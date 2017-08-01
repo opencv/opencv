@@ -12,10 +12,39 @@
 /* ************************************************************************* */
 // Includes
 #include "AKAZEConfig.h"
-#include "TEvolution.h"
 
 namespace cv
 {
+
+/// A-KAZE nonlinear diffusion filtering evolution
+struct Evolution
+{
+  Evolution() {
+    etime = 0.0f;
+    esigma = 0.0f;
+    octave = 0;
+    sublevel = 0;
+    sigma_size = 0;
+  }
+
+  UMat Lx, Ly;           ///< First order spatial derivatives
+  UMat Lt;               ///< Evolution image
+  UMat Lsmooth;          ///< Smoothed image, used only for computing determinant, released afterwards
+  UMat Ldet;             ///< Detector response
+
+  // the same as above, holding CPU mapping to UMats above
+  Mat Mx, My;
+  Mat Mt;
+  Mat Mdet;
+
+  Size size;                ///< Size of the layer
+  float etime;              ///< Evolution time
+  float esigma;             ///< Evolution sigma. For linear diffusion t = sigma^2 / 2
+  int octave;               ///< Image octave
+  int sublevel;             ///< Image sublevel in each octave
+  int sigma_size;           ///< Integer esigma. For computing the feature detector responses
+  float octave_ratio;       ///< Scaling ratio of this octave. ratio = 2^octave
+};
 
 /* ************************************************************************* */
 // AKAZE Class Declaration
@@ -24,7 +53,7 @@ class AKAZEFeatures {
 private:
 
   AKAZEOptions options_;                ///< Configuration options for AKAZE
-  std::vector<TEvolution> evolution_;        ///< Vector of nonlinear diffusion evolution
+  std::vector<Evolution> evolution_;        ///< Vector of nonlinear diffusion evolution
 
   /// FED parameters
   int ncycles_;                  ///< Number of cycles
@@ -44,16 +73,14 @@ public:
 
   /// Scale Space methods
   void Allocate_Memory_Evolution();
-  int Create_Nonlinear_Scale_Space(const cv::Mat& img);
+  void Create_Nonlinear_Scale_Space(InputArray img);
   void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
   void Compute_Determinant_Hessian_Response(void);
-  void Compute_Multiscale_Derivatives(void);
   void Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts);
   void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
 
   /// Feature description methods
-  void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
-  static void Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_);
+  void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, OutputArray desc);
   void Compute_Keypoints_Orientation(std::vector<cv::KeyPoint>& kpts) const;
 };
 

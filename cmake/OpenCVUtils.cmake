@@ -533,6 +533,12 @@ macro(ocv_finalize_status)
       execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENCV_BUILD_INFO_FILE}" "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc" OUTPUT_QUIET)
     endif()
   endif()
+
+  if(UNIX)
+    install(FILES "${OpenCV_SOURCE_DIR}/platforms/scripts/valgrind.supp"
+                  "${OpenCV_SOURCE_DIR}/platforms/scripts/valgrind_3rdparty.supp"
+            DESTINATION "${OPENCV_OTHER_INSTALL_PATH}" COMPONENT "dev")
+  endif()
 endmacro()
 
 
@@ -1116,7 +1122,7 @@ macro(ocv_add_testdata basedir dest_subdir)
     endif()
     if(INSTALL_TESTS)
       install(DIRECTORY ${basedir}/
-              DESTINATION ${OPENCV_TEST_DATA_INSTALL_PATH}/contrib/text
+              DESTINATION ${OPENCV_TEST_DATA_INSTALL_PATH}/${dest_subdir}
               COMPONENT "tests"
               ${ARGN}
       )

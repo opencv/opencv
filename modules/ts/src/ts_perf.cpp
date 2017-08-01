@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -197,6 +197,10 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
 #else
     const char *data_path_dir = OPENCV_TEST_DATA_PATH;
 #endif
+
+    cvtest::addDataSearchSubDirectory("");
+    cvtest::addDataSearchSubDirectory(testSuitName);
+
     const char *path_separator = "/";
 
     if (data_path_dir)
@@ -1208,6 +1212,18 @@ int64 TestBase::_calibrate()
         }
     };
 
+    // Initialize ThreadPool
+    class _dummyParallel : public ParallelLoopBody
+    {
+    public:
+       void operator()(const cv::Range& range) const
+       {
+           // nothing
+           CV_UNUSED(range);
+       }
+    };
+    parallel_for_(cv::Range(0, 1000), _dummyParallel());
+
     _timeadjustment = 0;
     _helper h;
     h.PerfTestBody();
@@ -1426,7 +1442,7 @@ bool TestBase::next()
                         CV_TRACE_REGION("idle_delay");
                         printf("Performance is unstable, it may be a result of overheat problems\n");
                         printf("Idle delay for %d ms... \n", perf_validation_idle_delay_ms);
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined _WIN32
 #ifndef WINRT_8_0
                         Sleep(perf_validation_idle_delay_ms);
 #else
@@ -1834,6 +1850,8 @@ void TestBase::SetUp()
 
     if (param_threads >= 0)
         cv::setNumThreads(param_threads);
+    else
+        cv::setNumThreads(-1);
 
 #ifdef __ANDROID__
     if (param_affinity_mask)

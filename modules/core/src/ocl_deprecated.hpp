@@ -578,7 +578,7 @@ static void* initOpenCLAndLoad(const char* funcname)
     return funcname && handle ? dlsym(handle, funcname) : 0;
 }
 
-#elif (defined WIN32 || defined _WIN32) && defined(HAVE_OPENCL)
+#elif defined _WIN32 && defined(HAVE_OPENCL)
 
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx

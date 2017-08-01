@@ -5,7 +5,7 @@
 // and call cv::Blur function. The result is mapped back to OpenGL texture
 // and rendered through OpenGL API.
 */
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
 #elif defined(__linux__)
@@ -27,7 +27,7 @@
 
 #include "winapp.hpp"
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 # pragma comment(lib, "opengl32.lib")
 # pragma comment(lib, "glu32.lib")
 #endif
@@ -74,7 +74,7 @@ public:
         WinApp::cleanup();
     }
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (message)
@@ -169,7 +169,7 @@ public:
 
     int init()
     {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         m_hDC = GetDC(m_hWnd);
 
         if (setup_pixel_format() != 0)
@@ -219,7 +219,7 @@ public:
 
     void print_info(MODE mode, float time, cv::String& oclDevName)
     {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         HDC hDC = m_hDC;
 
         HFONT hFont = (HFONT)::GetStockObject(SYSTEM_FONT);
@@ -323,7 +323,7 @@ public:
             glTexCoord2f(1.0f, 0.0f); glVertex3f(1.0f, 1.0f, 0.1f);
             glEnd();
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
             SwapBuffers(m_hDC);
 #elif defined(__linux__)
             glXSwapBuffers(m_display, m_window);
@@ -394,7 +394,7 @@ protected:
         m_timer.stop();
     }
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     int setup_pixel_format()
     {
         PIXELFORMATDESCRIPTOR  pfd;
@@ -459,7 +459,7 @@ private:
     bool               m_demo_processing;
     MODE               m_mode;
     cv::String         m_modeStr[2];
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     HDC                m_hDC;
     HGLRC              m_hRC;
 #elif defined(__linux__)
@@ -524,7 +524,7 @@ int main(int argc, char** argv)
     int width  = (int)cap.get(CAP_PROP_FRAME_WIDTH);
     int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     string wndname = "WGL Window";
 #elif defined(__linux__)
     string wndname = "GLX Window";

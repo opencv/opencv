@@ -21,13 +21,13 @@ __kernel void TanHForward(const int count, __global T* in, __global T* out) {
 __kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
   int index = get_global_id(0);
   if(index < count)
-  out[index] = 1. / (1. + exp(-in[index]));
+  out[index] = 1.0f / (1.0f + exp(-in[index]));
 }
 
 __kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
   int index = get_global_id(0);
   if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1. + exp(-in[index])) : log(1. + exp(in[index]));
+    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
   }
 }
 

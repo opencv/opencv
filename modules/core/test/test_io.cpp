@@ -1236,3 +1236,112 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
         }
     }
 }
+
+TEST(Core_InputOutput, FileStorage_format_xml)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.xml", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_XML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_xml_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.xml.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_XML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_json)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.json", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_JSON, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_json_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.json.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_JSON, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yaml)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yaml", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yaml_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yaml.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yml)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yml", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yml_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yml.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_json_named_nodes)
+{
+    std::string test =
+        "{ "
+            "\"int_value\": -324,"
+            "\"map_value\": {"
+                "\"str_value\": \"mystring\""
+            "},"
+            "\"array\": [0.2, 0.1]"
+        "}";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs["int_value"].isNamed());
+    ASSERT_TRUE(fs["map_value"].isNamed());
+    ASSERT_TRUE(fs["map_value"]["str_value"].isNamed());
+    ASSERT_TRUE(fs["array"].isNamed());
+    ASSERT_FALSE(fs["array"][0].isNamed());
+    ASSERT_FALSE(fs["array"][1].isNamed());
+
+    ASSERT_EQ(fs["int_value"].name(), "int_value");
+    ASSERT_EQ(fs["map_value"].name(), "map_value");
+    ASSERT_EQ(fs["map_value"]["str_value"].name(), "str_value");
+    ASSERT_EQ(fs["array"].name(), "array");
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_bool)
+{
+    std::string test =
+        "{ "
+            "\"str_true\": \"true\","
+            "\"map_value\": {"
+                "\"int_value\": -33333,\n"
+                "\"bool_true\": true,"
+                "\"str_false\": \"false\","
+            "},"
+            "\"bool_false\": false, \n"
+            "\"array\": [0.1, 0.2]"
+        "}";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs["str_true"].isString());
+    ASSERT_TRUE(fs["map_value"]["bool_true"].isInt());
+    ASSERT_TRUE(fs["map_value"]["str_false"].isString());
+    ASSERT_TRUE(fs["bool_false"].isInt());
+
+    ASSERT_EQ((std::string)fs["str_true"], "true");
+    ASSERT_EQ((int)fs["map_value"]["bool_true"], 1);
+    ASSERT_EQ((std::string)fs["map_value"]["str_false"], "false");
+    ASSERT_EQ((int)fs["bool_false"], 0);
+    fs.release();
+}

@@ -3665,7 +3665,6 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
         {
             CV_PARSE_ERROR( "Unrecognized value" );
         }
-        ptr++;
     }
 
     return ptr;
@@ -3781,6 +3780,7 @@ static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node )
                     ptr = icvJSONParseMap( fs, ptr, child );
                 else
                     ptr = icvJSONParseValue( fs, ptr, child );
+                child->tag |= CV_NODE_NAMED;
             }
         }
 
@@ -4270,11 +4270,25 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         if( fmt == CV_STORAGE_FORMAT_AUTO && filename )
         {
-            const char* dot_pos = strrchr( filename, '.' );
+            const char* dot_pos = NULL;
+            const char* dot_pos2 = NULL;
+            // like strrchr() implementation, but save two last positions simultaneously
+            for (const char* pos = filename; pos[0] != 0; pos++)
+            {
+                if (pos[0] == '.')
+                {
+                    dot_pos2 = dot_pos;
+                    dot_pos = pos;
+                }
+            }
+            if (cv_strcasecmp(dot_pos, ".gz") && dot_pos2 != NULL)
+            {
+                dot_pos = dot_pos2;
+            }
             fs->fmt
-                = cv_strcasecmp( dot_pos, ".xml" )
+                = (cv_strcasecmp(dot_pos, ".xml") || cv_strcasecmp(dot_pos, ".xml.gz"))
                 ? CV_STORAGE_FORMAT_XML
-                : cv_strcasecmp( dot_pos, ".json" )
+                : (cv_strcasecmp(dot_pos, ".json") || cv_strcasecmp(dot_pos, ".json.gz"))
                 ? CV_STORAGE_FORMAT_JSON
                 : CV_STORAGE_FORMAT_YAML
                 ;
@@ -6918,6 +6932,12 @@ String FileStorage::releaseAndGetString()
 FileNode FileStorage::root(int streamidx) const
 {
     return isOpened() ? FileNode(fs, cvGetRootFileNode(fs, streamidx)) : FileNode();
+}
+
+int FileStorage::getFormat() const
+{
+    CV_Assert(!fs.empty());
+    return fs->fmt & FORMAT_MASK;
 }
 
 FileStorage& operator << (FileStorage& fs, const String& str)

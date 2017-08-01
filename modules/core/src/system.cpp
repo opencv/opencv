@@ -79,7 +79,7 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #  include <cpu-features.h>
 #endif
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
@@ -655,7 +655,7 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
@@ -675,7 +675,7 @@ int64 getTickCount(void)
 
 double getTickFrequency(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
@@ -737,7 +737,7 @@ int64 getCPUTickCount(void)
 
 #endif
 
-#elif defined _MSC_VER && defined WIN32 && defined _M_IX86
+#elif defined _MSC_VER && defined _WIN32 && defined _M_IX86
 
 int64 getCPUTickCount(void)
 {
@@ -799,7 +799,7 @@ String tempfile( const char* suffix )
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 #ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
     std::wstring temp_dir = GetTempPathWinRT();
@@ -1124,7 +1124,7 @@ bool __termination = false;
 namespace cv
 {
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 
 struct Mutex::Impl
 {
@@ -1210,7 +1210,7 @@ bool Mutex::trylock() { return impl->trylock(); }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
@@ -1229,16 +1229,16 @@ public:
     void  SetData(void *pData);
 
 private:
-#ifdef WIN32
+#ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
 #endif
-#else // WIN32
+#else // _WIN32
     pthread_key_t  tlsKey;
 #endif
 };
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
@@ -1270,7 +1270,7 @@ void  TlsAbstraction::SetData(void *pData)
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
 }
 #endif
-#else // WIN32
+#else // _WIN32
 TlsAbstraction::TlsAbstraction()
 {
     CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
@@ -1306,7 +1306,8 @@ struct ThreadData
 class TlsStorage
 {
 public:
-    TlsStorage()
+    TlsStorage() :
+        tlsSlotsSize(0)
     {
         tlsSlots.reserve(32);
         threads.reserve(32);
@@ -1351,9 +1352,10 @@ public:
     size_t reserveSlot()
     {
         AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlotsSize == tlsSlots.size());
 
         // Find unused slots
-        for(size_t slot = 0; slot < tlsSlots.size(); slot++)
+        for(size_t slot = 0; slot < tlsSlotsSize; slot++)
         {
             if(!tlsSlots[slot])
             {
@@ -1363,15 +1365,16 @@ public:
         }
 
         // Create new slot
-        tlsSlots.push_back(1);
-        return (tlsSlots.size()-1);
+        tlsSlots.push_back(1); tlsSlotsSize++;
+        return tlsSlotsSize - 1;
     }
 
     // Release TLS storage index and pass associated data to caller
     void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
     {
         AutoLock guard(mtxGlobalAccess);
-        CV_Assert(tlsSlots.size() > slotIdx);
+        CV_Assert(tlsSlotsSize == tlsSlots.size());
+        CV_Assert(tlsSlotsSize > slotIdx);
 
         for(size_t i = 0; i < threads.size(); i++)
         {
@@ -1393,7 +1396,9 @@ public:
     // Get data by TLS storage index
     void* getData(size_t slotIdx) const
     {
-        CV_Assert(tlsSlots.size() > slotIdx);
+#ifndef CV_THREAD_SANITIZER
+        CV_Assert(tlsSlotsSize > slotIdx);
+#endif
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1406,7 +1411,8 @@ public:
     void gather(size_t slotIdx, std::vector<void*> &dataVec)
     {
         AutoLock guard(mtxGlobalAccess);
-        CV_Assert(tlsSlots.size() > slotIdx);
+        CV_Assert(tlsSlotsSize == tlsSlots.size());
+        CV_Assert(tlsSlotsSize > slotIdx);
 
         for(size_t i = 0; i < threads.size(); i++)
         {
@@ -1422,7 +1428,9 @@ public:
     // Set data to storage index
     void setData(size_t slotIdx, void* pData)
     {
-        CV_Assert(tlsSlots.size() > slotIdx && pData != NULL);
+#ifndef CV_THREAD_SANITIZER
+        CV_Assert(tlsSlotsSize > slotIdx);
+#endif
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(!threadData)
@@ -1438,9 +1446,8 @@ public:
 
         if(slotIdx >= threadData->slots.size())
         {
-            AutoLock guard(mtxGlobalAccess);
-            while(slotIdx >= threadData->slots.size())
-                threadData->slots.push_back(NULL);
+            AutoLock guard(mtxGlobalAccess); // keep synchronization with gather() calls
+            threadData->slots.resize(slotIdx + 1, NULL);
         }
         threadData->slots[slotIdx] = pData;
     }
@@ -1449,6 +1456,8 @@ private:
     TlsAbstraction tls; // TLS abstraction layer instance
 
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
+    size_t tlsSlotsSize;              // equal to tlsSlots.size() in synchronized sections
+                                      // without synchronization this counter doesn't desrease - it is used for slotIdx sanity checks
     std::vector<int> tlsSlots;        // TLS keys state
     std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
 };
@@ -1511,7 +1520,7 @@ TLSData<CoreTLSData>& getCoreTlsData()
     CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
 }
 
-#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#if defined CVAPI_EXPORTS && defined _WIN32 && !defined WINCE
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif

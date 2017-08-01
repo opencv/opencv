@@ -174,24 +174,6 @@ static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
     return ~crc;
 }
 
-struct HashKey
-{
-    typedef uint64 part;
-    HashKey(part _a, part _b) : a(_a), b(_b) {}
-    part a, b;
-};
-
-inline bool operator == (const HashKey& h1, const HashKey& h2)
-{
-    return h1.a == h2.a && h1.b == h2.b;
-}
-
-inline bool operator < (const HashKey& h1, const HashKey& h2)
-{
-    return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
-}
-
-
 bool haveOpenCL()
 {
 #ifdef HAVE_OPENCL
@@ -1351,7 +1333,7 @@ struct Context::Impl
                     const String& buildflags, String& errmsg)
     {
         size_t limit = getProgramCountLimit();
-        String key = Program::getPrefix(buildflags);
+        String key = cv::format("codehash=%08llx ", src.hash()) + Program::getPrefix(buildflags);
         {
             cv::AutoLock lock(program_cache_mutex);
             phash_t::iterator it = phash.find(key);

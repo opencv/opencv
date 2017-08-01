@@ -1547,7 +1547,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
-    Scalar mean, stddev;
+    Scalar mean(0), stddev(0);
     const int cn = _src.channels();
     if (cn > 4)
         return false;
@@ -1739,6 +1739,13 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
+
+#if IPP_VERSION_X100 < 201801
+    // IPP_DISABLE: C3C functions can read outside of allocated memory
+    if (cn > 1)
+        return false;
+#endif
+
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
@@ -2530,6 +2537,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         return false;
 #endif
 
+    // cv::minMaxIdx problem with index positions on AVX
+#if IPP_VERSION_X100 < 201810
+    if(!mask.empty() && _maxIdx && ipp::getIppFeatures()&ippCPUID_AVX)
+        return false;
+#endif
+
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(src.depth());
     float       minVal = 0;
@@ -2561,7 +2574,7 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         size.width *= src.channels();
 
         status = ippMinMaxFun(src.ptr(), (int)src.step, size, dataType, pMinVal, pMaxVal, pMinIdx, pMaxIdx, (Ipp8u*)mask.ptr(), (int)mask.step);
-        if(status < 0 || status == ippStsNoOperation)
+        if(status < 0)
             return false;
         if(_minVal)
             *_minVal = minVal;
@@ -2569,7 +2582,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
             *_maxVal = maxVal;
         if(_minIdx)
         {
-            if(!mask.empty() && !minIdx.y && !minIdx.x)
+            // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
+            if(status == ippStsNoOperation && !mask.empty() && !pMinIdx->x && !pMinIdx->y)
             {
                 _minIdx[0] = -1;
                 _minIdx[1] = -1;
@@ -2582,7 +2596,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         }
         if(_maxIdx)
         {
-            if(!mask.empty() && !maxIdx.y && !maxIdx.x)
+            // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
+            if(status == ippStsNoOperation && !mask.empty() && !pMaxIdx->x && !pMaxIdx->y)
             {
                 _maxIdx[0] = -1;
                 _maxIdx[1] = -1;

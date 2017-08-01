@@ -244,7 +244,7 @@ Cv64suf;
 #  define DISABLE_OPENCV_24_COMPATIBILITY
 #endif
 
-#if (defined WIN32 || defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined CVAPI_EXPORTS
+#if (defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined CVAPI_EXPORTS
 #  define CV_EXPORTS __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #  define CV_EXPORTS __attribute__ ((visibility ("default")))
@@ -324,6 +324,17 @@ Cv64suf;
 #ifndef CV_STATIC_ANALYSIS
 # if defined(__KLOCWORK__) || defined(__clang_analyzer__) || defined(__COVERITY__)
 #   define CV_STATIC_ANALYSIS
+# endif
+#endif
+
+/****************************************************************************************\
+*                                    Thread sanitizer                                    *
+\****************************************************************************************/
+#ifndef CV_THREAD_SANITIZER
+# if defined(__has_feature)
+#   if __has_feature(thread_sanitizer)
+#     define CV_THREAD_SANITIZER
+#   endif
 # endif
 #endif
 
