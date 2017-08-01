@@ -789,7 +789,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     }
     else
     {
-        av_dict_parse_string(&dict, options, ";", "|");
+        av_dict_parse_string(&dict, options, ";", "|", 0);
     }
 #else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
