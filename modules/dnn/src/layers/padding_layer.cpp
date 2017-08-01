@@ -25,7 +25,7 @@ public:
     {
         setParamsFrom(params);
         paddingDim = params.get<int>("padding_dim");
-        padding = abs(params.get<int>("padding"));
+        padding = params.get<int>("padding");
         inputDims = params.get<int>("input_dims", 0);
         index = params.get<int>("index", 0);
         paddingValue = params.get<double>("value", 0);
