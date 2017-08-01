@@ -1,10 +1,9 @@
-Introduction to OpenCV {#tutorial_js_table_of_contents_setup}
+Introduction to OpenCV-JavaScript {#tutorial_js_table_of_contents_setup}
 ======================
 
 -   @subpage tutorial_js_intro
 
-    Getting Started with
-    OpenCV-JavaScript
+    Introduction of OpenCV-JavaScript and Tutorials
 
 -   @subpage tutorial_js_setup
 
