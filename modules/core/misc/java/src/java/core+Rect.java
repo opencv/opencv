@@ -65,6 +65,10 @@ public class Rect {
         return width * height;
     }
 
+    public boolean empty() {
+        return width <= 0 || height <= 0;
+    }
+
     public boolean contains(Point p) {
         return x <= p.x && p.x < x + width && y <= p.y && p.y < y + height;
     }
