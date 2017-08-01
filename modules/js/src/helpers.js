@@ -1,7 +1,9 @@
 Module["imread"] = function(canvasID) {
     var canvas = document.getElementById(canvasID);
-    if (canvas === null || !(canvas instanceof HTMLCanvasElement))
-        { throw("Please input the valid canvas id."); return; }
+    if (canvas === null || !(canvas instanceof HTMLCanvasElement)) {
+        throw("Please input the valid canvas id.");
+        return;
+    }
     var ctx = canvas.getContext("2d");
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     return cv.matFromArray(imgData, cv.CV_8UC4);
@@ -9,10 +11,14 @@ Module["imread"] = function(canvasID) {
 
 Module["imshow"] = function(canvasID, mat) {
     var canvas = document.getElementById(canvasID);
-    if (canvas === null || !(canvas instanceof HTMLCanvasElement))
-        { throw("Please input the valid canvas id."); return; }
-    if (!(mat instanceof cv.Mat))
-        { throw("Please input the valid cv.Mat instance."); return; }
+    if (canvas === null || !(canvas instanceof HTMLCanvasElement)) {
+        throw("Please input the valid canvas id.");
+        return;
+    }
+    if (!(mat instanceof cv.Mat)) {
+        throw("Please input the valid cv.Mat instance.");
+        return;
+    }
 
     // convert the mat type to cv.CV_8U
     var img = new cv.Mat();
@@ -46,20 +52,28 @@ Module["imshow"] = function(canvasID, mat) {
 
 Module["VideoCapture"] = function(videoID) {
     var video = document.getElementById(videoID);
-    if (video === null || !(video instanceof HTMLVideoElement))
-        { throw("Please input the valid video id."); return; }
+    if (video === null || !(video instanceof HTMLVideoElement)) {
+        throw("Please input the valid video id.");
+        return;
+    }
     var canvas = document.createElement("canvas");
     canvas.width = video.width;
     canvas.height = video.height;
     var ctx = canvas.getContext("2d");
 
     this.read = function(frame) {
-        if (!(frame instanceof cv.Mat))
-            { throw("Please input the valid cv.Mat instance."); return; }
-        if (frame.type() !== cv.CV_8UC4)
-            { throw("Bad type of input mat: the type should be cv.CV_8UC4."); return; }
-        if (frame.cols !== video.width || frame.rows !== video.height)
-            { throw("Bad size of input mat: the size should be same as the video."); return; }
+        if (!(frame instanceof cv.Mat)) {
+            throw("Please input the valid cv.Mat instance.");
+            return;
+        }
+        if (frame.type() !== cv.CV_8UC4) {
+            throw("Bad type of input mat: the type should be cv.CV_8UC4.");
+            return;
+        }
+        if (frame.cols !== video.width || frame.rows !== video.height) {
+            throw("Bad size of input mat: the size should be same as the video.");
+            return;
+        }
         ctx.drawImage(video, 0, 0, video.width, video.height);
         frame.data().set(ctx.getImageData(0, 0, video.width, video.height).data);
     };
