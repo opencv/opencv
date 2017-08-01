@@ -302,6 +302,35 @@ struct SigmoidFunctor
     int64 getFLOPSPerElement() const { return 3; }
 };
 
+struct ELUFunctor
+{
+    typedef ELULayer Layer;
+
+    explicit ELUFunctor() {}
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for(int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = x >= 0.f ? x : exp(x) - 1;
+            }
+        }
+    }
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = select(input >= 0.0f, input, exp(input) - 1);
+    }
+#endif  // HAVE_HALIDE
+
+    int64 getFLOPSPerElement() const { return 2; }
+};
+
 struct AbsValFunctor
 {
     typedef AbsLayer Layer;
@@ -499,6 +528,14 @@ Ptr<TanHLayer> TanHLayer::create(const LayerParams& params)
 Ptr<SigmoidLayer> SigmoidLayer::create(const LayerParams& params)
 {
     Ptr<SigmoidLayer> l(new ElementWiseLayer<SigmoidFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<ELULayer> ELULayer::create(const LayerParams& params)
+{
+    Ptr<ELULayer> l(new ElementWiseLayer<ELUFunctor>(ELUFunctor()));
     l->setParamsFrom(params);
 
     return l;
