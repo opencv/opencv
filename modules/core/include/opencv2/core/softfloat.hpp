@@ -160,8 +160,19 @@ public:
     inline bool getSign() const { return (v >> 31) != 0; }
     inline softfloat& setSign(bool sign) { v = (v & ((1U << 31) - 1)) | ((uint32_t)sign << 31); return *this; }
     inline int getExp() const { return ((v >> 23) & 0xFF) - 127; }
-    inline softfloat& setExp(int e) { v = (v & 0x807fffff) | (((e + 127) & 0xFF) << 23 ) ; return *this; }
+    inline softfloat& setExp(int e) { v = (v & 0x807fffff) | (((e + 127) & 0xFF) << 23 ); return *this; }
 
+    // 1 <= frac < 2
+    inline softfloat getFrac() const
+    {
+        uint_fast32_t vv = (v & 0x007fffff) | (127 << 23);
+        return softfloat::fromRaw(vv);
+    }
+    inline softfloat& setFrac(const softfloat& s)
+    {
+        v = (v & 0xff800000) | (s.v & 0x007fffff);
+        return *this;
+    }
 
     static softfloat zero() { return softfloat::fromRaw( 0 ); }
     static softfloat  inf() { return softfloat::fromRaw( 0xFF << 23 ); }
@@ -275,8 +286,23 @@ public:
     softdouble& setSign(bool sign) { v = (v & ((1ULL << 63) - 1)) | ((uint_fast64_t)(sign) << 63); return *this; }
 
     inline int getExp() const { return ((v >> 52) & 0x7FF) - 1023; }
-    inline softdouble& setExp(int e) { v = (v & 0x800FFFFFFFFFFFFF) | (((e + 1023) & 0x7FF) << 52); return *this; }
+    inline softdouble& setExp(int e)
+    {
+        v = (v & 0x800FFFFFFFFFFFFF) | ((uint_fast64_t)((e + 1023) & 0x7FF) << 52);
+        return *this;
+    }
 
+    // 1 <= frac < 2
+    inline softdouble getFrac() const
+    {
+        uint_fast64_t vv = (v & 0x000FFFFFFFFFFFFF) | ((uint_fast64_t)(1023) << 52);
+        return softdouble::fromRaw(vv);
+    }
+    inline softdouble& setFrac(const softdouble& s)
+    {
+        v = (v & 0xFFF0000000000000) | (s.v & 0x000FFFFFFFFFFFFF);
+        return *this;
+    }
 
     static softdouble zero() { return softdouble::fromRaw( 0 ); }
     static softdouble  inf() { return softdouble::fromRaw( (uint_fast64_t)(0x7FF) << 52 ); }
@@ -362,10 +388,8 @@ CV_EXPORTS softfloat cbrt(const softfloat& a);
 /*
 TODOs:
 
-sin, cos
+sin, cos, pi
 
-nextafter
-frexp, ldexp
 */
 
 }
