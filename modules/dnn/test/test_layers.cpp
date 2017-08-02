@@ -268,9 +268,27 @@ static void test_Reshape_Split_Slice_layers()
 
     normAssert(input, output);
 }
+
 TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
 {
     test_Reshape_Split_Slice_layers();
+}
+
+TEST(Layer_Conv_Elu, Accuracy)
+{
+    Net net;
+    {
+        Ptr<Importer> importer = createTensorflowImporter(_tf("layer_elu_model.pb"));
+        ASSERT_TRUE(importer != NULL);
+        importer->populateNet(net);
+    }
+    Mat inp = blobFromNPY(_tf("layer_elu_in.npy"));
+    Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
+
+    net.setInput(inp, "input");
+    Mat out = net.forward();
+
+    normAssert(ref, out);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
