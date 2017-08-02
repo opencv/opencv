@@ -24,7 +24,7 @@ Web is the most ubiquitous open computing platform. With HTML5 standards get imp
 
 OpenCV.js is the JavaScript binding for a subset of OpenCV. It allows emerging web applications with multimedia processing to benefit from the wide variety of vision functions available in OpenCV. OpenCV.js leverages Emscripten, compiles OpenCV functions' implementation into asm.js and exposes JavaScript APIs for web applications use. The future version will support WebAssembly and other acceleration APIs available on Web.
 
-OpenCV.js was initiated in Parallel Architectures and Systems Group at University of California Irvine (UCI), funded by Intel Corportation. OpenCV.js got improved and integrated into OpenCV project as part of Google Summer of Code 2017 projects. 
+OpenCV.js was initiated in Parallel Architectures and Systems Group at University of California Irvine (UCI), funded by Intel Corporation. OpenCV.js got improved and integrated into OpenCV project as part of Google Summer of Code 2017 projects. 
 
 OpenCV.js Tutorials
 -----------------------
