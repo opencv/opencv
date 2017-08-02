@@ -80,10 +80,10 @@ small motions. So it fails when there is large motion. So again we go for pyrami
 the pyramid, small motions are removed and large motions becomes small motions. So applying
 Lucas-Kanade there, we get optical flow along with the scale.
 
-Lucas-Kanade Optical Flow in OpenCV
+Lucas-Kanade Optical Flow in OpenCV.js
 -----------------------------------
 
-OpenCV provides all these in a single function, **cv.calcOpticalFlowPyrLK()**. Here, we create a
+OpenCV.js provides all these in a single function, **cv.calcOpticalFlowPyrLK()**. Here, we create a
 simple application which tracks some points in a video. To decide the points, we use
 **cv.goodFeaturesToTrack()**. We take the first frame, detect some Shi-Tomasi corner points in it,
 then we iteratively track those points using Lucas-Kanade optical flow. For the function
@@ -293,11 +293,11 @@ function lkofStopVideo() {
 in image, there is a chance that optical flow finds the next point which may look close to it. So
 actually for a robust tracking, corner points should be detected in particular intervals.)
 
-Dense Optical Flow in OpenCV
+Dense Optical Flow in OpenCV.js
 ----------------------------
 
 Lucas-Kanade method computes optical flow for a sparse feature set (in our example, corners detected
-using Shi-Tomasi algorithm). OpenCV provides another algorithm to find the dense optical flow. It
+using Shi-Tomasi algorithm). OpenCV.js provides another algorithm to find the dense optical flow. It
 computes the optical flow for all the points in the frame. It is based on Gunner Farneback's
 algorithm which is explained in "Two-Frame Motion Estimation Based on Polynomial Expansion" by
 Gunner Farneback in 2003.

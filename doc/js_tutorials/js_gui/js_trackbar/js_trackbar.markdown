@@ -15,8 +15,8 @@ weight by using the trackbar.
 First, we need to creat three canvas elements, two for input and one for output. Please refer to 
 the tutorial @ref tutorial_js_image_display.
 @code{.js}
-var src1 = cv.imread("canvasInput1");
-var src2 = cv.imread("canvasInput2");
+let src1 = cv.imread("canvasInput1");
+let src2 = cv.imread("canvasInput2");
 @endcode
 
 Then we use HTML DOM Input Range Object to implement the trackbar, which is shown as below. 
@@ -26,13 +26,13 @@ Then we use HTML DOM Input Range Object to implement the trackbar, which is show
 
 You can create an &lt;input&gt; element with type="range" by using the document.createElement() method:
 @code{.js}
-var x = document.createElement("INPUT");
+let x = document.createElement("INPUT");
 x.setAttribute("type", "range");
 @endcode
 
 You can access an &lt;input&gt; element with type="range" by using getElementById():
 @code{.js}
-var x = document.getElementById("myRange");
+let x = document.getElementById("myRange");
 @endcode
 
 As a trackbar, the range element need a trackbar name, the default value, minimum value, maximum value, 
@@ -48,9 +48,9 @@ Finally, we can use the trackbar value in the callback function, blend the two i
 @code{.js}
 function addWeighted(value) {
     document.getElementById("weightValue").value = value;
-    var alpha = value/document.getElementById("trackbar").max;
-    var beta = ( 1.0 - alpha );
-    var dst = new cv.Mat();
+    let alpha = value/document.getElementById("trackbar").max;
+    let beta = ( 1.0 - alpha );
+    let dst = new cv.Mat();
     cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
     cv.imshow("canvasOutput", dst);
     dst.delete();
@@ -80,9 +80,9 @@ canvas {
 <div id="CodeArea">
 <h2>Input your code</h2>
 <textarea rows="8" cols="70" id="TestCode" spellcheck="false">
-var alpha = value/trackbar.max;
-var beta = ( 1.0 - alpha );
-var dst = new cv.Mat();
+let alpha = value/trackbar.max;
+let beta = ( 1.0 - alpha );
+let dst = new cv.Mat();
 cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
 cv.imshow("canvasOutput", dst);
 dst.delete();
@@ -101,12 +101,12 @@ dst.delete();
 <script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
-var weightValue = document.getElementById('weightValue');
-var trackbar = document.getElementById('trackbar');
+let weightValue = document.getElementById('weightValue');
+let trackbar = document.getElementById('trackbar');
 
 function addWeighted(value) {
     weightValue.value = value;    
-    var text = document.getElementById("TestCode").value;
+    let text = document.getElementById("TestCode").value;
     try {
         eval(text);
         document.getElementById("tbErr").innerHTML = " ";
@@ -118,7 +118,7 @@ function addWeighted(value) {
 loadImageToCanvas("LinuxLogo.jpg", "canvasInput1");
 loadImageToCanvas("WindowsLogo.jpg", "canvasInput2");
 
-var src1, src2;
+let src1, src2;
 function onReady() {
     src1 = cv.imread("canvasInput1");
     src2 = cv.imread("canvasInput2");

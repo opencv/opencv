@@ -32,9 +32,9 @@ So we normally pass the histogram backprojected image and initial target locatio
 moves, obviously the movement is reflected in histogram backprojected image. As a result, meanshift
 algorithm moves our window to the new location with maximum density.
 
-### Meanshift in OpenCV-JavaScript
+### Meanshift in OpenCV.js
 
-To use meanshift in OpenCV-JavaScript, first we need to setup the target, find its histogram so that we can
+To use meanshift in OpenCV.js, first we need to setup the target, find its histogram so that we can
 backproject the target on each frame for calculation of meanshift. We also need to provide initial
 location of window. For histogram, only Hue is considered here. Also, to avoid false values due to
 low light, low light values are discarded using **cv.inRange()** function.
@@ -220,7 +220,7 @@ The process is continued until required accuracy is met.
 
 ![image](images/camshift_face.gif)
 
-### Camshift in OpenCV-JavaScript
+### Camshift in OpenCV.js
 
 It is almost same as meanshift, but it returns a rotated rectangle (that is our result) and box
 parameters (used to be passed as search window in next iteration). 

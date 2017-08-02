@@ -4,7 +4,7 @@ Background Subtraction {#tutorial_js_bg_subtraction}
 Goal
 ----
 
--   We will familiarize with the background subtraction methods available in OpenCV-JavaScript.
+-   We will familiarize with the background subtraction methods available in OpenCV.js.
 
 Basics
 ------
@@ -22,7 +22,7 @@ to extract the background from whatever images we have. It become more complicat
 shadow of the vehicles. Since shadow is also moving, simple subtraction will mark that also as
 foreground. It complicates things.
 
-OpenCV-JavaScript has implemented one algorithm for this purpose, which is very easy to use.
+OpenCV.js has implemented one algorithm for this purpose, which is very easy to use.
 
 BackgroundSubtractorMOG2
 ------------------------

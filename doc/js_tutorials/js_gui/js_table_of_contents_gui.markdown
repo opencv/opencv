@@ -1,5 +1,5 @@
 Gui Features {#tutorial_js_table_of_contents_gui}
-======================
+============
 
 -   @subpage tutorial_js_image_display
 

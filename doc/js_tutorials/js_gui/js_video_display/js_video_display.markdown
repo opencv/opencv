@@ -9,7 +9,7 @@ Goal
 Capture video from camera
 -------------------------
 
-Often, we have to capture live stream with camera. In OpenCV-JavaScript, we use [WebRTC](https://webrtc.org/) 
+Often, we have to capture live stream with camera. In OpenCV.js, we use [WebRTC](https://webrtc.org/) 
 and HTML canvas element to implement this.
 Let's capture a video from the camera (either an in-built camera of your laptop or a usb camera 
 is ok), convert it into grayscale video and display it. Just a simple task to get started.
@@ -17,7 +17,7 @@ is ok), convert it into grayscale video and display it. Just a simple task to ge
 To capture a video, you need to add some HTML elements in the web.
 - a &lt;video&gt; to display video from camera directly
 - a &lt;canvas&gt; to transfer video to canvas ImageData frame-by-frame
-- another &lt;canvas&gt; to display the video OpenCV-JavaScript gets
+- another &lt;canvas&gt; to display the video OpenCV.js gets
 
 Fisrt, we use WebRTC navigator.mediaDevices.getUserMedia to get the media stream.
 @code{.js}
@@ -56,7 +56,7 @@ let loopIndex = setInterval(
     }, 33);
 @endcode
 
-In addition, OpenCV-JavaScript implements cv.VideoCapture using the above method. You need not to  
+In addition, OpenCV.js implements cv.VideoCapture using the above method. You need not to  
 add the hidden canvas tag manually. The above code of playing video could be simplified as below.
 @code{.js}
 let src = new cv.Mat(height, width, cv.CV_8UC4);
@@ -79,7 +79,7 @@ Try it
 ------
 
 Here is the demo for above code. Click `start` to start your camera and paly it. The left video is from 
-your camera directly, and the right one is from OpenCV-JavaScript. Click `processing` to gray the video. 
+your camera directly, and the right one is from OpenCV.js. Click `processing` to gray the video. 
 Here we set the video width as 320, and the height will be computed based on the input stream. Another 
 tip is that the &lt;canvas&gt; used to draw video stream should be hidden. Some core code is in the 
 textbox, and you can change it to investigate more.
