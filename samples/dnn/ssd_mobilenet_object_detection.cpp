@@ -101,16 +101,17 @@ int main(int argc, char** argv)
         //! [Prepare blob]
 
         //! [Set input blob]
-        net.setInput(inputBlob, "data");                //set the network input
+        net.setInput(inputBlob, "data"); //set the network input
         //! [Set input blob]
 
-        TickMeter tm;
-        tm.start();
         //! [Make forward pass]
-        Mat detection = net.forward("detection_out");                                  //compute output
-        tm.stop();
-        cout << "Inference time, ms: " << tm.getTimeMilli() << endl;
+        Mat detection = net.forward("detection_out"); //compute output
         //! [Make forward pass]
+
+        std::vector<double> layersTimings;
+        double freq = getTickFrequency() / 1000;
+        double time = net.getPerfProfile(layersTimings) / freq;
+        cout << "Inference time, ms: " << time << endl;
 
         Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
 
