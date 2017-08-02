@@ -4,9 +4,7 @@ Background Subtraction {#tutorial_js_bg_subtraction}
 Goal
 ----
 
-In this chapter,
-
--   We will familiarize with the background subtraction methods available in OpenCV.
+-   We will familiarize with the background subtraction methods available in OpenCV-JavaScript.
 
 Basics
 ------
@@ -67,27 +65,27 @@ canvas {
 
 <div id="CodeArea">
 <h3>Input your code</h3>
-<textarea rows="15" cols="90" id="bgsTestCode" spellcheck="false">
+<textarea rows="16" cols="90" id="bgsTestCode" spellcheck="false">
 // frame and fgmask are declared and deleted elsewhere
 frame = new cv.Mat(bgsHeight, bgsWidth, cv.CV_8UC4);
 fgmask = new cv.Mat(bgsHeight, bgsWidth, cv.CV_8UC1);
 let fgbg = new cv.BackgroundSubtractorMOG2(500, 16, true);
 
+// "bgsVideo" is the id of the video tag
+let cap = new cv.VideoCapture("bgsVideo");
 bgsLoopIndex = setInterval(
     function() {
-        if(bgsVideo.ended) bgsStopVideo();
-        context.drawImage(bgsVideo, 0, 0, bgsWidth, bgsHeight);
-        frame.data().set(context.getImageData(0, 0, bgsWidth, bgsHeight).data);
-
+        if(bgsVideo.ended) {
+            bgsStopVideo();
+            return;
+        }
+        cap.read(frame);
         fgbg.apply(frame, fgmask);
-
         cv.imshow("bgsCanvasOutput", fgmask);
-
     }, 33);  
 </textarea>
 <p class="err" id="bgsErr"></p>
 </div> 
-<canvas id="bgsCanvasFrame" hidden></canvas>
 <div id="contentarea">
     <button id="bgsStartup" disabled="true" onclick="bgsStartup()">try it</button>
     <button id="bgsStop" disabled="true" onclick="bgsStopVideo()">stop</button><br>
@@ -101,7 +99,6 @@ bgsLoopIndex = setInterval(
 // bgs means BackgroundSubtractorMOG2
 // Some HTML elements we need to configure.
 let bgsVideo = document.getElementById("bgsVideo");
-let bgsCanvasFrame = document.getElementById("bgsCanvasFrame");
 let bgsStop = document.getElementById("bgsStop");
 
 // In this case, We set width 320, and the height will be computed based on the input video.
@@ -114,8 +111,6 @@ let fgmask = null;
 bgsVideo.oncanplay = function() {
     bgsVideo.setAttribute("height", bgsVideo.videoHeight/bgsVideo.videoWidth*bgsVideo.width);
     bgsHeight = bgsVideo.height;
-    bgsCanvasFrame.setAttribute("width", bgsWidth);
-    bgsCanvasFrame.setAttribute("height", bgsHeight);
 };
 
 bgsVideo.onended = bgsStopVideo;
@@ -126,7 +121,6 @@ function bgsStartup() {
     bgsVideo.play();
     bgsStop.disabled = false;
 
-    let context = bgsCanvasFrame.getContext("2d");
     let bgsTestCode = document.getElementById("bgsTestCode").value;
     try {
         eval(bgsTestCode);

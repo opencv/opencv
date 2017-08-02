@@ -4,11 +4,10 @@ Optical Flow {#tutorial_js_lucas_kanade}
 Goal
 ----
 
-In this chapter,
-    -   We will understand the concepts of optical flow and its estimation using Lucas-Kanade
-        method.
-    -   We will use functions like **cv.calcOpticalFlowPyrLK()** to track feature points in a
-        video.
+-   We will understand the concepts of optical flow and its estimation using Lucas-Kanade
+    method.
+-   We will use functions like **cv.calcOpticalFlowPyrLK()** to track feature points in a
+    video.
 
 Optical Flow
 ------------
@@ -130,8 +129,8 @@ for(let i = 0; i < maxCorners; i++)
 
 // Take first frame and find corners in it
 let oldFrame = new cv.Mat(lkofHeight, lkofWidth, cv.CV_8UC4);
-context.drawImage(lkofVideo, 0, 0, lkofWidth, lkofHeight);
-oldFrame.data().set(context.getImageData(0, 0, lkofWidth, lkofHeight).data);
+let cap = new cv.VideoCapture("lkofVideo"); // "lkofVideo" is the id of the video tag
+cap.read(oldFrame);
 oldGray = new cv.Mat();
 cv.cvtColor(oldFrame, oldGray, cv.COLOR_RGB2GRAY);
 p0 = new cv.Mat();
@@ -149,9 +148,11 @@ st = new cv.Mat();
 err = new cv.Mat();
 lkofLoopIndex = setInterval(
     function() {
-        if(lkofVideo.ended) lkofStopVideo();
-        context.drawImage(lkofVideo, 0, 0, lkofWidth, lkofHeight);
-        frame.data().set(context.getImageData(0, 0, lkofWidth, lkofHeight).data);
+        if(lkofVideo.ended) {
+            lkofStopVideo();
+            return;
+        }
+        cap.read(frame);
         cv.cvtColor(frame, frameGray, cv.COLOR_RGBA2GRAY);
 
         // calculate optical flow
@@ -188,7 +189,6 @@ lkofLoopIndex = setInterval(
 </textarea>
 <p class="err" id="lkofErr"></p>
 </div> 
-<canvas id="lkofCanvasFrame" hidden></canvas>
 <div id="contentarea">
     <button id="lkofStartup" disabled="true" onclick="lkofStartup()">try it</button>
     <button id="lkofStop" disabled="true" onclick="lkofStopVideo()">stop</button><br>
@@ -202,7 +202,6 @@ lkofLoopIndex = setInterval(
 // lkof means Lucas-Kanade Optical Flow
 // Some HTML elements we need to configure.
 let lkofVideo = document.getElementById("lkofVideo");
-let lkofCanvasFrame = document.getElementById("lkofCanvasFrame");
 let lkofStop = document.getElementById("lkofStop");
 
 // In this case, We set width 640, and the height will be computed based on the input video.
@@ -222,8 +221,6 @@ let color = null;
 lkofVideo.oncanplay = function() {
     lkofVideo.setAttribute("height", lkofVideo.videoHeight/lkofVideo.videoWidth*lkofVideo.width);
     lkofHeight = lkofVideo.height;
-    lkofCanvasFrame.setAttribute("width", lkofWidth);
-    lkofCanvasFrame.setAttribute("height", lkofHeight);
 };
 
 lkofVideo.onended = lkofStopVideo;
@@ -233,7 +230,6 @@ function lkofStartup() {
         lkofVideo.load();
     lkofVideo.play();
     lkofStop.disabled = false;
-    let context = lkofCanvasFrame.getContext("2d");
 
     let lkofTestCode = document.getElementById("lkofTestCode").value;
     try {
@@ -338,8 +334,8 @@ canvas {
 // Mats used in the loop are all declared and deleted elsewhere
 // take first frame of the video
 let frame1 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC4);
-context.drawImage(dofVideo, 0, 0, dofWidth, dofHeight);
-frame1.data().set(context.getImageData(0, 0, dofWidth, dofHeight).data);
+let cap = new cv.VideoCapture("dofVideo"); // "dofVideo" is the id of the video tag
+cap.read(frame1);
 
 prvs = new cv.Mat();
 cv.cvtColor(frame1, prvs, cv.COLOR_RGBA2GRAY);
@@ -362,9 +358,11 @@ ang = new cv.Mat(dofHeight, dofWidth, cv.CV_32FC1);
 rgb = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC3);
 dofLoopIndex = setInterval(
     function() {
-        if(dofVideo.ended) dofStopVideo();
-        context.drawImage(dofVideo, 0, 0, dofWidth, dofHeight);
-        frame2.data().set(context.getImageData(0, 0, dofWidth, dofHeight).data);
+        if(dofVideo.ended) {
+            dofStopVideo();
+            return;
+        }
+        cap.read(frame2);
         cv.cvtColor(frame2, next, cv.COLOR_RGBA2GRAY);
         cv.calcOpticalFlowFarneback(prvs, next, flow, 0.5, 3, 15, 3, 5, 1.2, 0)
         cv.split(flow, flowVec);
@@ -380,7 +378,6 @@ dofLoopIndex = setInterval(
 </textarea>
 <p class="err" id="dofErr"></p>
 </div>
-<canvas id="dofCanvasFrame" hidden></canvas>
 <div id="contentarea">
     <button id="dofStartup" disabled="true" onclick="dofStartup()">try it</button>
     <button id="dofStop" disabled="true" onclick="dofStopVideo()">stop</button><br>
@@ -391,7 +388,6 @@ dofLoopIndex = setInterval(
 // dof means Dense Optical Flow
 // Some HTML elements we need to configure.
 let dofVideo = document.getElementById("dofVideo");
-let dofCanvasFrame = document.getElementById("dofCanvasFrame");
 let dofStop = document.getElementById("dofStop");
 
 // In this case, We set width 320, and the height will be computed based on the input video.
@@ -415,8 +411,6 @@ let rgb = null;
 dofVideo.oncanplay = function() {
     dofVideo.setAttribute("height", dofVideo.videoHeight/dofVideo.videoWidth*dofVideo.width);
     dofHeight = dofVideo.height;
-    dofCanvasFrame.setAttribute("width", dofWidth);
-    dofCanvasFrame.setAttribute("height", dofHeight);
 };
 
 dofVideo.onended = dofStopVideo;
@@ -426,7 +420,6 @@ function dofStartup() {
         dofVideo.load();
     dofVideo.play();
     dofStop.disabled = false;
-    let context = dofCanvasFrame.getContext("2d");
     let dofTestCode = document.getElementById("dofTestCode").value;
 
     try {

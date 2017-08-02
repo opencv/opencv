@@ -4,8 +4,6 @@ Meanshift and Camshift {#tutorial_js_meanshift}
 Goal
 ----
 
-In this chapter,
-
 -   We will learn about Meanshift and Camshift algorithms to find and track objects in videos.
 
 Meanshift
@@ -65,8 +63,8 @@ canvas {
 // Mats used in the loop are all declared and deleted elsewhere
 // take first frame of the video
 msFrame = new cv.Mat(msHeight, msWidth, cv.CV_8UC4);
-context.drawImage(msVideo, 0, 0, msWidth, msHeight);
-msFrame.data().set(context.getImageData(0, 0, msWidth, msHeight).data);
+let cap = new cv.VideoCapture("msVideo"); // "msVideo" is the id of the video tag
+cap.read(msFrame);
 
 // setup initial location of window
 let trackWindow = new cv.Rect(300, 120, 125, 250); // simply hardcoded the values 300, 120, 125, 250
@@ -102,10 +100,11 @@ msHsvVec = new cv.MatVector();
 msHsvVec.push_back(msHsv);
 msLoopIndex = setInterval(
     function() {
-        if(msVideo.ended) msStopVideo();
-        context.drawImage(msVideo, 0, 0, msWidth, msHeight);
-        msFrame.data().set(context.getImageData(0, 0, msWidth, msHeight).data);
-
+        if(msVideo.ended) {
+            msStopVideo();
+            return;
+        }       
+        cap.read(msFrame);
         cv.cvtColor(msFrame, msHsv, cv.COLOR_RGBA2RGB);
         cv.cvtColor(msHsv, msHsv, cv.COLOR_RGB2HSV);
         msHsvVec.set(0, msHsv);
@@ -122,7 +121,6 @@ msLoopIndex = setInterval(
 </textarea>
 <p class="err" id="msErr"></p>
 </div> 
-<canvas id="msCanvasFrame" hidden></canvas>
 <div id="contentarea">
     <button id="msStartup" disabled="true" onclick="msStartup()">try it</button>
     <button id="msStop" disabled="true" onclick="msStopVideo()">stop</button><br>
@@ -136,7 +134,6 @@ msLoopIndex = setInterval(
 // ms means Meanshift
 // Some HTML elements we need to configure.
 let msVideo = document.getElementById("msVideo");
-let msCanvasFrame = document.getElementById("msCanvasFrame");
 let msStop = document.getElementById("msStop");
 
 // In this case, We set width 640, and the height will be computed based on the input video.
@@ -152,8 +149,6 @@ let msRectColor = null;
 msVideo.oncanplay = function() {
     msVideo.setAttribute("height", msVideo.videoHeight/msVideo.videoWidth*msVideo.width);
     msHeight = msVideo.height;
-    msCanvasFrame.setAttribute("width", msWidth);
-    msCanvasFrame.setAttribute("height", msHeight);
 };
 
 msVideo.onended = msStopVideo;
@@ -164,7 +159,6 @@ function msStartup() {
     msVideo.play();
     msStop.disabled = false;
 
-    let context = msCanvasFrame.getContext("2d");
     let msTestCode = document.getElementById("msTestCode").value;
     try {
         eval(msTestCode);
@@ -256,8 +250,8 @@ canvas {
 // Mats used in the loop are all declared and deleted elsewhere
 // take first frame of the video
 csFrame = new cv.Mat(csHeight, csWidth, cv.CV_8UC4);
-context.drawImage(csVideo, 0, 0, csWidth, csHeight);
-csFrame.data().set(context.getImageData(0, 0, csWidth, csHeight).data);
+let cap = new cv.VideoCapture("csVideo"); // "csVideo" is the id of the video tag
+cap.read(csFrame);
 
 // setup initial location of window
 let trackWindow = new cv.Rect(300, 120, 125, 250); // simply hardcoded the values 300, 120, 125, 250
@@ -293,10 +287,11 @@ csDst = new cv.Mat();
 csRectColor = new cv.Scalar(255, 0, 0, 255);
 csLoopIndex = setInterval(
     function() {
-        if(csVideo.ended) csStopVideo();
-        context.drawImage(csVideo, 0, 0, csWidth, csHeight);
-        csFrame.data().set(context.getImageData(0, 0, csWidth, csHeight).data);
-
+        if(csVideo.ended) {
+            csStopVideo();
+            return;
+        }
+        cap.read(csFrame);
         cv.cvtColor(csFrame, csHsv, cv.COLOR_RGBA2RGB);
         cv.cvtColor(csHsv, csHsv, cv.COLOR_RGB2HSV);
         csHsvVec.set(0, csHsv);
@@ -317,7 +312,6 @@ csLoopIndex = setInterval(
 </textarea>
 <p class="err" id="csErr"></p>
 </div>
-<canvas id="csCanvasFrame" hidden></canvas>
 <div id="contentarea">
     <button id="csStartup" disabled="true" onclick="csStartup()">try it</button>
     <button id="csStop" disabled="true" onclick="csStopVideo()">stop</button><br>
@@ -328,7 +322,6 @@ csLoopIndex = setInterval(
 // cs means Camshift
 // Some HTML elements we need to configure.
 let csVideo = document.getElementById("csVideo");
-let csCanvasFrame = document.getElementById("csCanvasFrame");
 let csStop = document.getElementById("csStop");
 
 // In this case, We set width 640, and the height will be computed based on the input video.
@@ -345,8 +338,6 @@ let csRectColor = null;
 csVideo.oncanplay = function() {
     csVideo.setAttribute("height", csVideo.videoHeight/csVideo.videoWidth*csVideo.width);
     csHeight = csVideo.height;
-    csCanvasFrame.setAttribute("width", csWidth);
-    csCanvasFrame.setAttribute("height", csHeight);
 };
 
 csVideo.onended = csStopVideo;
@@ -356,7 +347,6 @@ function csStartup() {
         csVideo.load();
     csVideo.play();
     csStop.disabled = false;
-    let context = csCanvasFrame.getContext("2d");
     let csTestCode = document.getElementById("csTestCode").value;
     try {
         eval(csTestCode);
