@@ -780,7 +780,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     ic->interrupt_callback.opaque = &interrupt_metadata;
 #endif
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+#if LIBAVFORMAT_BUILD > CALC_FFMPEG_VERSION(51,11,0)
 #ifndef NO_GETENV
     char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if(options == NULL)
@@ -789,7 +789,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     }
     else
     {
+#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(52,6,0)
         av_dict_parse_string(&dict, options, ";", "|", 0);
+#else
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
     }
 #else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
