@@ -146,9 +146,6 @@ static float32_t f32_mulAdd( float32_t, float32_t, float32_t );
 static float32_t f32_div( float32_t, float32_t );
 static float32_t f32_rem( float32_t, float32_t );
 static float32_t f32_sqrt( float32_t );
-static bool f32_eq( float32_t, float32_t );
-static bool f32_le( float32_t, float32_t );
-static bool f32_lt( float32_t, float32_t );
 
 /*----------------------------------------------------------------------------
 | 64-bit (double-precision) floating-point operations.
@@ -164,9 +161,6 @@ static float64_t f64_mulAdd( float64_t, float64_t, float64_t );
 static float64_t f64_div( float64_t, float64_t );
 static float64_t f64_rem( float64_t, float64_t );
 static float64_t f64_sqrt( float64_t );
-static bool f64_eq( float64_t, float64_t );
-static bool f64_le( float64_t, float64_t );
-static bool f64_lt( float64_t, float64_t );
 
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
@@ -200,13 +194,6 @@ softfloat softfloat::operator * (const softfloat& a) const { return f32_mul(*thi
 softfloat softfloat::operator / (const softfloat& a) const { return f32_div(*this, a); }
 softfloat softfloat::operator % (const softfloat& a) const { return f32_rem(*this, a); }
 
-bool softfloat::operator == ( const softfloat& a ) const { return  f32_eq(*this, a); }
-bool softfloat::operator != ( const softfloat& a ) const { return !f32_eq(*this, a); }
-bool softfloat::operator >  ( const softfloat& a ) const { return  f32_lt(a, *this); }
-bool softfloat::operator >= ( const softfloat& a ) const { return  f32_le(a, *this); }
-bool softfloat::operator <  ( const softfloat& a ) const { return  f32_lt(*this, a); }
-bool softfloat::operator <= ( const softfloat& a ) const { return  f32_le(*this, a); }
-
 softdouble::softdouble( const uint32_t a ) { *this = ui32_to_f64(a); }
 softdouble::softdouble( const uint64_t a ) { *this = ui64_to_f64(a); }
 softdouble::softdouble( const  int32_t a ) { *this =  i32_to_f64(a); }
@@ -233,13 +220,6 @@ softdouble softdouble::operator - (const softdouble& a) const { return f64_sub(*
 softdouble softdouble::operator * (const softdouble& a) const { return f64_mul(*this, a); }
 softdouble softdouble::operator / (const softdouble& a) const { return f64_div(*this, a); }
 softdouble softdouble::operator % (const softdouble& a) const { return f64_rem(*this, a); }
-
-bool softdouble::operator == (const softdouble& a) const { return  f64_eq(*this, a); }
-bool softdouble::operator != (const softdouble& a) const { return !f64_eq(*this, a); }
-bool softdouble::operator >  (const softdouble& a) const { return  f64_lt(a, *this); }
-bool softdouble::operator >= (const softdouble& a) const { return  f64_le(a, *this); }
-bool softdouble::operator <  (const softdouble& a) const { return  f64_lt(*this, a); }
-bool softdouble::operator <= (const softdouble& a) const { return  f64_le(*this, a); }
 
 /*----------------------------------------------------------------------------
 | Overloads for math functions
@@ -764,62 +744,6 @@ static float32_t f32_div( float32_t a, float32_t b )
     uiZ = packToF32UI( signZ, 0, 0 );
  uiZ:
     return float32_t::fromRaw(uiZ);
-}
-
-static bool f32_eq( float32_t a, float32_t b )
-{
-    uint_fast32_t uiA;
-    uint_fast32_t uiB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
-        ) {
-            raiseFlags( flag_invalid );
-        }
-        return false;
-    }
-    return (uiA == uiB) || ! (uint32_t) ((uiA | uiB)<<1);
-}
-
-static bool f32_le( float32_t a, float32_t b )
-{
-    uint_fast32_t uiA;
-    uint_fast32_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        raiseFlags( flag_invalid );
-        return false;
-    }
-    signA = signF32UI( uiA );
-    signB = signF32UI( uiB );
-    return
-        (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1)
-            : (uiA == uiB) || (signA ^ (uiA < uiB));
-}
-
-static bool f32_lt( float32_t a, float32_t b )
-{
-    uint_fast32_t uiA;
-    uint_fast32_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        raiseFlags( flag_invalid );
-        return false;
-    }
-    signA = signF32UI( uiA );
-    signB = signF32UI( uiB );
-    return
-        (signA != signB) ? signA && ((uint32_t) ((uiA | uiB)<<1) != 0)
-            : (uiA != uiB) && (signA ^ (uiA < uiB));
 }
 
 static float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
@@ -1456,64 +1380,6 @@ static float64_t f64_div( float64_t a, float64_t b )
     uiZ = packToF64UI( signZ, 0, 0 );
  uiZ:
     return float64_t::fromRaw(uiZ);
-}
-
-static bool f64_eq( float64_t a, float64_t b )
-{
-    uint_fast64_t uiA;
-    uint_fast64_t uiB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
-        ) {
-            raiseFlags( flag_invalid );
-        }
-        return false;
-    }
-    return (uiA == uiB) || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
-}
-
-static bool f64_le( float64_t a, float64_t b )
-{
-    uint_fast64_t uiA;
-    uint_fast64_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        raiseFlags( flag_invalid );
-        return false;
-    }
-    signA = signF64UI( uiA );
-    signB = signF64UI( uiB );
-    return
-        (signA != signB)
-            ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-            : (uiA == uiB) || (signA ^ (uiA < uiB));
-}
-
-static bool f64_lt( float64_t a, float64_t b )
-{
-    uint_fast64_t uiA;
-    uint_fast64_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        raiseFlags( flag_invalid );
-        return false;
-    }
-    signA = signF64UI( uiA );
-    signB = signF64UI( uiB );
-    return
-        (signA != signB)
-            ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-            : (uiA != uiB) && (signA ^ (uiA < uiB));
 }
 
 static float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )

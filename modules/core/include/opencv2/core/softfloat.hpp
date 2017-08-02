@@ -97,20 +97,73 @@ public:
     softfloat& operator /= (const softfloat& a) { *this = *this / a; return *this; }
     softfloat& operator %= (const softfloat& a) { *this = *this % a; return *this; }
 
-    bool operator == ( const softfloat& ) const;
-    bool operator != ( const softfloat& ) const;
-    bool operator >  ( const softfloat& ) const;
-    bool operator >= ( const softfloat& ) const;
-    bool operator <  ( const softfloat& ) const;
-    bool operator <= ( const softfloat& ) const;
+    inline bool operator == ( const softfloat& a ) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else return (v == a.v) || ! (uint32_t) ((v | a.v)<<1);
+    }
 
-    bool isNaN() const { return (v & 0x7fffffff)  > 0x7f800000; }
-    bool isInf() const { return (v & 0x7fffffff) == 0x7f800000; }
+    inline bool operator != ( const softfloat& a ) const { return !(*this == a); }
+
+    inline bool operator > ( const softfloat& a ) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast32_t uiA = a.v, uiB = v;
+            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
+            return (signA != signB) ? (signA && ((uint32_t) ((uiA | uiB)<<1) != 0)) :
+                                      (uiA != uiB) && (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool operator < ( const softfloat& a ) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast32_t uiA = v, uiB = a.v;
+            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
+            return (signA != signB) ? signA && ((uint32_t) ((uiA | uiB)<<1) != 0) :
+                                      (uiA != uiB) && (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool operator >= ( const softfloat& a ) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast32_t uiA = a.v, uiB = v;
+            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
+            return (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1) :
+                                      (uiA == uiB) || (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool operator <= ( const softfloat& a ) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast32_t uiA = v, uiB = a.v;
+            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
+            return (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1) :
+                                      (uiA == uiB) || (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool isNaN() const { return (v & 0x7fffffff)  > 0x7f800000; }
+    inline bool isInf() const { return (v & 0x7fffffff) == 0x7f800000; }
+    inline bool isSubnormal() const { return ((v >> 23) & 0xFF) == 0; }
 
     static softfloat zero() { return softfloat::fromRaw( 0 ); }
     static softfloat  inf() { return softfloat::fromRaw( 0xFF << 23 ); }
     static softfloat  nan() { return softfloat::fromRaw( 0x7fffffff ); }
     static softfloat  one() { return softfloat::fromRaw(  127 << 23 ); }
+    static softfloat  min() { return softfloat::fromRaw( 0x01 << 23 ); }
+    static softfloat  eps() { return softfloat::fromRaw( (127 - 23) << 23 ); }
+    static softfloat  max() { return softfloat::fromRaw( (0xFF << 23) - 1 ); }
 
     uint32_t v;
 };
@@ -152,20 +205,73 @@ public:
     softdouble& operator /= (const softdouble& a) { *this = *this / a; return *this; }
     softdouble& operator %= (const softdouble& a) { *this = *this % a; return *this; }
 
-    bool operator == ( const softdouble& ) const;
-    bool operator != ( const softdouble& ) const;
-    bool operator >  ( const softdouble& ) const;
-    bool operator >= ( const softdouble& ) const;
-    bool operator <  ( const softdouble& ) const;
-    bool operator <= ( const softdouble& ) const;
+    inline bool operator == (const softdouble& a) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else return (v == a.v) || ! ((v | a.v) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
+    }
 
-    bool isNaN() const { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
-    bool isInf() const { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
+    inline bool operator != (const softdouble& a) const { return !(*this == a); }
+
+    inline bool operator > (const softdouble& a) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast64_t uiA = a.v, uiB = v;
+            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
+                                      (uiA != uiB) && (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool operator < (const softdouble& a) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast64_t uiA = v, uiB = a.v;
+            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
+                                      (uiA != uiB) && (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool operator >= (const softdouble& a) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast64_t uiA = a.v, uiB = v;
+            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
+                                      (uiA == uiB) || (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool operator <= (const softdouble& a) const
+    {
+        if(this->isNaN() || a.isNaN()) return false;
+        else
+        {
+            uint_fast64_t uiA = v, uiB = a.v;
+            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
+                                      (uiA == uiB) || (signA ^ (uiA < uiB));
+        }
+    }
+
+    inline bool isNaN() const { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
+    inline bool isInf() const { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
+    inline bool isSubnormal() const { return ((v >> 52) & (uint_fast64_t)(0x7FF)) == 0; }
 
     static softdouble zero() { return softdouble::fromRaw( 0 ); }
     static softdouble  inf() { return softdouble::fromRaw( (uint_fast64_t)(0x7FF) << 52 ); }
     static softdouble  nan() { return softdouble::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) ); }
     static softdouble  one() { return softdouble::fromRaw( (uint_fast64_t)( 1023) << 52 ); }
+    static softdouble  min() { return softdouble::fromRaw( (uint_fast64_t)( 0x01) << 52 ); }
+    static softdouble  eps() { return softdouble::fromRaw( (uint_fast64_t)( 1023 - 52 ) << 52 ); }
+    static softdouble  max() { return softdouble::fromRaw( ((uint_fast64_t)(0x7FF) << 52) - 1 ); }
 
     uint64_t v;
 };
@@ -239,6 +345,16 @@ CV_EXPORTS softfloat  pow( const softfloat&  a, const softfloat&  b);
 CV_EXPORTS softdouble pow( const softdouble& a, const softdouble& b);
 
 CV_EXPORTS softfloat cbrt(const softfloat& a);
+
+/*
+TODOs:
+
+sin, cos
+
+signbit, copysign
+nextafter
+frexp, ldexp
+*/
 
 }
 
