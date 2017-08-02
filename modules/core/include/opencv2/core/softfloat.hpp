@@ -157,6 +157,12 @@ public:
     inline bool isInf() const { return (v & 0x7fffffff) == 0x7f800000; }
     inline bool isSubnormal() const { return ((v >> 23) & 0xFF) == 0; }
 
+    inline bool getSign() const { return (v >> 31) != 0; }
+    inline softfloat& setSign(bool sign) { v = (v & ((1U << 31) - 1)) | ((uint32_t)sign << 31); return *this; }
+    inline int getExp() const { return ((v >> 23) & 0xFF) - 127; }
+    inline softfloat& setExp(int e) { v = (v & 0x807fffff) | (((e + 127) & 0xFF) << 23 ) ; return *this; }
+
+
     static softfloat zero() { return softfloat::fromRaw( 0 ); }
     static softfloat  inf() { return softfloat::fromRaw( 0xFF << 23 ); }
     static softfloat  nan() { return softfloat::fromRaw( 0x7fffffff ); }
@@ -219,7 +225,7 @@ public:
         else
         {
             uint_fast64_t uiA = a.v, uiB = v;
-            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
             return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
                                       (uiA != uiB) && (signA ^ (uiA < uiB));
         }
@@ -231,7 +237,7 @@ public:
         else
         {
             uint_fast64_t uiA = v, uiB = a.v;
-            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
             return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
                                       (uiA != uiB) && (signA ^ (uiA < uiB));
         }
@@ -243,7 +249,7 @@ public:
         else
         {
             uint_fast64_t uiA = a.v, uiB = v;
-            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
             return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
                                       (uiA == uiB) || (signA ^ (uiA < uiB));
         }
@@ -255,7 +261,7 @@ public:
         else
         {
             uint_fast64_t uiA = v, uiB = a.v;
-            bool signA = (((uint64_t) (uiA)>>63) != 0), signB = (((uint64_t) (uiB)>>63) != 0);
+            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
             return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
                                       (uiA == uiB) || (signA ^ (uiA < uiB));
         }
@@ -263,7 +269,14 @@ public:
 
     inline bool isNaN() const { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
     inline bool isInf() const { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
-    inline bool isSubnormal() const { return ((v >> 52) & (uint_fast64_t)(0x7FF)) == 0; }
+    inline bool isSubnormal() const { return ((v >> 52) & 0x7FF) == 0; }
+
+    inline bool getSign() const { return (v >> 63) != 0; }
+    softdouble& setSign(bool sign) { v = (v & ((1ULL << 63) - 1)) | ((uint_fast64_t)(sign) << 63); return *this; }
+
+    inline int getExp() const { return ((v >> 52) & 0x7FF) - 1023; }
+    inline softdouble& setExp(int e) { v = (v & 0x800FFFFFFFFFFFFF) | (((e + 1023) & 0x7FF) << 52); return *this; }
+
 
     static softdouble zero() { return softdouble::fromRaw( 0 ); }
     static softdouble  inf() { return softdouble::fromRaw( (uint_fast64_t)(0x7FF) << 52 ); }
@@ -351,7 +364,6 @@ TODOs:
 
 sin, cos
 
-signbit, copysign
 nextafter
 frexp, ldexp
 */
