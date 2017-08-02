@@ -181,6 +181,7 @@ public:
     static softfloat  min() { return softfloat::fromRaw( 0x01 << 23 ); }
     static softfloat  eps() { return softfloat::fromRaw( (127 - 23) << 23 ); }
     static softfloat  max() { return softfloat::fromRaw( (0xFF << 23) - 1 ); }
+    static softfloat   pi() { return softfloat::fromRaw( 0x40490fdb ); }
 
     uint32_t v;
 };
@@ -311,6 +312,7 @@ public:
     static softdouble  min() { return softdouble::fromRaw( (uint_fast64_t)( 0x01) << 52 ); }
     static softdouble  eps() { return softdouble::fromRaw( (uint_fast64_t)( 1023 - 52 ) << 52 ); }
     static softdouble  max() { return softdouble::fromRaw( ((uint_fast64_t)(0x7FF) << 52) - 1 ); }
+    static softdouble   pi() { return softdouble::fromRaw( CV_BIG_INT(0x400921FB54442D18) ); }
 
     uint64_t v;
 };
@@ -383,7 +385,10 @@ CV_EXPORTS softdouble log( const softdouble& a );
 CV_EXPORTS softfloat  pow( const softfloat&  a, const softfloat&  b);
 CV_EXPORTS softdouble pow( const softdouble& a, const softdouble& b);
 
-CV_EXPORTS softfloat cbrt(const softfloat& a);
+CV_EXPORTS softfloat cbrt( const softfloat& a );
+
+CV_EXPORTS softdouble sin( const softdouble& a );
+CV_EXPORTS softdouble cos( const softdouble& a );
 
 /*
 TODOs:
