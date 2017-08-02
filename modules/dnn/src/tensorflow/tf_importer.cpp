@@ -677,6 +677,13 @@ void TFImporter::populateNet(Net dstNet)
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
+        else if (type == "Elu")
+        {
+            int id = dstNet.addLayer(name, "ELU", layerParams);
+            layer_id[name] = id;
+
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+        }
         else if (type == "MaxPool")
         {
             layerParams.set("pool", "max");
