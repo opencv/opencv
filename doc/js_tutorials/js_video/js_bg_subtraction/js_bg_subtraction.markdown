@@ -91,7 +91,7 @@ bgsLoopIndex = setInterval(
 <div id="contentarea">
     <button id="bgsStartup" disabled="true" onclick="bgsStartup()">try it</button>
     <button id="bgsStop" disabled="true" onclick="bgsStopVideo()">stop</button><br>
-    <video id="bgsVideo" src="box.mp4" width="320">Your browser does not support the video tag.</video>
+    <video id="bgsVideo" src="box.mp4" width="320" muted>Your browser does not support the video tag.</video>
     <canvas id="bgsCanvasOutput"></canvas>
 </div>
 <script src="adapter.js"></script>

@@ -126,7 +126,7 @@ msLoopIndex = setInterval(
 <div id="contentarea">
     <button id="msStartup" disabled="true" onclick="msStartup()">try it</button>
     <button id="msStop" disabled="true" onclick="msStopVideo()">stop</button><br>
-    <video id="msVideo" src="cup.mp4" width="640" hidden>Your browser does not support the video tag.</video>
+    <video id="msVideo" src="cup.mp4" width="640" muted hidden>Your browser does not support the video tag.</video>
     <canvas id="msCanvasOutput"></canvas>
 </div>
 <script src="adapter.js"></script>
@@ -321,7 +321,7 @@ csLoopIndex = setInterval(
 <div id="contentarea">
     <button id="csStartup" disabled="true" onclick="csStartup()">try it</button>
     <button id="csStop" disabled="true" onclick="csStopVideo()">stop</button><br>
-    <video id="csVideo" src="cup.mp4" width="640" hidden>Your browser does not support the video tag.</video>
+    <video id="csVideo" src="cup.mp4" width="640" muted hidden>Your browser does not support the video tag.</video>
     <canvas id="csCanvasOutput"></canvas>
 </div>
 <script>

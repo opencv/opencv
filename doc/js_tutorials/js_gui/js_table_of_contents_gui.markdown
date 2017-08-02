@@ -1,4 +1,4 @@
-Gui Features in OpenCV-JavaScript {#tutorial_js_table_of_contents_gui}
+Gui Features {#tutorial_js_table_of_contents_gui}
 ======================
 
 -   @subpage tutorial_js_image_display

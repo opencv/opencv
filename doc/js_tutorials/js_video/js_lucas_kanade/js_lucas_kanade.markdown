@@ -192,7 +192,7 @@ lkofLoopIndex = setInterval(
 <div id="contentarea">
     <button id="lkofStartup" disabled="true" onclick="lkofStartup()">try it</button>
     <button id="lkofStop" disabled="true" onclick="lkofStopVideo()">stop</button><br>
-    <video id="lkofVideo" src="box.mp4" width="640" hidden>Your browser does not support the video tag.</video>
+    <video id="lkofVideo" src="box.mp4" width="640" muted hidden>Your browser does not support the video tag.</video>
     <canvas id="lkofCanvasOutput"></canvas>
 </div>
 <script src="adapter.js"></script>
@@ -384,7 +384,7 @@ dofLoopIndex = setInterval(
 <div id="contentarea">
     <button id="dofStartup" disabled="true" onclick="dofStartup()">try it</button>
     <button id="dofStop" disabled="true" onclick="dofStopVideo()">stop</button><br>
-    <video id="dofVideo" src="box.mp4" width="320">Your browser does not support the video tag.</video>
+    <video id="dofVideo" src="box.mp4" width="320" muted>Your browser does not support the video tag.</video>
     <canvas id="dofCanvasOutput"></canvas>
 </div>
 <script>

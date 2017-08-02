@@ -1,11 +1,11 @@
-Install OpenCV-JavaScript {#tutorial_js_setup}
+Build OpenCV.js {#tutorial_js_setup}
 ===============================
 
 
 Installing Emscripten
 -----------------------------
 
-[Emscripten](https://github.com/kripken/emscripten) is an LLVM-to-JavaScript compiler. We will use Emscripten to build OpenCV-JavaScript.
+[Emscripten](https://github.com/kripken/emscripten) is an LLVM-to-JavaScript compiler. We will use Emscripten to build OpenCV.js.
 
 To Install emscripten, you can follow instructions of [Emscripten SDK](https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
 
@@ -49,7 +49,7 @@ git clone https://github.com/opencv/opencv.git
 @note
 You may need to install `git` for your development environment.
 
-Building OpenCV-JavaScript from Source Using CMake
+Building OpenCV.js from Source Using CMake
 ---------------------------------------
 
 -#  Create a temporary directory, which we denote as \<cmake_build_dir\>, where you want to put
@@ -63,7 +63,7 @@ Building OpenCV-JavaScript from Source Using CMake
     cd build_js
     @endcode
 -#  Configuring. Run cmake [\<some optional parameters\>] \<path to the OpenCV source directory\>
-	To build OpenCV-JavaScript, you need to append `-D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake`.
+	To build OpenCV.js, you need to append `-D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake`.
 
     For example
     @code{.bash}

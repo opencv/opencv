@@ -1,4 +1,4 @@
-Image Processing in OpenCV {#tutorial_js_table_of_contents_imgproc}
+Image Processing {#tutorial_js_table_of_contents_imgproc}
 ==========================
 
 -   @subpage tutorial_js_colorspaces
