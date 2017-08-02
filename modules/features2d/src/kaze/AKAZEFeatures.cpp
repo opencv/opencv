@@ -2077,7 +2077,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
     }
   }
 
-  srand(1024);
+  RNG rng(1024);
   Mat_<int> comps = Mat_<int>(nchannels * (int)ceil(nbits / (float)nchannels), 2);
   comps = 1000;
 
@@ -2089,7 +2089,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   samples = -1;
 
   for (int i = 0; i < npicks; i++) {
-    int k = rand() % (fullM.rows - i);
+    int k = rng(fullM.rows - i);
     if (i < 6) {
       // Force use of the coarser grid values and comparisons
       k = i;
