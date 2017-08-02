@@ -435,9 +435,9 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 #define CV_Assert_5( expr1, expr2, expr3, expr4, expr5 ) CV_Assert_4(expr1, expr2, expr3, expr4); CV_Assert_1(expr5)
 #define CV_Assert_6( expr1, expr2, expr3, expr4, expr5, expr6 ) CV_Assert_5(expr1, expr2, expr3, expr4, expr5); CV_Assert_1(expr6)
 #define CV_Assert_7( expr1, expr2, expr3, expr4, expr5, expr6, expr7 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6 ); CV_Assert_1(expr7)
-#define CV_Assert_8( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6, expr7 ); CV_Assert_1(expr8)
-#define CV_Assert_9( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ); CV_Assert_1(expr9)
-#define CV_Assert_10( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ); CV_Assert_1(expr10)
+#define CV_Assert_8( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ) CV_Assert_7(expr1, expr2, expr3, expr4, expr5, expr6, expr7 ); CV_Assert_1(expr8)
+#define CV_Assert_9( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ) CV_Assert_8(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ); CV_Assert_1(expr9)
+#define CV_Assert_10( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10 ) CV_Assert_9(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ); CV_Assert_1(expr10)
 
 #define CV_Assert(...)               CVAUX_CONCAT(CV_Assert_, CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)
 
