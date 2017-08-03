@@ -1045,10 +1045,9 @@ Ptr<Importer> createTensorflowImporter(const String&)
 
 Net readNetFromTensorflow(const String &model)
 {
-    Ptr<Importer> importer = createTensorflowImporter(model);
+    TFImporter importer(model.c_str());
     Net net;
-    if (importer)
-        importer->populateNet(net);
+    importer.populateNet(net);
     return net;
 }
 

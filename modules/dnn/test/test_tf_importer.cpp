@@ -29,9 +29,8 @@ TEST(Test_TensorFlow, read_inception)
     Net net;
     {
         const string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);
-        Ptr<Importer> importer = createTensorflowImporter(model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromTensorflow(model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
@@ -53,9 +52,8 @@ TEST(Test_TensorFlow, inception_accuracy)
     Net net;
     {
         const string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);
-        Ptr<Importer> importer = createTensorflowImporter(model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromTensorflow(model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("grace_hopper_227.png"));

@@ -51,12 +51,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         sourceImageFile = f.toString();
         if(!f.exists()) throw new Exception("Test image is missing: " + sourceImageFile);
 
-        net = new Net();
-        if(net.empty()) {
-            Importer importer = Dnn.createTensorflowImporter(modelFileName);
-            importer.populateNet(net);
-        }
-
+        net = Dnn.readNetFromTensorflow(modelFileName);
     }
 
     public void testGetLayerTypes() {
