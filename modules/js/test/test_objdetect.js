@@ -60,8 +60,6 @@ QUnit.test("Cascade classification", function(assert) {
 
 		rectList.delete();
 		weights.delete();
-		rect1.delete();
-		rect2.delete();
 	}
 
 	// CascadeClassifier

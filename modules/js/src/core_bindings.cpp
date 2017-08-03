@@ -304,7 +304,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
     emscripten::class_<cv::RNG> ("RNG");
 
 #define EMSCRIPTEN_CV_SIZE(type) \
-    value_object<type>("#type") \
+    emscripten::value_object<type>("#type") \
         .field("width", &type::width) \
         .field("height", &type::height);
 
@@ -312,7 +312,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
     EMSCRIPTEN_CV_SIZE(Size2f)
 
 #define EMSCRIPTEN_CV_POINT(type) \
-    value_object<type>("#type") \
+    emscripten::value_object<type>("#type") \
         .field("x", &type::x) \
         .field("y", &type::y); \
 
@@ -320,15 +320,11 @@ EMSCRIPTEN_BINDINGS(Utils) {
     EMSCRIPTEN_CV_POINT(Point2f)
 
 #define EMSCRIPTEN_CV_RECT(type, name) \
-    emscripten::class_<cv::Rect_<type>> (name) \
-        .constructor<>() \
-        .constructor<const cv::Point_<type>&, const cv::Size_<type>&>() \
-        .constructor<type, type, type, type>() \
-        .constructor<const cv::Rect_<type>&>() \
-        .property("x", &cv::Rect_<type>::x) \
-        .property("y", &cv::Rect_<type>::y) \
-        .property("width", &cv::Rect_<type>::width) \
-        .property("height", &cv::Rect_<type>::height);
+    emscripten::value_object<cv::Rect_<type>> (name) \
+        .field("x", &cv::Rect_<type>::x) \
+        .field("y", &cv::Rect_<type>::y) \
+        .field("width", &cv::Rect_<type>::width) \
+        .field("height", &cv::Rect_<type>::height);
 
     EMSCRIPTEN_CV_RECT(int, "Rect")
     EMSCRIPTEN_CV_RECT(float, "Rect2f")

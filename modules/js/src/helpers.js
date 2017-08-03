@@ -78,3 +78,49 @@ Module["VideoCapture"] = function(videoID) {
         frame.data().set(ctx.getImageData(0, 0, video.width, video.height).data);
     };
 }
+
+function Rect() {
+    var x, y, width, height;
+    switch (arguments.length) {
+        case 0: {
+            // new cv.Rect()
+            this.x = 0;
+            this.y = 0;
+            this.width = 0;
+            this.height = 0;
+            break;
+        }
+        case 1: {
+            // new cv.Rect(rect)
+            var rect = arguments[0];
+            this.x = rect.x;
+            this.y = rect.y;
+            this.width = rect.width;
+            this.height = rect.height;
+            break;
+        }
+        case 2: {
+            // new cv.Rect(point, size)
+            var point = arguments[0];
+            var size = arguments[1];
+            this.x = point.x;
+            this.y = point.y;
+            this.width = size.width;
+            this.height = size.height;
+            break;
+        }
+        case 4: {
+            // new cv.Rect(x, y, width, height)
+            this.x = arguments[0];
+            this.y = arguments[1];
+            this.width = arguments[2];
+            this.height = arguments[3];
+            break
+        }
+        default: {
+            throw("Invalid arguments")
+        }
+    }
+}
+
+Module["Rect"] = Rect;

@@ -60,3 +60,46 @@ QUnit.test("Test vectors", function(assert) {
 
 	pointVector.delete();
 });
+QUnit.test("Test Rect", function(assert) {
+	let rectVector = new cv.RectVector();
+	let rect = {x: 1, y: 2, width: 3, height: 4};
+	rectVector.push_back(rect);
+	rectVector.push_back(new cv.Rect());
+	rectVector.push_back(new cv.Rect(rect));
+	rectVector.push_back(new cv.Rect({x: 5, y: 6}, {width: 7, height: 8}));
+	rectVector.push_back(new cv.Rect(9, 10, 11, 12));
+
+	assert.equal(rectVector.size(), 5);
+
+	let item = rectVector.get(0);
+	assert.equal(item.x, 1);
+	assert.equal(item.y, 2);
+	assert.equal(item.width, 3);
+	assert.equal(item.height, 4);
+
+	item = rectVector.get(1);
+	assert.equal(item.x, 0);
+	assert.equal(item.y, 0);
+	assert.equal(item.width, 0);
+	assert.equal(item.height, 0);
+
+	item = rectVector.get(2);
+	assert.equal(item.x, 1);
+	assert.equal(item.y, 2);
+	assert.equal(item.width, 3);
+	assert.equal(item.height, 4);
+
+	item = rectVector.get(3);
+	assert.equal(item.x, 5);
+	assert.equal(item.y, 6);
+	assert.equal(item.width, 7);
+	assert.equal(item.height, 8);
+
+	item = rectVector.get(4);
+	assert.equal(item.x, 9);
+	assert.equal(item.y, 10);
+	assert.equal(item.width, 11);
+	assert.equal(item.height, 12);
+
+	rectVector.delete();
+});
