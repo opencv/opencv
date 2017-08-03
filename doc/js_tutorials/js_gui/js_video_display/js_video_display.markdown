@@ -56,8 +56,10 @@ let loopIndex = setInterval(
     }, 33);
 @endcode
 
-In addition, OpenCV.js implements cv.VideoCapture using the above method. You need not to  
-add the hidden canvas tag manually. The above code of playing video could be simplified as below.
+In addition, OpenCV.js implements cv.VideoCapture using the above method. You need not to add the 
+hidden canvas tag manually. For performance reasons, the mat passed to read() function should be 
+constructed with cv.CV_8UC4 type and same size as the video. The above code of playing video could 
+be simplified as below.
 @code{.js}
 let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC1);

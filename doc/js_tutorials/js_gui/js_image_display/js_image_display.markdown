@@ -27,8 +27,9 @@ Then use cv.matFromArray to construct a cv.Mat.
 let src = cv.matFromArray(imgData, cv.CV_8UC4);
 @endcode
 
-@note Cause canvas only support 8-bit RGBA image, the cv.Mat type is cv.CV_8UC4. It is different 
-from native OpenCV, cause images returned and shown by the native **imread** and **imshow** have the channels stored in BGR order.
+@note Cause canvas only support 8-bit RGBA image with continuous storage, the cv.Mat type is cv.CV_8UC4. 
+It is different from native OpenCV, cause images returned and shown by the native **imread** and 
+**imshow** have the channels stored in BGR order.
 
 Display an image
 ----------------
