@@ -62,13 +62,13 @@ struct LibDNNConvConfig
                          stride(1, 1),
                          dilation(1, 1)
     {}
-    std::vector<int_tp> in_shape;
-    std::vector<int_tp> out_shape;
-    std::vector<int_tp> kernel;
-    std::vector<int_tp> pad;
-    std::vector<int_tp> stride;
-    std::vector<int_tp> dilation;
-    int_tp group = 1;
+    std::vector<int32_t> in_shape;
+    std::vector<int32_t> out_shape;
+    std::vector<int32_t> kernel;
+    std::vector<int32_t> pad;
+    std::vector<int32_t> stride;
+    std::vector<int32_t> dilation;
+    int32_t group = 1;
     bool bias_term = false;
     bool weights_backward = true;
     bool bias_backward = true;
@@ -83,7 +83,7 @@ class LibDNNConvSpatial
         ~LibDNNConvSpatial();
         bool Forward(const Dtype* bottom_data, const Dtype* weight,
                      const Dtype* bias,
-                     Dtype* top_data, int_tp batch_size);
+                     Dtype* top_data, int32_t batch_size);
 
     private:
         struct kernelConfig
@@ -92,24 +92,24 @@ class LibDNNConvSpatial
             float executionTime;
             size_t local_work_size[3];
             size_t global_work_size[3];
-            int_tp workItem_output[3];
+            int32_t workItem_output[3];
             bool verified;
             bool autoTune;
             bool tested;
             bool swizzle_weights;
             bool use_null_local;
-            int_tp kernelType;
+            int32_t kernelType;
 
             kernelConfig()
             {}
 
             kernelConfig(std::string name, size_t* global_size, size_t* local_size,
-                         int_tp* workItem,
+                         int32_t* workItem,
                          bool tune, bool swizzle, bool null_local,
-                         int_tp type = 0)
+                         int32_t type = 0)
             {
                 kernelName = name;
-                for (int_tp x = 0; x < 3; x++)
+                for (int32_t x = 0; x < 3; x++)
                 {
                     local_work_size[x] = local_size[x];
                     global_work_size[x] = global_size[x];
@@ -158,15 +158,15 @@ class LibDNNConvSpatial
                   const Dtype* weight,
                   const Dtype* bias,
                   const Dtype* bottom_data,
-                  int_tp batch_size);
+                  int32_t batch_size);
         void generateKernelSrc();
         uint64 crc64(const uchar* data, size_t size, uint64 crc0 = 0);
         std::string generateHeader();
         std::string generateDefs();
-        std::string generateKernels(int_tp kernelType,
-                                    int_tp blockM,
-                                    int_tp blockK,
-                                    int_tp blockN);
+        std::string generateKernels(int32_t kernelType,
+                                    int32_t blockM,
+                                    int32_t blockK,
+                                    int32_t blockN);
 
         ocl::Program compileKernel();
         typedef std::map<std::string, ocl::Program> phash_t;
@@ -179,31 +179,31 @@ class LibDNNConvSpatial
         void setupConvolution(const Dtype *bottom,
                               Dtype *top,
                               const Dtype *verify_blob);
-        void createConvolutionKernel(int_tp kernelType,
-                                     int_tp blockWidth,
-                                     int_tp blockHeight,
-                                     int_tp blockDepth);
-        bool setupIDLF(int_tp blockWidth,
-                       int_tp blockHeight,
-                       int_tp blockDepth);
-        bool createBasicKernel(int_tp blockWidth,
-                               int_tp blockHeight,
-                               int_tp blockDepth);
-        bool createGEMMLikeConvKernel(int_tp blockWidth,
-                                      int_tp blockHeight,
-                                      int_tp blockDepth);
+        void createConvolutionKernel(int32_t kernelType,
+                                     int32_t blockWidth,
+                                     int32_t blockHeight,
+                                     int32_t blockDepth);
+        bool setupIDLF(int32_t blockWidth,
+                       int32_t blockHeight,
+                       int32_t blockDepth);
+        bool createBasicKernel(int32_t blockWidth,
+                               int32_t blockHeight,
+                               int32_t blockDepth);
+        bool createGEMMLikeConvKernel(int32_t blockWidth,
+                                      int32_t blockHeight,
+                                      int32_t blockDepth);
         cl_int convolve(const Dtype *bottom,
-                        const Dtype *top, int_tp index,
-                        int_tp numImages,
+                        const Dtype *top, int32_t index,
+                        int32_t numImages,
                         kernelConfig* config);
         float timedConvolve(const Dtype *bottom,
-                            const Dtype *top, int_tp index,
-                            int_tp numImages,
+                            const Dtype *top, int32_t index,
+                            int32_t numImages,
                             kernelConfig* config);
         bool verifyResult(const Dtype *bottom,
                           Dtype *top,
-                          int_tp index,
-                          int_tp numImages,
+                          int32_t index,
+                          int32_t numImages,
                           const Dtype *verify_blob,
                           kernelConfig* config);
         bool tuneLocalSize(const Dtype *bottom,
@@ -211,14 +211,14 @@ class LibDNNConvSpatial
                            kernelConfig*);
         void swizzleWeights(const Dtype *bottom,
                             const Dtype *top,
-                            int_tp swizzle_factor,
+                            int32_t swizzle_factor,
                             bool interleave = false);
         void generateKey();
-        std::string generateSpecificKey(int_tp type, int_tp blockWidth,
-                                          int_tp blockHeight,
-                                          int_tp blockDepth);
-        void computeGlobalSize(int_tp batch,
-                               int_tp* workItemOutput,
+        std::string generateSpecificKey(int32_t type, int32_t blockWidth,
+                                          int32_t blockHeight,
+                                          int32_t blockDepth);
+        void computeGlobalSize(int32_t batch,
+                               int32_t* workItemOutput,
                                size_t* localSizes,
                                size_t* globalSizes);
         bool loadCachedConfig();
@@ -234,7 +234,7 @@ class LibDNNConvSpatial
         void cleanTmpSubBuffers(const Dtype *bottom,
                                 const Dtype *top);
 
-        int_tp group_;
+        int32_t group_;
         bool bias_term_;
         std::map<std::tuple<cl_mem, size_t, size_t>, cl_mem> subBufferMap;
         std::vector<cl_mem> tmpSubBuffers;
@@ -243,54 +243,54 @@ class LibDNNConvSpatial
         const Dtype* weight_;
         Dtype* swizzled_weights_;
         const Dtype* bias_;
-        int_tp bottom_index_;
-        int_tp output_h_;
-        int_tp output_w_;
-        int_tp kernel_h_;
-        int_tp kernel_w_;
-        int_tp height_;
-        int_tp width_;
-        int_tp pad_h_;
-        int_tp pad_w_;
-        int_tp stride_h_;
-        int_tp stride_w_;
-        int_tp dilation_h_;
-        int_tp dilation_w_;
+        int32_t bottom_index_;
+        int32_t output_h_;
+        int32_t output_w_;
+        int32_t kernel_h_;
+        int32_t kernel_w_;
+        int32_t height_;
+        int32_t width_;
+        int32_t pad_h_;
+        int32_t pad_w_;
+        int32_t stride_h_;
+        int32_t stride_w_;
+        int32_t dilation_h_;
+        int32_t dilation_w_;
 
         /// M_ is the channel dimension of the output for a single group, which is the
         /// leading dimension of the filter matrix.
-        int_tp M_;
+        int32_t M_;
         /// K_ is the dimension of an unrolled input for a single group, which is the
         /// leading dimension of the data matrix.
-        int_tp K_;
+        int32_t K_;
         /// N_ is the spatial dimension of the output, the H x W, which are the last
         /// dimensions of the data and filter matrices.
-        int_tp N_;
+        int32_t N_;
 
         bool tuned_;
         std::string key_;
         std::string short_key_;
         std::string kernel_name_;
         std::stringstream cache_path_;
-        int_tp kernel_index_;
+        int32_t kernel_index_;
         std::vector<kernelConfig*> kernelQueue;
         kernelConfig* bestKernelConfig;
 
-        int_tp bottom_dim_;
-        int_tp top_dim_;
-        int_tp num_;
-        int_tp channels_;
-        int_tp out_spatial_dim_;
-        int_tp num_output_;
-        int_tp kernel_dim_;
+        int32_t bottom_dim_;
+        int32_t top_dim_;
+        int32_t num_;
+        int32_t channels_;
+        int32_t out_spatial_dim_;
+        int32_t num_output_;
+        int32_t kernel_dim_;
 
-        int_tp kernelType_;
-        int_tp blockM_;
-        int_tp blockK_;
-        int_tp blockN_;
+        int32_t kernelType_;
+        int32_t blockM_;
+        int32_t blockK_;
+        int32_t blockN_;
         std::string options_;
         std::string kernel_;
-        int_tp prev_kernel_type_;
+        int32_t prev_kernel_type_;
 };
 
 typedef enum {
@@ -308,14 +308,14 @@ struct LibDNNPoolConfig
                          stride(1, 1),
                          dilation(1, 1)
     {}
-    std::vector<int_tp> in_shape;
-    std::vector<int_tp> out_shape;
-    std::vector<int_tp> kernel;
-    std::vector<int_tp> pad;
-    std::vector<int_tp> stride;
-    std::vector<int_tp> dilation;
+    std::vector<int32_t> in_shape;
+    std::vector<int32_t> out_shape;
+    std::vector<int32_t> kernel;
+    std::vector<int32_t> pad;
+    std::vector<int32_t> stride;
+    std::vector<int32_t> dilation;
 
-    int_tp channels;
+    int32_t channels;
     libdnnPoolingMethod_t pool_method = LIBDNN_POOLING_METHOD_MAX;
     bool global_pooling = false;
 };
@@ -334,33 +334,33 @@ class LibDNNPool
         cl_mem mask_idx_;
 
         // Pooling parameters
-        std::vector<int_tp> pad_;
-        std::vector<int_tp> stride_;
-        std::vector<int_tp> kernel_shape_;
-        std::vector<int_tp> im_in_shape_;
-        std::vector<int_tp> im_out_shape_;
+        std::vector<int32_t> pad_;
+        std::vector<int32_t> stride_;
+        std::vector<int32_t> kernel_shape_;
+        std::vector<int32_t> im_in_shape_;
+        std::vector<int32_t> im_out_shape_;
 
         libdnnPoolingMethod_t pool_method_;
-        int_tp count_;
-        int_tp batch_size_;
-        int_tp channels_;
-        int_tp kernel_h_;
-        int_tp kernel_w_;
-        int_tp stride_h_;
-        int_tp stride_w_;
-        int_tp pad_h_;
-        int_tp pad_w_;
-        int_tp height_;
-        int_tp width_;
-        int_tp pooled_height_;
-        int_tp pooled_width_;
+        int32_t count_;
+        int32_t batch_size_;
+        int32_t channels_;
+        int32_t kernel_h_;
+        int32_t kernel_w_;
+        int32_t stride_h_;
+        int32_t stride_w_;
+        int32_t pad_h_;
+        int32_t pad_w_;
+        int32_t height_;
+        int32_t width_;
+        int32_t pooled_height_;
+        int32_t pooled_width_;
 };
 
 struct LibDNNInnerProductConfig
 {
-    int_tp num_output;
-    int_tp M;
-    int_tp K;
+    int32_t num_output;
+    int32_t M;
+    int32_t K;
     bool bias_term;
     bool transpose = false;
     bool phase_test = true;
@@ -377,11 +377,11 @@ class LibDNNInnerProduct
                      Dtype* top_data);
     private:
         LibDNNInnerProductConfig config_;
-        int_tp axis_;
-        int_tp num_output_;
-        int_tp M_;
-        int_tp N_;
-        int_tp K_;
+        int32_t axis_;
+        int32_t num_output_;
+        int32_t M_;
+        int32_t N_;
+        int32_t K_;
         bool bias_term_;
         bool transpose_;
         bool image_copied_;
@@ -399,18 +399,18 @@ struct LibDNNLRNConfig
 {
     LibDNNLRNConfig()
     {}
-    std::vector<int_tp> in_shape;
+    std::vector<int32_t> in_shape;
     LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type;
     bool phase_test = true;
-    int_tp local_size;
+    int32_t local_size;
     float alpha;
     float beta;
     float k;
     bool norm_by_size;
-    int_tp batch_size;
-    int_tp channels;
-    int_tp height;
-    int_tp width;
+    int32_t batch_size;
+    int32_t channels;
+    int32_t height;
+    int32_t width;
 };
 
 template<typename Dtype>
@@ -424,14 +424,14 @@ class LibDNNLRN
         void crossChannelForward(const Dtype* bottom_data, Dtype* top_data);
         LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type_;
         bool phase_test_;
-        int_tp size_;
+        int32_t size_;
         Dtype alpha_;
         Dtype beta_;
         Dtype k_;
-        int_tp num_;
-        int_tp channels_;
-        int_tp height_;
-        int_tp width_;
+        int32_t num_;
+        int32_t channels_;
+        int32_t height_;
+        int32_t width_;
         bool norm_by_size_;
 };
 
@@ -439,9 +439,9 @@ struct LibDNNSoftmaxConfig
 {
     LibDNNSoftmaxConfig()
     {}
-    std::vector<int_tp> in_shape;
-    int_tp axis;
-    int_tp channels;
+    std::vector<int32_t> in_shape;
+    int32_t axis;
+    int32_t channels;
 };
 
 template<typename Dtype>
@@ -453,11 +453,11 @@ class LibDNNSoftmax
         bool Forward(const Dtype* bottom_data, Dtype* top_data);
 
     private:
-        int_tp softmax_axis_;
-        int_tp inner_num_;
-        int_tp outer_num_;
-        int_tp channels_;
-        int_tp count_;
+        int32_t softmax_axis_;
+        int32_t inner_num_;
+        int32_t outer_num_;
+        int32_t channels_;
+        int32_t count_;
         bool use_slm_;
         Dtype *scale_data_;
 };

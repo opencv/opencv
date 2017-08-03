@@ -50,15 +50,15 @@
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
 
 template<typename Dtype>
-void libdnnGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                const CBLAS_TRANSPOSE TransB, const int_tp M,
-                const int_tp N, const int_tp K, const Dtype alpha,
-                const cl_mem A, const int_tp offA, const cl_mem B,
-                const int_tp offB, const Dtype beta, cl_mem C,
-                const int_tp offC , const bool is_image_a = false,
+void libdnnGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                const CBLAS_TRANSPOSE TransB, const int32_t M,
+                const int32_t N, const int32_t K, const Dtype alpha,
+                const cl_mem A, const int32_t offA, const cl_mem B,
+                const int32_t offB, const Dtype beta, cl_mem C,
+                const int32_t offC , const bool is_image_a = false,
                 const bool is_image_b = false);
 
-void libdnnGEMMCopyBufferToImage(int_tp ctx_id,
+void libdnnGEMMCopyBufferToImage(int32_t ctx_id,
                                  cl_mem *image, cl_mem buffer, int offset,
                                  bool is_matrix_a, bool transpose,
                                  bool padding, int padded_height,
@@ -67,19 +67,19 @@ void libdnnGEMMCopyBufferToImage(int_tp ctx_id,
                                  cl_event *wait_list, cl_event *event);
 
 template<typename Dtype>
-void libdnnGEMV(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                const int_tp M, const int_tp N, const Dtype alpha,
-                const cl_mem A, const int_tp offA, const cl_mem x,
-                const int_tp offx, const Dtype beta, cl_mem y,
-                const int_tp offy);
+void libdnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                const int32_t M, const int32_t N, const Dtype alpha,
+                const cl_mem A, const int32_t offA, const cl_mem x,
+                const int32_t offx, const Dtype beta, cl_mem y,
+                const int32_t offy);
 
 template<typename Dtype>
-void libdnnAXPY(const int_tp ctx_id, const int_tp N, const Dtype alpha,
-                const cl_mem x, const int_tp offx, cl_mem y,
-                const int_tp offy);
+void libdnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+                const cl_mem x, const int32_t offx, cl_mem y,
+                const int32_t offy);
 
 template<typename Dtype>
-void libdnnSet(const int_tp ctx_id, const int_tp N, const Dtype alpha,
-                      cl_mem Y, const int_tp offY);
+void libdnnSet(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+                      cl_mem Y, const int32_t offY);
 #endif  // HAVE_OPENCL
 #endif

@@ -93,7 +93,7 @@ void LibDNNLRN<Dtype>::crossChannelForward(const Dtype* bottom_data,
     CHECK_EQ(phase_test_, true) << "Only support forward inference.";
 
     cl_uint argIdx = 0;
-    int_tp n_threads = num_ * height_ * width_;
+    int32_t n_threads = num_ * height_ * width_;
     size_t global_work_size_[1] = {(size_t)n_threads};
     String opts = " -cl-no-subgroup-ifp ";
     ocl::Kernel oclk_lrn_fill;

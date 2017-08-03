@@ -80,7 +80,7 @@ static void CL_CALLBACK gemmCallback(cl_event event,
 // Will return image to caller if the input image is NULL. Otherwise,
 // will use the image directly. It's caller's responsibility to
 // release the created image.
-void libdnnGEMMCopyBufferToImage(int_tp ctx_id,
+void libdnnGEMMCopyBufferToImage(int32_t ctx_id,
                                             cl_mem *image, cl_mem buffer, int offset,
                                             bool is_matrix_a, bool transpose,
                                             bool padding, int padded_height,
@@ -216,12 +216,12 @@ enum gemm_type_t
     GEMM_TYPE_MAX
 };
 
-static void libdnnFastImageGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                                         const CBLAS_TRANSPOSE TransB, const int_tp M,
-                                         const int_tp N, const int_tp K, const float alpha,
-                                         const cl_mem A, const int_tp offA, const cl_mem B,
-                                         const int_tp offB, const float beta, cl_mem C,
-                                         const int_tp offC, bool is_image_a, bool is_image_b,
+static void libdnnFastImageGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                                         const CBLAS_TRANSPOSE TransB, const int32_t M,
+                                         const int32_t N, const int32_t K, const float alpha,
+                                         const cl_mem A, const int32_t offA, const cl_mem B,
+                                         const int32_t offB, const float beta, cl_mem C,
+                                         const int32_t offC, bool is_image_a, bool is_image_b,
                                          enum gemm_type_t gemm_type)
 {
     CHECK_EQ(gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_32_2, true)
@@ -426,12 +426,12 @@ static void libdnnFastImageGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE Trans
     clSetEventCallback(ev[ev_idx], CL_COMPLETE, &gemmCallback, (void*)arg);
 }
 
-static void libdnnFastBufferGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                                          const CBLAS_TRANSPOSE TransB, const int_tp M,
-                                          const int_tp N, const int_tp K, const float alpha,
-                                          const cl_mem A, const int_tp offA, const cl_mem B,
-                                          const int_tp offB, const float beta, cl_mem C,
-                                          const int_tp offC, enum gemm_type_t gemm_type)
+static void libdnnFastBufferGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                                          const CBLAS_TRANSPOSE TransB, const int32_t M,
+                                          const int32_t N, const int32_t K, const float alpha,
+                                          const cl_mem A, const int32_t offA, const cl_mem B,
+                                          const int32_t offB, const float beta, cl_mem C,
+                                          const int32_t offC, enum gemm_type_t gemm_type)
 {
     CHECK_EQ(gemm_type == GEMM_TYPE_FAST_BUFFER, true)
              << "Invalid fast buffer gemm type." << std::endl;
@@ -552,12 +552,12 @@ static void libdnnFastBufferGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE Tran
 }
 
 template<typename Dtype>
-static void libdnnGEMMCommon(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                                     const CBLAS_TRANSPOSE TransB, const int_tp M,
-                                     const int_tp N, const int_tp K, const Dtype alpha,
-                                     const cl_mem A, const int_tp offA, const cl_mem B,
-                                     const int_tp offB, const Dtype beta, cl_mem C,
-                                     const int_tp offC, bool is_image_a, bool is_image_b,
+static void libdnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                                     const CBLAS_TRANSPOSE TransB, const int32_t M,
+                                     const int32_t N, const int32_t K, const Dtype alpha,
+                                     const cl_mem A, const int32_t offA, const cl_mem B,
+                                     const int32_t offB, const Dtype beta, cl_mem C,
+                                     const int32_t offC, bool is_image_a, bool is_image_b,
                                      gemm_type_t gemm_type)
 {
 
@@ -674,12 +674,12 @@ static void autoTuneGEMMAll(int ctx_id, bool use_fast_gemm_image)
 static std::mutex autoTuneGEMM_mutex;
 
 template<typename Dtype>
-void libdnnGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                       const CBLAS_TRANSPOSE TransB, const int_tp M,
-                       const int_tp N, const int_tp K, const Dtype alpha,
-                       const cl_mem A, const int_tp offA, const cl_mem B,
-                       const int_tp offB, const Dtype beta, cl_mem C,
-                       const int_tp offC, bool is_image_a, bool is_image_b)
+void libdnnGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                       const CBLAS_TRANSPOSE TransB, const int32_t M,
+                       const int32_t N, const int32_t K, const Dtype alpha,
+                       const cl_mem A, const int32_t offA, const cl_mem B,
+                       const int32_t offB, const Dtype beta, cl_mem C,
+                       const int32_t offC, bool is_image_a, bool is_image_b)
 {
     ocl::Device dev = ocl::Device::getDefault();
     bool use_fast_gemm_image = false;
@@ -766,37 +766,37 @@ void libdnnGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
                              preferred_gemm_type);
 }
 
-template void libdnnGEMM<float>(const int_tp ctx_id,
+template void libdnnGEMM<float>(const int32_t ctx_id,
                                        const CBLAS_TRANSPOSE TransA,
                                        const CBLAS_TRANSPOSE TransB,
-                                       const int_tp M, const int_tp N,
-                                       const int_tp K, const float alpha,
-                                       const cl_mem A, const int_tp offA,
-                                       const cl_mem B, const int_tp offB,
+                                       const int32_t M, const int32_t N,
+                                       const int32_t K, const float alpha,
+                                       const cl_mem A, const int32_t offA,
+                                       const cl_mem B, const int32_t offB,
                                        const float beta, cl_mem C,
-                                       const int_tp offC,
+                                       const int32_t offC,
                                        const bool is_image_a,
                                        const bool is_image_b);
 
-template void libdnnGEMMCommon<float>(const int_tp ctx_id,
+template void libdnnGEMMCommon<float>(const int32_t ctx_id,
                                        const CBLAS_TRANSPOSE TransA,
                                        const CBLAS_TRANSPOSE TransB,
-                                       const int_tp M, const int_tp N,
-                                       const int_tp K, const float alpha,
-                                       const cl_mem A, const int_tp offA,
-                                       const cl_mem B, const int_tp offB,
+                                       const int32_t M, const int32_t N,
+                                       const int32_t K, const float alpha,
+                                       const cl_mem A, const int32_t offA,
+                                       const cl_mem B, const int32_t offB,
                                        const float beta, cl_mem C,
-                                       const int_tp offC,
+                                       const int32_t offC,
                                        const bool is_image_a,
                                        const bool is_image_b,
                                        const gemm_type_t);
 
 template<typename Dtype>
-void libdnnGEMV(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
-                       const int_tp M, const int_tp N, const Dtype alpha,
-                       const cl_mem A, const int_tp offA, const cl_mem x,
-                       const int_tp offx, const Dtype beta, cl_mem y,
-                       const int_tp offy)
+void libdnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+                       const int32_t M, const int32_t N, const Dtype alpha,
+                       const cl_mem A, const int32_t offA, const cl_mem x,
+                       const int32_t offx, const Dtype beta, cl_mem y,
+                       const int32_t offy)
 {
     ocl::Context ctx = ocl::Context::getDefault();
 
@@ -869,18 +869,18 @@ void libdnnGEMV(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
     }
 }
 
-template void libdnnGEMV<float>(const int_tp ctx_id,
+template void libdnnGEMV<float>(const int32_t ctx_id,
                                        const CBLAS_TRANSPOSE TransA,
-                                       const int_tp M, const int_tp N,
+                                       const int32_t M, const int32_t N,
                                        const float alpha, const cl_mem A,
-                                       const int_tp offA, const cl_mem x,
-                                       const int_tp offx, const float beta,
-                                       cl_mem y, const int_tp offy);
+                                       const int32_t offA, const cl_mem x,
+                                       const int32_t offx, const float beta,
+                                       cl_mem y, const int32_t offy);
 
 template<typename Dtype>
-void libdnnAXPY(const int_tp ctx_id, const int_tp N, const Dtype alpha,
-                       const cl_mem X, const int_tp offX, cl_mem Y,
-                       const int_tp offY)
+void libdnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+                       const cl_mem X, const int32_t offX, cl_mem Y,
+                       const int32_t offY)
 {
     ocl::Context ctx = ocl::Context::getDefault();
 
@@ -906,14 +906,14 @@ void libdnnAXPY(const int_tp ctx_id, const int_tp N, const Dtype alpha,
     }
 }
 
-template void libdnnAXPY<float>(const int_tp ctx_id, const int_tp N,
+template void libdnnAXPY<float>(const int32_t ctx_id, const int32_t N,
                                        const float alpha, const cl_mem X,
-                                       const int_tp offX, cl_mem Y,
-                                       const int_tp offY);
+                                       const int32_t offX, cl_mem Y,
+                                       const int32_t offY);
 
 template<typename Dtype>
-void libdnnSet(const int_tp ctx_id, const int_tp N, const Dtype alpha,
-                      cl_mem Y, const int_tp offY) {
+void libdnnSet(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+                      cl_mem Y, const int32_t offY) {
     // OpenCL Version >= 1.2 approach
     // clEnqueueFillBuffer(ctx.get_queue().handle().get(),
     //                  Y, &alpha, sizeof(Dtype),
@@ -933,10 +933,10 @@ void libdnnSet(const int_tp ctx_id, const int_tp N, const Dtype alpha,
     oclk_fill.run(1, global, local, false);
 }
 
-template void libdnnSet<int_tp>(const int_tp ctx_id, const int_tp N,
-                                       const int_tp alpha, cl_mem Y,
-                                       const int_tp offY);
-template void libdnnSet<float>(const int_tp ctx_id, const int_tp N,
+template void libdnnSet<int32_t>(const int32_t ctx_id, const int32_t N,
+                                       const int32_t alpha, cl_mem Y,
+                                       const int32_t offY);
+template void libdnnSet<float>(const int32_t ctx_id, const int32_t N,
                                       const float alpha, cl_mem Y,
-                                      const int_tp offY);
+                                      const int32_t offY);
 #endif  // HAVE_OPENCL

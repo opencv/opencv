@@ -50,14 +50,14 @@
 template<typename Dtype>
 LibDNNPool<Dtype>::LibDNNPool(LibDNNPoolConfig config)
 {
-    int_tp dims = config.in_shape.size();
-    int_tp spatial_dims = config.kernel.size();
+    int32_t dims = config.in_shape.size();
+    int32_t spatial_dims = config.kernel.size();
 
     batch_size_ = config.in_shape[0];
     channels_ = config.channels;
     pool_method_ = config.pool_method;
 
-    for (int_tp i = 0; i < spatial_dims; ++i)
+    for (int32_t i = 0; i < spatial_dims; ++i)
     {
         kernel_shape_.push_back(config.kernel[i]);
         pad_.push_back(config.pad[i]);
@@ -78,7 +78,7 @@ LibDNNPool<Dtype>::LibDNNPool(LibDNNPoolConfig config)
     pooled_width_ = im_out_shape_[1];
 
     count_ = 1;
-    for (int_tp i = 0; i < config.out_shape.size(); ++i)
+    for (int32_t i = 0; i < config.out_shape.size(); ++i)
     {
         count_ *= config.out_shape[i];
     }
@@ -113,7 +113,7 @@ bool LibDNNPool<Dtype>::Forward(const Dtype *bottom_data,
         {
             if (top_mask == NULL && mask_idx_ == NULL)
             {
-                allocateMemory((void **)&mask_idx_,  sizeof(int_tp) * count_, CL_MEM_READ_WRITE);
+                allocateMemory((void **)&mask_idx_,  sizeof(int32_t) * count_, CL_MEM_READ_WRITE);
             }
             ocl::Kernel oclk_max_pool_forward(CL_KERNEL_SELECT("max_pool_forward"), cv::ocl::dnn::dnn_pooling_oclsrc);
 

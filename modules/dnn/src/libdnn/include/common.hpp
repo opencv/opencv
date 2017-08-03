@@ -46,13 +46,6 @@
 #include <opencv2/core/opencl/runtime/opencl_core.hpp>
 
 #ifdef HAVE_OPENCL
-#ifdef USE_INDEX_64
-#define int_tp int64_t
-#define uint_tp uint64_t
-#else
-#define int_tp int32_t
-#define uint_tp uint32_t
-#endif // USE_INDEX_64
 
 #define ALIGN(val,N) (( (val) + (N) - 1 ) & ~( (N) - 1 ))
 
@@ -66,7 +59,7 @@
     } while (0)
 
 bool isBeignet();
-void allocateMemory(void** ptr, uint_tp size, int_tp flags);
+void allocateMemory(void** ptr, uint32_t size, int32_t flags);
 
 #endif // HAVE_OPENCL
 #endif

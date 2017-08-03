@@ -61,7 +61,7 @@ LibDNNInnerProduct<Dtype>::LibDNNInnerProduct(LibDNNInnerProductConfig config)
     // Set up the bias multiplier
     if (bias_term_)
     {
-        int_tp flags = 0;
+        int32_t flags = 0;
         flags = CL_MEM_READ_WRITE;
         allocateMemory((void **)&bias_multiplier_,  sizeof(Dtype) * M_, flags);
         libdnnSet(0, M_, Dtype(1), (cl_mem) bias_multiplier_, 0);
