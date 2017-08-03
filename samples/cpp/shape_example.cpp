@@ -115,6 +115,7 @@ int main(int argc, char** argv)
     resize(iiIm, bestToShow, sz2Sh);
     imshow("BEST MATCH", bestToShow);
     moveWindow("BEST MATCH", sz2Sh.width+50,0);
+    waitKey();
 
     return 0;
 }

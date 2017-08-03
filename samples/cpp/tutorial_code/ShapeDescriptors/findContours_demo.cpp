@@ -23,10 +23,16 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image
-  src = imread(argv[1], IMREAD_COLOR);
+  String imageName("../data/happyfish.jpg"); // by default
+  if (argc > 1)
+  {
+    imageName = argv[1];
+  }
+  src = imread(imageName, IMREAD_COLOR);
+
   if (src.empty())
   {
     cerr << "No image supplied ..." << endl;
