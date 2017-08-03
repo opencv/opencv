@@ -15,7 +15,7 @@ using namespace cv;
  * @function main
  * @brief Main function
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
     //! [basic-linear-transform-parameters]
     double alpha = 1.0; /*< Simple contrast control */
@@ -24,7 +24,12 @@ int main( int, char** argv )
 
     /// Read image given by user
     //! [basic-linear-transform-load]
-    Mat image = imread( argv[1] );
+    String imageName("../data/lena.jpg"); // by default
+    if (argc > 1)
+    {
+        imageName = argv[1];
+    }
+    Mat image = imread( imageName );
     //! [basic-linear-transform-load]
     //! [basic-linear-transform-output]
     Mat new_image = Mat::zeros( image.size(), image.type() );

@@ -53,14 +53,13 @@ int main( int argc, char** argv )
             break;
 
         Point2f center( (float)frame.cols / 2, (float)frame.rows / 2 );
-        double radius = (double)frame.cols / 4;
-        double M = (double)frame.cols / log(radius);
+        double M = 70;
 
         logPolar(frame,log_polar_img, center, M, INTER_LINEAR + WARP_FILL_OUTLIERS);
-        linearPolar(frame,lin_polar_img, center, radius, INTER_LINEAR + WARP_FILL_OUTLIERS);
+        linearPolar(frame,lin_polar_img, center, M, INTER_LINEAR + WARP_FILL_OUTLIERS);
 
         logPolar(log_polar_img, recovered_log_polar, center, M, WARP_INVERSE_MAP + INTER_LINEAR);
-        linearPolar(lin_polar_img, recovered_lin_polar_img, center, radius, WARP_INVERSE_MAP + INTER_LINEAR + WARP_FILL_OUTLIERS);
+        linearPolar(lin_polar_img, recovered_lin_polar_img, center, M, WARP_INVERSE_MAP + INTER_LINEAR + WARP_FILL_OUTLIERS);
 
         imshow("Log-Polar", log_polar_img );
         imshow("Linear-Polar", lin_polar_img );
