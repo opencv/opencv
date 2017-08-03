@@ -74,12 +74,12 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
       Evolution step;
       step.size = Size(level_width, level_height);
       step.esigma = options_.soffset*pow(2.f, (float)(j) / (float)(options_.nsublevels) + i);
-      step.sigma_size = fRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
+      step.sigma_size = cvRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
       step.etime = 0.5f * (step.esigma * step.esigma);
       step.octave = i;
       step.sublevel = j;
       step.octave_ratio = (float)power;
-      step.border = fRound(smax * step.sigma_size) + 1;
+      step.border = cvRound(smax * step.sigma_size) + 1;
 
       evolution_.push_back(step);
     }
@@ -1301,9 +1301,9 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // get the right evolution level for this keypoint
   const Evolution& e = evolution[kpt.class_id];
   // Get the information from the keypoint
-  int scale = fRound(0.5f * kpt.size / e.octave_ratio);
-  int x0 = fRound(kpt.pt.x / e.octave_ratio);
-  int y0 = fRound(kpt.pt.y / e.octave_ratio);
+  int scale = cvRound(0.5f * kpt.size / e.octave_ratio);
+  int x0 = cvRound(kpt.pt.x / e.octave_ratio);
+  int y0 = cvRound(kpt.pt.y / e.octave_ratio);
 
   // Sample derivatives responses for the points within radius of 6*scale
   const int ang_size = 109;
@@ -1443,7 +1443,7 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
-  scale = fRound(0.5f*kpt.size / ratio);
+  scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1572,8 +1572,8 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
-  scale = fRound(0.5f*kpt.size / ratio);
-  angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  scale = cvRound(0.5f*kpt.size / ratio);
+  angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1613,11 +1613,11 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           // Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-          y1 = fRound(sample_y - 0.5f);
-          x1 = fRound(sample_x - 0.5f);
+          y1 = cvRound(sample_y - 0.5f);
+          x1 = cvRound(sample_x - 0.5f);
 
-          y2 = fRound(sample_y + 0.5f);
-          x2 = fRound(sample_x + 0.5f);
+          y2 = cvRound(sample_y + 0.5f);
+          x2 = cvRound(sample_x + 0.5f);
 
           // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
           // clip values so they fit into the image
@@ -1706,7 +1706,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
-  scale = fRound(0.5f*kpt.size / ratio);
+  scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1741,8 +1741,8 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
             sample_y = yf + l*scale;
             sample_x = xf + k*scale;
 
-            y1 = fRound(sample_y);
-            x1 = fRound(sample_x);
+            y1 = cvRound(sample_y);
+            x1 = cvRound(sample_x);
 
             ri = *(Lt.ptr<float>(y1)+x1);
             rx = *(Lx.ptr<float>(y1)+x1);
@@ -1810,8 +1810,8 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 float sample_y = yf + (l*co * scale + k*si*scale);
                 float sample_x = xf + (-l*si * scale + k*co*scale);
 
-                int y1 = fRound(sample_y);
-                int x1 = fRound(sample_x);
+                int y1 = cvRound(sample_y);
+                int x1 = cvRound(sample_x);
 
                 // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
                 // clip values so they fit into the image
@@ -1900,10 +1900,10 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
   };
 
   float ratio = (float)(1 << kpt.octave);
-  float scale = (float)fRound(0.5f*kpt.size / ratio);
+  float scale = (float)cvRound(0.5f*kpt.size / ratio);
   float xf = kpt.pt.x / ratio;
   float yf = kpt.pt.y / ratio;
-  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   float co = cos(angle);
   float si = sin(angle);
 
@@ -1941,8 +1941,8 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
 
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
-  int scale = fRound(0.5f*kpt.size / ratio);
-  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  int scale = cvRound(0.5f*kpt.size / ratio);
+  float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1983,8 +1983,8 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
         sample_y = yf + (l*scale*co + k*scale*si);
         sample_x = xf + (-l*scale*si + k*scale*co);
 
-        y1 = fRound(sample_y);
-        x1 = fRound(sample_x);
+        y1 = cvRound(sample_y);
+        x1 = cvRound(sample_x);
 
         di += *(Lt.ptr<float>(y1)+x1);
 
@@ -2049,7 +2049,7 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
 
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
-  int scale = fRound(0.5f*kpt.size / ratio);
+  int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -2081,8 +2081,8 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
         sample_y = yf + l*scale;
         sample_x = xf + k*scale;
 
-        y1 = fRound(sample_y);
-        x1 = fRound(sample_x);
+        y1 = cvRound(sample_y);
+        x1 = cvRound(sample_x);
         di += *(Lt.ptr<float>(y1)+x1);
 
         if (options.descriptor_channels > 1) {

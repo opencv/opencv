@@ -39,34 +39,4 @@ inline void checkDescriptorLimits(int &x, int &y, int width, int height) {
   }
 }
 
-/* ************************************************************************* */
-/**
- * @brief This funtion rounds float to nearest integer
- * @param flt Input float
- * @return dst Nearest integer
- */
-inline int fRound(float flt) {
-  return (int)(flt + 0.5f);
-}
-
-/* ************************************************************************* */
-/**
- * @brief Exponentiation by squaring
- * @param flt Exponentiation base
- * @return dst Exponentiation value
- */
-inline int fastpow(int base, int exp) {
-    int res = 1;
-    while(exp > 0) {
-        if(exp & 1) {
-            exp--;
-            res *= base;
-        } else {
-            exp /= 2;
-            base *= base;
-        }
-    }
-    return res;
-}
-
 #endif
