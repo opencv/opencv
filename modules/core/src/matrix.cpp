@@ -3406,11 +3406,6 @@ static TransposeInplaceFunc transposeInplaceTab[] =
 
 #ifdef HAVE_OPENCL
 
-static inline int divUp(int a, int b)
-{
-    return (a + b - 1) / b;
-}
-
 static bool ocl_transpose( InputArray _src, OutputArray _dst )
 {
     const ocl::Device & dev = ocl::Device::getDefault();
