@@ -1466,25 +1466,28 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
           //Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.50f*scale);
 
-          y1 = (int)(sample_y - .5f);
-          x1 = (int)(sample_x - .5f);
+          y1 = cvFloor(sample_y);
+          x1 = cvFloor(sample_x);
 
-          y2 = (int)(sample_y + .5f);
-          x2 = (int)(sample_x + .5f);
+          y2 = y1 + 1;
+          x2 = x1 + 1;
+
+          if (x1 < 0 || y1 < 0 || x2 >= Lx.cols || y2 >= Lx.rows)
+              continue; // FIXIT Boundaries
 
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(Lx.ptr<float>(y1)+x1);
-          res2 = *(Lx.ptr<float>(y1)+x2);
-          res3 = *(Lx.ptr<float>(y2)+x1);
-          res4 = *(Lx.ptr<float>(y2)+x2);
+          res1 = Lx.at<float>(y1, x1);
+          res2 = Lx.at<float>(y1, x2);
+          res3 = Lx.at<float>(y2, x1);
+          res4 = Lx.at<float>(y2, x2);
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(Ly.ptr<float>(y1)+x1);
-          res2 = *(Ly.ptr<float>(y1)+x2);
-          res3 = *(Ly.ptr<float>(y2)+x1);
-          res4 = *(Ly.ptr<float>(y2)+x2);
+          res1 = Ly.at<float>(y1, x1);
+          res2 = Ly.at<float>(y1, x2);
+          res3 = Ly.at<float>(y2, x1);
+          res4 = Ly.at<float>(y2, x2);
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           rx = gauss_s1*rx;
@@ -1519,8 +1522,9 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   // convert to unit vector
   len = sqrt(len);
 
+  const float len_inv = 1.0f / len;
   for (i = 0; i < dsize; i++) {
-    desc[i] /= len;
+    desc[i] *= len_inv;
   }
 }
 
@@ -1599,34 +1603,28 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           // Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-          y1 = cvRound(sample_y - 0.5f);
-          x1 = cvRound(sample_x - 0.5f);
+          y1 = cvFloor(sample_y);
+          x1 = cvFloor(sample_x);
 
-          y2 = cvRound(sample_y + 0.5f);
-          x2 = cvRound(sample_x + 0.5f);
+          y2 = y1 + 1;
+          x2 = x1 + 1;
 
-          // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
-          // clip values so they fit into the image
-          const MatSize& size = Lx.size;
-          y1 = min(max(0, y1), size[0] - 1);
-          x1 = min(max(0, x1), size[1] - 1);
-          y2 = min(max(0, y2), size[0] - 1);
-          x2 = min(max(0, x2), size[1] - 1);
-          CV_DbgAssert(Lx.size == Ly.size);
+          if (x1 < 0 || y1 < 0 || x2 >= Lx.cols || y2 >= Lx.rows)
+              continue; // FIXIT Boundaries
 
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(Lx.ptr<float>(y1, x1));
-          res2 = *(Lx.ptr<float>(y1, x2));
-          res3 = *(Lx.ptr<float>(y2, x1));
-          res4 = *(Lx.ptr<float>(y2, x2));
+          res1 = Lx.at<float>(y1, x1);
+          res2 = Lx.at<float>(y1, x2);
+          res3 = Lx.at<float>(y2, x1);
+          res4 = Lx.at<float>(y2, x2);
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(Ly.ptr<float>(y1, x1));
-          res2 = *(Ly.ptr<float>(y1, x2));
-          res3 = *(Ly.ptr<float>(y2, x1));
-          res4 = *(Ly.ptr<float>(y2, x2));
+          res1 = Ly.at<float>(y1, x1);
+          res2 = Ly.at<float>(y1, x2);
+          res3 = Ly.at<float>(y2, x1);
+          res4 = Ly.at<float>(y2, x2);
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           // Get the x and y derivatives on the rotated axis
@@ -1661,8 +1659,9 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   // convert to unit vector
   len = sqrt(len);
 
+  const float len_inv = 1.0f / len;
   for (i = 0; i < dsize; i++) {
-    desc[i] /= len;
+    desc[i] *= len_inv;
   }
 }
 
@@ -1675,13 +1674,6 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
  */
 void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
-  float di = 0.0, dx = 0.0, dy = 0.0;
-  float ri = 0.0, rx = 0.0, ry = 0.0, xf = 0.0, yf = 0.0;
-  float sample_x = 0.0, sample_y = 0.0, ratio = 0.0;
-  int x1 = 0, y1 = 0;
-  int nsamples = 0, scale = 0;
-  int dcount1 = 0, dcount2 = 0;
-
   const AKAZEOptions & options = *options_;
   const std::vector<Evolution>& evolution = *evolution_;
 
@@ -1691,14 +1683,14 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   float values[16*max_channels];
 
   // Get the information from the keypoint
-  ratio = (float)(1 << kpt.octave);
-  scale = cvRound(0.5f*kpt.size / ratio);
+  const float ratio = (float)(1 << kpt.octave);
+  const int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   const Mat Lx = evolution[level].Lx;
   const Mat Ly = evolution[level].Ly;
   const Mat Lt = evolution[level].Lt;
-  yf = kpt.pt.y / ratio;
-  xf = kpt.pt.x / ratio;
+  const float yf = kpt.pt.y / ratio;
+  const float xf = kpt.pt.x / ratio;
 
   // For 2x2 grid, 3x3 grid and 4x4 grid
   const int pattern_size = options_->descriptor_pattern_size;
@@ -1712,27 +1704,31 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   memset(desc, 0, desc_size);
 
   // For the three grids
+  int dcount1 = 0;
   for (int z = 0; z < 3; z++) {
-    dcount2 = 0;
+    int dcount2 = 0;
     const int step = sample_step[z];
     for (int i = -pattern_size; i < pattern_size; i += step) {
       for (int j = -pattern_size; j < pattern_size; j += step) {
-        di = dx = dy = 0.0;
-        nsamples = 0;
+        float di = 0.0, dx = 0.0, dy = 0.0;
 
-        for (int k = i; k < i + step; k++) {
-          for (int l = j; l < j + step; l++) {
+        int nsamples = 0;
+        for (int k = 0; k < step; k++) {
+          for (int l = 0; l < step; l++) {
 
             // Get the coordinates of the sample point
-            sample_y = yf + l*scale;
-            sample_x = xf + k*scale;
+            const float sample_y = yf + (l+j)*scale;
+            const float sample_x = xf + (k+i)*scale;
 
-            y1 = cvRound(sample_y);
-            x1 = cvRound(sample_x);
+            const int y1 = cvRound(sample_y);
+            const int x1 = cvRound(sample_x);
 
-            ri = *(Lt.ptr<float>(y1)+x1);
-            rx = *(Lx.ptr<float>(y1)+x1);
-            ry = *(Ly.ptr<float>(y1)+x1);
+            if (y1 < 0 || y1 >= Lt.rows || x1 < 0 || x1 >= Lt.cols)
+                continue; // Boundaries
+
+            const float ri = Lt.at<float>(y1, x1);
+            const float rx = Lx.at<float>(y1, x1);
+            const float ry = Ly.at<float>(y1, x1);
 
             di += ri;
             dx += rx;
@@ -1741,9 +1737,13 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
           }
         }
 
-        di /= nsamples;
-        dx /= nsamples;
-        dy /= nsamples;
+        if (nsamples > 0)
+        {
+            const float nsamples_inv = 1.0f / nsamples;
+            di *= nsamples_inv;
+            dx *= nsamples_inv;
+            dy *= nsamples_inv;
+        }
 
         float *val = &values[dcount2*max_channels];
         *(val) = di;
@@ -1780,17 +1780,20 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
     const std::vector<Evolution>& evolution = *evolution_;
     int pattern_size = options_->descriptor_pattern_size;
     int chan = options_->descriptor_channels;
-    int valpos = 0;
     const Mat Lx = evolution[level].Lx;
     const Mat Ly = evolution[level].Ly;
     const Mat Lt = evolution[level].Lt;
 
+    const Size size = Lt.size();
+    CV_Assert(size == Lx.size());
+    CV_Assert(size == Ly.size());
+
+    int valpos = 0;
     for (int i = -pattern_size; i < pattern_size; i += sample_step) {
         for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-            float di, dx, dy;
-            di = dx = dy = 0.0;
-            int nsamples = 0;
+            float di = 0.0f, dx = 0.0f, dy = 0.0f;
 
+            int nsamples = 0;
             for (int k = i; k < i + sample_step; k++) {
               for (int l = j; l < j + sample_step; l++) {
                 float sample_y = yf + (l*co * scale + k*si*scale);
@@ -1799,20 +1802,15 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 int y1 = cvRound(sample_y);
                 int x1 = cvRound(sample_x);
 
-                // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
-                // clip values so they fit into the image
-                const MatSize& size = Lt.size;
-                CV_DbgAssert(size == Lx.size &&
-                             size == Ly.size);
-                y1 = min(max(0, y1), size[0] - 1);
-                x1 = min(max(0, x1), size[1] - 1);
+                if (y1 < 0 || y1 >= Lt.rows || x1 < 0 || x1 >= Lt.cols)
+                    continue; // Boundaries
 
-                float ri = *(Lt.ptr<float>(y1, x1));
+                float ri = Lt.at<float>(y1, x1);
                 di += ri;
 
                 if(chan > 1) {
-                    float rx = *(Lx.ptr<float>(y1, x1));
-                    float ry = *(Ly.ptr<float>(y1, x1));
+                    float rx = Lx.at<float>(y1, x1);
+                    float ry = Ly.at<float>(y1, x1);
                     if (chan == 2) {
                       dx += sqrtf(rx*rx + ry*ry);
                     }
@@ -1826,20 +1824,25 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 nsamples++;
               }
             }
-            di /= nsamples;
-            dx /= nsamples;
-            dy /= nsamples;
+
+            if (nsamples > 0)
+            {
+                const float nsamples_inv = 1.0f / nsamples;
+                di *= nsamples_inv;
+                dx *= nsamples_inv;
+                dy *= nsamples_inv;
+            }
 
             values[valpos] = di;
             if (chan > 1) {
                 values[valpos + 1] = dx;
             }
             if (chan > 2) {
-              values[valpos + 2] = dy;
+                values[valpos + 2] = dy;
             }
             valpos += chan;
-          }
         }
+    }
 }
 
 void MLDB_Full_Descriptor_Invoker::MLDB_Binary_Comparisons(float* values, unsigned char* desc,
@@ -1917,10 +1920,8 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
  */
 void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
-  float di = 0.f, dx = 0.f, dy = 0.f;
   float rx = 0.f, ry = 0.f;
   float sample_x = 0.f, sample_y = 0.f;
-  int x1 = 0, y1 = 0;
 
   const AKAZEOptions & options = *options_;
   const std::vector<Evolution>& evolution = *evolution_;
@@ -1943,7 +1944,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   const int max_channels = 3;
   const int channels = options.descriptor_channels;
   CV_Assert(channels <= max_channels);
-  float values[(4 + 9 + 16)*max_channels];
+  float values[(4 + 9 + 16)*max_channels] = { 0 };
 
   // Sample everything, but only do the comparisons
   const int pattern_size = options.descriptor_pattern_size;
@@ -1958,9 +1959,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
     const int *coords = descriptorSamples_.ptr<int>(i);
     CV_Assert(coords[0] >= 0 && coords[0] < 3);
     const int sample_step = sample_steps[coords[0]];
-    di = 0.0f;
-    dx = 0.0f;
-    dy = 0.0f;
+    float di = 0.f, dx = 0.f, dy = 0.f;
 
     for (int k = coords[1]; k < coords[1] + sample_step; k++) {
       for (int l = coords[2]; l < coords[2] + sample_step; l++) {
@@ -1969,14 +1968,17 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
         sample_y = yf + (l*scale*co + k*scale*si);
         sample_x = xf + (-l*scale*si + k*scale*co);
 
-        y1 = cvRound(sample_y);
-        x1 = cvRound(sample_x);
+        const int y1 = cvRound(sample_y);
+        const int x1 = cvRound(sample_x);
 
-        di += *(Lt.ptr<float>(y1)+x1);
+        if (x1 < 0 || y1 < 0 || x1 >= Lt.cols || y1 >= Lt.rows)
+            continue; // Boundaries
+
+        di += Lt.at<float>(y1, x1);
 
         if (options.descriptor_channels > 1) {
-          rx = *(Lx.ptr<float>(y1)+x1);
-          ry = *(Ly.ptr<float>(y1)+x1);
+          rx = Lx.at<float>(y1, x1);
+          ry = Ly.at<float>(y1, x1);
 
           if (options.descriptor_channels == 2) {
             dx += sqrtf(rx*rx + ry*ry);
@@ -2044,7 +2046,10 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   float xf = kpt.pt.x / ratio;
 
   // Allocate memory for the matrix of values
-  Mat values ((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
+  const int max_channels = 3;
+  const int channels = options.descriptor_channels;
+  CV_Assert(channels <= max_channels);
+  float values[(4 + 9 + 16)*max_channels] = { 0 };
 
   const int pattern_size = options.descriptor_pattern_size;
   CV_Assert((pattern_size & 1) == 0);
@@ -2069,11 +2074,15 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
 
         y1 = cvRound(sample_y);
         x1 = cvRound(sample_x);
-        di += *(Lt.ptr<float>(y1)+x1);
+
+        if (x1 < 0 || y1 < 0 || x1 >= Lt.cols || y1 >= Lt.rows)
+            continue; // Boundaries
+
+        di += Lt.at<float>(y1, x1);
 
         if (options.descriptor_channels > 1) {
-          rx = *(Lx.ptr<float>(y1)+x1);
-          ry = *(Ly.ptr<float>(y1)+x1);
+          rx = Lx.at<float>(y1, x1);
+          ry = Ly.at<float>(y1, x1);
 
           if (options.descriptor_channels == 2) {
             dx += sqrtf(rx*rx + ry*ry);
@@ -2086,26 +2095,26 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
       }
     }
 
-    *(values.ptr<float>(options.descriptor_channels*i)) = di;
+    float* pValues = &values[channels * i];
+    pValues[0] = di;
 
     if (options.descriptor_channels == 2) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
+      pValues[1] = dx;
     }
     else if (options.descriptor_channels == 3) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
-      *(values.ptr<float>(options.descriptor_channels*i + 2)) = dy;
+      pValues[1] = dx;
+      pValues[2] = dy;
     }
   }
 
   // Do the comparisons
-  const float *vals = values.ptr<float>(0);
   const int *comps = descriptorBits_.ptr<int>(0);
 
   CV_Assert(divUp(descriptorBits_.rows, 8) == desc_size);
   memset(desc, 0, desc_size);
 
   for (int i = 0; i<descriptorBits_.rows; i++) {
-    if (vals[comps[2 * i]] > vals[comps[2 * i + 1]]) {
+    if (values[comps[2 * i]] > values[comps[2 * i + 1]]) {
       desc[i / 8] |= (1 << (i % 8));
     }
   }
