@@ -15,6 +15,10 @@
 
 #include <iostream>
 
+#ifdef HAVE_OPENCL // OpenCL is not well supported
+#undef HAVE_OPENCL
+#endif
+
 // Namespaces
 namespace cv
 {
@@ -251,38 +255,41 @@ private:
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
+ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
 {
-  if(!Lt.isContinuous())
-    return false;
+    if (!Lt_.isContinuous())
+        return false;
 
-  size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
+    UMat Lt = Lt_.getUMat(), Lf = Lf_.getUMat(), Lstep = Lstep_.getUMat();
 
-  ocl::Kernel ker("AKAZE_nld_step_scalar", ocl::features2d::akaze_oclsrc);
-  if( ker.empty() )
-    return false;
+    size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
 
-  return ker.args(
-    ocl::KernelArg::ReadOnly(Lt),
-    ocl::KernelArg::PtrReadOnly(Lf),
-    ocl::KernelArg::PtrWriteOnly(Lstep),
-    step_size).run(2, globalSize, 0, true);
+    ocl::Kernel ker("AKAZE_nld_step_scalar", ocl::features2d::akaze_oclsrc);
+    if (ker.empty())
+        return false;
+
+    return ker.args(
+            ocl::KernelArg::ReadOnly(Lt),
+            ocl::KernelArg::PtrReadOnly(Lf),
+            ocl::KernelArg::PtrWriteOnly(Lstep),
+            step_size)
+    .run(2, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
 static inline void
-non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
+non_linear_diffusion_step(InputArray Lt, InputArray Lf, OutputArray Lstep, float step_size)
 {
   CV_INSTRUMENT_REGION()
 
   Lstep.create(Lt.size(), Lt.type());
 
-  CV_OCL_RUN(true, ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
+#ifdef HAVE_OPENCL
+  CV_OCL_RUN(OCL_PERFORMANCE_CHECK(Lstep.isUMat()), ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
+#endif
 
-  // when on CPU UMats should be already allocated on CPU so getMat here is basicallly no-op
-  Mat Mstep = Lstep.getMat(ACCESS_WRITE);
-  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt.getMat(ACCESS_READ),
-    Lf.getMat(ACCESS_READ), Mstep, step_size));
+  Mat Mstep = Lstep.getMat();
+  parallel_for_(Range(0, Lt.rows()), NonLinearScalarDiffusionStep(Lt.getMat(), Lf.getMat(), Mstep, step_size));
 }
 
 /**
@@ -347,25 +354,28 @@ compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
+ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
 {
-  int total = Lx.rows * Lx.cols;
-  size_t globalSize[] = {(size_t)total};
+    UMat Lx = Lx_.getUMat(), Ly = Ly_.getUMat(), Lflow = Lflow_.getUMat();
 
-  ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
-  if( ker.empty() )
-    return false;
+    int total = Lx.rows * Lx.cols;
+    size_t globalSize[] = {(size_t)total};
 
-  return ker.args(
-    ocl::KernelArg::PtrReadOnly(Lx),
-    ocl::KernelArg::PtrReadOnly(Ly),
-    ocl::KernelArg::PtrWriteOnly(Lflow),
-    kcontrast, total).run(1, globalSize, 0, true);
+    ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
+    if (ker.empty())
+        return false;
+
+    return ker.args(
+            ocl::KernelArg::PtrReadOnly(Lx),
+            ocl::KernelArg::PtrReadOnly(Ly),
+            ocl::KernelArg::PtrWriteOnly(Lflow),
+            kcontrast, total)
+    .run(1, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
 static inline void
-compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast, int diffusivity)
+compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, int diffusivity)
 {
   CV_INSTRUMENT_REGION()
 
@@ -376,7 +386,9 @@ compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast
       pm_g1(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_PM_G2:
-      CV_OCL_RUN(true, ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
+#ifdef HAVE_OPENCL
+      CV_OCL_RUN(OCL_PERFORMANCE_CHECK(Lflow.isUMat()), ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
+#endif
       pm_g2(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_WEICKERT:
@@ -388,32 +400,6 @@ compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast
     default:
       CV_Error(diffusivity, "Diffusivity is not supported");
     break;
-  }
-}
-
-/**
- * @brief Fetches pyramid from the gpu.
- * @details Setups mapping for matrices that might be probably on the GPU, if the
- * code executes with OpenCL. This will setup MLx, MLy, Mdet members in the pyramid with
- * mapping to respective UMats. This must be called before CPU-only parts of AKAZE, that work
- * only on these Mats.
- *
- * This prevents mapping/unmapping overhead (and possible uploads/downloads) that would occur, if
- * we just create Mats from UMats each time we need it later. This has devastating effects on OCL
- * performace.
- *
- * @param evolution Pyramid to download
- */
-static inline void downloadPyramid(std::vector<Evolution>& evolution)
-{
-  CV_INSTRUMENT_REGION()
-
-  for (size_t i = 0; i < evolution.size(); ++i) {
-    Evolution& e = evolution[i];
-    e.Mx = e.Lx.getMat(ACCESS_READ);
-    e.My = e.Ly.getMat(ACCESS_READ);
-    e.Mt = e.Lt.getMat(ACCESS_READ);
-    e.Mdet = e.Ldet.getMat(ACCESS_READ);
   }
 }
 
@@ -435,12 +421,11 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   if (evolution_.size() == 1) {
     // we don't need to compute kcontrast factor
     Compute_Determinant_Hessian_Response();
-    downloadPyramid(evolution_);
     return;
   }
 
   // derivatives, flow and diffusion step
-  UMat Lx, Ly, Lsmooth, Lflow, Lstep;
+  Mat Lx, Ly, Lsmooth, Lflow, Lstep;
 
   // compute derivatives for computing k contrast
   GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
@@ -448,8 +433,7 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   Scharr(Lsmooth, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
   Lsmooth.release();
   // compute the kcontrast factor
-  float kcontrast = compute_kcontrast(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ),
-    options_.kcontrast_percentile, options_.kcontrast_nbins);
+  float kcontrast = compute_kcontrast(Lx, Ly, options_.kcontrast_percentile, options_.kcontrast_nbins);
 
   // Now generate the rest of evolution levels
   for (size_t i = 1; i < evolution_.size(); i++) {
@@ -483,31 +467,30 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   }
 
   Compute_Determinant_Hessian_Response();
-  downloadPyramid(evolution_);
-
-  return;
 }
 
 /* ************************************************************************* */
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
-  UMat& Ldet, float sigma)
+ocl_compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_, OutputArray Ldet_, float sigma)
 {
-  const int total = Lxx.rows * Lxx.cols;
-  size_t globalSize[] = {(size_t)total};
+    UMat Lxx = Lxx_.getUMat(), Lxy = Lxy_.getUMat(), Lyy = Lyy_.getUMat(), Ldet = Ldet_.getUMat();
 
-  ocl::Kernel ker("AKAZE_compute_determinant", ocl::features2d::akaze_oclsrc);
-  if( ker.empty() )
-    return false;
+    const int total = Lxx.rows * Lxx.cols;
+    size_t globalSize[] = {(size_t)total};
 
-  return ker.args(
-    ocl::KernelArg::PtrReadOnly(Lxx),
-    ocl::KernelArg::PtrReadOnly(Lxy),
-    ocl::KernelArg::PtrReadOnly(Lyy),
-    ocl::KernelArg::PtrWriteOnly(Ldet),
-    sigma, total).run(1, globalSize, 0, true);
+    ocl::Kernel ker("AKAZE_compute_determinant", ocl::features2d::akaze_oclsrc);
+    if (ker.empty())
+        return false;
+
+    return ker.args(
+            ocl::KernelArg::PtrReadOnly(Lxx),
+            ocl::KernelArg::PtrReadOnly(Lxy),
+            ocl::KernelArg::PtrReadOnly(Lyy),
+            ocl::KernelArg::PtrWriteOnly(Ldet),
+            sigma, total)
+    .run(1, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
@@ -521,27 +504,30 @@ ocl_compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
  * @param Ldet output determinant
  * @param sigma determinant will be scaled by this sigma
  */
-static inline void compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
-  UMat& Ldet, float sigma)
+static inline void compute_determinant(InputArray Lxx, InputArray Lxy, InputArray Lyy, OutputArray Ldet, float sigma)
 {
-  CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION()
 
-  Ldet.create(Lxx.size(), Lxx.type());
+    Ldet.create(Lxx.size(), Lxx.type());
 
-  CV_OCL_RUN(true, ocl_compute_determinant(Lxx, Lxy, Lyy, Ldet, sigma));
+#ifdef HAVE_OPENCL
+    CV_OCL_RUN(OCL_PERFORMANCE_CHECK(Ldet.isUMat()), ocl_compute_determinant(Lxx, Lxy, Lyy, Ldet, sigma));
+#endif
 
-  // output determinant
-  Mat Mxx = Lxx.getMat(ACCESS_READ), Mxy = Lxy.getMat(ACCESS_READ), Myy = Lyy.getMat(ACCESS_READ);
-  Mat Mdet = Ldet.getMat(ACCESS_WRITE);
-  float *lxx = Mxx.ptr<float>();
-  float *lxy = Mxy.ptr<float>();
-  float *lyy = Myy.ptr<float>();
-  float *ldet = Mdet.ptr<float>();
-  const int total = Lxx.cols * Lxx.rows;
-  for (int j = 0; j < total; j++) {
-    ldet[j] = (lxx[j] * lyy[j] - lxy[j] * lxy[j]) * sigma;
-  }
-
+    // output determinant
+    Mat Mxx = Lxx.getMat(), Mxy = Lxy.getMat(), Myy = Lyy.getMat(), Mdet = Ldet.getMat();
+    const int W = Mxx.cols, H = Mxx.rows;
+    for (int y = 0; y < H; y++)
+    {
+        float *lxx = Mxx.ptr<float>(y);
+        float *lxy = Mxy.ptr<float>(y);
+        float *lyy = Myy.ptr<float>(y);
+        float *ldet = Mdet.ptr<float>(y);
+        for (int x = 0; x < W; x++)
+        {
+            ldet[x] = (lxx[x] * lyy[x] - lxy[x] * lxy[x]) * sigma;
+        }
+    }
 }
 
 class DeterminantHessianResponse : public ParallelLoopBody
@@ -554,7 +540,7 @@ public:
 
   void operator()(const Range& range) const
   {
-    UMat Lxx, Lxy, Lyy;
+    Mat Lxx, Lxy, Lyy;
 
     for (int i = range.start; i < range.end; i++)
     {
@@ -670,16 +656,16 @@ public:
       const Evolution &e = (*evolution_)[i];
       Mat &kpts = (*keypoints_by_layers_)[i];
       // this mask will hold positions of keypoints in this level
-      kpts = Mat::zeros(e.Mdet.size(), CV_8UC1);
+      kpts = Mat::zeros(e.Ldet.size(), CV_8UC1);
 
       // if border is too big we shouldn't search any keypoints
       if (e.border + 1 >= e.Ldet.rows)
         continue;
 
-      const float * prev = e.Mdet.ptr<float>(e.border - 1);
-      const float * curr = e.Mdet.ptr<float>(e.border    );
-      const float * next = e.Mdet.ptr<float>(e.border + 1);
-      const float * ldet = e.Mdet.ptr<float>();
+      const float * prev = e.Ldet.ptr<float>(e.border - 1);
+      const float * curr = e.Ldet.ptr<float>(e.border    );
+      const float * next = e.Ldet.ptr<float>(e.border + 1);
+      const float * ldet = e.Ldet.ptr<float>();
       uchar *mask = kpts.ptr<uchar>();
       const int search_radius = e.sigma_size; // size of keypoint in this level
 
@@ -743,8 +729,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_laye
     const Mat &keypoints = keypoints_by_layers[i];
     const uchar *const kpts = keypoints_by_layers[i].ptr<uchar>();
     uchar *const kpts_prev = keypoints_by_layers[i-1].ptr<uchar>();
-    const float *const ldet = evolution_[i].Mdet.ptr<float>();
-    const float *const ldet_prev = evolution_[i-1].Mdet.ptr<float>();
+    const float *const ldet = evolution_[i].Ldet.ptr<float>();
+    const float *const ldet_prev = evolution_[i-1].Ldet.ptr<float>();
     // ratios are just powers of 2
     const int diff_ratio = (int)evolution_[i].octave_ratio / (int)evolution_[i-1].octave_ratio;
     const int search_radius = evolution_[i].sigma_size * diff_ratio; // size of keypoint in this level
@@ -775,8 +761,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_laye
     const Mat &keypoints = keypoints_by_layers[i];
     const uchar *const kpts = keypoints_by_layers[i].ptr<uchar>();
     uchar *const kpts_next = keypoints_by_layers[i+1].ptr<uchar>();
-    const float *const ldet = evolution_[i].Mdet.ptr<float>();
-    const float *const ldet_next = evolution_[i+1].Mdet.ptr<float>();
+    const float *const ldet = evolution_[i].Ldet.ptr<float>();
+    const float *const ldet_next = evolution_[i+1].Ldet.ptr<float>();
     // ratios are just powers of 2, i+1 ratio is always greater or equal to i
     const int diff_ratio = (int)evolution_[i+1].octave_ratio / (int)evolution_[i].octave_ratio;
     const int search_radius = evolution_[i+1].sigma_size; // size of keypoints in upper level
@@ -814,7 +800,7 @@ void AKAZEFeatures::Do_Subpixel_Refinement(
 
   for (size_t i = 0; i < keypoints_by_layers.size(); i++) {
     const Evolution &e = evolution_[i];
-    const float * const ldet = e.Mdet.ptr<float>();
+    const float * const ldet = e.Ldet.ptr<float>();
     const float ratio = e.octave_ratio;
     const int cols = e.Ldet.cols;
     const Mat& keypoints = keypoints_by_layers[i];
@@ -1308,7 +1294,7 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // Sample derivatives responses for the points within radius of 6*scale
   const int ang_size = 109;
   float resX[ang_size], resY[ang_size];
-  Sample_Derivative_Response_Radius6(e.Mx, e.My, x0, y0, scale, resX, resY);
+  Sample_Derivative_Response_Radius6(e.Lx, e.Ly, x0, y0, scale, resX, resY);
 
   // Compute the angle of each gradient vector
   float Ang[ang_size];
@@ -1445,8 +1431,8 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   ratio = (float)(1 << kpt.octave);
   scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Mx;
-  Mat Ly = evolution[level].My;
+  const Mat Lx = evolution[level].Lx;
+  const Mat Ly = evolution[level].Ly;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
 
@@ -1480,25 +1466,28 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
           //Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.50f*scale);
 
-          y1 = (int)(sample_y - .5f);
-          x1 = (int)(sample_x - .5f);
+          y1 = cvFloor(sample_y);
+          x1 = cvFloor(sample_x);
 
-          y2 = (int)(sample_y + .5f);
-          x2 = (int)(sample_x + .5f);
+          y2 = y1 + 1;
+          x2 = x1 + 1;
+
+          if (x1 < 0 || y1 < 0 || x2 >= Lx.cols || y2 >= Lx.rows)
+              continue; // FIXIT Boundaries
 
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(Lx.ptr<float>(y1)+x1);
-          res2 = *(Lx.ptr<float>(y1)+x2);
-          res3 = *(Lx.ptr<float>(y2)+x1);
-          res4 = *(Lx.ptr<float>(y2)+x2);
+          res1 = Lx.at<float>(y1, x1);
+          res2 = Lx.at<float>(y1, x2);
+          res3 = Lx.at<float>(y2, x1);
+          res4 = Lx.at<float>(y2, x2);
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(Ly.ptr<float>(y1)+x1);
-          res2 = *(Ly.ptr<float>(y1)+x2);
-          res3 = *(Ly.ptr<float>(y2)+x1);
-          res4 = *(Ly.ptr<float>(y2)+x2);
+          res1 = Ly.at<float>(y1, x1);
+          res2 = Ly.at<float>(y1, x2);
+          res3 = Ly.at<float>(y2, x1);
+          res4 = Ly.at<float>(y2, x2);
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           rx = gauss_s1*rx;
@@ -1533,8 +1522,9 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   // convert to unit vector
   len = sqrt(len);
 
+  const float len_inv = 1.0f / len;
   for (i = 0; i < dsize; i++) {
-    desc[i] /= len;
+    desc[i] *= len_inv;
   }
 }
 
@@ -1575,8 +1565,8 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   scale = cvRound(0.5f*kpt.size / ratio);
   angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Mx;
-  Mat Ly = evolution[level].My;
+  const Mat Lx = evolution[level].Lx;
+  const Mat Ly = evolution[level].Ly;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
   co = cos(angle);
@@ -1613,34 +1603,28 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           // Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-          y1 = cvRound(sample_y - 0.5f);
-          x1 = cvRound(sample_x - 0.5f);
+          y1 = cvFloor(sample_y);
+          x1 = cvFloor(sample_x);
 
-          y2 = cvRound(sample_y + 0.5f);
-          x2 = cvRound(sample_x + 0.5f);
+          y2 = y1 + 1;
+          x2 = x1 + 1;
 
-          // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
-          // clip values so they fit into the image
-          const MatSize& size = Lx.size;
-          y1 = min(max(0, y1), size[0] - 1);
-          x1 = min(max(0, x1), size[1] - 1);
-          y2 = min(max(0, y2), size[0] - 1);
-          x2 = min(max(0, x2), size[1] - 1);
-          CV_DbgAssert(Lx.size == Ly.size);
+          if (x1 < 0 || y1 < 0 || x2 >= Lx.cols || y2 >= Lx.rows)
+              continue; // FIXIT Boundaries
 
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(Lx.ptr<float>(y1, x1));
-          res2 = *(Lx.ptr<float>(y1, x2));
-          res3 = *(Lx.ptr<float>(y2, x1));
-          res4 = *(Lx.ptr<float>(y2, x2));
+          res1 = Lx.at<float>(y1, x1);
+          res2 = Lx.at<float>(y1, x2);
+          res3 = Lx.at<float>(y2, x1);
+          res4 = Lx.at<float>(y2, x2);
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(Ly.ptr<float>(y1, x1));
-          res2 = *(Ly.ptr<float>(y1, x2));
-          res3 = *(Ly.ptr<float>(y2, x1));
-          res4 = *(Ly.ptr<float>(y2, x2));
+          res1 = Ly.at<float>(y1, x1);
+          res2 = Ly.at<float>(y1, x2);
+          res3 = Ly.at<float>(y2, x1);
+          res4 = Ly.at<float>(y2, x2);
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           // Get the x and y derivatives on the rotated axis
@@ -1675,8 +1659,9 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   // convert to unit vector
   len = sqrt(len);
 
+  const float len_inv = 1.0f / len;
   for (i = 0; i < dsize; i++) {
-    desc[i] /= len;
+    desc[i] *= len_inv;
   }
 }
 
@@ -1689,13 +1674,6 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
  */
 void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
-  float di = 0.0, dx = 0.0, dy = 0.0;
-  float ri = 0.0, rx = 0.0, ry = 0.0, xf = 0.0, yf = 0.0;
-  float sample_x = 0.0, sample_y = 0.0, ratio = 0.0;
-  int x1 = 0, y1 = 0;
-  int nsamples = 0, scale = 0;
-  int dcount1 = 0, dcount2 = 0;
-
   const AKAZEOptions & options = *options_;
   const std::vector<Evolution>& evolution = *evolution_;
 
@@ -1705,14 +1683,14 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   float values[16*max_channels];
 
   // Get the information from the keypoint
-  ratio = (float)(1 << kpt.octave);
-  scale = cvRound(0.5f*kpt.size / ratio);
+  const float ratio = (float)(1 << kpt.octave);
+  const int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Mx;
-  Mat Ly = evolution[level].My;
-  Mat Lt = evolution[level].Mt;
-  yf = kpt.pt.y / ratio;
-  xf = kpt.pt.x / ratio;
+  const Mat Lx = evolution[level].Lx;
+  const Mat Ly = evolution[level].Ly;
+  const Mat Lt = evolution[level].Lt;
+  const float yf = kpt.pt.y / ratio;
+  const float xf = kpt.pt.x / ratio;
 
   // For 2x2 grid, 3x3 grid and 4x4 grid
   const int pattern_size = options_->descriptor_pattern_size;
@@ -1726,27 +1704,31 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   memset(desc, 0, desc_size);
 
   // For the three grids
+  int dcount1 = 0;
   for (int z = 0; z < 3; z++) {
-    dcount2 = 0;
+    int dcount2 = 0;
     const int step = sample_step[z];
     for (int i = -pattern_size; i < pattern_size; i += step) {
       for (int j = -pattern_size; j < pattern_size; j += step) {
-        di = dx = dy = 0.0;
-        nsamples = 0;
+        float di = 0.0, dx = 0.0, dy = 0.0;
 
-        for (int k = i; k < i + step; k++) {
-          for (int l = j; l < j + step; l++) {
+        int nsamples = 0;
+        for (int k = 0; k < step; k++) {
+          for (int l = 0; l < step; l++) {
 
             // Get the coordinates of the sample point
-            sample_y = yf + l*scale;
-            sample_x = xf + k*scale;
+            const float sample_y = yf + (l+j)*scale;
+            const float sample_x = xf + (k+i)*scale;
 
-            y1 = cvRound(sample_y);
-            x1 = cvRound(sample_x);
+            const int y1 = cvRound(sample_y);
+            const int x1 = cvRound(sample_x);
 
-            ri = *(Lt.ptr<float>(y1)+x1);
-            rx = *(Lx.ptr<float>(y1)+x1);
-            ry = *(Ly.ptr<float>(y1)+x1);
+            if (y1 < 0 || y1 >= Lt.rows || x1 < 0 || x1 >= Lt.cols)
+                continue; // Boundaries
+
+            const float ri = Lt.at<float>(y1, x1);
+            const float rx = Lx.at<float>(y1, x1);
+            const float ry = Ly.at<float>(y1, x1);
 
             di += ri;
             dx += rx;
@@ -1755,9 +1737,13 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
           }
         }
 
-        di /= nsamples;
-        dx /= nsamples;
-        dy /= nsamples;
+        if (nsamples > 0)
+        {
+            const float nsamples_inv = 1.0f / nsamples;
+            di *= nsamples_inv;
+            dx *= nsamples_inv;
+            dy *= nsamples_inv;
+        }
 
         float *val = &values[dcount2*max_channels];
         *(val) = di;
@@ -1794,17 +1780,20 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
     const std::vector<Evolution>& evolution = *evolution_;
     int pattern_size = options_->descriptor_pattern_size;
     int chan = options_->descriptor_channels;
-    int valpos = 0;
-    Mat Lx = evolution[level].Mx;
-    Mat Ly = evolution[level].My;
-    Mat Lt = evolution[level].Mt;
+    const Mat Lx = evolution[level].Lx;
+    const Mat Ly = evolution[level].Ly;
+    const Mat Lt = evolution[level].Lt;
 
+    const Size size = Lt.size();
+    CV_Assert(size == Lx.size());
+    CV_Assert(size == Ly.size());
+
+    int valpos = 0;
     for (int i = -pattern_size; i < pattern_size; i += sample_step) {
         for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-            float di, dx, dy;
-            di = dx = dy = 0.0;
-            int nsamples = 0;
+            float di = 0.0f, dx = 0.0f, dy = 0.0f;
 
+            int nsamples = 0;
             for (int k = i; k < i + sample_step; k++) {
               for (int l = j; l < j + sample_step; l++) {
                 float sample_y = yf + (l*co * scale + k*si*scale);
@@ -1813,20 +1802,15 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 int y1 = cvRound(sample_y);
                 int x1 = cvRound(sample_x);
 
-                // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
-                // clip values so they fit into the image
-                const MatSize& size = Lt.size;
-                CV_DbgAssert(size == Lx.size &&
-                             size == Ly.size);
-                y1 = min(max(0, y1), size[0] - 1);
-                x1 = min(max(0, x1), size[1] - 1);
+                if (y1 < 0 || y1 >= Lt.rows || x1 < 0 || x1 >= Lt.cols)
+                    continue; // Boundaries
 
-                float ri = *(Lt.ptr<float>(y1, x1));
+                float ri = Lt.at<float>(y1, x1);
                 di += ri;
 
                 if(chan > 1) {
-                    float rx = *(Lx.ptr<float>(y1, x1));
-                    float ry = *(Ly.ptr<float>(y1, x1));
+                    float rx = Lx.at<float>(y1, x1);
+                    float ry = Ly.at<float>(y1, x1);
                     if (chan == 2) {
                       dx += sqrtf(rx*rx + ry*ry);
                     }
@@ -1840,20 +1824,25 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 nsamples++;
               }
             }
-            di /= nsamples;
-            dx /= nsamples;
-            dy /= nsamples;
+
+            if (nsamples > 0)
+            {
+                const float nsamples_inv = 1.0f / nsamples;
+                di *= nsamples_inv;
+                dx *= nsamples_inv;
+                dy *= nsamples_inv;
+            }
 
             values[valpos] = di;
             if (chan > 1) {
                 values[valpos + 1] = dx;
             }
             if (chan > 2) {
-              values[valpos + 2] = dy;
+                values[valpos + 2] = dy;
             }
             valpos += chan;
-          }
         }
+    }
 }
 
 void MLDB_Full_Descriptor_Invoker::MLDB_Binary_Comparisons(float* values, unsigned char* desc,
@@ -1931,10 +1920,8 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
  */
 void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
-  float di = 0.f, dx = 0.f, dy = 0.f;
   float rx = 0.f, ry = 0.f;
   float sample_x = 0.f, sample_y = 0.f;
-  int x1 = 0, y1 = 0;
 
   const AKAZEOptions & options = *options_;
   const std::vector<Evolution>& evolution = *evolution_;
@@ -1944,9 +1931,9 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   int scale = cvRound(0.5f*kpt.size / ratio);
   float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Mx;
-  Mat Ly = evolution[level].My;
-  Mat Lt = evolution[level].Mt;
+  const Mat Lx = evolution[level].Lx;
+  const Mat Ly = evolution[level].Ly;
+  const Mat Lt = evolution[level].Lt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
   float co = cos(angle);
@@ -1957,7 +1944,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   const int max_channels = 3;
   const int channels = options.descriptor_channels;
   CV_Assert(channels <= max_channels);
-  float values[(4 + 9 + 16)*max_channels];
+  float values[(4 + 9 + 16)*max_channels] = { 0 };
 
   // Sample everything, but only do the comparisons
   const int pattern_size = options.descriptor_pattern_size;
@@ -1972,9 +1959,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
     const int *coords = descriptorSamples_.ptr<int>(i);
     CV_Assert(coords[0] >= 0 && coords[0] < 3);
     const int sample_step = sample_steps[coords[0]];
-    di = 0.0f;
-    dx = 0.0f;
-    dy = 0.0f;
+    float di = 0.f, dx = 0.f, dy = 0.f;
 
     for (int k = coords[1]; k < coords[1] + sample_step; k++) {
       for (int l = coords[2]; l < coords[2] + sample_step; l++) {
@@ -1983,14 +1968,17 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
         sample_y = yf + (l*scale*co + k*scale*si);
         sample_x = xf + (-l*scale*si + k*scale*co);
 
-        y1 = cvRound(sample_y);
-        x1 = cvRound(sample_x);
+        const int y1 = cvRound(sample_y);
+        const int x1 = cvRound(sample_x);
 
-        di += *(Lt.ptr<float>(y1)+x1);
+        if (x1 < 0 || y1 < 0 || x1 >= Lt.cols || y1 >= Lt.rows)
+            continue; // Boundaries
+
+        di += Lt.at<float>(y1, x1);
 
         if (options.descriptor_channels > 1) {
-          rx = *(Lx.ptr<float>(y1)+x1);
-          ry = *(Ly.ptr<float>(y1)+x1);
+          rx = Lx.at<float>(y1, x1);
+          ry = Ly.at<float>(y1, x1);
 
           if (options.descriptor_channels == 2) {
             dx += sqrtf(rx*rx + ry*ry);
@@ -2051,14 +2039,17 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   float ratio = (float)(1 << kpt.octave);
   int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Mx;
-  Mat Ly = evolution[level].My;
-  Mat Lt = evolution[level].Mt;
+  const Mat Lx = evolution[level].Lx;
+  const Mat Ly = evolution[level].Ly;
+  const Mat Lt = evolution[level].Lt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
 
   // Allocate memory for the matrix of values
-  Mat values ((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
+  const int max_channels = 3;
+  const int channels = options.descriptor_channels;
+  CV_Assert(channels <= max_channels);
+  float values[(4 + 9 + 16)*max_channels] = { 0 };
 
   const int pattern_size = options.descriptor_pattern_size;
   CV_Assert((pattern_size & 1) == 0);
@@ -2083,11 +2074,15 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
 
         y1 = cvRound(sample_y);
         x1 = cvRound(sample_x);
-        di += *(Lt.ptr<float>(y1)+x1);
+
+        if (x1 < 0 || y1 < 0 || x1 >= Lt.cols || y1 >= Lt.rows)
+            continue; // Boundaries
+
+        di += Lt.at<float>(y1, x1);
 
         if (options.descriptor_channels > 1) {
-          rx = *(Lx.ptr<float>(y1)+x1);
-          ry = *(Ly.ptr<float>(y1)+x1);
+          rx = Lx.at<float>(y1, x1);
+          ry = Ly.at<float>(y1, x1);
 
           if (options.descriptor_channels == 2) {
             dx += sqrtf(rx*rx + ry*ry);
@@ -2100,26 +2095,26 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
       }
     }
 
-    *(values.ptr<float>(options.descriptor_channels*i)) = di;
+    float* pValues = &values[channels * i];
+    pValues[0] = di;
 
     if (options.descriptor_channels == 2) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
+      pValues[1] = dx;
     }
     else if (options.descriptor_channels == 3) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
-      *(values.ptr<float>(options.descriptor_channels*i + 2)) = dy;
+      pValues[1] = dx;
+      pValues[2] = dy;
     }
   }
 
   // Do the comparisons
-  const float *vals = values.ptr<float>(0);
   const int *comps = descriptorBits_.ptr<int>(0);
 
   CV_Assert(divUp(descriptorBits_.rows, 8) == desc_size);
   memset(desc, 0, desc_size);
 
   for (int i = 0; i<descriptorBits_.rows; i++) {
-    if (vals[comps[2 * i]] > vals[comps[2 * i + 1]]) {
+    if (values[comps[2 * i]] > values[comps[2 * i + 1]]) {
       desc[i / 8] |= (1 << (i % 8));
     }
   }
@@ -2149,7 +2144,8 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   }
   ssz *= nchannels;
 
-  CV_Assert(nbits <= ssz); // Descriptor size can't be bigger than full descriptor
+  CV_Assert(ssz == 162*nchannels);
+  CV_Assert(nbits <= ssz && "Descriptor size can't be bigger than full descriptor (486 = 162*3 - 3 channels)");
 
   // Since the full descriptor is usually under 10k elements, we pick
   // the selection from the full matrix.  We take as many samples per
