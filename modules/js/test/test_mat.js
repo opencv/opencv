@@ -598,8 +598,8 @@ QUnit.test("test mat operations", function(assert) {
 
         assert.equal(result.minVal, 0);
         assert.equal(result.maxVal, 2);
-        assert.deepEqual(result.minLoc, [2, 0]);
-        assert.deepEqual(result.maxLoc, [1, 1]);
+        assert.deepEqual(result.minLoc, {x: 2, y: 0});
+        assert.deepEqual(result.maxLoc, {x: 1, y: 1});
 
         src.delete();
         result.delete();

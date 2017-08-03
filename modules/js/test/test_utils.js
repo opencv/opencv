@@ -38,25 +38,25 @@ QUnit.module ("Utils", {});
 QUnit.test("Test vectors", function(assert) {
 	let pointVector = new cv.PointVector();
 	for (var i=0 ; i<100; ++i) {
-		pointVector.push_back([i, 2*i]);
+		pointVector.push_back({x: i, y: 2*i});
 	}
 
 	assert.equal(pointVector.size(), 100);
 
 	let index = 10;
 	let item = pointVector.get(index);
-	assert.equal(item[0], index);
-	assert.equal(item[1], 2*index);
+	assert.equal(item.x, index);
+	assert.equal(item.y, 2*index);
 
 	index = 0;
 	item = pointVector.get(index);
-	assert.equal(item[0], index);
-	assert.equal(item[1], 2*index);
+	assert.equal(item.x, index);
+	assert.equal(item.y, 2*index);
 
 	index = 99;
 	item = pointVector.get(index);
-	assert.equal(item[0], index);
-	assert.equal(item[1], 2*index);
+	assert.equal(item.x, index);
+	assert.equal(item.y, 2*index);
 
 	pointVector.delete();
 });

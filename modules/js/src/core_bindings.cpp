@@ -312,9 +312,9 @@ EMSCRIPTEN_BINDINGS(Utils) {
     EMSCRIPTEN_CV_SIZE(Size2f)
 
 #define EMSCRIPTEN_CV_POINT(type) \
-    value_array<type>("#type") \
-        .element(&type::x) \
-        .element(&type::y); \
+    value_object<type>("#type") \
+        .field("x", &type::x) \
+        .field("y", &type::y); \
 
     EMSCRIPTEN_CV_POINT(Point)
     EMSCRIPTEN_CV_POINT(Point2f)

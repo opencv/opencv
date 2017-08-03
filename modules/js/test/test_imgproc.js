@@ -214,19 +214,19 @@ QUnit.test("test_shape", function(assert) {
 
 QUnit.test("test_rotated_rect", function(assert) {
   {
-    let rect = new cv.RotatedRect([100, 100], {height: 100, width: 50}, 30);
+    let rect = new cv.RotatedRect({x: 100, y: 100}, {height: 100, width: 50}, 30);
     let points = new cv.Point2fVector();
 
-    assert.equal(rect.center[0], 100);
-    assert.equal(rect.center[1], 100);
+    assert.equal(rect.center.x, 100);
+    assert.equal(rect.center.y, 100);
     assert.equal(rect.angle, 30);
     assert.equal(rect.size.height, 100);
     assert.equal(rect.size.width, 50);
 
     rect.points(points);
 
-    assert.equal(points.get(0)[0], rect.boundingRect2f().x);
-    assert.equal(points.get(1)[1], rect.boundingRect2f().y);
+    assert.equal(points.get(0).x, rect.boundingRect2f().x);
+    assert.equal(points.get(1).y, rect.boundingRect2f().y);
 
     rect.delete();
     points.delete();
@@ -249,7 +249,7 @@ QUnit.test("test_min_enclosing", function(assert) {
 
     cv.minEnclosingCircle(points, circle);
 
-    assert.deepEqual(circle.center, [0.5, 0.5]);
+    assert.deepEqual(circle.center, {x: 0.5, y: 0.5});
     assert.ok(Math.abs(circle.radius - Math.sqrt(2) / 2) < 0.001);
 
     circle.delete();
@@ -266,7 +266,7 @@ QUnit.test("test_filter", function(assert) {
       let mat1 = cv.Mat.ones(5, 5, cv.CV_8UC3);
       let mat2 = new cv.Mat();
 
-      cv.blur(mat1, mat2, {height: 3, width: 3}, [-1, -1], cv.BORDER_DEFAULT);
+      cv.blur(mat1, mat2, {height: 3, width: 3}, {x: -1, y: -1}, cv.BORDER_DEFAULT);
 
       // Verify result.
       let view = mat2.data();
@@ -275,7 +275,7 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(size[0], 5);
       assert.equal(size[1], 5);
 
-      cv.blur(mat1, mat2, {height: 3, width: 3}, [-1, -1]);
+      cv.blur(mat1, mat2, {height: 3, width: 3}, {x: -1, y: -1});
 
       // Verify result.
       view = mat2.data();
