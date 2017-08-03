@@ -49,6 +49,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/ocl.hpp"
+#include "opencv2/core/softfloat.hpp" // int32_t (MSVS 2010-2013)
 #include "opencv2/core/hal/hal.hpp"
 
 #include <algorithm>
