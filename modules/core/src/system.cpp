@@ -1541,7 +1541,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
         {
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
-            cv::deleteThreadAllocData();
             cv::getTlsStorage().releaseThread();
         }
     }
