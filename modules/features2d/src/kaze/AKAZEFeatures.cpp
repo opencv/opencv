@@ -74,12 +74,12 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
       Evolution step;
       step.size = Size(level_width, level_height);
       step.esigma = options_.soffset*pow(2.f, (float)(j) / (float)(options_.nsublevels) + i);
-      step.sigma_size = fRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
+      step.sigma_size = cvRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
       step.etime = 0.5f * (step.esigma * step.esigma);
       step.octave = i;
       step.sublevel = j;
       step.octave_ratio = (float)power;
-      step.border = fRound(smax * step.sigma_size) + 1;
+      step.border = cvRound(smax * step.sigma_size) + 1;
 
       evolution_.push_back(step);
     }
@@ -106,7 +106,7 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
  */
 static inline int getGaussianKernelSize(float sigma) {
   // Compute an appropriate kernel size according to the specified sigma
-  int ksize = (int)ceil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
+  int ksize = (int)cvCeil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
   ksize |= 1; // kernel should be odd
   return ksize;
 }
@@ -890,11 +890,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_SURF_Descriptor_Upright_64((*keypoints_)[i], descriptors_->ptr<float>(i));
+      Get_SURF_Descriptor_Upright_64((*keypoints_)[i], descriptors_->ptr<float>(i), descriptors_->cols);
     }
   }
 
-  void Get_SURF_Descriptor_Upright_64(const KeyPoint& kpt, float* desc) const;
+  void Get_SURF_Descriptor_Upright_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -916,11 +916,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_SURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i));
+      Get_SURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i), descriptors_->cols);
     }
   }
 
-  void Get_SURF_Descriptor_64(const KeyPoint& kpt, float* desc) const;
+  void Get_SURF_Descriptor_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -942,11 +942,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_MSURF_Upright_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i));
+      Get_MSURF_Upright_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i), descriptors_->cols);
     }
   }
 
-  void Get_MSURF_Upright_Descriptor_64(const KeyPoint& kpt, float* desc) const;
+  void Get_MSURF_Upright_Descriptor_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -968,11 +968,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_MSURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i));
+      Get_MSURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i), descriptors_->cols);
     }
   }
 
-  void Get_MSURF_Descriptor_64(const KeyPoint& kpt, float* desc) const;
+  void Get_MSURF_Descriptor_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -995,11 +995,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_Upright_MLDB_Full_Descriptor((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
+      Get_Upright_MLDB_Full_Descriptor((*keypoints_)[i], descriptors_->ptr<unsigned char>(i), descriptors_->cols);
     }
   }
 
-  void Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char* desc) const;
+  void Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -1030,11 +1030,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_Upright_MLDB_Descriptor_Subset((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
+      Get_Upright_MLDB_Descriptor_Subset((*keypoints_)[i], descriptors_->ptr<unsigned char>(i), descriptors_->cols);
     }
   }
 
-  void Get_Upright_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char* desc) const;
+  void Get_Upright_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -1061,11 +1061,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_MLDB_Full_Descriptor((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
+      Get_MLDB_Full_Descriptor((*keypoints_)[i], descriptors_->ptr<unsigned char>(i), descriptors_->cols);
     }
   }
 
-  void Get_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char* desc) const;
+  void Get_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
   void MLDB_Fill_Values(float* values, int sample_step, int level,
                         float xf, float yf, float co, float si, float scale) const;
   void MLDB_Binary_Comparisons(float* values, unsigned char* desc,
@@ -1100,11 +1100,11 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      Get_MLDB_Descriptor_Subset((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
+      Get_MLDB_Descriptor_Subset((*keypoints_)[i], descriptors_->ptr<unsigned char>(i), descriptors_->cols);
     }
   }
 
-  void Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char* desc) const;
+  void Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
 
 private:
   std::vector<KeyPoint>* keypoints_;
@@ -1131,20 +1131,17 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray
   }
 
   // Allocate memory for the matrix with the descriptors
-  if (options_.descriptor < AKAZE::DESCRIPTOR_MLDB_UPRIGHT) {
-    descriptors.create((int)kpts.size(), 64, CV_32FC1);
+  int descriptor_size = 64;
+  int descriptor_type = CV_32FC1;
+  if (options_.descriptor >= AKAZE::DESCRIPTOR_MLDB_UPRIGHT)
+  {
+    int descriptor_bits = (options_.descriptor_size == 0)
+          ? (6 + 36 + 120)*options_.descriptor_channels // the full length binary descriptor -> 486 bits
+          : options_.descriptor_size; // the random bit selection length binary descriptor
+    descriptor_size = divUp(descriptor_bits, 8);
+    descriptor_type = CV_8UC1;
   }
-  else {
-    // We use the full length binary descriptor -> 486 bits
-    if (options_.descriptor_size == 0) {
-      int t = (6 + 36 + 120)*options_.descriptor_channels;
-      descriptors.create((int)kpts.size(), (int)ceil(t / 8.), CV_8UC1);
-    }
-    else {
-      // We use the random bit selection length binary descriptor
-      descriptors.create((int)kpts.size(), (int)ceil(options_.descriptor_size / 8.), CV_8UC1);
-    }
-  }
+  descriptors.create((int)kpts.size(), descriptor_size, descriptor_type);
 
   Mat desc = descriptors.getMat();
 
@@ -1208,12 +1205,11 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
         { 0.00344629f, 0.00318132f, 0.00250252f, 0.00167749f, 0.00095820f, 0.00046640f, 0.00019346f },
         { 0.00142946f, 0.00131956f, 0.00103800f, 0.00069579f, 0.00039744f, 0.00019346f, 0.00008024f }
     };
-    static const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
     static const struct gtable
     {
       float weight[109];
-      int8_t xidx[109];
-      int8_t yidx[109];
+      int xidx[109];
+      int yidx[109];
 
       explicit gtable(void)
       {
@@ -1222,29 +1218,28 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
         for (int i = -6; i <= 6; ++i) {
           for (int j = -6; j <= 6; ++j) {
             if (i*i + j*j < 36) {
-              weight[k] = gauss25[id[i + 6]][id[j + 6]];
-              yidx[k] = static_cast<int8_t>(i);
-              xidx[k] = static_cast<int8_t>(j);
+              CV_Assert(k < 109);
+              weight[k] = gauss25[abs(i)][abs(j)];
+              yidx[k] = i;
+              xidx[k] = j;
               ++k;
             }
           }
         }
-        CV_DbgAssert(k == 109);
       }
     } g;
 
-  const float * lx = Lx.ptr<float>(0);
-  const float * ly = Ly.ptr<float>(0);
-  int cols = Lx.cols;
+  CV_Assert(x0 - 6 * scale >= 0 && x0 + 6 * scale < Lx.cols);
+  CV_Assert(y0 - 6 * scale >= 0 && y0 + 6 * scale < Lx.rows);
 
-  for (int i = 0; i < 109; i++) {
-    int j = (y0 + g.yidx[i] * scale) * cols + (x0 + g.xidx[i] * scale);
+  for (int i = 0; i < 109; i++)
+  {
+    int y = y0 + g.yidx[i] * scale;
+    int x = x0 + g.xidx[i] * scale;
 
-    resX[i] = g.weight[i] * lx[j];
-    resY[i] = g.weight[i] * ly[j];
-
-    CV_DbgAssert(isfinite(resX[i]));
-    CV_DbgAssert(isfinite(resY[i]));
+    float w = g.weight[i];
+    resX[i] = w * Lx.at<float>(y, x);
+    resY[i] = w * Ly.at<float>(y, x);
   }
 }
 
@@ -1253,7 +1248,7 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
  * @param a[] Input floating point array to sort
  * @param n The length of a[]
  * @param quantum The interval to convert a[i]'s float values to integers
- * @param max The upper bound of a[], meaning a[i] must be in [0, max]
+ * @param nkeys a[i] < nkeys * quantum
  * @param idx[] Output array of the indices: a[idx[i]] forms a sorted array
  * @param cum[] Output array of the starting indices of quantized floats
  * @note The values of a[] in [k*quantum, (k + 1)*quantum) is labeled by
@@ -1263,25 +1258,35 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
  */
 static inline
 void quantized_counting_sort(const float a[], const int n,
-                             const float quantum, const float max,
-                             uint8_t idx[], uint8_t cum[])
+                             const float quantum, const int nkeys,
+                             int idx[/*n*/], int cum[/*nkeys + 1*/])
 {
-  const int nkeys = (int)(max / quantum);
-
-  // The size of cum[] must be nkeys + 1
-  memset(cum, 0, nkeys + 1);
+  memset(cum, 0, sizeof(cum[0]) * (nkeys + 1));
 
   // Count up the quantized values
   for (int i = 0; i < n; i++)
-    cum[(int)(a[i] / quantum)]++;
+  {
+    int b = (int)(a[i] / quantum);
+    if (b < 0 || b >= nkeys)
+      b = 0;
+    cum[b]++;
+  }
 
   // Compute the inclusive prefix sum i.e. the end indices; cum[nkeys] is the total
   for (int i = 1; i <= nkeys; i++)
+  {
     cum[i] += cum[i - 1];
+  }
+  CV_Assert(cum[nkeys] == n);
 
   // Generate the sorted indices; cum[] becomes the exclusive prefix sum i.e. the start indices of keys
   for (int i = 0; i < n; i++)
-    idx[--cum[(int)(a[i] / quantum)]] = static_cast<uint8_t>(i);
+  {
+    int b = (int)(a[i] / quantum);
+    if (b < 0 || b >= nkeys)
+      b = 0;
+    idx[--cum[b]] = i;
+  }
 }
 
 /**
@@ -1296,9 +1301,9 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // get the right evolution level for this keypoint
   const Evolution& e = evolution[kpt.class_id];
   // Get the information from the keypoint
-  int scale = fRound(0.5f * kpt.size / e.octave_ratio);
-  int x0 = fRound(kpt.pt.x / e.octave_ratio);
-  int y0 = fRound(kpt.pt.y / e.octave_ratio);
+  int scale = cvRound(0.5f * kpt.size / e.octave_ratio);
+  int x0 = cvRound(kpt.pt.x / e.octave_ratio);
+  int y0 = cvRound(kpt.pt.y / e.octave_ratio);
 
   // Sample derivatives responses for the points within radius of 6*scale
   const int ang_size = 109;
@@ -1312,17 +1317,18 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // Sort by the angles; angles are labeled by slices of 0.15 radian
   const int slices = 42;
   const float ang_step = (float)(2.0 * CV_PI / slices);
-  uint8_t slice[slices + 1];
-  uint8_t sorted_idx[ang_size];
-  quantized_counting_sort(Ang, ang_size, ang_step, (float)(2.0 * CV_PI), sorted_idx, slice);
+  int slice[slices + 1];
+  int sorted_idx[ang_size];
+  quantized_counting_sort(Ang, ang_size, ang_step, slices, sorted_idx, slice);
 
   // Find the main angle by sliding a window of 7-slice size(=PI/3) around the keypoint
   const int win = 7;
 
   float maxX = 0.0f, maxY = 0.0f;
   for (int i = slice[0]; i < slice[win]; i++) {
-    maxX += resX[sorted_idx[i]];
-    maxY += resY[sorted_idx[i]];
+    const int idx = sorted_idx[i];
+    maxX += resX[idx];
+    maxY += resY[idx];
   }
   float maxNorm = maxX * maxX + maxY * maxY;
 
@@ -1333,8 +1339,9 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
 
     float sumX = 0.0f, sumY = 0.0f;
     for (int i = slice[sn]; i < slice[sn + win]; i++) {
-      sumX += resX[sorted_idx[i]];
-      sumY += resY[sorted_idx[i]];
+      const int idx = sorted_idx[i];
+      sumX += resX[idx];
+      sumY += resY[idx];
     }
 
     float norm = sumX * sumX + sumY * sumY;
@@ -1350,12 +1357,14 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
 
     float sumX = 0.0f, sumY = 0.0f;
     for (int i = slice[sn]; i < slice[slices]; i++) {
-      sumX += resX[sorted_idx[i]];
-      sumY += resY[sorted_idx[i]];
+      const int idx = sorted_idx[i];
+      sumX += resX[idx];
+      sumY += resY[idx];
     }
     for (int i = slice[0]; i < slice[remain]; i++) {
-      sumX += resX[sorted_idx[i]];
-      sumY += resY[sorted_idx[i]];
+      const int idx = sorted_idx[i];
+      sumX += resX[idx];
+      sumY += resY[idx];
     }
 
     float norm = sumX * sumX + sumY * sumY;
@@ -1410,7 +1419,10 @@ void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) c
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const KeyPoint& kpt, float *desc) const {
+void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const KeyPoint& kpt, float *desc, int desc_size) const {
+
+  const int dsize = 64;
+  CV_Assert(desc_size == dsize);
 
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
   float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1418,7 +1430,7 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   int x1 = 0, y1 = 0, sample_step = 0, pattern_size = 0;
   int x2 = 0, y2 = 0, kx = 0, ky = 0, i = 0, j = 0, dcount = 0;
   float fx = 0.0, fy = 0.0, ratio = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
-  int scale = 0, dsize = 0;
+  int scale = 0;
 
   // Subregion centers for the 4x4 gaussian weighting
   float cx = -0.5f, cy = 0.5f;
@@ -1426,13 +1438,12 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   const std::vector<Evolution>& evolution = *evolution_;
 
   // Set the descriptor size and the sample and pattern sizes
-  dsize = 64;
   sample_step = 5;
   pattern_size = 12;
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
-  scale = fRound(0.5f*kpt.size / ratio);
+  scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1469,11 +1480,11 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
           //Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.50f*scale);
 
-          y1 = (int)(sample_y - .5);
-          x1 = (int)(sample_x - .5);
+          y1 = (int)(sample_y - .5f);
+          x1 = (int)(sample_x - .5f);
 
-          y2 = (int)(sample_y + .5);
-          x2 = (int)(sample_x + .5);
+          y2 = (int)(sample_y + .5f);
+          x2 = (int)(sample_x + .5f);
 
           fx = sample_x - x1;
           fy = sample_y - y1;
@@ -1517,6 +1528,8 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
     i += 9;
   }
 
+  CV_Assert(dcount == desc_size);
+
   // convert to unit vector
   len = sqrt(len);
 
@@ -1535,7 +1548,10 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, float *desc) const {
+void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, float *desc, int desc_size) const {
+
+  const int dsize = 64;
+  CV_Assert(desc_size == dsize);
 
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
   float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1543,7 +1559,7 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   float fx = 0.0, fy = 0.0, ratio = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
   int x1 = 0, y1 = 0, x2 = 0, y2 = 0, sample_step = 0, pattern_size = 0;
   int kx = 0, ky = 0, i = 0, j = 0, dcount = 0;
-  int scale = 0, dsize = 0;
+  int scale = 0;
 
   // Subregion centers for the 4x4 gaussian weighting
   float cx = -0.5f, cy = 0.5f;
@@ -1551,14 +1567,13 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   const std::vector<Evolution>& evolution = *evolution_;
 
   // Set the descriptor size and the sample and pattern sizes
-  dsize = 64;
   sample_step = 5;
   pattern_size = 12;
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
-  scale = fRound(0.5f*kpt.size / ratio);
-  angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  scale = cvRound(0.5f*kpt.size / ratio);
+  angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1598,11 +1613,11 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           // Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-          y1 = fRound(sample_y - 0.5f);
-          x1 = fRound(sample_x - 0.5f);
+          y1 = cvRound(sample_y - 0.5f);
+          x1 = cvRound(sample_x - 0.5f);
 
-          y2 = fRound(sample_y + 0.5f);
-          x2 = fRound(sample_x + 0.5f);
+          y2 = cvRound(sample_y + 0.5f);
+          x2 = cvRound(sample_x + 0.5f);
 
           // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
           // clip values so they fit into the image
@@ -1655,6 +1670,8 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
     i += 9;
   }
 
+  CV_Assert(dcount == desc_size);
+
   // convert to unit vector
   len = sqrt(len);
 
@@ -1670,7 +1687,7 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
  * @param kpt Input keypoint
  * @param desc Descriptor vector
  */
-void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char *desc) const {
+void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
   float di = 0.0, dx = 0.0, dy = 0.0;
   float ri = 0.0, rx = 0.0, ry = 0.0, xf = 0.0, yf = 0.0;
@@ -1682,16 +1699,14 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   const AKAZEOptions & options = *options_;
   const std::vector<Evolution>& evolution = *evolution_;
 
-  // Matrices for the M-LDB descriptor
-  Mat values[3] = {
-    Mat(4, options.descriptor_channels, CV_32FC1),
-    Mat(9, options.descriptor_channels, CV_32FC1),
-    Mat(16, options.descriptor_channels, CV_32FC1)
-  };
+  // Buffer for the M-LDB descriptor
+  const int max_channels = 3;
+  CV_Assert(options.descriptor_channels <= max_channels);
+  float values[16*max_channels];
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
-  scale = fRound(0.5f*kpt.size / ratio);
+  scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1701,11 +1716,14 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
 
   // For 2x2 grid, 3x3 grid and 4x4 grid
   const int pattern_size = options_->descriptor_pattern_size;
-  int sample_step[3] = {
+  CV_Assert((pattern_size & 1) == 0);
+  const int sample_step[3] = {
     pattern_size,
-    static_cast<int>(ceil(pattern_size*2./3.)),
-    pattern_size / 2
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
   };
+
+  memset(desc, 0, desc_size);
 
   // For the three grids
   for (int z = 0; z < 3; z++) {
@@ -1723,8 +1741,8 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
             sample_y = yf + l*scale;
             sample_x = xf + k*scale;
 
-            y1 = fRound(sample_y);
-            x1 = fRound(sample_x);
+            y1 = cvRound(sample_y);
+            x1 = cvRound(sample_x);
 
             ri = *(Lt.ptr<float>(y1)+x1);
             rx = *(Lx.ptr<float>(y1)+x1);
@@ -1741,7 +1759,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
         dx /= nsamples;
         dy /= nsamples;
 
-        float *val = values[z].ptr<float>(dcount2);
+        float *val = &values[dcount2*max_channels];
         *(val) = di;
         *(val+1) = dx;
         *(val+2) = dy;
@@ -1753,13 +1771,11 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
     const int num = (z + 2) * (z + 2);
     for (int i = 0; i < num; i++) {
       for (int j = i + 1; j < num; j++) {
-        const float * valI = values[z].ptr<float>(i);
-        const float * valJ = values[z].ptr<float>(j);
+        const float * valI = &values[i*max_channels];
+        const float * valJ = &values[j*max_channels];
         for (int k = 0; k < 3; ++k) {
           if (*(valI + k) > *(valJ + k)) {
             desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-          } else {
-            desc[dcount1 / 8] &= ~(1 << (dcount1 % 8));
           }
           dcount1++;
         }
@@ -1767,6 +1783,9 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
     }
 
   } // for (int z = 0; z < 3; z++)
+
+  CV_Assert(dcount1 <= desc_size*8);
+  CV_Assert(divUp(dcount1, 8) == desc_size);
 }
 
 void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_step, const int level,
@@ -1791,8 +1810,8 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 float sample_y = yf + (l*co * scale + k*si*scale);
                 float sample_x = xf + (-l*si * scale + k*co*scale);
 
-                int y1 = fRound(sample_y);
-                int x1 = fRound(sample_x);
+                int y1 = cvRound(sample_y);
+                int x1 = cvRound(sample_x);
 
                 // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
                 // clip values so they fit into the image
@@ -1852,10 +1871,6 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Binary_Comparisons(float* values, unsign
                 if (ival > ivalues[chan * j + pos]) {
                   desc[dpos >> 3] |= (1 << (dpos & 7));
                 }
-                else {
-                  desc[dpos >> 3] &= ~(1 << (dpos & 7));
-                }
-
                 dpos++;
             }
         }
@@ -1869,30 +1884,41 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Binary_Comparisons(float* values, unsign
  * @param kpt Input keypoint
  * @param desc Descriptor vector
  */
-void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char *desc) const {
+void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
   const int max_channels = 3;
   CV_Assert(options_->descriptor_channels <= max_channels);
+  const int pattern_size = options_->descriptor_pattern_size;
+
   float values[16*max_channels];
-  const double size_mult[3] = {1, 2.0/3.0, 1.0/2.0};
+  CV_Assert((pattern_size & 1) == 0);
+  //const double size_mult[3] = {1, 2.0/3.0, 1.0/2.0};
+  const int sample_step[3] = { // static_cast<int>(ceil(pattern_size * size_mult[lvl]))
+    pattern_size,
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
+  };
 
   float ratio = (float)(1 << kpt.octave);
-  float scale = (float)fRound(0.5f*kpt.size / ratio);
+  float scale = (float)cvRound(0.5f*kpt.size / ratio);
   float xf = kpt.pt.x / ratio;
   float yf = kpt.pt.y / ratio;
-  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   float co = cos(angle);
   float si = sin(angle);
-  int pattern_size = options_->descriptor_pattern_size;
+
+  memset(desc, 0, desc_size);
 
   int dpos = 0;
-  for(int lvl = 0; lvl < 3; lvl++) {
-
+  for(int lvl = 0; lvl < 3; lvl++)
+  {
       int val_count = (lvl + 2) * (lvl + 2);
-      int sample_step = static_cast<int>(ceil(pattern_size * size_mult[lvl]));
-      MLDB_Fill_Values(values, sample_step, kpt.class_id, xf, yf, co, si, scale);
+      MLDB_Fill_Values(values, sample_step[lvl], kpt.class_id, xf, yf, co, si, scale);
       MLDB_Binary_Comparisons(values, desc, val_count, dpos);
   }
+
+  CV_Assert(dpos == 486);
+  CV_Assert(divUp(dpos, 8) == desc_size);
 }
 
 /* ************************************************************************* */
@@ -1903,7 +1929,7 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
  * @param kpt Input keypoint
  * @param desc Descriptor vector
  */
-void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char *desc) const {
+void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
   float di = 0.f, dx = 0.f, dy = 0.f;
   float rx = 0.f, ry = 0.f;
@@ -1915,8 +1941,8 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
 
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
-  int scale = fRound(0.5f*kpt.size / ratio);
-  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  int scale = cvRound(0.5f*kpt.size / ratio);
+  float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -1927,17 +1953,25 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   float si = sin(angle);
 
   // Allocate memory for the matrix of values
-  Mat values((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
+  // Buffer for the M-LDB descriptor
+  const int max_channels = 3;
+  const int channels = options.descriptor_channels;
+  CV_Assert(channels <= max_channels);
+  float values[(4 + 9 + 16)*max_channels];
 
   // Sample everything, but only do the comparisons
-  vector<int> steps(3);
-  steps.at(0) = options.descriptor_pattern_size;
-  steps.at(1) = (int)ceil(2.f*options.descriptor_pattern_size / 3.f);
-  steps.at(2) = options.descriptor_pattern_size / 2;
+  const int pattern_size = options.descriptor_pattern_size;
+  CV_Assert((pattern_size & 1) == 0);
+  const int sample_steps[3] = {
+    pattern_size,
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
+  };
 
   for (int i = 0; i < descriptorSamples_.rows; i++) {
     const int *coords = descriptorSamples_.ptr<int>(i);
-    int sample_step = steps.at(coords[0]);
+    CV_Assert(coords[0] >= 0 && coords[0] < 3);
+    const int sample_step = sample_steps[coords[0]];
     di = 0.0f;
     dx = 0.0f;
     dy = 0.0f;
@@ -1949,8 +1983,8 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
         sample_y = yf + (l*scale*co + k*scale*si);
         sample_x = xf + (-l*scale*si + k*scale*co);
 
-        y1 = fRound(sample_y);
-        x1 = fRound(sample_x);
+        y1 = cvRound(sample_y);
+        x1 = cvRound(sample_x);
 
         di += *(Lt.ptr<float>(y1)+x1);
 
@@ -1970,26 +2004,27 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
       }
     }
 
-    *(values.ptr<float>(options.descriptor_channels*i)) = di;
+    float* pValues = &values[channels * i];
+    pValues[0] = di;
 
-    if (options.descriptor_channels == 2) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
+    if (channels == 2) {
+      pValues[1] = dx;
     }
-    else if (options.descriptor_channels == 3) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
-      *(values.ptr<float>(options.descriptor_channels*i + 2)) = dy;
+    else if (channels == 3) {
+      pValues[1] = dx;
+      pValues[2] = dy;
     }
   }
 
   // Do the comparisons
-  const float *vals = values.ptr<float>(0);
   const int *comps = descriptorBits_.ptr<int>(0);
 
+  CV_Assert(divUp(descriptorBits_.rows, 8) == desc_size);
+  memset(desc, 0, desc_size);
+
   for (int i = 0; i<descriptorBits_.rows; i++) {
-    if (vals[comps[2 * i]] > vals[comps[2 * i + 1]]) {
+    if (values[comps[2 * i]] > values[comps[2 * i + 1]]) {
       desc[i / 8] |= (1 << (i % 8));
-    } else {
-      desc[i / 8] &= ~(1 << (i % 8));
     }
   }
 }
@@ -2002,7 +2037,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
  * @param kpt Input keypoint
  * @param desc Descriptor vector
  */
-void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char *desc) const {
+void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char *desc, int desc_size) const {
 
   float di = 0.0f, dx = 0.0f, dy = 0.0f;
   float rx = 0.0f, ry = 0.0f;
@@ -2014,7 +2049,7 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
 
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
-  int scale = fRound(0.5f*kpt.size / ratio);
+  int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
@@ -2025,14 +2060,18 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   // Allocate memory for the matrix of values
   Mat values ((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
 
-  vector<int> steps(3);
-  steps.at(0) = options.descriptor_pattern_size;
-  steps.at(1) = static_cast<int>(ceil(2.f*options.descriptor_pattern_size / 3.f));
-  steps.at(2) = options.descriptor_pattern_size / 2;
+  const int pattern_size = options.descriptor_pattern_size;
+  CV_Assert((pattern_size & 1) == 0);
+  const int sample_steps[3] = {
+    pattern_size,
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
+  };
 
   for (int i = 0; i < descriptorSamples_.rows; i++) {
     const int *coords = descriptorSamples_.ptr<int>(i);
-    int sample_step = steps.at(coords[0]);
+    CV_Assert(coords[0] >= 0 && coords[0] < 3);
+    int sample_step = sample_steps[coords[0]];
     di = 0.0f, dx = 0.0f, dy = 0.0f;
 
     for (int k = coords[1]; k < coords[1] + sample_step; k++) {
@@ -2042,8 +2081,8 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
         sample_y = yf + l*scale;
         sample_x = xf + k*scale;
 
-        y1 = fRound(sample_y);
-        x1 = fRound(sample_x);
+        y1 = cvRound(sample_y);
+        x1 = cvRound(sample_x);
         di += *(Lt.ptr<float>(y1)+x1);
 
         if (options.descriptor_channels > 1) {
@@ -2076,11 +2115,12 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   const float *vals = values.ptr<float>(0);
   const int *comps = descriptorBits_.ptr<int>(0);
 
+  CV_Assert(divUp(descriptorBits_.rows, 8) == desc_size);
+  memset(desc, 0, desc_size);
+
   for (int i = 0; i<descriptorBits_.rows; i++) {
     if (vals[comps[2 * i]] > vals[comps[2 * i + 1]]) {
       desc[i / 8] |= (1 << (i % 8));
-    } else {
-      desc[i / 8] &= ~(1 << (i % 8));
     }
   }
 }
@@ -2120,7 +2160,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   for (int i = 0, c = 0; i < 3; i++) {
     int gdiv = i + 2; //grid divisions, per row
     int gsz = gdiv*gdiv;
-    int psz = (int)ceil(2.f*pattern_size / (float)gdiv);
+    int psz = divUp(2*pattern_size, gdiv);
 
     for (int j = 0; j < gsz; j++) {
       for (int k = j + 1; k < gsz; k++, c++) {
@@ -2134,12 +2174,12 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   }
 
   RNG rng(1024);
-  Mat_<int> comps = Mat_<int>(nchannels * (int)ceil(nbits / (float)nchannels), 2);
+  const int npicks = divUp(nbits, nchannels);
+  Mat_<int> comps = Mat_<int>(nchannels * npicks, 2);
   comps = 1000;
 
   // Select some samples. A sample includes all channels
   int count = 0;
-  int npicks = (int)ceil(nbits / (float)nchannels);
   Mat_<int> samples(29, 3);
   Mat_<int> fullcopy = fullM.clone();
   samples = -1;
