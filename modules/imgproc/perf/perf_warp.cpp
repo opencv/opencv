@@ -149,11 +149,7 @@ PERF_TEST_P(TestWarpPerspective, WarpPerspective_ovx,
 
     TEST_CYCLE() warpPerspective(src, dst, warpMat, sz, interType, borderMode, borderColor);
 
-#ifdef __ANDROID__
-    SANITY_CHECK(dst, interType == INTER_LINEAR ? 5 : 10);
-#else
-    SANITY_CHECK(dst, 1);
-#endif
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,

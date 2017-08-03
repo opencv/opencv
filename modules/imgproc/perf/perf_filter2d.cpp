@@ -66,7 +66,7 @@ PERF_TEST_P(TestFilter2d, Filter2d_ovx,
 
     TEST_CYCLE() filter2D(src, dst, CV_16SC1, kernel, Point(kSize / 2, kSize / 2), 0., borderMode);
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P( Image_KernelSize, GaborFilter2d,

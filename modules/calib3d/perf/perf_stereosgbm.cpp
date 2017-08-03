@@ -76,7 +76,7 @@ PERF_TEST_P( TestStereoCorresp, DISABLED_TooLongInDebug_SGBM, Combine(Values(Siz
         sgbm->compute(src_left,src_right,dst);
     }
 
-    SANITY_CHECK(dst, .01, ERROR_RELATIVE);
+    SANITY_CHECK_NOTHING();
 }
 
 void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_right_view)

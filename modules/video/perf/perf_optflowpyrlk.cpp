@@ -145,8 +145,7 @@ PERF_TEST_P(Path_Idx_NPoints_WSize, OpticalFlowPyrLK_ovx, testing::Combine(
                              flags, minEigThreshold);
     }
 
-    SANITY_CHECK(outPoints, 0.3);
-    SANITY_CHECK(status);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tr1::tuple<std::string, int, int, tr1::tuple<int,int>, int, bool> Path_Idx_Cn_NPoints_WSize_Deriv_t;
