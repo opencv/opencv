@@ -43,6 +43,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace testing;
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -417,68 +418,82 @@ TEST( Features2d_DescriptorExtractor, batch )
     }
 }
 
-TEST( Features2d_Feature2d, no_crash )
+class DescriptorImage : public TestWithParam<std::string>
 {
-    const String& pattern = string(cvtest::TS::ptr()->get_data_path() + "shared/*.png");
+protected:
+    virtual void SetUp() {
+        pattern = GetParam();
+    }
+
+    std::string pattern;
+};
+
+TEST_P(DescriptorImage, no_crash)
+{
     vector<String> fnames;
-    glob(pattern, fnames, false);
+    glob(cvtest::TS::ptr()->get_data_path() + pattern, fnames, false);
     sort(fnames.begin(), fnames.end());
 
-    Ptr<AKAZE> akaze = AKAZE::create();
+    Ptr<AKAZE> akaze_mldb = AKAZE::create(AKAZE::DESCRIPTOR_MLDB);
+    Ptr<AKAZE> akaze_mldb_upright = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT);
+    Ptr<AKAZE> akaze_mldb_256 = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 256);
+    Ptr<AKAZE> akaze_mldb_upright_256 = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT, 256);
+    Ptr<AKAZE> akaze_kaze = AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
+    Ptr<AKAZE> akaze_kaze_upright = AKAZE::create(AKAZE::DESCRIPTOR_KAZE_UPRIGHT);
     Ptr<ORB> orb = ORB::create();
     Ptr<KAZE> kaze = KAZE::create();
     Ptr<BRISK> brisk = BRISK::create();
-    size_t i, n = fnames.size();
+    size_t n = fnames.size();
     vector<KeyPoint> keypoints;
     Mat descriptors;
     orb->setMaxFeatures(5000);
 
-    for( i = 0; i < n; i++ )
+    for(size_t i = 0; i < n; i++ )
     {
         printf("%d. image: %s:\n", (int)i, fnames[i].c_str());
         if( strstr(fnames[i].c_str(), "MP.png") != 0 )
+        {
+            printf("\tskip\n");
             continue;
+        }
         bool checkCount = strstr(fnames[i].c_str(), "templ.png") == 0;
 
         Mat img = imread(fnames[i], -1);
-        printf("\tAKAZE ... "); fflush(stdout);
-        akaze->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
-        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
 
-        printf("\tKAZE ... "); fflush(stdout);
-        kaze->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
-        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
+        printf("\t%dx%d\n", img.cols, img.rows);
 
-        printf("\tORB ... "); fflush(stdout);
-        orb->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
+#define TEST_DETECTOR(name, descriptor) \
+        keypoints.clear(); descriptors.release(); \
+        printf("\t" name "\n"); fflush(stdout); \
+        descriptor->detectAndCompute(img, noArray(), keypoints, descriptors); \
+        printf("\t\t\t(%d keypoints, descriptor size = %d)\n", (int)keypoints.size(), descriptors.cols); fflush(stdout); \
+        if (checkCount) \
+        { \
+            EXPECT_GT((int)keypoints.size(), 0); \
+        } \
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
 
-        printf("\tBRISK ... "); fflush(stdout);
-        brisk->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
-        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
+        TEST_DETECTOR("AKAZE:MLDB", akaze_mldb);
+        TEST_DETECTOR("AKAZE:MLDB_UPRIGHT", akaze_mldb_upright);
+        TEST_DETECTOR("AKAZE:MLDB_256", akaze_mldb_256);
+        TEST_DETECTOR("AKAZE:MLDB_UPRIGHT_256", akaze_mldb_upright_256);
+        TEST_DETECTOR("AKAZE:KAZE", akaze_kaze);
+        TEST_DETECTOR("AKAZE:KAZE_UPRIGHT", akaze_kaze_upright);
+        TEST_DETECTOR("KAZE", kaze);
+        TEST_DETECTOR("ORB", orb);
+        TEST_DETECTOR("BRISK", brisk);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(Features2d, DescriptorImage,
+        testing::Values(
+            "shared/lena.png",
+            "shared/box*.png",
+            "shared/fruits*.png",
+            "shared/airplane.png",
+            "shared/graffiti.png",
+            "shared/1_itseez-0001*.png",
+            "shared/pic*.png",
+            "shared/templ.png"
+        )
+);
