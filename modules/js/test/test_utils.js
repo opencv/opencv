@@ -165,3 +165,52 @@ QUnit.test("Test Size", function(assert) {
         mat.delete();
     }
 });
+
+
+QUnit.test("test_rotated_rect", function(assert) {
+  {
+    let rect = {center: {x: 100, y: 100}, size: {height: 100, width: 50}, angle: 30};
+
+    assert.equal(rect.center.x, 100);
+    assert.equal(rect.center.y, 100);
+    assert.equal(rect.angle, 30);
+    assert.equal(rect.size.height, 100);
+    assert.equal(rect.size.width, 50);
+  }
+
+  {
+    let rect = new cv.RotatedRect();
+
+    assert.equal(rect.center.x, 0);
+    assert.equal(rect.center.y, 0);
+    assert.equal(rect.angle, 0);
+    assert.equal(rect.size.height, 0);
+    assert.equal(rect.size.width, 0);
+
+    let points = rect.points();
+
+    assert.equal(points[0].x, 0);
+    assert.equal(points[0].y, 0);
+    assert.equal(points[1].x, 0);
+    assert.equal(points[1].y, 0);
+    assert.equal(points[2].x, 0);
+    assert.equal(points[2].y, 0);
+    assert.equal(points[3].x, 0);
+    assert.equal(points[3].y, 0);
+  }
+
+  {
+    let rect = new cv.RotatedRect({x: 100, y: 100}, {height: 100, width: 50}, 30);
+
+    assert.equal(rect.center.x, 100);
+    assert.equal(rect.center.y, 100);
+    assert.equal(rect.angle, 30);
+    assert.equal(rect.size.height, 100);
+    assert.equal(rect.size.width, 50);
+
+    let points = rect.points();
+
+    assert.equal(points[0].x, rect.boundingRect2f().x);
+    assert.equal(points[1].y, rect.boundingRect2f().y);
+  }
+});

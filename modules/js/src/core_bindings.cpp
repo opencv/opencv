@@ -159,9 +159,22 @@ namespace Utils{
         return obj.copyTo(mat, mask);
     }
 
-    void rotatedRectPoints(const cv::RotatedRect& obj, std::vector<cv::Point2f>& points) {
-        points.resize(4);
-        return obj.points(points.data());
+    emscripten::val rotatedRectPoints(const cv::RotatedRect& obj) {
+        cv::Point2f points[4];
+        obj.points(points);
+        emscripten::val pointsArray = emscripten::val::array();
+        for (int i = 0; i < 4; i++) {
+            pointsArray.call<void>("push", points[i]);
+        }
+        return pointsArray;
+    }
+
+    Rect rotatedRectBoundingRect(const cv::RotatedRect& obj) {
+        return obj.boundingRect();
+    }
+
+    Rect2f rotatedRectBoundingRect2f(const cv::RotatedRect& obj) {
+        return obj.boundingRect2f();
     }
 
     int cvMatDepth(int flags) {
@@ -329,15 +342,14 @@ EMSCRIPTEN_BINDINGS(Utils) {
     EMSCRIPTEN_CV_RECT(int, "Rect")
     EMSCRIPTEN_CV_RECT(float, "Rect2f")
 
-    emscripten::class_<cv::RotatedRect>("RotatedRect")
-        .constructor<>()
-        .constructor<const Point2f&, const Size2f&, float>()
-        .property("center", &cv::RotatedRect::center)
-        .property("size", &cv::RotatedRect::size)
-        .property("angle", &cv::RotatedRect::angle)
-        .function("points", select_overload<void(const cv::RotatedRect&, std::vector<Point2f>&)>(&Utils::rotatedRectPoints))
-        .function("boundingRect", select_overload<Rect()const>(&cv::RotatedRect::boundingRect))
-        .function("boundingRect2f", select_overload<Rect2f()const>(&cv::RotatedRect::boundingRect2f));
+    emscripten::value_object<cv::RotatedRect>("RotatedRect")
+        .field("center", &cv::RotatedRect::center)
+        .field("size", &cv::RotatedRect::size)
+        .field("angle", &cv::RotatedRect::angle);
+
+    function("_rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&Utils::rotatedRectPoints));
+    function("_rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect));
+    function("_rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect2f));
 
     emscripten::class_<cv::Scalar_<double>> ("Scalar")
         .constructor<>()

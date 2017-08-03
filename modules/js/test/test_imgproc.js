@@ -212,27 +212,6 @@ QUnit.test("test_shape", function(assert) {
   }
 });
 
-QUnit.test("test_rotated_rect", function(assert) {
-  {
-    let rect = new cv.RotatedRect({x: 100, y: 100}, {height: 100, width: 50}, 30);
-    let points = new cv.Point2fVector();
-
-    assert.equal(rect.center.x, 100);
-    assert.equal(rect.center.y, 100);
-    assert.equal(rect.angle, 30);
-    assert.equal(rect.size.height, 100);
-    assert.equal(rect.size.width, 50);
-
-    rect.points(points);
-
-    assert.equal(points.get(0).x, rect.boundingRect2f().x);
-    assert.equal(points.get(1).y, rect.boundingRect2f().y);
-
-    rect.delete();
-    points.delete();
-  }
-});
-
 QUnit.test("test_min_enclosing", function(assert) {
   {
     let points = new cv.Mat(4, 1, cv.CV_32FC2);

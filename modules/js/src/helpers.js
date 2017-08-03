@@ -132,9 +132,43 @@ function Rect() {
             break
         }
         default: {
-            throw("Invalid arguments")
+            throw("Invalid arguments");
         }
     }
 }
 
 Module["Rect"] = Rect;
+
+function RotatedRect() {
+    switch (arguments.length) {
+        case 0: {
+            this.center = {x: 0, y: 0};
+            this.size = {width: 0, height: 0};
+            this.angle = 0;
+            break;
+        }
+        case 3: {
+            this.center = arguments[0];
+            this.size = arguments[1];
+            this.angle = arguments[2];
+            break;
+        }
+        default: {
+            throw("Invalid arguments");
+        }
+    }
+}
+
+RotatedRect.prototype.points = function () {
+    return Module._rotatedRectPoints(this);
+}
+
+RotatedRect.prototype.boundingRect = function () {
+    return Module._rotatedRectBoundingRect(this);
+}
+
+RotatedRect.prototype.boundingRect2f = function () {
+    return Module._rotatedRectBoundingRect2f(this);
+}
+
+Module["RotatedRect"] = RotatedRect;
