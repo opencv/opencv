@@ -6,29 +6,30 @@ Steps
 
 In this tutorial, you will see how to include and start to use `opencv.js` inside a web page.
 
-### Create a web page uploading and displaying image
+### Create a web page uploading image
 
-First, let's create a simple web page which is able to upload and display an image.
+First, let's create a simple web page which is able to upload an image.
 
 @code{.js}
 <!DOCTYPE html>
 <html>
 <body>
 
-<h1>My First OpenCV.js Web Page</h1>
+<h1>Hello OpenCV.js</h1>
 
+<input type="file" id="fileInput" accept="image/gif, image/jpeg, image/png"/>
 <div>
-    <img id='srcImage'></img>
+    <img id="srcImage"></img>
 </div>
-<input type='file' id='fileInput' accept='image/gif, image/jpeg, image/png'/>
 
 <script>
-let imgElement = document.getElementById('srcImage')
-let inputElement = document.getElementById('fileInput');
+let imgElement = document.getElementById("srcImage")
+let inputElement = document.getElementById("fileInput");
 inputElement.addEventListener("change", (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 </script>
+
 </body>
 </html>
 @endcode
@@ -37,9 +38,9 @@ You can copy above content and save to a local index.html file. To run it, just 
 
 @note It is a better practice that is hosting the index.html by a local web server.
 
-### Include `opencv.js`
+### Include OpenCV.js
 
-To include `opencv.js`, you need to set the URL of `opencv.js` to `src` attribute of of \<script\> tag.
+You need to set the URL of `opencv.js` to `src` attribute of of \<script\> tag.
 
 @note For this tutorial, we host `opencv.js` at same folder of index.html.
 
@@ -49,19 +50,14 @@ Example for synchronous loading.
 @endcode
 
 You may want to load `opencv.js` asynchronously by `async` attribute in \<script\> tag. To be notified by `opencv.js` is ready, you can
-register a callback to `Module['onRuntimeInitialized']`. Please refer to [Emscripten FAQ](https://kripken.github.io/emscripten-site/docs/getting_started/FAQ.html#how-can-i-tell-when-the-page-is-fully-loaded-and-it-is-safe-to-call-compiled-functions) for details.
+register a callback to `onload` attribute.
 
 Example for asynchronous loading
 @code{.js}
-<script>
-var Module = {
-  'onRuntimeInitialized': () => {console.log('opencv.js is ready.');}
-}
-</script>
-<script src="opencv.js" async></script>
+<script async src="opencv.js" onload="opencvIsReady();"></script>
 @endcode
 
-### Use `opencv.js`
+### Use OpenCV.js
 
 Once `opencv.js` is ready, you can access OpenCV objects and functions through `cv` object.
 
@@ -80,12 +76,12 @@ Many OpenCV functions can be used to process cv.Mat. You can refer to other tuto
 In this tutorial, we just show a cv.Mat on screen. To show a cv.Mat, you need a canvas element.
 
 @code{.js}
-<canvas id='outputCanvas'></canvas>
+<canvas id="outputCanvas"></canvas>
 @endcode
 
 You can use cv.imshow to show cv.Mat into the canvas.
 @code{.js}
-cv.imshow(mat, 'outputCanvas');
+cv.imshow(mat, "outputCanvas");
 @endcode
 
 Putting them all together, the final index.html is shown below.
@@ -95,40 +91,41 @@ Putting them all together, the final index.html is shown below.
 <html>
 <body>
 
-<h1>My First OpenCV.js Web Page</h1>
+<h1>Hello OpenCV.js</h1>
 
-<p id='status'>OpenCV.js is loading.</p>
+<p id="status">OpenCV.js is loading...</p>
 
+<input type="file" id="fileInput" accept="image/gif, image/jpeg, image/png"/>
 <div>
-    <img id='srcImage'></img>
+    <img id="srcImage"></img>
+    <canvas id="outputCanvas"></canvas>
 </div>
-<input type='file' id='fileInput' accept='image/gif, image/jpeg, image/png'/>
-<div>
-    <canvas id='outputCanvas'></canvas>
-<div>
 
 <script>
-var Module = {
-  'onRuntimeInitialized': () => {document.getElementById('status').innerHTML = 'OpenCV.js is ready';}
-}
-</script>
-<script src="opencv.js" async></script>
-<script>
-let imgElement = document.getElementById('srcImage')
-let inputElement = document.getElementById('fileInput');
+let imgElement = document.getElementById("srcImage")
+let inputElement = document.getElementById("fileInput");
+
 inputElement.addEventListener("change", (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
+
 imgElement.onload = function() {
   let mat = cv.imread(imgElement);
-  cv.imshow('outputCanvas', mat);
+  cv.imshow("outputCanvas", mat);
+}
+
+function opencvIsReady() {
+  document.getElementById("status").innerHTML = "OpenCV.js is ready.";
 }
 </script>
+
+<script async src="opencv.js" onload="opencvIsReady();"></script>
+
 </body>
 </html>
 @endcode
 
-An embedded version is shown below. You can try it.
+An embedded version is shown below. You can try it. After you upload an image, the web page will show two images. The first one is an \<img\> as cv.Mat input. The second one is a \<canvas\> as cv.Mat output.
 - - -
 
 \htmlonly
@@ -136,24 +133,16 @@ An embedded version is shown below. You can try it.
 <html>
 <body>
 
-<h1>My First OpenCV.js Web Page</h1>
+<h1>Hello OpenCV.js</h1>
 
-<p id='status'>OpenCV.js is loading.</p>
+<p id="status">OpenCV.js is loading.</p>
 
+<input type="file" id="fileInput" accept="image/gif, image/jpeg, image/png"/>
 <div>
-    <img id='srcImage'></img>
-</div>
-<input type='file' id='fileInput' accept='image/gif, image/jpeg, image/png'/>
-<div>
-    <canvas id='outputCanvas'></canvas>
+    <img id="srcImage"></img>
+    <canvas id="outputCanvas"></canvas>
 <div>
 
-<script>
-var Module = {
-  'onRuntimeInitialized': () => {document.getElementById('status').innerHTML = 'OpenCV.js is ready';}
-}
-</script>
-<script src="opencv.js" async></script>
 <script>
 
 function imread(image) {
@@ -166,16 +155,24 @@ function imread(image) {
     return cv.matFromArray(imgData, cv.CV_8UC4);
 }
 
-let imgElement = document.getElementById('srcImage')
-let inputElement = document.getElementById('fileInput');
+let imgElement = document.getElementById("srcImage")
+let inputElement = document.getElementById("fileInput");
 inputElement.addEventListener("change", (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
+
 imgElement.onload = function() {
   let mat = imread(imgElement);
-  cv.imshow('outputCanvas', mat);
+  cv.imshow("outputCanvas", mat);
+}
+
+function opencvIsReady() {
+  document.getElementById("status").innerHTML = "OpenCV.js is ready.";
 }
 </script>
+
+<script async src="opencv.js" onload="opencvIsReady();"></script>
+
 </body>
 </html>
 \endhtmlonly
