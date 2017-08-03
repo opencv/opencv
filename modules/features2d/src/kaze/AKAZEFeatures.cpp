@@ -1679,12 +1679,10 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   const AKAZEOptions & options = *options_;
   const std::vector<Evolution>& evolution = *evolution_;
 
-  // Matrices for the M-LDB descriptor
-  Mat values[3] = {
-    Mat(4, options.descriptor_channels, CV_32FC1),
-    Mat(9, options.descriptor_channels, CV_32FC1),
-    Mat(16, options.descriptor_channels, CV_32FC1)
-  };
+  // Buffer for the M-LDB descriptor
+  const int max_channels = 3;
+  CV_Assert(options.descriptor_channels <= max_channels);
+  float values[16*max_channels];
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
@@ -1739,7 +1737,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
         dx /= nsamples;
         dy /= nsamples;
 
-        float *val = values[z].ptr<float>(dcount2);
+        float *val = &values[dcount2*max_channels];
         *(val) = di;
         *(val+1) = dx;
         *(val+2) = dy;
@@ -1751,8 +1749,8 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
     const int num = (z + 2) * (z + 2);
     for (int i = 0; i < num; i++) {
       for (int j = i + 1; j < num; j++) {
-        const float * valI = values[z].ptr<float>(i);
-        const float * valJ = values[z].ptr<float>(j);
+        const float * valI = &values[i*max_channels];
+        const float * valJ = &values[j*max_channels];
         for (int k = 0; k < 3; ++k) {
           if (*(valI + k) > *(valJ + k)) {
             desc[dcount1 / 8] |= (1 << (dcount1 % 8));
@@ -1931,7 +1929,11 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   float si = sin(angle);
 
   // Allocate memory for the matrix of values
-  Mat values((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
+  // Buffer for the M-LDB descriptor
+  const int max_channels = 3;
+  const int channels = options.descriptor_channels;
+  CV_Assert(channels <= max_channels);
+  float values[(4 + 9 + 16)*max_channels];
 
   // Sample everything, but only do the comparisons
   const int pattern_size = options.descriptor_pattern_size;
@@ -1978,23 +1980,23 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
       }
     }
 
-    *(values.ptr<float>(options.descriptor_channels*i)) = di;
+    float* pValues = &values[channels * i];
+    pValues[0] = di;
 
-    if (options.descriptor_channels == 2) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
+    if (channels == 2) {
+      pValues[1] = dx;
     }
-    else if (options.descriptor_channels == 3) {
-      *(values.ptr<float>(options.descriptor_channels*i + 1)) = dx;
-      *(values.ptr<float>(options.descriptor_channels*i + 2)) = dy;
+    else if (channels == 3) {
+      pValues[1] = dx;
+      pValues[2] = dy;
     }
   }
 
   // Do the comparisons
-  const float *vals = values.ptr<float>(0);
   const int *comps = descriptorBits_.ptr<int>(0);
 
   for (int i = 0; i<descriptorBits_.rows; i++) {
-    if (vals[comps[2 * i]] > vals[comps[2 * i + 1]]) {
+    if (values[comps[2 * i]] > values[comps[2 * i + 1]]) {
       desc[i / 8] |= (1 << (i % 8));
     } else {
       desc[i / 8] &= ~(1 << (i % 8));
