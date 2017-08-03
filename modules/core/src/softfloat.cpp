@@ -102,13 +102,18 @@ static inline void raiseFlags( uint_fast8_t /* flags */)
 | Software floating-point rounding mode.
 *----------------------------------------------------------------------------*/
 enum {
-    round_near_even   = 0,
-    round_minMag      = 1,
-    round_min         = 2,
-    round_max         = 3,
-    round_near_maxMag = 4,
-    round_odd         = 5
+    round_near_even   = 0, // round to nearest, with ties to even
+    round_minMag      = 1, // round to minimum magnitude (toward zero)
+    round_min         = 2, // round to minimum (down)
+    round_max         = 3, // round to maximum (up)
+    round_near_maxMag = 4, // round to nearest, with ties to maximum magnitude (away from zero)
+    round_odd         = 5  // round to odd (jamming)
 };
+/* What is round_odd (from SoftFloat manual):
+ * If supported, mode round_odd first rounds a floating-point result to minimum magnitude,
+ * the same as round_minMag, and then, if the result is inexact, the least-significant bit
+ * of the result is set to 1. This rounding mode is also known as jamming.
+ */
 
 //fixed to make softfloat code stateless
 static const uint_fast8_t globalRoundingMode = round_near_even;
