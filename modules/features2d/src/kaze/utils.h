@@ -3,31 +3,6 @@
 
 /* ************************************************************************* */
 /**
- * @brief This function computes the angle from the vector given by (X Y). From 0 to 2*Pi
- */
-inline float getAngle(float x, float y) {
-
-  if (x >= 0 && y >= 0) {
-    return atanf(y / x);
-  }
-
-  if (x < 0 && y >= 0) {
-    return static_cast<float>(CV_PI)-atanf(-y / x);
-  }
-
-  if (x < 0 && y < 0) {
-    return static_cast<float>(CV_PI)+atanf(y / x);
-  }
-
-  if (x >= 0 && y < 0) {
-    return static_cast<float>(2.0 * CV_PI) - atanf(-y / x);
-  }
-
-  return 0;
-}
-
-/* ************************************************************************* */
-/**
  * @brief This function computes the value of a 2D Gaussian function
  * @param x X Position
  * @param y Y Position
