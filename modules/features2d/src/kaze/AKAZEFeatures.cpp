@@ -1205,12 +1205,11 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
         { 0.00344629f, 0.00318132f, 0.00250252f, 0.00167749f, 0.00095820f, 0.00046640f, 0.00019346f },
         { 0.00142946f, 0.00131956f, 0.00103800f, 0.00069579f, 0.00039744f, 0.00019346f, 0.00008024f }
     };
-    static const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
     static const struct gtable
     {
       float weight[109];
-      int8_t xidx[109];
-      int8_t yidx[109];
+      int xidx[109];
+      int yidx[109];
 
       explicit gtable(void)
       {
@@ -1219,29 +1218,28 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
         for (int i = -6; i <= 6; ++i) {
           for (int j = -6; j <= 6; ++j) {
             if (i*i + j*j < 36) {
-              weight[k] = gauss25[id[i + 6]][id[j + 6]];
-              yidx[k] = static_cast<int8_t>(i);
-              xidx[k] = static_cast<int8_t>(j);
+              CV_Assert(k < 109);
+              weight[k] = gauss25[abs(i)][abs(j)];
+              yidx[k] = i;
+              xidx[k] = j;
               ++k;
             }
           }
         }
-        CV_DbgAssert(k == 109);
       }
     } g;
 
-  const float * lx = Lx.ptr<float>(0);
-  const float * ly = Ly.ptr<float>(0);
-  int cols = Lx.cols;
+  CV_Assert(x0 - 6 * scale >= 0 && x0 + 6 * scale < Lx.cols);
+  CV_Assert(y0 - 6 * scale >= 0 && y0 + 6 * scale < Lx.rows);
 
-  for (int i = 0; i < 109; i++) {
-    int j = (y0 + g.yidx[i] * scale) * cols + (x0 + g.xidx[i] * scale);
+  for (int i = 0; i < 109; i++)
+  {
+    int y = y0 + g.yidx[i] * scale;
+    int x = x0 + g.xidx[i] * scale;
 
-    resX[i] = g.weight[i] * lx[j];
-    resY[i] = g.weight[i] * ly[j];
-
-    CV_DbgAssert(isfinite(resX[i]));
-    CV_DbgAssert(isfinite(resY[i]));
+    float w = g.weight[i];
+    resX[i] = w * Lx.at<float>(y, x);
+    resY[i] = w * Ly.at<float>(y, x);
   }
 }
 
@@ -1250,7 +1248,7 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
  * @param a[] Input floating point array to sort
  * @param n The length of a[]
  * @param quantum The interval to convert a[i]'s float values to integers
- * @param max The upper bound of a[], meaning a[i] must be in [0, max]
+ * @param nkeys a[i] < nkeys * quantum
  * @param idx[] Output array of the indices: a[idx[i]] forms a sorted array
  * @param cum[] Output array of the starting indices of quantized floats
  * @note The values of a[] in [k*quantum, (k + 1)*quantum) is labeled by
@@ -1260,25 +1258,35 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
  */
 static inline
 void quantized_counting_sort(const float a[], const int n,
-                             const float quantum, const float max,
-                             uint8_t idx[], uint8_t cum[])
+                             const float quantum, const int nkeys,
+                             int idx[/*n*/], int cum[/*nkeys + 1*/])
 {
-  const int nkeys = (int)(max / quantum);
-
-  // The size of cum[] must be nkeys + 1
-  memset(cum, 0, nkeys + 1);
+  memset(cum, 0, sizeof(cum[0]) * (nkeys + 1));
 
   // Count up the quantized values
   for (int i = 0; i < n; i++)
-    cum[(int)(a[i] / quantum)]++;
+  {
+    int b = (int)(a[i] / quantum);
+    if (b < 0 || b >= nkeys)
+      b = 0;
+    cum[b]++;
+  }
 
   // Compute the inclusive prefix sum i.e. the end indices; cum[nkeys] is the total
   for (int i = 1; i <= nkeys; i++)
+  {
     cum[i] += cum[i - 1];
+  }
+  CV_Assert(cum[nkeys] == n);
 
   // Generate the sorted indices; cum[] becomes the exclusive prefix sum i.e. the start indices of keys
   for (int i = 0; i < n; i++)
-    idx[--cum[(int)(a[i] / quantum)]] = static_cast<uint8_t>(i);
+  {
+    int b = (int)(a[i] / quantum);
+    if (b < 0 || b >= nkeys)
+      b = 0;
+    idx[--cum[b]] = i;
+  }
 }
 
 /**
@@ -1309,17 +1317,18 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // Sort by the angles; angles are labeled by slices of 0.15 radian
   const int slices = 42;
   const float ang_step = (float)(2.0 * CV_PI / slices);
-  uint8_t slice[slices + 1];
-  uint8_t sorted_idx[ang_size];
-  quantized_counting_sort(Ang, ang_size, ang_step, (float)(2.0 * CV_PI), sorted_idx, slice);
+  int slice[slices + 1];
+  int sorted_idx[ang_size];
+  quantized_counting_sort(Ang, ang_size, ang_step, slices, sorted_idx, slice);
 
   // Find the main angle by sliding a window of 7-slice size(=PI/3) around the keypoint
   const int win = 7;
 
   float maxX = 0.0f, maxY = 0.0f;
   for (int i = slice[0]; i < slice[win]; i++) {
-    maxX += resX[sorted_idx[i]];
-    maxY += resY[sorted_idx[i]];
+    const int idx = sorted_idx[i];
+    maxX += resX[idx];
+    maxY += resY[idx];
   }
   float maxNorm = maxX * maxX + maxY * maxY;
 
@@ -1330,8 +1339,9 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
 
     float sumX = 0.0f, sumY = 0.0f;
     for (int i = slice[sn]; i < slice[sn + win]; i++) {
-      sumX += resX[sorted_idx[i]];
-      sumY += resY[sorted_idx[i]];
+      const int idx = sorted_idx[i];
+      sumX += resX[idx];
+      sumY += resY[idx];
     }
 
     float norm = sumX * sumX + sumY * sumY;
@@ -1347,12 +1357,14 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
 
     float sumX = 0.0f, sumY = 0.0f;
     for (int i = slice[sn]; i < slice[slices]; i++) {
-      sumX += resX[sorted_idx[i]];
-      sumY += resY[sorted_idx[i]];
+      const int idx = sorted_idx[i];
+      sumX += resX[idx];
+      sumY += resY[idx];
     }
     for (int i = slice[0]; i < slice[remain]; i++) {
-      sumX += resX[sorted_idx[i]];
-      sumY += resY[sorted_idx[i]];
+      const int idx = sorted_idx[i];
+      sumX += resX[idx];
+      sumY += resY[idx];
     }
 
     float norm = sumX * sumX + sumY * sumY;
