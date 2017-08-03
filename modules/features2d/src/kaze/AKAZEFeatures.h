@@ -25,6 +25,8 @@ struct Evolution
     octave = 0;
     sublevel = 0;
     sigma_size = 0;
+    octave_ratio = 0.0f;
+    border = 0;
   }
 
   UMat Lx, Ly;           ///< First order spatial derivatives
