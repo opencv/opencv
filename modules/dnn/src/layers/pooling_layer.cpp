@@ -49,6 +49,9 @@
 #include <algorithm>
 using std::max;
 using std::min;
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -83,7 +86,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<LibDNNPool<float>> poolOp;
+    Ptr<OCL4DNNPool<float>> poolOp;
 #endif
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
@@ -114,7 +117,7 @@ public:
     {
         if (poolOp.empty())
         {
-            LibDNNPoolConfig config;
+            OCL4DNNPoolConfig config;
 
             config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
             config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
@@ -125,7 +128,7 @@ public:
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
                                                LIBDNN_POOLING_METHOD_STO);
-            poolOp = Ptr<LibDNNPool<float>>(new LibDNNPool<float>(config));
+            poolOp = Ptr<OCL4DNNPool<float>>(new OCL4DNNPool<float>(config));
         }
 
         for (size_t ii = 0; ii < inputs.size(); ii++)

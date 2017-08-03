@@ -46,8 +46,9 @@
 #include "opencl_kernels_dnn.hpp"
 
 #ifdef HAVE_OPENCL
+namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
-LibDNNLRN<Dtype>::LibDNNLRN(LibDNNLRNConfig config)
+OCL4DNNLRN<Dtype>::OCL4DNNLRN(OCL4DNNLRNConfig config)
 {
     lrn_type_ = config.lrn_type;
     phase_test_ = config.phase_test;
@@ -64,7 +65,7 @@ LibDNNLRN<Dtype>::LibDNNLRN(LibDNNLRNConfig config)
 }
 
 template<typename Dtype>
-bool LibDNNLRN<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
+bool OCL4DNNLRN<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
 {
     bool ret = true;
     switch (lrn_type_)
@@ -85,7 +86,7 @@ bool LibDNNLRN<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
 }
 
 template<typename Dtype>
-void LibDNNLRN<Dtype>::crossChannelForward(const Dtype* bottom_data,
+void OCL4DNNLRN<Dtype>::crossChannelForward(const Dtype* bottom_data,
                                                Dtype* top_data)
 {
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -114,5 +115,8 @@ void LibDNNLRN<Dtype>::crossChannelForward(const Dtype* bottom_data,
     oclk_lrn_fill.run(1, global_work_size_, NULL, false);
 }
 
-template class LibDNNLRN<float>;
+template class OCL4DNNLRN<float>;
+} // namespace ocl4dnn
+}
+}
 #endif // HAVE_OPENCL

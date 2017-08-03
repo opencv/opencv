@@ -46,8 +46,9 @@
 #include "math_functions.hpp"
 
 #ifdef HAVE_OPENCL
+namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
-LibDNNInnerProduct<Dtype>::LibDNNInnerProduct(LibDNNInnerProductConfig config)
+OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config)
 {
     bias_term_  = config.bias_term;
     transpose_  = config.transpose;
@@ -69,7 +70,7 @@ LibDNNInnerProduct<Dtype>::LibDNNInnerProduct(LibDNNInnerProductConfig config)
 }
 
 template<typename Dtype>
-bool LibDNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
+bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
                                         const Dtype* weight,
                                         const Dtype* bias,
                                         Dtype* top_data)
@@ -136,5 +137,8 @@ bool LibDNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
     return true;
 }
 
-template class LibDNNInnerProduct<float>;
+template class OCL4DNNInnerProduct<float>;
+} // namespace ocl4dnn
+}
+}
 #endif // HAVE_OPENCL

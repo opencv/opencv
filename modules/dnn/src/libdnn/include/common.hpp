@@ -44,6 +44,7 @@
 #include "../../precomp.hpp"
 #include "../../caffe/glog_emulator.hpp"
 #include <opencv2/core/opencl/runtime/opencl_core.hpp>
+using namespace cv;
 
 #ifdef HAVE_OPENCL
 

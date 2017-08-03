@@ -50,12 +50,11 @@
 #include <vector>
 #include "common.hpp"
 
-using namespace cv;
-
+namespace cv { namespace dnn { namespace ocl4dnn {
 #ifdef HAVE_OPENCL
-struct LibDNNConvConfig
+struct OCL4DNNConvConfig
 {
-    LibDNNConvConfig() : in_shape(3, 1),
+    OCL4DNNConvConfig() : in_shape(3, 1),
                          out_shape(3, 1),
                          kernel(1, 1),
                          pad(0, 0),
@@ -76,11 +75,11 @@ struct LibDNNConvConfig
 };
 
 template<typename Dtype>
-class LibDNNConvSpatial
+class OCL4DNNConvSpatial
 {
     public:
-        explicit LibDNNConvSpatial(LibDNNConvConfig config);
-        ~LibDNNConvSpatial();
+        explicit OCL4DNNConvSpatial(OCL4DNNConvConfig config);
+        ~OCL4DNNConvSpatial();
         bool Forward(const Dtype* bottom_data, const Dtype* weight,
                      const Dtype* bias,
                      Dtype* top_data, int32_t batch_size);
@@ -299,9 +298,9 @@ typedef enum {
     LIBDNN_POOLING_METHOD_STO                 = 2
 } libdnnPoolingMethod_t;
 
-struct LibDNNPoolConfig
+struct OCL4DNNPoolConfig
 {
-    LibDNNPoolConfig() : in_shape(3, 1),
+    OCL4DNNPoolConfig() : in_shape(3, 1),
                          out_shape(3, 1),
                          kernel(1, 1),
                          pad(0, 0),
@@ -321,11 +320,11 @@ struct LibDNNPoolConfig
 };
 
 template<typename Dtype>
-class LibDNNPool
+class OCL4DNNPool
 {
     public:
-        explicit LibDNNPool(LibDNNPoolConfig config);
-        ~LibDNNPool();
+        explicit OCL4DNNPool(OCL4DNNPoolConfig config);
+        ~OCL4DNNPool();
         bool Forward(const Dtype *bottom_data,
                      Dtype *top_data,
                      Dtype *top_mask = NULL);
@@ -356,7 +355,7 @@ class LibDNNPool
         int32_t pooled_width_;
 };
 
-struct LibDNNInnerProductConfig
+struct OCL4DNNInnerProductConfig
 {
     int32_t num_output;
     int32_t M;
@@ -367,16 +366,16 @@ struct LibDNNInnerProductConfig
 };
 
 template<typename Dtype>
-class LibDNNInnerProduct
+class OCL4DNNInnerProduct
 {
     public:
-        explicit LibDNNInnerProduct(LibDNNInnerProductConfig config);
+        explicit OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config);
         bool Forward(const Dtype* bottom_data,
                      const Dtype* weight,
                      const Dtype* bias,
                      Dtype* top_data);
     private:
-        LibDNNInnerProductConfig config_;
+        OCL4DNNInnerProductConfig config_;
         int32_t axis_;
         int32_t num_output_;
         int32_t M_;
@@ -395,9 +394,9 @@ typedef enum {
     LRNParameter_NormRegion_WITHIN_CHANNEL = 1
 } LRNParameter_NormRegion_WITHIN_CHANNEL_t;
 
-struct LibDNNLRNConfig
+struct OCL4DNNLRNConfig
 {
-    LibDNNLRNConfig()
+    OCL4DNNLRNConfig()
     {}
     std::vector<int32_t> in_shape;
     LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type;
@@ -414,10 +413,10 @@ struct LibDNNLRNConfig
 };
 
 template<typename Dtype>
-class LibDNNLRN
+class OCL4DNNLRN
 {
     public:
-        explicit LibDNNLRN(LibDNNLRNConfig config);
+        explicit OCL4DNNLRN(OCL4DNNLRNConfig config);
         bool Forward(const Dtype* bottom_data, Dtype* top_data);
 
     private:
@@ -435,9 +434,9 @@ class LibDNNLRN
         bool norm_by_size_;
 };
 
-struct LibDNNSoftmaxConfig
+struct OCL4DNNSoftmaxConfig
 {
-    LibDNNSoftmaxConfig()
+    OCL4DNNSoftmaxConfig()
     {}
     std::vector<int32_t> in_shape;
     int32_t axis;
@@ -445,11 +444,11 @@ struct LibDNNSoftmaxConfig
 };
 
 template<typename Dtype>
-class LibDNNSoftmax
+class OCL4DNNSoftmax
 {
     public:
-        explicit LibDNNSoftmax(LibDNNSoftmaxConfig config);
-        ~LibDNNSoftmax();
+        explicit OCL4DNNSoftmax(OCL4DNNSoftmaxConfig config);
+        ~OCL4DNNSoftmax();
         bool Forward(const Dtype* bottom_data, Dtype* top_data);
 
     private:
@@ -462,4 +461,7 @@ class LibDNNSoftmax
         Dtype *scale_data_;
 };
 #endif // HAVE_OPENCL
+} // namespace ocl4dnn
+} // namespace dnn
+} // namespce cv
 #endif

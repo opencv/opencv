@@ -44,8 +44,6 @@
 #include "common.hpp"
 #include "opencl_kernels_dnn.hpp"
 
-using namespace cv;
-
 #ifdef HAVE_OPENCL
 Timer::Timer()
     : initted_(false)

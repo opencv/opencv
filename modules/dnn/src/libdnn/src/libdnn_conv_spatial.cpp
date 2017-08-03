@@ -52,13 +52,10 @@
 #include "opencl_kernels_dnn.hpp"
 #include "math_functions.hpp"
 
-// #define TEST_ALL_KERNELS
-
-using namespace cv;
-
 #ifdef HAVE_OPENCL
+namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
-LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
+OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 {
     bias_term_ = config.bias_term;
     int32_t dims = config.in_shape.size();
@@ -140,7 +137,7 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
 }
 
 template<typename Dtype>
-LibDNNConvSpatial<Dtype>::~LibDNNConvSpatial()
+OCL4DNNConvSpatial<Dtype>::~OCL4DNNConvSpatial()
 {
     if (swizzled_weights_) {
         clReleaseMemObject((cl_mem)swizzled_weights_);
@@ -151,7 +148,7 @@ LibDNNConvSpatial<Dtype>::~LibDNNConvSpatial()
 }
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generateHeader()
+std::string OCL4DNNConvSpatial<Dtype>::generateHeader()
 {
     std::stringstream ss;
 
@@ -222,7 +219,7 @@ std::string LibDNNConvSpatial<Dtype>::generateHeader()
 }
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generateDefs()
+std::string OCL4DNNConvSpatial<Dtype>::generateDefs()
 {
     std::stringstream ss;
 
@@ -282,7 +279,7 @@ typedef enum {
 } libdnnConvSpatialKernelType_t;
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
+std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
                                                       int32_t blockM,
                                                       int32_t blockK,
                                                       int32_t blockN)
@@ -1469,7 +1466,7 @@ std::string LibDNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::generateKernelSrc()
+void OCL4DNNConvSpatial<Dtype>::generateKernelSrc()
 {
     std::stringstream ss;
 
@@ -1481,7 +1478,7 @@ void LibDNNConvSpatial<Dtype>::generateKernelSrc()
 }
 
 template<typename Dtype>
-bool LibDNNConvSpatial<Dtype>::Forward(const Dtype* bottom_data,
+bool OCL4DNNConvSpatial<Dtype>::Forward(const Dtype* bottom_data,
                                        const Dtype* weight,
                                        const Dtype* bias, Dtype* top_data,
                                        int32_t batch_size)
@@ -1500,7 +1497,7 @@ bool LibDNNConvSpatial<Dtype>::Forward(const Dtype* bottom_data,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::tune(Dtype* top_data,
+void OCL4DNNConvSpatial<Dtype>::tune(Dtype* top_data,
                                     const Dtype* weight,
                                     const Dtype* bias,
                                     const Dtype* bottom_data,
@@ -1524,7 +1521,7 @@ void LibDNNConvSpatial<Dtype>::tune(Dtype* top_data,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
+void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
                                                   const Dtype* w,
                                                   const Dtype* bias,
                                                   Dtype* verify_data)
@@ -1558,7 +1555,7 @@ void LibDNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
 
 // Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
 template<typename Dtype>
-uint64 LibDNNConvSpatial<Dtype>::crc64(const uchar* data, size_t size, uint64 crc0)
+uint64 OCL4DNNConvSpatial<Dtype>::crc64(const uchar* data, size_t size, uint64 crc0)
 {
     static uint64 table[256];
     static bool initialized = false;
@@ -1583,7 +1580,7 @@ uint64 LibDNNConvSpatial<Dtype>::crc64(const uchar* data, size_t size, uint64 cr
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::generateKey()
+void OCL4DNNConvSpatial<Dtype>::generateKey()
 {
     std::stringstream keyBuilder;
     // FIXME: to support fuse?
@@ -1613,7 +1610,7 @@ void LibDNNConvSpatial<Dtype>::generateKey()
 }
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generateSpecificKey(int32_t type, int32_t blockWidth,
+std::string OCL4DNNConvSpatial<Dtype>::generateSpecificKey(int32_t type, int32_t blockWidth,
                                                             int32_t blockHeight, int32_t blockDepth)
 {
     std::stringstream keyBuilder;
@@ -1690,7 +1687,7 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
+void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
                                               const Dtype *top,
                                               int32_t swizzled_factor,
                                               bool interleave)
@@ -1786,7 +1783,7 @@ void LibDNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
 }
 
 template<>
-void LibDNNConvSpatial<float>::computeGlobalSize(int32_t batch,
+void OCL4DNNConvSpatial<float>::computeGlobalSize(int32_t batch,
                                                  int32_t* wio,    // work item output size
                                                  size_t* lSize,  // local size
                                                  size_t* gSize)  // global size
@@ -1797,7 +1794,7 @@ void LibDNNConvSpatial<float>::computeGlobalSize(int32_t batch,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
+bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
                                                    int32_t blockHeight, int32_t blockDepth)
 {
     int32_t workItemOutput[3];
@@ -1823,7 +1820,7 @@ bool LibDNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::setBufferKernelArg(const Dtype *bottom, const Dtype *top,
+void OCL4DNNConvSpatial<Dtype>::setBufferKernelArg(const Dtype *bottom, const Dtype *top,
                                                   ocl::Kernel *kernel,
                                                   const cl_uint &argIdx,
                                                   ocl::Context *ctx,
@@ -1864,7 +1861,7 @@ void LibDNNConvSpatial<Dtype>::setBufferKernelArg(const Dtype *bottom, const Dty
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::cleanTmpSubBuffers(const Dtype *bottom, const Dtype *top)
+void OCL4DNNConvSpatial<Dtype>::cleanTmpSubBuffers(const Dtype *bottom, const Dtype *top)
 {
     for (auto &buffer : tmpSubBuffers)
         clReleaseMemObject(buffer);
@@ -1872,7 +1869,7 @@ void LibDNNConvSpatial<Dtype>::cleanTmpSubBuffers(const Dtype *bottom, const Dty
 }
 
 template<>
-cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
+cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top,
                                           int32_t index,
                                           int32_t numImages, kernelConfig* config)
 {
@@ -2061,7 +2058,7 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
 }
 
 template<>
-float LibDNNConvSpatial<float>::timedConvolve(const float *bottom,
+float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
                                               const float *top,
                                               int32_t index,
                                               int32_t numImages,
@@ -2115,7 +2112,7 @@ float LibDNNConvSpatial<float>::timedConvolve(const float *bottom,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
+bool OCL4DNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
                                              int32_t index,
                                              int32_t numImages, const float *verify_blob, kernelConfig* config)
 {
@@ -2177,7 +2174,7 @@ out:
 }
 
 template<typename Dtype>
-ocl::Program LibDNNConvSpatial<Dtype>::compileKernel()
+ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
 {
     String errmsg;
     ocl::Context ctx = ocl::Context::getDefault();
@@ -2189,7 +2186,7 @@ ocl::Program LibDNNConvSpatial<Dtype>::compileKernel()
 }
 
 template<>
-bool LibDNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
+bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
                                                         int32_t blockK,
                                                         int32_t blockN)
 {
@@ -2243,7 +2240,7 @@ bool LibDNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
+bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
                                          int32_t blockHeight,
                                          int32_t simd_size)
 {
@@ -2294,7 +2291,7 @@ bool LibDNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::tuneLocalSize(const float *bottom,
+bool OCL4DNNConvSpatial<float>::tuneLocalSize(const float *bottom,
                                              const float *top,
                                              kernelConfig* config)
 {
@@ -2379,7 +2376,7 @@ bool LibDNNConvSpatial<float>::tuneLocalSize(const float *bottom,
 }
 
 template<>
-void LibDNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
+void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
                                                        int32_t blockWidth,
                                                        int32_t blockHeight,
                                                        int32_t blockDepth)
@@ -2395,7 +2392,7 @@ void LibDNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
 }
 
 template<>
-void LibDNNConvSpatial<float>::setupConvolution(const float *bottom, float *top,
+void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top,
                                                  const float *verify_blob)
 {
     char *auto_tuning = getenv("OPENCV_OPENCL_ENABLE_PROFILING");
@@ -2592,7 +2589,7 @@ void LibDNNConvSpatial<float>::setupConvolution(const float *bottom, float *top,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::prepareKernel()
+void OCL4DNNConvSpatial<Dtype>::prepareKernel()
 {
     std::string previous_key = key_;
 
@@ -2615,7 +2612,7 @@ void LibDNNConvSpatial<Dtype>::prepareKernel()
 }
 
 template<typename Dtype>
-bool LibDNNConvSpatial<Dtype>::loadCachedConfig()
+bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
 {
     // Find cached kernel configuration
     std::string outputFile;
@@ -2667,5 +2664,8 @@ bool LibDNNConvSpatial<Dtype>::loadCachedConfig()
         return false;
 }
 
-template class LibDNNConvSpatial<float>;
+template class OCL4DNNConvSpatial<float>;
+} // namespace ocl4dnn
+}
+}
 #endif // HAVE_OPENCL

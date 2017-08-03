@@ -47,6 +47,9 @@
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -65,7 +68,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<LibDNNSoftmax<float>> softmaxOp;
+    Ptr<OCL4DNNSoftmax<float>> softmaxOp;
 #endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -92,7 +95,7 @@ public:
     {
         if (softmaxOp.empty())
         {
-            LibDNNSoftmaxConfig config;
+            OCL4DNNSoftmaxConfig config;
 
             int dims = inputs[0]->dims;
             config.in_shape.resize(dims);
@@ -101,7 +104,7 @@ public:
             config.axis = axisRaw;
             config.channels = inputs[0]->size[axisRaw];
 
-            softmaxOp = Ptr<LibDNNSoftmax<float>>(new LibDNNSoftmax<float>(config));
+            softmaxOp = Ptr<OCL4DNNSoftmax<float>>(new OCL4DNNSoftmax<float>(config));
         }
 
         UMat srcMat, dstMat;

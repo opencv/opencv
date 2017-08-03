@@ -43,8 +43,6 @@
 #include "../../precomp.hpp"
 #include "common.hpp"
 
-using namespace cv;
-
 #ifdef HAVE_OPENCL
 bool isBeignet()
 {

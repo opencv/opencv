@@ -47,8 +47,9 @@
 #include "opencl_kernels_dnn.hpp"
 
 #ifdef HAVE_OPENCL
+namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
-LibDNNPool<Dtype>::LibDNNPool(LibDNNPoolConfig config)
+OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
 {
     int32_t dims = config.in_shape.size();
     int32_t spatial_dims = config.kernel.size();
@@ -87,7 +88,7 @@ LibDNNPool<Dtype>::LibDNNPool(LibDNNPoolConfig config)
 }
 
 template<typename Dtype>
-LibDNNPool<Dtype>::~LibDNNPool()
+OCL4DNNPool<Dtype>::~OCL4DNNPool()
 {
     if (mask_idx_)
     {
@@ -96,7 +97,7 @@ LibDNNPool<Dtype>::~LibDNNPool()
 }
 
 template<typename Dtype>
-bool LibDNNPool<Dtype>::Forward(const Dtype *bottom_data,
+bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
                                 Dtype *top_data,
                                 Dtype *top_mask)
 {
@@ -195,5 +196,8 @@ bool LibDNNPool<Dtype>::Forward(const Dtype *bottom_data,
     return ret;
 }
 
-template class LibDNNPool<float>;
+template class OCL4DNNPool<float>;
+} // namespace ocl4dnn
+}
+}
 #endif // HAVE_OPENCL

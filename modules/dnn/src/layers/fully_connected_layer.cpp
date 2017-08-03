@@ -46,6 +46,10 @@
 #include "opencl_kernels_dnn.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -57,7 +61,7 @@ public:
     enum { VEC_ALIGN = 8 };
 
 #ifdef HAVE_OPENCL
-    Ptr<LibDNNInnerProduct<float>> innerProductOp;
+    Ptr<OCL4DNNInnerProduct<float>> innerProductOp;
 #endif
 
     FullyConnectedLayerImpl(const LayerParams& params)
@@ -254,13 +258,13 @@ public:
 
         if (innerProductOp.empty())
         {
-            LibDNNInnerProductConfig config;
+            OCL4DNNInnerProductConfig config;
             config.num_output = numOutput;
             config.bias_term = bias;
             config.M = outerSize;
             config.K = innerSize;
 
-            innerProductOp = Ptr<LibDNNInnerProduct<float>>(new LibDNNInnerProduct<float>(config));
+            innerProductOp = Ptr<OCL4DNNInnerProduct<float>>(new OCL4DNNInnerProduct<float>(config));
         }
 
         UMat weights, biases;

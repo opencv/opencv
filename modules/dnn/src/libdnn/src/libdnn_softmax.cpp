@@ -46,8 +46,9 @@
 #include "opencl_kernels_dnn.hpp"
 
 #ifdef HAVE_OPENCL
+namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
-LibDNNSoftmax<Dtype>::LibDNNSoftmax(LibDNNSoftmaxConfig config)
+OCL4DNNSoftmax<Dtype>::OCL4DNNSoftmax(OCL4DNNSoftmaxConfig config)
 {
     softmax_axis_ = config.axis;
     channels_ = config.channels;
@@ -78,7 +79,7 @@ LibDNNSoftmax<Dtype>::LibDNNSoftmax(LibDNNSoftmaxConfig config)
 }
 
 template<typename Dtype>
-LibDNNSoftmax<Dtype>::~LibDNNSoftmax()
+OCL4DNNSoftmax<Dtype>::~OCL4DNNSoftmax()
 {
     if (scale_data_)
     {
@@ -87,7 +88,7 @@ LibDNNSoftmax<Dtype>::~LibDNNSoftmax()
 }
 
 template<typename Dtype>
-bool LibDNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
+bool OCL4DNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
 {
     bool ret = true;
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -143,5 +144,8 @@ bool LibDNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
     return ret;
 }
 
-template class LibDNNSoftmax<float>;
+template class OCL4DNNSoftmax<float>;
+} // namespace ocl4dnn
+}
+}
 #endif // HAVE_OPENCL

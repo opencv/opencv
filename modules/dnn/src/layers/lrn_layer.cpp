@@ -49,6 +49,10 @@
 #include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -80,7 +84,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<LibDNNLRN<float>> lrnOp;
+    Ptr<OCL4DNNLRN<float>> lrnOp;
 #endif
 
     virtual bool supportBackend(int backendId)
@@ -94,7 +98,7 @@ public:
     {
         if (lrnOp.empty())
         {
-            LibDNNLRNConfig config;
+            OCL4DNNLRNConfig config;
             config.lrn_type = type == CHANNEL_NRM ?
                               LRNParameter_NormRegion_ACROSS_CHANNELS :
                               LRNParameter_NormRegion_WITHIN_CHANNEL;
@@ -112,7 +116,7 @@ public:
             config.width = inputs[0]->size[3];
             config.norm_by_size = normBySize;
 
-            lrnOp = Ptr<LibDNNLRN<float>>(new LibDNNLRN<float>(config));
+            lrnOp = Ptr<OCL4DNNLRN<float>>(new OCL4DNNLRN<float>(config));
         }
 
         UMat inpMat, outMat;

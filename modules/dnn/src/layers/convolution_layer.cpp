@@ -47,6 +47,10 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
 
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -151,7 +155,7 @@ public:
     Ptr<ScaleLayer> scaleLayer;
 
 #ifdef HAVE_OPENCL
-    Ptr<LibDNNConvSpatial<float> > convolutionOp;
+    Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
 #endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
@@ -647,7 +651,7 @@ public:
 
         if (convolutionOp.empty())
         {
-            LibDNNConvConfig config;
+            OCL4DNNConvConfig config;
             config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
             config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
             config.kernel = {kernel.height, kernel.width};
@@ -659,7 +663,7 @@ public:
             config.weights_backward = false;
             config.bias_backward = false;
 
-            convolutionOp = Ptr<LibDNNConvSpatial<float> >(new LibDNNConvSpatial<float>(config));
+            convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
         }
 
         UMat weights, biases;
