@@ -230,10 +230,10 @@ INSTANTIATE_TEST_CASE_P(ORB, DetectorRotationInvariance,
                         Value(IMAGE_TSUKUBA, ORB::create(), 0.5f, 0.76f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE, DetectorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(), 0.5f, 0.76f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(), 0.5f, 0.71f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DetectorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.5f, 0.76f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.5f, 0.71f));
 
 /*
  * Detector's scale invariance check
