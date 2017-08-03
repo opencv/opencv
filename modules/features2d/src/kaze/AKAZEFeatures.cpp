@@ -106,7 +106,7 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
  */
 static inline int getGaussianKernelSize(float sigma) {
   // Compute an appropriate kernel size according to the specified sigma
-  int ksize = (int)ceil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
+  int ksize = (int)cvCeil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
   ksize |= 1; // kernel should be odd
   return ksize;
 }
@@ -1131,20 +1131,17 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray
   }
 
   // Allocate memory for the matrix with the descriptors
-  if (options_.descriptor < AKAZE::DESCRIPTOR_MLDB_UPRIGHT) {
-    descriptors.create((int)kpts.size(), 64, CV_32FC1);
+  int descriptor_size = 64;
+  int descriptor_type = CV_32FC1;
+  if (options_.descriptor >= AKAZE::DESCRIPTOR_MLDB_UPRIGHT)
+  {
+    int descriptor_bits = (options_.descriptor_size == 0)
+          ? (6 + 36 + 120)*options_.descriptor_channels // the full length binary descriptor -> 486 bits
+          : options_.descriptor_size; // the random bit selection length binary descriptor
+    descriptor_size = divUp(descriptor_bits, 8);
+    descriptor_type = CV_8UC1;
   }
-  else {
-    // We use the full length binary descriptor -> 486 bits
-    if (options_.descriptor_size == 0) {
-      int t = (6 + 36 + 120)*options_.descriptor_channels;
-      descriptors.create((int)kpts.size(), (int)ceil(t / 8.), CV_8UC1);
-    }
-    else {
-      // We use the random bit selection length binary descriptor
-      descriptors.create((int)kpts.size(), (int)ceil(options_.descriptor_size / 8.), CV_8UC1);
-    }
-  }
+  descriptors.create((int)kpts.size(), descriptor_size, descriptor_type);
 
   Mat desc = descriptors.getMat();
 
@@ -1701,10 +1698,11 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
 
   // For 2x2 grid, 3x3 grid and 4x4 grid
   const int pattern_size = options_->descriptor_pattern_size;
-  int sample_step[3] = {
+  CV_Assert((pattern_size & 1) == 0);
+  const int sample_step[3] = {
     pattern_size,
-    static_cast<int>(ceil(pattern_size*2./3.)),
-    pattern_size / 2
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
   };
 
   // For the three grids
@@ -1873,8 +1871,16 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
 
   const int max_channels = 3;
   CV_Assert(options_->descriptor_channels <= max_channels);
+  const int pattern_size = options_->descriptor_pattern_size;
+
   float values[16*max_channels];
-  const double size_mult[3] = {1, 2.0/3.0, 1.0/2.0};
+  CV_Assert((pattern_size & 1) == 0);
+  //const double size_mult[3] = {1, 2.0/3.0, 1.0/2.0};
+  const int sample_step[3] = { // static_cast<int>(ceil(pattern_size * size_mult[lvl]))
+    pattern_size,
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
+  };
 
   float ratio = (float)(1 << kpt.octave);
   float scale = (float)fRound(0.5f*kpt.size / ratio);
@@ -1883,14 +1889,12 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
   float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   float co = cos(angle);
   float si = sin(angle);
-  int pattern_size = options_->descriptor_pattern_size;
 
   int dpos = 0;
   for(int lvl = 0; lvl < 3; lvl++) {
 
       int val_count = (lvl + 2) * (lvl + 2);
-      int sample_step = static_cast<int>(ceil(pattern_size * size_mult[lvl]));
-      MLDB_Fill_Values(values, sample_step, kpt.class_id, xf, yf, co, si, scale);
+      MLDB_Fill_Values(values, sample_step[lvl], kpt.class_id, xf, yf, co, si, scale);
       MLDB_Binary_Comparisons(values, desc, val_count, dpos);
   }
 }
@@ -1930,14 +1934,18 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   Mat values((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
 
   // Sample everything, but only do the comparisons
-  vector<int> steps(3);
-  steps.at(0) = options.descriptor_pattern_size;
-  steps.at(1) = (int)ceil(2.f*options.descriptor_pattern_size / 3.f);
-  steps.at(2) = options.descriptor_pattern_size / 2;
+  const int pattern_size = options.descriptor_pattern_size;
+  CV_Assert((pattern_size & 1) == 0);
+  const int sample_steps[3] = {
+    pattern_size,
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
+  };
 
   for (int i = 0; i < descriptorSamples_.rows; i++) {
     const int *coords = descriptorSamples_.ptr<int>(i);
-    int sample_step = steps.at(coords[0]);
+    CV_Assert(coords[0] >= 0 && coords[0] < 3);
+    const int sample_step = sample_steps[coords[0]];
     di = 0.0f;
     dx = 0.0f;
     dy = 0.0f;
@@ -2025,14 +2033,18 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   // Allocate memory for the matrix of values
   Mat values ((4 + 9 + 16)*options.descriptor_channels, 1, CV_32FC1);
 
-  vector<int> steps(3);
-  steps.at(0) = options.descriptor_pattern_size;
-  steps.at(1) = static_cast<int>(ceil(2.f*options.descriptor_pattern_size / 3.f));
-  steps.at(2) = options.descriptor_pattern_size / 2;
+  const int pattern_size = options.descriptor_pattern_size;
+  CV_Assert((pattern_size & 1) == 0);
+  const int sample_steps[3] = {
+    pattern_size,
+    divUp(pattern_size * 2, 3),
+    divUp(pattern_size, 2)
+  };
 
   for (int i = 0; i < descriptorSamples_.rows; i++) {
     const int *coords = descriptorSamples_.ptr<int>(i);
-    int sample_step = steps.at(coords[0]);
+    CV_Assert(coords[0] >= 0 && coords[0] < 3);
+    int sample_step = sample_steps[coords[0]];
     di = 0.0f, dx = 0.0f, dy = 0.0f;
 
     for (int k = coords[1]; k < coords[1] + sample_step; k++) {
@@ -2120,7 +2132,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   for (int i = 0, c = 0; i < 3; i++) {
     int gdiv = i + 2; //grid divisions, per row
     int gsz = gdiv*gdiv;
-    int psz = (int)ceil(2.f*pattern_size / (float)gdiv);
+    int psz = divUp(2*pattern_size, gdiv);
 
     for (int j = 0; j < gsz; j++) {
       for (int k = j + 1; k < gsz; k++, c++) {
@@ -2134,12 +2146,12 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   }
 
   RNG rng(1024);
-  Mat_<int> comps = Mat_<int>(nchannels * (int)ceil(nbits / (float)nchannels), 2);
+  const int npicks = divUp(nbits, nchannels);
+  Mat_<int> comps = Mat_<int>(nchannels * npicks, 2);
   comps = 1000;
 
   // Select some samples. A sample includes all channels
   int count = 0;
-  int npicks = (int)ceil(nbits / (float)nchannels);
   Mat_<int> samples(29, 3);
   Mat_<int> fullcopy = fullM.clone();
   samples = -1;
