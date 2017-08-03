@@ -129,7 +129,7 @@ QUnit.test("test_mat_creation", function(assert) {
     //  Mat::create(Size, int)
     {
         let mat = new cv.Mat();
-        mat.create([10, 5], cv.CV_8UC4);
+        mat.create({height: 10, width: 5}, cv.CV_8UC4);
         let size = mat.size();
 
         assert.ok(mat.type() === cv.CV_8UC4);
@@ -265,7 +265,7 @@ QUnit.test("test_mat_zeros", function(assert) {
 
     // Mat::zeros(Size, int)
     {
-        let mat = cv.Mat.zeros([10, 10], cv.CV_8UC1);
+        let mat = cv.Mat.zeros({height: 10, width: 10}, cv.CV_8UC1);
         let view = mat.data();
 
         assert.deepEqual(view, zeros);
@@ -285,7 +285,7 @@ QUnit.test("test_mat_ones", function(assert) {
     }
     // Mat::ones(Size, int)
     {
-        var mat = cv.Mat.ones([10, 10], cv.CV_8UC1);
+        var mat = cv.Mat.ones({height: 10, width: 10}, cv.CV_8UC1);
         var view = mat.data();
 
         assert.deepEqual(view, ones);
@@ -307,7 +307,7 @@ QUnit.test("test_mat_eye", function(assert) {
 
     // Mat::eye(Size, int)
     {
-        var mat = cv.Mat.eye([4, 4], cv.CV_8UC1);
+        var mat = cv.Mat.eye({height: 4, width: 4}, cv.CV_8UC1);
         var view = mat.data();
 
         assert.deepEqual(view, eye4by4);
@@ -568,7 +568,7 @@ QUnit.test("test mat access", function(assert) {
 
     // test get_int(i,j)
     {
-        let mat = cv.Mat.eye([3, 3], cv.CV_32SC1);
+        let mat = cv.Mat.eye({height: 3, width: 3}, cv.CV_32SC1);
 
         assert.equal(mat.get_int_at(0, 0), 1);
         assert.equal(mat.get_int_at(0, 1), 0);

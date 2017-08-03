@@ -304,9 +304,9 @@ EMSCRIPTEN_BINDINGS(Utils) {
     emscripten::class_<cv::RNG> ("RNG");
 
 #define EMSCRIPTEN_CV_SIZE(type) \
-    value_array<type>("#type") \
-        .element(&type::height) \
-        .element(&type::width);
+    value_object<type>("#type") \
+        .field("width", &type::width) \
+        .field("height", &type::height);
 
     EMSCRIPTEN_CV_SIZE(Size)
     EMSCRIPTEN_CV_SIZE(Size2f)

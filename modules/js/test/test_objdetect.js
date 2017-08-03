@@ -78,14 +78,14 @@ QUnit.test("Cascade classification", function(assert) {
 		// cv.HAAR = 0
 		//assert.equal(classifier.getFeatureType(), 0);
 
-		let image = cv.Mat.eye([10, 10], cv.CV_8UC3),
+		let image = cv.Mat.eye({height: 10, width: 10}, cv.CV_8UC3),
 			objects = new cv.RectVector(),
 			numDetections = new cv.IntVector(),
 			scaleFactor = 1.1,
 			minNeighbors = 3,
 			flags = 0,
-			minSize = [0, 0],
-			maxSize = [10, 10];
+			minSize = {height: 0, width: 0},
+			maxSize = {height: 10, width: 10};
 
 		classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
 		minNeighbors, flags, minSize, maxSize);
@@ -107,13 +107,13 @@ QUnit.test("Cascade classification", function(assert) {
 	// HOGDescriptor
 	{
 		let hog = new cv.HOGDescriptor(),
-			mat = new cv.Mat([10, 10], cv.CV_8UC1),
+			mat = new cv.Mat({height: 10, width: 10}, cv.CV_8UC1),
 			descriptors = new cv.FloatVector(),
 			locations = new cv.PointVector();
 
 
-		assert.equal(hog.winSize[0], 128);
-		assert.equal(hog.winSize[1], 64);
+		assert.equal(hog.winSize.height, 128);
+		assert.equal(hog.winSize.width, 64);
 		assert.equal(hog.nbins, 9);
 		assert.equal(hog.derivAperture, 1);
 		assert.equal(hog.winSigma, -1);

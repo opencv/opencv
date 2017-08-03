@@ -43,7 +43,7 @@ QUnit.test("test_imgProc", function(assert) {
     var aa = 1;
 
     //var vec0 = new cv.Mat.zeros([20, 20], cv.CV_8UC1);
-    var vec1 = new cv.Mat.ones([20, 20], cv.CV_8UC1);
+    var vec1 = new cv.Mat.ones({height: 20, width: 20}, cv.CV_8UC1);
     //source.push_back(vec0);
     var source = new cv.MatVector();
     source.push_back(vec1);
@@ -214,14 +214,14 @@ QUnit.test("test_shape", function(assert) {
 
 QUnit.test("test_rotated_rect", function(assert) {
   {
-    let rect = new cv.RotatedRect([100, 100], [100, 50], 30);
+    let rect = new cv.RotatedRect([100, 100], {height: 100, width: 50}, 30);
     let points = new cv.Point2fVector();
 
     assert.equal(rect.center[0], 100);
     assert.equal(rect.center[1], 100);
     assert.equal(rect.angle, 30);
-    assert.equal(rect.size[0], 100);
-    assert.equal(rect.size[1], 50);
+    assert.equal(rect.size.height, 100);
+    assert.equal(rect.size.width, 50);
 
     rect.points(points);
 
@@ -266,7 +266,7 @@ QUnit.test("test_filter", function(assert) {
       let mat1 = cv.Mat.ones(5, 5, cv.CV_8UC3);
       let mat2 = new cv.Mat();
 
-      cv.blur(mat1, mat2, [3, 3], [-1, -1], cv.BORDER_DEFAULT);
+      cv.blur(mat1, mat2, {height: 3, width: 3}, [-1, -1], cv.BORDER_DEFAULT);
 
       // Verify result.
       let view = mat2.data();
@@ -275,7 +275,7 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(size[0], 5);
       assert.equal(size[1], 5);
 
-      cv.blur(mat1, mat2, [3, 3], [-1, -1]);
+      cv.blur(mat1, mat2, {height: 3, width: 3}, [-1, -1]);
 
       // Verify result.
       view = mat2.data();
@@ -284,7 +284,7 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(size[0], 5);
       assert.equal(size[1], 5);
 
-      cv.blur(mat1, mat2, [3, 3]);
+      cv.blur(mat1, mat2, {height: 3, width: 3});
 
       // Verify result.
       view = mat2.data();
@@ -304,7 +304,7 @@ QUnit.test("test_filter", function(assert) {
       let mat1 = cv.Mat.ones(7, 7, cv.CV_8UC1);
       let mat2 = new cv.Mat();
 
-      cv.GaussianBlur(mat1, mat2, [3, 3], 0, 0, cv.BORDER_DEFAULT);
+      cv.GaussianBlur(mat1, mat2, {height: 3, width: 3}, 0, 0, cv.BORDER_DEFAULT);
 
       // Verify result.
       let view = mat2.data();
@@ -397,9 +397,9 @@ QUnit.test("test_filter", function(assert) {
 
   // Concat
   {
-      let mat = cv.Mat.ones([10, 5], cv.CV_8UC3);
-      let mat2 = cv.Mat.eye([10, 5], cv.CV_8UC3);
-      let mat3 = cv.Mat.eye([10, 5], cv.CV_8UC3);
+      let mat = cv.Mat.ones({height: 10, width: 5}, cv.CV_8UC3);
+      let mat2 = cv.Mat.eye({height: 10, width: 5}, cv.CV_8UC3);
+      let mat3 = cv.Mat.eye({height: 10, width: 5}, cv.CV_8UC3);
 
 
       let out = new cv.Mat();
@@ -682,7 +682,7 @@ QUnit.test("test_filter", function(assert) {
 
   // Integral variants
   {
-      let mat = cv.Mat.eye([100, 100], cv.CV_8UC3);
+      let mat = cv.Mat.eye({height: 100, width: 100}, cv.CV_8UC3);
       let sum = new cv.Mat();
       let sqSum = new cv.Mat();
       let title = new cv.Mat();
@@ -715,7 +715,7 @@ QUnit.test("test_filter", function(assert) {
 
   // Mean, meanSTDev
   {
-      let mat = cv.Mat.eye([100, 100], cv.CV_8UC3);
+      let mat = cv.Mat.eye({height: 100, width: 100}, cv.CV_8UC3);
       let sum = new cv.Mat();
       let sqSum = new cv.Mat();
       let title = new cv.Mat();
