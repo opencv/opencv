@@ -57,22 +57,14 @@ static std::string _tf(TString filename)
 
 TEST(Test_Caffe, read_gtsrb)
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(_tf("gtsrb.prototxt"), "");
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(_tf("gtsrb.prototxt"));
+    ASSERT_FALSE(net.empty());
 }
 
 TEST(Test_Caffe, read_googlenet)
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(_tf("bvlc_googlenet.prototxt"), "");
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(_tf("bvlc_googlenet.prototxt"));
+    ASSERT_FALSE(net.empty());
 }
 
 TEST(Reproducibility_AlexNet, Accuracy)
@@ -81,9 +73,8 @@ TEST(Reproducibility_AlexNet, Accuracy)
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
-        Ptr<Importer> importer = createCaffeImporter(proto, model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
@@ -107,9 +98,8 @@ TEST(Reproducibility_FCN, Accuracy)
     {
         const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
         const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel", false);
-        Ptr<Importer> importer = createCaffeImporter(proto, model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("street.png"));
@@ -136,9 +126,8 @@ TEST(Reproducibility_SSD, Accuracy)
     {
         const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
         const string model = findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false);
-        Ptr<Importer> importer = createCaffeImporter(proto, model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("street.png"));
