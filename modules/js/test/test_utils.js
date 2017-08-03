@@ -36,29 +36,64 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 QUnit.module ("Utils", {});
 QUnit.test("Test vectors", function(assert) {
-	let pointVector = new cv.PointVector();
-	for (var i=0 ; i<100; ++i) {
-		pointVector.push_back({x: i, y: 2*i});
+	{
+		let pointVector = new cv.PointVector();
+		for (var i=0 ; i<100; ++i) {
+			pointVector.push_back({x: i, y: 2*i});
+		}
+
+		assert.equal(pointVector.size(), 100);
+
+		let index = 10;
+		let item = pointVector.get(index);
+		assert.equal(item.x, index);
+		assert.equal(item.y, 2*index);
+
+		index = 0;
+		item = pointVector.get(index);
+		assert.equal(item.x, index);
+		assert.equal(item.y, 2*index);
+
+		index = 99;
+		item = pointVector.get(index);
+		assert.equal(item.x, index);
+		assert.equal(item.y, 2*index);
+
+		pointVector.delete();
 	}
 
-	assert.equal(pointVector.size(), 100);
+	{
+		let pointVector = new cv.PointVector();
+		for (var i=0 ; i<100; ++i) {
+			pointVector.push_back(new cv.Point(i, 2*i));
+		}
 
-	let index = 10;
-	let item = pointVector.get(index);
-	assert.equal(item.x, index);
-	assert.equal(item.y, 2*index);
+		pointVector.push_back(new cv.Point());
 
-	index = 0;
-	item = pointVector.get(index);
-	assert.equal(item.x, index);
-	assert.equal(item.y, 2*index);
+		assert.equal(pointVector.size(), 101);
 
-	index = 99;
-	item = pointVector.get(index);
-	assert.equal(item.x, index);
-	assert.equal(item.y, 2*index);
+		let index = 10;
+		let item = pointVector.get(index);
+		assert.equal(item.x, index);
+		assert.equal(item.y, 2*index);
 
-	pointVector.delete();
+		index = 0;
+		item = pointVector.get(index);
+		assert.equal(item.x, index);
+		assert.equal(item.y, 2*index);
+
+		index = 99;
+		item = pointVector.get(index);
+		assert.equal(item.x, index);
+		assert.equal(item.y, 2*index);
+
+		index = 100;
+		item = pointVector.get(index);
+		assert.equal(item.x, 0);
+		assert.equal(item.y, 0);
+
+		pointVector.delete();
+	}
 });
 QUnit.test("Test Rect", function(assert) {
 	let rectVector = new cv.RectVector();
@@ -102,4 +137,31 @@ QUnit.test("Test Rect", function(assert) {
 	assert.equal(item.height, 12);
 
 	rectVector.delete();
+});
+QUnit.test("Test Size", function(assert) {
+	 {
+        let mat = new cv.Mat();
+        mat.create({width: 5, height: 10}, cv.CV_8UC4);
+        let size = mat.size();
+
+        assert.ok(mat.type() === cv.CV_8UC4);
+        assert.ok(size[0] === 10);
+        assert.ok(size[1] === 5);
+        assert.ok(mat.channels() === 4);
+
+        mat.delete();
+    }
+
+     {
+        let mat = new cv.Mat();
+        mat.create(new cv.Size(5, 10), cv.CV_8UC4);
+        let size = mat.size();
+
+        assert.ok(mat.type() === cv.CV_8UC4);
+        assert.ok(size[0] === 10);
+        assert.ok(size[1] === 5);
+        assert.ok(mat.channels() === 4);
+
+        mat.delete();
+    }
 });

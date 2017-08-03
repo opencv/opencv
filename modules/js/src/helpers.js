@@ -79,6 +79,20 @@ Module["VideoCapture"] = function(videoID) {
     };
 }
 
+function Point(x, y) {
+    this.x = typeof(x) === "undefined" ? 0 : x;
+    this.y = typeof(y) === "undefined" ? 0 : y;
+}
+
+Module["Point"] = Point;
+
+function Size(width, height) {
+    this.width = typeof(width) === "undefined" ? 0 : width;
+    this.height = typeof(height) === "undefined" ? 0 : height;
+}
+
+Module["Size"] = Size;
+
 function Rect() {
     var x, y, width, height;
     switch (arguments.length) {
