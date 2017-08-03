@@ -96,25 +96,35 @@ void CV_GrabcutTest::run( int /* start_from */)
     mask = Scalar(0);
     Mat bgdModel, fgdModel;
     grabCut( img, mask, rect, bgdModel, fgdModel, 0, GC_INIT_WITH_RECT );
+	bgdModel.copyTo(exp_bgdModel);
+	fgdModel.copyTo(exp_fgdModel);
     grabCut( img, mask, rect, bgdModel, fgdModel, 2, GC_EVAL );
-
+	
     // Multiply images by 255 for more visuality of test data.
     if( mask_prob.empty() )
     {
-        mask.copyTo( mask_prob );
-        imwrite(string(ts->get_data_path()) + "grabcut/mask_prob.png", mask_prob);
+		mask.copyTo( mask_prob );
+        imwrite(string(ts->get_data_path()) + "grabcut/mask_prob1.png", mask_prob);
     }
     if( exp_mask1.empty() )
     {
         exp_mask1 = (mask & 1) * 255;
         imwrite(string(ts->get_data_path()) + "grabcut/exp_mask1.png", exp_mask1);
     }
-
-    if (!verify((mask & 1) * 255, exp_mask1))
+	if (!verify((mask & 1) * 255, exp_mask1))
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
     }
+	// The model should not be changed after calling with GC_EVAL
+	double sumBgdModel = cv::sum(cv::abs(bgdModel) - cv::abs(exp_bgdModel))[0];
+	double sumFgdModel = cv::sum(cv::abs(fgdModel) - cv::abs(exp_fgdModel))[0];
+	if (sumBgdModel >= 0.1 || sumFgdModel >= 0.1)
+	{
+		ts->printf(cvtest::TS::LOG, "sumBgdModel = %f, sumFgdModel = %f\n", sumBgdModel, sumFgdModel);
+		ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+		return;
+	}
 
     mask = mask_prob;
     bgdModel.release();
@@ -128,7 +138,6 @@ void CV_GrabcutTest::run( int /* start_from */)
         exp_mask2 = (mask & 1) * 255;
         imwrite(string(ts->get_data_path()) + "grabcut/exp_mask2.png", exp_mask2);
     }
-
     if (!verify((mask & 1) * 255, exp_mask2))
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
