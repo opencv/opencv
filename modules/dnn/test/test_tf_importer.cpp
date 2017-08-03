@@ -71,4 +71,58 @@ TEST(Test_TensorFlow, inception_accuracy)
     normAssert(ref, out);
 }
 
+static std::string path(const std::string& file)
+{
+    return findDataFile("dnn/tensorflow/" + file, false);
+}
+
+static void runTensorFlowNet(const std::string& prefix)
+{
+    std::string netPath = path(prefix + "_net.pb");
+    std::string inpPath = path(prefix + "_in.npy");
+    std::string outPath = path(prefix + "_out.npy");
+
+    Net net = readNetFromTensorflow(netPath);
+
+    cv::Mat input = blobFromNPY(inpPath);
+    cv::Mat target = blobFromNPY(outPath);
+
+    net.setInput(input);
+    cv::Mat output = net.forward();
+    normAssert(target, output);
+}
+
+TEST(Test_TensorFlow, single_conv)
+{
+    runTensorFlowNet("single_conv");
+}
+
+TEST(Test_TensorFlow, padding)
+{
+    runTensorFlowNet("padding_same");
+    runTensorFlowNet("padding_valid");
+}
+
+TEST(Test_TensorFlow, eltwise_add_mul)
+{
+    runTensorFlowNet("eltwise_add_mul");
+}
+
+TEST(Test_TensorFlow, pad_and_concat)
+{
+    runTensorFlowNet("pad_and_concat");
+}
+
+TEST(Test_TensorFlow, fused_batch_norm)
+{
+    runTensorFlowNet("fused_batch_norm");
+}
+
+TEST(Test_TensorFlow, pooling)
+{
+    runTensorFlowNet("max_pool_even");
+    runTensorFlowNet("max_pool_odd_valid");
+    runTensorFlowNet("max_pool_odd_same");
+}
+
 }
