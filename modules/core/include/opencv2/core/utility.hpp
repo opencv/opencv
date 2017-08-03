@@ -444,6 +444,23 @@ static inline size_t alignSize(size_t sz, int n)
     return (sz + n-1) & -n;
 }
 
+/** @brief Integer division with result round up.
+
+Use this function instead of `ceil((float)a / b)` expressions.
+
+@sa alignSize
+*/
+static inline int divUp(int a, unsigned int b)
+{
+    CV_DbgAssert(a >= 0);
+    return (a + b - 1) / b;
+}
+/** @overload */
+static inline size_t divUp(size_t a, unsigned int b)
+{
+    return (a + b - 1) / b;
+}
+
 /** @brief Enables or disables the optimized code.
 
 The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX,
