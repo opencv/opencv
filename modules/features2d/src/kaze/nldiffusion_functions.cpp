@@ -49,7 +49,7 @@ void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst, int ksize_x, int 
 
     // Compute an appropriate kernel size according to the specified sigma
     if (sigma > ksize_x || sigma > ksize_y || ksize_x == 0 || ksize_y == 0) {
-        ksize_x_ = (int)ceil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
+        ksize_x_ = cvCeil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
         ksize_y_ = ksize_x_;
     }
 
