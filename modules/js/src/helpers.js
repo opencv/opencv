@@ -231,3 +231,25 @@ function Circle() {
 }
 
 Module["Circle"] = Circle;
+
+function TermCriteria() {
+    switch (arguments.length) {
+        case 0: {
+            this.type = 0;
+            this.maxCount = 0;
+            this.epsilon = 0;
+            break;
+        }
+        case 3: {
+            this.type = arguments[0];
+            this.maxCount = arguments[1];
+            this.epsilon = arguments[2];
+            break;
+        }
+        default: {
+            throw("Invalid arguments");
+        }
+    }
+}
+
+Module["TermCriteria"] = TermCriteria;

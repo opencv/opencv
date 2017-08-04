@@ -228,13 +228,6 @@ EMSCRIPTEN_BINDINGS(Utils) {
     register_vector<cv::Rect>("RectVector");
     register_vector<cv::Point2f>("Point2fVector");
 
-    emscripten::class_<cv::TermCriteria>("TermCriteria")
-        .constructor<>()
-        .constructor<int, int, double>()
-        .property("type", &cv::TermCriteria::type)
-        .property("maxCount", &cv::TermCriteria::maxCount)
-        .property("epsilon", &cv::TermCriteria::epsilon);
-
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
         //.constructor<const Mat&>()
@@ -317,6 +310,11 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .constructor<int, int, int, int>();
 
     emscripten::class_<cv::RNG> ("RNG");
+
+    emscripten::value_object<cv::TermCriteria>("TermCriteria")
+        .field("type", &cv::TermCriteria::type)
+        .field("maxCount", &cv::TermCriteria::maxCount)
+        .field("epsilon", &cv::TermCriteria::epsilon);
 
 #define EMSCRIPTEN_CV_SIZE(type) \
     emscripten::value_object<type>("#type") \
