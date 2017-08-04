@@ -215,7 +215,6 @@ QUnit.test("test_shape", function(assert) {
 QUnit.test("test_min_enclosing", function(assert) {
   {
     let points = new cv.Mat(4, 1, cv.CV_32FC2);
-    let circle = new cv.Circle();
 
     points.data32f()[0] = 0;
     points.data32f()[1] = 0;
@@ -226,12 +225,11 @@ QUnit.test("test_min_enclosing", function(assert) {
     points.data32f()[6] = 0;
     points.data32f()[7] = 1;
 
-    cv.minEnclosingCircle(points, circle);
+    let circle = cv.minEnclosingCircle(points);
 
     assert.deepEqual(circle.center, {x: 0.5, y: 0.5});
     assert.ok(Math.abs(circle.radius - Math.sqrt(2) / 2) < 0.001);
 
-    circle.delete();
     points.delete();
   }
 });

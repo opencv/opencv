@@ -588,12 +588,11 @@ QUnit.test("test mat operations", function(assert) {
     // test minMaxLoc
     {
         let src = cv.Mat.ones(4, 4, cv.CV_8UC1);
-        let result = new cv.MinMaxLocResult();
 
         src.data()[2] = 0;
         src.data()[5] = 2;
 
-        cv.minMaxLoc(src, result);
+        let result = cv.minMaxLoc(src);
 
         assert.equal(result.minVal, 0);
         assert.equal(result.maxVal, 2);
@@ -601,6 +600,5 @@ QUnit.test("test mat operations", function(assert) {
         assert.deepEqual(result.maxLoc, {x: 1, y: 1});
 
         src.delete();
-        result.delete();
     }
 });

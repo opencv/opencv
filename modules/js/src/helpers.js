@@ -187,3 +187,47 @@ Scalar.all = function(v) {
 }
 
 Module["Scalar"] = Scalar;
+
+function MinMaxLoc() {
+    switch (arguments.length) {
+        case 0: {
+            this.minVal = 0;
+            this.maxVal = 0;
+            this.minLoc = new Point();
+            this.maxLoc = new Point();
+            break;
+        }
+        case 4: {
+            this.minVal = arguments[0];
+            this.maxVal = arguments[1];
+            this.minLoc = arguments[2];
+            this.maxLoc = arguments[3];
+            break;
+        }
+        default: {
+            throw("Invalid arguments");
+        }
+    }
+}
+
+Module["MinMaxLoc"] = MinMaxLoc;
+
+function Circle() {
+    switch (arguments.length) {
+        case 0: {
+            this.center = new Point();
+            this.radius = 0;
+            break;
+        }
+        case 2: {
+            this.center = arguments[0];
+            this.radius = arguments[1];
+            break;
+        }
+        default: {
+            throw("Invalid arguments");
+        }
+    }
+}
+
+Module["Circle"] = Circle;

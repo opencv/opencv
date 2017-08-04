@@ -190,11 +190,13 @@ namespace Utils{
     };
 
     void minMaxLoc(const cv::Mat& src, MinMaxLocResult& result, const cv::Mat& mask) {
-        return cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc, mask);
+        cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc, mask);
+        printf("MinMaxLocResult: %f %f\n", result.minVal, result.maxVal);
     }
 
     void minMaxLoc_1(const cv::Mat& src, MinMaxLocResult& result) {
-        return cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc);
+        cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc);
+        printf("MinMaxLocResult: %f %f %d %d %d %d\n", result.minVal, result.maxVal, result.minLoc.x, result.minLoc.y, result.maxLoc.x, result.maxLoc.y);
     }
 
     class Circle {
@@ -357,17 +359,15 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .element(index<2>())
         .element(index<3>());
 
-    emscripten::class_<Utils::MinMaxLocResult>("MinMaxLocResult")
-        .constructor<>()
-        .property("minVal", &Utils::MinMaxLocResult::minVal)
-        .property("maxVal", &Utils::MinMaxLocResult::maxVal)
-        .property("minLoc", &Utils::MinMaxLocResult::minLoc)
-        .property("maxLoc", &Utils::MinMaxLocResult::maxLoc);
+    emscripten::value_object<Utils::MinMaxLocResult>("MinMaxLocResult")
+        .field("minVal", &Utils::MinMaxLocResult::minVal)
+        .field("maxVal", &Utils::MinMaxLocResult::maxVal)
+        .field("minLoc", &Utils::MinMaxLocResult::minLoc)
+        .field("maxLoc", &Utils::MinMaxLocResult::maxLoc);
 
-    emscripten::class_<Utils::Circle>("Circle")
-        .constructor<>()
-        .property("center", &Utils::Circle::center)
-        .property("radius", &Utils::Circle::radius);
+    emscripten::value_object<Utils::Circle>("Circle")
+        .field("center", &Utils::Circle::center)
+        .field("radius", &Utils::Circle::radius);
 
     function("minEnclosingCircle", select_overload<void(const cv::Mat&, Utils::Circle&)>(&Utils::minEnclosingCircle));
 
