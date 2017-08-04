@@ -217,20 +217,11 @@ namespace Utils{
 EMSCRIPTEN_BINDINGS(Utils) {
 
     register_vector<int>("IntVector");
-    register_vector<char>("CharVector");
-    register_vector<unsigned>("UnsignedVector");
-    register_vector<unsigned char>("UCharVector");
-    register_vector<std::string>("StrVector");
-    register_vector<emscripten::val>("EmvalVector");
     register_vector<float>("FloatVector");
-    register_vector<std::vector<int>>("IntVectorVector");
-    register_vector<std::vector<Point>>("PointVectorVector");
+    register_vector<double>("DoubleVector");
     register_vector<cv::Point>("PointVector");
-    register_vector<cv::Vec4i>("Vec4iVector");
     register_vector<cv::Mat>("MatVector");
-    register_vector<cv::KeyPoint>("KeyPointVector");
     register_vector<cv::Rect>("RectVector");
-    register_vector<cv::Point2f>("Point2fVector");
 
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
@@ -308,12 +299,6 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("get_float_at", select_overload<float&(int, int)>(&cv::Mat::at<float>))
         .function("get_float_at", select_overload<float&(int, int, int)>(&cv::Mat::at<float>))
         .function( "getROI_Rect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()));
-
-    emscripten::class_<cv::Vec<int,4>>("Vec4i")
-        .constructor<>()
-        .constructor<int, int, int, int>();
-
-    emscripten::class_<cv::RNG> ("RNG");
 
     emscripten::value_object<cv::TermCriteria>("TermCriteria")
         .field("type", &cv::TermCriteria::type)
