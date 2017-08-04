@@ -159,16 +159,16 @@ function RotatedRect() {
     }
 }
 
-RotatedRect.prototype.points = function () {
-    return Module._rotatedRectPoints(this);
+RotatedRect.points = function (obj) {
+    return Module.rotatedRectPoints(obj);
 }
 
-RotatedRect.prototype.boundingRect = function () {
-    return Module._rotatedRectBoundingRect(this);
+RotatedRect.boundingRect = function (obj) {
+    return Module.rotatedRectBoundingRect(obj);
 }
 
-RotatedRect.prototype.boundingRect2f = function () {
-    return Module._rotatedRectBoundingRect2f(this);
+RotatedRect.boundingRect2f = function (obj) {
+    return Module.rotatedRectBoundingRect2f(obj);
 }
 
 Module["RotatedRect"] = RotatedRect;

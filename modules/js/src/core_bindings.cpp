@@ -352,9 +352,9 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .field("size", &cv::RotatedRect::size)
         .field("angle", &cv::RotatedRect::angle);
 
-    function("_rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&Utils::rotatedRectPoints));
-    function("_rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect));
-    function("_rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect2f));
+    function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&Utils::rotatedRectPoints));
+    function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect));
+    function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect2f));
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
         .element(index<0>())
