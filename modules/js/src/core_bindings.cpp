@@ -212,6 +212,22 @@ namespace Utils{
         cv::minEnclosingCircle(points, circle.center, circle.radius);
         return circle;
     }
+
+    emscripten::val CamShiftWrapper(const cv::Mat& arg1, Rect& arg2, TermCriteria arg3) {
+        RotatedRect rotatedRect = cv::CamShift(arg1, arg2, arg3);
+        emscripten::val result = emscripten::val::array();
+        result.call<void>("push", rotatedRect);
+        result.call<void>("push", arg2);
+        return result;
+    }
+
+    emscripten::val meanShiftWrapper(const cv::Mat& arg1, Rect& arg2, TermCriteria arg3) {
+        int n = cv::meanShift(arg1, arg2, arg3);
+        emscripten::val result = emscripten::val::array();
+        result.call<void>("push", n);
+        result.call<void>("push", arg2);
+        return result;
+    }
 }
 
 EMSCRIPTEN_BINDINGS(Utils) {
@@ -367,6 +383,10 @@ EMSCRIPTEN_BINDINGS(Utils) {
     function("morphologyDefaultBorderValue", &cv::morphologyDefaultBorderValue);
 
     function("CV_MAT_DEPTH", &Utils::cvMatDepth);
+
+    function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&Utils::CamShiftWrapper));
+
+    function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&Utils::meanShiftWrapper));
 
     constant("CV_8UC1", CV_8UC1) ;
     constant("CV_8UC2", CV_8UC2) ;
