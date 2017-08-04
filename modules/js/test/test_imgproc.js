@@ -62,14 +62,14 @@ QUnit.test("test_imgProc", function(assert) {
     cv.calcHist(source, channels, mask, hist, histSize, ranges, false);
 
     // hist should contains a N X 1 arrary.
-    let size = hist.size();
+    let size = hist.size;
     assert.equal(size.length, 2);
     assert.equal(size[0], 256);
     assert.equal(size[1], 1);
 
     // default parameters
     cv.calcHist(source, channels, mask, hist, histSize, ranges);
-    size = hist.size();
+    size = hist.size;
     assert.equal(size.length, 2);
     assert.equal(size[0], 256);
     assert.equal(size[1], 1);
@@ -120,7 +120,7 @@ QUnit.test("test_imgProc", function(assert) {
     // of it.
     assert.equal(source.channels(), dest.channels());
     assert.equal(source.type(), dest.type());
-    assert.equal(source.size().length, dest.size().length);
+    assert.equal(source.size.length, dest.size.length);
     // Varifiy content>
 
     dest.delete();
@@ -247,7 +247,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       let view = mat2.data;
-      let size = mat2.size();
+      let size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 5);
       assert.equal(size[1], 5);
@@ -256,7 +256,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       view = mat2.data;
-      size = mat2.size();
+      size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 5);
       assert.equal(size[1], 5);
@@ -265,7 +265,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       view = mat2.data;
-      size = mat2.size();
+      size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 5);
       assert.equal(size[1], 5);
@@ -285,7 +285,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       let view = mat2.data;
-      let size = mat2.size();
+      let size = mat2.size;
       assert.equal(mat2.channels(), 1);
       assert.equal(size[0], 7);
       assert.equal(size[1], 7);
@@ -303,7 +303,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       let view = mat2.data;
-      let size = mat2.size();
+      let size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 9);
       assert.equal(size[1], 9);
@@ -318,7 +318,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       let view = mat2.data;
-      let size = mat2.size();
+      let size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 9);
       assert.equal(size[1], 9);
@@ -336,7 +336,7 @@ QUnit.test("test_filter", function(assert) {
 
       // Verify result.
       let view = mat2.data;
-      let size = mat2.size();
+      let size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 11);
       assert.equal(size[1], 11);
@@ -345,7 +345,7 @@ QUnit.test("test_filter", function(assert) {
       cv.bilateralFilter(mat1, mat2, 3, 6, 1.5);
       // Verify result.
       view = mat2.data;
-      size = mat2.size();
+      size = mat2.size;
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 11);
       assert.equal(size[1], 11);
@@ -362,7 +362,7 @@ QUnit.test("test_filter", function(assert) {
       cv.watershed(mat, out);
 
       // Verify result.
-      let size = out.size();
+      let size = out.size;
       assert.equal(out.channels(), 1);
       assert.equal(size[0], 11);
       assert.equal(size[1], 11);
@@ -388,7 +388,7 @@ QUnit.test("test_filter", function(assert) {
       cv.vconcat(input, out);
 
       // Verify result.
-      let size = out.size();
+      let size = out.size;
       assert.equal(out.channels(), 3);
       assert.equal(size[0], 30);
       assert.equal(size[1], 5);
@@ -397,7 +397,7 @@ QUnit.test("test_filter", function(assert) {
       cv.hconcat(input, out);
 
       // Verify result.
-      size = out.size();
+      size = out.size;
       assert.equal(out.channels(), 3);
       assert.equal(size[0], 10);
       assert.equal(size[1], 15);
@@ -417,7 +417,7 @@ QUnit.test("test_filter", function(assert) {
       cv.distanceTransform(mat, out, cv.DIST_L2, maskSize, cv.CV_32F);
 
       // Verify result.
-      let size = out.size();
+      let size = out.size;
       assert.equal(out.channels(), 1);
       assert.equal(size[0], 11);
       assert.equal(size[1], 11);
@@ -427,13 +427,13 @@ QUnit.test("test_filter", function(assert) {
       cv.distanceTransformWithLabels(mat, out, labels, cv.DIST_L2, maskSize, cv.DIST_LABEL_CCOMP);
 
       // Verify result.
-      size = out.size();
+      size = out.size;
       assert.equal(out.channels(), 1);
       assert.equal(size[0], 11);
       assert.equal(size[1], 11);
       assert.equal(out.elemSize1(), 4);
 
-      size = labels.size();
+      size = labels.size;
       assert.equal(labels.channels(), 1);
       assert.equal(size[0], 11);
       assert.equal(size[1], 11);
@@ -473,7 +473,7 @@ QUnit.test("test_filter", function(assert) {
       cv.min(mat1, mat2, mat3);
       // Verify result.
       let view = mat2.data;
-      let size = mat2.size();
+      let size = mat2.size;
       assert.equal(mat2.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -484,7 +484,7 @@ QUnit.test("test_filter", function(assert) {
       cv.max(mat1, mat2, mat3);
       // Verify result.
       view = mat2.data;
-      size = mat2.size();
+      size = mat2.size;
       assert.equal(mat2.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -525,7 +525,7 @@ QUnit.test("test_filter", function(assert) {
       cv.bitwise_not(mat1, mat3, none);
       // Verify result.
       let view = mat3.data;
-      let size = mat3.size();
+      let size = mat3.size;
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -535,7 +535,7 @@ QUnit.test("test_filter", function(assert) {
       cv.bitwise_and(mat1, mat2, mat3, none);
       // Verify result.
       view = mat3.data;
-      size = mat3.size();
+      size = mat3.size;
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -546,7 +546,7 @@ QUnit.test("test_filter", function(assert) {
       cv.bitwise_or(mat1, mat2, mat3, none);
       // Verify result.
       view = mat3.data;
-      size = mat3.size();
+      size = mat3.size;
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -555,7 +555,7 @@ QUnit.test("test_filter", function(assert) {
 
       cv.bitwise_xor(mat1, mat2, mat3, none);
       // Verify result.
-      size = mat3.size();
+      size = mat3.size;
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -611,7 +611,7 @@ QUnit.test("test_filter", function(assert) {
       cv.absdiff(mat1, mat2, dst);
       // Verify result.
       let view = dst.data;
-      let size = dst.size();
+      let size = dst.size;
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -621,7 +621,7 @@ QUnit.test("test_filter", function(assert) {
       cv.add(mat1, mat2, dst, none, -1);
       // Verify result.
       view = dst.data;
-      size = dst.size();
+      size = dst.size;
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -631,7 +631,7 @@ QUnit.test("test_filter", function(assert) {
       cv.addWeighted(mat1, alpha, mat2, beta, gamma, dst, -1);
       // Verify result.
       view = dst.data;
-      size = dst.size();
+      size = dst.size;
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -642,7 +642,7 @@ QUnit.test("test_filter", function(assert) {
       cv.addWeighted(mat1, alpha, mat2, beta, gamma, dst);
       // Verify result.
       view = dst.data;
-      size = dst.size();
+      size = dst.size;
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -667,19 +667,19 @@ QUnit.test("test_filter", function(assert) {
       cv.integral(mat, sum, -1);
 
       // Verify result.
-      let size = sum.size();
+      let size = sum.size;
       assert.equal(sum.channels(), 3);
       assert.equal(size[0], 100+1);
       assert.equal(size[1], 100+1);
 
       cv.integral2(mat, sum, sqSum, -1, -1);
       // Verify result.
-      size = sum.size();
+      size = sum.size;
       assert.equal(sum.channels(), 3);
       assert.equal(size[0], 100+1);
       assert.equal(size[1], 100+1);
 
-      size = sqSum.size();
+      size = sqSum.size;
       assert.equal(sqSum.channels(), 3);
       assert.equal(size[0], 100+1);
       assert.equal(size[1], 100+1);
@@ -700,19 +700,19 @@ QUnit.test("test_filter", function(assert) {
       cv.integral(mat, sum, -1);
 
       // Verify result.
-      let size = sum.size();
+      let size = sum.size;
       assert.equal(sum.channels(), 3);
       assert.equal(size[0], 100+1);
       assert.equal(size[1], 100+1);
 
       cv.integral2(mat, sum, sqSum, -1, -1);
       // Verify result.
-      size = sum.size();
+      size = sum.size;
       assert.equal(sum.channels(), 3);
       assert.equal(size[0], 100+1);
       assert.equal(size[1], 100+1);
 
-      size = sqSum.size();
+      size = sqSum.size;
       assert.equal(sqSum.channels(), 3);
       assert.equal(size[0], 100+1);
       assert.equal(size[1], 100+1);
@@ -804,7 +804,7 @@ QUnit.test("test_filter", function(assert) {
 
       cv.invert(mat1, inv1, 0);
       // Verify result.
-      let size = inv1.size();
+      let size = inv1.size;
       assert.equal(inv1.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
@@ -819,7 +819,7 @@ QUnit.test("test_filter", function(assert) {
 
       cv.invert(mat3, inv3, 0);
       // Verify result.
-      size = inv3.size();
+      size = inv3.size;
       assert.equal(inv3.channels(), 1);
       assert.equal(size[0], 4);
       assert.equal(size[1], 4);

@@ -142,7 +142,7 @@ QUnit.test("Test Size", function(assert) {
 	 {
         let mat = new cv.Mat();
         mat.create({width: 5, height: 10}, cv.CV_8UC4);
-        let size = mat.size();
+        let size = mat.size;
 
         assert.ok(mat.type() === cv.CV_8UC4);
         assert.ok(size[0] === 10);
@@ -155,7 +155,7 @@ QUnit.test("Test Size", function(assert) {
      {
         let mat = new cv.Mat();
         mat.create(new cv.Size(5, 10), cv.CV_8UC4);
-        let size = mat.size();
+        let size = mat.size;
 
         assert.ok(mat.type() === cv.CV_8UC4);
         assert.ok(size[0] === 10);

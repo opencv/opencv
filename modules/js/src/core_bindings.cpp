@@ -87,13 +87,20 @@ namespace Utils{
     }
 
     // returning MatSize
-    static emscripten::val getMatSize(const cv::Mat& mat)
-    {
+    static emscripten::val getMatSize(const cv::Mat& mat) {
       emscripten::val size = emscripten::val::array();
       for (int i = 0; i < mat.dims; i++) {
         size.call<void>("push", mat.size[i]);
       }
       return size;
+    }
+
+    static emscripten::val getMatStep(const cv::Mat& mat) {
+      emscripten::val step = emscripten::val::array();
+      for (int i = 0; i < mat.dims; i++) {
+        step.call<void>("push", mat.step[i]);
+      }
+      return step;
     }
 
     static Mat eye(int rows, int cols, int type) {
@@ -247,6 +254,27 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .constructor<int, int, int, const Scalar&>()
         .constructor(&Utils::createMat, allow_raw_pointers())
         .constructor(&Utils::createMat2, allow_raw_pointers())
+
+        .class_function("eye",select_overload<Mat(int, int, int)>(&Utils::eye))
+        .class_function("eye",select_overload<Mat(Size, int)>(&Utils::eye))
+        .class_function("ones",select_overload<Mat(int, int, int)>(&Utils::mat_ones_iii))
+        .class_function("ones",select_overload<Mat(Size, int)>(&Utils::mat_ones_Si))
+        .class_function("zeros",select_overload<Mat(int, int, int)>(&Utils::mat_zeros_iii))
+        .class_function("zeros",select_overload<Mat(Size, int)>(&Utils::mat_zeros_Si))
+
+        .property("rows", &cv::Mat::rows)
+        .property("cols", &cv::Mat::cols)
+        .property("size" , &Utils::getMatSize)
+        .property("step" , &Utils::getMatStep)
+        .property("data", &Utils::matData<unsigned char>)
+        .property("data8S", &Utils::matData<char>)
+        .property("data16U", &Utils::matData<unsigned short>)
+        .property("data16S", &Utils::matData<short>)
+        .property("data32U", &Utils::matData<unsigned int>)
+        .property("data32S", &Utils::matData<int>)
+        .property("data32F", &Utils::matData<float>)
+        .property("data64F", &Utils::matData<double>)
+
         .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))
         //.function("assignTo", select_overload<void(Mat&, int)const>(&cv::Mat::assignTo))
         .function("channels", select_overload<int()const>(&cv::Mat::channels))
@@ -255,8 +283,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("convertTo",  select_overload<void(const Mat&, Mat&, int, double)>(&Utils::convertTo_2))
         .function("total", select_overload<size_t()const>(&cv::Mat::total))
         .function("row", select_overload<Mat(int)const>(&cv::Mat::row))
-        .class_function("eye",select_overload<Mat(int, int, int)>(&Utils::eye))
-        .class_function("eye",select_overload<Mat(Size, int)>(&Utils::eye))
+
         .function("create", select_overload<void(int, int, int)>(&cv::Mat::create))
         .function("create", select_overload<void(Size, int)>(&cv::Mat::create))
         .function("rowRange", select_overload<Mat(int, int)const>(&cv::Mat::rowRange))
@@ -272,10 +299,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("colRange", select_overload<Mat(const Range&)const>(&cv::Mat::colRange))
         .function("step1", select_overload<size_t(int)const>(&cv::Mat::step1))
         .function("clone", select_overload<Mat()const>(&cv::Mat::clone))
-        .class_function("ones",select_overload<Mat(int, int, int)>(&Utils::mat_ones_iii))
-        .class_function("ones",select_overload<Mat(Size, int)>(&Utils::mat_ones_Si))
-        .class_function("zeros",select_overload<Mat(int, int, int)>(&Utils::mat_zeros_iii))
-        .class_function("zeros",select_overload<Mat(Size, int)>(&Utils::mat_zeros_Si))
+        
         .function("depth", select_overload<int()const>(&cv::Mat::depth))
         .function("col", select_overload<Mat(int)const>(&cv::Mat::col))
 
@@ -284,22 +308,9 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("inv", select_overload<Mat(const Mat&, int)>(&Utils::matInv))
         .function("t", select_overload<Mat(const Mat&)>(&Utils::matT))
 
-        .property("rows", &cv::Mat::rows)
-        .property("cols", &cv::Mat::cols)
-
-        .property("data", &Utils::matData<unsigned char>)
-        .property("data8S", &Utils::matData<char>)
-        .property("data16U", &Utils::matData<unsigned short>)
-        .property("data16S", &Utils::matData<short>)
-        .property("data32U", &Utils::matData<unsigned int>)
-        .property("data32S", &Utils::matData<int>)
-        .property("data32F", &Utils::matData<float>)
-        .property("data64F", &Utils::matData<double>)
-
         .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI))
         .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII))
 
-        .function("size" , &Utils::getMatSize)
         .function("get_uchar_at" , select_overload<unsigned char&(int)>(&cv::Mat::at<unsigned char>))
         .function("get_uchar_at", select_overload<unsigned char&(int, int)>(&cv::Mat::at<unsigned char>))
         .function("get_uchar_at", select_overload<unsigned char&(int, int, int)>(&cv::Mat::at<unsigned char>))
