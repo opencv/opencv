@@ -181,7 +181,7 @@ namespace Utils{
         return CV_MAT_DEPTH(flags);
     }
 
-    class MinMaxLocResult {
+    class MinMaxLoc {
       public:
         double minVal;
         double maxVal;
@@ -189,14 +189,16 @@ namespace Utils{
         Point maxLoc;
     };
 
-    void minMaxLoc(const cv::Mat& src, MinMaxLocResult& result, const cv::Mat& mask) {
+    MinMaxLoc minMaxLoc(const cv::Mat& src, const cv::Mat& mask) {
+        MinMaxLoc result;
         cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc, mask);
-        printf("MinMaxLocResult: %f %f\n", result.minVal, result.maxVal);
+        return result;
     }
 
-    void minMaxLoc_1(const cv::Mat& src, MinMaxLocResult& result) {
+    MinMaxLoc minMaxLoc_1(const cv::Mat& src) {
+        MinMaxLoc result;
         cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc);
-        printf("MinMaxLocResult: %f %f %d %d %d %d\n", result.minVal, result.maxVal, result.minLoc.x, result.minLoc.y, result.maxLoc.x, result.maxLoc.y);
+        return result;
     }
 
     class Circle {
@@ -205,8 +207,10 @@ namespace Utils{
         float radius;
     };
 
-    void minEnclosingCircle(const cv::Mat& points, Circle& circle) {
-        return cv::minEnclosingCircle(points, circle.center, circle.radius);
+    Circle minEnclosingCircle(const cv::Mat& points) {
+        Circle circle;
+        cv::minEnclosingCircle(points, circle.center, circle.radius);
+        return circle;
     }
 }
 
@@ -357,21 +361,21 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .element(index<2>())
         .element(index<3>());
 
-    emscripten::value_object<Utils::MinMaxLocResult>("MinMaxLocResult")
-        .field("minVal", &Utils::MinMaxLocResult::minVal)
-        .field("maxVal", &Utils::MinMaxLocResult::maxVal)
-        .field("minLoc", &Utils::MinMaxLocResult::minLoc)
-        .field("maxLoc", &Utils::MinMaxLocResult::maxLoc);
+    emscripten::value_object<Utils::MinMaxLoc>("MinMaxLoc")
+        .field("minVal", &Utils::MinMaxLoc::minVal)
+        .field("maxVal", &Utils::MinMaxLoc::maxVal)
+        .field("minLoc", &Utils::MinMaxLoc::minLoc)
+        .field("maxLoc", &Utils::MinMaxLoc::maxLoc);
 
     emscripten::value_object<Utils::Circle>("Circle")
         .field("center", &Utils::Circle::center)
         .field("radius", &Utils::Circle::radius);
 
-    function("minEnclosingCircle", select_overload<void(const cv::Mat&, Utils::Circle&)>(&Utils::minEnclosingCircle));
+    function("minEnclosingCircle", select_overload<Utils::Circle(const cv::Mat&)>(&Utils::minEnclosingCircle));
 
-    function("minMaxLoc", select_overload<void(const cv::Mat&, Utils::MinMaxLocResult&, const cv::Mat&)>(&Utils::minMaxLoc));
+    function("minMaxLoc", select_overload<Utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&Utils::minMaxLoc));
 
-    function("minMaxLoc", select_overload<void(const cv::Mat&, Utils::MinMaxLocResult&)>(&Utils::minMaxLoc_1));
+    function("minMaxLoc", select_overload<Utils::MinMaxLoc(const cv::Mat&)>(&Utils::minMaxLoc_1));
 
     function("matFromArray", &Utils::matFromArray);
 
