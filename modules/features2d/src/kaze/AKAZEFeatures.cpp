@@ -19,6 +19,13 @@
 #undef HAVE_OPENCL
 #endif
 
+
+#if defined(_MSC_VER) && _MSC_VER <= 1700
+// include float.h for _finite fuunction
+#include <float.h>
+#define isfinite _finite
+#endif
+
 // Namespaces
 namespace cv
 {
