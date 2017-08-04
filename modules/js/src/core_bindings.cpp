@@ -54,7 +54,7 @@ using namespace cv::ml;
 namespace Utils{
 
     template<typename T>
-    emscripten::val data(const cv::Mat& mat) {
+    emscripten::val matData(const cv::Mat& mat) {
         return emscripten::val(emscripten::memory_view<T>( (mat.total()*mat.elemSize())/sizeof(T), (T*) mat.data));
     }
 
@@ -287,13 +287,14 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .property("rows", &cv::Mat::rows)
         .property("cols", &cv::Mat::cols)
 
-        .function("data", &Utils::data<unsigned char>)
-        .function("data8S", &Utils::data<char>)
-        .function("data16u", &Utils::data<unsigned short>)
-        .function("data16s", &Utils::data<short>)
-        .function("data32s", &Utils::data<int>)
-        .function("data32f", &Utils::data<float>)
-        .function("data64f", &Utils::data<double>)
+        .property("data", &Utils::matData<unsigned char>)
+        .property("data8S", &Utils::matData<char>)
+        .property("data16U", &Utils::matData<unsigned short>)
+        .property("data16S", &Utils::matData<short>)
+        .property("data32U", &Utils::matData<unsigned int>)
+        .property("data32S", &Utils::matData<int>)
+        .property("data32F", &Utils::matData<float>)
+        .property("data64F", &Utils::matData<double>)
 
         .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI))
         .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII))

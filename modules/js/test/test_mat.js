@@ -149,7 +149,7 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.equal(mat.size()[0], mat2.size()[0]);
         assert.equal(mat.size()[1], mat2.size()[1]);
 
-        assert.deepEqual(mat.data(), mat2.data());
+        assert.deepEqual(mat.data, mat2.data);
 
 
         mat.delete();
@@ -165,7 +165,7 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.equal(mat.size()[0], mat2.size()[0]);
         assert.equal(mat.size()[1], mat2.size()[1]);
 
-        assert.deepEqual(mat.data(), mat2.data());
+        assert.deepEqual(mat.data, mat2.data);
 
 
         mat.delete();
@@ -182,7 +182,7 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.equal(mat.size()[0], mat2.size()[0]);
         assert.equal(mat.size()[1], mat2.size()[1]);
 
-        assert.deepEqual(mat.data(), mat2.data());
+        assert.deepEqual(mat.data, mat2.data);
 
 
         mat.delete();
@@ -199,7 +199,7 @@ QUnit.test("test_mat_ptr", function(assert) {
     // cv.CV_8UC1 + Mat::ptr(int).
     {
         let mat = new cv.Mat(10, 10, cv.CV_8UC1);
-        let view = mat.data();
+        let view = mat.data;
 
         // Alter matrix[2, 1].
         let step = 10;
@@ -214,7 +214,7 @@ QUnit.test("test_mat_ptr", function(assert) {
     // cv.CV_8UC3 + Mat::ptr(int).
     {
         let mat = new cv.Mat(10, 10, cv.CV_8UC3);
-        let view = mat.data();
+        let view = mat.data;
 
         // Alter matrix[2, 1].
         let step = 3 * 10;
@@ -233,7 +233,7 @@ QUnit.test("test_mat_ptr", function(assert) {
     // cv.CV_8UC3 + Mat::ptr(int, int).
     {
         let mat = new cv.Mat(10, 10, cv.CV_8UC3);
-        let view = mat.data();
+        let view = mat.data;
 
         // Alter matrix[2, 1].
         let step = 3 * 10;
@@ -255,7 +255,7 @@ QUnit.test("test_mat_zeros", function(assert) {
     // Mat::zeros(int, int, int)
     {
         let mat = cv.Mat.zeros(10, 10, cv.CV_8UC1);
-        let view = mat.data();
+        let view = mat.data;
 
         assert.deepEqual(view, zeros);
 
@@ -265,7 +265,7 @@ QUnit.test("test_mat_zeros", function(assert) {
     // Mat::zeros(Size, int)
     {
         let mat = cv.Mat.zeros({height: 10, width: 10}, cv.CV_8UC1);
-        let view = mat.data();
+        let view = mat.data;
 
         assert.deepEqual(view, zeros);
 
@@ -278,14 +278,14 @@ QUnit.test("test_mat_ones", function(assert) {
     // Mat::ones(int, int, int)
     {
         var mat = cv.Mat.ones(10, 10, cv.CV_8UC1);
-        var view = mat.data();
+        var view = mat.data;
 
         assert.deepEqual(view, ones);
     }
     // Mat::ones(Size, int)
     {
         var mat = cv.Mat.ones({height: 10, width: 10}, cv.CV_8UC1);
-        var view = mat.data();
+        var view = mat.data;
 
         assert.deepEqual(view, ones);
     }
@@ -299,7 +299,7 @@ QUnit.test("test_mat_eye", function(assert) {
     // Mat::eye(int, int, int)
     {
         var mat = cv.Mat.eye(4, 4, cv.CV_8UC1);
-        var view = mat.data();
+        var view = mat.data;
 
         assert.deepEqual(view, eye4by4);
     }
@@ -307,7 +307,7 @@ QUnit.test("test_mat_eye", function(assert) {
     // Mat::eye(Size, int)
     {
         var mat = cv.Mat.eye({height: 4, width: 4}, cv.CV_8UC1);
-        var view = mat.data();
+        var view = mat.data;
 
         assert.deepEqual(view, eye4by4);
     }
@@ -318,7 +318,7 @@ QUnit.test("test_mat_miscs", function(assert) {
     {
         let mat = cv.Mat.ones(5, 5, cv.CV_8UC2);
         let col = mat.col(1);
-        let view = col.data();
+        let view = col.data;
         assert.equal(view[0], 1);
         assert.equal(view[4], 1);
 
@@ -330,7 +330,7 @@ QUnit.test("test_mat_miscs", function(assert) {
     {
         let mat = cv.Mat.zeros(5, 5, cv.CV_8UC2);
         let row = mat.row(1);
-        let view = row.data();
+        let view = row.data;
         assert.equal(view[0], 0);
         assert.equal(view[4], 0);
 
@@ -345,7 +345,7 @@ QUnit.test("test_mat_miscs", function(assert) {
 
         mat.convertTo(grayMat, cv.CV_8U, 2, 1);
         // dest = 2 * source(x, y) + 1.
-        let view = grayMat.data();
+        let view = grayMat.data;
         assert.equal(view[0], (1 * 2) + 1);
 
         mat.convertTo(grayMat, cv.CV_8U);
@@ -370,7 +370,7 @@ QUnit.test("test_mat_miscs", function(assert) {
         const B =29;
 
         let mat = cv.Mat.ones(5, 5, cv.CV_8UC3);
-        let view = mat.data();
+        let view = mat.data;
         view[0] = R;
         view[1] = G;
         view[2] = B;
@@ -380,15 +380,15 @@ QUnit.test("test_mat_miscs", function(assert) {
         assert.equal(bgr_planes.size(), 3);
 
         let rMat = bgr_planes.get(0);
-        view = rMat.data();
+        view = rMat.data;
         assert.equal(view[0], R);
 
         let gMat = bgr_planes.get(1);
-        view = gMat.data();
+        view = gMat.data;
         assert.equal(view[0], G);
 
         let bMat = bgr_planes.get(2);
-        view = bMat.data();
+        view = bMat.data;
         assert.equal(view[0], B);
 
         mat.delete();
@@ -444,7 +444,7 @@ QUnit.test("test_mat_miscs", function(assert) {
                                       0, 0, 0, FACTOR])
         let mat3 = mat.mul(mat2, FACTOR);
 
-        assert.deepEqual(mat3.data(), expected);
+        assert.deepEqual(mat3.data, expected);
 
         mat.delete();
         mat2.delete();
@@ -470,18 +470,20 @@ QUnit.test("test mat access", function(assert) {
         charView = new Int8Array(data.buffer),
         shortView = new Int16Array(data.buffer),
         unsignedShortView = new Uint16Array(data.buffer),
+        uintView = new Uint32Array(data.buffer),
         intView = new Int32Array(data.buffer),
         float32View = new Float32Array(data.buffer),
         float64View = new Float64Array(data.buffer);
 
 
-        assert.deepEqual(unsignedCharView, mat.data());
-        assert.deepEqual(charView, mat.data8S());
-        assert.deepEqual(shortView, mat.data16s());
-        assert.deepEqual(unsignedShortView, mat.data16u());
-        assert.deepEqual(intView, mat.data32s());
-        assert.deepEqual(float32View, mat.data32f());
-        assert.deepEqual(float64View, mat.data64f());
+        assert.deepEqual(unsignedCharView, mat.data);
+        assert.deepEqual(charView, mat.data8S);
+        assert.deepEqual(shortView, mat.data16S);
+        assert.deepEqual(unsignedShortView, mat.data16U);
+        assert.deepEqual(uintView, mat.data32U);
+        assert.deepEqual(intView, mat.data32S);
+        assert.deepEqual(float32View, mat.data32F);
+        assert.deepEqual(float64View, mat.data64F);
     }
 
     // test get_uchar(i)
@@ -589,8 +591,8 @@ QUnit.test("test mat operations", function(assert) {
     {
         let src = cv.Mat.ones(4, 4, cv.CV_8UC1);
 
-        src.data()[2] = 0;
-        src.data()[5] = 2;
+        src.data[2] = 0;
+        src.data[5] = 2;
 
         let result = cv.minMaxLoc(src);
 

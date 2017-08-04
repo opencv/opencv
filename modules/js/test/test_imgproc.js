@@ -75,7 +75,7 @@ QUnit.test("test_imgProc", function(assert) {
     assert.equal(size[1], 1);
 
     // Do we need to verify data in histogram?
-    let dataView = hist.data();
+    let dataView = hist.data;
 
     // Free resource
     cv._free(binSize);
@@ -138,7 +138,7 @@ QUnit.test("test_segmentation", function(assert) {
   //   double threshold(const Mat&, Mat&, double, double, int)
   {
     let source = new cv.Mat(1, 5, cv.CV_8UC1);
-    let sourceView = source.data();
+    let sourceView = source.data;
     sourceView[0] = 0;   // < threshold
     sourceView[1] = 100; // < threshold
     sourceView[2] = 200; // > threshold
@@ -147,7 +147,7 @@ QUnit.test("test_segmentation", function(assert) {
 
     cv.threshold(source, dest, THRESHOLD, THRESHOLD_MAX, cv.THRESH_BINARY);
 
-    let destView = dest.data();
+    let destView = dest.data;
     assert.equal(destView[0], 0);
     assert.equal(destView[1], 0);
     assert.equal(destView[2], THRESHOLD_MAX);
@@ -159,7 +159,7 @@ QUnit.test("test_segmentation", function(assert) {
   //   void adaptiveThreshold(const Mat &, Mat &, double, int, int, int, double);
   {
     let source = cv.Mat.zeros(1, 5, cv.CV_8UC1);
-    let sourceView = source.data();
+    let sourceView = source.data;
     sourceView[0] = 50;
     sourceView[1] = 150;
     sourceView[2] = 200;
@@ -170,7 +170,7 @@ QUnit.test("test_segmentation", function(assert) {
     cv.adaptiveThreshold(source, dest, THRESHOLD_MAX,
         cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, block_size, C);
 
-    let destView = dest.data();
+    let destView = dest.data;
     assert.equal(destView[0], 0);
     assert.equal(destView[1], THRESHOLD_MAX);
     assert.equal(destView[2], THRESHOLD_MAX);
@@ -181,7 +181,7 @@ QUnit.test("test_shape", function(assert) {
   // moments
   {
     let points = new cv.Mat(1, 4, cv.CV_32SC2);
-    let data32S = points.data32s();
+    let data32S = points.data32S;
     data32S[0]=50;
     data32S[1]=56;
     data32S[2]=53;
@@ -216,14 +216,14 @@ QUnit.test("test_min_enclosing", function(assert) {
   {
     let points = new cv.Mat(4, 1, cv.CV_32FC2);
 
-    points.data32f()[0] = 0;
-    points.data32f()[1] = 0;
-    points.data32f()[2] = 1;
-    points.data32f()[3] = 0;
-    points.data32f()[4] = 1;
-    points.data32f()[5] = 1;
-    points.data32f()[6] = 0;
-    points.data32f()[7] = 1;
+    points.data32F[0] = 0;
+    points.data32F[1] = 0;
+    points.data32F[2] = 1;
+    points.data32F[3] = 0;
+    points.data32F[4] = 1;
+    points.data32F[5] = 1;
+    points.data32F[6] = 0;
+    points.data32F[7] = 1;
 
     let circle = cv.minEnclosingCircle(points);
 
@@ -246,7 +246,7 @@ QUnit.test("test_filter", function(assert) {
       cv.blur(mat1, mat2, {height: 3, width: 3}, {x: -1, y: -1}, cv.BORDER_DEFAULT);
 
       // Verify result.
-      let view = mat2.data();
+      let view = mat2.data;
       let size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 5);
@@ -255,7 +255,7 @@ QUnit.test("test_filter", function(assert) {
       cv.blur(mat1, mat2, {height: 3, width: 3}, {x: -1, y: -1});
 
       // Verify result.
-      view = mat2.data();
+      view = mat2.data;
       size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 5);
@@ -264,7 +264,7 @@ QUnit.test("test_filter", function(assert) {
       cv.blur(mat1, mat2, {height: 3, width: 3});
 
       // Verify result.
-      view = mat2.data();
+      view = mat2.data;
       size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 5);
@@ -284,7 +284,7 @@ QUnit.test("test_filter", function(assert) {
       cv.GaussianBlur(mat1, mat2, {height: 3, width: 3}, 0, 0, cv.BORDER_DEFAULT);
 
       // Verify result.
-      let view = mat2.data();
+      let view = mat2.data;
       let size = mat2.size();
       assert.equal(mat2.channels(), 1);
       assert.equal(size[0], 7);
@@ -302,7 +302,7 @@ QUnit.test("test_filter", function(assert) {
       cv.medianBlur(mat1, mat2, 3);
 
       // Verify result.
-      let view = mat2.data();
+      let view = mat2.data;
       let size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 9);
@@ -317,7 +317,7 @@ QUnit.test("test_filter", function(assert) {
       cv.transpose(mat1, mat2);
 
       // Verify result.
-      let view = mat2.data();
+      let view = mat2.data;
       let size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 9);
@@ -335,7 +335,7 @@ QUnit.test("test_filter", function(assert) {
       cv.bilateralFilter(mat1, mat2, 3, 6, 1.5, cv.BORDER_DEFAULT);
 
       // Verify result.
-      let view = mat2.data();
+      let view = mat2.data;
       let size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 11);
@@ -344,7 +344,7 @@ QUnit.test("test_filter", function(assert) {
       // default parameters
       cv.bilateralFilter(mat1, mat2, 3, 6, 1.5);
       // Verify result.
-      view = mat2.data();
+      view = mat2.data;
       size = mat2.size();
       assert.equal(mat2.channels(), 3);
       assert.equal(size[0], 11);
@@ -472,24 +472,24 @@ QUnit.test("test_filter", function(assert) {
 
       cv.min(mat1, mat2, mat3);
       // Verify result.
-      let view = mat2.data();
+      let view = mat2.data;
       let size = mat2.size();
       assert.equal(mat2.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(mat3.data(), expectedMin);
+      assert.deepEqual(mat3.data, expectedMin);
 
 
       cv.max(mat1, mat2, mat3);
       // Verify result.
-      view = mat2.data();
+      view = mat2.data;
       size = mat2.size();
       assert.equal(mat2.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(mat3.data(), expectedMax);
+      assert.deepEqual(mat3.data, expectedMax);
 
       cv._free(dataPtr);
       cv._free(dataPtr2);
@@ -524,34 +524,34 @@ QUnit.test("test_filter", function(assert) {
 
       cv.bitwise_not(mat1, mat3, none);
       // Verify result.
-      let view = mat3.data();
+      let view = mat3.data;
       let size = mat3.size();
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(mat3.data(), expectedNot);
+      assert.deepEqual(mat3.data, expectedNot);
 
       cv.bitwise_and(mat1, mat2, mat3, none);
       // Verify result.
-      view = mat3.data();
+      view = mat3.data;
       size = mat3.size();
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(mat3.data(), expectedAnd);
+      assert.deepEqual(mat3.data, expectedAnd);
 
 
       cv.bitwise_or(mat1, mat2, mat3, none);
       // Verify result.
-      view = mat3.data();
+      view = mat3.data;
       size = mat3.size();
       assert.equal(mat3.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(mat3.data(), expectedOr);
+      assert.deepEqual(mat3.data, expectedOr);
 
       cv.bitwise_xor(mat1, mat2, mat3, none);
       // Verify result.
@@ -560,7 +560,7 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(mat3.data(), expectedXor);
+      assert.deepEqual(mat3.data, expectedXor);
 
       cv._free(dataPtr);
       cv._free(dataPtr2);
@@ -610,44 +610,44 @@ QUnit.test("test_filter", function(assert) {
 
       cv.absdiff(mat1, mat2, dst);
       // Verify result.
-      let view = dst.data();
+      let view = dst.data;
       let size = dst.size();
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(dst.data(), expectedAbsDiff);
+      assert.deepEqual(dst.data, expectedAbsDiff);
 
       cv.add(mat1, mat2, dst, none, -1);
       // Verify result.
-      view = dst.data();
+      view = dst.data;
       size = dst.size();
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(dst.data(), expectedAdd);
+      assert.deepEqual(dst.data, expectedAdd);
 
       cv.addWeighted(mat1, alpha, mat2, beta, gamma, dst, -1);
       // Verify result.
-      view = dst.data();
+      view = dst.data;
       size = dst.size();
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(dst.data(), expectedWeightedAdd);
+      assert.deepEqual(dst.data, expectedWeightedAdd);
 
       // default parameter
       cv.addWeighted(mat1, alpha, mat2, beta, gamma, dst);
       // Verify result.
-      view = dst.data();
+      view = dst.data;
       size = dst.size();
       assert.equal(dst.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
 
-      assert.deepEqual(dst.data(), expectedWeightedAdd);
+      assert.deepEqual(dst.data, expectedWeightedAdd);
 
       mat1.delete();
       mat2.delete();
@@ -808,12 +808,12 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(inv1.channels(), 1);
       assert.equal(size[0], 3);
       assert.equal(size[1], 3);
-      assert.deepEqualWithTolerance(inv1.data32f(), expected1, 0.0001);
+      assert.deepEqualWithTolerance(inv1.data32F, expected1, 0.0001);
 
 
       cv.invert(mat2, inv2, 0);
       // Verify result.
-      assert.deepEqualWithTolerance(inv3.data32f(), expected3, 0.0001);
+      assert.deepEqualWithTolerance(inv3.data32F, expected3, 0.0001);
 
 
 
@@ -823,21 +823,21 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(inv3.channels(), 1);
       assert.equal(size[0], 4);
       assert.equal(size[1], 4);
-      assert.deepEqualWithTolerance(inv3.data32f(), expected3, 0.0001);
-      //console.log(inv3.data32f());
+      assert.deepEqualWithTolerance(inv3.data32F, expected3, 0.0001);
+      //console.log(inv3.data32F);
 
 
       cv.invert(mat3, inv3, 1);
       // Verify result.
-      assert.deepEqualWithTolerance(inv3.data32f(), expected3, 0.0001);
+      assert.deepEqualWithTolerance(inv3.data32F, expected3, 0.0001);
 
       cv.invert(mat4, inv4, 2);
       // Verify result.
-      assert.deepEqualWithTolerance(inv4.data32f(), expected4, 0.0001);
+      assert.deepEqualWithTolerance(inv4.data32F, expected4, 0.0001);
 
       cv.invert(mat4, inv4, 3);
       // Verify result.
-      assert.deepEqualWithTolerance(inv4.data32f(), expected4, 0.0001);
+      assert.deepEqualWithTolerance(inv4.data32F, expected4, 0.0001);
 
       mat1.delete();
       mat2.delete();
