@@ -104,24 +104,19 @@ public:
             softmaxOp = Ptr<LibDNNSoftmax<float>>(new LibDNNSoftmax<float>(config));
         }
 
-        UMat inpMat, outMat;
-        inpMat = inputs[0]->getUMat(ACCESS_READ);
-        outputs[0].copyTo(outMat);
+        UMat srcMat, dstMat;
+        srcMat = inputs[0]->getUMat(ACCESS_READ);
+        dstMat = outputs[0].getUMat(ACCESS_WRITE);
 
-        cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
-        cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+        cl_mem in_mem = (cl_mem)srcMat.handle(ACCESS_READ);
+        cl_mem out_mem = (cl_mem)dstMat.handle(ACCESS_WRITE);
 
         if (softmaxOp->Forward((float *)in_mem, (float *)out_mem))
-        {
-            outMat.copyTo(outputs[0]);
             return true;
-        }
 
         const Mat &src = *inputs[0];
-        UMat srcMat, dstMat, bufMat;
-        src.copyTo(srcMat);
+        UMat bufMat = internals[0].getUMat(ACCESS_WRITE);
         srcMat.copyTo(dstMat);
-        internals[0].copyTo(bufMat);
 
         int axis = clamp(axisRaw, src.dims);
         size_t outerSize = src.total(0, axis);
@@ -168,8 +163,6 @@ public:
                   ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
         if (!kdiv.run(1, &totalSize, &wgSize, false))
             return false;
-
-        dstMat.copyTo(outputs[0]);
 
         return true;
     }
