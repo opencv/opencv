@@ -99,12 +99,12 @@ void CV_GrabcutTest::run( int /* start_from */)
 	bgdModel.copyTo(exp_bgdModel);
 	fgdModel.copyTo(exp_fgdModel);
     grabCut( img, mask, rect, bgdModel, fgdModel, 2, GC_EVAL );
-	
+
     // Multiply images by 255 for more visuality of test data.
     if( mask_prob.empty() )
     {
 		mask.copyTo( mask_prob );
-        imwrite(string(ts->get_data_path()) + "grabcut/mask_prob1.png", mask_prob);
+        imwrite(string(ts->get_data_path()) + "grabcut/mask_prob.png", mask_prob);
     }
     if( exp_mask1.empty() )
     {
