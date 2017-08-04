@@ -83,7 +83,7 @@ TEST(Reproducibility_GoogLeNet_Halide, Accuracy)
 {
     test(findDataFile("dnn/bvlc_googlenet.caffemodel", false),
          findDataFile("dnn/bvlc_googlenet.prototxt", false),
-         "", 227, 227, "prob", "caffe", DNN_TARGET_CPU);
+         "", 224, 224, "prob", "caffe", DNN_TARGET_CPU);
 };
 
 TEST(Reproducibility_AlexNet_Halide, Accuracy)

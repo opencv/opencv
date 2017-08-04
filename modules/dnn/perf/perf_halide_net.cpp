@@ -55,7 +55,7 @@ PERF_TEST(GoogLeNet, HalidePerfTest)
 {
     Net net;
     loadNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
-            "", 227, 227, "prob", "caffe", DNN_TARGET_CPU, &net);
+            "", 224, 224, "prob", "caffe", DNN_TARGET_CPU, &net);
     TEST_CYCLE() net.forward();
     SANITY_CHECK_NOTHING();
 }
