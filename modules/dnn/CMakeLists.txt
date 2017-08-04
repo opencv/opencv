@@ -77,6 +77,24 @@ ocv_add_samples()
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
 
+ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
+ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
+if(BUILD_PERF_TESTS)
+  if (${the_module}_PERF_CAFFE)
+    find_package(Caffe QUIET)
+    if (Caffe_FOUND)
+      add_definitions(-DHAVE_CAFFE=1)
+      ocv_target_link_libraries(opencv_perf_dnn caffe)
+    endif()
+  elseif(${the_module}_PERF_CLCAFFE)
+    find_package(Caffe QUIET)
+    if (Caffe_FOUND)
+      add_definitions(-DHAVE_CLCAFFE=1)
+      ocv_target_link_libraries(opencv_perf_dnn caffe)
+    endif()
+  endif()
+endif()
+
 # ----------------------------------------------------------------------------
 # Torch7 importer of blobs and models, produced by Torch.nn module
 # ----------------------------------------------------------------------------
