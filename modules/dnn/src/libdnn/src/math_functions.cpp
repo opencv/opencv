@@ -49,7 +49,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
-#include "benchmark.hpp"
 #include "opencl_kernels_dnn.hpp"
 
 struct gemm_callback_arg {

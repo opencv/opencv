@@ -48,7 +48,6 @@
 #include <assert.h>
 #include "common.hpp"
 #include "libdnn.hpp"
-#include "benchmark.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include "math_functions.hpp"
 
@@ -2068,9 +2067,8 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
     bool saved_tuned = tuned_;
     tuned_ = false;
     convolve(bottom, top, index, num_, config);
-    Timer timer;
-    timer.initted();
-    timer.Start();
+    cv::ocl::Timer timer;
+    timer.start();
     cl_int err;
     dbgPrint(std::cout << "Bechmarking kernel: " << config->kernelName << std::endl);
     tuned_ = true;
@@ -2081,7 +2079,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
             break;
     }
     tuned_ = saved_tuned;
-    timer.Stop();
+    timer.stop();
     if (err != CL_SUCCESS) {
         config->tested = true;
         config->verified = false;
@@ -2089,7 +2087,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
         return 1e5;
     }
 
-    float elapsedTime = timer.MilliSeconds() / loop_cnt;
+    float elapsedTime = timer.milliSeconds() / loop_cnt;
     #ifdef dbg
     double out_w = output_w_;
     double out_h = output_h_;
@@ -2303,13 +2301,12 @@ bool OCL4DNNConvSpatial<float>::tuneLocalSize(const float *bottom,
     uint32_t localSize[3] = { 1, 1, 1 };
 
     int32_t skip = 0;
-    Timer timer;
-    timer.initted();
+    cv::ocl::Timer timer;
     bool allFailed = true;
     for (int32_t z = 0; z <= 16; z++) {
         for (int32_t y = 0; y <= 16; y++) {
             for (int32_t x = 1; x <= 16; x++) {
-                timer.Start();
+                timer.start();
                 skip = 0;
 
                 if (config->autoTune) {
@@ -2337,12 +2334,12 @@ bool OCL4DNNConvSpatial<float>::tuneLocalSize(const float *bottom,
                     skip = 1;
 
                 if (skip) {
-                    timer.Stop();
+                    timer.stop();
                     break;
                 }
-                timer.Stop();
+                timer.stop();
                 allFailed = false;
-                float elapsedTime = timer.MilliSeconds();
+                float elapsedTime = timer.milliSeconds();
 
                 if (elapsedTime < fastestTime) {
                     fastestTime = elapsedTime;

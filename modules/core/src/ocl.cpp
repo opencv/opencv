@@ -52,6 +52,7 @@
 #endif
 
 #include "opencv2/core/ocl_genbase.hpp"
+#include "opencl_kernels_core.hpp"
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
 #define CV_OPENCL_SHOW_RUN_ERRORS       0
@@ -5224,5 +5225,174 @@ bool internal::isCLBuffer(UMat& u)
 #endif
     return true;
 }
+
+struct Timer::Impl
+{
+    Impl()
+        : initted_(false)
+        , running_(false)
+        , has_run_at_least_once_(false)
+    {
+        init();
+    }
+
+    ~Impl()
+    {
+        clWaitForEvents(1, &start_gpu_cl_);
+        clWaitForEvents(1, &stop_gpu_cl_);
+        clReleaseEvent(start_gpu_cl_);
+        clReleaseEvent(stop_gpu_cl_);
+    }
+
+    void start()
+    {
+#ifdef HAVE_OPENCL
+        if (!running())
+        {
+            clWaitForEvents(1, &start_gpu_cl_);
+            clReleaseEvent(start_gpu_cl_);
+            ocl::Queue queue = ocl::Queue::getDefault();
+            ocl::Kernel kernel("null_kernel_float", ocl::core::benchmark_oclsrc);
+            float arg = 0;
+            clSetKernelArg((cl_kernel)kernel.ptr(), 0, sizeof(arg), &arg);
+            clEnqueueTask((cl_command_queue)queue.ptr(), (cl_kernel)kernel.ptr(), 0,
+                          NULL, &start_gpu_cl_);
+            clFinish((cl_command_queue)queue.ptr());
+            running_ = true;
+            has_run_at_least_once_ = true;
+        }
+#endif
+    }
+
+    void stop()
+    {
+#ifdef HAVE_OPENCL
+        if (running())
+        {
+            clWaitForEvents(1, &stop_gpu_cl_);
+            clReleaseEvent(stop_gpu_cl_);
+            ocl::Queue queue = ocl::Queue::getDefault();
+            ocl::Kernel kernel("null_kernel_float", ocl::core::benchmark_oclsrc);
+            float arg = 0;
+            clSetKernelArg((cl_kernel)kernel.ptr(), 0, sizeof(arg), &arg);
+            clEnqueueTask((cl_command_queue)queue.ptr(), (cl_kernel)kernel.ptr(), 0,
+                          NULL, &stop_gpu_cl_);
+            clFinish((cl_command_queue)queue.ptr());
+            running_ = false;
+        }
+#endif
+    }
+
+    float microSeconds()
+    {
+#ifdef HAVE_OPENCL
+        if (!has_run_at_least_once())
+        {
+            return 0;
+        }
+        if (running())
+        {
+            stop();
+        }
+        cl_ulong startTime, stopTime;
+        clWaitForEvents(1, &stop_gpu_cl_);
+        clGetEventProfilingInfo(start_gpu_cl_, CL_PROFILING_COMMAND_END,
+                                sizeof startTime, &startTime, NULL);
+        clGetEventProfilingInfo(stop_gpu_cl_, CL_PROFILING_COMMAND_START,
+                                sizeof stopTime, &stopTime, NULL);
+        double us = static_cast<double>(stopTime - startTime) / 1000.0;
+        elapsed_microseconds_ = static_cast<float>(us);
+        return elapsed_microseconds_;
+#else
+        return 0;
+#endif
+    }
+
+    float milliSeconds()
+    {
+#ifdef HAVE_OPENCL
+        if (!has_run_at_least_once())
+        {
+            return 0;
+        }
+        if (running())
+        {
+            stop();
+        }
+        cl_ulong startTime = 0, stopTime = 0;
+        clGetEventProfilingInfo(start_gpu_cl_, CL_PROFILING_COMMAND_END,
+                                sizeof startTime, &startTime, NULL);
+        clGetEventProfilingInfo(stop_gpu_cl_, CL_PROFILING_COMMAND_START,
+                                sizeof stopTime, &stopTime, NULL);
+        double ms = static_cast<double>(stopTime - startTime) / 1000000.0;
+        elapsed_milliseconds_ = static_cast<float>(ms);
+        return elapsed_milliseconds_;
+#else
+        return 0;
+#endif
+    }
+
+    float seconds()
+    {
+        return milliSeconds() / 1000.f;
+    }
+
+    void init()
+    {
+        if (!initted())
+        {
+            start_gpu_cl_ = 0;
+            stop_gpu_cl_ = 0;
+            initted_ = true;
+        }
+    }
+
+    inline bool initted() { return initted_; }
+    inline bool running() { return running_; }
+    inline bool has_run_at_least_once() { return has_run_at_least_once_; }
+
+    bool initted_;
+    bool running_;
+    bool has_run_at_least_once_;
+    float elapsed_milliseconds_;
+    float elapsed_microseconds_;
+    cl_event start_gpu_cl_;
+    cl_event stop_gpu_cl_;
+};
+
+Timer::Timer()
+{
+    p = new Impl();
+}
+
+Timer::~Timer()
+{
+    if(p)
+    {
+        delete p;
+        p = 0;
+    }
+}
+
+void Timer::start()
+{
+    if(p)
+        p->start();
+}
+
+void Timer::stop()
+{
+    if(p)
+        p->stop();
+}
+
+float Timer::microSeconds()
+{ return p ? p->microSeconds() : 0; }
+
+float Timer::milliSeconds()
+{ return p ? p->milliSeconds() : 0; }
+
+float Timer::seconds()
+{ return p ? p->seconds() : 0; }
 
 }}

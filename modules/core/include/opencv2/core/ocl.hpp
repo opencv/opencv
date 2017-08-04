@@ -732,6 +732,21 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS Timer
+{
+public:
+    Timer();
+    virtual ~Timer();
+    void start();
+    void stop();
+    float milliSeconds();
+    float microSeconds();
+    float seconds();
+
+protected:
+    struct Impl;
+    Impl* p;
+};
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
