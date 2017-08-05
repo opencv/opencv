@@ -278,3 +278,75 @@ function TermCriteria() {
 }
 
 Module["TermCriteria"] = TermCriteria;
+
+Module["matFromArray"] = function(rows, cols, type, array) {
+    var mat = new cv.Mat(rows, cols, type);
+    switch (type) {
+        case cv.CV_8U:
+        case cv.CV_8UC1:
+        case cv.CV_8UC2:
+        case cv.CV_8UC3:
+        case cv.CV_8UC4: {
+            mat.data.set(array);
+            break;
+        }
+        case cv.CV_8S:
+        case cv.CV_8SC1:
+        case cv.CV_8SC2:
+        case cv.CV_8SC3:
+        case cv.CV_8SC4: {
+            mat.data8S.set(array);
+            break;
+        }
+        case cv.CV_16U:
+        case cv.CV_16UC1:
+        case cv.CV_16UC2:
+        case cv.CV_16UC3:
+        case cv.CV_16UC4: {
+            mat.data16U.set(array);
+            break;
+        }
+        case cv.CV_16S:
+        case cv.CV_16SC1:
+        case cv.CV_16SC2:
+        case cv.CV_16SC3:
+        case cv.CV_16SC4: {
+            mat.data16S.set(array);
+            break;
+        }
+        case cv.CV_32S:
+        case cv.CV_32SC1:
+        case cv.CV_32SC2:
+        case cv.CV_32SC3:
+        case cv.CV_32SC4: {
+            mat.data32S.set(array);
+            break;
+        }
+        case cv.CV_32F:
+        case cv.CV_32FC1:
+        case cv.CV_32FC2:
+        case cv.CV_32FC3:
+        case cv.CV_32FC4: {
+            mat.data32F.set(array);
+            break;
+        }
+        case cv.CV_64F:
+        case cv.CV_64FC1:
+        case cv.CV_64FC2:
+        case cv.CV_64FC3:
+        case cv.CV_64FC4: {
+            mat.data64F.set(array);
+            break;
+        }
+        default: {
+            throw("Type is unsupported");
+        }
+    }
+    return mat;
+}
+
+Module["matFromImageData"] = function(imageData) {
+    var mat = new cv.Mat(imageData.height, imageData.width, cv.CV_8UC4);
+    mat.data.set(imageData.data);
+    return mat;
+}

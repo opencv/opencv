@@ -66,24 +66,8 @@ namespace Utils{
         return emscripten::val(emscripten::memory_view<uint8_t>(mat.step1(1), mat.ptr(i,j)));
     }
 
-    emscripten::val  matFromArray(const emscripten::val& object, int type) {
-        int w=  object["width"].as<unsigned>();
-        int h=  object["height"].as<unsigned>();
-        std::string str = object["data"]["buffer"].as<std::string>();
-
-        cv::Mat mat(h, w, type);
-        memcpy(mat.data, str.data(), mat.total()*mat.elemSize());
-        
-        return emscripten::val(mat);
-    }
-
     cv::Mat* createMat(int rows, int cols, int type, intptr_t data, size_t step) {
         return new cv::Mat(rows, cols, type, reinterpret_cast<void*>(data), step);
-    }
-
-
-    cv::Mat* createMat2(const std::vector<unsigned char>& vector) {
-        return new cv::Mat(vector, false);
     }
 
     // returning MatSize
@@ -248,12 +232,11 @@ EMSCRIPTEN_BINDINGS(Utils) {
 
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
-        //.constructor<const Mat&>()
+        .constructor<const Mat&>()
         .constructor<Size, int>()
         .constructor<int, int, int>()
         .constructor<int, int, int, const Scalar&>()
         .constructor(&Utils::createMat, allow_raw_pointers())
-        .constructor(&Utils::createMat2, allow_raw_pointers())
 
         .class_function("eye",select_overload<Mat(int, int, int)>(&Utils::eye))
         .class_function("eye",select_overload<Mat(Size, int)>(&Utils::eye))
@@ -270,7 +253,6 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .property("data8S", &Utils::matData<char>)
         .property("data16U", &Utils::matData<unsigned short>)
         .property("data16S", &Utils::matData<short>)
-        .property("data32U", &Utils::matData<unsigned int>)
         .property("data32S", &Utils::matData<int>)
         .property("data32F", &Utils::matData<float>)
         .property("data64F", &Utils::matData<double>)
@@ -389,8 +371,6 @@ EMSCRIPTEN_BINDINGS(Utils) {
     function("minMaxLoc", select_overload<Utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&Utils::minMaxLoc));
 
     function("minMaxLoc", select_overload<Utils::MinMaxLoc(const cv::Mat&)>(&Utils::minMaxLoc_1));
-
-    function("matFromArray", &Utils::matFromArray);
 
     function("morphologyDefaultBorderValue", &cv::morphologyDefaultBorderValue);
 

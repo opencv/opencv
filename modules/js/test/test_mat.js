@@ -189,6 +189,153 @@ QUnit.test("test_mat_creation", function(assert) {
         mat2.delete();
         mask.delete();
     }
+
+    // matFromArray
+    {
+        let arrayC1 = [0, -1, 2, -3];
+        let arrayC2 = [0, -1, 2, -3, 4, -5, 6, -7];
+        let arrayC3 = [0, -1, 2, -3, 4, -5, 6, -7, 9, -9, 10, -11];
+        let arrayC4 = [0, -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, 13, 14, 15];
+
+        let mat8UC1 = cv.matFromArray(2, 2, cv.CV_8UC1, arrayC1);
+        let mat8UC2 = cv.matFromArray(2, 2, cv.CV_8UC2, arrayC2);
+        let mat8UC3 = cv.matFromArray(2, 2, cv.CV_8UC3, arrayC3);
+        let mat8UC4 = cv.matFromArray(2, 2, cv.CV_8UC4, arrayC4);
+
+        let mat8SC1 = cv.matFromArray(2, 2, cv.CV_8SC1, arrayC1);
+        let mat8SC2 = cv.matFromArray(2, 2, cv.CV_8SC2, arrayC2);
+        let mat8SC3 = cv.matFromArray(2, 2, cv.CV_8SC3, arrayC3);
+        let mat8SC4 = cv.matFromArray(2, 2, cv.CV_8SC4, arrayC4);
+
+        let mat16UC1 = cv.matFromArray(2, 2, cv.CV_16UC1, arrayC1);
+        let mat16UC2 = cv.matFromArray(2, 2, cv.CV_16UC2, arrayC2);
+        let mat16UC3 = cv.matFromArray(2, 2, cv.CV_16UC3, arrayC3);
+        let mat16UC4 = cv.matFromArray(2, 2, cv.CV_16UC4, arrayC4);
+
+        let mat16SC1 = cv.matFromArray(2, 2, cv.CV_16SC1, arrayC1);
+        let mat16SC2 = cv.matFromArray(2, 2, cv.CV_16SC2, arrayC2);
+        let mat16SC3 = cv.matFromArray(2, 2, cv.CV_16SC3, arrayC3);
+        let mat16SC4 = cv.matFromArray(2, 2, cv.CV_16SC4, arrayC4);
+
+        let mat32SC1 = cv.matFromArray(2, 2, cv.CV_32SC1, arrayC1);
+        let mat32SC2 = cv.matFromArray(2, 2, cv.CV_32SC2, arrayC2);
+        let mat32SC3 = cv.matFromArray(2, 2, cv.CV_32SC3, arrayC3);
+        let mat32SC4 = cv.matFromArray(2, 2, cv.CV_32SC4, arrayC4);
+
+        let mat32FC1 = cv.matFromArray(2, 2, cv.CV_32FC1, arrayC1);
+        let mat32FC2 = cv.matFromArray(2, 2, cv.CV_32FC2, arrayC2);
+        let mat32FC3 = cv.matFromArray(2, 2, cv.CV_32FC3, arrayC3);
+        let mat32FC4 = cv.matFromArray(2, 2, cv.CV_32FC4, arrayC4);
+
+        let mat64FC1 = cv.matFromArray(2, 2, cv.CV_64FC1, arrayC1);
+        let mat64FC2 = cv.matFromArray(2, 2, cv.CV_64FC2, arrayC2);
+        let mat64FC3 = cv.matFromArray(2, 2, cv.CV_64FC3, arrayC3);
+        let mat64FC4 = cv.matFromArray(2, 2, cv.CV_64FC4, arrayC4);
+
+        assert.deepEqual(mat8UC1.data, new Uint8Array(arrayC1));
+        assert.deepEqual(mat8UC2.data, new Uint8Array(arrayC2));
+        assert.deepEqual(mat8UC3.data, new Uint8Array(arrayC3));
+        assert.deepEqual(mat8UC4.data, new Uint8Array(arrayC4));
+
+        assert.deepEqual(mat8SC1.data8S, new Int8Array(arrayC1));
+        assert.deepEqual(mat8SC2.data8S, new Int8Array(arrayC2));
+        assert.deepEqual(mat8SC3.data8S, new Int8Array(arrayC3));
+        assert.deepEqual(mat8SC4.data8S, new Int8Array(arrayC4));
+
+        assert.deepEqual(mat16UC1.data16U, new Uint16Array(arrayC1));
+        assert.deepEqual(mat16UC2.data16U, new Uint16Array(arrayC2));
+        assert.deepEqual(mat16UC3.data16U, new Uint16Array(arrayC3));
+        assert.deepEqual(mat16UC4.data16U, new Uint16Array(arrayC4));
+
+        assert.deepEqual(mat16SC1.data16S, new Int16Array(arrayC1));
+        assert.deepEqual(mat16SC2.data16S, new Int16Array(arrayC2));
+        assert.deepEqual(mat16SC3.data16S, new Int16Array(arrayC3));
+        assert.deepEqual(mat16SC4.data16S, new Int16Array(arrayC4));
+
+        assert.deepEqual(mat32SC1.data32S, new Int32Array(arrayC1));
+        assert.deepEqual(mat32SC2.data32S, new Int32Array(arrayC2));
+        assert.deepEqual(mat32SC3.data32S, new Int32Array(arrayC3));
+        assert.deepEqual(mat32SC4.data32S, new Int32Array(arrayC4));
+
+        assert.deepEqual(mat32FC1.data32F, new Float32Array(arrayC1));
+        assert.deepEqual(mat32FC2.data32F, new Float32Array(arrayC2));
+        assert.deepEqual(mat32FC3.data32F, new Float32Array(arrayC3));
+        assert.deepEqual(mat32FC4.data32F, new Float32Array(arrayC4));
+
+        assert.deepEqual(mat64FC1.data64F, new Float64Array(arrayC1));
+        assert.deepEqual(mat64FC2.data64F, new Float64Array(arrayC2));
+        assert.deepEqual(mat64FC3.data64F, new Float64Array(arrayC3));
+        assert.deepEqual(mat64FC4.data64F, new Float64Array(arrayC4));
+
+        mat8UC1.delete();
+        mat8UC2.delete();
+        mat8UC3.delete();
+        mat8UC4.delete();
+        mat8SC1.delete();
+        mat8SC2.delete();
+        mat8SC3.delete();
+        mat8SC4.delete();
+        mat16UC1.delete();
+        mat16UC2.delete();
+        mat16UC3.delete();
+        mat16UC4.delete();
+        mat16SC1.delete();
+        mat16SC2.delete();
+        mat16SC3.delete();
+        mat16SC4.delete();
+        mat32SC1.delete();
+        mat32SC2.delete();
+        mat32SC3.delete();
+        mat32SC4.delete();
+        mat32FC1.delete();
+        mat32FC2.delete();
+        mat32FC3.delete();
+        mat32FC4.delete();
+        mat64FC1.delete();
+        mat64FC2.delete();
+        mat64FC3.delete();
+        mat64FC4.delete();
+    }
+
+    // matFromImageData
+    {
+        // Only test in browser
+        if (typeof window === 'undefined')
+            return;
+        let canvas = window.document.createElement('canvas');
+        canvas.width = 2;
+        canvas.height = 2;
+        let ctx = canvas.getContext('2d');
+        ctx.fillStyle="#FF0000";
+        ctx.fillRect(0, 0, 1, 1);
+        ctx.fillRect(1, 1, 1, 1);
+
+        let imageData = ctx.getImageData(0, 0, 2, 2);
+        let mat = cv.matFromImageData(imageData);
+
+        assert.deepEqual(mat.data, new Uint8Array(imageData.data));
+
+        mat.delete();
+    }
+
+    // Mat(mat)
+    {
+        let mat = new cv.Mat(2, 2, cv.CV_8UC4, new cv.Scalar(1, 0, 1, 0));
+        let mat1 = new cv.Mat(mat);
+        let mat2 = mat;
+
+        assert.equal(mat.rows, mat1.rows);
+        assert.equal(mat.cols, mat1.cols);
+        assert.equal(mat.type(), mat1.type());
+        assert.deepEqual(mat.data, mat1.data);
+
+        mat.delete();
+
+        assert.equal(mat1.isDeleted(), false);
+        assert.equal(mat2.isDeleted(), true);
+
+        mat1.delete();
+    }
 });
 
 QUnit.test("test_mat_ptr", function(assert) {
@@ -490,7 +637,6 @@ QUnit.test("test mat access", function(assert) {
         charView = new Int8Array(data.buffer),
         shortView = new Int16Array(data.buffer),
         unsignedShortView = new Uint16Array(data.buffer),
-        uintView = new Uint32Array(data.buffer),
         intView = new Int32Array(data.buffer),
         float32View = new Float32Array(data.buffer),
         float64View = new Float64Array(data.buffer);
@@ -500,7 +646,6 @@ QUnit.test("test mat access", function(assert) {
         assert.deepEqual(charView, mat.data8S);
         assert.deepEqual(shortView, mat.data16S);
         assert.deepEqual(unsignedShortView, mat.data16U);
-        assert.deepEqual(uintView, mat.data32U);
         assert.deepEqual(intView, mat.data32S);
         assert.deepEqual(float32View, mat.data32F);
         assert.deepEqual(float64View, mat.data64F);
