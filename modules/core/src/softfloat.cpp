@@ -197,8 +197,9 @@ static float64_t f64_sqrt( float64_t );
 
 static float32_t f32_powi( float32_t x, int y);
 static float64_t f64_powi( float64_t x, int y);
-static float64_t __kernel_sin(float64_t x);
-static float64_t __kernel_cos(float64_t x);
+static float64_t f64_sin_kernel(float64_t x);
+static float64_t f64_cos_kernel(float64_t x);
+static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n);
 
 static float32_t f32_exp( float32_t x);
 static float64_t f64_exp(float64_t x);
@@ -3898,7 +3899,7 @@ S5  = float64_t(-2.50507602534068634195e-08), /* 0xBE5AE5E6, 0x8A2B9CEB */
 //  1/13! =  1/6227020800
 S6  = float64_t( 1.58969099521155010221e-10); /* 0x3DE5D93A, 0x5ACFD57C */
 
-static float64_t __kernel_sin(float64_t x)
+static float64_t f64_sin_kernel(float64_t x)
 {
     if(x.getExp() < -27)
     {
@@ -3907,6 +3908,7 @@ static float64_t __kernel_sin(float64_t x)
     }
 
     float64_t z = x*x;
+    //TODO: remove r and v
     float64_t v = z*x;
     float64_t r = S2 + z*(S3 + z*(S4 + z*(S5 + z*S6)));
     return x + v*(S1+z*r);
@@ -3964,7 +3966,7 @@ C5  = float64_t( 2.08757232129817482790e-09), /* 0x3E21EE9E, 0xBDB4B1C4 */
 // -1/14! = -1/87178291200
 C6  = float64_t(-1.13596475577881948265e-11); /* 0xBDA8FAE9, 0xBE8838D4 */
 
-static float64_t __kernel_cos(float64_t x)
+static float64_t f64_cos_kernel(float64_t x)
 {
     if(x.getExp() < -27)
     {
@@ -4001,6 +4003,34 @@ static float64_t __kernel_cos(float64_t x)
     }
 }
 
+static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n)
+{
+    if(abs(x) < piby4)
+    {
+        n = 0, y = x;
+    }
+    else
+    {
+        /* argument reduction needed */
+        float64_t kf = f64_roundToInt(x/piby2, round_near_even, false);
+        y = f64_rem(x, piby2);
+        //y = x - kf*piby2;
+
+        int k;
+        int kex = kf.getExp();
+        uint64 u = (kf.v & ((1ULL << 52) - 1)) | (1ULL << 52);
+        if(kex >= 54) k = 0; // step of floats is 4+ in that case
+        else if(kex == 53)
+            k = u << 1;
+        else
+        {
+            k = u >> (52 - kex);
+        }
+        k = kf.getSign() ? -k : k;
+        n = k & 3;
+    }
+}
+
 /* sin(x)
  * Return sine function of x.
  *
@@ -4010,7 +4040,7 @@ static float64_t __kernel_cos(float64_t x)
  *
  * Method.
  *      Let S,C and T denote the sin, cos and tan respectively on
- *  [-PI/4, +PI/4]. Reduce the argument x to y1+y2 = x-k*pi/2
+ *  [-PI/4, +PI/4]. Reduce the argument x to y = x-k*pi/2
  *  in [-pi/4 , +pi/4], and let n = k mod 4.
  *  We have
  *
@@ -4035,18 +4065,14 @@ static float64_t f64_sin( float64_t x )
 {
     if(x.isInf() || x.isNaN()) return x.nan();
 
-    if(abs(x) < piby4) return __kernel_sin(x);
-
-    /* argument reduction needed */
-    int k = cvTrunc(x/piby2);
-    float64_t y = x - float64_t(k)*piby2;
-
-    switch (k & 3)
+    float64_t y; int n;
+    f64_sincos_reduce(x, y, n);
+    switch (n)
     {
-    case 0:  return  __kernel_sin(y);
-    case 1:  return  __kernel_cos(y);
-    case 2:  return -__kernel_sin(y);
-    default: return -__kernel_cos(y);
+    case 0:  return  f64_sin_kernel(y);
+    case 1:  return  f64_cos_kernel(y);
+    case 2:  return -f64_sin_kernel(y);
+    default: return -f64_cos_kernel(y);
     }
 }
 
@@ -4059,7 +4085,7 @@ static float64_t f64_sin( float64_t x )
  *
  * Method.
  *      Let S,C and T denote the sin, cos and tan respectively on
- *  [-PI/4, +PI/4]. Reduce the argument x to y1+y2 = x-k*pi/2
+ *  [-PI/4, +PI/4]. Reduce the argument x to y = x-k*pi/2
  *  in [-pi/4 , +pi/4], and let n = k mod 4.
  *  We have
  *
@@ -4084,18 +4110,14 @@ static float64_t f64_cos( float64_t x )
 {
     if(x.isInf() || x.isNaN()) return x.nan();
 
-    if(abs(x) < piby4) return __kernel_cos(x);
-
-    /* argument reduction needed */
-    int k = cvTrunc(x/piby2);
-    float64_t y = x - float64_t(k)*piby2;
-
-    switch (k & 3)
+    float64_t y; int n;
+    f64_sincos_reduce(x, y, n);
+    switch (n)
     {
-    case 0:  return  __kernel_cos(y);
-    case 1:  return -__kernel_sin(y);
-    case 2:  return -__kernel_cos(y);
-    default: return  __kernel_sin(y);
+    case 0:  return  f64_cos_kernel(y);
+    case 1:  return -f64_sin_kernel(y);
+    case 2:  return -f64_cos_kernel(y);
+    default: return  f64_sin_kernel(y);
     }
 }
 
