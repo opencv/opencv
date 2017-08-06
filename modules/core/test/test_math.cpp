@@ -3581,4 +3581,99 @@ TEST(Core_SoftFloat, pow64)
     }
 }
 
+TEST(Core_SoftFloat, sincos64)
+{
+    const size_t nValues = 5000;
+
+    static const softdouble
+            two = softdouble(2), half  = softdouble::one()/two,
+            sin45 = sqrt(softdouble(2))/two, sin60 = sqrt(softdouble(3))/two,
+            zero = softdouble::zero(), one = softdouble::one(),
+            pi = softdouble::pi(), piby2 = pi/two, eps = softdouble::eps();
+
+    //TODO: check standard angles, +k*pi, +k*2*pi
+    softdouble vstdAngles[] =
+    //x, sin(x), cos(x)
+    {
+            zero,              zero,   one,
+            pi/softdouble(6),  half, sin60,
+            pi/softdouble(4), sin45, sin45,
+            pi/softdouble(3), sin60,  half,
+    };
+    vector<softdouble> stdAngles;
+    stdAngles.assign(vstdAngles, vstdAngles + 3*4);
+
+    for(size_t i = 0; i < nValues; i++)
+    {
+        for(size_t k = 0; k < stdAngles.size(); k++)
+        {
+            softdouble x = stdAngles[k*3] + pi*softdouble(2*(i-nValues/2));
+            softdouble s = stdAngles[k*3+1];
+            softdouble c = stdAngles[k*3+2];
+            ASSERT_LE(abs(sin(x) - s), eps);
+            ASSERT_LE(abs(cos(x) - c), eps);
+            //sin(x+pi/2) = cos(x)
+            ASSERT_LE(abs(sin(x + piby2) - c), eps);
+            //sin(x+pi) = -sin(x)
+            ASSERT_LE(abs(sin(x + pi) + s), eps);
+            //cos(x+pi/2) = -sin(x)
+            ASSERT_LE(abs(cos(x+piby2) + s), eps);
+            //cos(x+pi) = -cos(x)
+            ASSERT_LE(abs(cos(x+pi) + c), eps);
+        }
+    }
+
+    // sin(x) is NaN iff x ix NaN or Inf
+    ASSERT_TRUE(sin(softdouble::inf()).isNaN());
+    ASSERT_TRUE(sin(softdouble::nan()).isNaN());
+
+    vector<int> exponents;
+    exponents.push_back(0);
+    for(int i = 1; i < 52; i++)
+    {
+        exponents.push_back( i);
+        exponents.push_back(-i);
+    }
+    exponents.push_back(256); exponents.push_back(-256);
+    exponents.push_back(512); exponents.push_back(-512);
+    exponents.push_back(1022); exponents.push_back(-1022);
+
+    vector<softdouble> inputs;
+    RNG rng(0);
+
+    for(size_t i = 0; i < nValues; i++)
+    {
+        softdouble x;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.v = mantissa;
+        x.setSign(rng() % 2);
+        x.setExp(exponents[rng() % exponents.size()]);
+        inputs.push_back(x);
+    }
+
+    for(size_t i = 0; i < nValues; i++)
+    {
+        softdouble x = inputs[i];
+        softdouble sx = sin(x);
+        softdouble cx = cos(x);
+        ASSERT_FALSE(sx.isInf()); ASSERT_FALSE(cx.isInf());
+        ASSERT_FALSE(sx.isNaN()); ASSERT_FALSE(cx.isNaN());
+        ASSERT_LE(abs(sx), one); ASSERT_LE(abs(cx), one);
+        ASSERT_LE(abs((sx*sx + cx*cx) - one), eps);
+        //workaround inf overflow
+        if(abs(x.getExp()) < 1023)
+        {
+            ASSERT_LE(abs(sin(x*two) - two*sx*cx), eps);
+            ASSERT_LE(abs(cos(x*two) - (cx*cx - sx*sx)), eps);
+        }
+        ASSERT_LE(abs(sin(-x) + sx), eps);
+        ASSERT_LE(abs(cos(-x) - cx), eps);
+
+        ASSERT_LE(abs(sin(x + piby2) - cx), eps);
+        ASSERT_LE(abs(sin(x + pi) + sx), eps);
+        ASSERT_LE(abs(cos(x+piby2) + sx), eps);
+        ASSERT_LE(abs(cos(x+pi) + cx), eps);
+    }
+}
+
 /* End of file. */
