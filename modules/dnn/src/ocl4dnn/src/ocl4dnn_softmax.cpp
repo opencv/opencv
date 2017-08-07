@@ -69,22 +69,13 @@ OCL4DNNSoftmax<Dtype>::OCL4DNNSoftmax(OCL4DNNSoftmaxConfig config)
     for (int32_t i = 0; i < scale_dims.size(); i++)
         scale_sz *= scale_dims[i];
 
-    ocl::Context ctx = ocl::Context::getDefault();
-    cl_int err;
-    scale_data_ = reinterpret_cast<Dtype*>(clCreateBuffer((cl_context)ctx.ptr(),
-                                                          CL_MEM_READ_WRITE,
-                                                          sizeof(Dtype) * scale_sz,
-                                                          NULL, &err));
-    CHECK_EQ(err, CL_SUCCESS) << "Failed to create scale buffer.";
+    scale_data_.create(1, scale_sz, CV_32FC1);
 }
 
 template<typename Dtype>
 OCL4DNNSoftmax<Dtype>::~OCL4DNNSoftmax()
 {
-    if (scale_data_)
-    {
-        clReleaseMemObject((cl_mem)scale_data_);
-    }
+    scale_data_.release();
 }
 
 template<typename Dtype>
@@ -113,7 +104,7 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
             oclk_softmax_forward_kernel.set(argIdx++, outer_num_);
             oclk_softmax_forward_kernel.set(argIdx++, channels_);
             oclk_softmax_forward_kernel.set(argIdx++, inner_num_);
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) scale_data_);
+            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) scale_data_.handle(ACCESS_WRITE));
             oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) bottom_data);
             oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) top_data);
             clSetKernelArg((cl_kernel)oclk_softmax_forward_kernel.ptr(), argIdx++, channels_ * inner_num_* sizeof(Dtype), NULL);
@@ -129,7 +120,7 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
             oclk_softmax_forward_kernel.set(argIdx++, outer_num_);
             oclk_softmax_forward_kernel.set(argIdx++, channels_);
             oclk_softmax_forward_kernel.set(argIdx++, inner_num_);
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) scale_data_);
+            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) scale_data_.handle(ACCESS_WRITE));
             oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) bottom_data);
             oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) top_data);
             OCL_CHECK(clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),

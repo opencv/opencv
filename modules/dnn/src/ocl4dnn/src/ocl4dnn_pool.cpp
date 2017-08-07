@@ -83,17 +83,12 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     {
         count_ *= config.out_shape[i];
     }
-
-    mask_idx_ = NULL;
 }
 
 template<typename Dtype>
 OCL4DNNPool<Dtype>::~OCL4DNNPool()
 {
-    if (mask_idx_)
-    {
-        clReleaseMemObject((cl_mem)mask_idx_);
-    }
+    mask_idx_.release();
 }
 
 template<typename Dtype>
@@ -112,9 +107,9 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
     {
     case LIBDNN_POOLING_METHOD_MAX:
         {
-            if (top_mask == NULL && mask_idx_ == NULL)
+            if (top_mask == NULL && mask_idx_.empty())
             {
-                allocateMemory((void **)&mask_idx_,  sizeof(int32_t) * count_, CL_MEM_READ_WRITE);
+                mask_idx_.create(1, count_, CV_32FC1);
             }
             ocl::Kernel oclk_max_pool_forward(CL_KERNEL_SELECT("max_pool_forward"), cv::ocl::dnn::dnn_pooling_oclsrc);
 
@@ -134,8 +129,9 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
             oclk_max_pool_forward.set(argIdx++, pad_h_);
             oclk_max_pool_forward.set(argIdx++, pad_w_);
             oclk_max_pool_forward.set(argIdx++, (cl_mem) top_data);
-            oclk_max_pool_forward.set(argIdx++, mask_idx_ == NULL ? 0 : 1);
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) mask_idx_);
+            oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? 0 : 1);
+            oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? NULL :
+                                      (cl_mem) mask_idx_.handle(ACCESS_WRITE));
             oclk_max_pool_forward.set(argIdx++, (cl_mem) top_mask);
 
             oclk_max_pool_forward.run(1, global, local, false);

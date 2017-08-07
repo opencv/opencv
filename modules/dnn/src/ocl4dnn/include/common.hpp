@@ -60,7 +60,6 @@ using namespace cv;
     } while (0)
 
 bool isBeignet();
-void allocateMemory(void** ptr, uint32_t size, int32_t flags);
 
 #endif // HAVE_OPENCL
 #endif

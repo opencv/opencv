@@ -49,11 +49,4 @@ bool isBeignet()
     return ocl::Device::getDefault().OpenCL_C_Version().find("beignet") != std::string::npos;
 }
 
-void allocateMemory(void** ptr, uint32_t size, int32_t flags)
-{
-    ocl::Context ctx = ocl::Context::getDefault();
-    *ptr = (void*)clCreateBuffer((cl_context)ctx.ptr(),    // NOLINT
-                                 flags,
-                                 size, nullptr, nullptr);
-}
 #endif // HAVE_OPENCL

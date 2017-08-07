@@ -57,16 +57,20 @@ OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config
     K_ = config.K;
     phase_test_ = config.phase_test;
     image_copied_ = false;
-    weight_image_ = NULL;
 
     // Set up the bias multiplier
     if (bias_term_)
     {
-        int32_t flags = 0;
-        flags = CL_MEM_READ_WRITE;
-        allocateMemory((void **)&bias_multiplier_,  sizeof(Dtype) * M_, flags);
-        ocl4dnnSet(0, M_, Dtype(1), (cl_mem) bias_multiplier_, 0);
+        bias_multiplier_.create(1, M_, CV_32FC1);
+        ocl4dnnSet(0, M_, Dtype(1), (cl_mem) bias_multiplier_.handle(ACCESS_WRITE), 0);
     }
+}
+
+template<typename Dtype>
+OCL4DNNInnerProduct<Dtype>::~OCL4DNNInnerProduct()
+{
+    bias_multiplier_.release();
+    weight_image_.release();
 }
 
 template<typename Dtype>

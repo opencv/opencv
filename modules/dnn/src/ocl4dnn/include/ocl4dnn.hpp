@@ -330,7 +330,7 @@ class OCL4DNNPool
                      Dtype *top_mask = NULL);
 
     private:
-        cl_mem mask_idx_;
+        UMat mask_idx_;
 
         // Pooling parameters
         std::vector<int32_t> pad_;
@@ -370,6 +370,7 @@ class OCL4DNNInnerProduct
 {
     public:
         explicit OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config);
+        ~OCL4DNNInnerProduct();
         bool Forward(const Dtype* bottom_data,
                      const Dtype* weight,
                      const Dtype* bias,
@@ -385,8 +386,8 @@ class OCL4DNNInnerProduct
         bool transpose_;
         bool image_copied_;
         bool phase_test_;
-        Dtype *bias_multiplier_;
-        Dtype *weight_image_;
+        UMat bias_multiplier_;
+        UMat weight_image_;
 };
 
 typedef enum {
@@ -458,7 +459,7 @@ class OCL4DNNSoftmax
         int32_t channels_;
         int32_t count_;
         bool use_slm_;
-        Dtype *scale_data_;
+        UMat scale_data_;
 };
 #endif // HAVE_OPENCL
 } // namespace ocl4dnn
