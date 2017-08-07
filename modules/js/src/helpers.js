@@ -1,9 +1,9 @@
-Module["imread"] = function(canvasID) {
+Module["imread"] = function(imageSource) {
     var img = null;
-    if (typeof canvasID === "string")
-        img = document.getElementById(canvasID);
+    if (typeof imageSource === "string")
+        img = document.getElementById(imageSource);
     else
-        img = canvasID;
+        img = imageSource;
     var canvas = null;
     var ctx = null;
     if (img instanceof HTMLImageElement) {
@@ -12,26 +12,24 @@ Module["imread"] = function(canvasID) {
         canvas.height = img.height;
         ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, img.width, img.height);
-    }
-    else {
+    } else if (img instanceof HTMLCanvasElement) {
         canvas = img;
-    }
-    if (!(canvas instanceof HTMLCanvasElement)) {
+        ctx = canvas.getContext("2d");
+    } else {
         throw("Please input the valid canvas or img id.");
         return;
     }
     
-    ctx = canvas.getContext("2d");
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     return cv.matFromArray(imgData, cv.CV_8UC4);
 }
 
-Module["imshow"] = function(canvasID, mat) {
+Module["imshow"] = function(canvasSource, mat) {
     var canvas = null;
-    if (typeof canvasID === "string")
-        canvas = document.getElementById(canvasID);
+    if (typeof canvasSource === "string")
+        canvas = document.getElementById(canvasSource);
     else
-        canvas = canvasID;
+        canvas = canvasSource;
     if (!(canvas instanceof HTMLCanvasElement)) {
         throw("Please input the valid canvas element or id.");
         return;
@@ -71,12 +69,12 @@ Module["imshow"] = function(canvasID, mat) {
     img.delete();
 }
 
-Module["VideoCapture"] = function(videoID) {
+Module["VideoCapture"] = function(videoSource) {
     var video = null;
-    if (typeof videoID === "string")
-        video = document.getElementById(videoID);
+    if (typeof videoSource === "string")
+        video = document.getElementById(videoSource);
     else
-        video = videoID;
+        video = videoSource;
     if (!(video instanceof HTMLVideoElement)) {
         throw("Please input the valid video element or id.");
         return;
