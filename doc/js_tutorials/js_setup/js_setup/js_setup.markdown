@@ -110,5 +110,5 @@ Building OpenCV.js from Source Using CMake
 	node tests.js
 	@endcode
 
-	@node
+	@note
 	You may need to install `node` for your development environment.
