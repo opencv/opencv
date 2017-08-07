@@ -315,7 +315,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("getDoubleAt", select_overload<double&(int)>(&cv::Mat::at<double>))
         .function("getDoubleAt", select_overload<double&(int, int)>(&cv::Mat::at<double>))
 
-        .function( "getROI_Rect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()));
+        .function("getRoiRect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()));
 
     emscripten::value_object<cv::TermCriteria>("TermCriteria")
         .field("type", &cv::TermCriteria::type)

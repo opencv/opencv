@@ -769,3 +769,19 @@ QUnit.test("test mat operations", function(assert) {
         src.delete();
     }
 });
+
+QUnit.test("test mat roi", function(assert) {
+    // test minMaxLoc
+    {
+        let mat = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3])
+
+        let roi = mat.getRoiRect(new cv.Rect(1, 1, 1, 1));
+
+        assert.equal(roi.rows, 1);
+        assert.equal(roi.cols, 1);
+        assert.deepEqual(roi.data, new Uint8Array([mat.getUcharAt(1, 1)]));
+
+        mat.delete();
+        roi.delete();
+    }
+});
