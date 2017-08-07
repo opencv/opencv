@@ -1000,6 +1000,7 @@ struct Net::Impl
         Ptr<Layer> layerPtr = ld.getLayerInstance();
         {
             layerPtr->finalize(ld.inputBlobs, ld.outputBlobs);
+            layerPtr->preferableTarget = preferableTarget;
 #if 0
             std::cout << "\toutputs:";
             size_t noutputs = ld.outputBlobs.size();

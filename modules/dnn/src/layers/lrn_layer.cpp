@@ -140,7 +140,7 @@ public:
 
         CV_Assert(inputs.size() == outputs.size());
 
-        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
                    forward_ocl(inputs, outputs, internals))
 
         for (int i = 0; i < inputs.size(); i++)

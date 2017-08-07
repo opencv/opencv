@@ -165,7 +165,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
                    forward_ocl(inputs, outputs, internals))
 
         for (size_t ii = 0; ii < inputs.size(); ii++)

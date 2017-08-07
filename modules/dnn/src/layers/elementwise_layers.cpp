@@ -161,7 +161,7 @@ public:
     {
         CV_TRACE_FUNCTION();
 
-        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((this->preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
                    func.applyOCL(inputs, outputs, internals))
 
         for (size_t i = 0; i < inputs.size(); i++)
