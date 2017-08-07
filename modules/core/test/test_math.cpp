@@ -3583,13 +3583,14 @@ TEST(Core_SoftFloat, pow64)
 
 TEST(Core_SoftFloat, sincos64)
 {
-    const size_t nValues = 5000;
+
 
     static const softdouble
-            two = softdouble(2), half  = softdouble::one()/two,
-            sin45 = sqrt(softdouble(2))/two, sin60 = sqrt(softdouble(3))/two,
+            two = softdouble(2), three = softdouble(3),
+            half = softdouble::one()/two,
             zero = softdouble::zero(), one = softdouble::one(),
-            pi = softdouble::pi(), piby2 = pi/two, eps = softdouble::eps();
+            pi = softdouble::pi(), piby2 = pi/two, eps = softdouble::eps(),
+            sin45 = sqrt(two)/two, sin60 = sqrt(three)/two;
 
     softdouble vstdAngles[] =
     //x, sin(x), cos(x)
@@ -3597,17 +3598,18 @@ TEST(Core_SoftFloat, sincos64)
             zero,              zero,   one,
             pi/softdouble(6),  half, sin60,
             pi/softdouble(4), sin45, sin45,
-            pi/softdouble(3), sin60,  half,
+            pi/three, sin60,  half,
     };
     vector<softdouble> stdAngles;
     stdAngles.assign(vstdAngles, vstdAngles + 3*4);
 
     static const softdouble stdEps = eps.setExp(-39);
-    for(size_t i = 0; i < nValues; i++)
+    const size_t nStdValues = 5000;
+    for(size_t i = 0; i < nStdValues; i++)
     {
         for(size_t k = 0; k < stdAngles.size()/3; k++)
         {
-            softdouble x = stdAngles[k*3] + pi*softdouble(2*((int)i-(int)nValues/2));
+            softdouble x = stdAngles[k*3] + pi*softdouble(2*((int)i-(int)nStdValues/2));
             softdouble s = stdAngles[k*3+1];
             softdouble c = stdAngles[k*3+2];
 
@@ -3679,6 +3681,7 @@ TEST(Core_SoftFloat, sincos64)
     vector<softdouble> inputs;
     RNG rng(0);
 
+    static const size_t nValues = 1 << 18;
     for(size_t i = 0; i < nValues; i++)
     {
         softdouble x;
@@ -3689,8 +3692,7 @@ TEST(Core_SoftFloat, sincos64)
         inputs.push_back(x);
     }
 
-
-    for(size_t i = 0; i < nValues; i++)
+    for(size_t i = 0; i < inputs.size(); i++)
     {
         softdouble x = inputs[i];
 
@@ -3700,42 +3702,56 @@ TEST(Core_SoftFloat, sincos64)
 
         int xexp = x.getExp();
         //we don't guarantee values for huge numbers at all
-        softdouble randEps = (xexp >= 43) ? eps.setExp(1) :
-                             (xexp >= 20) ? eps.setExp(-10) :
-                             (xexp >=  9) ? eps.setExp(-30) :
-                                            eps.setExp(-46);
+//        softdouble randEps = (xexp >= 43) ? eps.setExp(  1) :
+//                             (xexp >= 20) ? eps.setExp(-10) :
+//                             (xexp >= 19) ? eps.setExp(-34) :
+//                             (xexp >= 17) ? eps.setExp(-37) :
+//                             (xexp >= 14) ? eps.setExp(-39) :
+//                             (xexp >= 12) ? eps.setExp(-41) :
+//                             (xexp >= 11) ? eps.setExp(-42) :
+//                             (xexp >=  9) ? eps.setExp(-44) :
+//                                            eps.setExp(-46);
+        softdouble randEps = eps.setExp(max(xexp-52, -46));
+
+        //TODO: remove it
+        printf("randEps: %a", (double)randEps);
+        cout << endl;
 
         softdouble sx = sin(x);
         softdouble cx = cos(x);
         ASSERT_FALSE(sx.isInf()); ASSERT_FALSE(cx.isInf());
         ASSERT_FALSE(sx.isNaN()); ASSERT_FALSE(cx.isNaN());
         ASSERT_LE(abs(sx), one); ASSERT_LE(abs(cx), one);
+
+        //TODO: remove it
+        printf("%a", (double)((sx*sx + cx*cx) - one));
+        cout << endl;
+
         ASSERT_LE(abs((sx*sx + cx*cx) - one), eps);
-        if(xexp < 10)
-        {
-            //TODO: remove it
-            printf("%a", (double)(sin(x*two) - two*sx*cx));
-            cout << endl;
 
-            ASSERT_LE(abs(sin(x*two) - two*sx*cx), randEps);
+        //TODO: remove it
+        printf("%a", (double)(sin(x*two) - two*sx*cx));
+        cout << endl;
 
-            //TODO: remove it
-            printf("%a", (double)(cos(x*two) - (cx*cx - sx*sx)));
-            cout << endl;
+        ASSERT_LE(abs(sin(x*two) - two*sx*cx), randEps);
 
-//            printf("%a %a %a %a %a %a",
-//                   (double)x, (double)(x*two), (double)(cos(x*two)),
-//                   (double)(cx), (double)(sx),
-//                   (double)(cos(x*two) - (cx*cx - sx*sx)));
-//            cout << endl;
-//            printf("%20.17f %20.17f %20.17f %20.17f %20.17f %20.17f",
-//                   (double)x, (double)(x*two), (double)(cos(x*two)),
-//                   (double)(cx), (double)(sx),
-//                   (double)(cos(x*two) - (cx*cx - sx*sx)));
-//            cout << endl;
+        //TODO: remove it
+        printf("%a", (double)(cos(x*two) - (cx*cx - sx*sx)));
+        cout << endl;
 
-            ASSERT_LE(abs(cos(x*two) - (cx*cx - sx*sx)), randEps);
-        }
+        //            printf("%a %a %a %a %a %a",
+        //                   (double)x, (double)(x*two), (double)(cos(x*two)),
+        //                   (double)(cx), (double)(sx),
+        //                   (double)(cos(x*two) - (cx*cx - sx*sx)));
+        //            cout << endl;
+        //            printf("%20.17f %20.17f %20.17f %20.17f %20.17f %20.17f",
+        //                   (double)x, (double)(x*two), (double)(cos(x*two)),
+        //                   (double)(cx), (double)(sx),
+        //                   (double)(cos(x*two) - (cx*cx - sx*sx)));
+        //            cout << endl;
+
+        ASSERT_LE(abs(cos(x*two) - (cx*cx - sx*sx)), randEps);
+
         ASSERT_LE(abs(sin(-x) + sx), eps);
         ASSERT_LE(abs(cos(-x) - cx), eps);
 
