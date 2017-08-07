@@ -58,12 +58,14 @@ namespace Utils{
         return emscripten::val(emscripten::memory_view<T>( (mat.total()*mat.elemSize())/sizeof(T), (T*) mat.data));
     }
 
+    template<typename T>
     emscripten::val matPtrI(const cv::Mat& mat, int i) {
-        return emscripten::val(emscripten::memory_view<uint8_t>(mat.step1(0), mat.ptr(i)));
+        return emscripten::val(emscripten::memory_view<T>(mat.step1(0), mat.ptr<T>(i)));
     }
 
+    template<typename T>
     emscripten::val matPtrII(const cv::Mat& mat, int i, int j) {
-        return emscripten::val(emscripten::memory_view<uint8_t>(mat.step1(1), mat.ptr(i,j)));
+        return emscripten::val(emscripten::memory_view<T>(mat.step1(1), mat.ptr<T>(i,j)));
     }
 
     cv::Mat* createMat(int rows, int cols, int type, intptr_t data, size_t step) {
@@ -290,8 +292,22 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("inv", select_overload<Mat(const Mat&, int)>(&Utils::matInv))
         .function("t", select_overload<Mat(const Mat&)>(&Utils::matT))
 
-        .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI))
-        .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII))
+        .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<unsigned char>))
+        .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<unsigned char>))
+        .function("ucharPtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<unsigned char>))
+        .function("ucharPtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<unsigned char>))
+        .function("charPtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<char>))
+        .function("charPtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<char>))
+        .function("shortPtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<short>))
+        .function("shortPtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<short>))
+        .function("ushortPtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<unsigned short>))
+        .function("ushortPtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<unsigned short>))
+        .function("intPtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<int>))
+        .function("intPtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<int>))
+        .function("floatPtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<float>))
+        .function("floatPtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<float>))
+        .function("doublePtr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<double>))
+        .function("doublePtr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<double>))
 
         .function("getCharAt", select_overload<char&(int)>(&cv::Mat::at<char>))
         .function("getCharAt", select_overload<char&(int, int)>(&cv::Mat::at<char>))

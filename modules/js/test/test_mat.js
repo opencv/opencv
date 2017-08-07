@@ -356,6 +356,8 @@ QUnit.test("test_mat_ptr", function(assert) {
         view = mat.ptr(2);
 
         assert.equal(view[1], RValue);
+
+        mat.delete();
     }
 
     // cv.CV_8UC3 + Mat::ptr(int).
@@ -375,6 +377,8 @@ QUnit.test("test_mat_ptr", function(assert) {
         assert.equal(view[3], RValue);
         assert.equal(view[3 + 1], GValue);
         assert.equal(view[3 + 2], BValue);
+
+        mat.delete();
     }
 
     // cv.CV_8UC3 + Mat::ptr(int, int).
@@ -394,7 +398,74 @@ QUnit.test("test_mat_ptr", function(assert) {
         assert.equal(view[0], RValue);
         assert.equal(view[1], GValue);
         assert.equal(view[2], BValue);
+
+        mat.delete();
     }
+
+    const RValueF32 = 3.3;
+    const GValueF32 = 7.3;
+    const BValueF32 = 197.3;
+    const EPSILON = 0.001;
+
+    // cv.CV_32FC1 + Mat::ptr(int).
+    {
+        let mat = new cv.Mat(10, 10, cv.CV_32FC1);
+        let view = mat.data32F;
+
+        // Alter matrix[2, 1].
+        let step = 10;
+        view[2 * step + 1] = RValueF32;
+
+        // Access matrix[2, 1].
+        view = mat.floatPtr(2);
+
+        assert.ok(Math.abs(view[1] - RValueF32) < EPSILON);
+
+        mat.delete();
+    }
+
+    // cv.CV_32FC3 + Mat::ptr(int).
+    {
+        let mat = new cv.Mat(10, 10, cv.CV_32FC3);
+        let view = mat.data32F;
+
+        // Alter matrix[2, 1].
+        let step = mat.step1(0);
+        view[2 * step + 3] = RValueF32;
+        view[2 * step + 3 + 1] = GValueF32;
+        view[2 * step + 3 + 2] = BValueF32;
+
+        // Access matrix[2, 1].
+        view = mat.floatPtr(2);
+
+        assert.ok(Math.abs(view[3] - RValueF32) < EPSILON);
+        assert.ok(Math.abs(view[3 + 1] - GValueF32) < EPSILON);
+        assert.ok(Math.abs(view[3 + 2] - BValueF32) < EPSILON);
+
+        mat.delete();
+    }
+
+    // cv.CV_32FC3 + Mat::ptr(int, int).
+    {
+        let mat = new cv.Mat(10, 10, cv.CV_32FC3);
+        let view = mat.data32F;
+
+        // Alter matrix[2, 1].
+        let step = mat.step1(0);
+        view[2 * step + 3] = RValueF32;
+        view[2 * step + 3 + 1] = GValueF32;
+        view[2 * step + 3 + 2] = BValueF32;
+
+        // Access matrix[2, 1].
+        view = mat.floatPtr(2, 1);
+
+        assert.ok(Math.abs(view[0] - RValueF32) < EPSILON);
+        assert.ok(Math.abs(view[1] - GValueF32) < EPSILON);
+        assert.ok(Math.abs(view[2] - BValueF32) < EPSILON);
+
+        mat.delete();
+    }
+
 });
 
 QUnit.test("test_mat_zeros", function(assert) {
