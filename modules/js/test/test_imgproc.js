@@ -208,7 +208,6 @@ QUnit.test("test_shape", function(assert) {
     assert.equal(area, 0);
 
     points.delete();
-    m.delete();
   }
 });
 

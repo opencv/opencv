@@ -389,6 +389,32 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .field("center", &Utils::Circle::center)
         .field("radius", &Utils::Circle::radius);
 
+    emscripten::value_object<cv::Moments >("Moments")
+        .field("m00", &cv::Moments::m00)
+        .field("m10", &cv::Moments::m10)
+        .field("m01", &cv::Moments::m01)
+        .field("m20", &cv::Moments::m20)
+        .field("m11", &cv::Moments::m11)
+        .field("m02", &cv::Moments::m02)
+        .field("m30", &cv::Moments::m30)
+        .field("m21", &cv::Moments::m21)
+        .field("m12", &cv::Moments::m12)
+        .field("m03", &cv::Moments::m03)
+        .field("mu20", &cv::Moments::mu20)
+        .field("mu11", &cv::Moments::mu11)
+        .field("mu02", &cv::Moments::mu02)
+        .field("mu30", &cv::Moments::mu30)
+        .field("mu21", &cv::Moments::mu21)
+        .field("mu12", &cv::Moments::mu12)
+        .field("mu03", &cv::Moments::mu03)
+        .field("nu20", &cv::Moments::nu20)
+        .field("nu11", &cv::Moments::nu11)
+        .field("nu02", &cv::Moments::nu02)
+        .field("nu30", &cv::Moments::nu30)
+        .field("nu21", &cv::Moments::nu21)
+        .field("nu12", &cv::Moments::nu12)
+        .field("nu03", &cv::Moments::nu03);
+
     function("minEnclosingCircle", select_overload<Utils::Circle(const cv::Mat&)>(&Utils::minEnclosingCircle));
 
     function("minMaxLoc", select_overload<Utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&Utils::minMaxLoc));

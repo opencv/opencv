@@ -81,7 +81,6 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
               'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
               'BackgroundSubtractor': ['apply', 'getBackgroundImage'],
               'Algorithm': [],
-              'Moments': [],
               'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']
               }
 
