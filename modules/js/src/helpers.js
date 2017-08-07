@@ -102,6 +102,13 @@ Module["VideoCapture"] = function(videoSource) {
     };
 }
 
+function Range(start, end) {
+    this.start = typeof(start) === "undefined" ? 0 : start;
+    this.end = typeof(end) === "undefined" ? 0 : end;
+}
+
+Module["Range"] = Range;
+
 function Point(x, y) {
     this.x = typeof(x) === "undefined" ? 0 : x;
     this.y = typeof(y) === "undefined" ? 0 : y;

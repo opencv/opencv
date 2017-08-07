@@ -856,3 +856,44 @@ QUnit.test("test mat roi", function(assert) {
         roi.delete();
     }
 });
+
+
+QUnit.test("test mat range", function(assert) {
+    {
+        let src = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3])
+
+        let mat = src.colRange(0, 1);
+
+        assert.equal(mat.rows, 2);
+        assert.equal(mat.cols, 1);
+        assert.deepEqual(mat.data, new Uint8Array([0, 1]));
+
+        mat.delete();
+
+        mat = src.colRange({start: 0, end: 1});
+
+        assert.equal(mat.rows, 2);
+        assert.equal(mat.cols, 1);
+        assert.deepEqual(mat.data, new Uint8Array([0, 1]));
+
+        mat.delete();
+
+        mat = src.rowRange(1, 2);
+
+        assert.equal(mat.rows, 1);
+        assert.equal(mat.cols, 2);
+        assert.deepEqual(mat.data, new Uint8Array([2, 3]));
+
+        mat.delete();
+
+        mat = src.rowRange({start: 1, end: 2});
+
+        assert.equal(mat.rows, 1);
+        assert.equal(mat.cols, 2);
+        assert.deepEqual(mat.data, new Uint8Array([2, 3]));
+
+        mat.delete();
+
+        src.delete();
+    }
+});

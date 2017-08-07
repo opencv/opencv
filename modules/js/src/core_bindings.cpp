@@ -260,7 +260,6 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .property("data64F", &Utils::matData<double>)
 
         .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))
-        //.function("assignTo", select_overload<void(Mat&, int)const>(&cv::Mat::assignTo))
         .function("channels", select_overload<int()const>(&cv::Mat::channels))
         .function("convertTo",  select_overload<void(const Mat&, Mat&, int, double, double)>(&Utils::convertTo))
         .function("convertTo",  select_overload<void(const Mat&, Mat&, int)>(&Utils::convertTo_1))
@@ -332,6 +331,10 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("doubleAt", select_overload<double&(int, int)>(&cv::Mat::at<double>))
 
         .function("getRoiRect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()));
+
+    emscripten::value_object<cv::Range>("Range")
+        .field("start", &cv::Range::start)
+        .field("end", &cv::Range::end);
 
     emscripten::value_object<cv::TermCriteria>("TermCriteria")
         .field("type", &cv::TermCriteria::type)
