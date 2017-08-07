@@ -4525,6 +4525,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         }
         catch (...)
         {
+            fs->is_opened = true;
             cvReleaseFileStorage( &fs );
             throw;
         }
