@@ -3846,7 +3846,8 @@ static float64_t f64_powi( float64_t x, int y)
 }
 
 /*
- * sin and cos functions from fdlibm
+ * sin and cos functions taken from fdlibm with original comments
+ * (edited where needed)
  */
 
 static const float64_t pi2   = float64_t::pi().setExp(2);
@@ -3856,7 +3857,7 @@ static const float64_t half  = float64_t::one()/float64_t(2);
 static const float64_t third = float64_t::one()/float64_t(3);
 
 /* __kernel_sin( x, y, iy)
- * N.B. from OpenCV side: both y and iy removed
+ * N.B. from OpenCV side: y and iy removed, simplified to polynomial
  *
  * kernel sin function on [-pi/4, pi/4], pi/4 ~ 0.7854
  * Input x is assumed to be bounded by ~pi/4 in magnitude.
@@ -3885,20 +3886,19 @@ static const float64_t third = float64_t::one()/float64_t(3);
  *      sin(x) = x + (S1*x + (x *(r-y/2)+y))
  */
 
-//TODO: rewrite it after tests
 static const float64_t
 // -1/3!  = -1/6
-S1  = float64_t(-1.66666666666666324348e-01), /* 0xBFC55555, 0x55555549 */
+S1  = float64_t::fromRaw( 0xBFC5555555555549 ),
 //  1/5!  =  1/120
-S2  = float64_t( 8.33333333332248946124e-03), /* 0x3F811111, 0x1110F8A6 */
+S2  = float64_t::fromRaw( 0x3F8111111110F8A6 ),
 // -1/7!  = -1/5040
-S3  = float64_t(-1.98412698298579493134e-04), /* 0xBF2A01A0, 0x19C161D5 */
+S3  = float64_t::fromRaw( 0xBF2A01A019C161D5 ),
 //  1/9!  =  1/362880
-S4  = float64_t( 2.75573137070700676789e-06), /* 0x3EC71DE3, 0x57B1FE7D */
+S4  = float64_t::fromRaw( 0x3EC71DE357B1FE7D ),
 // -1/11! = -1/39916800
-S5  = float64_t(-2.50507602534068634195e-08), /* 0xBE5AE5E6, 0x8A2B9CEB */
+S5  = float64_t::fromRaw( 0xBE5AE5E68A2B9CEB ),
 //  1/13! =  1/6227020800
-S6  = float64_t( 1.58969099521155010221e-10); /* 0x3DE5D93A, 0x5ACFD57C */
+S6  = float64_t::fromRaw( 0x3DE5D93A5ACFD57C );
 
 static float64_t f64_sin_kernel(float64_t x)
 {
@@ -3909,15 +3909,13 @@ static float64_t f64_sin_kernel(float64_t x)
     }
 
     float64_t z = x*x;
-    //TODO: remove r and v
-    float64_t v = z*x;
-    float64_t r = S2 + z*(S3 + z*(S4 + z*(S5 + z*S6)));
-    return x + v*(S1+z*r);
+    return x*mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z,
+                    S6, S5), S4), S3), S2), S1), x.one());
 }
 
 /*
  * __kernel_cos( x,  y )
- * N.B.: y removed
+ * N.B. from OpenCV's side: y removed, simplified to one polynomial
  *
  * kernel cos function on [-pi/4, pi/4], pi/4 ~ 0.785398164
  * Input x is assumed to be bounded by ~pi/4 in magnitude.
@@ -3943,6 +3941,9 @@ static float64_t f64_sin_kernel(float64_t x)
  *            ~ cos(x) - x*y,
  *     a correction term is necessary in cos(x) and hence
  *      cos(x+y) = 1 - (x*x/2 - (r - x*y))
+ *
+ * N.B. The following part was removed since we have enough precision
+ *
  *     For better accuracy when x > 0.3, let qx = |x|/4 with
  *     the last 32 bits mask off, and if x > 0.78125, let qx = 0.28125.
  *     Then
@@ -3952,20 +3953,19 @@ static float64_t f64_sin_kernel(float64_t x)
  *     thus, reducing the rounding error in the subtraction.
  */
 
-//TODO: try to replace when tests are done
 static const float64_t
 //  1/4!  =  1/24
-C1  = float64_t( 4.16666666666666019037e-02), /* 0x3FA55555, 0x5555554C */
+C1  = float64_t::fromRaw( 0x3FA555555555554C ),
 // -1/6!  = -1/720
-C2  = float64_t(-1.38888888888741095749e-03), /* 0xBF56C16C, 0x16C15177 */
+C2  = float64_t::fromRaw( 0xBF56C16C16C15177 ),
 //  1/8!  =  1/40320
-C3  = float64_t( 2.48015872894767294178e-05), /* 0x3EFA01A0, 0x19CB1590 */
+C3  = float64_t::fromRaw( 0x3EFA01A019CB1590 ),
 // -1/10! = -1/3628800
-C4  = float64_t(-2.75573143513906633035e-07), /* 0xBE927E4F, 0x809C52AD */
+C4  = float64_t::fromRaw( 0xBE927E4F809C52AD ),
 //  1/12! =  1/479001600
-C5  = float64_t( 2.08757232129817482790e-09), /* 0x3E21EE9E, 0xBDB4B1C4 */
+C5  = float64_t::fromRaw( 0x3E21EE9EBDB4B1C4 ),
 // -1/14! = -1/87178291200
-C6  = float64_t(-1.13596475577881948265e-11); /* 0xBDA8FAE9, 0xBE8838D4 */
+C6  = float64_t::fromRaw( 0xBDA8FAE9BE8838D4 );
 
 static float64_t f64_cos_kernel(float64_t x)
 {
@@ -3976,32 +3976,8 @@ static float64_t f64_cos_kernel(float64_t x)
     }
 
     float64_t z = x*x;
-    float64_t r = z*(C1 + z*(C2 + z*(C3 + z*(C4 + z*(C5 + z*C6)))));
-
-    //TODO: check 1/3
-    static const float64_t dot3 = float64_t(3)/float64_t(10);
-    // 0.78125 = 25/32
-    static const float64_t th1  = float64_t(25)/float64_t(32);
-    // 0.28125 =  9/32
-    static const float64_t th2  = float64_t( 9)/float64_t(32);
-    float64_t qx;
-    if(abs(x) < dot3)
-        return x.one() - (half*z - z*r);
-    else
-    {
-        if(x > th1)
-        {
-            qx = th2;
-        }
-        else
-        {
-            qx = x.setExp(x.getExp()-2); // x/4
-            qx.v = qx.v & ((uint64)(0xFFFFFFFF) << 32);
-        }
-        float64_t hz = half*z - qx;
-        float64_t a  = x.one() - qx;
-        return a - (hz - z*r);
-    }
+    return mulAdd(mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z,
+                  C6, C5), C4), C3), C2), C1), -half), z, x.one());
 }
 
 static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n)
