@@ -4013,52 +4013,23 @@ static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n)
     else
     {
         /* argument reduction needed */
-        float64_t kf = f64_roundToInt(x/piby2, round_near_even, false);
-        //TODO: fix this
-        y = f64_rem(x, piby2);
-        //y = x - kf*piby2;
-
-        //TODO: remove it
-//        float64_t dd = abs(abs(y) - piby4);
-//        printf("dd: %a\n", (double)dd);
-
-        //TODO: try to get rid of 2nd _rem()
-        if(abs(abs(y) - piby4) < float64_t::eps().setExp(-10))
+        float64_t p = f64_rem(x, pi2);
+        float64_t v = p - float64_t::eps().setExp(-10);
+        if(abs(v) <= piby4)
         {
-            float64_t p = f64_rem(x, pi2);
-            y = y > 0 ? y : y + piby2;
-            if(p < -piby2)
-            {
-                n = 2;
-            }
-            else if(p > p.zero() && p < piby2)
-            {
-                n = 0;
-            }
-            else if(p > piby2)
-            {
-                n = 1;
-            }
-            else
-            {
-                n = 3;
-            }
+            n = 0; y = p;
+        }
+        else if(abs(v) <= (float64_t(3)*piby4))
+        {
+            n = (p > 0) ? 1 : 3;
+            y = (p > 0) ? p - piby2 : p + piby2;
+            if(p > 0) n = 1, y = p - piby2;
+            else      n = 3, y = p + piby2;
         }
         else
         {
-            //TODO: workaround against huge y values
-            int k;
-            int kex = kf.getExp();
-            uint64 u = (kf.v & ((1ULL << 52) - 1)) | (1ULL << 52);
-            if(kex >= 54) k = 0; // step of floats is 4+ in that case
-            else if(kex == 53)
-                k = u << 1;
-            else
-            {
-                k = u >> (52 - kex);
-            }
-            k = kf.getSign() ? -k : k;
-            n = k & 3;
+            n = 2;
+            y = (p > 0) ? p - p.pi() : p + p.pi();
         }
     }
 }
