@@ -651,7 +651,7 @@ QUnit.test("test mat access", function(assert) {
         assert.deepEqual(float64View, mat.data64F);
     }
 
-    // test get_uchar(i)
+    // test getUcharAt(i)
     {
         let data = new Uint8Array([0, 0, 0, 255, 0, 1, 2, 3]),
         dataPtr = cv._malloc(8);
@@ -661,17 +661,17 @@ QUnit.test("test mat access", function(assert) {
 
         let mat = new cv.Mat(8, 1, cv.CV_8UC1, dataPtr, 0);
 
-        assert.equal(mat.get_uchar_at(0), 0);
-        assert.equal(mat.get_uchar_at(1), 0);
-        assert.equal(mat.get_uchar_at(2), 0);
-        assert.equal(mat.get_uchar_at(3), 255);
-        assert.equal(mat.get_uchar_at(4), 0);
-        assert.equal(mat.get_uchar_at(5), 1);
-        assert.equal(mat.get_uchar_at(6), 2);
-        assert.equal(mat.get_uchar_at(7), 3);
+        assert.equal(mat.getUcharAt(0), 0);
+        assert.equal(mat.getUcharAt(1), 0);
+        assert.equal(mat.getUcharAt(2), 0);
+        assert.equal(mat.getUcharAt(3), 255);
+        assert.equal(mat.getUcharAt(4), 0);
+        assert.equal(mat.getUcharAt(5), 1);
+        assert.equal(mat.getUcharAt(6), 2);
+        assert.equal(mat.getUcharAt(7), 3);
     }
 
-    // test get_ushort(i)
+    // test getUshortAt(i)
     {
         let data = new Uint16Array([0, 1000, 65000, 255, 0, 1, 2, 3]),
             dataPtr = cv._malloc(16);
@@ -681,17 +681,17 @@ QUnit.test("test mat access", function(assert) {
 
         let mat = new cv.Mat(8, 1, cv.CV_16SC1, dataPtr, 0);
 
-        assert.equal(mat.get_ushort_at(0), 0);
-        assert.equal(mat.get_ushort_at(1), 1000);
-        assert.equal(mat.get_ushort_at(2), 65000);
-        assert.equal(mat.get_ushort_at(3), 255);
-        assert.equal(mat.get_ushort_at(4), 0);
-        assert.equal(mat.get_ushort_at(5), 1);
-        assert.equal(mat.get_ushort_at(6), 2);
-        assert.equal(mat.get_ushort_at(7), 3);
+        assert.equal(mat.getUshortAt(0), 0);
+        assert.equal(mat.getUshortAt(1), 1000);
+        assert.equal(mat.getUshortAt(2), 65000);
+        assert.equal(mat.getUshortAt(3), 255);
+        assert.equal(mat.getUshortAt(4), 0);
+        assert.equal(mat.getUshortAt(5), 1);
+        assert.equal(mat.getUshortAt(6), 2);
+        assert.equal(mat.getUshortAt(7), 3);
     }
 
-    // test get_int(i)
+    // test getIntAt(i)
     {
         let data = new Int32Array([0, -1000, 65000, 255, -2000000, -1, 2, 3]),
             dataPtr = cv._malloc(32);
@@ -701,17 +701,17 @@ QUnit.test("test mat access", function(assert) {
 
         let mat = new cv.Mat(8, 1, cv.CV_32SC1, dataPtr, 0);
 
-        assert.equal(mat.get_int_at(0), 0);
-        assert.equal(mat.get_int_at(1), -1000);
-        assert.equal(mat.get_int_at(2), 65000);
-        assert.equal(mat.get_int_at(3), 255);
-        assert.equal(mat.get_int_at(4), -2000000);
-        assert.equal(mat.get_int_at(5), -1);
-        assert.equal(mat.get_int_at(6), 2);
-        assert.equal(mat.get_int_at(7), 3);
+        assert.equal(mat.getIntAt(0), 0);
+        assert.equal(mat.getIntAt(1), -1000);
+        assert.equal(mat.getIntAt(2), 65000);
+        assert.equal(mat.getIntAt(3), 255);
+        assert.equal(mat.getIntAt(4), -2000000);
+        assert.equal(mat.getIntAt(5), -1);
+        assert.equal(mat.getIntAt(6), 2);
+        assert.equal(mat.getIntAt(7), 3);
     }
 
-    // test get_float(i)
+    // test getFloatAt(i)
     {
         const EPSILON = 0.001;
         let data = new Float32Array([0, -10.5, 650.001, 255, -20.1, -1.2, 2, 3.5]),
@@ -722,29 +722,29 @@ QUnit.test("test mat access", function(assert) {
 
         let mat = new cv.Mat(8, 1, cv.CV_32FC1, dataPtr, 0);
 
-        assert.equal(Math.abs(mat.get_float_at(0)-0)       < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(1)+10.5)    < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(2)-650.001) < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(3)-255)     < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(4)+20.1)    < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(5)+1.2)     < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(6)-2)       < EPSILON, true);
-        assert.equal(Math.abs(mat.get_float_at(7)-3.5)     < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(0)-0)       < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(1)+10.5)    < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(2)-650.001) < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(3)-255)     < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(4)+20.1)    < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(5)+1.2)     < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(6)-2)       < EPSILON, true);
+        assert.equal(Math.abs(mat.getFloatAt(7)-3.5)     < EPSILON, true);
     }
 
-    // test get_int(i,j)
+    // test getIntAt(i,j)
     {
         let mat = cv.Mat.eye({height: 3, width: 3}, cv.CV_32SC1);
 
-        assert.equal(mat.get_int_at(0, 0), 1);
-        assert.equal(mat.get_int_at(0, 1), 0);
-        assert.equal(mat.get_int_at(0, 2), 0);
-        assert.equal(mat.get_int_at(1, 0), 0);
-        assert.equal(mat.get_int_at(1, 1), 1);
-        assert.equal(mat.get_int_at(1, 2), 0);
-        assert.equal(mat.get_int_at(2, 0), 0);
-        assert.equal(mat.get_int_at(2, 1), 0);
-        assert.equal(mat.get_int_at(2, 2), 1);
+        assert.equal(mat.getIntAt(0, 0), 1);
+        assert.equal(mat.getIntAt(0, 1), 0);
+        assert.equal(mat.getIntAt(0, 2), 0);
+        assert.equal(mat.getIntAt(1, 0), 0);
+        assert.equal(mat.getIntAt(1, 1), 1);
+        assert.equal(mat.getIntAt(1, 2), 0);
+        assert.equal(mat.getIntAt(2, 0), 0);
+        assert.equal(mat.getIntAt(2, 1), 0);
+        assert.equal(mat.getIntAt(2, 2), 1);
 
         mat.delete();
     }
