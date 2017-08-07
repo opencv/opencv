@@ -21,7 +21,7 @@ Module["imread"] = function(imageSource) {
     }
     
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    return cv.matFromArray(imgData, cv.CV_8UC4);
+    return cv.matFromImageData(imgData);
 }
 
 Module["imshow"] = function(canvasSource, mat) {
@@ -60,7 +60,7 @@ Module["imshow"] = function(canvasSource, mat) {
             throw("Bad number of channels (Source image must have 1, 3 or 4 channels)");
             return;
     }
-    var imgData = new ImageData(new Uint8ClampedArray(img.data()), img.cols, img.rows);
+    var imgData = new ImageData(new Uint8ClampedArray(img.data), img.cols, img.rows);
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     canvas.width = imgData.width;
@@ -98,7 +98,7 @@ Module["VideoCapture"] = function(videoSource) {
             return;
         }
         ctx.drawImage(video, 0, 0, video.width, video.height);
-        frame.data().set(ctx.getImageData(0, 0, video.width, video.height).data);
+        frame.data.set(ctx.getImageData(0, 0, video.width, video.height).data);
     };
 }
 
