@@ -112,6 +112,7 @@ inputElement.addEventListener("change", (e) => {
 imgElement.onload = function() {
   let mat = cv.imread(imgElement);
   cv.imshow("outputCanvas", mat);
+  mat.delete();
 }
 
 function opencvIsReady() {
@@ -124,6 +125,8 @@ function opencvIsReady() {
 </body>
 </html>
 @endcode
+
+@note You have to call delete method of cv.Mat to free memory allocated in Emscripten's heap. Please refer to [Memeory management of Emscripten](https://kripken.github.io/emscripten-site/docs/porting/connecting_cpp_and_javascript/embind.html#memory-management) for details.
 
 An embedded version is shown below. You can try it. After you upload an image, the web page will show two images. The first one is an \<img\> as cv.Mat input. The second one is a \<canvas\> as cv.Mat output.
 - - -
@@ -145,16 +148,6 @@ An embedded version is shown below. You can try it. After you upload an image, t
 
 <script>
 
-function imread(image) {
-    var canvas = document.createElement("canvas");
-    canvas.width = image.width;
-    canvas.height = image.height;
-    var ctx = canvas.getContext("2d");
-    ctx.drawImage(image, 0, 0, image.width, image.height);
-    var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    return cv.matFromArray(imgData, cv.CV_8UC4);
-}
-
 let imgElement = document.getElementById("srcImage")
 let inputElement = document.getElementById("fileInput");
 inputElement.addEventListener("change", (e) => {
@@ -162,8 +155,9 @@ inputElement.addEventListener("change", (e) => {
 }, false);
 
 imgElement.onload = function() {
-  let mat = imread(imgElement);
+  let mat = cv.imread(imgElement);
   cv.imshow("outputCanvas", mat);
+  mat.delete();
 }
 
 function opencvIsReady() {
