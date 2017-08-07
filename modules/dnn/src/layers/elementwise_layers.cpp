@@ -161,10 +161,8 @@ public:
     {
         CV_TRACE_FUNCTION();
 
-#ifdef HAVE_OPENCL
         CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
                    func.applyOCL(inputs, outputs, internals))
-#endif
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -267,7 +265,7 @@ struct ReLUFunctor
         for (size_t i = 0; i < inputs.size(); i++)
         {
             UMat src, dst;
-            src = inputs[i]->getUMat(ACCESS_READ);
+            inputs[i]->copyTo(src);
             dst = outputs[i].getUMat(ACCESS_WRITE);
             CV_Assert(src.isContinuous() && dst.isContinuous() && !src.offset && !dst.offset);
 
