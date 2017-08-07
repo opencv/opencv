@@ -3591,7 +3591,6 @@ TEST(Core_SoftFloat, sincos64)
             zero = softdouble::zero(), one = softdouble::one(),
             pi = softdouble::pi(), piby2 = pi/two, eps = softdouble::eps();
 
-    //TODO: check standard angles, +k*pi, +k*2*pi
     softdouble vstdAngles[] =
     //x, sin(x), cos(x)
     {
@@ -3603,23 +3602,62 @@ TEST(Core_SoftFloat, sincos64)
     vector<softdouble> stdAngles;
     stdAngles.assign(vstdAngles, vstdAngles + 3*4);
 
+    static const softdouble stdEps = eps.setExp(-39);
     for(size_t i = 0; i < nValues; i++)
     {
-        for(size_t k = 0; k < stdAngles.size(); k++)
+        for(size_t k = 0; k < stdAngles.size()/3; k++)
         {
-            softdouble x = stdAngles[k*3] + pi*softdouble(2*(i-nValues/2));
+            softdouble x = stdAngles[k*3] + pi*softdouble(2*((int)i-(int)nValues/2));
             softdouble s = stdAngles[k*3+1];
             softdouble c = stdAngles[k*3+2];
-            ASSERT_LE(abs(sin(x) - s), eps);
-            ASSERT_LE(abs(cos(x) - c), eps);
+
+            //TODO: remove it
+            printf("%a", (double)(sin(x) - s));
+            cout << endl;
+
+            ASSERT_LE(abs(sin(x) - s), stdEps);
+
+            //TODO: remove it
+            printf("%a", (double)(cos(x) - c));
+            cout << endl;
+
+            ASSERT_LE(abs(cos(x) - c), stdEps);
+
+            //TODO: remove it
+            printf("%a", (double)(sin(x + piby2) - c));
+            cout << endl;
+
             //sin(x+pi/2) = cos(x)
-            ASSERT_LE(abs(sin(x + piby2) - c), eps);
+            ASSERT_LE(abs(sin(x + piby2) - c), stdEps);
+
+            //TODO: remove it
+            printf("%a", (double)(sin(x + pi) + s));
+            cout << endl;
+
             //sin(x+pi) = -sin(x)
-            ASSERT_LE(abs(sin(x + pi) + s), eps);
+            ASSERT_LE(abs(sin(x + pi) + s), stdEps);
+
+            //TODO: remove it
+            printf("%a", (double)(cos(x+piby2) + s));
+            cout << endl;
+
+            //TODO: remove it
+            printf("%a", (double)(sin(x) - s));
+            cout << endl;
+            printf("%a %a %a",(double)(x+piby2), (double)(cos(x+piby2)), (double)(-s));
+            cout << endl;
+            printf("%f %f %f",(double)(x+piby2), (double)(cos(x+piby2)), (double)(-s));
+            cout << endl;
+
             //cos(x+pi/2) = -sin(x)
-            ASSERT_LE(abs(cos(x+piby2) + s), eps);
+            ASSERT_LE(abs(cos(x+piby2) + s), stdEps);
+
+            //TODO: remove it
+            printf("%a", (double)(cos(x+pi) + c));
+            cout << endl;
+
             //cos(x+pi) = -cos(x)
-            ASSERT_LE(abs(cos(x+pi) + c), eps);
+            ASSERT_LE(abs(cos(x+pi) + c), stdEps);
         }
     }
 
@@ -3646,33 +3684,120 @@ TEST(Core_SoftFloat, sincos64)
         softdouble x;
         uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         x.v = mantissa;
-        x.setSign(rng() % 2);
-        x.setExp(exponents[rng() % exponents.size()]);
+        x = x.setSign(rng() % 2);
+        x = x.setExp(exponents[rng() % exponents.size()]);
         inputs.push_back(x);
     }
+
 
     for(size_t i = 0; i < nValues; i++)
     {
         softdouble x = inputs[i];
+
+        //TODO: remove it
+        printf("x: %a", (double)x);
+        cout << endl;
+
+        int xexp = x.getExp();
+        //we don't guarantee values for huge numbers at all
+        softdouble randEps = (xexp >= 43) ? eps.setExp(1) :
+                             (xexp >= 20) ? eps.setExp(-10) :
+                             (xexp >=  9) ? eps.setExp(-30) :
+                                            eps.setExp(-46);
+
         softdouble sx = sin(x);
         softdouble cx = cos(x);
         ASSERT_FALSE(sx.isInf()); ASSERT_FALSE(cx.isInf());
         ASSERT_FALSE(sx.isNaN()); ASSERT_FALSE(cx.isNaN());
         ASSERT_LE(abs(sx), one); ASSERT_LE(abs(cx), one);
         ASSERT_LE(abs((sx*sx + cx*cx) - one), eps);
-        //workaround inf overflow
-        if(abs(x.getExp()) < 1023)
+        if(xexp < 10)
         {
-            ASSERT_LE(abs(sin(x*two) - two*sx*cx), eps);
-            ASSERT_LE(abs(cos(x*two) - (cx*cx - sx*sx)), eps);
+            //TODO: remove it
+            printf("%a", (double)(sin(x*two) - two*sx*cx));
+            cout << endl;
+
+            ASSERT_LE(abs(sin(x*two) - two*sx*cx), randEps);
+
+            //TODO: remove it
+            printf("%a", (double)(cos(x*two) - (cx*cx - sx*sx)));
+            cout << endl;
+
+//            printf("%a %a %a %a %a %a",
+//                   (double)x, (double)(x*two), (double)(cos(x*two)),
+//                   (double)(cx), (double)(sx),
+//                   (double)(cos(x*two) - (cx*cx - sx*sx)));
+//            cout << endl;
+//            printf("%20.17f %20.17f %20.17f %20.17f %20.17f %20.17f",
+//                   (double)x, (double)(x*two), (double)(cos(x*two)),
+//                   (double)(cx), (double)(sx),
+//                   (double)(cos(x*two) - (cx*cx - sx*sx)));
+//            cout << endl;
+
+            ASSERT_LE(abs(cos(x*two) - (cx*cx - sx*sx)), randEps);
         }
         ASSERT_LE(abs(sin(-x) + sx), eps);
         ASSERT_LE(abs(cos(-x) - cx), eps);
 
-        ASSERT_LE(abs(sin(x + piby2) - cx), eps);
-        ASSERT_LE(abs(sin(x + pi) + sx), eps);
-        ASSERT_LE(abs(cos(x+piby2) + sx), eps);
-        ASSERT_LE(abs(cos(x+pi) + cx), eps);
+        //TODO: remove it
+        printf("%a", (double)(sin(x + piby2) - cx));
+        cout << endl;
+
+//        printf("%a %a %a %a %a",
+//               (double)x, (double)(x+piby2), (double)(sin(x+piby2)),
+//               (double)(cos(x)),
+//               (double)(sin(x + piby2) - cx));
+//        cout << endl;
+//        printf("%f %f %f %f %f",
+//               (double)x, (double)(x+piby2), (double)(sin(x+piby2)),
+//               (double)(cos(x)),
+//               (double)(sin(x + piby2) - cx));
+//        cout << endl;
+
+//        softdouble sp2 = abs(sin(x + piby2) - cx);
+//        if(sp2 > randEps)
+//        {
+//            cout << "aaa" << endl;
+//        }
+
+        ASSERT_LE(abs(sin(x + piby2) - cx), randEps);
+
+        //TODO: remove it
+        printf("%a", (double)(sin(x + pi) + sx));
+        cout << endl;
+
+        ASSERT_LE(abs(sin(x + pi) + sx), randEps);
+
+        //TODO: remove it
+        printf("%a", (double)(cos(x+piby2) + sx));
+        cout << endl;
+
+//        printf("%a %a %a %a %a",
+//               (double)x, (double)(x+piby2), (double)(cos(x+piby2)),
+//               (double)(-sin(x)),
+//               (double)(cos(x + piby2) + sx));
+//        cout << endl;
+//        printf("%f %f %f %f %f",
+//               (double)x, (double)(x+piby2), (double)(cos(x+piby2)),
+//               (double)(-sin(x)),
+//               (double)(cos(x + piby2) + sx));
+//        cout << endl;
+
+//        if(abs(cos(x+piby2) + sx) >= randEps)
+//        {
+//            cout << "aaaa" << endl;
+//        }
+
+        ASSERT_LE(abs(cos(x+piby2) + sx), randEps);
+
+        //TODO: remove it
+        printf("%a", (double)(cos(x+pi) + cx));
+        cout << endl;
+
+        ASSERT_LE(abs(cos(x+pi) + cx), randEps);
+
+        //TODO: remove it
+        printf("%d\n", i);
     }
 }
 

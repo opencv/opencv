@@ -158,9 +158,9 @@ public:
     inline bool isSubnormal() const { return ((v >> 23) & 0xFF) == 0; }
 
     inline bool getSign() const { return (v >> 31) != 0; }
-    inline softfloat& setSign(bool sign) { v = (v & ((1U << 31) - 1)) | ((uint32_t)sign << 31); return *this; }
+    inline softfloat setSign(bool sign) const { softfloat x; x.v = (v & ((1U << 31) - 1)) | ((uint32_t)sign << 31); return x; }
     inline int getExp() const { return ((v >> 23) & 0xFF) - 127; }
-    inline softfloat& setExp(int e) { v = (v & 0x807fffff) | (((e + 127) & 0xFF) << 23 ); return *this; }
+    inline softfloat setExp(int e) const { softfloat x; x.v = (v & 0x807fffff) | (((e + 127) & 0xFF) << 23 ); return x; }
 
     // 1 <= frac < 2
     inline softfloat getFrac() const
@@ -168,10 +168,11 @@ public:
         uint_fast32_t vv = (v & 0x007fffff) | (127 << 23);
         return softfloat::fromRaw(vv);
     }
-    inline softfloat& setFrac(const softfloat& s)
+    inline softfloat setFrac(const softfloat& s) const
     {
-        v = (v & 0xff800000) | (s.v & 0x007fffff);
-        return *this;
+        softfloat x;
+        x.v = (v & 0xff800000) | (s.v & 0x007fffff);
+        return x;
     }
 
     static softfloat zero() { return softfloat::fromRaw( 0 ); }
@@ -284,13 +285,14 @@ public:
     inline bool isSubnormal() const { return ((v >> 52) & 0x7FF) == 0; }
 
     inline bool getSign() const { return (v >> 63) != 0; }
-    softdouble& setSign(bool sign) { v = (v & ((1ULL << 63) - 1)) | ((uint_fast64_t)(sign) << 63); return *this; }
+    softdouble setSign(bool sign) const { softdouble x; x.v = (v & ((1ULL << 63) - 1)) | ((uint_fast64_t)(sign) << 63); return x; }
 
     inline int getExp() const { return ((v >> 52) & 0x7FF) - 1023; }
-    inline softdouble& setExp(int e)
+    inline softdouble setExp(int e) const
     {
-        v = (v & 0x800FFFFFFFFFFFFF) | ((uint_fast64_t)((e + 1023) & 0x7FF) << 52);
-        return *this;
+        softdouble x;
+        x.v = (v & 0x800FFFFFFFFFFFFF) | ((uint_fast64_t)((e + 1023) & 0x7FF) << 52);
+        return x;
     }
 
     // 1 <= frac < 2
@@ -299,10 +301,11 @@ public:
         uint_fast64_t vv = (v & 0x000FFFFFFFFFFFFF) | ((uint_fast64_t)(1023) << 52);
         return softdouble::fromRaw(vv);
     }
-    inline softdouble& setFrac(const softdouble& s)
+    inline softdouble setFrac(const softdouble& s) const
     {
-        v = (v & 0xFFF0000000000000) | (s.v & 0x000FFFFFFFFFFFFF);
-        return *this;
+        softdouble x;
+        x.v = (v & 0xFFF0000000000000) | (s.v & 0x000FFFFFFFFFFFFF);
+        return x;
     }
 
     static softdouble zero() { return softdouble::fromRaw( 0 ); }

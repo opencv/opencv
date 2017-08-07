@@ -3849,6 +3849,7 @@ static float64_t f64_powi( float64_t x, int y)
  * sin and cos functions from fdlibm
  */
 
+static const float64_t pi2   = float64_t::pi().setExp(2);
 static const float64_t piby2 = float64_t::pi().setExp(0);
 static const float64_t piby4 = float64_t::pi().setExp(-1);
 static const float64_t half  = float64_t::one()/float64_t(2);
@@ -4013,21 +4014,52 @@ static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n)
     {
         /* argument reduction needed */
         float64_t kf = f64_roundToInt(x/piby2, round_near_even, false);
+        //TODO: fix this
         y = f64_rem(x, piby2);
         //y = x - kf*piby2;
 
-        int k;
-        int kex = kf.getExp();
-        uint64 u = (kf.v & ((1ULL << 52) - 1)) | (1ULL << 52);
-        if(kex >= 54) k = 0; // step of floats is 4+ in that case
-        else if(kex == 53)
-            k = u << 1;
+        //TODO: remove it
+//        float64_t dd = abs(abs(y) - piby4);
+//        printf("dd: %a\n", (double)dd);
+
+        //TODO: try to get rid of 2nd _rem()
+        if(abs(abs(y) - piby4) < float64_t::eps().setExp(-10))
+        {
+            float64_t p = f64_rem(x, pi2);
+            y = y > 0 ? y : y + piby2;
+            if(p < -piby2)
+            {
+                n = 2;
+            }
+            else if(p > p.zero() && p < piby2)
+            {
+                n = 0;
+            }
+            else if(p > piby2)
+            {
+                n = 1;
+            }
+            else
+            {
+                n = 3;
+            }
+        }
         else
         {
-            k = u >> (52 - kex);
+            //TODO: workaround against huge y values
+            int k;
+            int kex = kf.getExp();
+            uint64 u = (kf.v & ((1ULL << 52) - 1)) | (1ULL << 52);
+            if(kex >= 54) k = 0; // step of floats is 4+ in that case
+            else if(kex == 53)
+                k = u << 1;
+            else
+            {
+                k = u >> (52 - kex);
+            }
+            k = kf.getSign() ? -k : k;
+            n = k & 3;
         }
-        k = kf.getSign() ? -k : k;
-        n = k & 3;
     }
 }
 
