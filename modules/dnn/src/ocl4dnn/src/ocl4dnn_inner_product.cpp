@@ -42,7 +42,7 @@
 
 #include "../../precomp.hpp"
 #include "common.hpp"
-#include "libdnn.hpp"
+#include "ocl4dnn.hpp"
 #include "math_functions.hpp"
 
 #ifdef HAVE_OPENCL
@@ -65,27 +65,27 @@ OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config
         int32_t flags = 0;
         flags = CL_MEM_READ_WRITE;
         allocateMemory((void **)&bias_multiplier_,  sizeof(Dtype) * M_, flags);
-        libdnnSet(0, M_, Dtype(1), (cl_mem) bias_multiplier_, 0);
+        ocl4dnnSet(0, M_, Dtype(1), (cl_mem) bias_multiplier_, 0);
     }
 }
 
 template<typename Dtype>
 bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
-                                        const Dtype* weight,
-                                        const Dtype* bias,
-                                        Dtype* top_data)
+                                         const Dtype* weight,
+                                         const Dtype* bias,
+                                         Dtype* top_data)
 {
     if (M_ == 1)
     {
-        libdnnGEMV<Dtype>(0, CblasNoTrans, N_,
-                          K_, (Dtype) 1., (cl_mem) weight, 0,
-                          (cl_mem) bottom_data, 0, (Dtype) 0.,
-                          (cl_mem) top_data, 0);
+        ocl4dnnGEMV<Dtype>(0, CblasNoTrans, N_,
+                           K_, (Dtype) 1., (cl_mem) weight, 0,
+                           (cl_mem) bottom_data, 0, (Dtype) 0.,
+                           (cl_mem) top_data, 0);
         if (bias_term_)
-            libdnnAXPY<Dtype>(0, N_,
-                              1,
-                              (cl_mem) bias, 0,
-                              (cl_mem) top_data, 0);
+            ocl4dnnAXPY<Dtype>(0, N_,
+                               1,
+                               (cl_mem) bias, 0,
+                               (cl_mem) top_data, 0);
     }
     else
     {
@@ -107,31 +107,31 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
                 int width = !transpose_ ? K_ : N_;
                 int padded_height = !transpose_ ? height : (height + ((height & 7) ? 1 : 0));
                 int padded_width = !transpose_ ? width : (width + ((width & 7) ? 1 : 0));
-                greentea_gpu_gemm_copy_buffer_to_image(0,
-                                                       (cl_mem *)&weight_image_, (cl_mem) weight, 0,
-                                                       false, !transpose_,
-                                                       true, padded_height, padded_width,
-                                                       height, width, (int)0, NULL, NULL);
+                ocl4dnnGEMMCopyBufferToImage(0,
+                                             (cl_mem *)&weight_image_, (cl_mem) weight, 0,
+                                             false, !transpose_,
+                                             true, padded_height, padded_width,
+                                             height, width, (int)0, NULL, NULL);
                 image_copied_ = true;
             }
-            greentea_gpu_gemm<Dtype>(0, CblasNoTrans,
-                                     transpose_ ? CblasNoTrans : CblasTrans,
-                                     M_, N_, K_, (Dtype) 1.,
-                                     (cl_mem) bottom_data, 0, (cl_mem) weight_image_, 0,
-                                     (Dtype) 0., (cl_mem) top_data, 0, false, true);
+            ocl4dnnGEMM<Dtype>(0, CblasNoTrans,
+                               transpose_ ? CblasNoTrans : CblasTrans,
+                               M_, N_, K_, (Dtype) 1.,
+                               (cl_mem) bottom_data, 0, (cl_mem) weight_image_, 0,
+                               (Dtype) 0., (cl_mem) top_data, 0, false, true);
         } else
-            greentea_gpu_gemm<Dtype>(0, CblasNoTrans,
-                                     transpose_ ? CblasNoTrans : CblasTrans,
-                                     M_, N_, K_, (Dtype) 1.,
-                                     (cl_mem) bottom_data, 0, (cl_mem) weight, 0,
-                                     (Dtype) 0., (cl_mem) top_data, 0, false, false);
+            ocl4dnnGEMM<Dtype>(0, CblasNoTrans,
+                               transpose_ ? CblasNoTrans : CblasTrans,
+                               M_, N_, K_, (Dtype) 1.,
+                               (cl_mem) bottom_data, 0, (cl_mem) weight, 0,
+                               (Dtype) 0., (cl_mem) top_data, 0, false, false);
 
         if (bias_term_)
-            greentea_gpu_gemm<Dtype>(0, CblasNoTrans,
-                                     CblasNoTrans, M_, N_, 1, (Dtype) 1.,
-                                     (cl_mem) bias_multiplier_, 0,
-                                     (cl_mem) bias, 0,
-                                     (Dtype) 1., (cl_mem) top_data, 0, false, false);
+            ocl4dnnGEMM<Dtype>(0, CblasNoTrans,
+                               CblasNoTrans, M_, N_, 1, (Dtype) 1.,
+                               (cl_mem) bias_multiplier_, 0,
+                               (cl_mem) bias, 0,
+                               (Dtype) 1., (cl_mem) top_data, 0, false, false);
         */
     }
     return true;

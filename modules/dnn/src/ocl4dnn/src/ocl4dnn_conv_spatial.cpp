@@ -47,7 +47,7 @@
 #include <sys/stat.h>
 #include <assert.h>
 #include "common.hpp"
-#include "libdnn.hpp"
+#include "ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include "math_functions.hpp"
 
@@ -275,7 +275,7 @@ typedef enum {
     KERNEL_TYPE_INTEL_IDLF = 2,
     KERNEL_TYPE_BASIC = 4,
     KERNEL_TYPE_GEMM_LIKE = 5
-} libdnnConvSpatialKernelType_t;
+} ocl4dnnConvSpatialKernelType_t;
 
 template<typename Dtype>
 std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
@@ -2122,7 +2122,7 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
     else if (config->tested)
         return false;
 
-    libdnnSet(0, numImages * top_dim_, (float) 0, (cl_mem) top, 0);
+    ocl4dnnSet(0, numImages * top_dim_, (float) 0, (cl_mem) top, 0);
     config->executionTime = timedConvolve(bottom, top, index, numImages, config);
     const float *verify_data;
     float *data;

@@ -50,7 +50,7 @@
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
 
 template<typename Dtype>
-void libdnnGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+void ocl4dnnGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
                 const CBLAS_TRANSPOSE TransB, const int32_t M,
                 const int32_t N, const int32_t K, const Dtype alpha,
                 const cl_mem A, const int32_t offA, const cl_mem B,
@@ -58,7 +58,7 @@ void libdnnGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
                 const int32_t offC , const bool is_image_a = false,
                 const bool is_image_b = false);
 
-void libdnnGEMMCopyBufferToImage(int32_t ctx_id,
+void ocl4dnnGEMMCopyBufferToImage(int32_t ctx_id,
                                  cl_mem *image, cl_mem buffer, int offset,
                                  bool is_matrix_a, bool transpose,
                                  bool padding, int padded_height,
@@ -67,19 +67,19 @@ void libdnnGEMMCopyBufferToImage(int32_t ctx_id,
                                  cl_event *wait_list, cl_event *event);
 
 template<typename Dtype>
-void libdnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+void ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
                 const int32_t M, const int32_t N, const Dtype alpha,
                 const cl_mem A, const int32_t offA, const cl_mem x,
                 const int32_t offx, const Dtype beta, cl_mem y,
                 const int32_t offy);
 
 template<typename Dtype>
-void libdnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+void ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
                 const cl_mem x, const int32_t offx, cl_mem y,
                 const int32_t offy);
 
 template<typename Dtype>
-void libdnnSet(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+void ocl4dnnSet(const int32_t ctx_id, const int32_t N, const Dtype alpha,
                       cl_mem Y, const int32_t offY);
 #endif  // HAVE_OPENCL
 #endif

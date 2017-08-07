@@ -43,7 +43,7 @@
 #include <string>
 #include <vector>
 #include "common.hpp"
-#include "libdnn.hpp"
+#include "ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
 
 #ifdef HAVE_OPENCL

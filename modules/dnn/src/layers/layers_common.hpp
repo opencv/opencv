@@ -52,7 +52,7 @@
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 #ifdef HAVE_OPENCL
-#include "libdnn.hpp"
+#include "ocl4dnn.hpp"
 #endif
 
 namespace cv

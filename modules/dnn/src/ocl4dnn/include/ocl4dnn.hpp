@@ -296,7 +296,7 @@ typedef enum {
     LIBDNN_POOLING_METHOD_MAX                 = 0,
     LIBDNN_POOLING_METHOD_AVE                 = 1,
     LIBDNN_POOLING_METHOD_STO                 = 2
-} libdnnPoolingMethod_t;
+} ocl4dnnPoolingMethod_t;
 
 struct OCL4DNNPoolConfig
 {
@@ -315,7 +315,7 @@ struct OCL4DNNPoolConfig
     std::vector<int32_t> dilation;
 
     int32_t channels;
-    libdnnPoolingMethod_t pool_method = LIBDNN_POOLING_METHOD_MAX;
+    ocl4dnnPoolingMethod_t pool_method = LIBDNN_POOLING_METHOD_MAX;
     bool global_pooling = false;
 };
 
@@ -339,7 +339,7 @@ class OCL4DNNPool
         std::vector<int32_t> im_in_shape_;
         std::vector<int32_t> im_out_shape_;
 
-        libdnnPoolingMethod_t pool_method_;
+        ocl4dnnPoolingMethod_t pool_method_;
         int32_t count_;
         int32_t batch_size_;
         int32_t channels_;
