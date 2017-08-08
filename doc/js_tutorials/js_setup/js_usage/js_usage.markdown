@@ -4,11 +4,11 @@ Using OpenCV.js {#tutorial_js_usage}
 Steps
 -----
 
-In this tutorial, you will see how to include and start to use `opencv.js` inside a web page.
+In this tutorial, you will learn how to include and start to use `opencv.js` inside a web page.
 
-### Create a web page uploading image
+### Create a web page
 
-First, let's create a simple web page which is able to upload an image.
+First, let's create a simple web page that is able to upload an image.
 
 @code{.js}
 <!DOCTYPE html>
@@ -34,22 +34,22 @@ inputElement.addEventListener("change", (e) => {
 </html>
 @endcode
 
-You can copy above content and save to a local index.html file. To run it, just open it by the web browser.
+To run this web page, copy the content above and save to a local index.html file. To run it, open it using your web browser.
 
-@note It is a better practice that is hosting the index.html by a local web server.
+@note It is a better practice to use a local web server to host the index.html.
 
 ### Include OpenCV.js
 
-You need to set the URL of `opencv.js` to `src` attribute of of \<script\> tag.
+Set the URL of `opencv.js` to `src` attribute of \<script\> tag.
 
-@note For this tutorial, we host `opencv.js` at same folder of index.html.
+@note For this tutorial, we host `opencv.js` at same folder as index.html.
 
-Example for synchronous loading.
+Example for synchronous loading:
 @code{.js}
 <script src="opencv.js"></script>
 @endcode
 
-You may want to load `opencv.js` asynchronously by `async` attribute in \<script\> tag. To be notified by `opencv.js` is ready, you can
+You may want to load `opencv.js` asynchronously by `async` attribute in \<script\> tag. To be notified when `opencv.js` is ready, you can
 register a callback to `onload` attribute.
 
 Example for asynchronous loading
@@ -63,7 +63,7 @@ Once `opencv.js` is ready, you can access OpenCV objects and functions through `
 
 For example, you can create a cv.Mat from an image by cv.imread.
 
-@note As image loading is asynchronous, so you need to put cv.Mat creation inside the `onload` callback.
+@note Because image loading is asynchronous, you need to put cv.Mat creation inside the `onload` callback.
 
 @code{.js}
 imgElement.onload = function() {
@@ -71,7 +71,7 @@ imgElement.onload = function() {
 }
 @endcode
 
-Many OpenCV functions can be used to process cv.Mat. You can refer to other tutorials for details.
+Many OpenCV functions can be used to process cv.Mat. You can refer to other tutorials, such as @ref tutorial_js_table_of_contents_imgproc, for details.
 
 In this tutorial, we just show a cv.Mat on screen. To show a cv.Mat, you need a canvas element.
 
@@ -79,12 +79,12 @@ In this tutorial, we just show a cv.Mat on screen. To show a cv.Mat, you need a 
 <canvas id="outputCanvas"></canvas>
 @endcode
 
-You can use cv.imshow to show cv.Mat into the canvas.
+You can use cv.imshow to show cv.Mat on the canvas.
 @code{.js}
 cv.imshow(mat, "outputCanvas");
 @endcode
 
-Putting them all together, the final index.html is shown below.
+Putting all of the steps  together, the final index.html is shown below.
 
 @code{.js}
 <!DOCTYPE html>
