@@ -5,3 +5,7 @@ Object Detection {#tutorial_js_table_of_contents_objdetect}
 
     Face detection
     using haar-cascades
+
+-   @subpage tutorial_js_face_detection_camera
+
+    Face detection in camera
