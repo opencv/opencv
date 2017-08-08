@@ -335,8 +335,7 @@ cv.cvtColor(frame1, prvs, cv.COLOR_RGBA2GRAY);
 frame1.delete();
 hsv = new cv.Mat();
 hsv0 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1);
-let sValue = new cv.Scalar(255)
-hsv1 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1, sValue);
+hsv1 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1, new cv.Scalar(255));
 hsv2 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1);
 hsvVec = new cv.MatVector();
 hsvVec.push_back(hsv0); hsvVec.push_back(hsv1); hsvVec.push_back(hsv2);
@@ -358,10 +357,12 @@ dofLoopIndex = setInterval(
         cv.cvtColor(frame2, next, cv.COLOR_RGBA2GRAY);
         cv.calcOpticalFlowFarneback(prvs, next, flow, 0.5, 3, 15, 3, 5, 1.2, 0)
         cv.split(flow, flowVec);
-        cv.cartToPolar(flowVec.get(0), flowVec.get(1), mag, ang);
+        let flow0 = flowVec.get(0);
+        let flow1 = flowVec.get(1);
+        cv.cartToPolar(flow0, flow1, mag, ang);
+        flow0.delete(); flow1.delete();
         ang.convertTo(hsv0, cv.CV_8UC1, 180/Math.PI/2);
         cv.normalize(mag, hsv2, 0, 255, cv.NORM_MINMAX, cv.CV_8UC1);
-        hsvVec.set(0, hsv0); hsvVec.set(1, hsv1); hsvVec.set(2, hsv2);
         cv.merge(hsvVec, hsv);
         cv.cvtColor(hsv, rgb, cv.COLOR_HSV2RGB);
         cv.imshow("dofCanvasOutput", rgb);

@@ -92,7 +92,7 @@ msRoi.delete(); msHsvRoi.delete(); mask.delete(); low.delete(); high.delete(); m
 // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
 let termCrit = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1);
 
-msHsv = new cv.Mat();
+msHsv = new cv.Mat(msHeight, msWidth, cv.CV_8UC3);
 msDst = new cv.Mat();
 msHsvVec = new cv.MatVector();
 msHsvVec.push_back(msHsv);
@@ -105,7 +105,6 @@ msLoopIndex = setInterval(
         cap.read(msFrame);
         cv.cvtColor(msFrame, msHsv, cv.COLOR_RGBA2RGB);
         cv.cvtColor(msHsv, msHsv, cv.COLOR_RGB2HSV);
-        msHsvVec.set(0, msHsv);
         cv.calcBackProject(msHsvVec, [0], msRoiHist, msDst, [0,180], 1);
 
         // Apply meanshift to get the new location
@@ -272,7 +271,7 @@ csRoi.delete(); csHsvRoi.delete(); mask.delete(); low.delete(); high.delete(); c
 // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
 let termCrit = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1);
 
-csHsv = new cv.Mat();
+csHsv = new cv.Mat(csHeight, csWidth, cv.CV_8UC3);
 csHsvVec = new cv.MatVector();
 csHsvVec.push_back(csHsv);
 csDst = new cv.Mat();
@@ -286,7 +285,6 @@ csLoopIndex = setInterval(
         cap.read(csFrame);
         cv.cvtColor(csFrame, csHsv, cv.COLOR_RGBA2RGB);
         cv.cvtColor(csHsv, csHsv, cv.COLOR_RGB2HSV);
-        csHsvVec.set(0, csHsv);
         cv.calcBackProject(csHsvVec, [0], csRoiHist, csDst, [0,180], 1);
 
         // apply camshift to get the new location
