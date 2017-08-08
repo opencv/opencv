@@ -93,15 +93,12 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
     }
     else
     {
-        return false;
-
-        /*
         size_t max_image_size = std::min(ocl::Device::getDefault().image2DMaxWidth(),
                                          ocl::Device::getDefault().image2DMaxHeight());
         if (M_ <= max_image_size &&
             N_ <= max_image_size &&
             K_ <= max_image_size &&
-            std::is_same<Dtype, float>::value &&
+            std::is_same<Dtype, float>::value && 0 &&
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
 
@@ -111,17 +108,19 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
                 int width = !transpose_ ? K_ : N_;
                 int padded_height = !transpose_ ? height : (height + ((height & 7) ? 1 : 0));
                 int padded_width = !transpose_ ? width : (width + ((width & 7) ? 1 : 0));
+                cl_mem weight_image = (cl_mem )weight_image_.handle(ACCESS_WRITE);
                 ocl4dnnGEMMCopyBufferToImage(0,
-                                             (cl_mem *)&weight_image_, (cl_mem) weight, 0,
+                                             &weight_image, (cl_mem) weight, 0,
                                              false, !transpose_,
                                              true, padded_height, padded_width,
                                              height, width, (int)0, NULL, NULL);
                 image_copied_ = true;
             }
+
             ocl4dnnGEMM<Dtype>(0, CblasNoTrans,
                                transpose_ ? CblasNoTrans : CblasTrans,
                                M_, N_, K_, (Dtype) 1.,
-                               (cl_mem) bottom_data, 0, (cl_mem) weight_image_, 0,
+                               (cl_mem) bottom_data, 0, (cl_mem) weight_image_.handle(ACCESS_READ), 0,
                                (Dtype) 0., (cl_mem) top_data, 0, false, true);
         } else
             ocl4dnnGEMM<Dtype>(0, CblasNoTrans,
@@ -133,10 +132,9 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
         if (bias_term_)
             ocl4dnnGEMM<Dtype>(0, CblasNoTrans,
                                CblasNoTrans, M_, N_, 1, (Dtype) 1.,
-                               (cl_mem) bias_multiplier_, 0,
+                               (cl_mem) bias_multiplier_.handle(ACCESS_READ), 0,
                                (cl_mem) bias, 0,
                                (Dtype) 1., (cl_mem) top_data, 0, false, false);
-        */
     }
     return true;
 }

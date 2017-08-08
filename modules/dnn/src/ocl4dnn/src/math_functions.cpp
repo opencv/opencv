@@ -600,8 +600,7 @@ void ocl4dnnGEMM(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
         // 2. The fast gemm kernel is using the intel sub group extension.
         // 3. Currently, only the IGC compiler (the driver version is 16.xxx)
         //    can get better performance with the fast gemm.
-        // Cap at 1 MB to capture faulty OpenCL implementations (nVidia)
-        bool has_sub_group_ext = dev.extensions().find("cl_intel_subgroups") != std::string::npos;
+        bool has_sub_group_ext = ocl::Device::getDefault().intelSubgroupsSupport();
         if (has_sub_group_ext)
         {
             size_t max_image_size = std::min(dev.image2DMaxWidth(),
