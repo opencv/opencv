@@ -152,6 +152,14 @@ namespace Utils{
         return obj.copyTo(mat, mask);
     }
 
+    Mat matDiag(const cv::Mat& obj, int d) {
+        return obj.diag(d);
+    }
+
+    Mat matDiag_1(const cv::Mat& obj) {
+        return obj.diag();
+    }
+
     emscripten::val rotatedRectPoints(const cv::RotatedRect& obj) {
         cv::Point2f points[4];
         obj.points(points);
@@ -259,6 +267,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .property("data32F", &Utils::matData<float>)
         .property("data64F", &Utils::matData<double>)
 
+        .function("elemSize", select_overload<size_t()const>(&cv::Mat::elemSize))
         .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))
         .function("channels", select_overload<int()const>(&cv::Mat::channels))
         .function("convertTo",  select_overload<void(const Mat&, Mat&, int, double, double)>(&Utils::convertTo))
@@ -266,30 +275,28 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("convertTo",  select_overload<void(const Mat&, Mat&, int, double)>(&Utils::convertTo_2))
         .function("total", select_overload<size_t()const>(&cv::Mat::total))
         .function("row", select_overload<Mat(int)const>(&cv::Mat::row))
-
         .function("create", select_overload<void(int, int, int)>(&cv::Mat::create))
         .function("create", select_overload<void(Size, int)>(&cv::Mat::create))
         .function("rowRange", select_overload<Mat(int, int)const>(&cv::Mat::rowRange))
         .function("rowRange", select_overload<Mat(const Range&)const>(&cv::Mat::rowRange))
-
         .function("copyTo", select_overload<void(const Mat&, Mat&)>(&Utils::matCopyTo))
         .function("copyTo", select_overload<void(const Mat&, Mat&, const Mat&)>(&Utils::matCopyTo_1))
-        .function("elemSize", select_overload<size_t()const>(&cv::Mat::elemSize))
-
         .function("type", select_overload<int()const>(&cv::Mat::type))
         .function("empty", select_overload<bool()const>(&cv::Mat::empty))
         .function("colRange", select_overload<Mat(int, int)const>(&cv::Mat::colRange))
         .function("colRange", select_overload<Mat(const Range&)const>(&cv::Mat::colRange))
         .function("step1", select_overload<size_t(int)const>(&cv::Mat::step1))
         .function("clone", select_overload<Mat()const>(&cv::Mat::clone))
-        
         .function("depth", select_overload<int()const>(&cv::Mat::depth))
         .function("col", select_overload<Mat(int)const>(&cv::Mat::col))
-
         .function("dot", select_overload<double(const Mat&, const Mat&)>(&Utils::matDot))
         .function("mul", select_overload<Mat(const Mat&, const Mat&, double)>(&Utils::matMul))
         .function("inv", select_overload<Mat(const Mat&, int)>(&Utils::matInv))
         .function("t", select_overload<Mat(const Mat&)>(&Utils::matT))
+        .function("getRoiRect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()))
+        .function("diag", select_overload<Mat(const Mat&, int)>(&Utils::matDiag))
+        .function("diag", select_overload<Mat(const Mat&)>(&Utils::matDiag_1))
+        .function("isContinuous", select_overload<bool()const>(&cv::Mat::isContinuous))
 
         .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<unsigned char>))
         .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<unsigned char>))
@@ -328,9 +335,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("floatAt", select_overload<float&(int, int, int)>(&cv::Mat::at<float>))
         .function("doubleAt", select_overload<double&(int, int, int)>(&cv::Mat::at<double>))
         .function("doubleAt", select_overload<double&(int)>(&cv::Mat::at<double>))
-        .function("doubleAt", select_overload<double&(int, int)>(&cv::Mat::at<double>))
-
-        .function("getRoiRect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()));
+        .function("doubleAt", select_overload<double&(int, int)>(&cv::Mat::at<double>));
 
     emscripten::value_object<cv::Range>("Range")
         .field("start", &cv::Range::start)

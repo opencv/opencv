@@ -534,11 +534,14 @@ QUnit.test("test_mat_eye", function(assert) {
 QUnit.test("test_mat_miscs", function(assert) {
     // Mat::col(int)
     {
-        let mat = cv.Mat.ones(5, 5, cv.CV_8UC2);
+        let mat = cv.matFromArray(2, 2, cv.CV_8UC2, [1, 2, 3, 4, 5, 6, 7, 8]);
         let col = mat.col(1);
-        let view = col.data;
-        assert.equal(view[0], 1);
-        assert.equal(view[4], 1);
+
+        assert.equal(col.isContinuous(), false);
+        assert.equal(col.ptr(0, 0)[0], 3);
+        assert.equal(col.ptr(0, 0)[1], 4);
+        assert.equal(col.ptr(1, 0)[0], 7);
+        assert.equal(col.ptr(1, 0)[1], 8);
 
         col.delete();
         mat.delete();
@@ -864,17 +867,21 @@ QUnit.test("test mat range", function(assert) {
 
         let mat = src.colRange(0, 1);
 
+        assert.equal(mat.isContinuous(), false);
         assert.equal(mat.rows, 2);
         assert.equal(mat.cols, 1);
-        assert.deepEqual(mat.data, new Uint8Array([0, 1]));
+        assert.equal(mat.ucharAt(0), 0);
+        assert.equal(mat.ucharAt(1), 2);
 
         mat.delete();
 
         mat = src.colRange({start: 0, end: 1});
 
+        assert.equal(mat.isContinuous(), false);
         assert.equal(mat.rows, 2);
         assert.equal(mat.cols, 1);
-        assert.deepEqual(mat.data, new Uint8Array([0, 1]));
+        assert.equal(mat.ucharAt(0), 0);
+        assert.equal(mat.ucharAt(1), 2);
 
         mat.delete();
 
@@ -895,5 +902,36 @@ QUnit.test("test mat range", function(assert) {
         mat.delete();
 
         src.delete();
+    }
+});
+
+QUnit.test("test mat diag", function(assert) {
+    // test minMaxLoc
+    {
+        let mat = cv.matFromArray(3, 3, cv.CV_8UC1, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+
+        let d = mat.diag();
+        let d1 = mat.diag(1);
+        let d_1 = mat.diag(-1);
+
+        assert.equal(mat.isContinuous(), true);
+        assert.equal(d.isContinuous(), false);
+        assert.equal(d1.isContinuous(), false);
+        assert.equal(d_1.isContinuous(), false);
+
+        assert.equal(d.ucharAt(0), 0);
+        assert.equal(d.ucharAt(1), 4);
+        assert.equal(d.ucharAt(2), 8);
+
+        assert.equal(d1.ucharAt(0), 1);
+        assert.equal(d1.ucharAt(1), 5);
+
+        assert.equal(d_1.ucharAt(0), 3);
+        assert.equal(d_1.ucharAt(1), 7);
+
+        mat.delete();
+        d.delete();
+        d1.delete();
+        d_1.delete();
     }
 });
