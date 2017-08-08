@@ -15,10 +15,6 @@
 
 #include <iostream>
 
-#ifdef HAVE_OPENCL // OpenCL is not well supported
-#undef HAVE_OPENCL
-#endif
-
 // Namespaces
 namespace cv
 {
@@ -255,41 +251,38 @@ private:
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
+ocl_non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
 {
-    if (!Lt_.isContinuous())
-        return false;
+  if(!Lt.isContinuous())
+    return false;
 
-    UMat Lt = Lt_.getUMat(), Lf = Lf_.getUMat(), Lstep = Lstep_.getUMat();
+  size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
 
-    size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
+  ocl::Kernel ker("AKAZE_nld_step_scalar", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
 
-    ocl::Kernel ker("AKAZE_nld_step_scalar", ocl::features2d::akaze_oclsrc);
-    if (ker.empty())
-        return false;
-
-    return ker.args(
-            ocl::KernelArg::ReadOnly(Lt),
-            ocl::KernelArg::PtrReadOnly(Lf),
-            ocl::KernelArg::PtrWriteOnly(Lstep),
-            step_size)
-    .run(2, globalSize, 0, true);
+  return ker.args(
+    ocl::KernelArg::ReadOnly(Lt),
+    ocl::KernelArg::PtrReadOnly(Lf),
+    ocl::KernelArg::PtrWriteOnly(Lstep),
+    step_size).run(2, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
 static inline void
-non_linear_diffusion_step(InputArray Lt, InputArray Lf, OutputArray Lstep, float step_size)
+non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
 {
   CV_INSTRUMENT_REGION()
 
   Lstep.create(Lt.size(), Lt.type());
 
-#ifdef HAVE_OPENCL
-  CV_OCL_RUN(OCL_PERFORMANCE_CHECK(Lstep.isUMat()), ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
-#endif
+  CV_OCL_RUN(true, ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
 
-  Mat Mstep = Lstep.getMat();
-  parallel_for_(Range(0, Lt.rows()), NonLinearScalarDiffusionStep(Lt.getMat(), Lf.getMat(), Mstep, step_size));
+  // when on CPU UMats should be already allocated on CPU so getMat here is basicallly no-op
+  Mat Mstep = Lstep.getMat(ACCESS_WRITE);
+  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt.getMat(ACCESS_READ),
+    Lf.getMat(ACCESS_READ), Mstep, step_size));
 }
 
 /**
@@ -354,28 +347,25 @@ compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
+ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
 {
-    UMat Lx = Lx_.getUMat(), Ly = Ly_.getUMat(), Lflow = Lflow_.getUMat();
+  int total = Lx.rows * Lx.cols;
+  size_t globalSize[] = {(size_t)total};
 
-    int total = Lx.rows * Lx.cols;
-    size_t globalSize[] = {(size_t)total};
+  ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
 
-    ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
-    if (ker.empty())
-        return false;
-
-    return ker.args(
-            ocl::KernelArg::PtrReadOnly(Lx),
-            ocl::KernelArg::PtrReadOnly(Ly),
-            ocl::KernelArg::PtrWriteOnly(Lflow),
-            kcontrast, total)
-    .run(1, globalSize, 0, true);
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lx),
+    ocl::KernelArg::PtrReadOnly(Ly),
+    ocl::KernelArg::PtrWriteOnly(Lflow),
+    kcontrast, total).run(1, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
 static inline void
-compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, int diffusivity)
+compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast, int diffusivity)
 {
   CV_INSTRUMENT_REGION()
 
@@ -386,9 +376,7 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
       pm_g1(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_PM_G2:
-#ifdef HAVE_OPENCL
-      CV_OCL_RUN(OCL_PERFORMANCE_CHECK(Lflow.isUMat()), ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
-#endif
+      CV_OCL_RUN(true, ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
       pm_g2(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_WEICKERT:
@@ -400,6 +388,32 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
     default:
       CV_Error(diffusivity, "Diffusivity is not supported");
     break;
+  }
+}
+
+/**
+ * @brief Fetches pyramid from the gpu.
+ * @details Setups mapping for matrices that might be probably on the GPU, if the
+ * code executes with OpenCL. This will setup MLx, MLy, Mdet members in the pyramid with
+ * mapping to respective UMats. This must be called before CPU-only parts of AKAZE, that work
+ * only on these Mats.
+ *
+ * This prevents mapping/unmapping overhead (and possible uploads/downloads) that would occur, if
+ * we just create Mats from UMats each time we need it later. This has devastating effects on OCL
+ * performace.
+ *
+ * @param evolution Pyramid to download
+ */
+static inline void downloadPyramid(std::vector<Evolution>& evolution)
+{
+  CV_INSTRUMENT_REGION()
+
+  for (size_t i = 0; i < evolution.size(); ++i) {
+    Evolution& e = evolution[i];
+    e.Mx = e.Lx.getMat(ACCESS_READ);
+    e.My = e.Ly.getMat(ACCESS_READ);
+    e.Mt = e.Lt.getMat(ACCESS_READ);
+    e.Mdet = e.Ldet.getMat(ACCESS_READ);
   }
 }
 
@@ -421,11 +435,12 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   if (evolution_.size() == 1) {
     // we don't need to compute kcontrast factor
     Compute_Determinant_Hessian_Response();
+    downloadPyramid(evolution_);
     return;
   }
 
   // derivatives, flow and diffusion step
-  Mat Lx, Ly, Lsmooth, Lflow, Lstep;
+  UMat Lx, Ly, Lsmooth, Lflow, Lstep;
 
   // compute derivatives for computing k contrast
   GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
@@ -433,7 +448,8 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   Scharr(Lsmooth, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
   Lsmooth.release();
   // compute the kcontrast factor
-  float kcontrast = compute_kcontrast(Lx, Ly, options_.kcontrast_percentile, options_.kcontrast_nbins);
+  float kcontrast = compute_kcontrast(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ),
+    options_.kcontrast_percentile, options_.kcontrast_nbins);
 
   // Now generate the rest of evolution levels
   for (size_t i = 1; i < evolution_.size(); i++) {
@@ -467,30 +483,31 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   }
 
   Compute_Determinant_Hessian_Response();
+  downloadPyramid(evolution_);
+
+  return;
 }
 
 /* ************************************************************************* */
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_, OutputArray Ldet_, float sigma)
+ocl_compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
+  UMat& Ldet, float sigma)
 {
-    UMat Lxx = Lxx_.getUMat(), Lxy = Lxy_.getUMat(), Lyy = Lyy_.getUMat(), Ldet = Ldet_.getUMat();
+  const int total = Lxx.rows * Lxx.cols;
+  size_t globalSize[] = {(size_t)total};
 
-    const int total = Lxx.rows * Lxx.cols;
-    size_t globalSize[] = {(size_t)total};
+  ocl::Kernel ker("AKAZE_compute_determinant", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
 
-    ocl::Kernel ker("AKAZE_compute_determinant", ocl::features2d::akaze_oclsrc);
-    if (ker.empty())
-        return false;
-
-    return ker.args(
-            ocl::KernelArg::PtrReadOnly(Lxx),
-            ocl::KernelArg::PtrReadOnly(Lxy),
-            ocl::KernelArg::PtrReadOnly(Lyy),
-            ocl::KernelArg::PtrWriteOnly(Ldet),
-            sigma, total)
-    .run(1, globalSize, 0, true);
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lxx),
+    ocl::KernelArg::PtrReadOnly(Lxy),
+    ocl::KernelArg::PtrReadOnly(Lyy),
+    ocl::KernelArg::PtrWriteOnly(Ldet),
+    sigma, total).run(1, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
@@ -504,30 +521,27 @@ ocl_compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_, Outpu
  * @param Ldet output determinant
  * @param sigma determinant will be scaled by this sigma
  */
-static inline void compute_determinant(InputArray Lxx, InputArray Lxy, InputArray Lyy, OutputArray Ldet, float sigma)
+static inline void compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
+  UMat& Ldet, float sigma)
 {
-    CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION()
 
-    Ldet.create(Lxx.size(), Lxx.type());
+  Ldet.create(Lxx.size(), Lxx.type());
 
-#ifdef HAVE_OPENCL
-    CV_OCL_RUN(OCL_PERFORMANCE_CHECK(Ldet.isUMat()), ocl_compute_determinant(Lxx, Lxy, Lyy, Ldet, sigma));
-#endif
+  CV_OCL_RUN(true, ocl_compute_determinant(Lxx, Lxy, Lyy, Ldet, sigma));
 
-    // output determinant
-    Mat Mxx = Lxx.getMat(), Mxy = Lxy.getMat(), Myy = Lyy.getMat(), Mdet = Ldet.getMat();
-    const int W = Mxx.cols, H = Mxx.rows;
-    for (int y = 0; y < H; y++)
-    {
-        float *lxx = Mxx.ptr<float>(y);
-        float *lxy = Mxy.ptr<float>(y);
-        float *lyy = Myy.ptr<float>(y);
-        float *ldet = Mdet.ptr<float>(y);
-        for (int x = 0; x < W; x++)
-        {
-            ldet[x] = (lxx[x] * lyy[x] - lxy[x] * lxy[x]) * sigma;
-        }
-    }
+  // output determinant
+  Mat Mxx = Lxx.getMat(ACCESS_READ), Mxy = Lxy.getMat(ACCESS_READ), Myy = Lyy.getMat(ACCESS_READ);
+  Mat Mdet = Ldet.getMat(ACCESS_WRITE);
+  float *lxx = Mxx.ptr<float>();
+  float *lxy = Mxy.ptr<float>();
+  float *lyy = Myy.ptr<float>();
+  float *ldet = Mdet.ptr<float>();
+  const int total = Lxx.cols * Lxx.rows;
+  for (int j = 0; j < total; j++) {
+    ldet[j] = (lxx[j] * lyy[j] - lxy[j] * lxy[j]) * sigma;
+  }
+
 }
 
 class DeterminantHessianResponse : public ParallelLoopBody
@@ -540,7 +554,7 @@ public:
 
   void operator()(const Range& range) const
   {
-    Mat Lxx, Lxy, Lyy;
+    UMat Lxx, Lxy, Lyy;
 
     for (int i = range.start; i < range.end; i++)
     {
@@ -656,16 +670,16 @@ public:
       const Evolution &e = (*evolution_)[i];
       Mat &kpts = (*keypoints_by_layers_)[i];
       // this mask will hold positions of keypoints in this level
-      kpts = Mat::zeros(e.Ldet.size(), CV_8UC1);
+      kpts = Mat::zeros(e.Mdet.size(), CV_8UC1);
 
       // if border is too big we shouldn't search any keypoints
       if (e.border + 1 >= e.Ldet.rows)
         continue;
 
-      const float * prev = e.Ldet.ptr<float>(e.border - 1);
-      const float * curr = e.Ldet.ptr<float>(e.border    );
-      const float * next = e.Ldet.ptr<float>(e.border + 1);
-      const float * ldet = e.Ldet.ptr<float>();
+      const float * prev = e.Mdet.ptr<float>(e.border - 1);
+      const float * curr = e.Mdet.ptr<float>(e.border    );
+      const float * next = e.Mdet.ptr<float>(e.border + 1);
+      const float * ldet = e.Mdet.ptr<float>();
       uchar *mask = kpts.ptr<uchar>();
       const int search_radius = e.sigma_size; // size of keypoint in this level
 
@@ -729,8 +743,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_laye
     const Mat &keypoints = keypoints_by_layers[i];
     const uchar *const kpts = keypoints_by_layers[i].ptr<uchar>();
     uchar *const kpts_prev = keypoints_by_layers[i-1].ptr<uchar>();
-    const float *const ldet = evolution_[i].Ldet.ptr<float>();
-    const float *const ldet_prev = evolution_[i-1].Ldet.ptr<float>();
+    const float *const ldet = evolution_[i].Mdet.ptr<float>();
+    const float *const ldet_prev = evolution_[i-1].Mdet.ptr<float>();
     // ratios are just powers of 2
     const int diff_ratio = (int)evolution_[i].octave_ratio / (int)evolution_[i-1].octave_ratio;
     const int search_radius = evolution_[i].sigma_size * diff_ratio; // size of keypoint in this level
@@ -761,8 +775,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_laye
     const Mat &keypoints = keypoints_by_layers[i];
     const uchar *const kpts = keypoints_by_layers[i].ptr<uchar>();
     uchar *const kpts_next = keypoints_by_layers[i+1].ptr<uchar>();
-    const float *const ldet = evolution_[i].Ldet.ptr<float>();
-    const float *const ldet_next = evolution_[i+1].Ldet.ptr<float>();
+    const float *const ldet = evolution_[i].Mdet.ptr<float>();
+    const float *const ldet_next = evolution_[i+1].Mdet.ptr<float>();
     // ratios are just powers of 2, i+1 ratio is always greater or equal to i
     const int diff_ratio = (int)evolution_[i+1].octave_ratio / (int)evolution_[i].octave_ratio;
     const int search_radius = evolution_[i+1].sigma_size; // size of keypoints in upper level
@@ -800,7 +814,7 @@ void AKAZEFeatures::Do_Subpixel_Refinement(
 
   for (size_t i = 0; i < keypoints_by_layers.size(); i++) {
     const Evolution &e = evolution_[i];
-    const float * const ldet = e.Ldet.ptr<float>();
+    const float * const ldet = e.Mdet.ptr<float>();
     const float ratio = e.octave_ratio;
     const int cols = e.Ldet.cols;
     const Mat& keypoints = keypoints_by_layers[i];
@@ -1294,7 +1308,7 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // Sample derivatives responses for the points within radius of 6*scale
   const int ang_size = 109;
   float resX[ang_size], resY[ang_size];
-  Sample_Derivative_Response_Radius6(e.Lx, e.Ly, x0, y0, scale, resX, resY);
+  Sample_Derivative_Response_Radius6(e.Mx, e.My, x0, y0, scale, resX, resY);
 
   // Compute the angle of each gradient vector
   float Ang[ang_size];
@@ -1431,8 +1445,8 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   ratio = (float)(1 << kpt.octave);
   scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  const Mat Lx = evolution[level].Lx;
-  const Mat Ly = evolution[level].Ly;
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
 
@@ -1565,8 +1579,8 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   scale = cvRound(0.5f*kpt.size / ratio);
   angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
-  const Mat Lx = evolution[level].Lx;
-  const Mat Ly = evolution[level].Ly;
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
   co = cos(angle);
@@ -1686,9 +1700,9 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   const float ratio = (float)(1 << kpt.octave);
   const int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  const Mat Lx = evolution[level].Lx;
-  const Mat Ly = evolution[level].Ly;
-  const Mat Lt = evolution[level].Lt;
+  const Mat Lx = evolution[level].Mx;
+  const Mat Ly = evolution[level].My;
+  const Mat Lt = evolution[level].Mt;
   const float yf = kpt.pt.y / ratio;
   const float xf = kpt.pt.x / ratio;
 
@@ -1780,9 +1794,9 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
     const std::vector<Evolution>& evolution = *evolution_;
     int pattern_size = options_->descriptor_pattern_size;
     int chan = options_->descriptor_channels;
-    const Mat Lx = evolution[level].Lx;
-    const Mat Ly = evolution[level].Ly;
-    const Mat Lt = evolution[level].Lt;
+    const Mat Lx = evolution[level].Mx;
+    const Mat Ly = evolution[level].My;
+    const Mat Lt = evolution[level].Mt;
 
     const Size size = Lt.size();
     CV_Assert(size == Lx.size());
@@ -1931,9 +1945,9 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   int scale = cvRound(0.5f*kpt.size / ratio);
   float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
   const int level = kpt.class_id;
-  const Mat Lx = evolution[level].Lx;
-  const Mat Ly = evolution[level].Ly;
-  const Mat Lt = evolution[level].Lt;
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
+  Mat Lt = evolution[level].Mt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
   float co = cos(angle);
@@ -2039,9 +2053,9 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   float ratio = (float)(1 << kpt.octave);
   int scale = cvRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  const Mat Lx = evolution[level].Lx;
-  const Mat Ly = evolution[level].Ly;
-  const Mat Lt = evolution[level].Lt;
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
+  Mat Lt = evolution[level].Mt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
 
