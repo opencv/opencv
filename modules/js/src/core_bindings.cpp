@@ -160,6 +160,14 @@ namespace Utils{
         return obj.diag();
     }
 
+    void matSetTo(cv::Mat& obj, const cv::Scalar& s) {
+        obj.setTo(s);
+    }
+
+    void matSetTo_1(cv::Mat& obj, const cv::Scalar& s, const cv::Mat& mask) {
+        obj.setTo(s, mask);
+    }
+
     emscripten::val rotatedRectPoints(const cv::RotatedRect& obj) {
         cv::Point2f points[4];
         obj.points(points);
@@ -297,6 +305,8 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("diag", select_overload<Mat(const Mat&, int)>(&Utils::matDiag))
         .function("diag", select_overload<Mat(const Mat&)>(&Utils::matDiag_1))
         .function("isContinuous", select_overload<bool()const>(&cv::Mat::isContinuous))
+        .function("setTo", select_overload<void(Mat&, const Scalar&)>(&Utils::matSetTo))
+        .function("setTo", select_overload<void(Mat&, const Scalar&, const Mat&)>(&Utils::matSetTo_1))
 
         .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<unsigned char>))
         .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<unsigned char>))

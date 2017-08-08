@@ -336,6 +336,32 @@ QUnit.test("test_mat_creation", function(assert) {
 
         mat1.delete();
     }
+
+    // mat.setTo
+    {
+        let mat = new cv.Mat(2, 2, cv.CV_8UC4);
+        let s = [0, 1, 2, 3];
+
+        mat.setTo(s);
+
+        assert.deepEqual(mat.ptr(0, 0), new Uint8Array(s));
+        assert.deepEqual(mat.ptr(0, 1), new Uint8Array(s));
+        assert.deepEqual(mat.ptr(1, 0), new Uint8Array(s));
+        assert.deepEqual(mat.ptr(1, 1), new Uint8Array(s));
+
+        let s1 = [0, 0, 0, 0];
+        mat.setTo(s1);
+        let mask = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 0, 1]);
+        mat.setTo(s, mask);
+
+        assert.deepEqual(mat.ptr(0, 0), new Uint8Array(s1));
+        assert.deepEqual(mat.ptr(0, 1), new Uint8Array(s));
+        assert.deepEqual(mat.ptr(1, 0), new Uint8Array(s1));
+        assert.deepEqual(mat.ptr(1, 1), new Uint8Array(s));
+
+        mat.delete();
+        mask.delete();
+    }
 });
 
 QUnit.test("test_mat_ptr", function(assert) {
