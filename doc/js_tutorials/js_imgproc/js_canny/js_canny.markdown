@@ -103,10 +103,10 @@ canvas {
 <h2>Input your code</h2>
 <button id="CannyTryIt" disabled="true" onclick="CannyExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="CannyTestCode" spellcheck="false">
-var src = cv.imread("CannyCanvasInput");
-var dst = new cv.Mat();
+let src = cv.imread("CannyCanvasInput");
+let dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
-// You can try more different conversion
+// You can try more different parameters
 cv.Canny(src, dst, 50, 100, 3, false);
 cv.imshow("CannyCanvasOutput", dst);
 src.delete(); dst.delete();
@@ -124,7 +124,7 @@ src.delete(); dst.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function CannyExecuteCode() {
-    var CannyText = document.getElementById("CannyTestCode").value;
+    let CannyText = document.getElementById("CannyTestCode").value;
     try {
         eval(CannyText);
         document.getElementById("CannyErr").innerHTML = " ";
@@ -134,10 +134,10 @@ function CannyExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "CannyCanvasInput");
-var CannyInputElement = document.getElementById("CannyInput");
+let CannyInputElement = document.getElementById("CannyInput");
 CannyInputElement.addEventListener("change", CannyHandleFiles, false);
 function CannyHandleFiles(e) {
-    var CannyUrl = URL.createObjectURL(e.target.files[0]);
+    let CannyUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(CannyUrl, "CannyCanvasInput");
 }
 function onReady() {

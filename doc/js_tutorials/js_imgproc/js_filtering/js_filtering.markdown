@@ -20,12 +20,12 @@ will try an averaging filter on an image. A 5x5 averaging filter kernel will loo
 
 \f[K =  \frac{1}{25} \begin{bmatrix} 1 & 1 & 1 & 1 & 1  \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \end{bmatrix}\f]
 
-We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = [-1, -1], delta = 0, borderType = cv.BORDER_DEFAULT)** 
+We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = new cv.Point(-1, -1), delta = 0, borderType = cv.BORDER_DEFAULT)** 
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      desired depth of the destination image.
 @param kernel      convolution kernel (or rather a correlation kernel), a single-channel floating point matrix; if you want to apply different kernels to different channels, split the image into separate color planes using split and process them individually.
-@param anchor      anchor of the kernel that indicates the relative position of a filtered point within the kernel; the anchor should lie within the kernel; default value [-1, -1] means that the anchor is at the kernel center.
+@param anchor      anchor of the kernel that indicates the relative position of a filtered point within the kernel; the anchor should lie within the kernel; default value new cv.Point(-1, -1) means that the anchor is at the kernel center.
 @param delta       optional value added to the filtered pixels before storing them in dst.
 @param borderType  pixel extrapolation method(see cv.BorderTypes).
 
@@ -51,12 +51,13 @@ canvas {
 <div id="filterCodeArea">
 <h2>Input your code</h2>
 <button id="filterTryIt" disabled="true" onclick="filterExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="filterTestCode" spellcheck="false">
-var src = cv.imread("filterCanvasInput");
-var dst = new cv.Mat();
-var M = cv.Mat.eye(3, 3, cv.CV_32FC1);
-// You can try more different conversion
-cv.filter2D(src, dst, cv.CV_8U, M, [-1, -1], 0, cv.BORDER_DEFAULT);
+<textarea rows="8" cols="80" id="filterTestCode" spellcheck="false">
+let src = cv.imread("filterCanvasInput");
+let dst = new cv.Mat();
+let M = cv.Mat.eye(3, 3, cv.CV_32FC1);
+let anchor = new cv.Point(-1, -1);
+// You can try more different parameters
+cv.filter2D(src, dst, cv.CV_8U, M, anchor, 0, cv.BORDER_DEFAULT);
 cv.imshow("filterCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete();
 </textarea>
@@ -73,7 +74,7 @@ src.delete(); dst.delete(); M.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function filterExecuteCode() {
-    var filterText = document.getElementById("filterTestCode").value;
+    let filterText = document.getElementById("filterTestCode").value;
     try {
         eval(filterText);
         document.getElementById("filterErr").innerHTML = " ";
@@ -83,10 +84,10 @@ function filterExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "filterCanvasInput");
-var filterInputElement = document.getElementById("filterInput");
+let filterInputElement = document.getElementById("filterInput");
 filterInputElement.addEventListener("change", filterHandleFiles, false);
 function filterHandleFiles(e) {
-    var filterUrl = URL.createObjectURL(e.target.files[0]);
+    let filterUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(filterUrl, "filterCanvasInput");
 }
 </script>
@@ -110,19 +111,19 @@ specify the width and height of kernel. A 3x3 normalized box filter would look l
 
 \f[K =  \frac{1}{9} \begin{bmatrix} 1 & 1 & 1  \\ 1 & 1 & 1 \\ 1 & 1 & 1 \end{bmatrix}\f]
 
-We use the functions: **cv.blur (src, dst, ksize, anchor = [-1,-1], borderType = cv.BORDER_DEFAULT)** 
+We use the functions: **cv.blur (src, dst, ksize, anchor = new cv.Point(-1, -1), borderType = cv.BORDER_DEFAULT)** 
 @param src         input image; it can have any number of channels, which are processed independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst         output image of the same size and type as src.
 @param ksize       blurring kernel size.
-@param anchor      anchor point; anchor = [-1, -1] means that the anchor is at the kernel center. 
+@param anchor      anchor point; anchor = new cv.Point(-1, -1) means that the anchor is at the kernel center. 
 @param borderType  border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
-**cv.boxFilter (src, dst, ddepth, ksize, anchor = [-1,-1], normalize = true, borderType = cv.BORDER_DEFAULT)**
+**cv.boxFilter (src, dst, ddepth, ksize, anchor = new cv.Point(-1, -1), normalize = true, borderType = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image of the same size and type as src.
 @param ddepth      the output image depth (-1 to use src.depth()).
 @param ksize       blurring kernel size.
-@param anchor      anchor point; anchor = [-1, -1] means that the anchor is at the kernel center. 
+@param anchor      anchor point; anchor = new cv.Point(-1, -1) means that the anchor is at the kernel center. 
 @param normalize   flag, specifying whether the kernel is normalized by its area or not.
 @param borderType  border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
@@ -138,25 +139,21 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="blurCodeArea">
 <h2>Input your code</h2>
 <button id="blurTryIt" disabled="true" onclick="blurExecuteCode()">Try it</button><br>
 <textarea rows="9" cols="80" id="blurTestCode" spellcheck="false">
-var src = cv.imread("blurCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
-cv.blur(src, dst, [3, 3], [-1, -1], cv.BORDER_DEFAULT);
-//cv.boxFilter(src, dst, -1, [3, 3], [-1, -1], true, cv.BORDER_DEFAULT)
+let src = cv.imread("blurCanvasInput");
+let dst = new cv.Mat();
+let ksize = new cv.Size(3, 3);
+let anchor = new cv.Point(-1, -1);
+// You can try more different parameters
+cv.blur(src, dst, ksize, anchor, cv.BORDER_DEFAULT);
+// cv.boxFilter(src, dst, -1, ksize, anchor, true, cv.BORDER_DEFAULT)
 cv.imshow("blurCanvasOutput", dst);
-src.delete();
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="blurErr"></p>
 </div>
@@ -169,7 +166,7 @@ dst.delete();
 </div>
 <script>
 function blurExecuteCode() {
-    var blurText = document.getElementById("blurTestCode").value;
+    let blurText = document.getElementById("blurTestCode").value;
     try {
         eval(blurText);
         document.getElementById("blurErr").innerHTML = " ";
@@ -179,10 +176,10 @@ function blurExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "blurCanvasInput");
-var blurInputElement = document.getElementById("blurInput");
+let blurInputElement = document.getElementById("blurInput");
 blurInputElement.addEventListener("change", blurHandleFiles, false);
 function blurHandleFiles(e) {
-    var blurUrl = URL.createObjectURL(e.target.files[0]);
+    let blurUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(blurUrl, "blurCanvasInput");
 }
 </script>
@@ -211,24 +208,19 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="GaussianBlurCodeArea">
 <h2>Input your code</h2>
 <button id="GaussianBlurTryIt" disabled="true" onclick="GaussianBlurExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="GaussianBlurTestCode" spellcheck="false">
-var src = cv.imread("GaussianBlurCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
-cv.GaussianBlur(src, dst, [5, 5], 0, 0, cv.BORDER_DEFAULT);
+<textarea rows="7" cols="80" id="GaussianBlurTestCode" spellcheck="false">
+let src = cv.imread("GaussianBlurCanvasInput");
+let dst = new cv.Mat();
+let ksize = new cv.Size(3, 3);
+// You can try more different parameters
+cv.GaussianBlur(src, dst, ksize, 0, 0, cv.BORDER_DEFAULT);
 cv.imshow("GaussianBlurCanvasOutput", dst);
-src.delete();
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="GaussianBlurErr"></p>
 </div>
@@ -241,7 +233,7 @@ dst.delete();
 </div>
 <script>
 function GaussianBlurExecuteCode() {
-    var GaussianBlurText = document.getElementById("GaussianBlurTestCode").value;
+    let GaussianBlurText = document.getElementById("GaussianBlurTestCode").value;
     try {
         eval(GaussianBlurText);
         document.getElementById("GaussianBlurErr").innerHTML = " ";
@@ -251,10 +243,10 @@ function GaussianBlurExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "GaussianBlurCanvasInput");
-var GaussianBlurInputElement = document.getElementById("GaussianBlurInput");
+let GaussianBlurInputElement = document.getElementById("GaussianBlurInput");
 GaussianBlurInputElement.addEventListener("change", GaussianBlurHandleFiles, false);
 function GaussianBlurHandleFiles(e) {
-    var GaussianBlurUrl = URL.createObjectURL(e.target.files[0]);
+    let GaussianBlurUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(GaussianBlurUrl, "GaussianBlurCanvasInput");
 }
 </script>
@@ -287,24 +279,18 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="medianBlurCodeArea">
 <h2>Input your code</h2>
 <button id="medianBlurTryIt" disabled="true" onclick="medianBlurExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="medianBlurTestCode" spellcheck="false">
-var src = cv.imread("medianBlurCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
+<textarea rows="6" cols="80" id="medianBlurTestCode" spellcheck="false">
+let src = cv.imread("medianBlurCanvasInput");
+let dst = new cv.Mat();
+// You can try more different parameters
 cv.medianBlur(src, dst, 5);
 cv.imshow("medianBlurCanvasOutput", dst);
-src.delete();
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="medianBlurErr"></p>
 </div>
@@ -317,7 +303,7 @@ dst.delete();
 </div>
 <script>
 function medianBlurExecuteCode() {
-    var medianBlurText = document.getElementById("medianBlurTestCode").value;
+    let medianBlurText = document.getElementById("medianBlurTestCode").value;
     try {
         eval(medianBlurText);
         document.getElementById("medianBlurErr").innerHTML = " ";
@@ -327,10 +313,10 @@ function medianBlurExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "medianBlurCanvasInput");
-var medianBlurInputElement = document.getElementById("medianBlurInput");
+let medianBlurInputElement = document.getElementById("medianBlurInput");
 medianBlurInputElement.addEventListener("change", medianBlurHandleFiles, false);
 function medianBlurHandleFiles(e) {
-    var medianBlurUrl = URL.createObjectURL(e.target.files[0]);
+    let medianBlurUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(medianBlurUrl, "medianBlurCanvasInput");
 }
 </script>
@@ -372,25 +358,19 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="bilateralFilterCodeArea">
 <h2>Input your code</h2>
 <button id="bilateralFilterTryIt" disabled="true" onclick="bilateralFilterExecuteCode()">Try it</button><br>
-<textarea rows="9" cols="80" id="bilateralFilterTestCode" spellcheck="false">
-var src = cv.imread("bilateralFilterCanvasInput");
-var dst = new cv.Mat();
+<textarea rows="7" cols="80" id="bilateralFilterTestCode" spellcheck="false">
+let src = cv.imread("bilateralFilterCanvasInput");
+let dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-// You can try more different conversion
+// You can try more different parameters
 cv.bilateralFilter(src, dst, 9, 75, 75, cv.BORDER_DEFAULT);
 cv.imshow("bilateralFilterCanvasOutput", dst);
-src.delete();
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="bilateralFilterErr"></p>
 </div>
@@ -403,7 +383,7 @@ dst.delete();
 </div>
 <script>
 function bilateralFilterExecuteCode() {
-    var bilateralFilterText = document.getElementById("bilateralFilterTestCode").value;
+    let bilateralFilterText = document.getElementById("bilateralFilterTestCode").value;
     try {
         eval(bilateralFilterText);
         document.getElementById("bilateralFilterErr").innerHTML = " ";
@@ -413,10 +393,10 @@ function bilateralFilterExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "bilateralFilterCanvasInput");
-var bilateralFilterInputElement = document.getElementById("bilateralFilterInput");
+let bilateralFilterInputElement = document.getElementById("bilateralFilterInput");
 bilateralFilterInputElement.addEventListener("change", bilateralFilterHandleFiles, false);
 function bilateralFilterHandleFiles(e) {
-    var bilateralFilterUrl = URL.createObjectURL(e.target.files[0]);
+    let bilateralFilterUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(bilateralFilterUrl, "bilateralFilterCanvasInput");
 }
 

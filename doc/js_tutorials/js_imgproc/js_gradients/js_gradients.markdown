@@ -67,15 +67,15 @@ canvas {
 <h2>Input your code</h2>
 <button id="SobelTryIt" disabled="true" onclick="SobelExecuteCode()">Try it</button><br>
 <textarea rows="13" cols="80" id="SobelTestCode" spellcheck="false">
-var src = cv.imread("SobelCanvasInput");
-var dstx = new cv.Mat();
-var dsty = new cv.Mat();
+let src = cv.imread("SobelCanvasInput");
+let dstx = new cv.Mat();
+let dsty = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
-// You can try more different conversion
+// You can try more different parameters
 cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.Sobel(src, dsty, cv.CV_8U, 0, 1, 3, 1, 0, cv.BORDER_DEFAULT);
-//cv.Scharr(src, dstx, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
-//cv.Scharr(src, dsty, cv.CV_8U, 0, 1, 1, 0, cv.BORDER_DEFAULT);
+// cv.Scharr(src, dstx, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
+// cv.Scharr(src, dsty, cv.CV_8U, 0, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("SobelCanvasOutputX", dstx);
 cv.imshow("SobelCanvasOutputY", dsty); 
 src.delete(); dstx.delete(); dsty.delete();
@@ -101,7 +101,7 @@ src.delete(); dstx.delete(); dsty.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function SobelExecuteCode() {
-    var SobelText = document.getElementById("SobelTestCode").value;
+    let SobelText = document.getElementById("SobelTestCode").value;
     try {
         eval(SobelText);
         document.getElementById("SobelErr").innerHTML = " ";
@@ -111,10 +111,10 @@ function SobelExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "SobelCanvasInput");
-var SobelInputElement = document.getElementById("SobelInput");
+let SobelInputElement = document.getElementById("SobelInput");
 SobelInputElement.addEventListener("change", SobelHandleFiles, false);
 function SobelHandleFiles(e) {
-    var SobelUrl = URL.createObjectURL(e.target.files[0]);
+    let SobelUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(SobelUrl, "SobelCanvasInput");
 }
 </script>
@@ -148,21 +148,16 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="LaplacianCodeArea">
 <h2>Input your code</h2>
 <button id="LaplacianTryIt" disabled="true" onclick="LaplacianExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="LaplacianTestCode" spellcheck="false">
-var src = cv.imread("LaplacianCanvasInput");
-var dst = new cv.Mat();
+let src = cv.imread("LaplacianCanvasInput");
+let dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
-// You can try more different conversion
+// You can try more different parameters
 cv.Laplacian(src, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("LaplacianCanvasOutput", dst);
 src.delete(); dst.delete();
@@ -178,7 +173,7 @@ src.delete(); dst.delete();
 </div>
 <script>
 function LaplacianExecuteCode() {
-    var LaplacianText = document.getElementById("LaplacianTestCode").value;
+    let LaplacianText = document.getElementById("LaplacianTestCode").value;
     try {
         eval(LaplacianText);
         document.getElementById("LaplacianErr").innerHTML = " ";
@@ -188,10 +183,10 @@ function LaplacianExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "LaplacianCanvasInput");
-var LaplacianInputElement = document.getElementById("LaplacianInput");
+let LaplacianInputElement = document.getElementById("LaplacianInput");
 LaplacianInputElement.addEventListener("change", LaplacianHandleFiles, false);
 function LaplacianHandleFiles(e) {
-    var LaplacianUrl = URL.createObjectURL(e.target.files[0]);
+    let LaplacianUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(LaplacianUrl, "LaplacianCanvasInput");
 }
 </script>
@@ -225,22 +220,17 @@ We use the function: **cv.convertScaleAbs (src, dst, alpha = 1, beta = 0)**
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="absSobelCodeArea">
 <h2>Input your code</h2>
 <button id="absSobelTryIt" disabled="true" onclick="absSobelExecuteCode()">Try it</button><br>
 <textarea rows="11" cols="80" id="absSobelTestCode" spellcheck="false">
-var src = cv.imread("absSobelCanvasInput");
-var dstx = new cv.Mat();
-var absDstx = new cv.Mat();
+let src = cv.imread("absSobelCanvasInput");
+let dstx = new cv.Mat();
+let absDstx = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
-// You can try more different conversion
+// You can try more different parameters
 cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.convertScaleAbs(absDstx, absDstx, 1, 0);
@@ -267,7 +257,7 @@ src.delete(); dstx.delete(); absDstx.delete();
 </div>
 <script>
 function absSobelExecuteCode() {
-    var absSobelText = document.getElementById("absSobelTestCode").value;
+    let absSobelText = document.getElementById("absSobelTestCode").value;
     try {
         eval(absSobelText);
         document.getElementById("absSobelErr").innerHTML = " ";
@@ -277,10 +267,10 @@ function absSobelExecuteCode() {
 }
 
 loadImageToCanvas("LinuxLogo.jpg", "absSobelCanvasInput");
-var absSobelInputElement = document.getElementById("absSobelInput");
+let absSobelInputElement = document.getElementById("absSobelInput");
 absSobelInputElement.addEventListener("change", absSobelHandleFiles, false);
 function absSobelHandleFiles(e) {
-    var absSobelUrl = URL.createObjectURL(e.target.files[0]);
+    let absSobelUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(absSobelUrl, "absSobelCanvasInput");
 }
 

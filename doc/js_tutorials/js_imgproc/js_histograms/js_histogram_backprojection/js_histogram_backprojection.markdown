@@ -1,4 +1,4 @@
-Histogram - 4 : Histogram Backprojection {#tutorial_js_histogram_backprojection}
+Histogram - 3 : Histogram Backprojection {#tutorial_js_histogram_backprojection}
 ========================================
 
 Goal
@@ -30,18 +30,16 @@ resulting output on proper thresholding gives us the ground alone.
 Backprojection in OpenCV
 ------------------------
 
-We use the functions: **cv.calcBackProject (images, nimages, channels, hist, backProject, ranges, scale = 1, uniform = true)** 
+We use the functions: **cv.calcBackProject (images, channels, hist, dst, ranges, scale)** 
 
 @param images       source arrays. They all should have the same depth, cv.CV_8U, cv.CV_16U or cv.CV_32F , and the same size. Each of them can have an arbitrary number of channels.
-@param nimages      number of source images.
 @param channels     the list of channels used to compute the back projection. The number of channels must match the histogram dimensionality. 
 @param hist         input histogram that can be dense or sparse.
-@param backProject  destination back projection array that is a single-channel array of the same size and depth as images[0].
+@param dst          destination back projection array that is a single-channel array of the same size and depth as images[0].
 @param ranges       array of arrays of the histogram bin boundaries in each dimension(see cv.calcHist).
 @param scale        optional scale factor for the output back projection.
-@param uniform      flag indicating whether the histogram is uniform or not.
 
-**cv.normalize (src, dst, alpha = 1, beta = 0, norm_type = cv.NORM_L2, dtype = -1, mask = Mat())** 
+**cv.normalize (src, dst, alpha = 1, beta = 0, norm_type = cv.NORM_L2, dtype = -1, mask = new cv.Mat())** 
 
 @param src        input array.
 @param dst        output array of the same size as src .
@@ -75,15 +73,15 @@ canvas {
 <h2>Input your code</h2>
 <button id="calcBackProjectTryIt" disabled="true" onclick="calcBackProjectExecuteCode()">Try it</button><br>
 <textarea rows="15" cols="90" id="calcBackProjectTestCode" spellcheck="false">
-var src = cv.imread("calcBackProjectCanvasSrcInput");
-var dst = cv.imread("calcBackProjectCanvasDstInput");
+let src = cv.imread("calcBackProjectCanvasSrcInput");
+let dst = cv.imread("calcBackProjectCanvasDstInput");
 cv.cvtColor(src, src, cv.COLOR_RGB2HSV, 0);
 cv.cvtColor(dst, dst, cv.COLOR_RGB2HSV, 0);
-var srcVec = new cv.MatVector(), dstVec = new cv.MatVector();
+let srcVec = new cv.MatVector(), dstVec = new cv.MatVector();
 srcVec.push_back(src); dstVec.push_back(dst);
-var backproj = new cv.Mat(), none = new cv.Mat(), mask = new cv.Mat(), hist = new cv.Mat();
-var channels = [0], histSize = [50], ranges = [0, 180];
-var accumulate = false;
+let backproj = new cv.Mat(), none = new cv.Mat(), mask = new cv.Mat(), hist = new cv.Mat();
+let channels = [0], histSize = [50], ranges = [0, 180];
+let accumulate = false;
 cv.calcHist(srcVec, channels, mask, hist, histSize, ranges, accumulate);
 cv.normalize(hist, hist, 0, 255, cv.NORM_MINMAX, -1 ,none);
 cv.calcBackProject(dstVec, channels, hist, backproj, ranges, 1);
@@ -112,7 +110,7 @@ src.delete(); dst.delete(); srcVec.delete(); dstVec.delete(); backproj.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function calcBackProjectExecuteCode() {
-    var calcBackProjectText = document.getElementById("calcBackProjectTestCode").value;
+    let calcBackProjectText = document.getElementById("calcBackProjectTestCode").value;
     try {
         eval(calcBackProjectText);
         document.getElementById("calcBackProjectErr").innerHTML = " ";
@@ -124,17 +122,17 @@ function calcBackProjectExecuteCode() {
 loadImageToCanvas("handSrc.jpg", "calcBackProjectCanvasSrcInput");
 loadImageToCanvas("handDst.jpg", "calcBackProjectCanvasDstInput");
 
-var calcBackProjectSrcInputElement = document.getElementById("calcBackProjectSrcInput");
+let calcBackProjectSrcInputElement = document.getElementById("calcBackProjectSrcInput");
 calcBackProjectSrcInputElement.addEventListener("change", calcBackProjectSrcHandleFiles, false);
 function calcBackProjectSrcHandleFiles(e) {
-    var calcBackProjectSrcUrl = URL.createObjectURL(e.target.files[0]);
+    let calcBackProjectSrcUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(calcBackProjectSrcUrl, "calcBackProjectCanvasSrcInput");
 }
 
-var calcBackProjectDstInputElement = document.getElementById("calcBackProjectDstInput");
+let calcBackProjectDstInputElement = document.getElementById("calcBackProjectDstInput");
 calcBackProjectDstInputElement.addEventListener("change", calcBackProjectDstHandleFiles, false);
 function calcBackProjectDstHandleFiles(e) {
-    var calcBackProjectDstUrl = URL.createObjectURL(e.target.files[0]);
+    let calcBackProjectDstUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(calcBackProjectDstUrl, "calcBackProjectCanvasDstInput");
 }
 

@@ -91,7 +91,7 @@ Here we will deal with detection. OpenCV already contains many pre-trained class
 eyes, smile etc. Those XML files are stored in opencv/data/haarcascades/ folder. Let's create face
 and eye detector with OpenCV.
 
-We use the function: **detectMultiScale (image, objects, scaleFactor = 1.1, minNeighbors = 3, flags = 0, minSize = [0, 0], maxSize = [0, 0])** 
+We use the function: **detectMultiScale (image, objects, scaleFactor = 1.1, minNeighbors = 3, flags = 0, minSize = new cv.Size(0, 0), maxSize = new cv.Size(0, 0))** 
 
 @param image               matrix of the type CV_8U containing an image where objects are detected. 
 @param objects             vector of rectangles where each rectangle contains the detected object, the rectangles may be partially outside the original image.    
@@ -100,6 +100,8 @@ We use the function: **detectMultiScale (image, objects, scaleFactor = 1.1, minN
 @param flags               parameter with the same meaning for an old cascade as in the function cvHaarDetectObjects. It is not used for a new cascade.
 @param minSize             minimum possible object size. Objects smaller than that are ignored.
 @param maxSize             maximum possible object size. Objects larger than that are ignored. If maxSize == minSize model is evaluated on single scale.
+
+@note Don't forget to delete CascadeClassifier and RectVector!
 
 Try it
 ------
@@ -124,32 +126,36 @@ canvas {
 <h2>Input your code</h2>
 <button id="haarCascadeDetectionTryIt" disabled="true" onclick="haarCascadeDetectionExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="80" id="haarCascadeDetectionTestCode" spellcheck="false">
-var src = cv.imread("haarCascadeDetectionCanvasInput");
-var gray = new cv.Mat();
+let src = cv.imread("haarCascadeDetectionCanvasInput");
+let gray = new cv.Mat();
 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-var faceCoclor = new cv.Scalar(255, 0, 0, 255), eyeCoclor = new cv.Scalar(0, 0, 255, 255);
-var faces = new cv.RectVector(), eyes = new cv.RectVector();
-var face_cascade = new cv.CascadeClassifier(), eye_cascade = new cv.CascadeClassifier();
+let faces = new cv.RectVector(), eyes = new cv.RectVector();
+let face_cascade = new cv.CascadeClassifier(), eye_cascade = new cv.CascadeClassifier();
 // load pre-trained classifiers
 face_cascade.load("haarcascade_frontalface_default.xml");
 eye_cascade.load("haarcascade_eye.xml");
 // detect faces 
-face_cascade.detectMultiScale(gray, faces, 1.1, 3, 0, [0, 0], [0, 0]);
-for(var i = 0; i < faces.size(); ++i)
+let msize = new cv.Size(0, 0);
+face_cascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
+for(let i = 0; i < faces.size(); ++i)
 {
-    var roiGray = gray.getROI_Rect(faces.get(i));
-    var roiSrc = src.getROI_Rect(faces.get(i));
-    cv.rectangle(src, [faces.get(i).x, faces.get(i).y], [faces.get(i).x + faces.get(i).width, faces.get(i).y + faces.get(i).height], faceCoclor);
+    let roiGray = gray.getRoiRect(faces.get(i));
+    let roiSrc = src.getRoiRect(faces.get(i));
+    let point1 = new cv.Point(faces.get(i).x, faces.get(i).y);
+    let point2 = new cv.Point(faces.get(i).x + faces.get(i).width, faces.get(i).y + faces.get(i).height);
+    cv.rectangle(src, point1, point2, [255, 0, 0, 255]);
     // detect eyes in face ROI
     eye_cascade.detectMultiScale(roiGray, eyes);
-    for (var j = 0; j < eyes.size(); ++j)
+    for (let j = 0; j < eyes.size(); ++j)
     {
-        cv.rectangle(roiSrc, [eyes.get(j).x, eyes.get(j).y], [eyes.get(j).x + eyes.get(j).width, eyes.get(j).y + eyes.get(i).height], eyeCoclor);
+        let point1 = new cv.Point(eyes.get(j).x, eyes.get(j).y);
+        let point2 = new cv.Point(eyes.get(j).x + eyes.get(j).width, eyes.get(j).y + eyes.get(i).height);
+        cv.rectangle(roiSrc, point1, point2, [0, 0, 255, 255]);
     }
     roiGray.delete(); roiSrc.delete();
 }
 cv.imshow("haarCascadeDetectionCanvasOutput", src);
-src.delete(); gray.delete(); faceCoclor.delete(); eyeCoclor.delete(); face_cascade.delete(); eye_cascade.delete(); faces.delete(); eyes.delete()
+src.delete(); gray.delete(); face_cascade.delete(); eye_cascade.delete(); faces.delete(); eyes.delete();
 </textarea>
 <p class="err" id="haarCascadeDetectionErr"></p>
 </div>
@@ -164,7 +170,7 @@ src.delete(); gray.delete(); faceCoclor.delete(); eyeCoclor.delete(); face_casca
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function haarCascadeDetectionExecuteCode() {
-    var haarCascadeDetectionText = document.getElementById("haarCascadeDetectionTestCode").value;
+    let haarCascadeDetectionText = document.getElementById("haarCascadeDetectionTestCode").value;
     try {
         eval(haarCascadeDetectionText);
         document.getElementById("haarCascadeDetectionErr").innerHTML = " ";
@@ -174,10 +180,10 @@ function haarCascadeDetectionExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "haarCascadeDetectionCanvasInput");
-var haarCascadeDetectionInputElement = document.getElementById("haarCascadeDetectionInput");
+let haarCascadeDetectionInputElement = document.getElementById("haarCascadeDetectionInput");
 haarCascadeDetectionInputElement.addEventListener("change", haarCascadeDetectionHandleFiles, false);
 function haarCascadeDetectionHandleFiles(e) {
-    var haarCascadeDetectionUrl = URL.createObjectURL(e.target.files[0]);
+    let haarCascadeDetectionUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(haarCascadeDetectionUrl, "haarCascadeDetectionCanvasInput");
 }
 
@@ -190,7 +196,7 @@ if (typeof cv !== 'undefined') {
     document.getElementById("opencvjs").onload = onReady;
 }
 
-var Module = {
+let Module = {
 preRun: [function() {
 	Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml', 'haarcascade_eye.xml', true, false);
 	Module.FS_createPreloadedFile('/', 'haarcascade_frontalface_default.xml', 'haarcascade_frontalface_default.xml', true, false);

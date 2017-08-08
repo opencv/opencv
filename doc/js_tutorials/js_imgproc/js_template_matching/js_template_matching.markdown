@@ -28,7 +28,7 @@ and height of the rectangle. That rectangle is your region of template.
 Template Matching in OpenCV
 ---------------------------
 
-We use the function: **cv.matchTemplate (image, templ, result, method, mask = cv.Mat())** 
+We use the function: **cv.matchTemplate (image, templ, result, method, mask = new cv.Mat())** 
 
 @param image      image where the search is running. It must be 8-bit or 32-bit floating-point.
 @param templ      searched template. It must be not greater than the source image and have the same data type.
@@ -59,19 +59,19 @@ canvas {
 <h2>Input your code</h2>
 <button id="matchTemplateTryIt" disabled="true" onclick="matchTemplateExecuteCode()">Try it</button><br>
 <textarea rows="13" cols="80" id="matchTemplateTestCode" spellcheck="false">
-var src = cv.imread("imageCanvasInput");
-var templ = cv.imread("templateCanvasInput");
-var dst = new cv.Mat();
-var mask = new cv.Mat();
+let src = cv.imread("imageCanvasInput");
+let templ = cv.imread("templateCanvasInput");
+let dst = new cv.Mat();
+let mask = new cv.Mat();
 cv.matchTemplate(src, templ, dst, cv.TM_CCOEFF, mask);
-var result = new cv.MinMaxLocResult();
-cv.minMaxLoc(dst, result, mask);
-var max = result.maxVal;
-var maxPoint = result.maxLoc;
-var color = new cv.Scalar(255, 0, 0, 255);
-cv.rectangle(src, [maxPoint[0], maxPoint[1]], [maxPoint[0] + templ.cols, maxPoint[1] + templ.rows], color, 2, cv.LINE_8, 0);
+let result = cv.minMaxLoc(dst, mask);
+let max = result.maxVal;
+let maxPoint = result.maxLoc;
+let color = new cv.Scalar(255, 0, 0, 255);
+let point = new cv.Point(maxPoint.x + templ.cols, maxPoint.y + templ.rows)
+cv.rectangle(src, maxPoint, point, color, 2, cv.LINE_8, 0);
 cv.imshow("matchTemplateCanvasOutput", src);
-src.delete(); dst.delete(); color.delete(); result.delete(); mask.delete()
+src.delete(); dst.delete(); mask.delete()
 </textarea>
 <p class="err" id="matchTemplateErr"></p>
 </div>
@@ -95,7 +95,7 @@ src.delete(); dst.delete(); color.delete(); result.delete(); mask.delete()
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function matchTemplateExecuteCode() {
-    var matchTemplateText = document.getElementById("matchTemplateTestCode").value;
+    let matchTemplateText = document.getElementById("matchTemplateTestCode").value;
     try {
         eval(matchTemplateText);
         document.getElementById("matchTemplateErr").innerHTML = " ";
@@ -107,17 +107,17 @@ function matchTemplateExecuteCode() {
 loadImageToCanvas("lenaFace.png", "templateCanvasInput");
 loadImageToCanvas("lena.jpg", "imageCanvasInput");
 
-var templateInputElement = document.getElementById("templateInput");
+let templateInputElement = document.getElementById("templateInput");
 templateInputElement.addEventListener("change", templateHandleFiles, false);
 function templateHandleFiles(e) {
-    var templateUrl = URL.createObjectURL(e.target.files[0]);
+    let templateUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(templateUrl, "templateCanvasInput");
 }
 
-var imageInputElement = document.getElementById("imageInput");
+let imageInputElement = document.getElementById("imageInput");
 imageInputElement.addEventListener("change", imageHandleFiles, false);
 function imageHandleFiles(e) {
-    var imageUrl = URL.createObjectURL(e.target.files[0]);
+    let imageUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(imageUrl, "imageCanvasInput");
 }
 

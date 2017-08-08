@@ -1,4 +1,4 @@
-Contours in OpenCV {#tutorial_js_table_of_contents_contours}
+Contours in OpenCV.js {#tutorial_js_table_of_contents_contours}
 ==================
 
 -   @subpage tutorial_js_contours_begin

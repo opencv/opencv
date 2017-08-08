@@ -53,7 +53,7 @@ We use the functions: **cv.dft (src, dst, flags = 0, nonzeroRows = 0)**
 
 @param vecsize   vector size.
 
-**cv.copyMakeBorder (src, dst, top, bottom, left, right, borderType, value = cv.Scalar())**
+**cv.copyMakeBorder (src, dst, top, bottom, left, right, borderType, value = new cv.Scalar())**
 
 @param src           input array that could be real or complex.
 @param dst           output array whose size and type depends on the flags.
@@ -103,22 +103,22 @@ canvas {
 <h2>Input your code</h2>
 <button id="dftTryIt" disabled="true" onclick="dftExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="90" id="dftTestCode" spellcheck="false">
-var src = cv.imread("dftCanvasInput");
+let src = cv.imread("dftCanvasInput");
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 
 // get optimal size of DFT
-var optimalRows = cv.getOptimalDFTSize(src.rows);
-var optimalCols = cv.getOptimalDFTSize(src.cols);
-var s0 = new cv.Scalar.all(0);
-var padded = new cv.Mat()
+let optimalRows = cv.getOptimalDFTSize(src.rows);
+let optimalCols = cv.getOptimalDFTSize(src.cols);
+let s0 = cv.Scalar.all(0);
+let padded = new cv.Mat()
 cv.copyMakeBorder(src, padded, 0, optimalRows - src.rows, 0, optimalCols - src.cols, cv.BORDER_CONSTANT, s0);
 
 // use cv.MatVector to distribute space for real part and imaginary part
-var plane0 = new cv.Mat()
+let plane0 = new cv.Mat()
 padded.convertTo(plane0, cv.CV_32F);
-var planes = new cv.MatVector();
-var complexI = new cv.Mat();
-var plane1 = new cv.Mat.zeros(padded.cols, padded.rows, cv.CV_32F);
+let planes = new cv.MatVector();
+let complexI = new cv.Mat();
+let plane1 = new cv.Mat.zeros(padded.cols, padded.rows, cv.CV_32F);
 planes.push_back(plane0); planes.push_back(plane1);
 cv.merge(planes, complexI);
 
@@ -128,31 +128,30 @@ cv.dft(complexI, complexI);
 // compute log(1 + sqrt(Re(DFT(img))**2 + Im(DFT(img))**2))
 cv.split(complexI, planes);
 cv.magnitude(planes.get(0), planes.get(1), planes.get(0));
-var mag = planes.get(0);
-var m1 = new cv.Mat.ones(mag.rows, mag.cols, mag.type());
+let mag = planes.get(0);
+let m1 = new cv.Mat.ones(mag.rows, mag.cols, mag.type());
 cv.add(mag, m1, mag);
 cv.log(mag, mag);
 
 // crop the spectrum, if it has an odd number of rows or columns
-var rect = new cv.Rect(0, 0, mag.cols & -2, mag.rows & -2);
-mag = mag.getROI_Rect(rect);
+let rect = new cv.Rect(0, 0, mag.cols & -2, mag.rows & -2);
+mag = mag.getRoiRect(rect);
 
 // rearrange the quadrants of Fourier image
 // so that the origin is at the image center
-var cx = mag.cols / 2;
-var cy = mag.rows / 2;
-var tmp = new cv.Mat();
-var q0 = new cv.Mat(), q1 = new cv.Mat(), q2 = new cv.Mat(), q3 = new cv.Mat();
+let cx = mag.cols / 2;
+let cy = mag.rows / 2;
+let tmp = new cv.Mat();
 
-var rect0 = new cv.Rect(0, 0, cx, cy);
-var rect1 = new cv.Rect(cx, 0, cx, cy);
-var rect2 = new cv.Rect(0, cy, cx, cy);
-var rect3 = new cv.Rect(cx, cy, cx, cy);
+let rect0 = new cv.Rect(0, 0, cx, cy);
+let rect1 = new cv.Rect(cx, 0, cx, cy);
+let rect2 = new cv.Rect(0, cy, cx, cy);
+let rect3 = new cv.Rect(cx, cy, cx, cy);
 
-var q0 = mag.getROI_Rect(rect0);
-var q1 = mag.getROI_Rect(rect1);
-var q2 = mag.getROI_Rect(rect2);
-var q3 = mag.getROI_Rect(rect3);
+let q0 = mag.getRoiRect(rect0);
+let q1 = mag.getRoiRect(rect1);
+let q2 = mag.getRoiRect(rect2);
+let q3 = mag.getRoiRect(rect3);
 
 // exchange 1 and 4 quadrants
 q0.copyTo(tmp);
@@ -168,7 +167,7 @@ tmp.copyTo(q2);
 cv.normalize(mag, mag, 0, 1, cv.NORM_MINMAX);
 
 cv.imshow("dftCanvasOutput", mag);
-src.delete(); s0.delete(); padded.delete(); planes.delete(); complexI.delete(); m1.delete(); rect.delete(); tmp.delete(); q0.delete(); q1.delete(); q2.delete(); q3.delete(); rect0.delete(); rect1.delete(); rect2.delete(); rect3.delete();
+src.delete(); padded.delete(); planes.delete(); complexI.delete(); m1.delete(); tmp.delete(); 
 </textarea>
 <p class="err" id="dftErr"></p>
 </div>
@@ -183,7 +182,7 @@ src.delete(); s0.delete(); padded.delete(); planes.delete(); complexI.delete(); 
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function dftExecuteCode() {
-    var dftText = document.getElementById("dftTestCode").value;
+    let dftText = document.getElementById("dftTestCode").value;
     try {
         eval(dftText);
         document.getElementById("dftErr").innerHTML = " ";
@@ -193,10 +192,10 @@ function dftExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "dftCanvasInput");
-var dftInputElement = document.getElementById("dftInput");
+let dftInputElement = document.getElementById("dftInput");
 dftInputElement.addEventListener("change", dftHandleFiles, false);
 function dftHandleFiles(e) {
-    var dftUrl = URL.createObjectURL(e.target.files[0]);
+    let dftUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(dftUrl, "dftCanvasInput");
 }
 

@@ -57,8 +57,8 @@ canvas {
 <h2>Input your code</h2>
 <button id="equalizeHistTryIt" disabled="true" onclick="equalizeHistExecuteCode()">Try it</button><br>
 <textarea rows="7" cols="80" id="equalizeHistTestCode" spellcheck="false">
-var src = cv.imread("equalizeHistCanvasInput");
-var dst = new cv.Mat();
+let src = cv.imread("equalizeHistCanvasInput");
+let dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.equalizeHist(src, dst);
 cv.imshow("imageGrayCanvasOutput", src);
@@ -86,7 +86,7 @@ src.delete(); dst.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function equalizeHistExecuteCode() {
-    var equalizeHistText = document.getElementById("equalizeHistTestCode").value;
+    let equalizeHistText = document.getElementById("equalizeHistTestCode").value;
     try {
         eval(equalizeHistText);
         document.getElementById("equalizeHistErr").innerHTML = " ";
@@ -96,10 +96,10 @@ function equalizeHistExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "equalizeHistCanvasInput");
-var equalizeHistInputElement = document.getElementById("equalizeHistInput");
+let equalizeHistInputElement = document.getElementById("equalizeHistInput");
 equalizeHistInputElement.addEventListener("change", equalizeHistHandleFiles, false);
 function equalizeHistHandleFiles(e) {
-    var equalizeHistUrl = URL.createObjectURL(e.target.files[0]);
+    let equalizeHistUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(equalizeHistUrl, "equalizeHistCanvasInput");
 }
 </script>
@@ -112,10 +112,12 @@ CLAHE (Contrast Limited Adaptive Histogram Equalization)
 In **adaptive histogram equalization**, image is divided into small blocks called "tiles" (tileSize is 8x8 by default in OpenCV). Then each of these blocks are histogram equalized as usual. So in a small area, histogram would confine to a small region
 (unless there is noise). If noise is there, it will be amplified. To avoid this, **contrast limiting** is applied. If any histogram bin is above the specified contrast limit (by default 40 in OpenCV), those pixels are clipped and distributed uniformly to other bins before applying histogram equalization. After equalization, to remove artifacts in tile borders, bilinear interpolation is applied.
 
-We use the function: **cv.CLAHE (clipLimit = 40, tileGridSize = [8, 8])** 
+We use the class: **cv.CLAHE (clipLimit = 40, tileGridSize = new cv.Size(8, 8))** 
 
 @param clipLimit      threshold for contrast limiting.
 @param tileGridSize   size of grid for histogram equalization. Input image will be divided into equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.
+
+@note Don't forget to delete CLAHE!
 
 Try it
 ------
@@ -126,29 +128,23 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
 </head>
 <body>
 <div id="createCLAHECodeArea">
 <h2>Input your code</h2>
 <button id="createCLAHETryIt" disabled="true" onclick="createCLAHEExecuteCode()">Try it</button><br>
 <textarea rows="9" cols="80" id="createCLAHETestCode" spellcheck="false">
-var src = cv.imread("createCLAHECanvasInput");
-var equalDst = new cv.Mat(), claheDst = new cv.Mat();
+let src = cv.imread("createCLAHECanvasInput");
+let equalDst = new cv.Mat(), claheDst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.equalizeHist(src, equalDst);
-var clahe = new cv.CLAHE(40, [8, 8]);
+let tileGridSize = new cv.Size(8, 8);
+// You can try more different parameters
+let clahe = new cv.CLAHE(40, tileGridSize);
 clahe.apply(src, claheDst);
 cv.imshow("equalCanvasOutput", equalDst);
 cv.imshow("createCLAHECanvasOutput", claheDst);
-src.delete(); equalDst.delete(); claheDst.delete();
+src.delete(); equalDst.delete(); claheDst.delete(); clahe.delete();
 </textarea>
 <p class="err" id="createCLAHEErr"></p>
 </div>
@@ -169,7 +165,7 @@ src.delete(); equalDst.delete(); claheDst.delete();
 </div>
 <script>
 function createCLAHEExecuteCode() {
-    var createCLAHEText = document.getElementById("createCLAHETestCode").value;
+    let createCLAHEText = document.getElementById("createCLAHETestCode").value;
     try {
         eval(createCLAHEText);
         document.getElementById("createCLAHEErr").innerHTML = " ";
@@ -179,10 +175,10 @@ function createCLAHEExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "createCLAHECanvasInput");
-var createCLAHEInputElement = document.getElementById("createCLAHEInput");
+let createCLAHEInputElement = document.getElementById("createCLAHEInput");
 createCLAHEInputElement.addEventListener("change", createCLAHEHandleFiles, false);
 function createCLAHEHandleFiles(e) {
-    var createCLAHEUrl = URL.createObjectURL(e.target.files[0]);
+    let createCLAHEUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(createCLAHEUrl, "createCLAHECanvasInput");
 }
 

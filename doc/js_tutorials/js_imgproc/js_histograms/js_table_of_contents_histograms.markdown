@@ -1,4 +1,4 @@
-Histograms in OpenCV {#tutorial_js_table_of_contents_histograms}
+Histograms in OpenCV.js {#tutorial_js_table_of_contents_histograms}
 ====================
 
 -   @subpage tutorial_js_histogram_begins
@@ -8,10 +8,6 @@ Histograms in OpenCV {#tutorial_js_table_of_contents_histograms}
 -   @subpage tutorial_js_histogram_equalization
 
     Learn to Equalize Histograms to get better contrast for images
-
--   @subpage tutorial_js_2d_histogram
-
-    Learn to find and plot 2D Histograms
 
 -   @subpage tutorial_js_histogram_backprojection
 

@@ -90,29 +90,26 @@ canvas {
 <h2>Input your code</h2>
 <button id="grabCutTryIt" disabled="true" onclick="grabCutExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="80" id="grabCutTestCode" spellcheck="false">
-var src = cv.imread("grabCutCanvasInput");
+let src = cv.imread("grabCutCanvasInput");
 cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-var mask = new cv.Mat(), bgdModel = new cv.Mat(), fgdModel = new cv.Mat();
-var rect = new cv.Rect(50, 50, 260, 280);
+let mask = new cv.Mat(), bgdModel = new cv.Mat(), fgdModel = new cv.Mat();
+let rect = new cv.Rect(50, 50, 260, 280);
 cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
 // draw foreground
-for(var i = 0; i < src.rows; i++)
-    for(var j = 0; j < src.cols; j++) 
-    {
-        var srcNum = i * src.cols * src.channels() + j * src.channels();
-        var maskNum = i * mask.cols * mask.channels() + j * mask.channels();
-        if(mask.data()[maskNum] == 0 || mask.data()[maskNum] == 2)
-        {
-            src.data()[srcNum] = 0;
-            src.data()[srcNum + 1] = 0;
-            src.data()[srcNum + 2] = 0;
+for (let i = 0; i < src.rows; i++)
+    for (let j = 0; j < src.cols; j++) 
+        if (mask.ucharPtr(i, j)[0] == 0 || mask.ucharPtr(i, j)[0] == 2) {
+            src.ucharPtr(i, j)[0] = 0;
+            src.ucharPtr(i, j)[1] = 0;
+            src.ucharPtr(i, j)[2] = 0;
         }
-    }
-var color = new cv.Scalar(0, 0, 255);
 // draw grab rect
-cv.rectangle(src, [rect.x, rect.y], [rect.x + rect.width, rect.y + rect.height], color);
+let color = new cv.Scalar(0, 0, 255);
+let point1 = new cv.Point(rect.x, rect.y);
+let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+cv.rectangle(src, point1, point2, color);
 cv.imshow("grabCutCanvasOutput", src);
-src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete(); rect.delete(); color.delete();
+src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete(); 
 </textarea>
 <p class="err" id="grabCutErr"></p>
 </div>
@@ -127,7 +124,7 @@ src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete(); rect.delete()
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function grabCutExecuteCode() {
-    var grabCutText = document.getElementById("grabCutTestCode").value;
+    let grabCutText = document.getElementById("grabCutTestCode").value;
     try {
         eval(grabCutText);
         document.getElementById("grabCutErr").innerHTML = " ";
@@ -137,10 +134,10 @@ function grabCutExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "grabCutCanvasInput");
-var grabCutInputElement = document.getElementById("grabCutInput");
+let grabCutInputElement = document.getElementById("grabCutInput");
 grabCutInputElement.addEventListener("change", grabCutHandleFiles, false);
 function grabCutHandleFiles(e) {
-    var grabCutUrl = URL.createObjectURL(e.target.files[0]);
+    let grabCutUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(grabCutUrl, "grabCutCanvasInput");
 }
 

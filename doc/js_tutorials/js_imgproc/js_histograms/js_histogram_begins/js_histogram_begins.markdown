@@ -32,17 +32,14 @@ brighter region, and amount of midtones (pixel values in mid-range, say around 1
 Find Histogram
 --------------
 
-We use the function: **cv.calcHist (image, nimages, channels, mask, hist, dims, histSize, ranges, uniform = true, accumulate = false)** 
+We use the function: **cv.calcHist (image, channels, mask, hist, histSize, ranges, accumulate = false)** 
 
 @param image        source arrays. They all should have the same depth, cv.CV_8U, cv.CV_16U or cv.CV_32F , and the same size. Each of them can have an arbitrary number of channels. 
-@param nimages      number of source images.
-@param channels     list of the dims channels used to compute the histogram. The first array channels are numerated from 0 to images[0].channels()-1 , the second array channels are counted from images[0].channels() to images[0].channels() + images[1].channels()-1, and so on.
+@param channels     list of the dims channels used to compute the histogram.
 @param mask         optional mask. If the matrix is not empty, it must be an 8-bit array of the same size as images[i] . The non-zero mask elements mark the array elements counted in the histogram.
 @param hist        	output histogram(cv.CV_32F type), which is a dense or sparse dims -dimensional array.
-@param dims         histogram dimensionality that must be positive and not greater than 32(in the current OpenCV version).
 @param histSize     array of histogram sizes in each dimension.
 @param ranges       array of the dims arrays of the histogram bin boundaries in each dimension.
-@param uniform      flag indicating whether the histogram is uniform or not.
 @param accumulate   accumulation flag. If it is set, the histogram is not cleared in the beginning when it is allocated. This feature enables you to compute a single histogram from several sets of arrays, or to update the histogram in time.
 
 Try it
@@ -68,27 +65,28 @@ canvas {
 <h2>Input your code</h2>
 <button id="calcHistTryIt" disabled="true" onclick="calcHistExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="90" id="calcHistTestCode" spellcheck="false">
-var src = cv.imread("calcHistCanvasInput");
+let src = cv.imread("calcHistCanvasInput");
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-var srcVec = new cv.MatVector();
+let srcVec = new cv.MatVector();
 srcVec.push_back(src);
-var accumulate = false;
-var channels = [0], histSize = [256], ranges = [0,255];
-var hist = new cv.Mat(), mask = new cv.Mat(), color = new cv.Scalar(255, 255, 255);
-var scale = 2;
+let accumulate = false;
+let channels = [0], histSize = [256], ranges = [0, 255];
+let hist = new cv.Mat(), mask = new cv.Mat(), color = new cv.Scalar(255, 255, 255);
+let scale = 2;
+// You can try more different parameters
 cv.calcHist(srcVec, channels, mask, hist, histSize, ranges, accumulate);
-var result = new cv.MinMaxLocResult();
-cv.minMaxLoc(hist, result, mask);
-var max = result.maxVal;
-var dst = new cv.Mat.zeros(src.rows, histSize[0] * scale, cv.CV_8UC3);
+let result = cv.minMaxLoc(hist, mask);
+let max = result.maxVal;
+let dst = new cv.Mat.zeros(src.rows, histSize[0] * scale, cv.CV_8UC3);
 // draw histogram
-for(var i = 0; i < histSize[0]; i++)
-{
-    var binVal = hist.data32f()[i] * src.rows / max;
-    cv.rectangle(dst, [i * scale, src.rows - 1], [(i + 1) * scale - 1, src.rows - binVal], color, cv.FILLED);
+for (let i = 0; i < histSize[0]; i++) {
+    let binVal = hist.data32F[i] * src.rows / max;
+    let pioint1 = new cv.Point(i * scale, src.rows - 1);
+    let pioint2 = new cv.Point((i + 1) * scale - 1, src.rows - binVal);
+    cv.rectangle(dst, pioint1, pioint2, color, cv.FILLED);
 }
 cv.imshow("calcHistCanvasOutput", dst);
-src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete(); color.delete(); result.delete();
+src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete();
 </textarea>
 <p class="err" id="calcHistErr"></p>
 </div>
@@ -103,7 +101,7 @@ src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete(); color
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function calcHistExecuteCode() {
-    var calcHistText = document.getElementById("calcHistTestCode").value;
+    let calcHistText = document.getElementById("calcHistTestCode").value;
     try {
         eval(calcHistText);
         document.getElementById("calcHistErr").innerHTML = " ";
@@ -113,10 +111,10 @@ function calcHistExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "calcHistCanvasInput");
-var calcHistInputElement = document.getElementById("calcHistInput");
+let calcHistInputElement = document.getElementById("calcHistInput");
 calcHistInputElement.addEventListener("change", calcHistHandleFiles, false);
 function calcHistHandleFiles(e) {
-    var calcHistUrl = URL.createObjectURL(e.target.files[0]);
+    let calcHistUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(calcHistUrl, "calcHistCanvasInput");
 }
 

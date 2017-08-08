@@ -52,14 +52,14 @@ canvas {
 <div id="resizeCodeArea">
 <h2>Input your code</h2>
 <button id="resizeTryIt" disabled="true" onclick="resizeExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="resizeTestCode" spellcheck="false">
-var src = cv.imread("resizeCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
-cv.resize(src, dst, [300, 300], 0, 0, cv.INTER_AREA);
+<textarea rows="7" cols="80" id="resizeTestCode" spellcheck="false">
+let src = cv.imread("resizeCanvasInput");
+let dst = new cv.Mat();
+let dsize = new cv.Size(300, 300);
+// You can try more different parameters
+cv.resize(src, dst, dsize, 0, 0, cv.INTER_AREA);
 cv.imshow("resizeCanvasOutput", dst);
-src.delete();
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="resizeErr"></p>
 </div>
@@ -74,7 +74,7 @@ dst.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function resizeExecuteCode() {
-    var resizeText = document.getElementById("resizeTestCode").value;
+    let resizeText = document.getElementById("resizeTestCode").value;
     try {
         eval(resizeText);
         document.getElementById("resizeErr").innerHTML = " ";
@@ -84,10 +84,10 @@ function resizeExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "resizeCanvasInput");
-var resizeInputElement = document.getElementById("resizeInput");
+let resizeInputElement = document.getElementById("resizeInput");
 resizeInputElement.addEventListener("change", resizeHandleFiles, false);
 function resizeHandleFiles(e) {
-    var resizeUrl = URL.createObjectURL(e.target.files[0]);
+    let resizeUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(resizeUrl, "resizeCanvasInput");
 }
 </script>
@@ -101,7 +101,7 @@ be \f$(t_x,t_y)\f$, you can create the transformation matrix \f$\textbf{M}\f$ as
 
 \f[M = \begin{bmatrix} 1 & 0 & t_x \\ 0 & 1 & t_y  \end{bmatrix}\f]
 
-We use the function: **cv.warpAffine (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = cv.Scalar())**
+We use the function: **cv.warpAffine (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = new cv.Scalar())**
 @param src          input image.
 @param dst          output image that has the size dsize and the same type as src.
 @param Mat          2 × 3 transformation matrix(cv.CV_64FC1 type).
@@ -121,27 +121,20 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="warpAffineCodeArea">
 <h2>Input your code</h2>
 <button id="warpAffineTryIt" disabled="true" onclick="warpAffineExecuteCode()">Try it</button><br>
-<textarea rows="11" cols="80" id="warpAffineTestCode" spellcheck="false">
-var src = cv.imread("warpAffineCanvasInput");
-var dst = new cv.Mat();
-var M = new cv.Mat([2, 3], cv.CV_64FC1);
-var color = new cv.Scalar();
-M.data64f()[0]=1; M.data64f()[1]=0; M.data64f()[2]=50;
-M.data64f()[3]=0; M.data64f()[4]=1; M.data64f()[5]=100;
-// You can try more different conversion
-cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
+<textarea rows="8" cols="90" id="warpAffineTestCode" spellcheck="false">
+let src = cv.imread("warpAffineCanvasInput");
+let dst = new cv.Mat();
+let M = cv.matFromArray(2, 3, cv.CV_64FC1, [1, 0, 50, 0, 1, 100]);
+let dsize = new cv.Size(src.rows, src.cols);
+// You can try more different parameters
+cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("warpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); color.delete()
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="warpAffineErr"></p>
 </div>
@@ -154,7 +147,7 @@ src.delete(); dst.delete(); M.delete(); color.delete()
 </div>
 <script>
 function warpAffineExecuteCode() {
-    var warpAffineText = document.getElementById("warpAffineTestCode").value;
+    let warpAffineText = document.getElementById("warpAffineTestCode").value;
     try {
         eval(warpAffineText);
         document.getElementById("warpAffineErr").innerHTML = " ";
@@ -164,10 +157,10 @@ function warpAffineExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "warpAffineCanvasInput");
-var warpAffineInputElement = document.getElementById("warpAffineInput");
+let warpAffineInputElement = document.getElementById("warpAffineInput");
 warpAffineInputElement.addEventListener("change", warpAffineHandleFiles, false);
 function warpAffineHandleFiles(e) {
-    var warpAffineUrl = URL.createObjectURL(e.target.files[0]);
+    let warpAffineUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(warpAffineUrl, "warpAffineCanvasInput");
 }
 </script>
@@ -203,26 +196,21 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="rotateWarpAffineCodeArea">
 <h2>Input your code</h2>
 <button id="rotateWarpAffineTryIt" disabled="true" onclick="rotateWarpAffineExecuteCode()">Try it</button><br>
-<textarea rows="9" cols="80" id="rotateWarpAffineTestCode" spellcheck="false">
-var src = cv.imread("rotateWarpAffineCanvasInput");
-var dst = new cv.Mat();
-var M = new cv.Mat([2, 3], cv.CV_64FC1);
-var color = new cv.Scalar();
-M = cv.getRotationMatrix2D([src.cols / 2, src.rows / 2], 45, 1)
-// You can try more different conversion
-cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
+<textarea rows="9" cols="90" id="rotateWarpAffineTestCode" spellcheck="false">
+let src = cv.imread("rotateWarpAffineCanvasInput");
+let dst = new cv.Mat();
+let dsize = new cv.Size(src.rows, src.cols);
+let center = new cv.Point(src.cols / 2, src.rows / 2);
+// You can try more different parameters
+let M = cv.getRotationMatrix2D(center, 45, 1);
+cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("rotateWarpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); color.delete();
+src.delete(); dst.delete(); M.delete(); 
 </textarea>
 <p class="err" id="rotateWarpAffineErr"></p>
 </div>
@@ -235,7 +223,7 @@ src.delete(); dst.delete(); M.delete(); color.delete();
 </div>
 <script>
 function rotateWarpAffineExecuteCode() {
-    var rotateWarpAffineText = document.getElementById("rotateWarpAffineTestCode").value;
+    let rotateWarpAffineText = document.getElementById("rotateWarpAffineTestCode").value;
     try {
         eval(rotateWarpAffineText);
         document.getElementById("rotateWarpAffineErr").innerHTML = " ";
@@ -245,10 +233,10 @@ function rotateWarpAffineExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "rotateWarpAffineCanvasInput");
-var rotateWarpAffineInputElement = document.getElementById("rotateWarpAffineInput");
+let rotateWarpAffineInputElement = document.getElementById("rotateWarpAffineInput");
 rotateWarpAffineInputElement.addEventListener("change", rotateWarpAffineHandleFiles, false);
 function rotateWarpAffineHandleFiles(e) {
-    var rotateWarpAffineUrl = URL.createObjectURL(e.target.files[0]);
+    let rotateWarpAffineUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(rotateWarpAffineUrl, "rotateWarpAffineCanvasInput");
 }
 
@@ -277,39 +265,25 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="getAffineTransformCodeArea">
 <h2>Input your code</h2>
 <button id="getAffineTransformTryIt" disabled="true" onclick="getAffineTransformExecuteCode()">Try it</button><br>
-<textarea rows="22" cols="80" id="getAffineTransformTestCode" spellcheck="false">
-var src = cv.imread("getAffineTransformCanvasInput");
-var dst = new cv.Mat();
-var srcTri = new cv.Mat(3, 1, cv.CV_32FC2); 
-var dstTri = new cv.Mat(3, 1, cv.CV_32FC2);
-var color = new cv.Scalar();
-
-//[data32f()[0], data32f()[1]] is the first point
-srcTri.data32f()[0] = 0; srcTri.data32f()[1] = 0;
-//[data32f()[2], data32f()[3]] is the sescond point
-srcTri.data32f()[2] = 0; srcTri.data32f()[3] = 1;
-//[data32f()[4], data32f()[5]] is the third point
-srcTri.data32f()[4] = 1; srcTri.data32f()[5] = 0;
-
-dstTri.data32f()[0] = 0.6; dstTri.data32f()[1] = 0.2;
-dstTri.data32f()[2] = 0.1; dstTri.data32f()[3] = 1.3;
-dstTri.data32f()[4] = 1.5; dstTri.data32f()[5] = 0.3;
-var M = new cv.Mat([2, 3], cv.CV_64FC1);
-M = cv.getAffineTransform(srcTri, dstTri);
-// You can try more different conversion
-cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
+<textarea rows="13" cols="90" id="getAffineTransformTestCode" spellcheck="false">
+let src = cv.imread("getAffineTransformCanvasInput");
+let dst = new cv.Mat();
+// (data32F[0], data32F[1]) is the first point
+// (data32F[2], data32F[3]) is the sescond point
+// (data32F[4], data32F[5]) is the third point
+let srcTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0, 0, 0, 1, 1, 0]); 
+let dstTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0.6, 0.2, 0.1, 1.3, 1.5, 0.3]);
+let dsize = new cv.Size(src.rows, src.cols);
+let M = cv.getAffineTransform(srcTri, dstTri);
+// You can try more different parameters
+cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("getAffineTransformCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete(); color.delete();
+src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete(); 
 </textarea>
 <p class="err" id="getAffineTransformErr"></p>
 </div>
@@ -322,7 +296,7 @@ src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete(); color.
 </div>
 <script>
 function getAffineTransformExecuteCode() {
-    var getAffineTransformText = document.getElementById("getAffineTransformTestCode").value;
+    let getAffineTransformText = document.getElementById("getAffineTransformTestCode").value;
     try {
         eval(getAffineTransformText);
         document.getElementById("getAffineTransformErr").innerHTML = " ";
@@ -332,10 +306,10 @@ function getAffineTransformExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "getAffineTransformCanvasInput");
-var getAffineTransformInputElement = document.getElementById("getAffineTransformInput");
+let getAffineTransformInputElement = document.getElementById("getAffineTransformInput");
 getAffineTransformInputElement.addEventListener("change", getAffineTransformHandleFiles, false);
 function getAffineTransformHandleFiles(e) {
-    var getAffineTransformUrl = URL.createObjectURL(e.target.files[0]);
+    let getAffineTransformUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(getAffineTransformUrl, "getAffineTransformCanvasInput");
 }
 </script>
@@ -346,7 +320,7 @@ function getAffineTransformHandleFiles(e) {
 
 For perspective transformation, you need a 3x3 transformation matrix. Straight lines will remain straight even after the transformation. To find this transformation matrix, you need 4 points on the input image and corresponding points on the output image. Among these 4 points, 3 of them should not be collinear. Then transformation matrix can be found by the function **cv.getPerspectiveTransform**. Then apply **cv.warpPerspective** with this 3x3 transformation matrix.
 
-We use the functions: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = cv.Scalar())**
+We use the functions: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = new cv.Scalar())**
 
 @param src          input image.
 @param dst          output image that has the size dsize and the same type as src.
@@ -370,43 +344,26 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="warpPerspectiveCodeArea">
 <h2>Input your code</h2>
 <button id="warpPerspectiveTryIt" disabled="true" onclick="warpPerspectiveExecuteCode()">Try it</button><br>
-<textarea rows="26" cols="80" id="warpPerspectiveTestCode" spellcheck="false">
-var src = cv.imread("warpPerspectiveCanvasInput");
-var dst = new cv.Mat();
-var M = new cv.Mat([3, 3], cv.CV_64FC1);
-var srcTri = new cv.Mat(4, 1, cv.CV_32FC2); 
-var dstTri = new cv.Mat(4, 1, cv.CV_32FC2);
-var color = new cv.Scalar();
-
-//[data32f()[0], data32f()[1]] is the first point
-srcTri.data32f()[0] = 56; srcTri.data32f()[1] = 65;
-//[data32f()[2], data32f()[3]] is the sescond point
-srcTri.data32f()[2] = 368; srcTri.data32f()[3] = 52;
-//[data32f()[4], data32f()[5]] is the third point
-srcTri.data32f()[4] = 28; srcTri.data32f()[5] = 387;
-//[data32f()[6], data32f()[7]] is the fourth point
-srcTri.data32f()[6] = 389; srcTri.data32f()[7] = 390;
-
-dstTri.data32f()[0] = 0; dstTri.data32f()[1] = 0;
-dstTri.data32f()[2] = 300; dstTri.data32f()[3] = 0;
-dstTri.data32f()[4] = 0; dstTri.data32f()[5] = 300;
-dstTri.data32f()[6] = 300; dstTri.data32f()[7] = 300;
-
-M = cv.getPerspectiveTransform(srcTri, dstTri);
-// You can try more different conversion
-cv.warpPerspective(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
+<textarea rows="15" cols="90" id="warpPerspectiveTestCode" spellcheck="false">
+let src = cv.imread("warpPerspectiveCanvasInput");
+let dst = new cv.Mat();
+let dsize = new cv.Size(src.rows, src.cols);
+// (data32F[0], data32F[1]) is the first point
+// (data32F[2], data32F[3]) is the sescond point
+// (data32F[4], data32F[5]) is the third point
+// (data32F[6], data32F[7]) is the fourth point
+let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [56, 65, 368, 52, 28, 387, 389, 390]); 
+let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 300, 0, 0, 300, 300, 300]);
+let M = cv.getPerspectiveTransform(srcTri, dstTri);
+// You can try more different parameters
+cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("warpPerspectiveCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); color.delete();
+src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
 </textarea>
 <p class="err" id="warpPerspectiveErr"></p>
 </div>
@@ -419,7 +376,7 @@ src.delete(); dst.delete(); M.delete(); color.delete();
 </div>
 <script>
 function warpPerspectiveExecuteCode() {
-    var warpPerspectiveText = document.getElementById("warpPerspectiveTestCode").value;
+    let warpPerspectiveText = document.getElementById("warpPerspectiveTestCode").value;
     try {
         eval(warpPerspectiveText);
         document.getElementById("warpPerspectiveErr").innerHTML = " ";
@@ -429,10 +386,10 @@ function warpPerspectiveExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "warpPerspectiveCanvasInput");
-var warpPerspectiveInputElement = document.getElementById("warpPerspectiveInput");
+let warpPerspectiveInputElement = document.getElementById("warpPerspectiveInput");
 warpPerspectiveInputElement.addEventListener("change", warpPerspectiveHandleFiles, false);
 function warpPerspectiveHandleFiles(e) {
-    var warpPerspectiveUrl = URL.createObjectURL(e.target.files[0]);
+    let warpPerspectiveUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(warpPerspectiveUrl, "warpPerspectiveCanvasInput");
 
 }

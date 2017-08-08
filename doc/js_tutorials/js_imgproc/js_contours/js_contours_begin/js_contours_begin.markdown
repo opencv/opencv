@@ -27,7 +27,7 @@ How to draw the contours?
 To draw the contours, cv.drawContours function is used. It can also be used to draw any shape
 provided you have its boundary points.
 
-We use the functions: **cv.findContours (image, contours, hierarchy, mode, method, offset = [0, 0])** 
+We use the functions: **cv.findContours (image, contours, hierarchy, mode, method, offset = new cv.Point(0, 0))** 
 @param image         source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as binary. 
 @param contours      detected contours. 
 @param hierarchy     containing information about the image topology. It has as many elements as the number of contours. 
@@ -35,7 +35,7 @@ We use the functions: **cv.findContours (image, contours, hierarchy, mode, metho
 @param method        contour approximation method(see cv.ContourApproximationModes).
 @param offset        optional offset by which every contour point is shifted. This is useful if the contours are extracted from the image ROI and then they should be analyzed in the whole image context.
 
-**cv.drawContours (image, contours, contourIdx, color, thickness = 1, lineType = cv.LINE_8, hierarchy = cv.Mat(), maxLevel = INT_MAX, offset = [0, 0])** 
+**cv.drawContours (image, contours, contourIdx, color, thickness = 1, lineType = cv.LINE_8, hierarchy = new cv.Mat(), maxLevel = INT_MAX, offset = new cv.Point(0, 0))** 
 @param image         destination image.
 @param contours      all the input contours. 
 @param contourIdx    parameter indicating a contour to draw. If it is negative, all the contours are drawn.
@@ -70,20 +70,18 @@ canvas {
 <h2>Input your code</h2>
 <button id="contoursTryIt" disabled="true" onclick="contoursExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="90" id="contoursTestCode" spellcheck="false">
-var src = cv.imread("contoursCanvasInput");
-var dst = cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
+let src = cv.imread("contoursCanvasInput");
+let dst = cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
-var contours  = new cv.MatVector();
-var hierarchy = new cv.Mat();
-// You can try more different conversion
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0, 0]);
+let contours  = new cv.MatVector();
+let hierarchy = new cv.Mat();
+// You can try more different parameters
+cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
 // draw contours with random Scalar
-for (var i = 0; i < contours.size(); ++i)
-{
-    var color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
-    cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100, [0, 0]);
-    color.delete();
+for (let i = 0; i < contours.size(); ++i) {
+    let color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
+    cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
 }
 cv.imshow("contoursCanvasOutput", dst);
 src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); 
@@ -101,7 +99,7 @@ src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function contoursExecuteCode() {
-    var contoursText = document.getElementById("contoursTestCode").value;
+    let contoursText = document.getElementById("contoursTestCode").value;
     try {
         eval(contoursText);
         document.getElementById("contoursErr").innerHTML = " ";
@@ -111,10 +109,10 @@ function contoursExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "contoursCanvasInput");
-var contoursInputElement = document.getElementById("contoursInput");
+let contoursInputElement = document.getElementById("contoursInput");
 contoursInputElement.addEventListener("change", contoursHandleFiles, false);
 function contoursHandleFiles(e) {
-    var contoursUrl = URL.createObjectURL(e.target.files[0]);
+    let contoursUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(contoursUrl, "contoursCanvasInput");
 }
 

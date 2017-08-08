@@ -99,26 +99,24 @@ canvas {
 <h2>Input your code</h2>
 <button id="HoughLinesTryIt" disabled="true" onclick="HoughLinesExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="80" id="HoughLinesTestCode" spellcheck="false">
-var src = cv.imread("HoughLinesCanvasInput");
-var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
-var lines = new cv.Mat();
-var color = new cv.Scalar(255, 0, 0);
+let src = cv.imread("HoughLinesCanvasInput");
+let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+let lines = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.Canny(src, src, 50, 200, 3);
-// You can try more different conversion
-cv.HoughLines(src, lines, 1, Math.PI / 180, 50, 0, 0, 0, Math.PI);
+// You can try more different parameters
+cv.HoughLines(src, lines, 1, Math.PI / 180, 30, 0, 0, 0, Math.PI);
 // draw lines
-for(var i = 0; i < lines.rows; ++i)
-{
-    var rho = lines.data32f()[i * 2], theta = lines.data32f()[i * 2 + 1];
-    var a = Math.cos(theta), b = Math.sin(theta);
-    var x0 = a * rho, y0 = b * rho;
-    var startPoint = [x0 - 1000 * b, y0 + 1000 * a];
-    var endPoint = [x0 + 1000 * b, y0 - 1000 * a];
-    cv.line(dst, startPoint, endPoint, color);
+for (let i = 0; i < lines.rows; ++i) {
+    let rho = lines.data32F[i * 2], theta = lines.data32F[i * 2 + 1];
+    let a = Math.cos(theta), b = Math.sin(theta);
+    let x0 = a * rho, y0 = b * rho;
+    let startPoint = {x : x0 - 1000 * b, y : y0 + 1000 * a};
+    let endPoint = {x : x0 + 1000 * b, y : y0 - 1000 * a};
+    cv.line(dst, startPoint, endPoint, [255, 0, 0, 255]);
 }
 cv.imshow("HoughLinesCanvasOutput", dst);
-src.delete(); dst.delete(); lines.delete(); color.delete();
+src.delete(); dst.delete(); lines.delete(); 
 </textarea>
 <p class="err" id="HoughLinesErr"></p>
 </div>
@@ -133,7 +131,7 @@ src.delete(); dst.delete(); lines.delete(); color.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function HoughLinesExecuteCode() {
-    var HoughLinesText = document.getElementById("HoughLinesTestCode").value;
+    let HoughLinesText = document.getElementById("HoughLinesTestCode").value;
     try {
         eval(HoughLinesText);
         document.getElementById("HoughLinesErr").innerHTML = " ";
@@ -142,11 +140,11 @@ function HoughLinesExecuteCode() {
     }
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "HoughLinesCanvasInput");
-var HoughLinesInputElement = document.getElementById("HoughLinesInput");
+loadImageToCanvas("shape.jpg", "HoughLinesCanvasInput");
+let HoughLinesInputElement = document.getElementById("HoughLinesInput");
 HoughLinesInputElement.addEventListener("change", HoughLinesHandleFiles, false);
 function HoughLinesHandleFiles(e) {
-    var HoughLinesUrl = URL.createObjectURL(e.target.files[0]);
+    let HoughLinesUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(HoughLinesUrl, "HoughLinesCanvasInput");
 }
 </script>
@@ -193,23 +191,22 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 <h2>Input your code</h2>
 <button id="HoughLinesPTryIt" disabled="true" onclick="HoughLinesPExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="80" id="HoughLinesPTestCode" spellcheck="false">
-var src = cv.imread("HoughLinesPCanvasInput");
-var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
-var lines = new cv.Mat();
-var color = new cv.Scalar(255, 0, 0);
+let src = cv.imread("HoughLinesPCanvasInput");
+let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+let lines = new cv.Mat();
+let color = new cv.Scalar(255, 0, 0);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.Canny(src, src, 50, 200, 3);
-// You can try more different conversion
-cv.HoughLinesP(src, lines, 1, Math.PI / 180, 40, 0, 0);
+// You can try more different parameters
+cv.HoughLinesP(src, lines, 1, Math.PI / 180, 2, 0, 0);
 // draw lines
-for(var i = 0; i < lines.rows; ++i)
-{
-    var startPoint = [lines.data32s()[i * 4], lines.data32s()[i * 4 + 1]];
-    var endPoint = [lines.data32s()[i * 4 + 2], lines.data32s()[i * 4 + 3]];
+for (let i = 0; i < lines.rows; ++i) {
+    let startPoint = new cv.Point(lines.data32S[i * 4], lines.data32S[i * 4 + 1]);
+    let endPoint = new cv.Point(lines.data32S[i * 4 + 2], lines.data32S[i * 4 + 3]);
     cv.line(dst, startPoint, endPoint, color);
 }
 cv.imshow("HoughLinesPCanvasOutput", dst);
-src.delete(); dst.delete(); lines.delete(); color.delete();
+src.delete(); dst.delete(); lines.delete();
 </textarea>
 <p class="err" id="HoughLinesPErr"></p>
 </div>
@@ -222,7 +219,7 @@ src.delete(); dst.delete(); lines.delete(); color.delete();
 </div>
 <script>
 function HoughLinesPExecuteCode() {
-    var HoughLinesPText = document.getElementById("HoughLinesPTestCode").value;
+    let HoughLinesPText = document.getElementById("HoughLinesPTestCode").value;
     try {
         eval(HoughLinesPText);
         document.getElementById("HoughLinesPErr").innerHTML = " ";
@@ -231,11 +228,11 @@ function HoughLinesPExecuteCode() {
     }
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "HoughLinesPCanvasInput");
-var HoughLinesPInputElement = document.getElementById("HoughLinesPInput");
+loadImageToCanvas("shape.jpg", "HoughLinesPCanvasInput");
+let HoughLinesPInputElement = document.getElementById("HoughLinesPInput");
 HoughLinesPInputElement.addEventListener("change", HoughLinesPHandleFiles, false);
 function HoughLinesPHandleFiles(e) {
-    var HoughLinesPUrl = URL.createObjectURL(e.target.files[0]);
+    let HoughLinesPUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(HoughLinesPUrl, "HoughLinesPCanvasInput");
 }
 

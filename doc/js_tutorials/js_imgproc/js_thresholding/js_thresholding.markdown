@@ -56,9 +56,9 @@ canvas {
 <h2>Input your code</h2>
 <button id="thresholdTryIt" disabled="true" onclick="thresholdExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="thresholdTestCode" spellcheck="false">
-var src = cv.imread("thresholdCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
+let src = cv.imread("thresholdCanvasInput");
+let dst = new cv.Mat();
+// You can try more different parameters
 cv.threshold(src, dst, 177, 200, cv.THRESH_BINARY)
 cv.imshow("thresholdCanvasOutput", dst);
 src.delete();
@@ -77,7 +77,7 @@ dst.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function thresholdExecuteCode() {
-    var thresholdText = document.getElementById("thresholdTestCode").value;
+    let thresholdText = document.getElementById("thresholdTestCode").value;
     try {
         eval(thresholdText);
         document.getElementById("thresholdErr").innerHTML = " ";
@@ -87,10 +87,10 @@ function thresholdExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "thresholdCanvasInput");
-var thresholdInputElement = document.getElementById("thresholdInput");
+let thresholdInputElement = document.getElementById("thresholdInput");
 thresholdInputElement.addEventListener("change", thresholdHandleFiles, false);
 function thresholdHandleFiles(e) {
-    var thresholdUrl = URL.createObjectURL(e.target.files[0]);
+    let thresholdUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(thresholdUrl, "thresholdCanvasInput");
 }
 </script>
@@ -128,21 +128,16 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="adaptiveThresholdCodeArea">
 <h2>Input your code</h2>
 <button id="adaptiveThresholdTryIt" disabled="true" onclick="adaptiveThresholdExecuteCode()">Try it</button><br>
 <textarea rows="9" cols="80" id="adaptiveThresholdTestCode" spellcheck="false">
-var src = cv.imread("adaptiveThresholdCanvasInput");
-var dst = new cv.Mat();
+let src = cv.imread("adaptiveThresholdCanvasInput");
+let dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-// You can try more different conversion
+// You can try more different parameters
 cv.adaptiveThreshold(src, dst, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 3, 2)
 cv.imshow("adaptiveThresholdCanvasOutput", dst);
 src.delete();
@@ -159,7 +154,7 @@ dst.delete();
 </div>
 <script>
 function adaptiveThresholdExecuteCode() {
-    var adaptiveThresholdText = document.getElementById("adaptiveThresholdTestCode").value;
+    let adaptiveThresholdText = document.getElementById("adaptiveThresholdTestCode").value;
     try {
         eval(adaptiveThresholdText);
         document.getElementById("adaptiveThresholdErr").innerHTML = " ";
@@ -169,10 +164,10 @@ function adaptiveThresholdExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "adaptiveThresholdCanvasInput");
-var adaptiveThresholdInputElement = document.getElementById("adaptiveThresholdInput");
+let adaptiveThresholdInputElement = document.getElementById("adaptiveThresholdInput");
 adaptiveThresholdInputElement.addEventListener("change", adaptiveThresholdHandleFiles, false);
 function adaptiveThresholdHandleFiles(e) {
-    var adaptiveThresholdUrl = URL.createObjectURL(e.target.files[0]);
+    let adaptiveThresholdUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(adaptiveThresholdUrl, "adaptiveThresholdCanvasInput");
 }
 function onReady() {

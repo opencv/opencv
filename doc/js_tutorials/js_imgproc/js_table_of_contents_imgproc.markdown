@@ -42,17 +42,17 @@ Image Processing {#tutorial_js_table_of_contents_imgproc}
 -   @subpage tutorial_js_table_of_contents_contours
 
     All
-    about Contours in OpenCV
+    about Contours in OpenCV.js
 
 -   @subpage tutorial_js_table_of_contents_histograms
 
     All
-    about histograms in OpenCV
+    about histograms in OpenCV.js
 
 -   @subpage tutorial_js_table_of_contents_transforms
 
     Meet
-    different Image Transforms in OpenCV like Fourier Transform, Cosine Transform etc.
+    different Image Transforms in OpenCV.js like Fourier Transform, Cosine Transform etc.
 
 -   @subpage tutorial_js_template_matching
 

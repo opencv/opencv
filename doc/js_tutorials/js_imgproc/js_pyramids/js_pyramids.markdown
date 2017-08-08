@@ -37,7 +37,7 @@ Gaussian Pyramid and expanded version of its upper level in Gaussian Pyramid.
 Downsample
 ------
 
-We use the function: **cv.pyrDown (src, dst, dstsize = [0, 0], borderType  = cv.BORDER_DEFAULT)** 
+We use the function: **cv.pyrDown (src, dst, dstsize = new cv.Size(0, 0), borderType  = cv.BORDER_DEFAULT)** 
 @param src         input image.
 @param dst         output image; it has the specified size and the same type as src.
 @param dstsize     size of the output image.
@@ -65,14 +65,13 @@ canvas {
 <div id="pyrDownCodeArea">
 <h2>Input your code</h2>
 <button id="pyrDownTryIt" disabled="true" onclick="pyrDownExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="pyrDownTestCode" spellcheck="false">
-var src = cv.imread("pyrDownCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
-cv.pyrDown(src, dst, [0, 0], cv.BORDER_DEFAULT);
+<textarea rows="6" cols="80" id="pyrDownTestCode" spellcheck="false">
+let src = cv.imread("pyrDownCanvasInput");
+let dst = new cv.Mat();
+// You can try more different parameters
+cv.pyrDown(src, dst, new cv.Size(0, 0), cv.BORDER_DEFAULT);
 cv.imshow("pyrDownCanvasOutput", dst);
-src.delete(); 
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="pyrDownErr"></p>
 </div>
@@ -87,7 +86,7 @@ dst.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function pyrDownExecuteCode() {
-    var pyrDownText = document.getElementById("pyrDownTestCode").value;
+    let pyrDownText = document.getElementById("pyrDownTestCode").value;
     try {
         eval(pyrDownText);
         document.getElementById("pyrDownErr").innerHTML = " ";
@@ -97,10 +96,10 @@ function pyrDownExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "pyrDownCanvasInput");
-var pyrDownInputElement = document.getElementById("pyrDownInput");
+let pyrDownInputElement = document.getElementById("pyrDownInput");
 pyrDownInputElement.addEventListener("change", pyrDownHandleFiles, false);
 function pyrDownHandleFiles(e) {
-    var pyrDownUrl = URL.createObjectURL(e.target.files[0]);
+    let pyrDownUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(pyrDownUrl, "pyrDownCanvasInput");
 }
 </script>
@@ -110,7 +109,7 @@ function pyrDownHandleFiles(e) {
 Upsample
 ------
 
-We use the function: **cv.pyrUp (src, dst, dstsize = [0, 0], borderType  = cv.BORDER_DEFAULT)** 
+We use the function: **cv.pyrUp (src, dst, dstsize = new cv.Size(0, 0), borderType  = cv.BORDER_DEFAULT)** 
 @param src         input image.
 @param dst         output image; it has the specified size and the same type as src.
 @param dstsize     size of the output image.
@@ -125,24 +124,18 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="pyrUpCodeArea">
 <h2>Input your code</h2>
 <button id="pyrUpTryIt" disabled="true" onclick="pyrUpExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="pyrUpTestCode" spellcheck="false">
-var src = cv.imread("pyrUpCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
-cv.pyrUp(src, dst, [0, 0], cv.BORDER_DEFAULT);
+<textarea rows="6" cols="80" id="pyrUpTestCode" spellcheck="false">
+let src = cv.imread("pyrUpCanvasInput");
+let dst = new cv.Mat();
+// You can try more different parameters
+cv.pyrUp(src, dst, new cv.Size(0, 0), cv.BORDER_DEFAULT);
 cv.imshow("pyrUpCanvasOutput", dst);
-src.delete(); 
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="pyrUpErr"></p>
 </div>
@@ -155,7 +148,7 @@ dst.delete();
 </div>
 <script>
 function pyrUpExecuteCode() {
-    var pyrUpText = document.getElementById("pyrUpTestCode").value;
+    let pyrUpText = document.getElementById("pyrUpTestCode").value;
     try {
         eval(pyrUpText);
         document.getElementById("pyrUpErr").innerHTML = " ";
@@ -165,10 +158,10 @@ function pyrUpExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "pyrUpCanvasInput");
-var pyrUpInputElement = document.getElementById("pyrUpInput");
+let pyrUpInputElement = document.getElementById("pyrUpInput");
 pyrUpInputElement.addEventListener("change", pyrUpHandleFiles, false);
 function pyrUpHandleFiles(e) {
-    var pyrUpUrl = URL.createObjectURL(e.target.files[0]);
+    let pyrUpUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(pyrUpUrl, "pyrUpCanvasInput");
 }
 function onReady() {

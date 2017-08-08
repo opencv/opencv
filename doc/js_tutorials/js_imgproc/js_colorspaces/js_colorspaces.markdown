@@ -45,13 +45,12 @@ canvas {
 <h2>Input your code</h2>
 <button id="cvtColorTryIt" disabled="true" onclick="cvtColorExecuteCode()">Try it</button><br>
 <textarea rows="7" cols="80" id="cvtColorTestCode" spellcheck="false">
-var src = cv.imread("cvtColorCanvasInput");
-var dst = new cv.Mat();
-// You can try more different conversion
+let src = cv.imread("cvtColorCanvasInput");
+let dst = new cv.Mat();
+// You can try more different parameters
 cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
 cv.imshow("cvtColorCanvasOutput", dst);
-src.delete();
-dst.delete();
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="cvtColorErr"></p>
 </div>
@@ -66,7 +65,7 @@ dst.delete();
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 function cvtColorExecuteCode() {
-    var cvtColorText = document.getElementById("cvtColorTestCode").value;
+    let cvtColorText = document.getElementById("cvtColorTestCode").value;
     try {
         eval(cvtColorText);
         document.getElementById("cvtColorErr").innerHTML = " ";
@@ -76,10 +75,10 @@ function cvtColorExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "cvtColorCanvasInput");
-var cvtColorInputElement = document.getElementById("cvtColorInput");
+let cvtColorInputElement = document.getElementById("cvtColorInput");
 cvtColorInputElement.addEventListener("change", cvtColorHandleFiles, false);
 function cvtColorHandleFiles(e) {
-    var cvtColorUrl = URL.createObjectURL(e.target.files[0]);
+    let cvtColorUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(cvtColorUrl, "cvtColorCanvasInput");
 }
 </script>
@@ -106,27 +105,20 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 \htmlonly
 <!DOCTYPE html>
 <head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
 </head>
 <body>
 <div id="inRangeCodeArea">
 <h2>Input your code</h2>
 <button id="inRangeTryIt" disabled="true" onclick="inRangeExecuteCode()">Try it</button><br>
-<textarea rows="12" cols="80" id="inRangeTestCode" spellcheck="false">
-var src = cv.imread("inRangeCanvasInput");
-var dst = new cv.Mat();
-var lowScalar = new cv.Scalar(0, 0, 0, 0);
-var highScalar = new cv.Scalar(150, 150, 150, 255);
-var low = new cv.Mat(src.rows , src.cols, src.type(), lowScalar);
-var high = new cv.Mat(src.rows , src.cols, src.type(), highScalar);
-// You can try more different conversion
+<textarea rows="8" cols="80" id="inRangeTestCode" spellcheck="false">
+let src = cv.imread("inRangeCanvasInput");
+let dst = new cv.Mat();
+let low = new cv.Mat(src.rows , src.cols, src.type(), [0, 0, 0, 0]);
+let high = new cv.Mat(src.rows , src.cols, src.type(), [150, 150, 150, 255]);
+// You can try more different parameters
 cv.inRange(src, low, high, dst);
 cv.imshow("inRangeCanvasOutput", dst);
-src.delete(); dst.delete(); low.delete(); high.delete(); lowScalar.delete(); highScalar.delete();
+src.delete(); dst.delete(); low.delete(); high.delete();
 </textarea>
 <p class="err" id="inRangeErr"></p>
 </div>
@@ -139,7 +131,7 @@ src.delete(); dst.delete(); low.delete(); high.delete(); lowScalar.delete(); hig
 </div>
 <script>
 function inRangeExecuteCode() {
-    var inRangeText = document.getElementById("inRangeTestCode").value;
+    let inRangeText = document.getElementById("inRangeTestCode").value;
     try {
         eval(inRangeText);
         document.getElementById("inRangeErr").innerHTML = " ";
@@ -149,10 +141,10 @@ function inRangeExecuteCode() {
 }
 
 loadImageToCanvas("lena.jpg", "inRangeCanvasInput");
-var inRangeInputElement = document.getElementById("inRangeInput");
+let inRangeInputElement = document.getElementById("inRangeInput");
 inRangeInputElement.addEventListener("change", inRangeHandleFiles, false);
 function inRangeHandleFiles(e) {
-    var inRangeUrl = URL.createObjectURL(e.target.files[0]);
+    let inRangeUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(inRangeUrl, "inRangeCanvasInput");
 }
 function onReady() {
