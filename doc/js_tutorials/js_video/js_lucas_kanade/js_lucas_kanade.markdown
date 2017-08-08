@@ -118,12 +118,12 @@ canvas {
 let [maxCorners, qualityLevel, minDistance, blockSize] = [30, 0.3, 7, 7];
 
 // Parameters for lucas kanade optical flow
-let winSize  = [15,15];
+let winSize  = new cv.Size(15,15);
 let maxLevel = 2;
 let criteria = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03);
 
 // Create some random colors
-color = [];
+let color = [];
 for(let i = 0; i < maxCorners; i++)
     color.push(new cv.Scalar(parseInt(Math.random()*255), parseInt(Math.random()*255), parseInt(Math.random()*255), 255));
 
@@ -162,9 +162,9 @@ lkofLoopIndex = setInterval(
         let goodNew = [];
         let goodOld = [];
         for(let i = 0; i < st.rows; i++) {
-            if(st.data()[i] === 1) {
-                goodNew.push([p1.data32f()[i*2], p1.data32f()[i*2+1]]);
-                goodOld.push([p0.data32f()[i*2], p0.data32f()[i*2+1]]);
+            if(st.data[i] === 1) {
+                goodNew.push(new cv.Point(p1.data32F[i*2], p1.data32F[i*2+1]));
+                goodOld.push(new cv.Point(p0.data32F[i*2], p0.data32F[i*2+1]));
             }
         }
 
@@ -182,8 +182,8 @@ lkofLoopIndex = setInterval(
         p0.delete(); p0 = null;
         p0 = new cv.Mat(goodNew.length, 1, cv.CV_32FC2);
         for(let i = 0; i < goodNew.length; i++) {
-            p0.data32f()[i*2] = goodNew[i][0];
-            p0.data32f()[i*2+1] = goodNew[i][1];
+            p0.data32F[i*2] = goodNew[i].x;
+            p0.data32F[i*2+1] = goodNew[i].y;
         }
     }, 33); 
 </textarea>
@@ -195,8 +195,6 @@ lkofLoopIndex = setInterval(
     <video id="lkofVideo" src="box.mp4" width="640" muted hidden>Your browser does not support the video tag.</video>
     <canvas id="lkofCanvasOutput"></canvas>
 </div>
-<script src="adapter.js"></script>
-<script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 // lkof means Lucas-Kanade Optical Flow
@@ -275,11 +273,6 @@ function lkofStopVideo() {
         mask.delete();
         mask = null;
     }
-    if (color != null && color.length > 0 && !color[0].isDeleted()) {
-        for(let i = 0; i < color.length; i++)
-            color[i].delete();
-        color = null;
-    }
     //document.getElementById("lkofCanvasOutput").getContext("2d").clearRect(0, 0, lkofWidth, lkofHeight);
     lkofVideo.pause();
     lkofVideo.currentTime = 0;
@@ -344,7 +337,6 @@ hsv = new cv.Mat();
 hsv0 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1);
 let sValue = new cv.Scalar(255)
 hsv1 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1, sValue);
-sValue.delete();
 hsv2 = new cv.Mat(dofHeight, dofWidth, cv.CV_8UC1);
 hsvVec = new cv.MatVector();
 hsvVec.push_back(hsv0); hsvVec.push_back(hsv1); hsvVec.push_back(hsv2);

@@ -115,8 +115,8 @@ function addWeighted(value) {
     }
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "canvasInput1");
-loadImageToCanvas("WindowsLogo.jpg", "canvasInput2");
+loadImageToCanvas("apple.jpg", "canvasInput1");
+loadImageToCanvas("orange.jpg", "canvasInput2");
 
 let src1, src2;
 function onReady() {

@@ -21,7 +21,7 @@ To capture a video, you need to add some HTML elements in the web.
 
 Fisrt, we use WebRTC navigator.mediaDevices.getUserMedia to get the media stream.
 @code{.js}
-let video = document.getElementById("video"); // video is the id of <video>
+let video = document.getElementById("video"); // video is the id of video tag
 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     .then(function(stream) {
         video.srcObject = stream;
@@ -33,7 +33,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
 @endcode
 
 @note This function is needless when you just capture video from a video file. But notice that 
-<video> tag only supports video formats of Ogg(Theora), WebM(VP8/VP9) or MP4(H.264).
+HTML video element only supports video formats of Ogg(Theora), WebM(VP8/VP9) or MP4(H.264).
 
 Playing video
 -------------
@@ -50,22 +50,22 @@ let dst = new cv.Mat(height, width, cv.CV_8UC1);
 let loopIndex = setInterval(
     function() {
         context.drawImage(video, 0, 0, width, height);
-        src.data().set(context.getImageData(0, 0, width, height).data);
+        src.data.set(context.getImageData(0, 0, width, height).data);
         cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
         cv.imshow("canvasOutput", dst); // canvasOutput is the id of another <canvas>;
     }, 33);
 @endcode
 
 In addition, OpenCV.js implements cv.VideoCapture using the above method. You need not to add the 
-hidden canvas tag manually. For performance reasons, the mat passed to read() function should be 
+hidden canvas element manually. For performance reasons, the mat passed to read() function should be 
 constructed with cv.CV_8UC4 type and same size as the video. The above code of playing video could 
 be simplified as below.
 @code{.js}
 let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC1);
 
-// "video" is the id of the video tag
-let cap = new cv.VideoCapture("video");
+// videoSource is the video id or element.
+let cap = new cv.VideoCapture(videoSource);
 let loopIndex = setInterval(
     function() {
         // the read() function need a mat with cv.CV_8UC4 type and size same as the video
@@ -82,9 +82,8 @@ Try it
 
 Here is the demo for above code. Click `start` to start your camera and paly it. The left video is from 
 your camera directly, and the right one is from OpenCV.js. Click `processing` to gray the video. 
-Here we set the video width as 320, and the height will be computed based on the input stream. Another 
-tip is that the &lt;canvas&gt; used to draw video stream should be hidden. Some core code is in the 
-textbox, and you can change it to investigate more.
+Here we set the video width as 320, and the height will be computed based on the input stream. Some core 
+code is in the textbox, and you can change it to investigate more.
 
 \htmlonly
 <head>
@@ -131,8 +130,6 @@ loopIndex = setInterval(
     <video id="video">Your browser does not support the video tag.</video>
     <canvas id="canvasOutput"></canvas>
 </div>
-<script src="adapter.js"></script>
-<script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 // In this case, We set width 320, and the height will be computed based on the input stream.

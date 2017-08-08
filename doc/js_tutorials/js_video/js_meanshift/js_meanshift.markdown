@@ -70,7 +70,7 @@ cap.read(msFrame);
 let trackWindow = new cv.Rect(300, 120, 125, 250); // simply hardcoded the values 300, 120, 125, 250
 
 // set up the ROI for tracking
-let msRoi = msFrame.getROI_Rect(trackWindow);
+let msRoi = msFrame.getRoiRect(trackWindow);
 let msHsvRoi = new cv.Mat();
 cv.cvtColor(msRoi, msHsvRoi, cv.COLOR_RGBA2RGB);
 cv.cvtColor(msHsvRoi, msHsvRoi, cv.COLOR_RGB2HSV);
@@ -88,14 +88,12 @@ cv.normalize(msRoiHist, msRoiHist, 0, 255, cv.NORM_MINMAX);
 
 // delete useless mats.
 msRoi.delete(); msHsvRoi.delete(); mask.delete(); low.delete(); high.delete(); msHsvRoiVec.delete();
-lowScalar.delete(); highScalar.delete();
 
 // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
 let termCrit = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1);
 
 msHsv = new cv.Mat();
 msDst = new cv.Mat();
-msRectColor = new cv.Scalar(255, 0, 0, 255);
 msHsvVec = new cv.MatVector();
 msHsvVec.push_back(msHsv);
 msLoopIndex = setInterval(
@@ -110,12 +108,14 @@ msLoopIndex = setInterval(
         msHsvVec.set(0, msHsv);
         cv.calcBackProject(msHsvVec, [0], msRoiHist, msDst, [0,180], 1);
 
-        // apply meanshift to get the new location
-        cv.meanShift(msDst, trackWindow, termCrit);
+        // Apply meanshift to get the new location
+        // and it also returns number of iterations meanShift took to converge, 
+        // which is useless in this demo.
+        [ , trackWindow] = cv.meanShift(msDst, trackWindow, termCrit);
 
         // Draw it on image
         let [x,y,w,h] = [trackWindow.x, trackWindow.y, trackWindow.width, trackWindow.height];
-        cv.rectangle(msFrame, [x, y], [x+w, y+h], msRectColor, 2);
+        cv.rectangle(msFrame, new cv.Point(x, y), new cv.Point(x+w, y+h), [255, 0, 0, 255], 2);
         cv.imshow("msCanvasOutput", msFrame);
     }, 33);
 </textarea>
@@ -127,8 +127,6 @@ msLoopIndex = setInterval(
     <video id="msVideo" src="cup.mp4" width="640" muted hidden>Your browser does not support the video tag.</video>
     <canvas id="msCanvasOutput"></canvas>
 </div>
-<script src="adapter.js"></script>
-<script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 // ms means Meanshift
@@ -144,7 +142,6 @@ let msFrame = null;
 let msDst = null;
 let msHsvVec = null;
 let msRoiHist = null;
-let msRectColor = null;
 
 msVideo.oncanplay = function() {
     msVideo.setAttribute("height", msVideo.videoHeight/msVideo.videoWidth*msVideo.width);
@@ -190,10 +187,6 @@ function msStopVideo() {
     if (msHsv != null && !msHsv.isDeleted()) {
         msHsv.delete();
         msHsv = null;
-    }
-    if (msRectColor != null && !msRectColor.isDeleted()) {
-        msRectColor.delete();
-        msRectColor = null;
     }
     //document.getElementById("msCanvasOutput").getContext("2d").clearRect(0, 0, msWidth, msHeight);
     msVideo.pause();
@@ -257,25 +250,24 @@ cap.read(csFrame);
 let trackWindow = new cv.Rect(300, 120, 125, 250); // simply hardcoded the values 300, 120, 125, 250
 
 // set up the ROI for tracking
-let csRoi = csFrame.getROI_Rect(trackWindow);
-let cvHsvRoi = new cv.Mat();
-cv.cvtColor(csRoi, cvHsvRoi, cv.COLOR_RGBA2RGB);
-cv.cvtColor(cvHsvRoi, cvHsvRoi, cv.COLOR_RGB2HSV);
+let csRoi = csFrame.getRoiRect(trackWindow);
+let csHsvRoi = new cv.Mat();
+cv.cvtColor(csRoi, csHsvRoi, cv.COLOR_RGBA2RGB);
+cv.cvtColor(csHsvRoi, csHsvRoi, cv.COLOR_RGB2HSV);
 let mask = new cv.Mat();
 let lowScalar = new cv.Scalar(30, 30, 0);
 let highScalar = new cv.Scalar(180, 180, 180);
-let low = new cv.Mat(cvHsvRoi.rows, cvHsvRoi.cols, cvHsvRoi.type(), lowScalar);
-let high = new cv.Mat(cvHsvRoi.rows, cvHsvRoi.cols, cvHsvRoi.type(), highScalar);
-cv.inRange(cvHsvRoi, low, high, mask);
+let low = new cv.Mat(csHsvRoi.rows, csHsvRoi.cols, csHsvRoi.type(), lowScalar);
+let high = new cv.Mat(csHsvRoi.rows, csHsvRoi.cols, csHsvRoi.type(), highScalar);
+cv.inRange(csHsvRoi, low, high, mask);
 csRoiHist = new cv.Mat();
-let cvHsvRoiVec = new cv.MatVector();
-cvHsvRoiVec.push_back(cvHsvRoi);
-cv.calcHist(cvHsvRoiVec, [0], mask, csRoiHist, [180], [0,180]);
+let csHsvRoiVec = new cv.MatVector();
+csHsvRoiVec.push_back(csHsvRoi);
+cv.calcHist(csHsvRoiVec, [0], mask, csRoiHist, [180], [0,180]);
 cv.normalize(csRoiHist, csRoiHist, 0, 255, cv.NORM_MINMAX);
 
 // delete useless mats.
-csRoi.delete(); cvHsvRoi.delete(); mask.delete(); low.delete(); high.delete(); cvHsvRoiVec.delete();
-lowScalar.delete(); highScalar.delete();
+csRoi.delete(); csHsvRoi.delete(); mask.delete(); low.delete(); high.delete(); csHsvRoiVec.delete();
 
 // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
 let termCrit = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1);
@@ -284,7 +276,7 @@ csHsv = new cv.Mat();
 csHsvVec = new cv.MatVector();
 csHsvVec.push_back(csHsv);
 csDst = new cv.Mat();
-csRectColor = new cv.Scalar(255, 0, 0, 255);
+let trackBox = null;
 csLoopIndex = setInterval(
     function() {
         if(csVideo.ended) {
@@ -298,15 +290,14 @@ csLoopIndex = setInterval(
         cv.calcBackProject(csHsvVec, [0], csRoiHist, csDst, [0,180], 1);
 
         // apply camshift to get the new location
-        let trackBox = cv.CamShift(csDst, trackWindow, termCrit);
+        [trackBox, trackWindow] = cv.CamShift(csDst, trackWindow, termCrit);
 
         // Draw it on image
-        let pts = new cv.Point2fVector();
-        trackBox.points(pts);
-        cv.line(csFrame, pts.get(0), pts.get(1), csRectColor, 3);
-        cv.line(csFrame, pts.get(1), pts.get(2), csRectColor, 3);
-        cv.line(csFrame, pts.get(2), pts.get(3), csRectColor, 3);
-        cv.line(csFrame, pts.get(3), pts.get(0), csRectColor, 3);
+        let pts = cv.rotatedRectPoints(trackBox);
+        cv.line(csFrame, pts[0], pts[1], [255, 0, 0, 255], 3);
+        cv.line(csFrame, pts[1], pts[2], [255, 0, 0, 255], 3);
+        cv.line(csFrame, pts[2], pts[3], [255, 0, 0, 255], 3);
+        cv.line(csFrame, pts[3], pts[0], [255, 0, 0, 255], 3);
         cv.imshow("csCanvasOutput", csFrame);
     }, 33);  
 </textarea>
@@ -333,7 +324,6 @@ let csDst = null;
 let csHsvVec = null;
 let csHsv = null;
 let csRoiHist = null;
-let csRectColor = null;
 
 csVideo.oncanplay = function() {
     csVideo.setAttribute("height", csVideo.videoHeight/csVideo.videoWidth*csVideo.width);
@@ -378,10 +368,6 @@ function csStopVideo() {
     if (csHsv != null && !csHsv.isDeleted()) {
         csHsv.delete();
         csHsv = null;
-    }
-    if (csRectColor != null && !csRectColor.isDeleted()) {
-        csRectColor.delete();
-        csRectColor = null;
     }
     //document.getElementById("csCanvasOutput").getContext("2d").clearRect(0, 0, csWidth, csHeight);
     csVideo.pause();

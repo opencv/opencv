@@ -24,7 +24,8 @@ let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
 Then use cv.matFromArray to construct a cv.Mat.
 @code{.js}
-let src = cv.matFromArray(imgData, cv.CV_8UC4);
+let src = new cv.Mat(canvas.height, canvas.width, cv.CV_8UC4);
+src.data.set(imgData.data);
 @endcode
 
 @note Cause canvas only support 8-bit RGBA image with continuous storage, the cv.Mat type is cv.CV_8UC4. 
@@ -45,7 +46,7 @@ cv.cvtColor(dst, dst, cv.COLOR_***2RGBA);
 
 Then new an ImageData obj from dst.
 @code{.js}
-let imgData = new ImageData(new Uint8ClampedArray(dst.data()), dst.cols, dst.rows);
+let imgData = new ImageData(new Uint8ClampedArray(dst.data, dst.cols, dst.rows);
 @endcode
 
 Finally, display it.
@@ -61,17 +62,17 @@ ctx.putImageData(imgData, 0, 0);
 In addition, OpenCV.js implements image read and show using the above method. You can use 
 cv.imread and cv.imshow to read image from html canvas and display it.
 @code{.js}
-let img = cv.imread("canvasInput");
-cv.imshow("canvasOutput", img);
+// imageSource should be canvas element or id, or img element or id.
+let img = cv.imread(imageSource);
+// canvasOutput should be canvas element or id.
+cv.imshow(canvasOutput, img);
 img.delete();
 @endcode
 
 Try it
 ------
 
-Here is the demo for above code. Canvas elements named canvasInput and canvasOutput have been prepared. 
-Choose an image and click `Try it` to see the result. And you can change the code in the textbox to 
-investigate more.
+Here is the demo for above code. Canvas "canvasInput" and canvas "canvasOutput" have been prepared. Choose an image and click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

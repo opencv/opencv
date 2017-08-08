@@ -41,6 +41,8 @@ foreground mask. And, you have an option of selecting whether shadow to be detec
 detectShadows = True (which is so by default), it detects and marks shadows, but decreases the speed. 
 Shadows will be marked in gray color.
 
+@note The object of cv.BackgroundSubtractorMOG2 should be deleted manually.
+
 Try it
 ------
 
@@ -66,10 +68,10 @@ canvas {
 <div id="CodeArea">
 <h3>Input your code</h3>
 <textarea rows="16" cols="90" id="bgsTestCode" spellcheck="false">
-// frame and fgmask are declared and deleted elsewhere
+// frame, fgmask and fgbg are declared and deleted elsewhere
 frame = new cv.Mat(bgsHeight, bgsWidth, cv.CV_8UC4);
 fgmask = new cv.Mat(bgsHeight, bgsWidth, cv.CV_8UC1);
-let fgbg = new cv.BackgroundSubtractorMOG2(500, 16, true);
+fgbg = new cv.BackgroundSubtractorMOG2(500, 16, true);
 
 // "bgsVideo" is the id of the video tag
 let cap = new cv.VideoCapture("bgsVideo");
@@ -92,8 +94,6 @@ bgsLoopIndex = setInterval(
     <video id="bgsVideo" src="box.mp4" width="320" muted>Your browser does not support the video tag.</video>
     <canvas id="bgsCanvasOutput"></canvas>
 </div>
-<script src="adapter.js"></script>
-<script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 // bgs means BackgroundSubtractorMOG2
@@ -107,6 +107,7 @@ let bgsHeight = null;
 let bgsLoopIndex = null;
 let frame = null;
 let fgmask = null;
+let fgbg = null;
 
 bgsVideo.oncanplay = function() {
     bgsVideo.setAttribute("height", bgsVideo.videoHeight/bgsVideo.videoWidth*bgsVideo.width);
@@ -140,6 +141,10 @@ function bgsStopVideo() {
     if (fgmask != null && !fgmask.isDeleted()) {
         fgmask.delete();
         fgmask = null;
+    }
+    if (fgbg != null && !fgbg.isDeleted()) {
+        fgbg.delete();
+        fgbg = null;
     }
     //document.getElementById("bgsCanvasOutput").getContext("2d").clearRect(0, 0, bgsWidth, bgsHeight);
     bgsVideo.pause();
