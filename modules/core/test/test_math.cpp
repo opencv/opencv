@@ -3647,7 +3647,7 @@ TEST(Core_SoftFloat, sincos64)
         softdouble x;
         uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         x.v = mantissa;
-        x = x.setSign(rng() % 2);
+        x = x.setSign((rng() % 2) != 0);
         x = x.setExp(exponents[rng() % exponents.size()]);
         inputs.push_back(x);
     }

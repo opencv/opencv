@@ -163,61 +163,12 @@ public:
        + The only exception is when x is NaN: x != y for any y.
      - Positive and negative zeros are equal
     */
-    inline bool operator == ( const softfloat& a ) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else return (v == a.v) || ! (uint32_t) ((v | a.v)<<1);
-    }
-
-    inline bool operator != ( const softfloat& a ) const { return !(*this == a); }
-
-    inline bool operator > ( const softfloat& a ) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast32_t uiA = a.v, uiB = v;
-            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
-            return (signA != signB) ? (signA && ((uint32_t) ((uiA | uiB)<<1) != 0)) :
-                                      (uiA != uiB) && (signA ^ (uiA < uiB));
-        }
-    }
-
-    inline bool operator < ( const softfloat& a ) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast32_t uiA = v, uiB = a.v;
-            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
-            return (signA != signB) ? signA && ((uint32_t) ((uiA | uiB)<<1) != 0) :
-                                      (uiA != uiB) && (signA ^ (uiA < uiB));
-        }
-    }
-
-    inline bool operator >= ( const softfloat& a ) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast32_t uiA = a.v, uiB = v;
-            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
-            return (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1) :
-                                      (uiA == uiB) || (signA ^ (uiA < uiB));
-        }
-    }
-
-    inline bool operator <= ( const softfloat& a ) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast32_t uiA = v, uiB = a.v;
-            bool signA = (uiA >> 31) != 0, signB = (uiB >> 31) != 0;
-            return (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1) :
-                                      (uiA == uiB) || (signA ^ (uiA < uiB));
-        }
-    }
+    bool operator == ( const softfloat& ) const;
+    bool operator != ( const softfloat& ) const;
+    bool operator >  ( const softfloat& ) const;
+    bool operator >= ( const softfloat& ) const;
+    bool operator <  ( const softfloat& ) const;
+    bool operator <= ( const softfloat& ) const;
 
     /** @brief NaN state indicator */
     inline bool isNaN() const { return (v & 0x7fffffff)  > 0x7f800000; }
@@ -343,61 +294,12 @@ public:
        + The only exception is when x is NaN: x != y for any y.
      - Positive and negative zeros are equal
     */
-    inline bool operator == (const softdouble& a) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else return (v == a.v) || ! ((v | a.v) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
-    }
-
-    inline bool operator != (const softdouble& a) const { return !(*this == a); }
-
-    inline bool operator > (const softdouble& a) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast64_t uiA = a.v, uiB = v;
-            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
-            return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
-                                      (uiA != uiB) && (signA ^ (uiA < uiB));
-        }
-    }
-
-    inline bool operator < (const softdouble& a) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast64_t uiA = v, uiB = a.v;
-            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
-            return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
-                                      (uiA != uiB) && (signA ^ (uiA < uiB));
-        }
-    }
-
-    inline bool operator >= (const softdouble& a) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast64_t uiA = a.v, uiB = v;
-            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
-            return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
-                                      (uiA == uiB) || (signA ^ (uiA < uiB));
-        }
-    }
-
-    inline bool operator <= (const softdouble& a) const
-    {
-        if(this->isNaN() || a.isNaN()) return false;
-        else
-        {
-            uint_fast64_t uiA = v, uiB = a.v;
-            bool signA = ((uiA >> 63) != 0), signB = ((uiB >> 63) != 0);
-            return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF )) :
-                                      (uiA == uiB) || (signA ^ (uiA < uiB));
-        }
-    }
+    bool operator == ( const softdouble& ) const;
+    bool operator != ( const softdouble& ) const;
+    bool operator >  ( const softdouble& ) const;
+    bool operator >= ( const softdouble& ) const;
+    bool operator <  ( const softdouble& ) const;
+    bool operator <= ( const softdouble& ) const;
 
     /** @brief NaN state indicator */
     inline bool isNaN() const { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
