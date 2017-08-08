@@ -53,15 +53,11 @@ const char* keys =
 
 int main( int argc, const char** argv )
 {
+    help();
     CommandLineParser parser(argc, argv, keys);
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
     string filename = parser.get<string>(0);
 
-    image = imread(filename, 1);
+    image = imread(filename, IMREAD_COLOR);
     if(image.empty())
     {
         printf("Cannot read image file: %s\n", filename.c_str());

@@ -11,7 +11,7 @@ using std::tr1::make_tuple;
 using std::tr1::get;
 using namespace testing;
 
-#define SHOW_DEBUG_LOG 0
+#define SHOW_DEBUG_LOG 1
 
 typedef std::tr1::tuple<std::string, Ptr<FeatureDetector>, float, float> String_FeatureDetector_Float_Float_t;
 const static std::string IMAGE_TSUKUBA = "features2d/tsukuba.png";
@@ -230,10 +230,10 @@ INSTANTIATE_TEST_CASE_P(ORB, DetectorRotationInvariance,
                         Value(IMAGE_TSUKUBA, ORB::create(), 0.5f, 0.76f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE, DetectorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(), 0.5f, 0.76f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(), 0.5f, 0.71f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DetectorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.5f, 0.76f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.5f, 0.71f));
 
 /*
  * Detector's scale invariance check

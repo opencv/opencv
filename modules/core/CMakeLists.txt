@@ -45,6 +45,16 @@ endif()
 if(ITT_INCLUDE_DIRS)
   ocv_module_include_directories(${ITT_INCLUDE_DIRS})
 endif()
+if(HAVE_POSIX_MEMALIGN)
+  ocv_append_sourge_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_POSIX_MEMALIGN=1")
+endif()
+if(HAVE_MALLOC_H)
+  ocv_append_sourge_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MALLOC_H=1")
+endif()
+if(HAVE_MEMALIGN)
+  ocv_append_sourge_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MEMALIGN=1")
+endif()
+
 ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module}
