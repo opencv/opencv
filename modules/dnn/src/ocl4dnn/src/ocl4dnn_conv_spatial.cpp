@@ -160,8 +160,9 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 template<typename Dtype>
 OCL4DNNConvSpatial<Dtype>::~OCL4DNNConvSpatial()
 {
-    swizzled_weights_.release();
-
+    if (!swizzled_weights_umat.empty()) {
+        swizzled_weights_umat.release();
+    }
     if (bestKernelConfig) {
         delete bestKernelConfig;
     }
@@ -300,9 +301,9 @@ typedef enum {
 
 template<typename Dtype>
 std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
-                                                      int32_t blockM,
-                                                      int32_t blockK,
-                                                      int32_t blockN)
+                                                       int32_t blockM,
+                                                       int32_t blockK,
+                                                       int32_t blockN)
 {
     std::stringstream ss;
     std::stringstream opts;
@@ -727,55 +728,52 @@ void OCL4DNNConvSpatial<Dtype>::generateKernelSrc()
 template<typename Dtype>
 bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
                                         const UMat& weight,
-                                        const UMat& bias, UMat& top,
-                                        int32_t batch_size)
+                                        const UMat& bias,
+                                        UMat& top,
+                                        int32_t numImages)
 {
-    cl_int ret;
-    bottom_data_ = (Dtype*)bottom.handle(ACCESS_READ);
-    top_data_ = (Dtype*)top.handle(ACCESS_WRITE);
-    weight_ = (Dtype*)weight.handle(ACCESS_READ);
-    bias_ = (Dtype*)bias.handle(ACCESS_READ);
-    num_ = batch_size;
+    int32_t total_bottom_size = bottom.total();
+    int32_t total_kernel_size = weight.total();
+    int32_t total_bias_size   = bias.total();
+    int32_t total_top_size    = top.total();
 
-    prepareKernel();
-    ret = convolve(bottom_data_, top_data_, 0, num_, bestKernelConfig);
+    UMat bottom_reshaped = bottom.reshape(1, 1, &total_bottom_size);
+    UMat top_reshaped    = top.reshape(1, 1, &total_top_size);
+    UMat weight_reshaped = weight.reshape(1, 1, &total_kernel_size);
+    UMat bias_reshaped;
+    if (bias_term_)
+        bias_reshaped = bias.reshape(1, 1, &total_bias_size);
+    num_ = numImages;
 
-    return ret == CL_SUCCESS ? true : false;
+    prepareKernel(bottom_reshaped, top_reshaped, weight_reshaped, bias_reshaped, numImages);
+    return convolve(bottom_reshaped, top_reshaped, weight_reshaped, bias_reshaped, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::tune(Dtype* top_data,
-                                    const Dtype* weight,
-                                    const Dtype* bias,
-                                    const Dtype* bottom_data,
-                                    int32_t batch_size)
+void OCL4DNNConvSpatial<Dtype>::tune(UMat &bottom,
+                                     UMat &top,
+                                     UMat &weight,
+                                     UMat &bias,
+                                     int32_t numImages)
 {
-    UMat verify_mat;
-    Dtype *verify_data;
+    UMat verify_top_umat;
 
-    verify_mat.create(1, batch_size * num_output_ * out_spatial_dim_, CV_32FC1);
-    verify_data = reinterpret_cast<Dtype*>(verify_mat.handle(ACCESS_WRITE));
+    verify_top_umat.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
+    calculateBenchmark(bottom, verify_top_umat, weight, bias, numImages);
+    setupConvolution(bottom, top, weight, bias, numImages, verify_top_umat);
+    verify_top_umat.release();
 
-    calculateBenchmark(bottom_data, weight, bias, verify_data);
-    setupConvolution(bottom_data, top_data, verify_data);
-    verify_mat.release();
     CHECK_EQ(tuned_, true) << "Spatial convolution auto-tuning failed.";
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
-                                                  const Dtype* w,
-                                                  const Dtype* bias,
-                                                  Dtype* verify_data)
+void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(UMat &bottom, UMat &verifyTop,
+                                                   UMat &weight, UMat &bias,
+                                                   int32_t numImages)
 {
     createBasicKernel(1, 1, 1);
     kernel_index_ = kernelQueue.size() - 1;
-    convolve(bottom, verify_data, 0, num_, kernelQueue[kernel_index_]);
-    ocl::Queue &queue = ocl::Queue::getDefault();
-    clEnqueueCopyBuffer((cl_command_queue)queue.ptr(),
-                        (cl_mem)top_data_,
-                        (cl_mem)verify_data, 0, 0,
-                        sizeof(float) * num_ * top_dim_, 0, NULL, NULL);
+    convolve(bottom, verifyTop, weight, bias, numImages, kernelQueue[kernel_index_]);
     CV_Assert(phash.find(kernelQueue[kernel_index_]->kernelName) != phash.end());
     unloadProgram(phash.find(kernelQueue[kernel_index_]->kernelName)->second);
     phash.erase(kernelQueue[kernel_index_]->kernelName);
@@ -855,7 +853,7 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
 
 template<typename Dtype>
 std::string OCL4DNNConvSpatial<Dtype>::generateSpecificKey(int32_t type, int32_t blockWidth,
-                                                            int32_t blockHeight, int32_t blockDepth)
+                                                           int32_t blockHeight, int32_t blockDepth)
 {
     std::stringstream keyBuilder;
     keyBuilder << short_key_
@@ -931,8 +929,7 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
-                                              const Dtype *top,
+void OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
                                               int32_t swizzled_factor,
                                               bool interleave)
 {
@@ -940,51 +937,44 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
     // in test phase and not in auto tuning
     // This requires we always call convolve again with the winner configuration
     // during the auto tuning stage.
-    if (tuned_ && !swizzled_weights_.empty())
+    if (tuned_ && !swizzled_weights_umat.empty())
         return;
 
-    if (swizzled_weights_.empty()) {
-        swizzled_weights_.create(1, ((num_output_ + 15) & ~15) * channels_ *
-                                 kernel_h_ * ((kernel_w_ + 1) & ~1), CV_32FC1);
-    }
+    ocl::Context ocl_ctx = ocl::Context::getDefault();
+    if (swizzled_weights_umat.empty())
+        swizzled_weights_umat.create(1, ((num_output_ + 15) & ~15) * channels_ *
+                                     kernel_h_ * ((kernel_w_ + 1) & ~1), CV_32FC1);
 
     ocl::Queue queue = ocl::Queue::getDefault();
-
     if (!interleave) {
-        ocl::Kernel oclk_copy_weight(CL_KERNEL_SELECT("copyWeightsSwizzled"), cv::ocl::dnn::conv_spatial_helper_oclsrc);
         cl_uint argIdx = 0;
-
         int32_t channels = channels_ / group_;
-        oclk_copy_weight.set(argIdx++, (cl_mem) weight_);
-        oclk_copy_weight.set(argIdx++, (cl_mem) swizzled_weights_.handle(ACCESS_WRITE));
+
+        ocl::Kernel oclk_copy_weight(CL_KERNEL_SELECT("copyWeightsSwizzled"),
+                                     cv::ocl::dnn::conv_spatial_helper_oclsrc);
+        oclk_copy_weight.set(argIdx++, weight.handle(ACCESS_READ));
+        oclk_copy_weight.set(argIdx++, swizzled_weights_umat.handle(ACCESS_WRITE));
         oclk_copy_weight.set(argIdx++, kernel_w_);
         oclk_copy_weight.set(argIdx++, kernel_h_);
         oclk_copy_weight.set(argIdx++, channels);
-        oclk_copy_weight.set(argIdx++, this->num_output_);
+        oclk_copy_weight.set(argIdx++, num_output_);
         oclk_copy_weight.set(argIdx++, swizzled_factor);
-        const size_t global_work_size_Copy[3] = {
-            (size_t) (alignSize(this->num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
 
-        OCL_CHECK(clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                         (cl_kernel)oclk_copy_weight.ptr(), 3, NULL,
-                                         global_work_size_Copy, NULL, 0, NULL,
-                                         NULL));
+        size_t global_work_size_copy[3] = {
+            (size_t) (alignSize(num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
+        cl_int err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
+                                            (cl_kernel)oclk_copy_weight.ptr(), 3, NULL,
+                                            global_work_size_copy, NULL, 0, NULL,
+                                            NULL);
+        if (err != CL_SUCCESS) {
+            std::cout << "Swizzle kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+        }
     } else {
-        Dtype* cpu_weight =
-            reinterpret_cast<Dtype*>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
-                                                        (cl_mem)weight_, true, CL_MAP_READ, 0,
-                                                        sizeof(Dtype) * num_output_ * kernel_dim_ * group_,
-                                                        0, NULL, NULL, NULL));
-
         // assumption: kernel dimesion is 2
-        Dtype* cpu_swizzled_weight =
-            reinterpret_cast<Dtype*>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
-                                                        (cl_mem)swizzled_weights_.handle(ACCESS_READ),
-                                                        true, CL_MAP_WRITE, 0,
-                                                        sizeof(Dtype) *
-                                                        ((num_output_ + 15) & ~15) *
-                                                        channels_ * kernel_h_ * ((kernel_w_ + 1) & ~1),
-                                                        0, NULL, NULL, NULL));
+        Mat weightMat = weight.getMat(ACCESS_READ);
+        Dtype* cpu_weight = (Dtype *)weightMat.ptr<float>();
+        Mat swizzledWeightMat = swizzled_weights_umat.getMat(ACCESS_WRITE);
+        Dtype* cpu_swizzled_weight = (Dtype *)swizzledWeightMat.ptr<float>();
 
         int interleavedRows = (kernel_w_ / 2) * 2;
         int nonInterleavedRows = kernel_w_ % 2;
@@ -1006,24 +996,15 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
                          nonInterleavedRows,
                          blockWidth,
                          rowAlignment);
-
-        clEnqueueUnmapMemObject((cl_command_queue)queue.ptr(),
-                                (cl_mem)weight_,
-                                cpu_weight, 0, NULL,
-                                NULL);
-        clEnqueueUnmapMemObject((cl_command_queue)queue.ptr(),
-                                (cl_mem)swizzled_weights_.handle(ACCESS_READ),
-                                cpu_swizzled_weight, 0, NULL,
-                                NULL);
         free(tmpSwizzledWeight);
     }
 }
 
 template<>
 void OCL4DNNConvSpatial<float>::computeGlobalSize(int32_t batch,
-                                                 int32_t* wio,    // work item output size
-                                                 size_t* lSize,  // local size
-                                                 size_t* gSize)  // global size
+                                                  int32_t* wio,    // work item output size
+                                                  size_t* lSize,  // local size
+                                                  size_t* gSize)  // global size
 {
     gSize[0] = ceil((fmax(static_cast<float>(output_w_) / wio[0], 1.0)) / lSize[0]) * lSize[0];
     gSize[1] = ceil((fmax(static_cast<float>(output_h_) / wio[1], 1.0)) / lSize[1]) * lSize[1];
@@ -1032,7 +1013,7 @@ void OCL4DNNConvSpatial<float>::computeGlobalSize(int32_t batch,
 
 template<>
 bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
-                                                   int32_t blockHeight, int32_t blockDepth)
+                                                  int32_t blockHeight, int32_t blockDepth)
 {
     int32_t workItemOutput[3];
     workItemOutput[0] = 1;
@@ -1056,73 +1037,24 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
     return true;
 }
 
-template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::setBufferKernelArg(const Dtype *bottom, const Dtype *top,
-                                                  ocl::Kernel *kernel,
-                                                  const cl_uint &argIdx,
-                                                  ocl::Context *ctx,
-                                                  cl_mem buffer, size_t offset,
-                                                  size_t size, bool readOnly,
-                                                  bool preserved)
-{
-
-    if (offset == 0) {
-        kernel->set(argIdx, (cl_mem)buffer);
-        return;
-    }
-
-    if (preserved &&
-        subBufferMap.find(std::make_tuple(buffer, offset, size)) != subBufferMap.end()) {
-        kernel->set(argIdx, (cl_mem)(subBufferMap.find(std::make_tuple(buffer, offset, size))->second));
-        return;
-    }
-    cl_buffer_region region;
-    region.origin = offset * sizeof(Dtype);
-    region.size = size * sizeof(Dtype);
-    cl_mem_flags memFlags = readOnly ? CL_MEM_READ_ONLY : CL_MEM_READ_WRITE;
-    cl_int error;
-    cl_mem sub_buffer = clCreateSubBuffer(buffer, memFlags,
-                                          CL_BUFFER_CREATE_TYPE_REGION,
-                                          &region, &error);
-    CHECK_EQ(error, CL_SUCCESS) << "Failed to create sub buffer." << std::endl;
-    if (error != CL_SUCCESS) {
-        dbgPrint(std::cout << "Failed to create sub buffer (" << error << ")." << std::endl);
-        throw(error);
-    }
-    kernel->set(argIdx, (cl_mem)sub_buffer);
-    if (preserved)
-        subBufferMap.insert(std::make_pair(std::make_tuple(buffer, offset, size),
-                            sub_buffer));
-    else
-        tmpSubBuffers.push_back(sub_buffer);
-}
-
-template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::cleanTmpSubBuffers(const Dtype *bottom, const Dtype *top)
-{
-    for (auto &buffer : tmpSubBuffers)
-        clReleaseMemObject(buffer);
-    tmpSubBuffers.clear();
-}
-
 template<>
-cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top,
-                                          int32_t index,
-                                          int32_t numImages, kernelConfig* config)
+bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
+                                         UMat &weight, UMat &bias,
+                                         int32_t numImages, kernelConfig* config)
 {
+    cl_int err = CL_SUCCESS;
     ocl::Context ctx = ocl::Context::getDefault();
     ocl::Program program;
     phash_t::iterator it = phash.find(config->kernelName);
     if (it != phash.end())
         program = it->second;
     else
-        return CL_INVALID_PROGRAM;
+        return false;
     ocl::Kernel kernel(config->kernelName.c_str(), program);
-    cl_int err = CL_SUCCESS;
-
     int32_t bias_offset;
+
     if (config->kernelType == KERNEL_TYPE_INTEL_IDLF) {
-        swizzleWeights(bottom, top, config->workItem_output[2], false);
+        swizzleWeight(weight, config->workItem_output[2], false);
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
         size_t total_bias_size = M_ * group_;
@@ -1135,55 +1067,68 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
             int32_t kernel_offset = kernel_h_ * kernel_w_ * (channels_ / group_) * M_ * g;
             cl_uint argIdx = 0;
 
-            try {
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) bottom_data_,
-                                   image_offset,
-                                   total_bottom_size - image_offset,
-                                   true, false);
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) swizzled_weights_.handle(ACCESS_READ),
-                                   kernel_offset,
-                                   total_kernel_size - kernel_offset,
-                                   true, true);
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) bias_,
-                                   bias_offset,
-                                   total_bias_size - bias_offset,
-                                   true, true);
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) top_data_,
-                                   output_image_offset,
-                                   total_top_size - output_image_offset,
-                                   false, false);
-            } catch (int e) {
-                err = e;
+            if (image_offset)
+            {
+                Range r(image_offset, total_bottom_size - image_offset);
+                kernel.set(argIdx, bottom(&r).handle(ACCESS_READ));
+            }
+            else
+            {
+                kernel.set(argIdx, bottom.handle(ACCESS_READ));
+            }
+            argIdx++;
+
+            if (kernel_offset)
+            {
+                Range r(kernel_offset, total_kernel_size - kernel_offset);
+                kernel.set(argIdx, swizzled_weights_umat(&r).handle(ACCESS_READ));
+            }
+            else
+            {
+                kernel.set(argIdx, swizzled_weights_umat.handle(ACCESS_READ));
+            }
+            argIdx++;
+
+            if (bias_offset)
+            {
+                Range r(bias_offset, total_bias_size - bias_offset);
+                kernel.set(argIdx, bias(&r).handle(ACCESS_READ));
+            }
+            else
+            {
+                kernel.set(argIdx, bias.handle(ACCESS_READ));
             }
 
-            if (err == CL_SUCCESS) {
-                kernel.set(argIdx++, (uint16_t)width_);
-                kernel.set(argIdx++, (uint16_t)height_);
-                kernel.set(argIdx++, (uint16_t)output_w_);
-                kernel.set(argIdx++, (uint16_t)output_h_);
-                ocl::Queue queue = ocl::Queue::getDefault();
-                err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                             (cl_kernel)kernel.ptr(), 3,
-                                             NULL,
-                                             config->global_work_size,
-                                             config->local_work_size, 0, NULL,
-                                             NULL);
+            argIdx++;
+            if (output_image_offset)
+            {
+                Range r(output_image_offset, total_top_size - output_image_offset);
+                kernel.set(argIdx, top(&r).handle(ACCESS_WRITE));
             }
-            if (err != CL_SUCCESS)
-                break;
-        }
+            else
+            {
+                kernel.set(argIdx, top.handle(ACCESS_READ));
+            }
+            argIdx++;
 
-        if (group_ > 1) {
-            cleanTmpSubBuffers(bottom, top);
+            kernel.set(argIdx++, (uint16_t)width_);
+            kernel.set(argIdx++, (uint16_t)height_);
+            kernel.set(argIdx++, (uint16_t)output_w_);
+            kernel.set(argIdx++, (uint16_t)output_h_);
+            ocl::Queue queue = ocl::Queue::getDefault();
+            err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
+                                         (cl_kernel)kernel.ptr(), 3,
+                                         NULL,
+                                         config->global_work_size,
+                                         config->local_work_size, 0, NULL,
+                                         NULL);
+            if (err != CL_SUCCESS) {
+                std::cout << "IDLF kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+                return false;
+            }
         }
-        if (err != CL_SUCCESS)
-            return err;
     } else if (config->kernelType == KERNEL_TYPE_GEMM_LIKE) {
-        swizzleWeights(bottom, top, config->workItem_output[1], true);
+        swizzleWeight(weight, config->workItem_output[1], true);
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
         size_t total_bias_size = M_ * group_;
@@ -1195,79 +1140,91 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
 
             cl_uint argIdx = 0;
             int32_t kernel_offset = kernel_h_ * kernel_w_ * (channels_ / group_) * M_ * g;
-            try {
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) bottom_data_,
-                                   image_offset,
-                                   total_bottom_size - image_offset,
-                                   true, false);
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) swizzled_weights_.handle(ACCESS_READ),
-                                   kernel_offset,
-                                   total_kernel_size - kernel_offset,
-                                   true, true);
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) bias_,
-                                   bias_offset,
-                                   total_bias_size - bias_offset,
-                                   true, true);
-                setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) top_data_,
-                                   output_image_offset,
-                                   total_top_size - output_image_offset,
-                                   false, false);
-            } catch (int e) {
-                err = e;
+            if (image_offset)
+            {
+                Range r(image_offset, total_bottom_size - image_offset);
+                kernel.set(argIdx, bottom(&r).handle(ACCESS_READ));
+            }
+            else
+            {
+                kernel.set(argIdx, bottom.handle(ACCESS_READ));
+            }
+            argIdx++;
+
+            if (kernel_offset)
+            {
+                Range r(kernel_offset, total_kernel_size - kernel_offset);
+                kernel.set(argIdx, swizzled_weights_umat(&r).handle(ACCESS_READ));
+            }
+            else
+            {
+                kernel.set(argIdx, swizzled_weights_umat.handle(ACCESS_READ));
+            }
+            argIdx++;
+
+            if (bias_offset)
+            {
+                Range r(bias_offset, total_bias_size - bias_offset);
+                kernel.set(argIdx, bias(&r).handle(ACCESS_READ));
+            }
+            else
+            {
+                kernel.set(argIdx, bias.handle(ACCESS_READ));
             }
 
-            if (err == CL_SUCCESS) {
-                kernel.set(argIdx++, (uint16_t)width_);
-                kernel.set(argIdx++, (uint16_t)height_);
-                kernel.set(argIdx++, (uint16_t)output_w_);
-                kernel.set(argIdx++, (uint16_t)output_h_);
-                int out_pitch_y = output_w_ * output_h_;
-                int out_pitch_z = out_pitch_y * M_;
-                int aligned_input_size = height_ * width_ * channels_ / group_;
-                int slice_pitch = width_ * height_;
-                kernel.set(argIdx++, (uint32_t)out_pitch_y);
-                kernel.set(argIdx++, (uint32_t)out_pitch_z);
-                kernel.set(argIdx++, (uint32_t)aligned_input_size);
-                kernel.set(argIdx++, (uint32_t)slice_pitch);
-
-                int blockM = config->workItem_output[0];
-                int blockK = config->workItem_output[1];
-                int blockN = config->workItem_output[2];
-                int alignedFilterWidth = alignSize(M_, blockN);
-                int alignedExpandHeight = alignSize(output_w_ * output_h_, blockM);
-                int globalWorkSizeDX = blockN;
-                int globalWorkSizeDY = blockM;
-                size_t sgemm_m = alignedExpandHeight;
-                size_t sgemm_n = alignedFilterWidth;
-                size_t gx = (size_t) ceil( (float) sgemm_n /
-                        (float) globalWorkSizeDX );
-                size_t gy = (size_t) ceil( (float) sgemm_m /
-                        (float) globalWorkSizeDY );
-                gy = alignSize(gy, blockK);
-                size_t global_size[3] = { gx, gy, config->global_work_size[2] };
-
-                ocl::Queue queue = ocl::Queue::getDefault();
-                err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                             (cl_kernel)kernel.ptr(), 3,
-                                             NULL,
-                                             global_size,
-                                             config->local_work_size, 0, NULL,
-                                             NULL);
-                OCL_CHECK(err);
+            argIdx++;
+            if (output_image_offset)
+            {
+                Range r(output_image_offset, total_top_size - output_image_offset);
+                kernel.set(argIdx, top(&r).handle(ACCESS_WRITE));
             }
-            if (err != CL_SUCCESS)
-                break;
-        }
+            else
+            {
+                kernel.set(argIdx, top.handle(ACCESS_READ));
+            }
+            argIdx++;
+            kernel.set(argIdx++, (uint16_t)width_);
+            kernel.set(argIdx++, (uint16_t)height_);
+            kernel.set(argIdx++, (uint16_t)output_w_);
+            kernel.set(argIdx++, (uint16_t)output_h_);
 
-        if (group_ > 1) {
-            cleanTmpSubBuffers(bottom, top);
+            int out_pitch_y = output_w_ * output_h_;
+            int out_pitch_z = out_pitch_y * M_;
+            int aligned_input_size = height_ * width_ * channels_ / group_;
+            int slice_pitch = width_ * height_;
+            kernel.set(argIdx++, (uint32_t)out_pitch_y);
+            kernel.set(argIdx++, (uint32_t)out_pitch_z);
+            kernel.set(argIdx++, (uint32_t)aligned_input_size);
+            kernel.set(argIdx++, (uint32_t)slice_pitch);
+
+            int blockM = config->workItem_output[0];
+            int blockK = config->workItem_output[1];
+            int blockN = config->workItem_output[2];
+            int alignedFilterWidth = alignSize(M_, blockN);
+            int alignedExpandHeight = alignSize(output_w_ * output_h_, blockM);
+            int globalWorkSizeDX = blockN;
+            int globalWorkSizeDY = blockM;
+            size_t sgemm_m = alignedExpandHeight;
+            size_t sgemm_n = alignedFilterWidth;
+            size_t gx = (size_t) ceil( (float) sgemm_n /
+                    (float) globalWorkSizeDX );
+            size_t gy = (size_t) ceil( (float) sgemm_m /
+                    (float) globalWorkSizeDY );
+            gy = alignSize(gy, blockK);
+            size_t global_size[3] = { gx, gy, config->global_work_size[2] };
+
+            ocl::Queue queue = ocl::Queue::getDefault();
+            err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
+                                         (cl_kernel)kernel.ptr(), 3,
+                                         NULL,
+                                         global_size,
+                                         config->local_work_size, 0, NULL,
+                                         NULL);
+            if (err != CL_SUCCESS) {
+                std::cout << "GEMM like kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+                return false;
+            }
         }
-        if (err != CL_SUCCESS)
-            return err;
     } else {
         for (int32_t n = 0; n < numImages; ++n) {
             for (int32_t g = 0; g < group_; ++g) {
@@ -1280,13 +1237,13 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                 cl_uint argIdx = 0;
                 int32_t kernel_offset = kernel_h_ * kernel_w_ * (channels_ / group_) * M_ * g;
 
-                kernel.set(argIdx++, (cl_mem) bottom_data_);
+                kernel.set(argIdx++, bottom.handle(ACCESS_READ));
                 kernel.set(argIdx++, image_offset);
-                kernel.set(argIdx++, (cl_mem) weight_);
+                kernel.set(argIdx++, weight.handle(ACCESS_READ));
                 kernel.set(argIdx++, kernel_offset);
-                kernel.set(argIdx++, (cl_mem) bias_);
+                kernel.set(argIdx++, bias.handle(ACCESS_READ));
                 kernel.set(argIdx++, bias_offset);
-                kernel.set(argIdx++, (cl_mem) top_data_);
+                kernel.set(argIdx++, top.handle(ACCESS_WRITE));
                 kernel.set(argIdx++, output_image_offset);
                 kernel.set(argIdx++, (uint16_t)width_);
                 kernel.set(argIdx++, (uint16_t)height_);
@@ -1309,44 +1266,42 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                                                  config->local_work_size, 0, NULL,
                                                  NULL);
                 }
-
-                if (err != CL_SUCCESS)
-                    return err;
+                if (err != CL_SUCCESS) {
+                    std::cout << "Basic kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+                    return false;
+                }
             }
         }
     }
 
-    return err;
+    return true;
 }
 
 template<>
-float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
-                                              const float *top,
-                                              int32_t index,
-                                              int32_t numImages,
-                                              kernelConfig* config)
+float OCL4DNNConvSpatial<float>::timedConvolve(UMat &bottom, UMat &top,
+                                               UMat &weight, UMat &bias,
+                                               int32_t numImages, kernelConfig* config)
 {
     // warm up.
     bool saved_tuned = tuned_;
     tuned_ = false;
-    convolve(bottom, top, index, num_, config);
+    convolve(bottom, top, weight, bias, numImages, config);
     cv::ocl::Timer timer;
     timer.start();
-    cl_int err;
+    bool res = true;;
     dbgPrint(std::cout << "Benchmarking kernel: " << config->kernelName << std::endl);
     tuned_ = true;
     int loop_cnt = 4;
     for (int i = 0; i < loop_cnt; i++) {
-        err = convolve(bottom, top, index, num_, config);
-        if (err != CL_SUCCESS)
+        res = convolve(bottom, top, weight, bias, numImages, config);
+        if (!res)
             break;
     }
     tuned_ = saved_tuned;
     timer.stop();
-    if (err != CL_SUCCESS) {
+    if (!res) {
         config->tested = true;
         config->verified = false;
-        dbgPrint(std::cout << "convolution failed with error code " << err << std::endl);
         return 1e5;
     }
 
@@ -1373,9 +1328,13 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
 }
 
 template<>
-bool OCL4DNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
-                                             int32_t index,
-                                             int32_t numImages, const float *verify_blob, kernelConfig* config)
+bool OCL4DNNConvSpatial<float>::verifyResult(UMat &bottom,
+                                             UMat &top,
+                                             UMat &weight,
+                                             UMat &bias,
+                                             int32_t numImages,
+                                             kernelConfig* config,
+                                             UMat &verifyTop)
 {
 
     uint32_t verificationFail = 0;
@@ -1385,24 +1344,14 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
     else if (config->tested)
         return false;
 
-    ocl4dnnSet(0, numImages * top_dim_, (float) 0, (cl_mem) top, 0);
-    config->executionTime = timedConvolve(bottom, top, index, numImages, config);
-    const float *verify_data;
-    float *data;
-    float *tmp_verify_data;
-    ocl::Queue queue = ocl::Queue::getDefault();
-    data = reinterpret_cast<float *>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
-                                                        (cl_mem)top, true, CL_MAP_READ,
-                                                        0, sizeof(float) * numImages * top_dim_,
-                                                        0, NULL, NULL, NULL));
-    tmp_verify_data =
-        reinterpret_cast<float *>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
-                                                     (cl_mem)verify_blob, true, CL_MAP_READ,
-                                                     0, sizeof(float) * numImages * top_dim_,
-                                                     0, NULL, NULL, NULL));
-    verify_data = tmp_verify_data;
+    int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
+    top.zeros(4, sz, CV_32FC1);
+    config->executionTime = timedConvolve(bottom, top, weight, bias, numImages, config);
 
-    for (int32_t n = 0; n < numImages; ++n) {
+    float *data = (float *)top.getMat(ACCESS_READ).ptr<float>();
+    float *verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
+
+    for (int32_t n = 0; n < num_; ++n) {
         for (int32_t g = 0; g < group_; ++g) {
             int32_t output_image_offset = n * top_dim_ + output_w_ * output_h_ * M_ * g;
             for (int out_ch = 0; out_ch < M_ && !verificationFail; out_ch++)
@@ -1422,12 +1371,7 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
                     }
         }
     }
-
 out:
-    clEnqueueUnmapMemObject((cl_command_queue)queue.ptr(),
-                            (cl_mem)top, data, 0, NULL, NULL);
-    clEnqueueUnmapMemObject((cl_command_queue)queue.ptr(),
-                            (cl_mem)verify_blob, tmp_verify_data, 0, NULL, NULL);
     if (verificationFail == 1)
         return false;
     else
@@ -1529,39 +1473,25 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
 
     size_t workgroupSize_used;
     ocl::Kernel kernel(kernel_name_.c_str(), program);
-    cl_int err = clGetKernelWorkGroupInfo((cl_kernel)kernel.ptr(),
-                                          (cl_device_id)ocl::Device::getDefault().ptr(),
-                                          CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
-                                          sizeof(size_t), &workgroupSize_used,
-                                          NULL);
-
-    if (workgroupSize_used != simd_size) {
+    workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
+    if (workgroupSize_used != simd_size)
+    {
         phash.erase(kernel_name_);
         unloadProgram(program);
         return false;
     }
-
-    if (err == CL_SUCCESS) {
-        kernelQueue.push_back(new kernelConfig(kernel_name_,
-                                               global_size,
-                                               local_size,
-                                               workItemOutput,
-                                               false,
-                                               true,
-                                               false,
-                                               5));
-        return true;
-    } else {
-        phash.erase(kernel_name_);
-        unloadProgram(program);
-        return false;
+    else
+    {
+       kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
+                                               false, true, false, 5));
+       return true;
     }
 }
 
 template<>
 bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
-                                         int32_t blockHeight,
-                                         int32_t simd_size)
+                                          int32_t blockHeight,
+                                          int32_t simd_size)
 {
     int32_t workItemOutput[3] = { blockWidth, blockHeight, simd_size };
     const int32_t num_output_maps = M_;
@@ -1588,33 +1518,25 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
     // ClKernel kernel;
     size_t workgroupSize_used;
     ocl::Kernel kernel(kernel_name_.c_str(), program);
-    cl_int err = clGetKernelWorkGroupInfo((cl_kernel)kernel.ptr(),
-                                          (cl_device_id)ocl::Device::getDefault().ptr(),
-                                          CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
-                                          sizeof(size_t), &workgroupSize_used,
-                                          NULL);
-
-    if (workgroupSize_used != simd_size) {
+    workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
+    if (workgroupSize_used != simd_size)
+    {
         phash.erase(kernel_name_);
         unloadProgram(program);
         return false;
     }
-
-    if (err == CL_SUCCESS) {
+    else
+    {
         kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
                                                false, true, false, 2));
         return true;
-    } else {
-        phash.erase(kernel_name_);
-        unloadProgram(program);
-        return false;
     }
 }
 
 template<>
-bool OCL4DNNConvSpatial<float>::tuneLocalSize(const float *bottom,
-                                             const float *top,
-                                             kernelConfig* config)
+bool OCL4DNNConvSpatial<float>::tuneLocalSize(UMat &bottom, UMat &top,
+                                              UMat &weight, UMat &bias,
+                                              kernelConfig* config)
 {
     if (config->use_null_local || !config->autoTune)
         return true;
@@ -1650,10 +1572,10 @@ bool OCL4DNNConvSpatial<float>::tuneLocalSize(const float *bottom,
                 if (config->swizzle_weights)
                     z = 32;
 
-                int32_t err = 0;
-                err = convolve(bottom, top, 0, 1, config);
+                bool res = true;
+                res = convolve(bottom, top, weight, bias, 1, config);
 
-                if (err != CL_SUCCESS)
+                if (!res)
                     skip = 1;
 
                 if (skip) {
@@ -1697,9 +1619,9 @@ bool OCL4DNNConvSpatial<float>::tuneLocalSize(const float *bottom,
 
 template<>
 void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
-                                                       int32_t blockWidth,
-                                                       int32_t blockHeight,
-                                                       int32_t blockDepth)
+                                                        int32_t blockWidth,
+                                                        int32_t blockHeight,
+                                                        int32_t blockDepth)
 {
     if (kernelType == KERNEL_TYPE_INTEL_IDLF)
         setupIDLF(blockWidth, blockHeight, blockDepth);
@@ -1712,8 +1634,12 @@ void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top,
-                                                 const float *verify_blob)
+void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
+                                                 UMat &top,
+                                                 UMat &weight,
+                                                 UMat &bias,
+                                                 int32_t numImages,
+                                                 UMat &verifyTop)
 {
     if (auto_tuning_ && ocl::Device::getDefault().intelSubgroupsSupport()) {
         /* IDLF kernels are using Intel specific extension which make
@@ -1721,7 +1647,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
         // Generates static key_
         int max_compute_units = ocl::Device::getDefault().maxComputeUnits();
         int kernelCnt = 0;
-        if (this->group_ == 1 && ((M_ % 8 == 0) && (M_ % 32 != 24))) {
+        if (group_ == 1 && ((M_ % 8 == 0) && (M_ % 32 != 24))) {
             createConvolutionKernel(5, 1, 8, 32);
             createConvolutionKernel(5, 2, 8, 32);
             if (kernel_w_ < 4 && M_ % 32 == 0)
@@ -1729,9 +1655,9 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
         }
 
         for (int simd_size = 8; simd_size <= 16; simd_size += 8) {
-            if (simd_size == 8 && !((this->group_ == 1 || M_ % 8 == 0)))
+            if (simd_size == 8 && !((group_ == 1 || M_ % 8 == 0)))
                 continue;
-            if (simd_size == 16 && !(this->group_ == 1 || M_ % 16 == 0))
+            if (simd_size == 16 && !(group_ == 1 || M_ % 16 == 0))
                 continue;
             int width_max, height_max, block_size_max;
             width_max = 14;
@@ -1781,9 +1707,9 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
         }
     }
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
-        if (tuneLocalSize(bottom, top, kernelQueue[x])) {
-            kernelQueue[x]->executionTime = timedConvolve(bottom, top, bottom_index_,
-                                                           num_, kernelQueue[x]);
+        if (tuneLocalSize(bottom, top, weight, bias, kernelQueue[x])) {
+            kernelQueue[x]->executionTime = timedConvolve(bottom, top, weight, bias, numImages,
+                                                          kernelQueue[x]);
         } else {
             // skip those kernels without a good local size.
             kernelQueue[x]->verified = false;
@@ -1791,8 +1717,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
         }
         #ifdef TEST_ALL_KERNELS
         if (kernelQueue[x]->tested == false) {
-            bool verified = verifyResult(bottom, top, bottom_index_, num_,
-                                          verify_blob, kernelQueue[x]);
+            bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[x], verifyTop);
             if (verified == false) {
                 dbgPrint(std::cout << "Kernel "
                          << kernelQueue[x]->kernelName
@@ -1843,8 +1768,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
             }
             if (fastestKernel < 0) break;
             // Test fastest kernel
-            bool verified = verifyResult(bottom, top, bottom_index_, num_,
-                                          verify_blob, kernelQueue[fastestKernel]);
+            bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[fastestKernel], verifyTop);
             if (verified == true) {
                 kernelQueue[fastestKernel]->verified = true;
                 kernel_index_ = fastestKernel;
@@ -1870,8 +1794,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
             dbgPrint(std::cout << "Auto-tuning disabled, fallback to basic kernel" << std::endl);
         createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
-        verification = verifyResult(bottom, top, bottom_index_, num_,
-                                     verify_blob, kernelQueue[kernel_index_]);
+        verification = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernel_index_], verifyTop);
         CHECK_EQ(verification, true) << "Basic kernel failed verification." << std::endl;
     }
     this->bestKernelConfig = kernelQueue[kernel_index_];
@@ -1879,7 +1802,8 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
     dbgPrint(std::cout << "Convolution Time:" << kernelQueue[kernel_index_]->executionTime << std::endl);
 
     if (bestKernelConfig->kernelType != 2 && bestKernelConfig->kernelType != 5)
-        swizzled_weights_.release();
+        if (!swizzled_weights_umat.empty())
+            swizzled_weights_umat.release();
 
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
         if (x != kernel_index_) {
@@ -1912,7 +1836,9 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::prepareKernel()
+void OCL4DNNConvSpatial<Dtype>::prepareKernel(UMat &bottom, UMat &top,
+                                              UMat &weight, UMat &bias,
+                                              int32_t numImages)
 {
     std::string previous_key = key_;
 
@@ -1933,7 +1859,7 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel()
     if (loadCachedConfig())
         return;
 
-    tune(top_data_, weight_, bias_, bottom_data_, num_);
+    tune(bottom, top, weight, bias, numImages);
 }
 
 template<typename Dtype>
@@ -1980,7 +1906,8 @@ bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
             (bestKernelConfig->kernelType == KERNEL_TYPE_INTEL_IDLF ||
              bestKernelConfig->kernelType == KERNEL_TYPE_GEMM_LIKE))
         {
-            swizzled_weights_.release();
+            if (!swizzled_weights_umat.empty())
+                swizzled_weights_umat.release();
         }
         tuned_ = true;
         return true;

@@ -153,11 +153,11 @@ class OCL4DNNConvSpatial
             addDef(ss, name.c_str(), value);
         }
 
-        void tune(Dtype* top_data,
-                  const Dtype* weight,
-                  const Dtype* bias,
-                  const Dtype* bottom_data,
-                  int32_t batch_size);
+        void tune(UMat &bottom,
+                  UMat &top,
+                  UMat &weight,
+                  UMat &bias,
+                  int32_t numImages);
         void generateKernelSrc();
         uint64 crc64(const uchar* data, size_t size, uint64 crc0 = 0);
         std::string generateHeader();
@@ -170,14 +170,18 @@ class OCL4DNNConvSpatial
         ocl::Program compileKernel();
         typedef std::map<std::string, ocl::Program> phash_t;
         phash_t phash;
-        void calculateBenchmark(const Dtype* bottom,
-                                const Dtype* w,
-                                const Dtype* bias,
-                                Dtype* verify_data);
+        void calculateBenchmark(UMat &bottom, UMat &verifyTop,
+                                UMat &weight, UMat &bias,
+                                int32_t numImages);
 
-        void setupConvolution(const Dtype *bottom,
-                              Dtype *top,
-                              const Dtype *verify_blob);
+
+        void setupConvolution(UMat &bottom,
+                              UMat &top,
+                              UMat &weight,
+                              UMat &bias,
+                              int32_t numImags,
+                              UMat &verifyTop);
+
         void createConvolutionKernel(int32_t kernelType,
                                      int32_t blockWidth,
                                      int32_t blockHeight,
@@ -191,27 +195,29 @@ class OCL4DNNConvSpatial
         bool createGEMMLikeConvKernel(int32_t blockWidth,
                                       int32_t blockHeight,
                                       int32_t blockDepth);
-        cl_int convolve(const Dtype *bottom,
-                        const Dtype *top, int32_t index,
-                        int32_t numImages,
-                        kernelConfig* config);
-        float timedConvolve(const Dtype *bottom,
-                            const Dtype *top, int32_t index,
-                            int32_t numImages,
-                            kernelConfig* config);
-        bool verifyResult(const Dtype *bottom,
-                          Dtype *top,
-                          int32_t index,
+        bool convolve(UMat &bottom, UMat &top,
+                      UMat &weight, UMat &bias,
+                      int32_t numImages,
+                      kernelConfig* config);
+        float timedConvolve(UMat &bottom, UMat &top,
+                            UMat &weight, UMat &bias,
+                            int32_t numImages, kernelConfig* config);
+
+        bool verifyResult(UMat &bottom,
+                          UMat &top,
+                          UMat &weight,
+                          UMat &bias,
                           int32_t numImages,
-                          const Dtype *verify_blob,
-                          kernelConfig* config);
-        bool tuneLocalSize(const Dtype *bottom,
-                           const Dtype *top,
-                           kernelConfig*);
-        void swizzleWeights(const Dtype *bottom,
-                            const Dtype *top,
-                            int32_t swizzle_factor,
-                            bool interleave = false);
+                          kernelConfig* config,
+                          UMat &verifyTop);
+
+        bool tuneLocalSize(UMat &bottom, UMat &top,
+                           UMat &weight, UMat &bias,
+                           kernelConfig* config);
+        void swizzleWeight(UMat &weight,
+                           int32_t swizzled_factor,
+                           bool interleave = false);
+
         void generateKey();
         std::string generateSpecificKey(int32_t type, int32_t blockWidth,
                                           int32_t blockHeight,
@@ -221,29 +227,19 @@ class OCL4DNNConvSpatial
                                size_t* localSizes,
                                size_t* globalSizes);
         bool loadCachedConfig();
-        void prepareKernel();
-        void setBufferKernelArg(const Dtype *bottom,
-                                const Dtype *top,
-                                ocl::Kernel *cl_kernel,
-                                const cl_uint &argIdx,
-                                ocl::Context *ctx,
-                                cl_mem buffer, size_t offset,
-                                size_t size, bool readOnly,
-                                bool preserved);
-        void cleanTmpSubBuffers(const Dtype *bottom,
-                                const Dtype *top);
         std::string programEntryToString(ocl::ProgramSource& src);
         void unloadProgram(ocl::Program& prog);
-
+        void prepareKernel(UMat &bottom, UMat &top,
+                           UMat &weight, UMat &bias,
+                           int32_t numImages);
         int32_t group_;
         bool bias_term_;
-        std::map<std::tuple<cl_mem, size_t, size_t>, cl_mem> subBufferMap;
-        std::vector<cl_mem> tmpSubBuffers;
         const Dtype* bottom_data_;
         Dtype* top_data_;
         const Dtype* weight_;
-        UMat swizzled_weights_;
+        UMat swizzled_weights_umat;
         const Dtype* bias_;
+
         int32_t bottom_index_;
         int32_t output_h_;
         int32_t output_w_;
@@ -331,7 +327,6 @@ class OCL4DNNPool
         bool Forward(const UMat& bottom_data,
                      UMat& top_data,
                      UMat& top_mask);
-
     private:
         UMat mask_idx_;
 
