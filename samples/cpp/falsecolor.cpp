@@ -125,11 +125,15 @@ static Mat DrawMyImage(int thickness,int nbShape)
     return img;
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
     ParamColorMar  p;
 
-    Mat img= DrawMyImage(2,256);
+    Mat img;
+    if (argc > 1)
+        img = imread(argv[1], 0);
+    else
+        img = DrawMyImage(2,256);
     p.img=img;
     p.iColormap=0;
 

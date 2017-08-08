@@ -301,6 +301,8 @@ public:
     Size_& operator = (const Size_& sz);
     //! the area (width*height)
     _Tp area() const;
+    //! true if empty
+    bool empty() const;
 
     //! conversion of another data type.
     template<typename _Tp2> operator Size_<_Tp2>() const;
@@ -400,6 +402,8 @@ public:
     Size_<_Tp> size() const;
     //! area (width*height) of the rectangle
     _Tp area() const;
+    //! true if empty
+    bool empty() const;
 
     //! conversion to another data type
     template<typename _Tp2> operator Rect_<_Tp2>() const;
@@ -1599,6 +1603,13 @@ _Tp Size_<_Tp>::area() const
     return result;
 }
 
+template<typename _Tp> inline
+bool Size_<_Tp>::empty() const
+{
+    return width <= 0 || height <= 0;
+}
+
+
 template<typename _Tp> static inline
 Size_<_Tp>& operator *= (Size_<_Tp>& a, _Tp b)
 {
@@ -1741,6 +1752,12 @@ _Tp Rect_<_Tp>::area() const
     return result;
 }
 
+template<typename _Tp> inline
+bool Rect_<_Tp>::empty() const
+{
+    return width <= 0 || height <= 0;
+}
+
 template<typename _Tp> template<typename _Tp2> inline
 Rect_<_Tp>::operator Rect_<_Tp2>() const
 {
@@ -1803,10 +1820,10 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 template<typename _Tp> static inline
 Rect_<_Tp>& operator |= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 {
-    if (!a.area()) {
+    if (a.empty()) {
         a = b;
     }
-    else if (b.area()) {
+    else if (!b.empty()) {
         _Tp x1 = std::min(a.x, b.x);
         _Tp y1 = std::min(a.y, b.y);
         a.width = std::max(a.x + a.width, b.x + b.width) - x1;

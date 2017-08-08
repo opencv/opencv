@@ -559,21 +559,39 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "BiasAdd" || type == "Add")
         {
-            layerParams.blobs.resize(1);
-            blobFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
+            bool haveConst = false;
+            for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)
+            {
+                Pin input = parsePin(layer.input(ii));
+                haveConst = value_id.find(input.name) != value_id.end();
+            }
+            CV_Assert(!haveConst || layer.input_size() == 2);
 
-            int id = dstNet.addLayer(name, "Shift", layerParams);
-            layer_id[name] = id;
+            if (haveConst)
+            {
+                layerParams.blobs.resize(1);
+                blobFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
 
-            // one input only
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
-        }
-        else if (type == "Identity")
-        {
-            int id = dstNet.addLayer(name, "Identity", layerParams);
-            layer_id[name] = id;
+                int id = dstNet.addLayer(name, "Shift", layerParams);
+                layer_id[name] = id;
 
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+                // one input only
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            }
+            else
+            {
+                layerParams.set("operation", "sum");
+                int id = dstNet.addLayer(name, "Eltwise", layerParams);
+                layer_id[name] = id;
+
+                for (int ii = 0; ii < layer.input_size(); ii++)
+                {
+                    Pin inp = parsePin(layer.input(ii));
+                    if (layer_id.find(inp.name) == layer_id.end())
+                        CV_Error(Error::StsError, "Input layer not found: " + inp.name);
+                    dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii);
+                }
+            }
         }
         else if (type == "MatMul")
         {
@@ -624,13 +642,6 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Const")
         {
         }
-        else if (type == "Softmax")
-        {
-            int id = dstNet.addLayer(name, "Softmax", layerParams);
-            layer_id[name] = id;
-
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
-        }
         else if (type == "LRN")
         {
             if(hasLayerAttr(layer, "alpha")) {
@@ -653,29 +664,27 @@ void TFImporter::populateNet(Net dstNet)
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
-        else if (type == "Concat")
+        else if (type == "Concat" || type == "ConcatV2")
         {
-            int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
+            int axisId = (type == "Concat" ? 0 : layer.input_size() - 1);
+            int axis = getConstBlob(layer, value_id, axisId).int_val().Get(0);
             layerParams.set("axis", toNCHW[axis]);
 
             int id = dstNet.addLayer(name, "Concat", layerParams);
             layer_id[name] = id;
 
-            // input(0) is concat_dim
-            for (int ii = 1; ii < layer.input_size(); ii++)
+
+            int from = (type == "Concat" ? 1 : 0);
+            int to = (type == "Concat" ? layer.input_size() : layer.input_size() - 1);
+
+            // input(0) or input(n-1) is concat_dim
+            for (int ii = from; ii < to; ii++)
             {
                 Pin inp = parsePin(layer.input(ii));
                 if (layer_id.find(inp.name) == layer_id.end())
                     CV_Error(Error::StsError, "Input layer not found: " + inp.name);
-                dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii - 1);
+                dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii - from);
             }
-        }
-        else if (type == "Relu")
-        {
-            int id = dstNet.addLayer(name, "ReLU", layerParams);
-            layer_id[name] = id;
-
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
         else if (type == "MaxPool")
         {
@@ -728,6 +737,145 @@ void TFImporter::populateNet(Net dstNet)
 
             // one input only
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
+        }
+        else if (type == "Mul")
+        {
+            bool haveConst = false;
+            for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)
+            {
+                Pin input = parsePin(layer.input(ii));
+                haveConst = value_id.find(input.name) != value_id.end();
+            }
+            CV_Assert(!haveConst || layer.input_size() == 2);
+
+            if (haveConst)
+            {
+                // Multiplication by constant.
+                CV_Assert(layer.input_size() == 2);
+
+                float scale = getConstBlob(layer, value_id).float_val()[0];
+                layerParams.set("scale", scale);
+
+                int id = dstNet.addLayer(name, "Power", layerParams);
+                layer_id[name] = id;
+
+                Pin inp0 = parsePin(layer.input(0));
+                if (layer_id.find(inp0.name) != layer_id.end())
+                    // First operand is a constant.
+                    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+                else
+                    connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
+            }
+            else
+            {
+                layerParams.set("operation", "prod");
+                int id = dstNet.addLayer(name, "Eltwise", layerParams);
+                layer_id[name] = id;
+
+                for (int ii = 0; ii < layer.input_size(); ii++)
+                {
+                    Pin inp = parsePin(layer.input(ii));
+                    if (layer_id.find(inp.name) == layer_id.end())
+                        CV_Error(Error::StsError, "Input layer not found: " + inp.name);
+                    dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii);
+                }
+            }
+        }
+        else if (type == "Pad")
+        {
+            tensorflow::TensorProto paddings = getConstBlob(layer, value_id, 1);
+            MatShape shape;
+            blobShapeFromTensor(paddings, shape);
+            if (shape[0] != 4)
+                CV_Error(Error::StsError, "Expected NHWC data format");
+
+            // Copy tensor with paddings.
+            std::vector<int32_t> values(shape[0] * 2);
+            CV_Assert(sizeof(int32_t) * values.size() ==
+                      paddings.tensor_content().size());
+            memcpy(&values[0], &paddings.tensor_content()[0],
+                   paddings.tensor_content().size());
+
+            // Allow only one padding operation per layer.
+            bool padded = false;
+            for (int i = 0; i < values.size(); ++i)
+            {
+                if (values[i])
+                {
+                    if (padded)
+                        CV_Error(Error::StsError,
+                                 "Only single padding operation per layer is supported");
+                    padded = true;
+
+                    int axis = i / 2;
+                    // Remap NHWC to NCHW.
+                    // 0 -> 0
+                    // 1 -> 2
+                    // 2 -> 3
+                    // 3 -> 1
+                    if (axis != 0)
+                        axis = axis % 3 + 1;
+
+                    layerParams.set("padding_dim", axis);
+                    if (i % 2)  // Pad after
+                        layerParams.set("padding", values[i]);
+                    else  // Pad before
+                        layerParams.set("padding", -1 * values[i]);
+
+                    int id = dstNet.addLayer(name, "Padding", layerParams);
+                    layer_id[name] = id;
+
+                    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+                }
+            }
+        }
+        else if (type == "FusedBatchNorm")
+        {
+            // op: "FusedBatchNorm"
+            // input: "input"
+            // input: "BatchNorm/gamma"
+            // input: "BatchNorm/beta"
+            // input: "BatchNorm/moving_mean"
+            // input: "BatchNorm/moving_variance"
+            if (layer.input_size() != 5)
+                CV_Error(Error::StsNotImplemented,
+                         "Expected gamma, beta, mean and std");
+
+            layerParams.blobs.resize(4);
+            // gamma
+            blobFromTensor(getConstBlob(layer, value_id, 1), layerParams.blobs[2]);
+            // beta
+            blobFromTensor(getConstBlob(layer, value_id, 2), layerParams.blobs[3]);
+            // mean
+            blobFromTensor(getConstBlob(layer, value_id, 3), layerParams.blobs[0]);
+            // std
+            blobFromTensor(getConstBlob(layer, value_id, 4), layerParams.blobs[1]);
+
+            if (hasLayerAttr(layer, "epsilon"))
+                layerParams.set("eps", getLayerAttr(layer, "epsilon").f());
+
+            layerParams.set("has_weight", true);
+            layerParams.set("has_bias", true);
+
+            int id = dstNet.addLayer(name, "BatchNorm", layerParams);
+            layer_id[name] = id;
+
+            // one input only
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
+        else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
+                 type == "Relu" || type == "Elu" || type == "Softmax" ||
+                 type == "Identity")
+        {
+            std::string dnnType = type;
+            if (type == "Abs") dnnType = "AbsVal";
+            else if (type == "Tanh") dnnType = "TanH";
+            else if (type == "Relu") dnnType = "ReLU";
+            else if (type == "Elu") dnnType = "ELU";
+
+            int id = dstNet.addLayer(name, dnnType, layerParams);
+            layer_id[name] = id;
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
         else
         {

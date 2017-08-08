@@ -148,10 +148,6 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-#if defined _WIN32
-void deleteThreadAllocData();
-#endif
-
 inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
 {
     int64 sz = (int64)cols * rows * widthScale;

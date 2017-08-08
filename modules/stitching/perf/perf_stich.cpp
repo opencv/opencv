@@ -102,7 +102,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
 
     Mat pano;
     vector<Mat> imgs;
-    int width, height, allowed_diff = 10;
+    int width, height, allowed_diff = 20;
     Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(detector);
 
     if(dataset == "budapest")
@@ -117,7 +117,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
         height = 1158;
         // this dataset is big, the results between surf and orb differ slightly,
         // but both are still good
-        allowed_diff = 27;
+        allowed_diff = 50;
     }
     else if (dataset == "newspaper")
     {

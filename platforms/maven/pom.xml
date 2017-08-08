@@ -14,8 +14,8 @@
     </licenses>
     <url>http://opencv.org/</url>
     <scm>
-        <connection>scm:git:https://github.com/Itseez/opencv.git</connection>
-        <url>https://github.com/Itseez/opencv</url>
+        <connection>scm:git:https://github.com/opencv/opencv.git</connection>
+        <url>https://github.com/opencv/opencv</url>
     </scm>
     <contributors>
         <contributor>
