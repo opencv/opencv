@@ -9,6 +9,10 @@ OpenCV.js Tutorials {#tutorial_js_root}
 
     Here you will learn how to read and display images and videos, and create trackbar.
 
+-   @subpage tutorial_js_table_of_contents_core
+
+    In this section you will learn some basic operations on image, some mathematical tools and some data structures etc.
+
 -   @subpage tutorial_js_table_of_contents_imgproc
 
     In this section
