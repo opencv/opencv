@@ -110,8 +110,9 @@ namespace Utils{
     }
 
     Size matSize(const cv::Mat& mat) {
-        return  mat.size();
+        return mat.size();
     }
+
     cv::Mat mat_zeros_iii(int arg0, int arg1, int arg2) {
         return cv::Mat::zeros(arg0, arg1, arg2);
     }
@@ -265,7 +266,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
 
         .property("rows", &cv::Mat::rows)
         .property("cols", &cv::Mat::cols)
-        .property("size" , &Utils::getMatSize)
+        .property("matSize" , &Utils::getMatSize)
         .property("step" , &Utils::getMatStep)
         .property("data", &Utils::matData<unsigned char>)
         .property("data8S", &Utils::matData<char>)
@@ -307,6 +308,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("isContinuous", select_overload<bool()const>(&cv::Mat::isContinuous))
         .function("setTo", select_overload<void(Mat&, const Scalar&)>(&Utils::matSetTo))
         .function("setTo", select_overload<void(Mat&, const Scalar&, const Mat&)>(&Utils::matSetTo_1))
+        .function("size", select_overload<Size(const Mat&)>(&Utils::matSize))
 
         .function("ptr", select_overload<val(const Mat&, int)>(&Utils::matPtrI<unsigned char>))
         .function("ptr", select_overload<val(const Mat&, int, int)>(&Utils::matPtrII<unsigned char>))

@@ -48,10 +48,9 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.equal(mat.channels(), 3);
         assert.ok(mat.empty() === false);
 
-        let size = mat.size;
-        assert.ok(size.length === 2);
-        assert.equal(size[0], 10);
-        assert.equal(size[1], 20);
+        let size = mat.size();
+        assert.equal(size.height, 10);
+        assert.equal(size.width, 20);
 
         mat.delete();
     }
@@ -68,7 +67,7 @@ QUnit.test("test_mat_creation", function(assert) {
         //assert.equal(mat2.empty(), mat1.empty());
 
         //let size1 = mat1.size;
-        //let size2 = mat2.size;
+        //let size2 = mat2.size();
         //assert.ok(size1.size === size2.size);
         //assert.ok(size1.get(0) === size2.get(0));
         //assert.ok(size1.get(1) === size2.get(1));
@@ -88,10 +87,9 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.equal(mat.channels(), 1);
         assert.ok(mat.empty() === false);
 
-        let size = mat.size;
-        assert.ok(size.length === 2);
-        assert.ok(size[0] === 10);
-        assert.ok(size[1] === 10);
+        let size = mat.size();
+        assert.ok(size.height === 10);
+        assert.ok(size.width === 10);
 
         mat.delete();
     }
@@ -118,11 +116,11 @@ QUnit.test("test_mat_creation", function(assert) {
     {
         let mat = new cv.Mat();
         mat.create(10, 5, cv.CV_8UC3);
-        let size = mat.size;
+        let size = mat.size();
 
         assert.ok(mat.type() === cv.CV_8UC3);
-        assert.ok(size[0] === 10);
-        assert.ok(size[1] === 5);
+        assert.ok(size.height === 10);
+        assert.ok(size.width === 5);
         assert.ok(mat.channels() === 3);
 
         mat.delete();
@@ -131,11 +129,11 @@ QUnit.test("test_mat_creation", function(assert) {
     {
         let mat = new cv.Mat();
         mat.create({height: 10, width: 5}, cv.CV_8UC4);
-        let size = mat.size;
+        let size = mat.size();
 
         assert.ok(mat.type() === cv.CV_8UC4);
-        assert.ok(size[0] === 10);
-        assert.ok(size[1] === 5);
+        assert.ok(size.height === 10);
+        assert.ok(size.width === 5);
         assert.ok(mat.channels() === 4);
 
         mat.delete();
@@ -146,8 +144,8 @@ QUnit.test("test_mat_creation", function(assert) {
         let mat2 = mat.clone();
 
         assert.equal(mat.channels, mat2.channels);
-        assert.equal(mat.size[0], mat2.size[0]);
-        assert.equal(mat.size[1], mat2.size[1]);
+        assert.equal(mat.size().height, mat2.size().height);
+        assert.equal(mat.size().width, mat2.size().width);
 
         assert.deepEqual(mat.data, mat2.data);
 
@@ -162,8 +160,8 @@ QUnit.test("test_mat_creation", function(assert) {
         mat.copyTo(mat2);
 
         assert.equal(mat.channels, mat2.channels);
-        assert.equal(mat.size[0], mat2.size[0]);
-        assert.equal(mat.size[1], mat2.size[1]);
+        assert.equal(mat.size().height, mat2.size().height);
+        assert.equal(mat.size().width, mat2.size().width);
 
         assert.deepEqual(mat.data, mat2.data);
 
@@ -179,8 +177,8 @@ QUnit.test("test_mat_creation", function(assert) {
         mat.copyTo(mat2, mask);
 
         assert.equal(mat.channels, mat2.channels);
-        assert.equal(mat.size[0], mat2.size[0]);
-        assert.equal(mat.size[1], mat2.size[1]);
+        assert.equal(mat.size().height, mat2.size().height);
+        assert.equal(mat.size().width, mat2.size().width);
 
         assert.deepEqual(mat.data, mat2.data);
 
