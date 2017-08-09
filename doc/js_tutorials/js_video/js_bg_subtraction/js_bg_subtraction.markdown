@@ -46,7 +46,7 @@ Shadows will be marked in gray color.
 Try it
 ------
 
-Here is the demo for cv.BackgroundSubtractorMOG2. Some core code is in the textbox, and you can click 
+Try this demo for cv.BackgroundSubtractorMOG2. Some core code is in the textbox, and you can click 
 `try it` to investigate more.
 
 \htmlonly

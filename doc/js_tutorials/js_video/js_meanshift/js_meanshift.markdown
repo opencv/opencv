@@ -41,7 +41,7 @@ low light, low light values are discarded using **cv.inRange()** function.
 
 ### Try it
 
-Here is the demo for cv.meanShift. Some core code is in the textbox, and you can click `try it` to 
+Try this demo for cv.meanShift. Some core code is in the textbox, and you can click `try it` to 
 investigate more.
 
 \htmlonly
@@ -200,7 +200,7 @@ Camshift
 --------
 
 Did you closely watch the last result? There is a problem. Our window always has the same size when
-car is farther away and it is very close to camera. That is not good. We need to adapt the window
+the object is farther away and it is very close to camera. That is not good. We need to adapt the window
 size with size and rotation of the target. Once again, the solution came from "OpenCV Labs" and it
 is called CAMshift (Continuously Adaptive Meanshift) published by Gary Bradsky in his paper
 "Computer Vision Face Tracking for Use in a Perceptual User Interface" in 1988.
@@ -220,7 +220,7 @@ parameters (used to be passed as search window in next iteration).
 
 ### Try it
 
-Here is the demo for cv.CamShift. Some core code is in the textbox, and you can click `try it` to 
+Try this demo for cv.CamShift. Some core code is in the textbox, and you can click `try it` to 
 investigate more.
 
 \htmlonly
