@@ -16,6 +16,9 @@ For example
 ./emsdk activate latest
 @endcode
 
+@note
+To compile to [WebAssembly](http://webassembly.org), you also need to install and activate [Binaryen](https://github.com/WebAssembly/binaryen) with the `emsdk` command. Please refer to [Developer's Guide](http://webassembly.org/getting-started/developers-guide/) for more details.
+
 After install, ensure the `EMSCRIPTEN` environment is setup correctly.
 
 For example:
@@ -73,6 +76,9 @@ Building OpenCV.js from Source Using CMake
 
     @note
     Use `cmake -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..` , without spaces after -D if the above example doesn't work.
+
+    @note
+    Pass `-DCMAKE_C_FLAGS="-s WASM=1"` and `-DCMAKE_CXX_FLAGS="-s WASM=1"` to `cmake` if you are targeting WebAssembly.
 
 -#  To build, execute *make*, from the build directory. it is recommended to do this in several threads.
 
