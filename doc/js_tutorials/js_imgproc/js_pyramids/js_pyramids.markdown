@@ -4,9 +4,8 @@ Image Pyramids {#tutorial_js_pyramids}
 Goal
 ----
 
-In this chapter,
-    -   We will learn about Image Pyramids
-    -   We will see these functions: **cv.pyrUp()**, **cv.pyrDown()**
+-   We will learn about Image Pyramids
+-   We will learn these functions: **cv.pyrUp()**, **cv.pyrDown()**
 
 Theory
 ------
@@ -46,8 +45,8 @@ We use the function: **cv.pyrDown (src, dst, dstsize = new cv.Size(0, 0), border
 Try it
 ------
 
-Here is a demo. Canvas elements named pyrDownCanvasInput and pyrDownCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named pyrDownCanvasInput and pyrDownCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -118,8 +117,8 @@ We use the function: **cv.pyrUp (src, dst, dstsize = new cv.Size(0, 0), borderTy
 Try it
 ------
 
-Here is a demo. Canvas elements named pyrUpCanvasInput and pyrUpCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named pyrUpCanvasInput and pyrUpCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

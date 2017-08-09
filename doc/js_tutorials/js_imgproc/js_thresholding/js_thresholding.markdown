@@ -36,8 +36,8 @@ by the fourth parameter of the function. Different types are:
 Try it
 ------
 
-Here is a demo. Canvas elements named thresholdCanvasInput and thresholdCanvasOutput have been prepared. Choose an image and 
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named thresholdCanvasInput and thresholdCanvasOutput have been prepared. Choose an image and 
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -122,8 +122,8 @@ We use the function: **cv.adaptiveThreshold (src, dst, maxValue, adaptiveMethod,
 Try it
 ------
 
-Here is a demo. Canvas elements named adaptiveThresholdCanvasInput and adaptiveThresholdCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named adaptiveThresholdCanvasInput and adaptiveThresholdCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

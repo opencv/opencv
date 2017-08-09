@@ -4,15 +4,15 @@ Basic Operations on Images {#tutorial_js_basic_ops}
 Goal
 ----
 
-Learn to:
 
--   Access image properties
--   How to construct Mat
--   How to copy Mat
--   How to convert the type of Mat
--   Access pixel values and modify them
--   Setting Region of Interest (ROI)
--   Splitting and Merging images
+-   Learn how to access image properties
+-   Learn how to construct Mat
+-   Learn how to copy Mat
+-   Learn how to convert the type of Mat
+-   Learn how to use MatVector
+-   Learn how to access pixel values and modify them
+-   Learn how to set Region of Interest (ROI)
+-   Learn how to split and Merge images
 
 Accessing Image Properties
 --------------------------
@@ -21,80 +21,138 @@ Image properties include number of rows, columns and size, depth, channels, type
 
 @code{.js}
 let src = cv.imread("canvasInput");
-let rows =  src.cols;
-let columns = src.rows;
-let size = src.size;
-let depth = src.depth();
-let channels = src.channels();
-let type = src.type();
+console.log('image width: ' + src.cols + '\n' +
+            'image height: ' + src.rows + '\n' +
+            'image size: ' + src.size().width + '*' src.size().height + '\n' +
+            'image depth: ' + src.depth() + '\n' +
+            'image channels ' + src.channels() + '\n' +
+            'image type: ' + src.type() + '\n');
 @endcode
 
-@note src.type() is very important while debugging because a large number of errors in OpenCV-Python
+@note src.type() is very important while debugging because a large number of errors in OpenCV.js
 code is caused by invalid data type.
 
 How to construct Mat
 ------------------------------------
 
-There are 4 constructors:
+There are 4 basic constructors:
 
 @code{.js}
-let mat = new cv.Mat(size, type);                        // 2 parameters
-let mat = new cv.Mat(rows, cols, type);                  // 3 parameters
-let mat = new cv.Mat(rows, cols, type, new cv.Scalar()); // 4 parameters
-let mat = matFromArray(rows, cols, type, array);
+// 1. default constructor
+let mat = new cv.Mat();           
+// 2. two-dimensional arrays by size and type                       
+let mat = new cv.Mat(size, type);           
+// 3. two-dimensional arrays by rows, cols, and type             
+let mat = new cv.Mat(rows, cols, type);              
+// 4. two-dimensional arrays by rows, cols, and type with initialization value    
+let mat = new cv.Mat(rows, cols, type, new cv.Scalar()); 
 @endcode
 
 There are 3 static functions:
 
 @code{.js}
-let mat = cv.Mat.zeros(rows, cols, type);           
-let mat = cv.Mat.ones(rows, cols, type); 
-let mat = cv.Mat.eye(rows, cols, type);
+// 1. Create a Mat which is full of zeros 
+let mat = cv.Mat.zeros(rows, cols, type);  
+// 2. Create a Mat which is full of ones        
+let mat = cv.Mat.ones(rows, cols, type);   
+// 3. Create a Mat which is an identity matrix   
+let mat = cv.Mat.eye(rows, cols, type);    
 @endcode
 
-**warning**
+There are 2 factory functions:
+@code{.js}
+// 1. Use JS array to construct a mat 
+let mat = cv.matFromArray(rows, cols, type, array); 
+// 2. Use imgData to construct a mat 
+let ctx = canvas.getContext("2d");
+let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+let mat = cv.matFromImageData(imgData);   
+@endcode
 
-Don't forget to delete cv.Mat(cv.MatVector) when you don't want to use it any more.
+@note Don't forget to delete cv.Mat when you don't want to use it any more.
 
 How to copy Mat
 ------------------------------------
 
+There are 2 ways to copy a Mat:
+
 @code{.js}
-dst = src.clone();
-src.copyTo(dst, mask); // only entries indicated in the arry mask are copied    
+// 1. Clone 
+let dst = src.clone();
+// 2. CopyTo(only entries indicated in the mask are copied)
+src.copyTo(dst, mask);     
 @endcode
   
 How to convert the type of Mat
 ------------------------------------
 
+We use the function: **convertTo(m, rtype, alpha = 1, beta = 0)**
+@param m        output matrix; if it does not have a proper size or type before the operation, it is reallocated.
+@param rtype    desired output matrix type or, rather, the depth since the number of channels are the same as the input has; if rtype is negative, the output matrix will have the same type as the input.
+@param alpha    optional scale factor.
+@param beta     optional delta added to the scaled values.
+
 @code{.js}
-src.convertTo(dst, rtype); // rtype desired dst matrix type
+src.convertTo(dst, rtype); 
 @endcode
+
+How use MatVector
+------------------------------------
+
+@code{.js}
+let mat = new cv.Mat(); 
+// Initialise a MatVector
+let matVec = new cv.MatVector();
+// Push a Mat back into MatVector
+matVec.push_back(mat);
+// Get a Mat fom MatVector
+let cnt = matVec.get(0);
+mat.delete(); matVec.delete(); cnt.delete();
+@endcode
+
+@note Don't forget to delete cv.Mat, cv.MatVector and cnt(the Mat you get from MatVector) when you don't want to use them any more.
 
 Accessing and Modifying pixel values
 ------------------------------------
 
 Firstly, you should know the following type relationship: 
 
--   data    \f$\leftrightarrow\f$ uchar
--   data8S  \f$\leftrightarrow\f$ char
--   data16U \f$\leftrightarrow\f$ ushort
--   data16S \f$\leftrightarrow\f$ short
--   data32S \f$\leftrightarrow\f$ int
--   data32F \f$\leftrightarrow\f$ float
--   data64F \f$\leftrightarrow\f$ double
+Data Properties  | C++ Type | JavaScript Typed Array
+---------------  | -------- | ----------------------
+data             | uchar    | Uint8Array
+data8S           | char     | Int8Array
+data16U          | ushort   | Uint16Array
+data16S          | short    | Int16Array
+data32S          | int      | Int32Array
+data32F          | float    | Float32Array
+data64F          | double   | Float64Array
 
-We use different ways to get the first channel of a pixel from a CV_8UC4 Mat. The coordinate of this pixel is (x, y).
+
+We use different ways to get the first channel of a pixel from a CV_8UC4 image. The coordinate of this pixel is (x, y).
 
 **1. data**
 
 @code{.js}
 let x = 3, y = 4;
 let src = cv.imread("canvasInput");
-let pixel = src.data[y * src.cols * src.channels() + x * src.channels()];
+if (src.isContinuous()) {
+    let pixel = src.data[y * src.cols * src.channels() + x * src.channels()];
+}
 @endcode
 
+@note  Data manipulation is only valid for continuous Mat. You should use isContinuous() to check first.
+
 **2. at**
+
+Data Properties  | At manipulation 
+---------------  | ---------------
+data             | ucharAt    
+data8S           | charAt    
+data16U          | ushortAt  
+data16S          | shortAt  
+data32S          | intAt
+data32F          | floatAt  
+data64F          | doubleAt   
 
 @code{.js}
 let x = 3, y = 4;
@@ -102,13 +160,27 @@ let src = cv.imread("canvasInput");
 let pixel = src.ucharAt(y, x * src.channels());
 @endcode
 
+@note  At manipulation is only for single channel access and the value can't be modified.
+
 **3. ptr**
+
+Data Properties  | Ptr manipulation 
+---------------  | ---------------
+data             | ucharPtr    
+data8S           | charPtr    
+data16U          | ushortPtr 
+data16S          | shortPtr  
+data32S          | intPtr
+data32F          | floatPtr  
+data64F          | doublePtr  
 
 @code{.js}
 let x = 3, y = 4;
 let src = cv.imread("canvasInput");
 let pixel = src.ucharPtr(y, x)[0];
 @endcode
+
+mat.ucharPtr(k) get the k th column of the mat. mat.ucharPtr(i, j) get the i th column and the j row th of the mat.
 
 Image ROI
 ---------
@@ -118,11 +190,14 @@ face detection is done all over the image and when face is obtained, we select t
 and search for eyes inside it instead of searching whole image. It improves accuracy (because eyes
 are always on faces) and performance (because we search for a small area)
 
+We use the function: **getRoiRect (rect)**
+@param rect    rectangle Region of Interest.
+
 Try it
 ------
 
-Here is a demo. Canvas elements named roiCanvasInput and roiCanvasOutput have been prepared. Choose an image and 
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named roiCanvasInput and roiCanvasOutput have been prepared. Choose an image and 
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -192,12 +267,17 @@ image.
 
 @code{.js}
 let src = cv.imread("canvasInput");
-let rgbPlanes = new cv.MatVector();
-cv.split(src, rgbPlanes);
-cv.merge(rgbPlanes, src);
-src.delete(); rgbPlanes.delete();
+let rgbaPlanes = new cv.MatVector();
+// Split the Mat
+cv.split(src, rgbaPlanes);
+// Get R channel
+let R = rgbaPlanes.get(0);
+// Merge all channels
+cv.merge(rgbaPlanes, src);
+src.delete(); rgbaPlanes.delete(); R.delete();
 @endcode
 
+@note Don't forget to delete cv.Mat, cv.MatVector and R(the Mat you get from MatVector) when you don't want to use them any more.
 
 Making Borders for Images (Padding)
 -----------------------------------
@@ -227,8 +307,8 @@ padding etc. This function takes following arguments:
 Try it
 ------
 
-Here is a demo. Canvas elements named copyMakeBorderCanvasInput and copyMakeBorderCanvasOutput have been prepared. Choose an image and 
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named copyMakeBorderCanvasInput and copyMakeBorderCanvasOutput have been prepared. Choose an image and 
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

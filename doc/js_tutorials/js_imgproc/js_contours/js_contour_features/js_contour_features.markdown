@@ -4,10 +4,8 @@ Contour Features {#tutorial_js_contour_features}
 Goal
 ----
 
-In this article, we will learn
-
 -   To find the different features of contours, like area, perimeter, centroid, bounding box etc
--   You will see plenty of functions related to contours.
+-   You will learn plenty of functions related to contours.
 
 1. Moments
 ----------
@@ -23,8 +21,8 @@ We use the function: **cv.moments (array, binaryImage = false)**
 Try it
 ------
 
-Here is a demo. Canvas elements named momentsCanvasInput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named momentsCanvasInput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -110,8 +108,8 @@ We use the function: **cv.contourArea (contour, oriented = false)**
 Try it
 ------
 
-Here is a demo. Canvas elements named areaCanvasInput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named areaCanvasInput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -179,8 +177,8 @@ We use the function: **cv.arcLength (curve, closed)**
 Try it
 ------
 
-Here is a demo. Canvas elements named perimeterCanvasInput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named perimeterCanvasInput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -253,8 +251,8 @@ We use the function: **cv.approxPolyDP (curve, approxCurve, epsilon, closed)**
 Try it
 ------
 
-Here is a demo. Canvas elements named approxPolyDPCanvasInput and approxPolyDPCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named approxPolyDPCanvasInput and approxPolyDPCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -343,8 +341,8 @@ We use the function: **cv.convexHull (points, hull, clockwise = false, returnPoi
 Try it
 ------
 
-Here is a demo. Canvas elements named convexHullCanvasInput and convexHullCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named convexHullCanvasInput and convexHullCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -438,8 +436,8 @@ We use the function: **cv.boundingRect (points)**
 Try it
 ------
 
-Here is a demo. Canvas elements named boundingRectCanvasInput and boundingRectCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named boundingRectCanvasInput and boundingRectCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -510,8 +508,8 @@ We use the function: **cv.minAreaRect (points)**
 Try it
 ------
 
-Here is a demo. Canvas elements named minAreaRectCanvasInput and minAreaRectCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named minAreaRectCanvasInput and minAreaRectCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -532,8 +530,7 @@ cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
 let cnt = contours.get(0);
 // You can try more different parameters
 let rotatedRect = cv.minAreaRect(cnt);
-let vertices = new cv.PointVector;
-vertices = cv.RotatedRect.points(rotatedRect);
+let vertices = cv.RotatedRect.points(rotatedRect);
 let contoursColor = new cv.Scalar(255, 255, 255);
 let rectangleColor = new cv.Scalar(255, 0, 0);
 cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100);
@@ -595,8 +592,8 @@ We use the functions: **cv.minEnclosingCircle (points)**
 Try it
 ------
 
-Here is a demo. Canvas elements named minEnclosingCircleCanvasInput and minEnclosingCircleCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named minEnclosingCircleCanvasInput and minEnclosingCircleCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -673,8 +670,8 @@ We use the functions: **cv.fitEllipse (points)**
 Try it
 ------
 
-Here is a demo. Canvas elements named fitEllipseCanvasInput and fitEllipseCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named fitEllipseCanvasInput and fitEllipseCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -758,8 +755,8 @@ We use the functions: **cv.fitLine (points, line, distType, param, reps, aeps)**
 Try it
 ------
 
-Here is a demo. Canvas elements named fitLineCanvasInput and fitLineCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named fitLineCanvasInput and fitLineCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

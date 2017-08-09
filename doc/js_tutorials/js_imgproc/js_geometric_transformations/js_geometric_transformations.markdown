@@ -4,9 +4,9 @@ Geometric Transformations of Images {#tutorial_js_geometric_transformations}
 Goals
 -----
 
--   Learn to apply different geometric transformation to images like translation, rotation, affine
+-   Learn how to apply different geometric transformation to images like translation, rotation, affine
     transformation etc.
--   You will see these functions: **cv.resize**, **cv.warpAffine**, **cv.getAffineTransform** and **cv.warpPerspective** 
+-   You will learn these functions: **cv.resize**, **cv.warpAffine**, **cv.getAffineTransform** and **cv.warpPerspective** 
 
 Transformations
 ---------------
@@ -33,8 +33,8 @@ We use the function: **cv.resize (src, dst, dsize, fx = 0, fy = 0, interpolation
 Try it
 ------
 
-Here is a demo. Canvas elements named resizeCanvasInput and resizeCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named resizeCanvasInput and resizeCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -115,8 +115,8 @@ rows.
 Try it
 ------
 
-Here is a demo. Canvas elements named warpAffineCanvasInput and warpAffineCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named warpAffineCanvasInput and warpAffineCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -190,8 +190,8 @@ We use the function: **cv.getRotationMatrix2D (center, angle, scale)**
 Try it
 ------
 
-Here is a demo. Canvas elements named rotateWarpAffineCanvasInput and rotateWarpAffineCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named rotateWarpAffineCanvasInput and rotateWarpAffineCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -259,8 +259,8 @@ We use the function: **cv.getAffineTransform (src, dst)**
 Try it
 ------
 
-Here is a demo. Canvas elements named getAffineTransformCanvasInput and getAffineTransformCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named getAffineTransformCanvasInput and getAffineTransformCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -338,8 +338,8 @@ We use the functions: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER
 Try it
 ------
 
-Here is a demo. Canvas elements named warpPerspectiveCanvasInput and warpPerspectiveCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named warpPerspectiveCanvasInput and warpPerspectiveCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

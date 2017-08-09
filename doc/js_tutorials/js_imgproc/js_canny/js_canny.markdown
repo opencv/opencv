@@ -4,8 +4,6 @@ Canny Edge Detection {#tutorial_js_canny}
 Goal
 ----
 
-In this chapter, we will learn about
-
 -   Concept of Canny edge detection
 -   OpenCV functions for that : **cv.Canny()**
 
@@ -83,8 +81,8 @@ magnitude. If it is True, it uses the equation mentioned above which is more acc
 Try it
 ------
 
-Here is a demo. Canvas elements named CannyCanvasInput and CannyCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named CannyCanvasInput and CannyCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

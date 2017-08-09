@@ -55,8 +55,8 @@ bitwise operations.
 Try it
 ------
 
-Here is a demo. Canvas elements named imageCanvasInput, logoCanvasInput and bitwiseCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named imageCanvasInput, logoCanvasInput and bitwiseCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -89,18 +89,18 @@ let rect = new cv.Rect(0, 0, logo.cols, logo.rows);
 // I want to put logo on top-left corner, So I create a ROI
 roi = src.getRoiRect(rect);
 
-// create a mask of logo and create its inverse mask also
+// Create a mask of logo and create its inverse mask also
 cv.cvtColor(logo, mask, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(mask, mask, 100, 255, cv.THRESH_BINARY);
 cv.bitwise_not(mask, maskInv);
 
-// black-out the area of logo in ROI
+// Black-out the area of logo in ROI
 cv.bitwise_and(roi, roi, imgBg, maskInv);
 
-// take only region of logo from logo image
+// Take only region of logo from logo image
 cv.bitwise_and(logo, logo, imgFg, mask);
 
-// put logo in ROI and modify the main image
+// Put logo in ROI and modify the main image
 cv.add(imgBg, imgFg, sum);
 
 dst = src.clone();

@@ -4,8 +4,7 @@ Foreground Extraction using GrabCut Algorithm {#tutorial_js_grabcut}
 Goal
 ----
 
-In this chapter
-    -   We will see GrabCut algorithm to extract foreground in images
+-   We will learn GrabCut algorithm to extract foreground in images
 
 Theory
 ------
@@ -70,8 +69,8 @@ We use the function: **cv.grabCut (image, mask, rect, bgdModel, fgdModel, iterCo
 Try it
 ------
 
-Here is a demo. Canvas elements named grabCutCanvasInput and grabCutCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named grabCutCanvasInput and grabCutCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

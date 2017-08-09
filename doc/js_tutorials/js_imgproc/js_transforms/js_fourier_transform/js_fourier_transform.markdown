@@ -4,10 +4,9 @@ Fourier Transform {#tutorial_js_fourier_transform}
 Goal
 ----
 
-In this section, we will learn
-    -   To find the Fourier Transform of images using OpenCV
-    -   Some applications of Fourier Transform
-    -   We will see following functions : **cv.dft()** etc
+-   To find the Fourier Transform of images using OpenCV
+-   Some applications of Fourier Transform
+-   We will learn following functions : **cv.dft()** etc
 
 Theory
 ------
@@ -83,8 +82,8 @@ We use the functions: **cv.dft (src, dst, flags = 0, nonzeroRows = 0)**
 Try it
 ------
 
-Here is a demo. Canvas elements named dftCanvasInput and dftCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named dftCanvasInput and dftCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

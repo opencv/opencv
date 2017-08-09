@@ -4,10 +4,9 @@ Morphological Transformations {#tutorial_js_morphological_ops}
 Goal
 ----
 
-In this chapter,
-    -   We will learn different morphological operations like Erosion, Dilation, Opening, Closing
+-   We will learn different morphological operations like Erosion, Dilation, Opening, Closing
         etc.
-    -   We will see different functions like : **cv.erode()**, **cv.dilate()**,
+-   We will learn different functions like : **cv.erode()**, **cv.dilate()**,
         **cv.morphologyEx()** etc.
 
 Theory
@@ -45,8 +44,8 @@ We use the function: **cv.erode (src, dst, kernel, anchor = new cv.Point(-1, -1)
 Try it
 ------
 
-Here is a demo. Canvas elements named erodeCanvasInput and erodeCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named erodeCanvasInput and erodeCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -127,8 +126,8 @@ We use the function: **cv.dilate (src, dst, kernel, anchor = new cv.Point(-1, -1
 Try it
 ------
 
-Here is a demo. Canvas elements named dilateCanvasInput and dilateCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named dilateCanvasInput and dilateCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -196,8 +195,8 @@ We use the function: **cv.morphologyEx (src, dst, op, kernel, anchor = new cv.Po
 Try it
 ------
 
-Here is a demo. Canvas elements named openingCanvasInput and openingCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named openingCanvasInput and openingCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -256,8 +255,8 @@ inside the foreground objects, or small black points on the object.
 Try it
 ------
 
-Here is a demo. Canvas elements named closingCanvasInput and closingCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named closingCanvasInput and closingCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -316,8 +315,8 @@ The result will look like the outline of the object.
 Try it
 ------
 
-Here is a demo. Canvas elements named gradientCanvasInput and gradientCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named gradientCanvasInput and gradientCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -375,8 +374,8 @@ It is the difference between input image and Opening of the image.
 Try it
 ------
 
-Here is a demo. Canvas elements named topHatCanvasInput and topHatCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named topHatCanvasInput and topHatCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -434,8 +433,8 @@ It is the difference between the closing of the input image and input image.
 Try it
 ------
 
-Here is a demo. Canvas elements named blackHatCanvasInput and blackHatCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named blackHatCanvasInput and blackHatCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -502,8 +501,8 @@ We use the function: **cv.getStructuringElement (shape, ksize, anchor = new cv.P
 Try it
 ------
 
-Here is a demo. Canvas elements named getStructuringElementCanvasInput and getStructuringElementCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named getStructuringElementCanvasInput and getStructuringElementCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

@@ -4,9 +4,8 @@ Smoothing Images {#tutorial_js_filtering}
 Goals
 -----
 
-Learn to:
-    -   Blur the images with various low pass filters
-    -   Apply custom-made filters to images (2D convolution)
+-   Blur the images with various low pass filters
+-   Apply custom-made filters to images (2D convolution)
 
 2D Convolution ( Image Filtering )
 ----------------------------------
@@ -32,8 +31,8 @@ We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = new cv.P
 Try it
 ------
 
-Here is a demo. Canvas elements named filterCanvasInput and filterCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named filterCanvasInput and filterCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -133,8 +132,8 @@ normalize = false to the function.
 Try it
 ------
 
-Here is a demo. Canvas elements named blurCanvasInput and blurCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named blurCanvasInput and blurCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -202,8 +201,8 @@ We use the function: **cv.GaussianBlur (src, dst, ksize, sigmaX, sigmaY = 0, bor
 Try it
 ------
 
-Here is a demo. Canvas elements named GaussianBlurCanvasInput and GaussianBlurCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named GaussianBlurCanvasInput and GaussianBlurCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -273,8 +272,8 @@ We use the function: **cv.medianBlur (src, dst, ksize)**
 Try it
 ------
 
-Here is a demo. Canvas elements named medianBlurCanvasInput and medianBlurCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named medianBlurCanvasInput and medianBlurCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -352,8 +351,8 @@ We use the function: **cv.bilateralFilter (src, dst, d, sigmaColor, sigmaSpace, 
 Try it
 ------
 
-Here is a demo. Canvas elements named bilateralFilterCanvasInput and bilateralFilterCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named bilateralFilterCanvasInput and bilateralFilterCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

@@ -4,9 +4,8 @@ Template Matching {#tutorial_js_template_matching}
 Goals
 -----
 
-In this chapter, you will learn
-    -   To find objects in an image using Template Matching
-    -   You will see these functions : **cv.matchTemplate()**, **cv.minMaxLoc()**
+-   To find objects in an image using Template Matching
+-   You will learn these functions : **cv.matchTemplate()**, **cv.minMaxLoc()**
 
 Theory
 ------
@@ -39,8 +38,8 @@ We use the function: **cv.matchTemplate (image, templ, result, method, mask = ne
 Try it
 ------
 
-Here is a demo. Canvas elements named imageCanvasInput, templateCanvasInput and matchTemplateCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named imageCanvasInput, templateCanvasInput and matchTemplateCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

@@ -1,14 +1,12 @@
-Face Detection in Camera {#tutorial_js_face_detection_camera}
+Face Detection in Video Capture {#tutorial_js_face_detection_camera}
 ==================================
 
 Goal
 ----
 
-In this session,
+-   learn how to detect faces in video capture. 
 
--   We will see how to detect faces in camera. 
-
-    If you don't know how to capture video from camera, please review @ref tutorial_js_video_display.
+@note  If you don't know how to capture video from camera, please review @ref tutorial_js_video_display.
 
 \htmlonly
 <!DOCTYPE html>

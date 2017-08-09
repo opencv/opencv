@@ -4,10 +4,9 @@ Histograms - 1 : Find, Plot, Analyze !!! {#tutorial_js_histogram_begins}
 Goal
 ----
 
-Learn to
-    -   Find histograms
-    -   Plot histograms
-    -   You will see the function: **cv.calcHist()**.
+-   Find histograms
+-   Plot histograms
+-   You will learn the function: **cv.calcHist()**.
 
 Theory
 ------
@@ -45,8 +44,8 @@ We use the function: **cv.calcHist (image, channels, mask, hist, histSize, range
 Try it
 ------
 
-Here is a demo. Canvas elements named calcHistCanvasInput and calcHistCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named calcHistCanvasInput and calcHistCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

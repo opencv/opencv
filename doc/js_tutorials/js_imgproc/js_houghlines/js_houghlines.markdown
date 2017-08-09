@@ -4,10 +4,9 @@ Hough Line Transform {#tutorial_js_houghlines}
 Goal
 ----
 
-In this chapter,
-    -   We will understand the concept of the Hough Transform.
-    -   We will see how to use it to detect lines in an image.
-    -   We will see the following functions: **cv.HoughLines()**, **cv.HoughLinesP()**
+-   We will understand the concept of the Hough Transform.
+-   We will learn how to use it to detect lines in an image.
+-   We will learn the following functions: **cv.HoughLines()**, **cv.HoughLinesP()**
 
 Theory
 ------
@@ -79,8 +78,8 @@ We use the function: **cv.HoughLines (image, lines, rho, theta, threshold, srn =
 Try it
 ------
 
-Here is a demo. Canvas elements named HoughLinesCanvasInput and HoughLinesCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named HoughLinesCanvasInput and HoughLinesCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -179,8 +178,8 @@ We use the function: **cv.HoughLinesP (image, lines, rho, theta, threshold, minL
 Try it
 ------
 
-Here is a demo. Canvas elements named HoughLinesPCanvasInput and HoughLinesPCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named HoughLinesPCanvasInput and HoughLinesPCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

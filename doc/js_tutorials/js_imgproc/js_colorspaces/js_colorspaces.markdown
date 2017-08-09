@@ -25,8 +25,8 @@ For RGB \f$\rightarrow\f$ Gray conversion we use the code cv.COLOR_RGBA2GRAY.
 Try it
 ------
 
-Here is a demo. Canvas elements named cvtColorCanvasInput and cvtColorCanvasOutput have been prepared. Choose an image and 
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named cvtColorCanvasInput and cvtColorCanvasOutput have been prepared. Choose an image and 
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -99,8 +99,8 @@ We use the function: **cv.inRange (src, lowerb, upperb, dst)**
 Try it
 ------
 
-Here is a demo. Canvas elements named inRangeCanvasInput and inRangeCanvasOutput have been prepared. Choose an image and 
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named inRangeCanvasInput and inRangeCanvasOutput have been prepared. Choose an image and 
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

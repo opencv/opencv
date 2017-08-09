@@ -1,12 +1,11 @@
 Contour Properties {#tutorial_js_contour_properties}
 ==================
 
-Here we will learn to extract some frequently used properties of objects like Solidity, Equivalent
-Diameter, Mask image, Mean Intensity etc. More features can be found at [Matlab regionprops
-documentation](http://www.mathworks.in/help/images/ref/regionprops.html).
+Goal
+----
 
-*(NB : Centroid, Area, Perimeter etc also belong to this category, but we have seen it in last
-chapter)*
+-   Here we will learn to extract some frequently used properties of objects like Solidity, Equivalent
+Diameter, Mask image, Mean Intensity etc. 
 
 1. Aspect Ratio
 ---------------

@@ -4,10 +4,8 @@ Image Gradients {#tutorial_js_gradients}
 Goal
 ----
 
-In this chapter, we will learn to:
-
 -   Find Image gradients, edges etc
--   We will see following functions : **cv.Sobel()**, **cv.Scharr()**, **cv.Laplacian()** etc
+-   We will learn following functions : **cv.Sobel()**, **cv.Scharr()**, **cv.Laplacian()** etc
 
 Theory
 ------
@@ -47,8 +45,8 @@ We use the functions: **cv.Sobel (src, dst, ddepth, dx, dy, ksize = 3, scale = 1
 Try it
 ------
 
-Here is a demo. Canvas elements named SobelCanvasInput, SobelCanvasOutputX and SobelCanvasOutputY have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named SobelCanvasInput, SobelCanvasOutputX and SobelCanvasOutputY have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -142,8 +140,8 @@ We use the function: **cv.Laplacian (src, dst, ddepth, ksize = 1, scale = 1, del
 Try it
 ------
 
-Here is a demo. Canvas elements named LaplacianCanvasInput and LaplacianCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named LaplacianCanvasInput and LaplacianCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -208,8 +206,8 @@ Below code demonstrates this procedure for a horizontal Sobel filter and differe
 Try it
 ------
 
-Here is a demo. Canvas elements named absSobelCanvasInput, absSobelCanvasOutput8U and absSobelCanvasOutput64F have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named absSobelCanvasInput, absSobelCanvasOutput8U and absSobelCanvasOutput64F have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 We use the function: **cv.convertScaleAbs (src, dst, alpha = 1, beta = 0)** 
 @param src     input array.

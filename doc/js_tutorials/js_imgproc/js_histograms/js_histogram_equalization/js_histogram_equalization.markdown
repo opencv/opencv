@@ -4,8 +4,6 @@ Histograms - 2: Histogram Equalization {#tutorial_js_histogram_equalization}
 Goal
 ----
 
-In this section,
-
 -   We will learn the concepts of histogram equalization and use it to improve the contrast of our
     images.
 
@@ -36,8 +34,8 @@ We use the function: **cv.equalizeHist (src, dst)**
 Try it
 ------
 
-Here is a demo. Canvas elements named equalizeHistCanvasInput, imageGrayCanvasOutput and equalizeHistCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named equalizeHistCanvasInput, imageGrayCanvasOutput and equalizeHistCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 
 \htmlonly
@@ -122,8 +120,8 @@ We use the class: **cv.CLAHE (clipLimit = 40, tileGridSize = new cv.Size(8, 8))*
 Try it
 ------
 
-Here is a demo. Canvas elements named createCLAHECanvasInput, equalCanvasOutput and createCLAHECanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named createCLAHECanvasInput, equalCanvasOutput and createCLAHECanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

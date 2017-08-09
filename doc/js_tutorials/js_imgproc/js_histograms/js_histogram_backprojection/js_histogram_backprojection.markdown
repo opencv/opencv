@@ -4,7 +4,7 @@ Histogram - 3 : Histogram Backprojection {#tutorial_js_histogram_backprojection}
 Goal
 ----
 
-In this chapter, we will learn about histogram backprojection.
+-   We will learn about histogram backprojection.
 
 Theory
 ------
@@ -52,8 +52,8 @@ We use the functions: **cv.calcBackProject (images, channels, hist, dst, ranges,
 Try it
 ------
 
-Here is a demo. Canvas elements named calcBackProjectCanvasSrcInput, calcBackProjectCanvasDstInput and calcBackProjectCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named calcBackProjectCanvasSrcInput, calcBackProjectCanvasDstInput and calcBackProjectCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 
 \htmlonly

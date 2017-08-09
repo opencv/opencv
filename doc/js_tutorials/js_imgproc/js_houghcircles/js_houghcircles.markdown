@@ -4,9 +4,8 @@ Hough Circle Transform {#tutorial_js_houghcircles}
 Goal
 ----
 
-In this chapter,
-    -   We will learn to use Hough Transform to find circles in an image.
-    -   We will see these functions: **cv.HoughCircles()**
+-   We will learn to use Hough Transform to find circles in an image.
+-   We will learn these functions: **cv.HoughCircles()**
 
 Theory
 ------
@@ -32,8 +31,8 @@ We use the function: **cv.HoughCircles (image, circles, method, dp, minDist, par
 Try it
 ------
 
-Here is a demo. Canvas elements named HoughCirclesPCanvasInput and HoughCirclesPCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named HoughCirclesPCanvasInput and HoughCirclesPCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

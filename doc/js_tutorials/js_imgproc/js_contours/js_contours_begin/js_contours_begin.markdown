@@ -6,7 +6,7 @@ Goal
 
 -   Understand what contours are.
 -   Learn to find contours, draw contours etc
--   You will see these functions : **cv.findContours()**, **cv.drawContours()**
+-   You will learn these functions : **cv.findContours()**, **cv.drawContours()**
 
 What are contours?
 ------------------
@@ -50,8 +50,8 @@ We use the functions: **cv.findContours (image, contours, hierarchy, mode, metho
 Try it
 ------
 
-Here is a demo. Canvas elements named contoursCanvasInput and contoursCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named contoursCanvasInput and contoursCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

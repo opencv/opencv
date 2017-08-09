@@ -4,7 +4,7 @@ Contours Hierarchy {#tutorial_js_contours_hierarchy}
 Goal
 ----
 
-This time, we learn about the hierarchy of contours, i.e. the parent-child relationship in Contours.
+-   This time, we learn about the hierarchy of contours, i.e. the parent-child relationship in Contours.
 
 Theory
 ------

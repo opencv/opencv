@@ -4,10 +4,9 @@ Contours : More Functions {#tutorial_js_contours_more_functions}
 Goal
 ----
 
-In this chapter, we will learn about
-    -   Convexity defects and how to find them.
-    -   Finding shortest distance from a point to a polygon
-    -   Matching different shapes
+-   Convexity defects and how to find them.
+-   Finding shortest distance from a point to a polygon
+-   Matching different shapes
 
 Theory and Code
 ---------------
@@ -29,8 +28,8 @@ We use the function: **cv.convexityDefects (contour, convexhull, convexityDefect
 Try it
 ------
 
-Here is a demo. Canvas elements named convexityDefectsCanvasInput and convexityDefectsCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named convexityDefectsCanvasInput and convexityDefectsCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -135,8 +134,8 @@ We use the function: **cv.matchShapes (contour1, contour2, method, parameter)**
 Try it
 ------
 
-Here is a demo. Canvas elements named matchShapesCanvasInput and matchShapesCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named matchShapesCanvasInput and matchShapesCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>

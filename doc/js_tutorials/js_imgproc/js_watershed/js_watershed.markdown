@@ -4,9 +4,8 @@ Image Segmentation with Watershed Algorithm {#tutorial_js_watershed}
 Goal
 ----
 
-In this chapter,
-    -   We will learn to use marker-based image segmentation using watershed algorithm
-    -   We will see: **cv.watershed()**
+-   We will learn how to use marker-based image segmentation using watershed algorithm
+-   We will learn: **cv.watershed()**
 
 Theory
 ------
@@ -320,8 +319,8 @@ We use the function: **cv.watershed (image, markers)**
 Try it
 ------
 
-Here is a demo. Canvas elements named watershedCanvasInput and watershedCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Try this demo using the code above. Canvas elements named watershedCanvasInput and watershedCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
 <!DOCTYPE html>
