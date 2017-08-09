@@ -58,31 +58,47 @@ ignore_list = ['locate',  #int&
                ]
 
 # Classes and methods whitelist
-white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',\
-                   'compare', 'copyMakeBorder', 'countNonZero', 'determinant', 'divide', 'eigen', 'exp', 'flip', 'gemm',\
-                   'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', 'max', 'max', 'mean', 'meanStdDev', 'merge',\
-                   'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize', 'perspectiveTransform', 'polarToCart',\
-                   'pow', 'randn', 'randu', 'reduce', 'repeat', 'setIdentity', 'setRNGSeed', 'solve', 'solvePoly', 'split', 'sqrt',\
-                   'subtract', 'trace', 'transform', 'transpose', 'vconcat', 'Canny', 'GaussianBlur', 'Laplacian',\
-                   'Scharr','Sobel','adaptiveThreshold','approxPolyDP','arcLength','bilateralFilter','blur','boundingRect','boxFilter',\
-                   'calcBackProject','calcHist','circle','compareHist','connectedComponents','connectedComponentsWithStats','contourArea',\
-                   'convexHull','cornerHarris','cornerMinEigenVal','createLineSegmentDetector','cvtColor','demosaicing','dilate',\
-                   'distanceTransform','distanceTransformWithLabels','drawContours','ellipse','ellipse2Poly','equalizeHist','erode',\
-                   'findContours','fitEllipse','floodFill','getAffineTransform','goodFeaturesToTrack','grabCut','initUndistortRectifyMap',\
-                   'integral','integral2','line','matchTemplate','medianBlur','moments','putText','pyrDown','pyrUp','rectangle','remap',\
-                   'resize','sepFilter2D','threshold','undistort','warpAffine','warpPerspective','watershed', 'groupRectangles', 'CamShift',\
-                   'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
-                   'findTransformECC', 'meanShift', 'getRotationMatrix2D', 'getPerspectiveTransform', 'filter2D', 'morphologyEx',\
-                   'getStructuringElement', 'convertScaleAbs', 'isContourConvex', 'minAreaRect', 'minEnclosingCircle', 'fitLine',\
-                   'minMaxLoc', 'convexityDefects', 'pointPolygonTest', 'matchShapes', 'createCLAHE', 'dft', 'getOptimalDFTSize',\
-                   'HoughLines', 'HoughLinesP', 'HoughCircles'],
-              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
-              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
-              'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
-              'BackgroundSubtractor': ['apply', 'getBackgroundImage'],
-              'Algorithm': [],
-              'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']
-              }
+core = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',\
+             'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen', \
+             'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', \
+             'max', 'mean', 'meanStdDev', 'merge', 'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize', \
+             'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'setIdentity', 'setRNGSeed', \
+             'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat'],
+        'Algorithm': []}
+
+imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP', 'HoughCircles', 'Scharr','Sobel', \
+                'adaptiveThreshold','approxPolyDP','arcLength','bilateralFilter','blur','boundingRect','boxFilter',\
+                'calcBackProject','calcHist','circle','compareHist','connectedComponents','connectedComponentsWithStats', \
+                'contourArea', 'convexHull', 'convexityDefects', 'cornerHarris','cornerMinEigenVal','createCLAHE', \
+                'createLineSegmentDetector','cvtColor','demosaicing','dilate', 'distanceTransform','distanceTransformWithLabels', \
+                'drawContours','ellipse','ellipse2Poly','equalizeHist','erode', 'filter2D', 'findContours','fitEllipse', \
+                'fitLine', 'floodFill','getAffineTransform', 'getPerspectiveTransform', 'getRotationMatrix2D', 'getStructuringElement', \
+                'goodFeaturesToTrack','grabCut','initUndistortRectifyMap', 'integral','integral2', 'isContourConvex', 'line', \
+                'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
+                'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
+                'undistort','warpAffine','warpPerspective','watershed'],
+           'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
+
+objdetect = {'': ['groupRectangles'],
+             'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
+             'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale']}
+
+video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
+             'findTransformECC', 'meanShift'],
+         'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
+         'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
+
+def makeWhiteList(module_list):
+    wl = {}
+    for m in module_list:
+        for k in m.keys():
+            if k in wl:
+                wl[k] += m[k]
+            else:
+                wl[k] = m[k]
+    return wl
+
+white_list = makeWhiteList([core, imgproc, objdetect, video])
 
 # Features to be exported
 export_enums = False
