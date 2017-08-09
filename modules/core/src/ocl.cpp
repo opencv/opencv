@@ -2143,7 +2143,7 @@ int Kernel::set(int i, const Image2D& image2D)
 
 int Kernel::set(int i, const UMat& m)
 {
-    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
+    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m));
 }
 
 int Kernel::set(int i, const KernelArg& arg)

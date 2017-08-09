@@ -584,7 +584,6 @@ public:
     Program();
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
-    explicit Program(const String& buf);
     Program(const Program& prog);
 
     Program& operator = (const Program& prog);
