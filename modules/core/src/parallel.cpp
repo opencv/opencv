@@ -377,77 +377,81 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
         return;
 
 #ifdef CV_PARALLEL_FRAMEWORK
-
-    static int flagNestedParallelFor = 0;
-    bool isNotNesterParallelFor = CV_XADD(&flagNestedParallelFor, 1) == 0;
-    if(numThreads != 0 && isNotNesterParallelFor)
+    if(numThreads != 0)
     {
-        ParallelLoopBodyWrapperContext ctx(body, range, nstripes);
-        ProxyLoopBody pbody(ctx);
-        cv::Range stripeRange = pbody.stripeRange();
-        if( stripeRange.end - stripeRange.start == 1 )
+        static int flagNestedParallelFor = 0;
+        if(CV_XADD(&flagNestedParallelFor, 1) == 0)
         {
-            body(range);
-            flagNestedParallelFor = 0;
-            return;
-        }
+            ParallelLoopBodyWrapperContext ctx(body, range, nstripes);
+            ProxyLoopBody pbody(ctx);
+            cv::Range stripeRange = pbody.stripeRange();
+            if( stripeRange.end - stripeRange.start == 1 )
+            {
+                body(range);
+                flagNestedParallelFor = 0;
+                return;
+            }
 
 #if defined HAVE_TBB
 
-        tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
+            tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
 
 #elif defined HAVE_CSTRIPES
 
-        parallel(MAX(0, numThreads))
-        {
-            int offset = stripeRange.start;
-            int len = stripeRange.end - offset;
-            Range r(offset + CPX_RANGE_START(len), offset + CPX_RANGE_END(len));
-            pbody(r);
-            barrier();
-        }
+            parallel(MAX(0, numThreads))
+            {
+                int offset = stripeRange.start;
+                int len = stripeRange.end - offset;
+                Range r(offset + CPX_RANGE_START(len), offset + CPX_RANGE_END(len));
+                pbody(r);
+                barrier();
+            }
 
 #elif defined HAVE_OPENMP
 
-        #pragma omp parallel for schedule(dynamic) num_threads(numThreads > 0 ? numThreads : numThreadsMax)
-        for (int i = stripeRange.start; i < stripeRange.end; ++i)
-            pbody(Range(i, i + 1));
+            #pragma omp parallel for schedule(dynamic) num_threads(numThreads > 0 ? numThreads : numThreadsMax)
+            for (int i = stripeRange.start; i < stripeRange.end; ++i)
+                pbody(Range(i, i + 1));
 
 #elif defined HAVE_GCD
 
-        dispatch_queue_t concurrent_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-        dispatch_apply_f(stripeRange.end - stripeRange.start, concurrent_queue, &pbody, block_function);
+            dispatch_queue_t concurrent_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+            dispatch_apply_f(stripeRange.end - stripeRange.start, concurrent_queue, &pbody, block_function);
 
 #elif defined WINRT
 
-        Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
+            Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
 
 #elif defined HAVE_CONCURRENCY
 
-        if(!pplScheduler || pplScheduler->Id() == Concurrency::CurrentScheduler::Id())
-        {
-            Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
-        }
-        else
-        {
-            pplScheduler->Attach();
-            Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
-            Concurrency::CurrentScheduler::Detach();
-        }
+            if(!pplScheduler || pplScheduler->Id() == Concurrency::CurrentScheduler::Id())
+            {
+                Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
+            }
+            else
+            {
+                pplScheduler->Attach();
+                Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
+                Concurrency::CurrentScheduler::Detach();
+            }
 
 #elif defined HAVE_PTHREADS_PF
 
-        parallel_for_pthreads(pbody.stripeRange(), pbody, pbody.stripeRange().size());
+            parallel_for_pthreads(pbody.stripeRange(), pbody, pbody.stripeRange().size());
 
 #else
 
 #error You have hacked and compiling with unsupported parallel framework
 
 #endif
-        flagNestedParallelFor = 0;
+            flagNestedParallelFor = 0;
+        }
+        else
+        {
+            body(range);
+        }
     }
     else
-
 #endif // CV_PARALLEL_FRAMEWORK
     {
         (void)nstripes;
