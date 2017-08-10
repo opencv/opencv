@@ -29,9 +29,9 @@ else()
   cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 endif()
 
-# Following block can broke build in case of cross-compilng
+# Following block can break build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
-# so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
+# so we will try to detect cross-compiling by presense of CMAKE_TOOLCHAIN_FILE
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
   if(NOT CMAKE_TOOLCHAIN_FILE)
     # it _must_ go before project(OpenCV) in order to work
@@ -43,7 +43,7 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
   else(NOT CMAKE_TOOLCHAIN_FILE)
     #Android: set output folder to ${CMAKE_BINARY_DIR}
     set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
-    # any crosscompiling
+    # any cross-compiling
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
   endif(NOT CMAKE_TOOLCHAIN_FILE)
 endif()
@@ -141,7 +141,7 @@ include(cmake/OpenCVDownload.cmake)
 # ----------------------------------------------------------------------------
 if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
   message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
-  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
 # ----------------------------------------------------------------------------

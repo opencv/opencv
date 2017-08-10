@@ -108,7 +108,7 @@ XML/YAML/JSON file storages.     {#xml_storage}
 Writing to a file storage.
 --------------------------
 You can store and then restore various OpenCV data structures to/from XML (<http://www.w3c.org/XML>),
-YAML (<http://www.yaml.org>) or JSON (<http://www.json.org/>) formats. Also, it is possible store
+YAML (<http://www.yaml.org>) or JSON (<http://www.json.org/>) formats. Also, it is possible to store
 and load arbitrarily complex data structures, which include OpenCV data structures, as well as
 primitive data types (integer and floating-point numbers and text strings) as their elements.
 
@@ -155,7 +155,7 @@ Here is an example:
         return 0;
     }
 @endcode
-The sample above stores to XML and integer, text string (calibration date), 2 matrices, and a custom
+The sample above stores to YML an integer, a text string (calibration date), 2 matrices, and a custom
 structure "feature", which includes feature coordinates and LBP (local binary pattern) value. Here
 is output of the sample:
 @code{.yaml}
