@@ -1010,16 +1010,21 @@ double CV_ColorLabTest::get_success_error_level( int /*test_case_idx*/, int i, i
 }
 
 
-static const double _1_3 = 0.333333333333;
-const static float _1_3f = static_cast<float>(_1_3);
-
-
 void CV_ColorLabTest::convert_row_bgr2abc_32f_c3(const float* src_row, float* dst_row, int n)
 {
     int depth = test_mat[INPUT][0].depth();
     float Lscale = depth == CV_8U ? 255.f/100.f : depth == CV_16U ? 65535.f/100.f : 1.f;
     float ab_bias = depth == CV_8U ? 128.f : depth == CV_16U ? 32768.f : 0.f;
     float M[9];
+
+    // 7.787f = (29/3)^3/(29*4)
+    static const float lowScale = 29.f*29.f/(27.f*4.f);
+    // 0.008856f = (6/29)^3
+    static const float lthresh = 6.f*6.f*6.f/(29.f*29.f*29.f);
+    // 903.3 = (29/3)^3
+    static const float yscale = 29.f*29.f*29.f/27.f;
+
+    static const float f16of116 = 16.f/116.f;
 
     for (int j = 0; j < 9; j++ )
         M[j] = (float)RGB2XYZ[j];
@@ -1031,25 +1036,14 @@ void CV_ColorLabTest::convert_row_bgr2abc_32f_c3(const float* src_row, float* ds
         float B = src_row[x];
 
         float X = (R * M[0] + G * M[1] + B * M[2]) / Xn;
-        float Y = R * M[3] + G * M[4] + B * M[5];
+        float Y =  R * M[3] + G * M[4] + B * M[5];
         float Z = (R * M[6] + G * M[7] + B * M[8]) / Zn;
-        float fX = X > 0.008856f ? pow(X, _1_3f) :
-            (7.787f * X + 16.f / 116.f);
-        float fZ = Z > 0.008856f ? pow(Z, _1_3f):
-            (7.787f * Z + 16.f / 116.f);
 
-        float L = 0.0f, fY = 0.0f;
-        if (Y > 0.008856f)
-        {
-            fY = pow(Y, _1_3f);
-            L = 116.f * fY - 16.f;
-        }
-        else
-        {
-            fY = 7.787f * Y + 16.f / 116.f;
-            L = 903.3f * Y;
-        }
+        float fX = X > lthresh ? cubeRoot(X) : (lowScale * X + f16of116);
+        float fY = Y > lthresh ? cubeRoot(Y) : (lowScale * Y + f16of116);
+        float fZ = Z > lthresh ? cubeRoot(Z) : (lowScale * Z + f16of116);
 
+        float L = Y > lthresh ? (116.f*fY - 16.f) : (yscale*Y);
         float a = 500.f * (fX - fY);
         float b = 200.f * (fY - fZ);
 
@@ -1069,8 +1063,16 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
     for(int j = 0; j < 9; j++ )
         M[j] = (float)XYZ2RGB[j];
 
-    static const float lthresh = 903.3f * 0.008856f;
-    static const float thresh = 7.787f * 0.008856f + 16.0f / 116.0f;
+    // 0.008856f * 903.3f  = (6/29)^3*(29/3)^3 = 8
+    static const float lThresh = 8.f;
+    // 7.787f * 0.008856f + 16.0f / 116.0f = 6/29
+    static const float fThresh = 6.f/29.f;
+    static const float lbias = 16.f/116.f;
+    // 7.787f = (29/3)^3/(29*4)
+    static const float lowScale = 29.f*29.f/(27.f*4.f);
+    // 903.3 = (29/3)^3
+    static const float yscale = 29.f*29.f*29.f/27.f;
+
     for (int x = 0, end = n * 3; x < end; x += 3)
     {
         float L = src_row[x] * Lscale;
@@ -1078,10 +1080,10 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         float b = src_row[x + 2] - ab_bias;
 
         float FY = 0.0f, Y = 0.0f;
-        if (L <= lthresh)
+        if (L <= lThresh)
         {
-            Y = L / 903.3f;
-            FY = 7.787f * Y + 16.0f / 116.0f;
+            Y = L / yscale;
+            FY = lowScale * Y + lbias;
         }
         else
         {
@@ -1095,8 +1097,8 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         float FXZ[] = { FX, FZ };
         for (int k = 0; k < 2; ++k)
         {
-            if (FXZ[k] <= thresh)
-                FXZ[k] = (FXZ[k] - 16.0f / 116.0f) / 7.787f;
+            if (FXZ[k] <= fThresh)
+                FXZ[k] = (FXZ[k] - lbias) / lowScale;
             else
                 FXZ[k] = FXZ[k] * FXZ[k] * FXZ[k];
         }
@@ -1155,24 +1157,36 @@ void CV_ColorLuvTest::convert_row_bgr2abc_32f_c3( const float* src_row, float* d
 {
     int depth = test_mat[INPUT][0].depth();
     float Lscale = depth == CV_8U ? 255.f/100.f : depth == CV_16U ? 65535.f/100.f : 1.f;
+    static const float uLow = -134.f, uHigh = 220.f, uRange = uHigh - uLow;
+    static const float vLow = -140.f, vHigh = 122.f, vRange = vHigh - vLow;
     int j;
 
     float M[9];
-    float un = 4.f*Xn/(Xn + 15.f*1.f + 3*Zn);
-    float vn = 9.f*1.f/(Xn + 15.f*1.f + 3*Zn);
+    // Yn == 1
+    float dd = Xn + 15.f*1.f + 3.f*Zn;
+    float un = 4.f*13.f*Xn/dd;
+    float vn = 9.f*13.f/dd;
+
     float u_scale = 1.f, u_bias = 0.f;
     float v_scale = 1.f, v_bias = 0.f;
 
     for( j = 0; j < 9; j++ )
         M[j] = (float)RGB2XYZ[j];
 
+    //0.72033 = 255/(220+134), 96.525 = 134*255/(220+134)
+    //0.9732 = 255/(140+122), 136.259 = 140*255/(140+122)
     if( depth == CV_8U )
     {
-        u_scale = 0.720338983f;
-        u_bias = 96.5254237f;
-        v_scale = 0.973282442f;
-        v_bias = 136.2595419f;
+        u_scale = 255.f/uRange;
+        u_bias = -uLow*255.f/uRange;
+        v_scale = 255.f/vRange;
+        v_bias = -vLow*255.f/vRange;
     }
+
+    // 0.008856f = (6/29)^3
+    static const float lthresh = 6.f*6.f*6.f/(29.f*29.f*29.f);
+    // 903.3 = (29/3)^3
+    static const float yscale = 29.f*29.f*29.f/27.f;
 
     for( j = 0; j < n*3; j += 3 )
     {
@@ -1189,14 +1203,14 @@ void CV_ColorLuvTest::convert_row_bgr2abc_32f_c3( const float* src_row, float* d
             L = u = v = 0;
         else
         {
-            if( Y > 0.008856f )
-                L = (float)(116.*pow((double)Y,_1_3) - 16.);
+            if( Y > lthresh )
+                L = 116.f*cubeRoot(Y) - 16.f;
             else
-                L = 903.3f * Y;
+                L = yscale * Y;
 
-            d = 1.f/d;
-            u = 13*L*(4*X*d - un);
-            v = 13*L*(9*Y*d - vn);
+            d = 4.f*13.f/d;
+            u = L*(X*d - un);
+            v = L*(9.f/4.f*Y*d - vn);
         }
         dst_row[j] = L*Lscale;
         dst_row[j+1] = u*u_scale + u_bias;
@@ -1209,24 +1223,34 @@ void CV_ColorLuvTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
 {
     int depth = test_mat[INPUT][0].depth();
     float Lscale = depth == CV_8U ? 100.f/255.f : depth == CV_16U ? 100.f/65535.f : 1.f;
+    static const float uLow = -134.f, uHigh = 220.f, uRange = uHigh - uLow;
+    static const float vLow = -140.f, vHigh = 122.f, vRange = vHigh - vLow;
+
     int j;
     float M[9];
-    float un = 4.f*Xn/(Xn + 15.f*1.f + 3*Zn);
-    float vn = 9.f*1.f/(Xn + 15.f*1.f + 3*Zn);
+    // Yn == 1
+    float dd = Xn + 15.f*1.f + 3.f*Zn;
+    float un = 4*13.f*Xn/dd;
+    float vn = 9*13.f*1.f/dd;
+
     float u_scale = 1.f, u_bias = 0.f;
     float v_scale = 1.f, v_bias = 0.f;
 
     for( j = 0; j < 9; j++ )
         M[j] = (float)XYZ2RGB[j];
 
+    //0.72033 = 255/(220+134), 96.525 = 134*255/(220+134)
+    //0.9732 = 255/(140+122), 136.259 = 140*255/(140+122)
     if( depth == CV_8U )
     {
-        u_scale = 1.f/0.720338983f;
-        u_bias = 96.5254237f;
-        v_scale = 1.f/0.973282442f;
-        v_bias = 136.2595419f;
+        u_scale = uRange/255.f;
+        u_bias = -uLow*255.f/uRange;
+        v_scale = vRange/255.f;
+        v_bias = -vLow*255.f/vRange;
     }
 
+    // (1 / 903.3) = (3/29)^3
+    static const float yscale = 27.f/(29.f*29.f*29.f);
     for( j = 0; j < n*3; j += 3 )
     {
         float L = src_row[j]*Lscale;
@@ -1241,16 +1265,15 @@ void CV_ColorLuvTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         }
         else
         {
-            Y = L * (1.f/903.3f);
-            if( L == 0 )
-                L = 0.001f;
+            Y = L * yscale;
         }
 
-        u = u/(13*L) + un;
-        v = v/(13*L) + vn;
-
-        X = -9*Y*u/((u - 4)*v - u*v);
-        Z = (9*Y - 15*v*Y - v*X)/(3*v);
+        float up = 3.f*(u + L*un);
+        float vp = 0.25f/(v + L*vn);
+        if(vp >  0.25f) vp =  0.25f;
+        if(vp < -0.25f) vp = -0.25f;
+        X = Y*3.f*up*vp;
+        Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
 
         float r = M[0]*X + M[1]*Y + M[2]*Z;
         float g = M[3]*X + M[4]*Y + M[5]*Z;
