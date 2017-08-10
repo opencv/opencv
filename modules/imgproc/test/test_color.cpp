@@ -1898,13 +1898,15 @@ static void validateResult(const Mat& reference, const Mat& actual, const Mat& s
     int cn = reference.channels();
     ssize.width *= cn;
     bool next = true;
+    //RGB2Lab_f works throug LUT and brings additional error
+    static const float maxErr = 1.f/200.f;
 
     for (int y = 0; y < ssize.height && next; ++y)
     {
         const float* rD = reference.ptr<float>(y);
         const float* D = actual.ptr<float>(y);
         for (int x = 0; x < ssize.width && next; ++x)
-            if (fabs(rD[x] - D[x]) > 0.0001f)
+            if(fabs(rD[x] - D[x]) > maxErr)
             {
                 next = false;
                 ts->printf(cvtest::TS::SUMMARY, "Error in: (%d, %d)\n", x / cn,  y);
