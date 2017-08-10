@@ -68,6 +68,14 @@ protected:
     // called from default implementation of convert_backward
     virtual void convert_row_abc2bgr_32f_c3( const float* src_row, float* dst_row, int n );
 
+    // called from default implementation of convert_backward
+    // for cases of bit-exact functions
+    virtual int convert_row_abc2bgr_8u_c3( const uchar* src_row, uchar* dst_row, int n );
+
+    // called from default implementation of convert_forward
+    // for cases of bit-exact functions
+    virtual int convert_row_bgr2abc_8u_c3(const uchar *src_row, uchar *dst_row, int n );
+
     const char* fwd_code_str;
     const char* inv_code_str;
 
@@ -226,19 +234,23 @@ void CV_ColorCvtBaseTest::convert_forward( const Mat& src, Mat& dst )
                 const uchar* src_row = src.ptr(i);
                 uchar* dst_row = dst.ptr(i);
 
-                for( j = 0; j < cols; j++ )
+                int processed = convert_row_bgr2abc_8u_c3( src_row, dst_row, cols );
+                if(processed != cols)
                 {
-                    src_buf[j*3] = src_row[j*cn + blue_idx]*c8u;
-                    src_buf[j*3+1] = src_row[j*cn + 1]*c8u;
-                    src_buf[j*3+2] = src_row[j*cn + (blue_idx^2)]*c8u;
-                }
+                    for( j = 0; j < cols; j++ )
+                    {
+                        src_buf[j*3] = src_row[j*cn + blue_idx]*c8u;
+                        src_buf[j*3+1] = src_row[j*cn + 1]*c8u;
+                        src_buf[j*3+2] = src_row[j*cn + (blue_idx^2)]*c8u;
+                    }
 
-                convert_row_bgr2abc_32f_c3( src_buf, dst_buf, cols );
+                    convert_row_bgr2abc_32f_c3( src_buf, dst_buf, cols );
 
-                for( j = 0; j < dst_cols_n; j++ )
-                {
-                    int t = cvRound( dst_buf[j] );
-                    dst_row[j] = saturate_cast<uchar>(t);
+                    for( j = 0; j < dst_cols_n; j++ )
+                    {
+                        int t = cvRound( dst_buf[j] );
+                        dst_row[j] = saturate_cast<uchar>(t);
+                    }
                 }
             }
             break;
@@ -297,6 +309,19 @@ void CV_ColorCvtBaseTest::convert_row_abc2bgr_32f_c3( const float* /*src_row*/,
 }
 
 
+int CV_ColorCvtBaseTest::convert_row_abc2bgr_8u_c3(const uchar * /*src_row*/,
+                                                   uchar * /*dst_row*/, int /*n*/ )
+{
+    return 0;
+}
+
+
+int CV_ColorCvtBaseTest::convert_row_bgr2abc_8u_c3( const uchar* /*src_row*/,
+                                                    uchar* /*dst_row*/, int /*n*/ )
+{
+    return 0;
+}
+
 void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat& dst2 )
 {
     if( custom_inv_transform )
@@ -321,21 +346,26 @@ void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat&
                     const uchar* src_row = dst.ptr(i);
                     uchar* dst_row = dst2.ptr(i);
 
-                    for( j = 0; j < cols_n; j++ )
-                        src_buf[j] = src_row[j];
+                    int processed = convert_row_abc2bgr_8u_c3(src_row, dst_row, dst_cols);
 
-                    convert_row_abc2bgr_32f_c3( src_buf, dst_buf, dst_cols );
-
-                    for( j = 0; j < dst_cols; j++ )
+                    if(processed != dst_cols)
                     {
-                        int b = cvRound( dst_buf[j*3]*255. );
-                        int g = cvRound( dst_buf[j*3+1]*255. );
-                        int r = cvRound( dst_buf[j*3+2]*255. );
-                        dst_row[j*cn + blue_idx] = saturate_cast<uchar>(b);
-                        dst_row[j*cn + 1] = saturate_cast<uchar>(g);
-                        dst_row[j*cn + (blue_idx^2)] = saturate_cast<uchar>(r);
-                        if( cn == 4 )
-                            dst_row[j*cn + 3] = 255;
+                        for( j = 0; j < cols_n; j++ )
+                            src_buf[j] = src_row[j];
+
+                        convert_row_abc2bgr_32f_c3( src_buf, dst_buf, dst_cols );
+
+                        for( j = 0; j < dst_cols; j++ )
+                        {
+                            int b = cvRound( dst_buf[j*3]*255. );
+                            int g = cvRound( dst_buf[j*3+1]*255. );
+                            int r = cvRound( dst_buf[j*3+2]*255. );
+                            dst_row[j*cn + blue_idx] = saturate_cast<uchar>(b);
+                            dst_row[j*cn + 1] = saturate_cast<uchar>(g);
+                            dst_row[j*cn + (blue_idx^2)] = saturate_cast<uchar>(r);
+                            if( cn == 4 )
+                                dst_row[j*cn + 3] = 255;
+                        }
                     }
                 }
                 break;
