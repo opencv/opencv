@@ -12,7 +12,7 @@ Goal
 -   Learn how to use MatVector
 -   Learn how to access pixel values and modify them
 -   Learn how to set Region of Interest (ROI)
--   Learn how to split and Merge images
+-   Learn how to split and merge images
 
 Accessing Image Properties
 --------------------------
@@ -30,7 +30,7 @@ console.log('image width: ' + src.cols + '\n' +
 @endcode
 
 @note src.type() is very important while debugging because a large number of errors in OpenCV.js
-code is caused by invalid data type.
+code are caused by invalid data type.
 
 How to construct Mat
 ------------------------------------
@@ -61,7 +61,8 @@ let mat = cv.Mat.eye(rows, cols, type);
 
 There are 2 factory functions:
 @code{.js}
-// 1. Use JS array to construct a mat 
+// 1. Use JS array to construct a mat. 
+// For example: let mat = cv.matFromArray(2, 2, cv.CV_8UC1, [1, 2, 3, 4]);
 let mat = cv.matFromArray(rows, cols, type, array); 
 // 2. Use imgData to construct a mat 
 let ctx = canvas.getContext("2d");
@@ -117,26 +118,26 @@ Accessing and Modifying pixel values
 
 Firstly, you should know the following type relationship: 
 
-Data Properties  | C++ Type | JavaScript Typed Array
----------------  | -------- | ----------------------
-data             | uchar    | Uint8Array
-data8S           | char     | Int8Array
-data16U          | ushort   | Uint16Array
-data16S          | short    | Int16Array
-data32S          | int      | Int32Array
-data32F          | float    | Float32Array
-data64F          | double   | Float64Array
-
-
-We use different ways to get the first channel of a pixel from a CV_8UC4 image. The coordinate of this pixel is (x, y).
+Data Properties  | C++ Type | JavaScript Typed Array | Mat Type
+---------------  | -------- | ---------------------- | --------
+data             | uchar    | Uint8Array             | CV_8U
+data8S           | char     | Int8Array              | CV_8S
+data16U          | ushort   | Uint16Array            | CV_16U
+data16S          | short    | Int16Array             | CV_16S
+data32S          | int      | Int32Array             | CV_32S 
+data32F          | float    | Float32Array           | CV_32F
+data64F          | double   | Float64Array           | CV_64F
 
 **1. data**
 
 @code{.js}
-let x = 3, y = 4;
+let row = 3, col = 4;
 let src = cv.imread("canvasInput");
 if (src.isContinuous()) {
-    let pixel = src.data[y * src.cols * src.channels() + x * src.channels()];
+    let R = src.data[row * src.cols * src.channels() + col * src.channels()];
+    let G = src.data[row * src.cols * src.channels() + col * src.channels() + 1];
+    let B = src.data[row * src.cols * src.channels() + col * src.channels() + 2];
+    let A = src.data[row * src.cols * src.channels() + col * src.channels() + 3];
 }
 @endcode
 
@@ -144,43 +145,50 @@ if (src.isContinuous()) {
 
 **2. at**
 
-Data Properties  | At manipulation 
----------------  | ---------------
-data             | ucharAt    
-data8S           | charAt    
-data16U          | ushortAt  
-data16S          | shortAt  
-data32S          | intAt
-data32F          | floatAt  
-data64F          | doubleAt   
+Mat Type  | At Manipulation 
+--------- | ---------------
+CV_8U     | ucharAt    
+CV_8S     | charAt    
+CV_16U    | ushortAt  
+CV_16S    | shortAt  
+CV_32S    | intAt
+CV_32F    | floatAt  
+CV_64F    | doubleAt   
 
 @code{.js}
-let x = 3, y = 4;
+let row = 3, col = 4;
 let src = cv.imread("canvasInput");
-let pixel = src.ucharAt(y, x * src.channels());
+let R = src.ucharAt(row, col * src.channels());
+let G = src.ucharAt(row, col * src.channels() + 1);
+let B = src.ucharAt(row, col * src.channels() + 2);
+let A = src.ucharAt(row, col * src.channels() + 3);
 @endcode
 
 @note  At manipulation is only for single channel access and the value can't be modified.
 
 **3. ptr**
 
-Data Properties  | Ptr manipulation 
----------------  | ---------------
-data             | ucharPtr    
-data8S           | charPtr    
-data16U          | ushortPtr 
-data16S          | shortPtr  
-data32S          | intPtr
-data32F          | floatPtr  
-data64F          | doublePtr  
+Mat Type  | Ptr Manipulation | JavaScript Typed Array 
+--------  | ---------------  | ----------------------
+CV_8U     | ucharPtr         | Uint8Array             
+CV_8S     | charPtr          | Int8Array  
+CV_16U    | ushortPtr        | Uint16Array
+CV_16S    | shortPtr         | Int16Array
+CV_32S    | intPtr           | Int32Array
+CV_32F    | floatPtr         | Float32Array
+CV_64F    | doublePtr        | Float64Array 
 
 @code{.js}
-let x = 3, y = 4;
+let row = 3, col = 4;
 let src = cv.imread("canvasInput");
-let pixel = src.ucharPtr(y, x)[0];
+let pixel = src.ucharPtr(row, col);
+let R = pixel[0];
+let G = pixel[1];
+let B = pixel[2];
+let A = pixel[3];
 @endcode
 
-mat.ucharPtr(k) get the k th column of the mat. mat.ucharPtr(i, j) get the i th column and the j row th of the mat.
+mat.ucharPtr(k) get the k th row of the mat. mat.ucharPtr(i, j) get the i th row and the j th column of the mat.
 
 Image ROI
 ---------
