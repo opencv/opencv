@@ -37,6 +37,7 @@ ocv_list_filterout(opencv_hdrs "modules/cuda.*")
 ocv_list_filterout(opencv_hdrs "modules/cudev")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
 ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker.hpp") # Conditional compilation
+ocv_list_filterout(opencv_hdrs "modules/core/include/opencv2/core/utils/trace.*.hpp")
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 
