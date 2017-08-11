@@ -13,7 +13,7 @@ Often, we have to capture live stream with a camera. In OpenCV.js, we use [WebRT
 and HTML canvas element to implement this. Let's capture a video from the camera(built-in 
 or a usb), convert it into grayscale video and display it.
 
-To capture a video, you need to add some HTML elements to the web page.
+To capture a video, you need to add some HTML elements to the web page:
 - a &lt;video&gt; to display video from camera directly
 - a &lt;canvas&gt; to transfer video to canvas ImageData frame-by-frame
 - another &lt;canvas&gt; to display the video OpenCV.js gets
@@ -55,19 +55,22 @@ let loopIndex = setInterval(
     }, 33);
 @endcode
 
-In addition, OpenCV.js implements cv.VideoCapture using the above method. You need not to add the 
-hidden canvas element manually. For performance reasons, the mat passed to read() function should be 
-constructed with cv.CV_8UC4 type and same size as the video. The above code of playing video could 
-be simplified as below.
+OpenCV.js implements **cv.VideoCapture (videoSource)** using the above method. You need not to 
+add the hidden canvas element manually.
+@param videoSource   the video id or element.
+@return              cv.VideoCapture instance
+
+We use **read (image)** to get one frame of the video. For performance reasons, the image should be 
+constructed with cv.CV_8UC4 type and same size as the video. 
+@param image         image with cv.CV_8UC4 type and same size as the video.
+
+The above code of playing video could be simplified as below.
 @code{.js}
 let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC1);
-
-// videoSource is the video id or element.
 let cap = new cv.VideoCapture(videoSource);
 let loopIndex = setInterval(
     function() {
-        // the read() function need a mat with cv.CV_8UC4 type and size same as the video
         cap.read(src);
         cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
         cv.imshow("canvasOutput", dst);

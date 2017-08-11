@@ -34,14 +34,25 @@ in 2006. One important feature of this algorithm is that it selects the appropri
 gaussian distribution for each pixel. It provides better adaptibility to varying scenes due illumination
 changes etc.
 
-While coding, we need to create a background object of cv.BackgroundSubtractorMOG2. It has some optional 
-parameters like length of history, number of gaussian mixtures, threshold etc. It is all set to some 
-default values. Then inside the video loop, use apply() method to get the 
-foreground mask. And, you have an option of selecting whether shadow to be detected or not. If 
-detectShadows = True (which is so by default), it detects and marks shadows, but decreases the speed. 
-Shadows will be marked in gray color.
+While coding, we use the constructor: **cv.BackgroundSubtractorMOG2 (history = 500, varThreshold = 16, 
+detectShadows = true)**
+@param history         Length of the history.
+@param varThreshold    Threshold on the squared distance between the pixel and the sample to decide 
+whether a pixel is close to that sample. This parameter does not affect the background update.
+@param detectShadows   If true, the algorithm will detect shadows and mark them. It decreases the 
+speed a bit, so if you do not need this feature, set the parameter to false.
+@return                instance of cv.BackgroundSubtractorMOG2
 
-@note The object of cv.BackgroundSubtractorMOG2 should be deleted manually.
+Use **apply (image, fgmask, learningRate = -1)** method to get the foreground mask
+@param image         Next video frame. Floating point frame will be used without scaling and should 
+be in range [0,255].
+@param fgmask        The output foreground mask as an 8-bit binary image.
+@param learningRate  The value between 0 and 1 that indicates how fast the background model is learnt. 
+Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means 
+that the background model is not updated at all, 1 means that the background model is completely 
+reinitialized from the last frame.
+
+@note The instance of cv.BackgroundSubtractorMOG2 should be deleted manually.
 
 Try it
 ------
