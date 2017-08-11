@@ -32,13 +32,10 @@ let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC4);
 let gray = new cv.Mat();
 let faceFrontal = new cv.RectVector();
-let faceProfile = new cv.RectVector();
 let faceFrontalCascadeFrontal = new cv.CascadeClassifier(); 
-let faceFrontalCascadeProfile = new cv.CascadeClassifier(); 
 
 // load pre-trained classifiers
 faceFrontalCascadeFrontal.load("haarcascade_frontalface_default.xml");
-faceFrontalCascadeProfile.load("haarcascade_profileface.xml");
 
 // "video" is the id of the video tag
 let cap = new cv.VideoCapture("video");
@@ -93,9 +90,7 @@ let src = null;
 let dst = null;
 let gray = null;
 let faceFrontal = null;
-let faceProfile = null;
 let faceFrontalCascadeFrontal = null; 
-let faceFrontalCascadeProfile = null; 
 
 function initVideo(ev){
     if (!streaming) {
@@ -156,17 +151,9 @@ function stopCamera() {
         faceFrontalCascadeFrontal.delete();
         faceFrontalCascadeFrontal = null;
     }
-    if (faceFrontalCascadeProfile != null && !faceFrontalCascadeProfile.isDeleted()) {
-        faceFrontalCascadeProfile.delete();
-        faceFrontalCascadeProfile = null;
-    }
     if (faceFrontal != null && !faceFrontal.isDeleted()) {
         faceFrontal.delete();
         faceFrontal = null;
-    }
-    if (faceProfile != null && !faceProfile.isDeleted()) {
-        faceProfile.delete();
-        faceProfile = null;
     }
     if (gray != null && !gray.isDeleted()) {
         gray.delete();
@@ -185,7 +172,6 @@ let Module = {
 preRun: [function() {
     Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml', 'haarcascade_eye.xml', true, false);
     Module.FS_createPreloadedFile('/', 'haarcascade_frontalface_default.xml', 'haarcascade_frontalface_default.xml', true, false);
-    Module.FS_createPreloadedFile('/', 'haarcascade_profileface.xml', 'haarcascade_profileface.xml', true, false);
     }],
 };
 
