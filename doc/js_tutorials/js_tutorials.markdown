@@ -1,5 +1,8 @@
 OpenCV.js Tutorials {#tutorial_js_root}
 =======================
+-   [**OpenCV.js Demos**](https://huningxin.github.io/opencv.js/samples/index.html)
+
+    Learn what OpenCV.js can do for web pages
 
 -   @subpage tutorial_js_table_of_contents_setup
 
