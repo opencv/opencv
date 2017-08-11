@@ -42,19 +42,14 @@
 
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-
-
-// Types used for parameters, offset computations and so on
-#define int_tp int
-#define uint_tp unsigned int
 #define Dtype float
 
 #if defined(cl_intel_subgroups)
 #pragma OPENCL EXTENSION  cl_intel_subgroups : enable
 #endif
 
-__kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int_tp num, const int_tp channels,
-                                   const int_tp spatial_dim,
+__kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int channels,
+                                   const int spatial_dim,
                                    __global Dtype* scale,
                                    __global const Dtype* data,
                                    __global Dtype* out,
@@ -62,11 +57,11 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int_tp num, const int_tp
                                    __local Dtype *scale_tmp,
                                    __local Dtype *group_tmp) {
 
-  int_tp n = get_global_id(1);
-  for (int_tp index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
+  int n = get_global_id(1);
+  for (int index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
       get_global_size(0), ++s) {
     float maxval = -FLT_MAX;
-    for (int_tp c = get_global_id(0); c < channels; c += get_global_size(0)) {
+    for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
       Dtype tmp = data[(n * channels + c) * spatial_dim + s];
       maxval = max((Dtype)tmp, (Dtype)maxval);
     }
@@ -77,9 +72,9 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int_tp num, const int_tp
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
+  for (int index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
       get_global_size(0)) {
-    int_tp s = index / get_max_sub_group_size();
+    int s = index / get_max_sub_group_size();
     Dtype maxval = sub_group_reduce_max(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
     scale_tmp[s] = maxval;
@@ -87,17 +82,17 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int_tp num, const int_tp
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < channels * spatial_dim;
+  for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
-    int_tp s = index % spatial_dim;
+    int s = index % spatial_dim;
     out_tmp[index] = exp(data[n * channels * spatial_dim + index] - scale_tmp[s]);
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
+  for (int index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
       get_global_size(0), ++s) {
     Dtype sum = 0;
-    for (int_tp c = get_global_id(0); c < channels; c += get_global_size(0)) {
+    for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
       sum += out_tmp[c * spatial_dim + s];
     }
     sum = sub_group_reduce_add(sum);
@@ -105,34 +100,34 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int_tp num, const int_tp
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
+  for (int index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
       get_global_size(0)) {
-    int_tp s = index / get_max_sub_group_size();
+    int s = index / get_max_sub_group_size();
     Dtype sum = sub_group_reduce_add(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
     scale_tmp[s] = sum;
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < channels * spatial_dim;
+  for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
-    int_tp s = index % spatial_dim;
+    int s = index % spatial_dim;
     out[n * channels * spatial_dim + index] = out_tmp[index] / scale_tmp[s];
   }
 }
 
-__kernel void TEMPLATE(softmax_forward,Dtype)(const int_tp num, const int_tp channels,
-                                   const int_tp spatial_dim,
+__kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
+                                   const int spatial_dim,
                                    __global Dtype* scale,
                                    __global const Dtype* data,
                                    __global Dtype* out) {
 
-  int_tp n = get_global_id(1);
+  int n = get_global_id(1);
   __global Dtype *group_tmp = scale + spatial_dim * num + n * get_max_sub_group_size() * spatial_dim;
-  for (int_tp index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
+  for (int index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
       get_global_size(0), ++s) {
     float maxval = -FLT_MAX;
-    for (int_tp c = get_global_id(0); c < channels; c += get_global_size(0)) {
+    for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
       Dtype tmp = data[(n * channels + c) * spatial_dim + s];
       maxval = max((Dtype)tmp, (Dtype)maxval);
     }
@@ -142,9 +137,9 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int_tp num, const int_tp cha
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
+  for (int index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
       get_global_size(0)) {
-    int_tp s = index / get_max_sub_group_size();
+    int s = index / get_max_sub_group_size();
     Dtype maxval = sub_group_reduce_max(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
     scale[n * spatial_dim + s] = maxval;
@@ -152,17 +147,17 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int_tp num, const int_tp cha
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < channels * spatial_dim;
+  for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
-    int_tp s = index % spatial_dim;
+    int s = index % spatial_dim;
     out[n * channels * spatial_dim + index] = exp(data[n * channels * spatial_dim + index] - scale[n * spatial_dim + s]);
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
+  for (int index = get_global_id(0), s = 0; index < spatial_dim * get_local_size(0); index +=
       get_global_size(0), ++s) {
     Dtype sum = 0;
-    for (int_tp c = get_global_id(0); c < channels; c += get_global_size(0)) {
+    for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
       sum += out[n * channels * spatial_dim + c * spatial_dim + s];
     }
     sum = sub_group_reduce_add(sum);
@@ -170,18 +165,18 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int_tp num, const int_tp cha
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
+  for (int index = get_global_id(0); index < spatial_dim * get_max_sub_group_size(); index +=
       get_global_size(0)) {
-    int_tp s = index / get_max_sub_group_size();
+    int s = index / get_max_sub_group_size();
     Dtype sum = sub_group_reduce_add(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
     scale[n * spatial_dim + s] = sum;
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
 
-  for (int_tp index = get_global_id(0); index < channels * spatial_dim;
+  for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
-    int_tp s = index % spatial_dim;
+    int s = index % spatial_dim;
     out[n * channels * spatial_dim + index] /= scale[n * spatial_dim + s];
   }
 }
@@ -198,8 +193,8 @@ enum LossParameter_NormalizationMode {
 #endif
 // Copied from softmax_loss_layer.cpp, must keep consistent with the original implementation
 Dtype TEMPLATE(get_normalizer, Dtype)(
-    enum LossParameter_NormalizationMode normalization_mode, int_tp valid_count,
-    int_tp outer_num_, int_tp inner_num_) {
+    enum LossParameter_NormalizationMode normalization_mode, int valid_count,
+    int outer_num_, int inner_num_) {
   Dtype normalizer;
   switch (normalization_mode) {
     case LossParameter_NormalizationMode_FULL:
@@ -226,9 +221,9 @@ Dtype TEMPLATE(get_normalizer, Dtype)(
   return fmax((Dtype)(1.0), normalizer);
 }
 
-Dtype TEMPLATE(asum, Dtype)(int_tp n, __global const Dtype *data, __local Dtype *sum_tmp) {
+Dtype TEMPLATE(asum, Dtype)(int n, __global const Dtype *data, __local Dtype *sum_tmp) {
   Dtype sum = 0;
-  for(int_tp i = get_global_id(0); i < n; i += get_global_size(0)) {
+  for(int i = get_global_id(0); i < n; i += get_global_size(0)) {
     sum += data[i];
   }
   sum = sub_group_reduce_add(sum);
@@ -240,8 +235,8 @@ Dtype TEMPLATE(asum, Dtype)(int_tp n, __global const Dtype *data, __local Dtype 
 }
 
 __kernel void TEMPLATE(softmax_loss_forward_asum, Dtype)(
-    int_tp n, int_tp outer_num_, int_tp inner_num_,
-    int_tp compute_count_sum, int_tp normalization_type,
+    int n, int outer_num_, int inner_num_,
+    int compute_count_sum, int normalization_type,
     __global const Dtype *loss,
     __global const Dtype *counts, __global Dtype *out) {
     __local Dtype sum_tmp[16];
@@ -256,17 +251,17 @@ __kernel void TEMPLATE(softmax_loss_forward_asum, Dtype)(
 }
 
 __kernel void TEMPLATE(softmax_loss_forward,Dtype)(
-    int_tp n, __global const Dtype* prob_data, __global const Dtype* label,
+    int n, __global const Dtype* prob_data, __global const Dtype* label,
     __global Dtype* loss,
-    const int_tp num, const int_tp dim, const int_tp spatial_dim,
-    const int has_ignore_label_, const int_tp ignore_label_,
+    const int num, const int dim, const int spatial_dim,
+    const int has_ignore_label_, const int ignore_label_,
     __global Dtype* counts) {
 
-  for (int_tp index = get_global_id(0); index < n;
+  for (int index = get_global_id(0); index < n;
       index += get_global_size(0)) {
-    const int_tp n = index / spatial_dim;
-    const int_tp s = index % spatial_dim;
-    const int_tp label_value = (int_tp) (label[n * spatial_dim + s]);
+    const int n = index / spatial_dim;
+    const int s = index % spatial_dim;
+    const int label_value = (int) (label[n * spatial_dim + s]);
     if (has_ignore_label_ == 1 && label_value == ignore_label_) {
       loss[index] = 0;
       counts[index] = 0;
@@ -279,24 +274,24 @@ __kernel void TEMPLATE(softmax_loss_forward,Dtype)(
   }
 }
 
-__kernel void TEMPLATE(softmax_loss_backward,Dtype)(const int_tp nthreads,
+__kernel void TEMPLATE(softmax_loss_backward,Dtype)(const int nthreads,
                                                     __global const Dtype* top,
                                                     __global const Dtype* label,
                                                     __global Dtype* bottom_diff,
-                                                    const int_tp num,
-                                                    const int_tp dim,
-                                                    const int_tp spatial_dim,
+                                                    const int num,
+                                                    const int dim,
+                                                    const int spatial_dim,
                                                     const int has_ignore_label_,
-                                                    const int_tp ignore_label_,
+                                                    const int ignore_label_,
                                                     __global Dtype* counts) {
-  const int_tp channels = dim / spatial_dim;
-  for (int_tp index = get_global_id(0); index < nthreads; index +=
+  const int channels = dim / spatial_dim;
+  for (int index = get_global_id(0); index < nthreads; index +=
       get_global_size(0)) {
-    const int_tp n = index / spatial_dim;
-    const int_tp s = index % spatial_dim;
-    const int_tp label_value = (int_tp) (label[n * spatial_dim + s]);
+    const int n = index / spatial_dim;
+    const int s = index % spatial_dim;
+    const int label_value = (int) (label[n * spatial_dim + s]);
     if (has_ignore_label_ == 1 && label_value == ignore_label_) {
-      for (int_tp c = 0; c < channels; ++c) {
+      for (int c = 0; c < channels; ++c) {
         bottom_diff[n * dim + c * spatial_dim + s] = 0;
       }
       counts[index] = 0;

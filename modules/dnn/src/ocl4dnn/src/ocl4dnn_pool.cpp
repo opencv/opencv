@@ -111,7 +111,8 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
             {
                 mask_idx_.create(1, count_, CV_32FC1);
             }
-            ocl::Kernel oclk_max_pool_forward(CL_KERNEL_SELECT("max_pool_forward"), cv::ocl::dnn::dnn_pooling_oclsrc);
+            ocl::Kernel oclk_max_pool_forward(CL_KERNEL_SELECT("max_pool_forward"),
+                                              cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
 
             argIdx = 0;
             oclk_max_pool_forward.set(argIdx++, count_);
@@ -139,7 +140,8 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
         break;
     case LIBDNN_POOLING_METHOD_AVE:
         {
-            ocl::Kernel oclk_ave_pool_forward(CL_KERNEL_SELECT("ave_pool_forward"), cv::ocl::dnn::dnn_pooling_oclsrc);
+            ocl::Kernel oclk_ave_pool_forward(CL_KERNEL_SELECT("ave_pool_forward"),
+                                              cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
 
             argIdx = 0;
             oclk_ave_pool_forward.set(argIdx++, count_);
@@ -163,7 +165,8 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
         break;
     case LIBDNN_POOLING_METHOD_STO:
         {
-            ocl::Kernel oclk_sto_pool_forward(CL_KERNEL_SELECT("sto_pool_forward_test"), cv::ocl::dnn::dnn_pooling_oclsrc);
+            ocl::Kernel oclk_sto_pool_forward(CL_KERNEL_SELECT("sto_pool_forward_test"),
+                                              cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
 
             argIdx = 0;
             oclk_sto_pool_forward.set(argIdx++, count_);

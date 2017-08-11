@@ -42,41 +42,37 @@
 
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-
-// Types used for parameters, offset computations and so on
-#define int_tp int
-#define uint_tp unsigned int
 #define Dtype float
 
-__kernel void TEMPLATE(lrn_compute_output,Dtype)(const int_tp nthreads,
+__kernel void TEMPLATE(lrn_compute_output,Dtype)(const int nthreads,
                                                  __global const Dtype* in,
                                                  __global const Dtype* scale,
                                                  const Dtype negative_beta,
                                                  __global Dtype* out) {
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0)) {
     out[index] = in[index] * pow(scale[index], negative_beta);
   }
 }
 
-__kernel void TEMPLATE(lrn_fill_scale,Dtype)(const int_tp nthreads, __global const Dtype* in,
-                             const int_tp num, const int_tp channels,
-                             const int_tp height, const int_tp width, const int_tp size,
+__kernel void TEMPLATE(lrn_fill_scale,Dtype)(const int nthreads, __global const Dtype* in,
+                             const int num, const int channels,
+                             const int height, const int width, const int size,
                              const Dtype alpha_over_size, const Dtype k,
                              __global Dtype* const scale) {
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0)) {
     // find out the local offset
-    const int_tp w = index % width;
-    const int_tp h = (index / width) % height;
-    const int_tp n = index / width / height;
-    const int_tp offset = (n * channels * height + h) * width + w;
-    const int_tp step = height * width;
+    const int w = index % width;
+    const int h = (index / width) % height;
+    const int n = index / width / height;
+    const int offset = (n * channels * height + h) * width + w;
+    const int step = height * width;
     __global const Dtype* in_off = in + offset;
     __global Dtype* scale_off = scale + offset;
-    int_tp head = 0;
-    const int_tp pre_pad = (size - 1) / 2;
-    const int_tp post_pad = size - pre_pad - 1;
+    int head = 0;
+    const int pre_pad = (size - 1) / 2;
+    const int post_pad = size - pre_pad - 1;
     Dtype accum_scale = 0;
     // fill the scale at [n, :, h, w]
     // accumulate values
@@ -106,32 +102,32 @@ __kernel void TEMPLATE(lrn_fill_scale,Dtype)(const int_tp nthreads, __global con
   }
 }
 
-__kernel void TEMPLATE(lrn_compute_diff,Dtype)(const int_tp nthreads,
+__kernel void TEMPLATE(lrn_compute_diff,Dtype)(const int nthreads,
                                __global const Dtype* bottom_data,
                                __global const Dtype* top_data,
                                __global const Dtype* scale,
-                               __global const Dtype* top_diff, const int_tp num,
-                               const int_tp channels, const int_tp height,
-                               const int_tp width, const int_tp size,
+                               __global const Dtype* top_diff, const int num,
+                               const int channels, const int height,
+                               const int width, const int size,
                                const Dtype negative_beta,
                                const Dtype cache_ratio,
                                __global Dtype* bottom_diff) {
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0)) {
     // find out the local offset
-    const int_tp w = index % width;
-    const int_tp h = (index / width) % height;
-    const int_tp n = index / width / height;
-    const int_tp offset = (n * channels * height + h) * width + w;
-    const int_tp step = height * width;
+    const int w = index % width;
+    const int h = (index / width) % height;
+    const int n = index / width / height;
+    const int offset = (n * channels * height + h) * width + w;
+    const int step = height * width;
     __global const Dtype* bottom_off = bottom_data + offset;
     __global const Dtype* top_off = top_data + offset;
     __global const Dtype* scale_off = scale + offset;
     __global const Dtype* top_diff_off = top_diff + offset;
     __global Dtype* bottom_diff_off = bottom_diff + offset;
-    int_tp head = 0;
-    const int_tp pre_pad = size - (size + 1) / 2;
-    const int_tp post_pad = size - pre_pad - 1;
+    int head = 0;
+    const int pre_pad = size - (size + 1) / 2;
+    const int post_pad = size - pre_pad - 1;
     Dtype accum_ratio = 0;
     // accumulate values
     while (head < post_pad && head < channels) {
@@ -169,32 +165,32 @@ __kernel void TEMPLATE(lrn_compute_diff,Dtype)(const int_tp nthreads,
 // This kernel is used in LRNOptimizedLayer.
 // It is based on ave_pool_forward kernel with some modifications on the input and output.
 __kernel void TEMPLATE(lrn_within_channel_forward,Dtype)(
-    const int_tp nthreads, __global const Dtype* const bottom_data, const int_tp num,
-    const int_tp channels, const int_tp height, const int_tp width,
-    const int_tp pooled_height, const int_tp pooled_width, const int_tp kernel_h,
-    const int_tp kernel_w, const int_tp stride_h, const int_tp stride_w, const int_tp pad_h,
-    const int_tp pad_w, const Dtype power, const Dtype scale, __global Dtype* top_data) {
-  for (int_tp index = get_global_id(0); index < nthreads;
+    const int nthreads, __global const Dtype* const bottom_data, const int num,
+    const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const int kernel_h,
+    const int kernel_w, const int stride_h, const int stride_w, const int pad_h,
+    const int pad_w, const Dtype power, const Dtype scale, __global Dtype* top_data) {
+  for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0)) {
     {
-      const int_tp pw = index % pooled_width;
-      const int_tp ph = (index / pooled_width) % pooled_height;
-      const int_tp c = (index / pooled_width / pooled_height) % channels;
-      const int_tp n = index / pooled_width / pooled_height / channels;
-      int_tp hstart = ph * stride_h - pad_h;
-      int_tp wstart = pw * stride_w - pad_w;
-      int_tp hend = min(hstart + kernel_h, height + pad_h);
-      int_tp wend = min(wstart + kernel_w, width + pad_w);
-      const int_tp pool_size = (hend - hstart) * (wend - wstart);
-      hstart = max(hstart, (int_tp)0);
-      wstart = max(wstart, (int_tp)0);
+      const int pw = index % pooled_width;
+      const int ph = (index / pooled_width) % pooled_height;
+      const int c = (index / pooled_width / pooled_height) % channels;
+      const int n = index / pooled_width / pooled_height / channels;
+      int hstart = ph * stride_h - pad_h;
+      int wstart = pw * stride_w - pad_w;
+      int hend = min(hstart + kernel_h, height + pad_h);
+      int wend = min(wstart + kernel_w, width + pad_w);
+      const int pool_size = (hend - hstart) * (wend - wstart);
+      hstart = max(hstart, (int)0);
+      wstart = max(wstart, (int)0);
       hend = min(hend, height);
       wend = min(wend, width);
       Dtype aveval = 0;
       __global const Dtype* bottom_slice = bottom_data
           + (n * channels + c) * height * width;
-      for (int_tp h = hstart; h < hend; ++h) {
-        for (int_tp w = wstart; w < wend; ++w) {
+      for (int h = hstart; h < hend; ++h) {
+        for (int w = wstart; w < wend; ++w) {
           Dtype tmp_val = bottom_slice[h * width + w];
           aveval += (tmp_val * tmp_val);
         }
@@ -222,8 +218,8 @@ __kernel void TEMPLATE(lrn_within_channel_forward,Dtype)(
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 __kernel void TEMPLATE(lrn_within_channel_forward_opt,Dtype)(
     __global const float* const bottom_data,
-    const int_tp height,
-    const int_tp width,
+    const int height,
+    const int width,
     const float power,
     const float scale,
     __global float* top_data)
@@ -323,27 +319,27 @@ __kernel void TEMPLATE(lrn_within_channel_forward_opt,Dtype)(
 
 // This kernel is used in LRNOptimizedLayer.
 // It is based on ave_pool_backward kernel with some modifications on the input and output.
-__kernel void TEMPLATE(lrn_within_channel_backward,Dtype)(const int_tp nthreads,
+__kernel void TEMPLATE(lrn_within_channel_backward,Dtype)(const int nthreads,
     __global const Dtype* top_data, __global const Dtype* top_diff,
-    const int_tp num, const int_tp channels, const int_tp height,
-    const int_tp width, const int_tp pooled_height, const int_tp pooled_width,
-    const int_tp kernel_h, const int_tp kernel_w, const int_tp stride_h,
-    const int_tp stride_w, const int_tp pad_h, const int_tp pad_w,
+    const int num, const int channels, const int height,
+    const int width, const int pooled_height, const int pooled_width,
+    const int kernel_h, const int kernel_w, const int stride_h,
+    const int stride_w, const int pad_h, const int pad_w,
     const Dtype power, const Dtype scale, __global const Dtype* bottom_data,
                       __global Dtype* top_bottom_ratio , __global Dtype* bottom_diff){
 
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
               index += get_global_size(0)) {
        // find out the local index
        // find out the local offset
-      const int_tp w = index % width + pad_w;
-      const int_tp h = (index / width) % height + pad_h;
-      const int_tp c = (index / width / height) % channels;
-      const int_tp n = index / width / height / channels;
-      const int_tp phstart = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
-      const int_tp phend = min(h / stride_h + 1, pooled_height);
-      const int_tp pwstart = (w < kernel_w) ? 0 : (w - kernel_w) / stride_w + 1;
-      const int_tp pwend = min(w / stride_w + 1, pooled_width);
+      const int w = index % width + pad_w;
+      const int h = (index / width) % height + pad_h;
+      const int c = (index / width / height) % channels;
+      const int n = index / width / height / channels;
+      const int phstart = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
+      const int phend = min(h / stride_h + 1, pooled_height);
+      const int pwstart = (w < kernel_w) ? 0 : (w - kernel_w) / stride_w + 1;
+      const int pwend = min(w / stride_w + 1, pooled_width);
       Dtype gradient = 0.0;
       __global const Dtype* top_diff_slice = top_diff
                  + (n * channels + c) * pooled_height * pooled_width;
@@ -362,14 +358,14 @@ __kernel void TEMPLATE(lrn_within_channel_backward,Dtype)(const int_tp nthreads,
                       top_diff_slice[(h - pad_h) * width + w - pad_w];
       }
 
-      for (int_tp ph = phstart; ph < phend; ++ph) {
-        for (int_tp pw = pwstart; pw < pwend; ++pw) {
+      for (int ph = phstart; ph < phend; ++ph) {
+        for (int pw = pwstart; pw < pwend; ++pw) {
             // figure out the pooling size
-            int_tp hstart = ph * stride_h - pad_h;
-            int_tp wstart = pw * stride_w - pad_w;
-            int_tp hend = min(hstart + kernel_h, height + pad_h);
-            int_tp wend = min(wstart + kernel_w, width + pad_w);
-            int_tp pool_size = (hend - hstart) * (wend - wstart);
+            int hstart = ph * stride_h - pad_h;
+            int wstart = pw * stride_w - pad_w;
+            int hend = min(hstart + kernel_h, height + pad_h);
+            int wend = min(wstart + kernel_w, width + pad_w);
+            int pool_size = (hend - hstart) * (wend - wstart);
             Dtype tmp_value = 2 * scale * power * bottom_data[index] / pool_size;
             gradient += top_diff_slice[ph * pooled_width + pw] *
                       top_bottom_ratio_slice[ph * pooled_width + pw] *
@@ -382,10 +378,10 @@ __kernel void TEMPLATE(lrn_within_channel_backward,Dtype)(const int_tp nthreads,
 
 // compute power of top and bottom ratio
 __kernel void TEMPLATE(lrn_within_channel_backward_ratio,Dtype)(
-                       const int_tp nthreads, __global const Dtype* bottom_data,
+                       const int nthreads, __global const Dtype* bottom_data,
                        Dtype power, __global const Dtype* top_data,
                        __global Dtype* top_bottom_ratio ){
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
               index += get_global_size(0)) {
         top_bottom_ratio[index] = pow(top_data[index] / bottom_data[index],
                                                      (power - 1) / power);
@@ -404,35 +400,35 @@ __attribute__((intel_reqd_sub_group_size(SIMD_WIDTH)))
 // This kernel only get better performance on those Intel platforms with edram.
 __kernel void TEMPLATE(lrn_fuse_pool_max,Dtype)(
                              __global const Dtype* in,
-                             const int_tp channels,
-                             const int_tp height, const int_tp width,
-                             const int_tp tiled_height, int_tp tiled_width,
-                             const int_tp size,
+                             const int channels,
+                             const int height, const int width,
+                             const int tiled_height, int tiled_width,
+                             const int size,
                              const Dtype alpha_over_size, const Dtype k,
                              __global Dtype* const out,
                              const Dtype negative_beta,
-                             const int_tp pool_h, const int_tp pool_w, const int_tp pool_stride_h, int_tp pool_stride_w,
-                             const int_tp pooled_height, const int_tp pooled_width,
-                             const int_tp tile_pooled_block_h, const int_tp tile_pooled_block_w) {
+                             const int pool_h, const int pool_w, const int pool_stride_h, int pool_stride_w,
+                             const int pooled_height, const int pooled_width,
+                             const int tile_pooled_block_h, const int tile_pooled_block_w) {
   // find out the local offset
-  const int_tp block_x = get_global_id(0) % tiled_width;
-  const int_tp block_y = (get_global_id(0) / tiled_width) % tiled_height;
-  const int_tp n = get_global_id(0) / (tiled_width * tiled_height);
+  const int block_x = get_global_id(0) % tiled_width;
+  const int block_y = (get_global_id(0) / tiled_width) % tiled_height;
+  const int n = get_global_id(0) / (tiled_width * tiled_height);
 
-  const int_tp w = block_x * tile_pooled_block_w * pool_stride_w;
-  const int_tp h = block_y * tile_pooled_block_h * pool_stride_h;
-  const int_tp offset = (n * channels * height + h) * width + w;
-  const int_tp out_h = block_y * tile_pooled_block_h;
-  const int_tp out_w = block_x * tile_pooled_block_w;
-  const int_tp out_offset = (n * channels * pooled_height + out_h) * pooled_width + out_w + get_local_id(1);
-  const int_tp step = height * width;
-  const int_tp out_step = pooled_height * pooled_width;
+  const int w = block_x * tile_pooled_block_w * pool_stride_w;
+  const int h = block_y * tile_pooled_block_h * pool_stride_h;
+  const int offset = (n * channels * height + h) * width + w;
+  const int out_h = block_y * tile_pooled_block_h;
+  const int out_w = block_x * tile_pooled_block_w;
+  const int out_offset = (n * channels * pooled_height + out_h) * pooled_width + out_w + get_local_id(1);
+  const int step = height * width;
+  const int out_step = pooled_height * pooled_width;
   __global const Dtype* in_off = in + offset + get_local_id(1);
   __global Dtype* out_off = out + out_offset;
   Dtype scale_val;
-  int_tp head = 0;
-  const int_tp pre_pad = (size - 1) / 2;
-  const int_tp post_pad = size - pre_pad - 1;
+  int head = 0;
+  const int pre_pad = (size - 1) / 2;
+  const int post_pad = size - pre_pad - 1;
   Dtype accum_scale[TILE_H] = {0};
   if (w + get_local_id(1) >= width)
     return;
@@ -501,26 +497,26 @@ __kernel void TEMPLATE(lrn_fuse_pool_max,Dtype)(
 #undef TILE_W
 #undef TILE_H
 
-__kernel void TEMPLATE(lrn_full_no_scale,Dtype)(const int_tp nthreads, __global const Dtype* in,
-                             const int_tp num, const int_tp channels,
-                             const int_tp height, const int_tp width, const int_tp size,
+__kernel void TEMPLATE(lrn_full_no_scale,Dtype)(const int nthreads, __global const Dtype* in,
+                             const int num, const int channels,
+                             const int height, const int width, const int size,
                              const Dtype alpha_over_size, const Dtype k,
                              __global Dtype* const out,
                              const Dtype negative_beta) {
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0)) {
     // find out the local offset
-    const int_tp w = index % width;
-    const int_tp h = (index / width) % height;
-    const int_tp n = index / width / height;
-    const int_tp offset = (n * channels * height + h) * width + w;
-    const int_tp step = height * width;
+    const int w = index % width;
+    const int h = (index / width) % height;
+    const int n = index / width / height;
+    const int offset = (n * channels * height + h) * width + w;
+    const int step = height * width;
     __global const Dtype* in_off = in + offset;
     __global Dtype* out_off = out + offset;
     Dtype scale_val;
-    int_tp head = 0;
-    const int_tp pre_pad = (size - 1) / 2;
-    const int_tp post_pad = size - pre_pad - 1;
+    int head = 0;
+    const int pre_pad = (size - 1) / 2;
+    const int post_pad = size - pre_pad - 1;
     Dtype accum_scale = 0;
     // fill the scale at [n, :, h, w]
     // accumulate values
@@ -552,28 +548,28 @@ __kernel void TEMPLATE(lrn_full_no_scale,Dtype)(const int_tp nthreads, __global 
   }
 }
 
-__kernel void TEMPLATE(lrn_full,Dtype)(const int_tp nthreads, __global const Dtype* in,
-                             const int_tp num, const int_tp channels,
-                             const int_tp height, const int_tp width, const int_tp size,
+__kernel void TEMPLATE(lrn_full,Dtype)(const int nthreads, __global const Dtype* in,
+                             const int num, const int channels,
+                             const int height, const int width, const int size,
                              const Dtype alpha_over_size, const Dtype k,
                              __global Dtype* const scale,
                              __global Dtype* const out,
                              const Dtype negative_beta) {
-  for (int_tp index = get_global_id(0); index < nthreads;
+  for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0)) {
     // find out the local offset
-    const int_tp w = index % width;
-    const int_tp h = (index / width) % height;
-    const int_tp n = index / width / height;
-    const int_tp offset = (n * channels * height + h) * width + w;
-    const int_tp step = height * width;
+    const int w = index % width;
+    const int h = (index / width) % height;
+    const int n = index / width / height;
+    const int offset = (n * channels * height + h) * width + w;
+    const int step = height * width;
     __global const Dtype* in_off = in + offset;
     __global Dtype* out_off = out + offset;
     __global Dtype* scale_off = scale + offset;
     Dtype scale_val;
-    int_tp head = 0;
-    const int_tp pre_pad = (size - 1) / 2;
-    const int_tp post_pad = size - pre_pad - 1;
+    int head = 0;
+    const int pre_pad = (size - 1) / 2;
+    const int post_pad = size - pre_pad - 1;
     Dtype accum_scale = 0;
     // fill the scale at [n, :, h, w]
     // accumulate values

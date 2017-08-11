@@ -98,7 +98,7 @@ void OCL4DNNLRN<Dtype>::crossChannelForward(const Dtype* bottom_data,
     size_t global_work_size_[1] = {(size_t)n_threads};
     String opts = " -cl-no-subgroup-ifp ";
     ocl::Kernel oclk_lrn_fill;
-    oclk_lrn_fill.create(CL_KERNEL_SELECT("lrn_full_no_scale"), cv::ocl::dnn::dnn_lrn_oclsrc, opts);
+    oclk_lrn_fill.create(CL_KERNEL_SELECT("lrn_full_no_scale"), cv::ocl::dnn::ocl4dnn_lrn_oclsrc, opts);
 
     oclk_lrn_fill.set(argIdx++, n_threads);
     oclk_lrn_fill.set(argIdx++, (cl_mem) bottom_data);

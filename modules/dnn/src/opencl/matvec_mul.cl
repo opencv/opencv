@@ -41,10 +41,6 @@
 
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-
-// Types used for parameters, offset computations and so on
-#define int_tp int
-#define uint_tp unsigned int
 #define Dtype float
 
 __kernel void TEMPLATE(matvec_mul4,Dtype)(
