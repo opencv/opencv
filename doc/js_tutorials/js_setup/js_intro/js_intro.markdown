@@ -8,7 +8,7 @@ OpenCV was created at Intel in 1999 by **Gary Bradski**. The first release came 
 
 OpenCV supports a wide variety of programming languages such as C++, Python, and Java, and is available on different platforms including Windows, Linux, OS X, Android, and iOS. Interfaces for high-speed GPU operations based on CUDA and OpenCL are also under active development. OpenCV.js brings OpenCV to the open web platform and makes it available to the JavaScript programmer.
 
-OpenCV.js
+OpenCV.js: OpenCV for the JavaScript programmer
 -------------
 
 Web is the most ubiquitous open computing platform. With HTML5 standards implemented in every browser, web applications are able to render online video with HTML5 video tags, capture webcam video via WebRTC API, and access each pixel of a video frame via canvas API. With abundance of available multimedia content, web developers are in need of a wide array of image and vision processing algorithms in JavaScript to build innovative applications. This requirement is even more essential for emerging applications on the web, such as Web Virtual Reality (WebVR) and Augmented Reality (WebAR). All of these use cases demand efficient implementations of computation-intensive vision kernels on web.
@@ -40,6 +40,6 @@ Below is the list of contributors of OpenCV.js bindings and tutorials.
 -#  Sajjad Taheri (Implemented the initial version. GSoC mentor, University of California, Irvine)
 -#  Congxiang Pan (GSoC student, Shanghai Jiao Tong University)
 -#  Gang Song (GSoC student, Shanghai Jiao Tong University)
--#  Wenyao Gan (Shanghai Jiao Tong University)
--#  Mohammad Reza Haghighat (Intel Corporation)
--#  Ningxin Hu (Intel Corporation)
+-#  Wenyao Gan (Student intern, Shanghai Jiao Tong University)
+-#  Mohammad Reza Haghighat (Project initiator & sponsor, Intel Corporation)
+-#  Ningxin Hu (Students' supervisor, Intel Corporation)
