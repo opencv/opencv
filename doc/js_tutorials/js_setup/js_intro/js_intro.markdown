@@ -37,9 +37,9 @@ Contributors
 
 Below is the list of contributors of OpenCV.js bindings and tutorials.
 
--#  Sajjad Taheri (Implemented the initial version. GSoC mentor, University of California, Irvine)
--#  Congxiang Pan (GSoC student, Shanghai Jiao Tong University)
--#  Gang Song (GSoC student, Shanghai Jiao Tong University)
--#  Wenyao Gan (Student intern, Shanghai Jiao Tong University)
--#  Mohammad Reza Haghighat (Project initiator & sponsor, Intel Corporation)
--#  Ningxin Hu (Students' supervisor, Intel Corporation)
+-  Sajjad Taheri (Architect of the initial version and GSoC mentor, University of California, Irvine)
+-  Congxiang Pan (GSoC student, Shanghai Jiao Tong University)
+-  Gang Song (GSoC student, Shanghai Jiao Tong University)
+-  Wenyao Gan (Student intern, Shanghai Jiao Tong University)
+-  Mohammad Reza Haghighat (Project initiator & sponsor, Intel Corporation)
+-  Ningxin Hu (Students' supervisor, Intel Corporation)
