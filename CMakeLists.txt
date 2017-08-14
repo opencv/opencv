@@ -135,7 +135,6 @@ HunterGate(
 project(OpenCV CXX C)
 
 if(IOS)
-  set(CMAKE_SYSTEM_PROCESSOR "")
   set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -fomit-frame-pointer -ffast-math")
 endif()
 
