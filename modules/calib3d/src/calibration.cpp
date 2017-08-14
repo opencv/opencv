@@ -2758,7 +2758,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
     __3dImage.create(disparity.size(), CV_MAKETYPE(dtype, 3));
     Mat _3dImage = __3dImage.getMat();
 
-    const double bigZ = 10000.;
+    const float bigZ = 10000.f;
     Matx44d _Q;
     Q.convertTo(_Q, CV_64F);
 
