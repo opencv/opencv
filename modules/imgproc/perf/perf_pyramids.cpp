@@ -35,8 +35,6 @@ PERF_TEST_P(Size_MatType, pyrDown_ovx, testing::Combine(
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
-    const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
-    perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;
 
     Mat src(sz, matType);
     Mat dst((sz.height + 1) / 2, (sz.width + 1) / 2, matType);
@@ -45,7 +43,7 @@ PERF_TEST_P(Size_MatType, pyrDown_ovx, testing::Combine(
 
     TEST_CYCLE() pyrDown(src, dst, cv::Size(), BORDER_REPLICATE);
 
-    SANITY_CHECK(dst, eps, error_type);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_MatType, pyrUp, testing::Combine(

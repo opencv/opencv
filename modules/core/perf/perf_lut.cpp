@@ -22,5 +22,5 @@ PERF_TEST_P( SizePrm, LUT,
 
     TEST_CYCLE() LUT(src, lut, dst);
 
-    SANITY_CHECK(dst, 0.1);
+    SANITY_CHECK_NOTHING();
 }
