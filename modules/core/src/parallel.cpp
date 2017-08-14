@@ -125,6 +125,8 @@
 #  define CV_PARALLEL_FRAMEWORK "pthreads"
 #endif
 
+using namespace cv;
+
 namespace cv
 {
     ParallelLoopBody::~ParallelLoopBody() {}
