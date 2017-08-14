@@ -2,11 +2,8 @@ project(libprotobuf)
 
 include(CheckIncludeFiles)
 
-if(NOT MSVC)
-  check_include_files("pthread.h" HAVE_PTHREAD)
-  if(HAVE_PTHREAD)
-    add_definitions(-DHAVE_PTHREAD=1)
-  endif()
+if(HAVE_PTHREAD)
+  add_definitions(-DHAVE_PTHREAD=1)
 endif()
 
 if(MSVC)
