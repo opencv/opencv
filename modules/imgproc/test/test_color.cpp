@@ -87,6 +87,7 @@ protected:
     int fwd_code, inv_code;
     bool test_cpp;
     int hue_range;
+    bool srgb;
 };
 
 
@@ -108,6 +109,7 @@ CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allo
     test_cpp = false;
     hue_range = 0;
     blue_idx = 0;
+    srgb = false;
     inplace = false;
 }
 
@@ -146,6 +148,7 @@ void CV_ColorCvtBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 
     cn = (cvtest::randInt(rng) & 1) + 3;
     blue_idx = cvtest::randInt(rng) & 1 ? 2 : 0;
+    srgb = (cvtest::randInt(rng) & 1) != 0;
 
     types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, 3);
@@ -1004,6 +1007,16 @@ void CV_ColorXYZTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
 
 
 //// rgb <=> L*a*b*
+static inline float applyGamma(float x)
+{
+    return x <= 0.04045f ? x*(1.f/12.92f) : (float)std::pow((double)(x + 0.055)*(1./1.055), 2.4);
+}
+
+static inline float applyInvGamma(float x)
+{
+    return x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
+}
+
 class CV_ColorLabTest : public CV_ColorCvtBaseTest
 {
 public:
@@ -1026,10 +1039,20 @@ void CV_ColorLabTest::get_test_array_types_and_sizes( int test_case_idx, vector<
 {
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    if( blue_idx == 0 )
-        fwd_code = CV_LBGR2Lab, inv_code = CV_Lab2LBGR;
+    if(srgb)
+    {
+        if( blue_idx == 0 )
+            fwd_code = CV_BGR2Lab, inv_code = CV_Lab2BGR;
+        else
+            fwd_code = CV_RGB2Lab, inv_code = CV_Lab2RGB;
+    }
     else
-        fwd_code = CV_LRGB2Lab, inv_code = CV_Lab2LRGB;
+    {
+        if( blue_idx == 0 )
+            fwd_code = CV_LBGR2Lab, inv_code = CV_Lab2LBGR;
+        else
+            fwd_code = CV_LRGB2Lab, inv_code = CV_Lab2LRGB;
+    }
 }
 
 
@@ -1064,6 +1087,16 @@ void CV_ColorLabTest::convert_row_bgr2abc_32f_c3(const float* src_row, float* ds
         float R = src_row[x + 2];
         float G = src_row[x + 1];
         float B = src_row[x];
+
+        R = std::min(std::max(R, 0.f), 1.f);
+        G = std::min(std::max(G, 0.f), 1.f);
+        B = std::min(std::max(B, 0.f), 1.f);
+        if (srgb)
+        {
+            R = applyGamma(R);
+            G = applyGamma(G);
+            B = applyGamma(B);
+        }
 
         float X = (R * M[0] + G * M[1] + B * M[2]) / Xn;
         float Y =  R * M[3] + G * M[4] + B * M[5];
@@ -1139,6 +1172,16 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         float G = M[3] * X + M[4] * Y + M[5] * Z;
         float B = M[6] * X + M[7] * Y + M[8] * Z;
 
+        R = std::min(std::max(R, 0.f), 1.f);
+        G = std::min(std::max(G, 0.f), 1.f);
+        B = std::min(std::max(B, 0.f), 1.f);
+        if (srgb)
+        {
+            R = applyInvGamma(R);
+            G = applyInvGamma(G);
+            B = applyInvGamma(B);
+        }
+
         dst_row[x] = B;
         dst_row[x + 1] = G;
         dst_row[x + 2] = R;
@@ -1169,10 +1212,20 @@ void CV_ColorLuvTest::get_test_array_types_and_sizes( int test_case_idx, vector<
 {
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    if( blue_idx == 0 )
-        fwd_code = CV_LBGR2Luv, inv_code = CV_Luv2LBGR;
+    if(srgb)
+    {
+        if( blue_idx == 0 )
+            fwd_code = CV_BGR2Luv, inv_code = CV_Luv2BGR;
+        else
+            fwd_code = CV_RGB2Luv, inv_code = CV_Luv2RGB;
+    }
     else
-        fwd_code = CV_LRGB2Luv, inv_code = CV_Luv2LRGB;
+    {
+        if( blue_idx == 0 )
+            fwd_code = CV_LBGR2Luv, inv_code = CV_Luv2LBGR;
+        else
+            fwd_code = CV_LRGB2Luv, inv_code = CV_Luv2LRGB;
+    }
 }
 
 
@@ -1223,6 +1276,16 @@ void CV_ColorLuvTest::convert_row_bgr2abc_32f_c3( const float* src_row, float* d
         float r = src_row[j+2];
         float g = src_row[j+1];
         float b = src_row[j];
+
+        r = std::min(std::max(r, 0.f), 1.f);
+        g = std::min(std::max(g, 0.f), 1.f);
+        b = std::min(std::max(b, 0.f), 1.f);
+        if( srgb )
+        {
+            r = applyGamma(r);
+            g = applyGamma(g);
+            b = applyGamma(b);
+        }
 
         float X = r*M[0] + g*M[1] + b*M[2];
         float Y = r*M[3] + g*M[4] + b*M[5];
@@ -1308,6 +1371,17 @@ void CV_ColorLuvTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         float r = M[0]*X + M[1]*Y + M[2]*Z;
         float g = M[3]*X + M[4]*Y + M[5]*Z;
         float b = M[6]*X + M[7]*Y + M[8]*Z;
+
+        r = std::min(std::max(r, 0.f), 1.f);
+        g = std::min(std::max(g, 0.f), 1.f);
+        b = std::min(std::max(b, 0.f), 1.f);
+
+        if( srgb )
+        {
+            r = applyInvGamma(r);
+            g = applyInvGamma(g);
+            b = applyInvGamma(b);
+        }
 
         dst_row[j] = b;
         dst_row[j+1] = g;
