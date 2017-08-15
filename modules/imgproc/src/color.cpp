@@ -6771,7 +6771,10 @@ struct Lab2RGBinteger
 
         //float fxz[] = { ai / 500.0f + fy, fy - bi / 200.0f };
         int adiv, bdiv;
-        adiv = aa*BASE/500 - 128*BASE/500, bdiv = bb*BASE/200 - 128*BASE/200;
+        //adiv = aa*BASE/500 - 128*BASE/500, bdiv = bb*BASE/200 - 128*BASE/200;
+        //approximations with reasonable precision
+        adiv = ((5*aa*53687 + (1 << 7)) >> 13) - 128*BASE/500;
+        bdiv = ((  bb*41943 + (1 << 4)) >>  9) - 128*BASE/200+1;
 
         int ifxz[] = {ify + adiv, ify - bdiv};
 
@@ -7104,8 +7107,6 @@ struct Lab2RGB_b
                const float* _whitept, bool _srgb )
     : fcvt(3, _blueIdx, _coeffs, _whitept, _srgb ), icvt(_dstcn, _blueIdx, _coeffs, _whitept, _srgb), dstcn(_dstcn)
     {
-        useBitExactness = (!_coeffs && !_whitept && _srgb && enableBitExactness);
-
         #if CV_NEON
         v_scale_inv = vdupq_n_f32(100.f/255.f);
         v_scale = vdupq_n_f32(255.f);
@@ -7162,7 +7163,7 @@ struct Lab2RGB_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        if(useBitExactness)
+        if(enableBitExactness)
         {
             icvt(src, dst, n);
             return;
@@ -7328,7 +7329,6 @@ struct Lab2RGB_b
     __m128i v_zero;
     bool haveSIMD;
     #endif
-    bool useBitExactness;
     int dstcn;
 };
 
