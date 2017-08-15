@@ -2297,7 +2297,7 @@ static void validateResult(const Mat& reference, const Mat& actual, const Mat& s
     ssize.width *= cn;
     bool next = true;
     //RGB2Lab_f works throug LUT and brings additional error
-    static const float maxErr = 1.f/200.f;
+    static const float maxErr = 1.f/192.f;
 
     for (int y = 0; y < ssize.height && next; ++y)
     {
@@ -2335,20 +2335,22 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     Size ssize = src.size();
     CV_Assert(ssize.width == ssize.height);
 
-    RNG& rng = cvtest::TS::ptr()->get_rng();
-    int blueInd = rng.uniform(0., 1.) > 0.5 ? 0 : 2;
-    bool srgb = rng.uniform(0., 1.) > 0.5;
+    for(int i = 0; i < 4; i++)
+    {
+        int blueInd = (i%2) > 0 ? 0 : 2;
+        bool srgb = i > 1;
 
-    // Convert test image to LAB
-    cv::Mat lab;
-    int forward_code = blueInd ? srgb ? CV_BGR2Lab : CV_LBGR2Lab : srgb ? CV_RGB2Lab : CV_LRGB2Lab;
-    int inverse_code = blueInd ? srgb ? CV_Lab2BGR : CV_Lab2LBGR : srgb ? CV_Lab2RGB : CV_Lab2LRGB;
-    cv::cvtColor(src, lab, forward_code);
-    // Convert LAB image back to BGR(RGB)
-    cv::Mat recons;
-    cv::cvtColor(lab, recons, inverse_code);
+        // Convert test image to LAB
+        cv::Mat lab;
+        int forward_code = blueInd ? srgb ? CV_BGR2Lab : CV_LBGR2Lab : srgb ? CV_RGB2Lab : CV_LRGB2Lab;
+        int inverse_code = blueInd ? srgb ? CV_Lab2BGR : CV_Lab2LBGR : srgb ? CV_Lab2RGB : CV_Lab2LRGB;
+        cv::cvtColor(src, lab, forward_code);
+        // Convert LAB image back to BGR(RGB)
+        cv::Mat recons;
+        cv::cvtColor(lab, recons, inverse_code);
 
-    validateResult(src, recons, src, forward_code);
+        validateResult(src, recons, src, forward_code);
+    }
 }
 
 static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
