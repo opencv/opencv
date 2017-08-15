@@ -3248,6 +3248,9 @@ public:
     //! returns read-only pointer to the real buffer, stack-allocated or head-allocated
     operator const _Tp* () const;
 
+    //! returns number of allocated elements
+    size_t getSize() const;
+
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;

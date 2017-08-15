@@ -2581,6 +2581,9 @@ template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::op
 template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
 { return ptr; }
 
+template<typename _Tp, size_t fixed_size> inline size_t AutoBuffer<_Tp, fixed_size>::getSize() const
+{ return size; }
+
 
 /////////////////////////////////// Ptr ////////////////////////////////////////
 

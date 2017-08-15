@@ -115,8 +115,9 @@ bool  BmpDecoder::readHeader()
 
                 if( m_bpp <= 8 )
                 {
-                    memset( m_palette, 0, sizeof(m_palette));
-                    m_strm.getBytes( m_palette, (clrused == 0? 1<<m_bpp : clrused)*4 );
+                    CV_Assert(clrused < 256);
+                    memset(m_palette, 0, sizeof(m_palette));
+                    m_strm.getBytes(m_palette, (clrused == 0? 1<<m_bpp : clrused)*4 );
                     iscolor = IsColorPalette( m_palette, m_bpp );
                 }
                 else if( m_bpp == 16 && m_rle_code == BMP_BITFIELDS )
@@ -282,7 +283,9 @@ bool  BmpDecoder::readData( Mat& img )
                     else if( code > 2 ) // absolute mode
                     {
                         if( data + code*nch > line_end ) goto decode_rle4_bad;
-                        m_strm.getBytes( src, (((code + 1)>>1) + 1) & -2 );
+                        int sz = (((code + 1)>>1) + 1) & (~1);
+                        CV_Assert((size_t)sz < _src.getSize());
+                        m_strm.getBytes(src, sz);
                         if( color )
                             data = FillColorRow4( data, src, code, m_palette );
                         else
@@ -371,7 +374,9 @@ decode_rle4_bad: ;
 
                         if( data + code3 > line_end )
                             goto decode_rle8_bad;
-                        m_strm.getBytes( src, (code + 1) & -2 );
+                        int sz = (code + 1) & (~1);
+                        CV_Assert((size_t)sz < _src.getSize());
+                        m_strm.getBytes(src, sz);
                         if( color )
                             data = FillColorRow8( data, src, code, m_palette );
                         else

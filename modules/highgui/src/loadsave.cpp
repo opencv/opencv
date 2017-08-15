@@ -48,11 +48,31 @@
 #undef min
 #undef max
 
+#include <iostream>
+
 /****************************************************************************************\
 *                                      Image Codecs                                      *
 \****************************************************************************************/
 namespace cv
 {
+
+// TODO Add runtime configuration
+#define CV_IO_MAX_IMAGE_PARAMS (50)
+#define CV_IO_MAX_IMAGE_WIDTH (1<<20)
+#define CV_IO_MAX_IMAGE_HEIGHT (1<<20)
+#define CV_IO_MAX_IMAGE_PIXELS (1<<30) // 1 Gigapixel
+
+static Size validateInputImageSize(const Size& size)
+{
+    CV_Assert(size.width > 0);
+    CV_Assert(size.width <= CV_IO_MAX_IMAGE_WIDTH);
+    CV_Assert(size.height > 0);
+    CV_Assert(size.height <= CV_IO_MAX_IMAGE_HEIGHT);
+    uint64 pixels = (uint64)size.width * (uint64)size.height;
+    CV_Assert(pixels <= CV_IO_MAX_IMAGE_PIXELS);
+    return size;
+}
+
 
 struct ImageCodecInitializer
 {
@@ -203,12 +223,26 @@ imread_( const string& filename, int flags, int hdrtype, Mat* mat=0 )
     if( decoder.empty() )
         return 0;
     decoder->setSource(filename);
-    if( !decoder->readHeader() )
-        return 0;
 
-    CvSize size;
-    size.width = decoder->width();
-    size.height = decoder->height();
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader())
+            return 0;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        return 0;
+    }
+    catch (...)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        return 0;
+    }
+
+
+    Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
     int type = decoder->type();
     if( flags != -1 )
@@ -242,7 +276,21 @@ imread_( const string& filename, int flags, int hdrtype, Mat* mat=0 )
         temp = cvarrToMat(image);
     }
 
-    if( !decoder->readData( *data ))
+    bool success = false;
+    try
+    {
+        if (decoder->readData(*data))
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+    }
+    if (!success)
     {
         cvReleaseImage( &image );
         cvReleaseMat( &matrix );
@@ -288,6 +336,7 @@ static bool imwrite_( const string& filename, const Mat& image,
     }
 
     encoder->setDestination( filename );
+    CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
     bool code = encoder->write( *pimage, params );
 
     //    CV_Assert( code );
@@ -326,16 +375,34 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         decoder->setSource(filename);
     }
 
-    if( !decoder->readHeader() )
+    bool success = false;
+    try
     {
-        if( !filename.empty() )
-            remove(filename.c_str());
+        if (decoder->readHeader())
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+    }
+    if (!success)
+    {
+        if (!filename.empty())
+        {
+            if (0 != remove(filename.c_str()))
+            {
+                std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+            }
+        }
         return 0;
     }
 
-    CvSize size;
-    size.width = decoder->width();
-    size.height = decoder->height();
+    // established the required input image size
+    Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
     int type = decoder->type();
     if( flags != -1 )
@@ -369,11 +436,30 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         temp = cvarrToMat(image);
     }
 
-    bool code = decoder->readData( *data );
-    if( !filename.empty() )
-        remove(filename.c_str());
+    success = false;
+    try
+    {
+        if (decoder->readData(*data))
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+    }
 
-    if( !code )
+    if (!filename.empty())
+    {
+        if (0 != remove(filename.c_str()))
+        {
+            std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+        }
+    }
+
+    if (!success)
     {
         cvReleaseImage( &image );
         cvReleaseMat( &matrix );
@@ -490,7 +576,7 @@ cvSaveImage( const char* filename, const CvArr* arr, const int* _params )
     if( _params )
     {
         for( ; _params[i] > 0; i += 2 )
-            ;
+            CV_Assert(i < CV_IO_MAX_IMAGE_PARAMS*2); // Limit number of params for security reasons
     }
     return cv::imwrite_(filename, cv::cvarrToMat(arr),
         i > 0 ? cv::vector<int>(_params, _params+i) : cv::vector<int>(),
@@ -521,7 +607,7 @@ cvEncodeImage( const char* ext, const CvArr* arr, const int* _params )
     if( _params )
     {
         for( ; _params[i] > 0; i += 2 )
-            ;
+            CV_Assert(i < CV_IO_MAX_IMAGE_PARAMS*2); // Limit number of params for security reasons
     }
     cv::Mat img = cv::cvarrToMat(arr);
     if( CV_IS_IMAGE(arr) && ((const IplImage*)arr)->origin == IPL_ORIGIN_BL )
