@@ -17,6 +17,7 @@ namespace cv
 {
 
 /// A-KAZE nonlinear diffusion filtering evolution
+template <typename MatType>
 struct Evolution
 {
   Evolution() {
@@ -29,15 +30,28 @@ struct Evolution
     border = 0;
   }
 
-  UMat Lx, Ly;           ///< First order spatial derivatives
-  UMat Lt;               ///< Evolution image
-  UMat Lsmooth;          ///< Smoothed image, used only for computing determinant, released afterwards
-  UMat Ldet;             ///< Detector response
+  template <typename T>
+  explicit Evolution(const Evolution<T> &other) {
+    size = other.size;
+    etime = other.etime;
+    esigma = other.esigma;
+    octave = other.octave;
+    sublevel = other.sublevel;
+    sigma_size = other.sigma_size;
+    octave_ratio = other.octave_ratio;
+    border = other.border;
 
-  // the same as above, holding CPU mapping to UMats above
-  Mat Mx, My;
-  Mat Mt;
-  Mat Mdet;
+    other.Lx.copyTo(Lx);
+    other.Ly.copyTo(Ly);
+    other.Lt.copyTo(Lt);
+    other.Lsmooth.copyTo(Lsmooth);
+    other.Ldet.copyTo(Ldet);
+  }
+
+  MatType Lx, Ly;           ///< First order spatial derivatives
+  MatType Lt;               ///< Evolution image
+  MatType Lsmooth;          ///< Smoothed image, used only for computing determinant, released afterwards
+  MatType Ldet;             ///< Detector response
 
   Size size;                ///< Size of the layer
   float etime;              ///< Evolution time
@@ -49,6 +63,11 @@ struct Evolution
   int border;               ///< Width of border where descriptors cannot be computed
 };
 
+typedef Evolution<Mat> MEvolution;
+typedef Evolution<UMat> UEvolution;
+typedef std::vector<MEvolution> Pyramid;
+typedef std::vector<UEvolution> UMatPyramid;
+
 /* ************************************************************************* */
 // AKAZE Class Declaration
 class AKAZEFeatures {
@@ -56,7 +75,7 @@ class AKAZEFeatures {
 private:
 
   AKAZEOptions options_;                ///< Configuration options for AKAZE
-  std::vector<Evolution> evolution_;        ///< Vector of nonlinear diffusion evolution
+  Pyramid evolution_;        ///< Vector of nonlinear diffusion evolution
 
   /// FED parameters
   int ncycles_;                  ///< Number of cycles
@@ -71,7 +90,6 @@ private:
 
   /// Scale Space methods
   void Allocate_Memory_Evolution();
-  void Compute_Determinant_Hessian_Response();
   void Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_layers);
   void Do_Subpixel_Refinement(std::vector<Mat>& keypoints_by_layers,
     std::vector<KeyPoint>& kpts);
