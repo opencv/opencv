@@ -6,9 +6,12 @@
 project(openexr CXX)
 
 if(UNIX)
-  set(HAVE_PTHREAD 1)
-  include(CheckIncludeFile)
-  check_include_file(semaphore.h HAVE_POSIX_SEMAPHORES)
+  if(APPLE)
+    set(HAVE_POSIX_SEMAPHORES 0)  # Unnamed semaphores are not supported: https://github.com/opencv/opencv/issues/9361
+  else()
+    include(CheckIncludeFile)
+    check_include_file(semaphore.h HAVE_POSIX_SEMAPHORES)
+  endif()
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/IlmBaseConfig.h.cmakein"
