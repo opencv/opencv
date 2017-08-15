@@ -383,13 +383,12 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
 
   Lflow.create(Lx.size(), Lx.type());
 
-  bool runOCL = Lx.isUMat() && Ly.isUMat() && Lflow.isUMat();
   switch (diffusivity) {
     case KAZE::DIFF_PM_G1:
       pm_g1(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_PM_G2:
-      CV_OCL_RUN(runOCL, ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
+      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(), ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
       pm_g2(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_WEICKERT:
