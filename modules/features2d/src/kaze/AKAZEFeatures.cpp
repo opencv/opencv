@@ -418,14 +418,38 @@ static inline void downloadPyramid(std::vector<Evolution>& evolution)
 }
 
 /**
+ * @brief Converts input image to grayscale float image
+ *
+ * @param image any image
+ * @param dst grayscale float image
+ */
+static inline void prepareInputImage(InputArray image, OutputArray dst)
+{
+  Mat img = image.getMat();
+  if (img.channels() > 1)
+    cvtColor(image, img, COLOR_BGR2GRAY);
+
+  if ( img.depth() == CV_32F )
+    dst.assign(img);
+  else if ( img.depth() == CV_8U )
+    img.convertTo(dst, CV_32F, 1.0 / 255.0, 0);
+  else if ( img.depth() == CV_16U )
+    img.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
+}
+
+/**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully, -1 otherwise
  */
-void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
+void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
 {
   CV_INSTRUMENT_REGION()
   CV_Assert(evolution_.size() > 0);
+
+  // convert input to grayscale float image if needed
+  Mat img;
+  prepareInputImage(image, img);
 
   // create first level of the evolution
   int ksize = getGaussianKernelSize(options_.soffset);
@@ -618,6 +642,7 @@ void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
   std::vector<Mat> keypoints_by_layers;
   Find_Scale_Space_Extrema(keypoints_by_layers);
   Do_Subpixel_Refinement(keypoints_by_layers, kpts);
+  Compute_Keypoints_Orientation(kpts);
 }
 
 /**
