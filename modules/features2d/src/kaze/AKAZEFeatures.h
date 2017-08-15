@@ -69,23 +69,22 @@ private:
   cv::Mat descriptorBits_;
   cv::Mat bitMask_;
 
-public:
-
-  /// Constructor with input arguments
-  AKAZEFeatures(const AKAZEOptions& options);
-
   /// Scale Space methods
   void Allocate_Memory_Evolution();
-  void Create_Nonlinear_Scale_Space(InputArray img);
-  void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
-  void Compute_Determinant_Hessian_Response(void);
+  void Compute_Determinant_Hessian_Response();
   void Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_layers);
   void Do_Subpixel_Refinement(std::vector<Mat>& keypoints_by_layers,
     std::vector<KeyPoint>& kpts);
 
   /// Feature description methods
-  void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, OutputArray desc);
   void Compute_Keypoints_Orientation(std::vector<cv::KeyPoint>& kpts) const;
+
+public:
+  /// Constructor with input arguments
+  AKAZEFeatures(const AKAZEOptions& options);
+  void Create_Nonlinear_Scale_Space(InputArray img);
+  void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
+  void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, OutputArray desc);
 };
 
 /* ************************************************************************* */

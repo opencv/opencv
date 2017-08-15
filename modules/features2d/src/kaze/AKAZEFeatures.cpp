@@ -251,10 +251,14 @@ private:
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
+ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
 {
-  if(!Lt.isContinuous())
+  if(!Lt_.isContinuous())
     return false;
+
+  UMat Lt = Lt_.getUMat();
+  UMat Lf = Lf_.getUMat();
+  UMat Lstep = Lstep_.getUMat();
 
   size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
 
@@ -271,18 +275,19 @@ ocl_non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float
 #endif // HAVE_OPENCL
 
 static inline void
-non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
+non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
 {
   CV_INSTRUMENT_REGION()
 
-  Lstep.create(Lt.size(), Lt.type());
+  Lstep_.create(Lt_.size(), Lt_.type());
 
-  CV_OCL_RUN(true, ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
+  CV_OCL_RUN(Lt_.isUMat() && Lf_.isUMat() && Lstep_.isUMat(),
+    ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, step_size));
 
-  // when on CPU UMats should be already allocated on CPU so getMat here is basicallly no-op
-  Mat Mstep = Lstep.getMat(ACCESS_WRITE);
-  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt.getMat(ACCESS_READ),
-    Lf.getMat(ACCESS_READ), Mstep, step_size));
+  Mat Lt = Lt_.getMat();
+  Mat Lf = Lf_.getMat();
+  Mat Lstep = Lstep_.getMat();
+  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt, Lf, Lstep, step_size));
 }
 
 /**
@@ -295,12 +300,15 @@ non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float ste
  * @return k contrast factor
  */
 static inline float
-compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
+compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
 {
   CV_INSTRUMENT_REGION()
 
   CV_Assert(nbins > 2);
-  CV_Assert(!Lx.empty());
+  CV_Assert(!Lx_.empty());
+
+  Mat Lx = Lx_.getMat();
+  Mat Ly = Ly_.getMat();
 
   // temporary square roots of dot product
   Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32F);
@@ -347,8 +355,12 @@ compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
+ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
 {
+  UMat Lx = Lx_.getUMat();
+  UMat Ly = Ly_.getUMat();
+  UMat Lflow = Lflow_.getUMat();
+
   int total = Lx.rows * Lx.cols;
   size_t globalSize[] = {(size_t)total};
 
@@ -365,18 +377,19 @@ ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
 #endif // HAVE_OPENCL
 
 static inline void
-compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast, int diffusivity)
+compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, int diffusivity)
 {
   CV_INSTRUMENT_REGION()
 
   Lflow.create(Lx.size(), Lx.type());
 
+  bool runOCL = Lx.isUMat() && Ly.isUMat() && Lflow.isUMat();
   switch (diffusivity) {
     case KAZE::DIFF_PM_G1:
       pm_g1(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_PM_G2:
-      CV_OCL_RUN(true, ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
+      CV_OCL_RUN(runOCL, ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
       pm_g2(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_WEICKERT:
@@ -472,8 +485,7 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
   Scharr(Lsmooth, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
   Lsmooth.release();
   // compute the kcontrast factor
-  float kcontrast = compute_kcontrast(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ),
-    options_.kcontrast_percentile, options_.kcontrast_nbins);
+  float kcontrast = compute_kcontrast(Lx, Ly, options_.kcontrast_percentile, options_.kcontrast_nbins);
 
   // Now generate the rest of evolution levels
   for (size_t i = 1; i < evolution_.size(); i++) {
@@ -516,9 +528,14 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
-  UMat& Ldet, float sigma)
+ocl_compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_,
+  OutputArray Ldet_, float sigma)
 {
+  UMat Lxx = Lxx_.getUMat();
+  UMat Lxy = Lxy_.getUMat();
+  UMat Lyy = Lyy_.getUMat();
+  UMat Ldet = Ldet_.getUMat();
+
   const int total = Lxx.rows * Lxx.cols;
   size_t globalSize[] = {(size_t)total};
 
@@ -545,22 +562,21 @@ ocl_compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
  * @param Ldet output determinant
  * @param sigma determinant will be scaled by this sigma
  */
-static inline void compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
-  UMat& Ldet, float sigma)
+static inline void compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_,
+  OutputArray Ldet_, float sigma)
 {
   CV_INSTRUMENT_REGION()
 
-  Ldet.create(Lxx.size(), Lxx.type());
+  Ldet_.create(Lxx_.size(), Lxx_.type());
 
-  CV_OCL_RUN(true, ocl_compute_determinant(Lxx, Lxy, Lyy, Ldet, sigma));
+  CV_OCL_RUN(Lxx_.isUMat() && Ldet_.isUMat(), ocl_compute_determinant(Lxx_, Lxy_, Lyy_, Ldet_, sigma));
 
   // output determinant
-  Mat Mxx = Lxx.getMat(ACCESS_READ), Mxy = Lxy.getMat(ACCESS_READ), Myy = Lyy.getMat(ACCESS_READ);
-  Mat Mdet = Ldet.getMat(ACCESS_WRITE);
-  float *lxx = Mxx.ptr<float>();
-  float *lxy = Mxy.ptr<float>();
-  float *lyy = Myy.ptr<float>();
-  float *ldet = Mdet.ptr<float>();
+  Mat Lxx = Lxx_.getMat(), Lxy = Lxy_.getMat(), Lyy = Lyy_.getMat(), Ldet = Ldet_.getMat();
+  float *lxx = Lxx.ptr<float>();
+  float *lxy = Lxy.ptr<float>();
+  float *lyy = Lyy.ptr<float>();
+  float *ldet = Ldet.ptr<float>();
   const int total = Lxx.cols * Lxx.rows;
   for (int j = 0; j < total; j++) {
     ldet[j] = (lxx[j] * lyy[j] - lxy[j] * lxy[j]) * sigma;
