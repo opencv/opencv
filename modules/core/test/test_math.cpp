@@ -3071,12 +3071,10 @@ TEST(Core_QR_Solver, accuracy64f)
 
 softdouble naiveExp(softdouble x)
 {
-    int exponent = ((x.v >>52) & 0x7FF) - 1023;
-    int sign = (((uint64_t)(x.v) >> 63) != 0) ? -1 : 1;
+    int exponent = x.getExp();
+    int sign = x.getSign() ? -1 : 1;
     if(sign < 0 && exponent >= 10) return softdouble::inf();
-    softdouble mantissa;
-    //mantissa.v = packToF64UI(0, 1023, fracF64UI(x.v));
-    mantissa.v = ((uint64_t)(1023)<<52) + (((x.v) & UINT64_C( 0x000FFFFFFFFFFFFF )));
+    softdouble mantissa = x.getFrac();
     //Taylor series for mantissa
     uint64 fac[20] = {1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800,
                     39916800, 479001600, 6227020800, 87178291200, 1307674368000,
@@ -3109,34 +3107,33 @@ TEST(Core_SoftFloat, exp32)
     ASSERT_EQ  (exp(-softfloat::inf()), softfloat::zero());
 
     //ln(FLT_MAX) ~ 88.722
-    const float ln_max = 88.722f;
-    vector<float> inputs;
+    const softfloat ln_max(88.722f);
+    vector<softfloat> inputs;
     RNG rng(0);
-    inputs.push_back(0);
-    inputs.push_back(1);
-    inputs.push_back(FLT_MIN);
+    inputs.push_back(softfloat::zero());
+    inputs.push_back(softfloat::one());
+    inputs.push_back(softfloat::min());
     for(int i = 0; i < 50000; i++)
     {
         Cv32suf x;
         x.fmt.sign = rng() % 2;
         x.fmt.exponent = rng() % (10 + 127); //bigger exponent will produce inf
         x.fmt.significand = rng() % (1 << 23);
-        if(x.f > ln_max)
-            x.f = rng.uniform(0.0f, ln_max);
-        inputs.push_back(x.f);
+        if(softfloat(x.f) > ln_max)
+            x.f = rng.uniform(0.0f, (float)ln_max);
+        inputs.push_back(softfloat(x.f));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        float xf = inputs[i];
-        softfloat x(xf);
+        softfloat x(inputs[i]);
         softfloat y = exp(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
         ASSERT_GE(y, softfloat::zero());
         softfloat ygood = naiveExp(x);
         softfloat diff = abs(ygood - y);
-        const softfloat eps(FLT_EPSILON);
+        const softfloat eps = softfloat::eps();
         if(diff > eps)
         {
             ASSERT_LE(diff/max(abs(y), abs(ygood)), eps);
@@ -3152,12 +3149,12 @@ TEST(Core_SoftFloat, exp64)
     ASSERT_EQ  (exp(-softdouble::inf()), softdouble::zero());
 
     //ln(DBL_MAX) ~ 709.7827
-    const double ln_max = 709.7827;
-    vector<double> inputs;
+    const softdouble ln_max(709.7827);
+    vector<softdouble> inputs;
     RNG rng(0);
-    inputs.push_back(0);
-    inputs.push_back(1);
-    inputs.push_back(DBL_MIN);
+    inputs.push_back(softdouble::zero());
+    inputs.push_back(softdouble::one());
+    inputs.push_back(softdouble::min());
     for(int i = 0; i < 50000; i++)
     {
         Cv64suf x;
@@ -3165,22 +3162,21 @@ TEST(Core_SoftFloat, exp64)
         uint64 exponent = rng() % (10 + 1023); //bigger exponent will produce inf
         uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         x.u = (sign << 63) | (exponent << 52) | mantissa;
-        if(x.f > ln_max)
-            x.f = rng.uniform(0.0, ln_max);
-        inputs.push_back(x.f);
+        if(softdouble(x.f) > ln_max)
+            x.f = rng.uniform(0.0, (double)ln_max);
+        inputs.push_back(softdouble(x.f));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        double xf = inputs[i];
-        softdouble x(xf);
+        softdouble x(inputs[i]);
         softdouble y = exp(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
         ASSERT_GE(y, softdouble::zero());
         softdouble ygood = naiveExp(x);
         softdouble diff = abs(ygood - y);
-        const softdouble eps(DBL_EPSILON);
+        const softdouble eps = softdouble::eps();
         if(diff > eps)
         {
             ASSERT_LE(diff/max(abs(y), abs(ygood)), softdouble(8192)*eps);
@@ -3205,25 +3201,24 @@ TEST(Core_SoftFloat, log32)
     }
     ASSERT_TRUE(log(softfloat::zero()).isInf());
 
-    vector<float> inputs;
+    vector<softfloat> inputs;
 
-    inputs.push_back(1);
-    inputs.push_back(std::exp(1.f));
-    inputs.push_back(FLT_MIN);
-    inputs.push_back(FLT_MAX);
+    inputs.push_back(softfloat::one());
+    inputs.push_back(softfloat(exp(softfloat::one())));
+    inputs.push_back(softfloat::min());
+    inputs.push_back(softfloat::max());
     for(int i = 0; i < nValues; i++)
     {
         Cv32suf x;
         x.fmt.sign = 0;
         x.fmt.exponent = rng() % 255;
         x.fmt.significand = rng() % (1 << 23);
-        inputs.push_back(x.f);
+        inputs.push_back(softfloat(x.f));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        float xf = inputs[i];
-        softfloat x(xf);
+        softfloat x(inputs[i]);
         softfloat y = log(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
@@ -3231,9 +3226,10 @@ TEST(Core_SoftFloat, log32)
         softfloat diff = abs(ex - x);
         // 88 is approx estimate of max exp() argument
         ASSERT_TRUE(!ex.isInf() || (y > softfloat(88)));
-        if(!ex.isInf() && diff > softfloat(FLT_EPSILON))
+        const softfloat eps2 = softfloat().setExp(-17);
+        if(!ex.isInf() && diff > softfloat::eps())
         {
-            ASSERT_LT(diff/max(abs(ex), x), softfloat(0.00001f));
+            ASSERT_LT(diff/max(abs(ex), x), eps2);
         }
     }
 }
@@ -3256,11 +3252,11 @@ TEST(Core_SoftFloat, log64)
     }
     ASSERT_TRUE(log(softdouble::zero()).isInf());
 
-    vector<double> inputs;
-    inputs.push_back(1);
+    vector<softdouble> inputs;
+    inputs.push_back(softdouble::one());
     inputs.push_back(exp(softdouble::one()));
-    inputs.push_back(DBL_MIN);
-    inputs.push_back(DBL_MAX);
+    inputs.push_back(softdouble::min());
+    inputs.push_back(softdouble::max());
     for(int i = 0; i < nValues; i++)
     {
         Cv64suf x;
@@ -3268,13 +3264,12 @@ TEST(Core_SoftFloat, log64)
         uint64 exponent = rng() % 2047;
         uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         x.u = (sign << 63) | (exponent << 52) | mantissa;
-        inputs.push_back(abs(x.f));
+        inputs.push_back(softdouble(x.f));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        double xf = inputs[i];
-        softdouble x(xf);
+        softdouble x(inputs[i]);
         softdouble y = log(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
@@ -3282,40 +3277,40 @@ TEST(Core_SoftFloat, log64)
         softdouble diff = abs(ex - x);
         // 700 is approx estimate of max exp() argument
         ASSERT_TRUE(!ex.isInf() || (y > softdouble(700)));
-        if(!ex.isInf() && diff > softdouble(DBL_EPSILON))
+        const softdouble eps2 = softdouble().setExp(-41);
+        if(!ex.isInf() && diff > softdouble::eps())
         {
-            ASSERT_LT(diff/max(abs(ex), x), softdouble(1e-10));
+            ASSERT_LT(diff/max(abs(ex), x), eps2);
         }
     }
 }
 
 TEST(Core_SoftFloat, cbrt32)
 {
-    vector<float> inputs;
+    vector<softfloat> inputs;
     RNG rng(0);
-    inputs.push_back(0);
-    inputs.push_back(1);
-    inputs.push_back(FLT_MAX);
-    inputs.push_back(FLT_MIN);
+    inputs.push_back(softfloat::zero());
+    inputs.push_back(softfloat::one());
+    inputs.push_back(softfloat::max());
+    inputs.push_back(softfloat::min());
     for(int i = 0; i < 50000; i++)
     {
         Cv32suf x;
         x.fmt.sign = rng() % 2;
         x.fmt.exponent = rng() % 255;
         x.fmt.significand = rng() % (1 << 23);
-        inputs.push_back(x.f);
+        inputs.push_back(softfloat(x.f));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        float xf = inputs[i];
-        softfloat x(xf);
+        softfloat x(inputs[i]);
         softfloat y = cbrt(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
         softfloat cube = y*y*y;
         softfloat diff = abs(x - cube);
-        const softfloat eps(FLT_EPSILON);
+        const softfloat eps = softfloat::eps();
         if(diff > eps)
         {
             ASSERT_LT(diff/max(abs(x), abs(cube)), softfloat(4)*eps);
@@ -3384,10 +3379,9 @@ TEST(Core_SoftFloat, pow32)
     // nan ** y == nan, if y != 0
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.u = rng();
-        if(!x.u) x.f = FLT_MIN;
-        softfloat x32(x.f);
+        unsigned u = rng();
+        softfloat x32 = softfloat::fromRaw(u);
+        x32 = (x32 != softfloat::zero()) ? x32 : softfloat::min();
         ASSERT_TRUE(pow(nan, x32).isNaN());
     }
     // nan ** 0 == 1
@@ -3514,10 +3508,9 @@ TEST(Core_SoftFloat, pow64)
     // nan ** y == nan, if y != 0
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(!x.u) x.f = DBL_MIN;
-        softdouble x64(x.f);
+        uint64 u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
+        softdouble x64 = softdouble::fromRaw(u);
+        x64 = (x64 != softdouble::zero()) ? x64 : softdouble::min();
         ASSERT_TRUE(pow(nan, x64).isNaN());
     }
     // nan ** 0 == 1
@@ -3585,6 +3578,100 @@ TEST(Core_SoftFloat, pow64)
         ASSERT_TRUE(pow(zero, -x64).isInf());
         if(x64 != one)
             ASSERT_EQ(pow(zero, x64), zero);
+    }
+}
+
+TEST(Core_SoftFloat, sincos64)
+{
+    static const softdouble
+            two = softdouble(2), three = softdouble(3),
+            half = softdouble::one()/two,
+            zero = softdouble::zero(), one = softdouble::one(),
+            pi = softdouble::pi(), piby2 = pi/two, eps = softdouble::eps(),
+            sin45 = sqrt(two)/two, sin60 = sqrt(three)/two;
+
+    softdouble vstdAngles[] =
+    //x, sin(x), cos(x)
+    {
+            zero,              zero,   one,
+            pi/softdouble(6),  half, sin60,
+            pi/softdouble(4), sin45, sin45,
+            pi/three, sin60,  half,
+    };
+    vector<softdouble> stdAngles;
+    stdAngles.assign(vstdAngles, vstdAngles + 3*4);
+
+    static const softdouble stdEps = eps.setExp(-39);
+    const size_t nStdValues = 5000;
+    for(size_t i = 0; i < nStdValues; i++)
+    {
+        for(size_t k = 0; k < stdAngles.size()/3; k++)
+        {
+            softdouble x = stdAngles[k*3] + pi*softdouble(2*((int)i-(int)nStdValues/2));
+            softdouble s = stdAngles[k*3+1];
+            softdouble c = stdAngles[k*3+2];
+            ASSERT_LE(abs(sin(x) - s), stdEps);
+            ASSERT_LE(abs(cos(x) - c), stdEps);
+            //sin(x+pi/2) = cos(x)
+            ASSERT_LE(abs(sin(x + piby2) - c), stdEps);
+            //sin(x+pi) = -sin(x)
+            ASSERT_LE(abs(sin(x + pi) + s), stdEps);
+            //cos(x+pi/2) = -sin(x)
+            ASSERT_LE(abs(cos(x+piby2) + s), stdEps);
+            //cos(x+pi) = -cos(x)
+            ASSERT_LE(abs(cos(x+pi) + c), stdEps);
+        }
+    }
+
+    // sin(x) is NaN iff x ix NaN or Inf
+    ASSERT_TRUE(sin(softdouble::inf()).isNaN());
+    ASSERT_TRUE(sin(softdouble::nan()).isNaN());
+
+    vector<int> exponents;
+    exponents.push_back(0);
+    for(int i = 1; i < 52; i++)
+    {
+        exponents.push_back( i);
+        exponents.push_back(-i);
+    }
+    exponents.push_back(256); exponents.push_back(-256);
+    exponents.push_back(512); exponents.push_back(-512);
+    exponents.push_back(1022); exponents.push_back(-1022);
+
+    vector<softdouble> inputs;
+    RNG rng(0);
+
+    static const size_t nValues = 1 << 18;
+    for(size_t i = 0; i < nValues; i++)
+    {
+        softdouble x;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.v = mantissa;
+        x = x.setSign((rng() % 2) != 0);
+        x = x.setExp(exponents[rng() % exponents.size()]);
+        inputs.push_back(x);
+    }
+
+    for(size_t i = 0; i < inputs.size(); i++)
+    {
+        softdouble x = inputs[i];
+
+        int xexp = x.getExp();
+        softdouble randEps = eps.setExp(max(xexp-52, -46));
+        softdouble sx = sin(x);
+        softdouble cx = cos(x);
+        ASSERT_FALSE(sx.isInf()); ASSERT_FALSE(cx.isInf());
+        ASSERT_FALSE(sx.isNaN()); ASSERT_FALSE(cx.isNaN());
+        ASSERT_LE(abs(sx), one); ASSERT_LE(abs(cx), one);
+        ASSERT_LE(abs((sx*sx + cx*cx) - one), eps);
+        ASSERT_LE(abs(sin(x*two) - two*sx*cx), randEps);
+        ASSERT_LE(abs(cos(x*two) - (cx*cx - sx*sx)), randEps);
+        ASSERT_LE(abs(sin(-x) + sx), eps);
+        ASSERT_LE(abs(cos(-x) - cx), eps);
+        ASSERT_LE(abs(sin(x + piby2) - cx), randEps);
+        ASSERT_LE(abs(sin(x + pi) + sx), randEps);
+        ASSERT_LE(abs(cos(x+piby2) + sx), randEps);
+        ASSERT_LE(abs(cos(x+pi) + cx), randEps);
     }
 }
 
