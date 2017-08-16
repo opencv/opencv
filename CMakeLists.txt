@@ -77,10 +77,6 @@ if(WINRT)
   endif()
 endif()
 
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 OLD)
-endif()
-
 if(POLICY CMP0022)
   cmake_policy(SET CMP0022 OLD)
 endif()
