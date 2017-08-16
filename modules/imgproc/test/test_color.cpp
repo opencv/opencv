@@ -1044,8 +1044,6 @@ protected:
     double get_success_error_level( int test_case_idx, int i, int j );
     void convert_row_bgr2abc_32f_c3( const float* src_row, float* dst_row, int n );
     void convert_row_abc2bgr_32f_c3( const float* src_row, float* dst_row, int n );
-    int convert_row_bgr2abc_8u_c3( const uchar *src_row, uchar *dst_row, int n, int cn );
-    int convert_row_abc2bgr_8u_c3( const uchar *src_row, uchar *dst_row, int n, int cn );
 };
 
 
