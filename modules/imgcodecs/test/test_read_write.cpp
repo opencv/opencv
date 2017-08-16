@@ -50,7 +50,7 @@ TEST(Imgcodecs_Image, read_write_bmp)
         psnr = cvtest::PSNR(buf_loaded, image);
         EXPECT_GT(psnr, thresDbell);
 
-        remove(dst_name.c_str());
+        EXPECT_EQ(0, remove(dst_name.c_str()));
     }
 }
 
@@ -95,7 +95,7 @@ TEST_P(Imgcodecs_Image, read_write)
     psnr = cvtest::PSNR(buf_loaded, image);
     EXPECT_GT(psnr, thresDbell);
 
-    remove(full_name.c_str());
+    EXPECT_EQ(0, remove(full_name.c_str()));
 }
 
 const string exts[] = {
