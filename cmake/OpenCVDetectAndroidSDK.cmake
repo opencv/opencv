@@ -309,9 +309,8 @@ macro(add_android_project target path)
             LIBRARY_OUTPUT_DIRECTORY "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}"
             )
 
-        get_target_property(android_proj_jni_location "${JNI_LIB_NAME}" LOCATION)
         if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
-            add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
+            add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${JNI_LIB_NAME}>")
         endif()
       endif()
 

@@ -45,8 +45,7 @@ else()
 endif()
 
 if(POLICY CMP0026)
-  # silence cmake 3.0+ warnings about reading LOCATION attribute
-  cmake_policy(SET CMP0026 OLD)
+  cmake_policy(SET CMP0026 NEW)
 endif()
 
 if (POLICY CMP0042)
@@ -1017,7 +1016,7 @@ if(HAVE_OPENCL)
     set(__libs "")
     foreach(l ${OPENCL_LIBRARIES})
       if(TARGET ${l})
-        get_target_property(p ${l} LOCATION)
+        get_target_property(p ${l} IMPORTED_LOCATION)
         if(p MATCHES NOTFOUND)
           list(APPEND __libs "${l}")
         else()
