@@ -62,6 +62,7 @@ public:
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNInnerProduct<float>> innerProductOp;
+    std::vector<UMat> umat_blobs;
 #endif
 
     FullyConnectedLayerImpl(const LayerParams& params)
@@ -93,6 +94,12 @@ public:
             biasMat = blobs[1] = blobs[1].reshape(1, 1);
         else
             biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+
+#ifdef HAVE_OPENCL
+        size_t n = blobs.size();
+        umat_blobs.resize(n);
+        for (int i = 0; i < n; i++) blobs[i].copyTo(umat_blobs[i]);
+#endif
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -267,12 +274,8 @@ public:
             innerProductOp = Ptr<OCL4DNNInnerProduct<float>>(new OCL4DNNInnerProduct<float>(config));
         }
 
-        UMat weights, biases;
-        weights = blobs[0].getUMat(ACCESS_READ);
-        biases = blobs[1].getUMat(ACCESS_READ);
-
-        cl_mem weight_mem = (cl_mem)weights.handle(ACCESS_READ);
-        cl_mem bias_mem = (cl_mem)biases.handle(ACCESS_READ);
+        cl_mem weight_mem = (cl_mem)umat_blobs[0].handle(ACCESS_READ);
+        cl_mem bias_mem = (bias) ? (cl_mem)umat_blobs[1].handle(ACCESS_READ) : NULL;
 
         for (size_t i = 0; i < input.size(); i++)
         {
@@ -292,6 +295,7 @@ public:
 
         if (ret) return true;
 
+        UMat& weights = umat_blobs[0];
         UMat biasOnesMat = UMat::ones(outerSize, 1, blobs[0].type());
         for (size_t i = 0; i < input.size(); i++)
         {
@@ -302,7 +306,10 @@ public:
             cv::gemm(srcMat, weights, 1, noArray(), 0, dstMat, GEMM_2_T);
 
             if (bias)
+            {
+                UMat& biases = umat_blobs[1];
                 cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
+            }
         }
 
         return true;

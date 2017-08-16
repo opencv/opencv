@@ -156,6 +156,7 @@ public:
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
+    std::vector<UMat> umat_blobs;
 #endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
@@ -647,7 +648,7 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
-        int group = inputs[0]->size[1] / blobs[0].size[1];
+        int group = inputs[0]->size[1] / umat_blobs[0].size[1];
 
         if (convolutionOp.empty())
         {
@@ -666,12 +667,8 @@ public:
             convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
         }
 
-        UMat weights, biases;
-        weights = blobs[0].getUMat(ACCESS_READ);
-        if (hasBias()) biases = blobs[1].getUMat(ACCESS_READ);
-
-        cl_mem weight_mem = (cl_mem)weights.handle(ACCESS_READ);
-        cl_mem bias_mem = (cl_mem)biases.handle(ACCESS_READ);
+        cl_mem weight_mem = (cl_mem)umat_blobs[0].handle(ACCESS_READ);
+        cl_mem bias_mem = hasBias() ? (cl_mem)umat_blobs[1].handle(ACCESS_READ) : NULL;
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -1261,8 +1258,17 @@ static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const Laye
 
 Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 {
-    Ptr<BaseConvolutionLayer> l(new ConvolutionLayerImpl);
+    ConvolutionLayerImpl* conv_ptr = new ConvolutionLayerImpl;
+    Ptr<BaseConvolutionLayer> l(conv_ptr);
     initConvDeconvLayerFromCaffe(l, params);
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
+    size_t n = params.blobs.size();
+    conv_ptr->umat_blobs.resize(n);
+    for (int i = 0; i < n; i++) params.blobs[i].copyTo(conv_ptr->umat_blobs[i]);
+#endif
+
     return l;
 }
 
