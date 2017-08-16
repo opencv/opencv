@@ -44,10 +44,6 @@ else()
   cmake_minimum_required(VERSION 2.8.12.2)
 endif()
 
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 OLD)
-endif()
-
 if(POLICY CMP0026)
   # silence cmake 3.0+ warnings about reading LOCATION attribute
   cmake_policy(SET CMP0026 OLD)

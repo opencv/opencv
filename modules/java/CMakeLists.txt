@@ -314,18 +314,20 @@ if(BUILD_FAT_JAVA_LIB)
   endif()
   if(APPLE)
     foreach(_dep ${__deps})
-      target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
+      target_link_libraries(${the_module} LINK_PRIVATE -Wl,-force_load "${_dep}")
     endforeach()
   else()
-    target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+    target_link_libraries(${the_module} LINK_PRIVATE -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
   endif()
-  target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
+  target_link_libraries(${the_module} LINK_PRIVATE ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
-  target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+  target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
 
 if(ANDROID)
-  target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
+  target_link_libraries(${the_module} LINK_PUBLIC jnigraphics) # for Mat <=> Bitmap converters
+  target_link_libraries(${the_module} LINK_PUBLIC log dl z)
+  target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_LINKER_LIBS})
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
@@ -343,7 +345,6 @@ set_target_properties(${the_module} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
-    LINK_INTERFACE_LIBRARIES ""
     )
 
 if(WIN32)
