@@ -131,8 +131,7 @@ __kernel void TEMPLATE(sign,Dtype)(const int n, __global const Dtype* x,
                                    const int offx, __global Dtype* y,
                                    const int offy) {
   for (int index = get_global_id(0); index < n; index += get_global_size(0)) {
-    y[index + offy] = (0.0 < x[index + offx])
-        - (x[index + offx] < 0.0);
+    y[index + offy] = sign(x[index + offx]);
   }
 }
 
