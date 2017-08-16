@@ -175,7 +175,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
-        remove(filename.c_str());
+        EXPECT_EQ(0, remove(filename.c_str()));
     }
 }
 
