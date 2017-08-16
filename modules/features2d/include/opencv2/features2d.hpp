@@ -658,13 +658,22 @@ public:
     CV_WRAP virtual int getDiffusivity() const = 0;
 };
 
-/** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13 . :
+/** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13.
 
-@note AKAZE descriptors can only be used with KAZE or AKAZE keypoints. Try to avoid using *extract*
-and *detect* instead of *operator()* due to performance reasons. .. [ANB13] Fast Explicit Diffusion
-for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien
-Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
- */
+@details AKAZE descriptors can only be used with KAZE or AKAZE keypoints. This class is thread-safe.
+
+@note When you need descriptors use Feature2D::detectAndCompute, which
+provides better performance. When using Feature2D::detect followed by
+Feature2D::compute scale space pyramid is computed twice.
+
+@note AKAZE implements T-API. When image is passed as UMat some parts of the algorithm
+will use OpenCL.
+
+@note [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear
+Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In
+British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
+
+*/
 class CV_EXPORTS_W AKAZE : public Feature2D
 {
 public:
