@@ -277,11 +277,13 @@ public:
         cl_mem weight_mem = (cl_mem)umat_blobs[0].handle(ACCESS_READ);
         cl_mem bias_mem = (bias) ? (cl_mem)umat_blobs[1].handle(ACCESS_READ) : NULL;
 
+        UMat biasOnesMat = UMat::ones(outerSize, 1, blobs[0].type());
         for (size_t i = 0; i < input.size(); i++)
         {
             UMat srcMat, dstMat;
             srcMat = input[i]->getUMat(ACCESS_READ);
             dstMat = output[i].getUMat(ACCESS_WRITE);
+            dstMat.setTo(0.0f);
 
             cl_mem in_mem = (cl_mem)srcMat.handle(ACCESS_READ);
             cl_mem out_mem = (cl_mem)dstMat.handle(ACCESS_WRITE);
@@ -291,12 +293,17 @@ public:
                 ret = false;
                 break;
             }
+
+            if (bias && (outerSize > 1))
+            {
+                UMat& biases = umat_blobs[1];
+                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
+            }
         }
 
         if (ret) return true;
 
         UMat& weights = umat_blobs[0];
-        UMat biasOnesMat = UMat::ones(outerSize, 1, blobs[0].type());
         for (size_t i = 0; i < input.size(); i++)
         {
             UMat srcMat, dstMat;
