@@ -123,9 +123,6 @@ if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
 
-#stop automatic dependencies propagation for this module
-set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
-
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 endmacro()
 
