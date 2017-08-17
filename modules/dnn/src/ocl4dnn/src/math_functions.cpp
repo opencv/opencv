@@ -48,6 +48,8 @@
 #include <vector>
 #include "opencl_kernels_dnn.hpp"
 
+using namespace cv;
+
 struct gemm_callback_arg {
     std::vector<cl_event> evs;
     std::vector<cl_mem> imgs;

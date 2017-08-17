@@ -51,6 +51,11 @@
 #include "opencl_kernels_dnn.hpp"
 #include "math_functions.hpp"
 
+#if defined WIN32 || defined _WIN32
+#include <windows.h>
+#include <direct.h>
+#endif
+
 #ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
@@ -116,25 +121,40 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 
     if (std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH")) {
         cache_path_ << std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH");
-    } else if (std::getenv("HOME")) {
-        cache_path_ << std::getenv("HOME");
     }
 
     bool hasCacheDir = false;
-#if defined(__linux__)
+#if defined WIN32 || defined _WIN32
+    if (cache_path_.str().empty() && std::getenv("USERPROFILE"))
+        cache_path_ << std::getenv("USERPROFILE");
+
+    struct _stat file_stat;
+    cache_path_ << "\\spatialkernels\\";
+    hasCacheDir = _stat(cache_path_.str().c_str(), &file_stat) == 0 &&
+                  ((_S_IFDIR & file_stat.st_mode) != 0);
+#else
+    if (cache_path_.str().empty() && std::getenv("HOME"))
+        cache_path_ << std::getenv("HOME");
+
+    struct stat file_stat;
     cache_path_ << "/spatialkernels/";
-    struct stat stat_buf;
-    if (0 != stat(cache_path_.str().c_str(), &stat_buf)) {
-        hasCacheDir = !mkdir(cache_path_.str().c_str(), 0755);
-    } else if (S_ISDIR(stat_buf.st_mode)) {
-        hasCacheDir = true;
+    hasCacheDir = stat(cache_path_.str().c_str(), &file_stat) == 0 &&
+                  S_ISDIR(file_stat.st_mode);
+#endif
+
+    if (!hasCacheDir) {
+#if defined WIN32 || defined _WIN32
+        int result = _mkdir(cache_path_.str().c_str());
+#else
+        int result = mkdir(cache_path_.str().c_str(), 0755);
+#endif
+        hasCacheDir = (result == -1) ? false : true;
     }
-    if (hasCacheDir != true) {
+    if (!hasCacheDir) {
         std::cout << "Failed to create cache directory: "
                   << cache_path_.str()
                   << ", disable auto-tuning." << std::endl;
     }
-#endif
     auto_tuning_ = (getenv("OPENCV_OCL4DNN_ENABLE_AUTO_TUNING") != NULL)
                    && hasCacheDir;
 }
