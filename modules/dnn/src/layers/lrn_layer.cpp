@@ -123,10 +123,7 @@ public:
         inpMat = inputs[0]->getUMat(ACCESS_READ);
         outMat = outputs[0].getUMat(ACCESS_WRITE);
 
-        cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
-        cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
-
-        if (!lrnOp->Forward((float *)in_mem, (float *)out_mem))
+        if (!lrnOp->Forward(inpMat, outMat))
             return false;
 
         return true;

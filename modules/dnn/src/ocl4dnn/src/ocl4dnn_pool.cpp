@@ -92,9 +92,9 @@ OCL4DNNPool<Dtype>::~OCL4DNNPool()
 }
 
 template<typename Dtype>
-bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
-                                Dtype *top_data,
-                                Dtype *top_mask)
+bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
+                                 UMat& top,
+                                 UMat& top_mask)
 {
     bool ret = true;
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -107,7 +107,7 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
     {
     case LIBDNN_POOLING_METHOD_MAX:
         {
-            if (top_mask == NULL && mask_idx_.empty())
+            if (top_mask.empty() && mask_idx_.empty())
             {
                 mask_idx_.create(1, count_, CV_32FC1);
             }
@@ -116,7 +116,7 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
 
             argIdx = 0;
             oclk_max_pool_forward.set(argIdx++, count_);
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) bottom_data);
+            oclk_max_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
             oclk_max_pool_forward.set(argIdx++, batch_size_);
             oclk_max_pool_forward.set(argIdx++, channels_);
             oclk_max_pool_forward.set(argIdx++, height_);
@@ -129,11 +129,11 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
             oclk_max_pool_forward.set(argIdx++, stride_w_);
             oclk_max_pool_forward.set(argIdx++, pad_h_);
             oclk_max_pool_forward.set(argIdx++, pad_w_);
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) top_data);
+            oclk_max_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
             oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? 0 : 1);
             oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? NULL :
                                       (cl_mem) mask_idx_.handle(ACCESS_WRITE));
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) top_mask);
+            oclk_max_pool_forward.set(argIdx++, (cl_mem) top_mask.handle(ACCESS_WRITE));
 
             oclk_max_pool_forward.run(1, global, local, false);
         }
@@ -145,7 +145,7 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
 
             argIdx = 0;
             oclk_ave_pool_forward.set(argIdx++, count_);
-            oclk_ave_pool_forward.set(argIdx++, (cl_mem) bottom_data);
+            oclk_ave_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
             oclk_ave_pool_forward.set(argIdx++, batch_size_);
             oclk_ave_pool_forward.set(argIdx++, channels_);
             oclk_ave_pool_forward.set(argIdx++, height_);
@@ -158,7 +158,7 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
             oclk_ave_pool_forward.set(argIdx++, stride_w_);
             oclk_ave_pool_forward.set(argIdx++, pad_h_);
             oclk_ave_pool_forward.set(argIdx++, pad_w_);
-            oclk_ave_pool_forward.set(argIdx++, (cl_mem) top_data);
+            oclk_ave_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
 
             oclk_ave_pool_forward.run(1, global, local, false);
         }
@@ -170,7 +170,7 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
 
             argIdx = 0;
             oclk_sto_pool_forward.set(argIdx++, count_);
-            oclk_sto_pool_forward.set(argIdx++, (cl_mem) bottom_data);
+            oclk_sto_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
             oclk_sto_pool_forward.set(argIdx++, batch_size_);
             oclk_sto_pool_forward.set(argIdx++, channels_);
             oclk_sto_pool_forward.set(argIdx++, height_);
@@ -181,7 +181,7 @@ bool OCL4DNNPool<Dtype>::Forward(const Dtype *bottom_data,
             oclk_sto_pool_forward.set(argIdx++, kernel_w_);
             oclk_sto_pool_forward.set(argIdx++, stride_h_);
             oclk_sto_pool_forward.set(argIdx++, stride_w_);
-            oclk_sto_pool_forward.set(argIdx++, (cl_mem)top_data);
+            oclk_sto_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
 
             oclk_sto_pool_forward.run(1, global, local, false);
         }

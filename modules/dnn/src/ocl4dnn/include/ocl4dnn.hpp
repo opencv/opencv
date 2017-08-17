@@ -80,9 +80,9 @@ class OCL4DNNConvSpatial
     public:
         explicit OCL4DNNConvSpatial(OCL4DNNConvConfig config);
         ~OCL4DNNConvSpatial();
-        bool Forward(const Dtype* bottom_data, const Dtype* weight,
-                     const Dtype* bias,
-                     Dtype* top_data, int32_t batch_size);
+        bool Forward(const UMat& bottom_data, const UMat& weight,
+                     const UMat& bias,
+                     UMat& top_data, int32_t batch_size);
 
     private:
         struct kernelConfig
@@ -325,9 +325,9 @@ class OCL4DNNPool
     public:
         explicit OCL4DNNPool(OCL4DNNPoolConfig config);
         ~OCL4DNNPool();
-        bool Forward(const Dtype *bottom_data,
-                     Dtype *top_data,
-                     Dtype *top_mask = NULL);
+        bool Forward(const UMat& bottom_data,
+                     UMat& top_data,
+                     UMat& top_mask);
 
     private:
         UMat mask_idx_;
@@ -371,10 +371,10 @@ class OCL4DNNInnerProduct
     public:
         explicit OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config);
         ~OCL4DNNInnerProduct();
-        bool Forward(const Dtype* bottom_data,
-                     const Dtype* weight,
-                     const Dtype* bias,
-                     Dtype* top_data);
+        bool Forward(const UMat& bottom_data,
+                     const UMat& weight,
+                     const UMat& bias,
+                     UMat& top_data);
     private:
         OCL4DNNInnerProductConfig config_;
         int32_t axis_;
@@ -418,10 +418,10 @@ class OCL4DNNLRN
 {
     public:
         explicit OCL4DNNLRN(OCL4DNNLRNConfig config);
-        bool Forward(const Dtype* bottom_data, Dtype* top_data);
+        bool Forward(const UMat& bottom_data, UMat& top_data);
 
     private:
-        void crossChannelForward(const Dtype* bottom_data, Dtype* top_data);
+        void crossChannelForward(const UMat& bottom_data, UMat& top_data);
         LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type_;
         bool phase_test_;
         int32_t size_;
@@ -450,7 +450,7 @@ class OCL4DNNSoftmax
     public:
         explicit OCL4DNNSoftmax(OCL4DNNSoftmaxConfig config);
         ~OCL4DNNSoftmax();
-        bool Forward(const Dtype* bottom_data, Dtype* top_data);
+        bool Forward(const UMat& bottom_data, UMat& top_data);
 
     private:
         int32_t softmax_axis_;

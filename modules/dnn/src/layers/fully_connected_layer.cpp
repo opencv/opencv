@@ -274,10 +274,7 @@ public:
             innerProductOp = Ptr<OCL4DNNInnerProduct<float>>(new OCL4DNNInnerProduct<float>(config));
         }
 
-        cl_mem weight_mem = (cl_mem)umat_blobs[0].handle(ACCESS_READ);
-        cl_mem bias_mem = (bias) ? (cl_mem)umat_blobs[1].handle(ACCESS_READ) : NULL;
-
-        UMat biasOnesMat = UMat::ones(outerSize, 1, blobs[0].type());
+        UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
         for (size_t i = 0; i < input.size(); i++)
         {
             UMat srcMat, dstMat;
@@ -285,10 +282,7 @@ public:
             dstMat = output[i].getUMat(ACCESS_WRITE);
             dstMat.setTo(0.0f);
 
-            cl_mem in_mem = (cl_mem)srcMat.handle(ACCESS_READ);
-            cl_mem out_mem = (cl_mem)dstMat.handle(ACCESS_WRITE);
-
-            if (!innerProductOp->Forward((float *)in_mem, (float *)weight_mem, (float *)bias_mem, (float *)out_mem))
+            if (!innerProductOp->Forward(srcMat, umat_blobs[0], (bias) ? umat_blobs[1] : UMat(), dstMat))
             {
                 ret = false;
                 break;

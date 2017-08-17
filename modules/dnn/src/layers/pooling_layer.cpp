@@ -134,25 +134,21 @@ public:
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {
             UMat inpMat, outMat, maskMat;
-            cl_mem in_mem, out_mem, mask_mem = NULL;
 
             inpMat = inputs[ii]->getUMat(ACCESS_READ);
-            in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
 
             if (type == MAX)
             {
                 outMat = outputs[2 * ii].getUMat(ACCESS_WRITE);
-                out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
                 maskMat = outputs[2 * ii + 1].getUMat(ACCESS_WRITE);
-                mask_mem = (cl_mem)maskMat.handle(ACCESS_WRITE);
             } else {
                 outMat = outputs[ii].getUMat(ACCESS_WRITE);
-                out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+                maskMat = UMat();
             }
 
             CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
-            if (!poolOp->Forward((float *)in_mem, (float *)out_mem, (float *)mask_mem))
+            if (!poolOp->Forward(inpMat, outMat, maskMat))
                 return false;
         }
 

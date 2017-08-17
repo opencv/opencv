@@ -111,10 +111,7 @@ public:
         srcMat = inputs[0]->getUMat(ACCESS_READ);
         dstMat = outputs[0].getUMat(ACCESS_WRITE);
 
-        cl_mem in_mem = (cl_mem)srcMat.handle(ACCESS_READ);
-        cl_mem out_mem = (cl_mem)dstMat.handle(ACCESS_WRITE);
-
-        if (softmaxOp->Forward((float *)in_mem, (float *)out_mem))
+        if (softmaxOp->Forward(srcMat, dstMat))
             return true;
 
         const Mat &src = *inputs[0];

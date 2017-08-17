@@ -1477,16 +1477,16 @@ void OCL4DNNConvSpatial<Dtype>::generateKernelSrc()
 }
 
 template<typename Dtype>
-bool OCL4DNNConvSpatial<Dtype>::Forward(const Dtype* bottom_data,
-                                       const Dtype* weight,
-                                       const Dtype* bias, Dtype* top_data,
-                                       int32_t batch_size)
+bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
+                                        const UMat& weight,
+                                        const UMat& bias, UMat& top,
+                                        int32_t batch_size)
 {
     cl_int ret;
-    bottom_data_ = bottom_data;
-    top_data_ = top_data;
-    weight_ = weight;
-    bias_ = bias;
+    bottom_data_ = (Dtype*)bottom.handle(ACCESS_READ);
+    top_data_ = (Dtype*)top.handle(ACCESS_WRITE);
+    weight_ = (Dtype*)weight.handle(ACCESS_READ);
+    bias_ = (Dtype*)bias.handle(ACCESS_READ);
     num_ = batch_size;
 
     prepareKernel();

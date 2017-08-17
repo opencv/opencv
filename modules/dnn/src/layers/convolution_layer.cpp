@@ -667,9 +667,6 @@ public:
             convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
         }
 
-        cl_mem weight_mem = (cl_mem)umat_blobs[0].handle(ACCESS_READ);
-        cl_mem bias_mem = hasBias() ? (cl_mem)umat_blobs[1].handle(ACCESS_READ) : NULL;
-
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
             UMat inpMat, outMat;
@@ -677,11 +674,9 @@ public:
             outMat = outputs[ii].getUMat(ACCESS_WRITE);
 
             int batch_size = inpMat.size[0];
-            cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
-            cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
 
-            if (!convolutionOp->Forward((float *)in_mem, (float *)weight_mem, (float *)bias_mem,
-                                        (float *)out_mem, batch_size))
+            if (!convolutionOp->Forward(inpMat, umat_blobs[0], hasBias() ? umat_blobs[1] : UMat(),
+                                        outMat, batch_size))
                return false;
         }
         return true;

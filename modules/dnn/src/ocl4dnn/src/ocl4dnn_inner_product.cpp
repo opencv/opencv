@@ -74,22 +74,22 @@ OCL4DNNInnerProduct<Dtype>::~OCL4DNNInnerProduct()
 }
 
 template<typename Dtype>
-bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
-                                         const Dtype* weight,
-                                         const Dtype* bias,
-                                         Dtype* top_data)
+bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
+                                         const UMat& weight,
+                                         const UMat& bias,
+                                         UMat& top)
 {
     if (M_ == 1)
     {
         ocl4dnnGEMV<Dtype>(0, CblasNoTrans, N_,
-                           K_, (Dtype) 1., (cl_mem) weight, 0,
-                           (cl_mem) bottom_data, 0, (Dtype) 0.,
-                           (cl_mem) top_data, 0);
+                           K_, (Dtype) 1., (cl_mem) weight.handle(ACCESS_READ), 0,
+                           (cl_mem) bottom.handle(ACCESS_READ), 0, (Dtype) 0.,
+                           (cl_mem) top.handle(ACCESS_WRITE), 0);
         if (bias_term_)
             ocl4dnnAXPY<Dtype>(0, N_,
                                1,
-                               (cl_mem) bias, 0,
-                               (cl_mem) top_data, 0);
+                               (cl_mem) bias.handle(ACCESS_READ), 0,
+                               (cl_mem) top.handle(ACCESS_WRITE), 0);
     }
     else
     {
@@ -110,7 +110,7 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
                 int padded_width = !transpose_ ? width : (width + ((width & 7) ? 1 : 0));
                 cl_mem weight_image = (cl_mem )weight_image_.handle(ACCESS_WRITE);
                 ocl4dnnGEMMCopyBufferToImage<Dtype>(0,
-                                                    &weight_image, (cl_mem) weight, 0,
+                                                    &weight_image, (cl_mem) weight.handle(ACCESS_READ), 0,
                                                     false, !transpose_,
                                                     true, padded_height, padded_width,
                                                     height, width, width,
@@ -120,10 +120,10 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
 
             ocl4dnnGEMMCommon<Dtype>(0,
                                      transpose_ ? CblasNoTrans : CblasTrans,
-                                     M_, N_, K_, (cl_mem) bottom_data,
-                                     (cl_mem) weight,
+                                     M_, N_, K_, (cl_mem) bottom.handle(ACCESS_READ),
+                                     (cl_mem) weight.handle(ACCESS_READ),
                                      (cl_mem) weight_image_.handle(ACCESS_READ),
-                                     (cl_mem) top_data,
+                                     (cl_mem) top.handle(ACCESS_WRITE),
                                      max_image_size);
         } else
             return false;
