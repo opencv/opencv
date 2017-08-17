@@ -13,9 +13,9 @@ Theory
 
 @note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
 
-### Convolution
+### Correlation
 
-In a very general sense, convolution is an operation between every part of an image and an operator
+In a very general sense, correlation is an operation between every part of an image and an operator
 (kernel).
 
 ### What is a kernel?
@@ -25,10 +25,10 @@ that array, which is typically located at the center.
 
 ![](images/filter_2d_tutorial_kernel_theory.png)
 
-### How does convolution with a kernel work?
+### How does correlation with a kernel work?
 
 Assume you want to know the resulting value of a particular location in the image. The value of the
-convolution is calculated in the following way:
+correlation is calculated in the following way:
 
 -#  Place the kernel anchor on top of a determined pixel, with the rest of the kernel overlaying the
     corresponding local pixels in the image.
@@ -91,7 +91,7 @@ Explanation
     -#  *kernel*: The kernel to be scanned through the image
     -#  *anchor*: The position of the anchor relative to its kernel. The location *Point(-1, -1)*
         indicates the center by default.
-    -#  *delta*: A value to be added to each pixel during the convolution. By default it is \f$0\f$
+    -#  *delta*: A value to be added to each pixel during the correlation. By default it is \f$0\f$
     -#  *BORDER_DEFAULT*: We let this value by default (more details in the following tutorial)
 
 -#  Our program will effectuate a *while* loop, each 500 ms the kernel size of our filter will be

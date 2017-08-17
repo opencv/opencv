@@ -59,6 +59,10 @@ public:
     explicit BRISK_Impl(const std::vector<float> &radiusList, const std::vector<int> &numberList,
         float dMax=5.85f, float dMin=8.2f, const std::vector<int> indexChange=std::vector<int>());
 
+    explicit BRISK_Impl(int thresh, int octaves, const std::vector<float> &radiusList,
+        const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
+        const std::vector<int> indexChange=std::vector<int>());
+
     virtual ~BRISK_Impl();
 
     int descriptorSize() const
@@ -317,6 +321,18 @@ BRISK_Impl::BRISK_Impl(const std::vector<float> &radiusList,
   generateKernel(radiusList, numberList, dMax, dMin, indexChange);
   threshold = 20;
   octaves = 3;
+}
+
+BRISK_Impl::BRISK_Impl(int thresh,
+                       int octaves_in,
+                       const std::vector<float> &radiusList,
+                       const std::vector<int> &numberList,
+                       float dMax, float dMin,
+                       const std::vector<int> indexChange)
+{
+  generateKernel(radiusList, numberList, dMax, dMin, indexChange);
+  threshold = thresh;
+  octaves = octaves_in;
 }
 
 void
@@ -2316,6 +2332,13 @@ Ptr<BRISK> BRISK::create(const std::vector<float> &radiusList, const std::vector
                          float dMax, float dMin, const std::vector<int>& indexChange)
 {
     return makePtr<BRISK_Impl>(radiusList, numberList, dMax, dMin, indexChange);
+}
+
+Ptr<BRISK> BRISK::create(int thresh, int octaves, const std::vector<float> &radiusList,
+                         const std::vector<int> &numberList, float dMax, float dMin,
+                         const std::vector<int>& indexChange)
+{
+    return makePtr<BRISK_Impl>(thresh, octaves, radiusList, numberList, dMax, dMin, indexChange);
 }
 
 }

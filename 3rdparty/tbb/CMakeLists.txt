@@ -67,7 +67,7 @@ else()
                  )
 endif()
 
-if (HAVE_LIBPTHREAD)
+if(HAVE_PTHREAD)
   add_definitions(-DUSE_PTHREAD) #required for Unix
 endif()
 

@@ -579,6 +579,7 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     CV_INSTRUMENT_REGION()
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
+    CV_Assert( winSize.width > 1 && winSize.height > 1 );
 
     _dst.create(winSize, type);
     Mat dst = _dst.getMat();

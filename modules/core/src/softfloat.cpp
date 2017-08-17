@@ -2,7 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-// This file is based on files from package issued with the following license:
+// This file is based on files from packages softfloat and fdlibm
+// issued with the following licenses:
 
 /*============================================================================
 
@@ -38,6 +39,29 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
+
+// FDLIBM licenses:
+
+/*
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunSoft, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+/*
+ * ====================================================
+ * Copyright (C) 2004 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
 
 #include "precomp.hpp"
 
@@ -78,13 +102,18 @@ static inline void raiseFlags( uint_fast8_t /* flags */)
 | Software floating-point rounding mode.
 *----------------------------------------------------------------------------*/
 enum {
-    round_near_even   = 0,
-    round_minMag      = 1,
-    round_min         = 2,
-    round_max         = 3,
-    round_near_maxMag = 4,
-    round_odd         = 5
+    round_near_even   = 0, // round to nearest, with ties to even
+    round_minMag      = 1, // round to minimum magnitude (toward zero)
+    round_min         = 2, // round to minimum (down)
+    round_max         = 3, // round to maximum (up)
+    round_near_maxMag = 4, // round to nearest, with ties to maximum magnitude (away from zero)
+    round_odd         = 5  // round to odd (jamming)
 };
+/* What is round_odd (from SoftFloat manual):
+ * If supported, mode round_odd first rounds a floating-point result to minimum magnitude,
+ * the same as round_minMag, and then, if the result is inexact, the least-significant bit
+ * of the result is set to 1. This rounding mode is also known as jamming.
+ */
 
 //fixed to make softfloat code stateless
 static const uint_fast8_t globalRoundingMode = round_near_even;
@@ -169,11 +198,14 @@ static bool f64_le( float64_t, float64_t );
 static bool f64_lt( float64_t, float64_t );
 
 /*----------------------------------------------------------------------------
-| Ported from OpenCV and added for usability
+| Ported from OpenCV and fdlibm and added for usability
 *----------------------------------------------------------------------------*/
 
 static float32_t f32_powi( float32_t x, int y);
 static float64_t f64_powi( float64_t x, int y);
+static float64_t f64_sin_kernel(float64_t x);
+static float64_t f64_cos_kernel(float64_t x);
+static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n);
 
 static float32_t f32_exp( float32_t x);
 static float64_t f64_exp(float64_t x);
@@ -182,6 +214,8 @@ static float64_t f64_log(float64_t x);
 static float32_t f32_cbrt(float32_t x);
 static float32_t f32_pow( float32_t x, float32_t y);
 static float64_t f64_pow( float64_t x, float64_t y);
+static float64_t f64_sin( float64_t x );
+static float64_t f64_cos( float64_t x );
 
 /*----------------------------------------------------------------------------
 | softfloat and softdouble methods and members
@@ -261,6 +295,9 @@ softfloat  pow( const softfloat&  a, const softfloat&  b) { return f32_pow(a, b)
 softdouble pow( const softdouble& a, const softdouble& b) { return f64_pow(a, b); }
 
 softfloat cbrt(const softfloat& a) { return f32_cbrt(a); }
+
+softdouble sin(const softdouble& a) { return f64_sin(a); }
+softdouble cos(const softdouble& a) { return f64_cos(a); }
 
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 32-bit integer formats that raise an
@@ -773,12 +810,10 @@ static bool f32_eq( float32_t a, float32_t b )
 
     uiA = a.v;
     uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
-        ) {
+    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) )
+    {
+        if (softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB ) )
             raiseFlags( flag_invalid );
-        }
         return false;
     }
     return (uiA == uiB) || ! (uint32_t) ((uiA | uiB)<<1);
@@ -792,15 +827,15 @@ static bool f32_le( float32_t a, float32_t b )
 
     uiA = a.v;
     uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
+    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) )
+    {
         raiseFlags( flag_invalid );
         return false;
     }
     signA = signF32UI( uiA );
     signB = signF32UI( uiB );
-    return
-        (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1)
-            : (uiA == uiB) || (signA ^ (uiA < uiB));
+    return (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1)
+                            : (uiA == uiB) || (signA ^ (uiA < uiB));
 }
 
 static bool f32_lt( float32_t a, float32_t b )
@@ -809,17 +844,16 @@ static bool f32_lt( float32_t a, float32_t b )
     uint_fast32_t uiB;
     bool signA, signB;
 
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
+    uiA = a.v; uiB = b.v;
+    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) )
+    {
         raiseFlags( flag_invalid );
         return false;
     }
     signA = signF32UI( uiA );
     signB = signF32UI( uiB );
-    return
-        (signA != signB) ? signA && ((uint32_t) ((uiA | uiB)<<1) != 0)
-            : (uiA != uiB) && (signA ^ (uiA < uiB));
+    return (signA != signB) ? signA && ((uint32_t) ((uiA | uiB)<<1) != 0)
+                            : (uiA != uiB) && (signA ^ (uiA < uiB));
 }
 
 static float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
@@ -1465,12 +1499,10 @@ static bool f64_eq( float64_t a, float64_t b )
 
     uiA = a.v;
     uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
-        ) {
+    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) )
+    {
+        if ( softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB ) )
             raiseFlags( flag_invalid );
-        }
         return false;
     }
     return (uiA == uiB) || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
@@ -1490,10 +1522,8 @@ static bool f64_le( float64_t a, float64_t b )
     }
     signA = signF64UI( uiA );
     signB = signF64UI( uiB );
-    return
-        (signA != signB)
-            ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-            : (uiA == uiB) || (signA ^ (uiA < uiB));
+    return (signA != signB) ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
+                            : (uiA == uiB) || (signA ^ (uiA < uiB));
 }
 
 static bool f64_lt( float64_t a, float64_t b )
@@ -1510,10 +1540,8 @@ static bool f64_lt( float64_t a, float64_t b )
     }
     signA = signF64UI( uiA );
     signB = signF64UI( uiB );
-    return
-        (signA != signB)
-            ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-            : (uiA != uiB) && (signA ^ (uiA < uiB));
+    return (signA != signB) ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
+                            : (uiA != uiB) && (signA ^ (uiA < uiB));
 }
 
 static float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )
@@ -3940,6 +3968,261 @@ static float64_t f64_powi( float64_t x, int y)
     }
 
     return v;
+}
+
+/*
+ * sin and cos functions taken from fdlibm with original comments
+ * (edited where needed)
+ */
+
+static const float64_t pi2   = float64_t::pi().setExp(2);
+static const float64_t piby2 = float64_t::pi().setExp(0);
+static const float64_t piby4 = float64_t::pi().setExp(-1);
+static const float64_t half  = float64_t::one()/float64_t(2);
+static const float64_t third = float64_t::one()/float64_t(3);
+
+/* __kernel_sin( x, y, iy)
+ * N.B. from OpenCV side: y and iy removed, simplified to polynomial
+ *
+ * kernel sin function on [-pi/4, pi/4], pi/4 ~ 0.7854
+ * Input x is assumed to be bounded by ~pi/4 in magnitude.
+ * Input y is the tail of x.
+ * Input iy indicates whether y is 0. (if iy=0, y assume to be 0).
+ *
+ * Algorithm
+ *  1. Since sin(-x) = -sin(x), we need only to consider positive x.
+ *  2. if x < 2^-27 (hx<0x3e400000 0), return x with inexact if x!=0.
+ *  3. sin(x) is approximated by a polynomial of degree 13 on
+ *     [0,pi/4]
+ *                       3            13
+ *      sin(x) ~ x + S1*x + ... + S6*x
+ *     where
+ *
+ *  |sin(x)         2     4     6     8     10     12  |     -58
+ *  |----- - (1+S1*x +S2*x +S3*x +S4*x +S5*x  +S6*x   )| <= 2
+ *  |  x                                               |
+ *
+ *  4. sin(x+y) = sin(x) + sin'(x')*y
+ *          ~ sin(x) + (1-x*x/2)*y
+ *     For better accuracy, let
+ *           3      2      2      2      2
+ *      r = x *(S2+x *(S3+x *(S4+x *(S5+x *S6))))
+ *     then                   3    2
+ *      sin(x) = x + (S1*x + (x *(r-y/2)+y))
+ */
+
+static const float64_t
+// -1/3!  = -1/6
+S1  = float64_t::fromRaw( 0xBFC5555555555549 ),
+//  1/5!  =  1/120
+S2  = float64_t::fromRaw( 0x3F8111111110F8A6 ),
+// -1/7!  = -1/5040
+S3  = float64_t::fromRaw( 0xBF2A01A019C161D5 ),
+//  1/9!  =  1/362880
+S4  = float64_t::fromRaw( 0x3EC71DE357B1FE7D ),
+// -1/11! = -1/39916800
+S5  = float64_t::fromRaw( 0xBE5AE5E68A2B9CEB ),
+//  1/13! =  1/6227020800
+S6  = float64_t::fromRaw( 0x3DE5D93A5ACFD57C );
+
+static float64_t f64_sin_kernel(float64_t x)
+{
+    if(x.getExp() < -27)
+    {
+        if(x != x.zero()) raiseFlags(flag_inexact);
+        return x;
+    }
+
+    float64_t z = x*x;
+    return x*mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z,
+                    S6, S5), S4), S3), S2), S1), x.one());
+}
+
+/*
+ * __kernel_cos( x,  y )
+ * N.B. from OpenCV's side: y removed, simplified to one polynomial
+ *
+ * kernel cos function on [-pi/4, pi/4], pi/4 ~ 0.785398164
+ * Input x is assumed to be bounded by ~pi/4 in magnitude.
+ * Input y is the tail of x.
+ *
+ * Algorithm
+ *  1. Since cos(-x) = cos(x), we need only to consider positive x.
+ *  2. if x < 2^-27 (hx<0x3e400000 0), return 1 with inexact if x!=0.
+ *  3. cos(x) is approximated by a polynomial of degree 14 on
+ *     [0,pi/4]
+ *                           4            14
+ *      cos(x) ~ 1 - x*x/2 + C1*x + ... + C6*x
+ *     where the remez error is
+ *
+ *  |              2     4     6     8     10    12     14 |     -58
+ *  |cos(x)-(1-.5*x +C1*x +C2*x +C3*x +C4*x +C5*x  +C6*x  )| <= 2
+ *  |                                                      |
+ *
+ *                 4     6     8     10    12     14
+ *  4. let r = C1*x +C2*x +C3*x +C4*x +C5*x  +C6*x  , then
+ *         cos(x) = 1 - x*x/2 + r
+ *     since cos(x+y) ~ cos(x) - sin(x)*y
+ *            ~ cos(x) - x*y,
+ *     a correction term is necessary in cos(x) and hence
+ *      cos(x+y) = 1 - (x*x/2 - (r - x*y))
+ *
+ * N.B. The following part was removed since we have enough precision
+ *
+ *     For better accuracy when x > 0.3, let qx = |x|/4 with
+ *     the last 32 bits mask off, and if x > 0.78125, let qx = 0.28125.
+ *     Then
+ *      cos(x+y) = (1-qx) - ((x*x/2-qx) - (r-x*y)).
+ *         Note that 1-qx and (x*x/2-qx) is EXACT here, and the
+ *     magnitude of the latter is at least a quarter of x*x/2,
+ *     thus, reducing the rounding error in the subtraction.
+ */
+
+static const float64_t
+//  1/4!  =  1/24
+C1  = float64_t::fromRaw( 0x3FA555555555554C ),
+// -1/6!  = -1/720
+C2  = float64_t::fromRaw( 0xBF56C16C16C15177 ),
+//  1/8!  =  1/40320
+C3  = float64_t::fromRaw( 0x3EFA01A019CB1590 ),
+// -1/10! = -1/3628800
+C4  = float64_t::fromRaw( 0xBE927E4F809C52AD ),
+//  1/12! =  1/479001600
+C5  = float64_t::fromRaw( 0x3E21EE9EBDB4B1C4 ),
+// -1/14! = -1/87178291200
+C6  = float64_t::fromRaw( 0xBDA8FAE9BE8838D4 );
+
+static float64_t f64_cos_kernel(float64_t x)
+{
+    if(x.getExp() < -27)
+    {
+        if(x != x.zero()) raiseFlags(flag_inexact);
+        return x.one();
+    }
+
+    float64_t z = x*x;
+    return mulAdd(mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z, mulAdd(z,
+                  C6, C5), C4), C3), C2), C1), -half), z, x.one());
+}
+
+static void f64_sincos_reduce(const float64_t& x, float64_t& y, int& n)
+{
+    if(abs(x) < piby4)
+    {
+        n = 0, y = x;
+    }
+    else
+    {
+        /* argument reduction needed */
+        float64_t p = f64_rem(x, pi2);
+        float64_t v = p - float64_t::eps().setExp(-10);
+        if(abs(v) <= piby4)
+        {
+            n = 0; y = p;
+        }
+        else if(abs(v) <= (float64_t(3)*piby4))
+        {
+            n = (p > 0) ? 1 : 3;
+            y = (p > 0) ? p - piby2 : p + piby2;
+            if(p > 0) n = 1, y = p - piby2;
+            else      n = 3, y = p + piby2;
+        }
+        else
+        {
+            n = 2;
+            y = (p > 0) ? p - p.pi() : p + p.pi();
+        }
+    }
+}
+
+/* sin(x)
+ * Return sine function of x.
+ *
+ * kernel function:
+ *  __kernel_sin        ... sine function on [-pi/4,pi/4]
+ *  __kernel_cos        ... cose function on [-pi/4,pi/4]
+ *
+ * Method.
+ *      Let S,C and T denote the sin, cos and tan respectively on
+ *  [-PI/4, +PI/4]. Reduce the argument x to y = x-k*pi/2
+ *  in [-pi/4 , +pi/4], and let n = k mod 4.
+ *  We have
+ *
+ *      n        sin(x)    cos(x)    tan(x)
+ *     ----------------------------------------------------------
+ *      0          S       C         T
+ *      1          C      -S        -1/T
+ *      2         -S      -C         T
+ *      3         -C       S        -1/T
+ *     ----------------------------------------------------------
+ *
+ * Special cases:
+ *      Let trig be any of sin, cos, or tan.
+ *      trig(+-INF)  is NaN, with signals;
+ *      trig(NaN)    is that NaN;
+ *
+ * Accuracy:
+ *  TRIG(x) returns trig(x) nearly rounded
+ */
+
+static float64_t f64_sin( float64_t x )
+{
+    if(x.isInf() || x.isNaN()) return x.nan();
+
+    float64_t y; int n;
+    f64_sincos_reduce(x, y, n);
+    switch (n)
+    {
+    case 0:  return  f64_sin_kernel(y);
+    case 1:  return  f64_cos_kernel(y);
+    case 2:  return -f64_sin_kernel(y);
+    default: return -f64_cos_kernel(y);
+    }
+}
+
+/* cos(x)
+ * Return cosine function of x.
+ *
+ * kernel function:
+ *  __kernel_sin        ... sine function on [-pi/4,pi/4]
+ *  __kernel_cos        ... cosine function on [-pi/4,pi/4]
+ *
+ * Method.
+ *      Let S,C and T denote the sin, cos and tan respectively on
+ *  [-PI/4, +PI/4]. Reduce the argument x to y = x-k*pi/2
+ *  in [-pi/4 , +pi/4], and let n = k mod 4.
+ *  We have
+ *
+ *      n       sin(x)      cos(x)       tan(x)
+ *     ----------------------------------------------------------
+ *      0       S            C           T
+ *      1       C           -S          -1/T
+ *      2      -S           -C           T
+ *      3      -C            S          -1/T
+ *     ----------------------------------------------------------
+ *
+ * Special cases:
+ *      Let trig be any of sin, cos, or tan.
+ *      trig(+-INF)  is NaN, with signals;
+ *      trig(NaN)    is that NaN;
+ *
+ * Accuracy:
+ *  TRIG(x) returns trig(x) nearly rounded
+ */
+
+static float64_t f64_cos( float64_t x )
+{
+    if(x.isInf() || x.isNaN()) return x.nan();
+
+    float64_t y; int n;
+    f64_sincos_reduce(x, y, n);
+    switch (n)
+    {
+    case 0:  return  f64_cos_kernel(y);
+    case 1:  return -f64_sin_kernel(y);
+    case 2:  return -f64_cos_kernel(y);
+    default: return  f64_sin_kernel(y);
+    }
 }
 
 }
