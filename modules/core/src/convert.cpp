@@ -86,12 +86,6 @@ static MergeFunc getMergeFunc(int depth)
 }
 
 #ifdef HAVE_IPP
-#ifdef HAVE_IPP_IW
-extern "C" {
-IW_DECL(IppStatus) llwiCopySplit(const void *pSrc, int srcStep, void* const pDstOrig[], int dstStep,
-                                   IppiSize size, int typeSize, int channels);
-}
-#endif
 
 namespace cv {
 static bool ipp_split(const Mat& src, Mat* mv, int channels)
@@ -114,7 +108,7 @@ static bool ipp_split(const Mat& src, Mat* mv, int channels)
                 return false;
         }
 
-        return CV_INSTRUMENT_FUN_IPP(llwiCopySplit, src.ptr(), (int)src.step, dstPtrs, (int)dstStep, size, (int)src.elemSize1(), channels) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(llwiCopySplit, src.ptr(), (int)src.step, dstPtrs, (int)dstStep, size, (int)src.elemSize1(), channels, 0) >= 0;
     }
     else
     {
@@ -132,7 +126,7 @@ static bool ipp_split(const Mat& src, Mat* mv, int channels)
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if(CV_INSTRUMENT_FUN_IPP(llwiCopySplit, ptrs[0], 0, (void**)&ptrs[1], 0, size, (int)src.elemSize1(), channels) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(llwiCopySplit, ptrs[0], 0, (void**)&ptrs[1], 0, size, (int)src.elemSize1(), channels, 0) < 0)
                 return false;
         }
         return true;
@@ -273,12 +267,6 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 }
 
 #ifdef HAVE_IPP
-#ifdef HAVE_IPP_IW
-extern "C" {
-IW_DECL(IppStatus) llwiCopyMerge(const void* const pSrc[], int srcStep, void *pDst, int dstStep,
-    IppiSize size, int typeSize, int channels);
-}
-#endif
 
 namespace cv {
 static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
@@ -301,7 +289,7 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
                 return false;
         }
 
-        return CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, srcPtrs, (int)srcStep, dst.ptr(), (int)dst.step, size, (int)mv[0].elemSize1(), channels) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, srcPtrs, (int)srcStep, dst.ptr(), (int)dst.step, size, (int)mv[0].elemSize1(), channels, 0) >= 0;
     }
     else
     {
@@ -319,7 +307,7 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if(CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, (const void**)&ptrs[1], 0, ptrs[0], 0, size, (int)mv[0].elemSize1(), channels) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, (const void**)&ptrs[1], 0, ptrs[0], 0, size, (int)mv[0].elemSize1(), channels, 0) < 0)
                 return false;
         }
         return true;
@@ -820,16 +808,10 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 }
 
 #ifdef HAVE_IPP
-#ifdef HAVE_IPP_IW
-extern "C" {
-IW_DECL(IppStatus) llwiCopyMixed(const void *pSrc, int srcStep, int srcChannels, void *pDst, int dstStep, int dstChannels,
-    IppiSize size, int typeSize, int channelsShift);
-}
-#endif
 
 namespace cv
 {
-static bool ipp_extractInsertChannel(const Mat &src, Mat &dst, int channel)
+static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 {
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
@@ -840,14 +822,11 @@ static bool ipp_extractInsertChannel(const Mat &src, Mat &dst, int channel)
     if(src.dims != dst.dims)
         return false;
 
-    if(srcChannels == dstChannels || (srcChannels != 1 && dstChannels != 1))
-        return false;
-
     if(src.dims <= 2)
     {
         IppiSize size = ippiSize(src.size());
 
-        return CV_INSTRUMENT_FUN_IPP(llwiCopyMixed, src.ptr(), (int)src.step, srcChannels, dst.ptr(), (int)dst.step, dstChannels, size, (int)src.elemSize1(), channel) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(llwiCopyChannel, src.ptr(), (int)src.step, srcChannels, channel, dst.ptr(), (int)dst.step, dstChannels, 0, size, (int)src.elemSize1()) >= 0;
     }
     else
     {
@@ -859,7 +838,45 @@ static bool ipp_extractInsertChannel(const Mat &src, Mat &dst, int channel)
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if(CV_INSTRUMENT_FUN_IPP(llwiCopyMixed, ptrs[0], 0, srcChannels, ptrs[1], 0, dstChannels, size, (int)src.elemSize1(), channel) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(llwiCopyChannel, ptrs[0], 0, srcChannels, channel, ptrs[1], 0, dstChannels, 0, size, (int)src.elemSize1()) < 0)
+                return false;
+        }
+        return true;
+    }
+#else
+    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(channel);
+    return false;
+#endif
+}
+
+static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
+{
+#ifdef HAVE_IPP_IW
+    CV_INSTRUMENT_REGION_IPP()
+
+    int srcChannels = src.channels();
+    int dstChannels = dst.channels();
+
+    if(src.dims != dst.dims)
+        return false;
+
+    if(src.dims <= 2)
+    {
+        IppiSize size = ippiSize(src.size());
+
+        return CV_INSTRUMENT_FUN_IPP(llwiCopyChannel, src.ptr(), (int)src.step, srcChannels, 0, dst.ptr(), (int)dst.step, dstChannels, channel, size, (int)src.elemSize1()) >= 0;
+    }
+    else
+    {
+        const Mat      *arrays[] = {&dst, NULL};
+        uchar          *ptrs[2]  = {NULL};
+        NAryMatIterator it(arrays, ptrs);
+
+        IppiSize size = {(int)it.size, 1};
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        {
+            if(CV_INSTRUMENT_FUN_IPP(llwiCopyChannel, ptrs[0], 0, srcChannels, 0, ptrs[1], 0, dstChannels, channel, size, (int)src.elemSize1()) < 0)
                 return false;
         }
         return true;
@@ -893,7 +910,7 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
     _dst.create(src.dims, &src.size[0], depth);
     Mat dst = _dst.getMat();
 
-    CV_IPP_RUN_FAST(ipp_extractInsertChannel(src, dst, coi))
+    CV_IPP_RUN_FAST(ipp_extractChannel(src, dst, coi))
 
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }
@@ -917,7 +934,7 @@ void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
-    CV_IPP_RUN_FAST(ipp_extractInsertChannel(src, dst, coi))
+    CV_IPP_RUN_FAST(ipp_insertChannel(src, dst, coi))
 
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }
@@ -5152,7 +5169,7 @@ static bool ipp_convertTo(Mat &src, Mat &dst, double alpha, double beta)
             iwSrc.Init(ippiSize(sz), srcDepth, 1, NULL, (void*)src.ptr(), src.step);
             iwDst.Init(ippiSize(sz), dstDepth, 1, NULL, (void*)dst.ptr(), dst.step);
 
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwSrc, &iwDst, alpha, beta, mode);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwDst, alpha, beta, ::ipp::IwiScaleParams(mode));
         }
         else
         {
@@ -5168,7 +5185,7 @@ static bool ipp_convertTo(Mat &src, Mat &dst, double alpha, double beta)
                 iwSrc.m_ptr  = ptrs[0];
                 iwDst.m_ptr  = ptrs[1];
 
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwSrc, &iwDst, alpha, beta, mode);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwDst, alpha, beta, ::ipp::IwiScaleParams(mode));
             }
         }
     }

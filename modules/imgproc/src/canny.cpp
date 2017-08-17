@@ -95,7 +95,7 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
             ippiGetImage(dy_, iwSrcDy);
             ippiGetImage(dst, iwDst);
 
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, &iwSrcDx, &iwSrcDy, &iwDst, norm, low, high);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
         }
         catch (::ipp::IwException ex)
         {
@@ -121,7 +121,7 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
             ippiGetImage(src, iwSrc);
             ippiGetImage(dst, iwDst);
 
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, &iwSrc, &iwDst, ippFilterSobel, kernel, norm, low, high, ippBorderRepl);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, iwSrc, iwDst, low, high, ::ipp::IwiFilterCannyParams(ippFilterSobel, kernel, norm), ippBorderRepl);
         }
         catch (::ipp::IwException)
         {

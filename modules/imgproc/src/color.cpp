@@ -469,11 +469,32 @@ static ippiGeneralFunc ippiRGB2GrayC4Tab[] =
     0, (ippiGeneralFunc)ippiRGBToGray_32f_AC4C1R, 0, 0
 };
 
-static ippiGeneralFunc ippiCopyP3C3RTab[] =
+
+static IppStatus ippiGrayToRGB_C1C3R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize)
 {
-    (ippiGeneralFunc)ippiCopy_8u_P3C3R, 0, (ippiGeneralFunc)ippiCopy_16u_P3C3R, 0,
-    0, (ippiGeneralFunc)ippiCopy_32f_P3C3R, 0, 0
-};
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
+}
+static IppStatus ippiGrayToRGB_C1C3R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
+}
+static IppStatus ippiGrayToRGB_C1C3R(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, IppiSize roiSize)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_32f_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
+}
+
+static IppStatus ippiGrayToRGB_C1C4R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize, Ipp8u  aval)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
+}
+static IppStatus ippiGrayToRGB_C1C4R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize, Ipp16u aval)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
+}
+static IppStatus ippiGrayToRGB_C1C4R(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, IppiSize roiSize, Ipp32f aval)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_32f_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
+}
 
 #if !IPP_DISABLE_RGB_XYZ
 static ippiGeneralFunc ippiRGB2XYZTab[] =
@@ -580,48 +601,31 @@ private:
     Ipp32f coeffs[3];
 };
 
+template <typename T>
 struct IPPGray2BGRFunctor
 {
-    IPPGray2BGRFunctor(ippiGeneralFunc _func) :
-        ippiGrayToBGR(_func)
-    {
-    }
+    IPPGray2BGRFunctor(){}
 
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        if (ippiGrayToBGR == 0)
-            return false;
-
-        const void* srcarray[3] = { src, src, src };
-        return CV_INSTRUMENT_FUN_IPP(ippiGrayToBGR, srcarray, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
+        return ippiGrayToRGB_C1C3R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows)) >= 0;
     }
-private:
-    ippiGeneralFunc ippiGrayToBGR;
 };
 
+template <typename T>
 struct IPPGray2BGRAFunctor
 {
-    IPPGray2BGRAFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _depth) :
-        ippiColorConvertGeneral(_func1), ippiColorConvertReorder(_func2), depth(_depth)
+    IPPGray2BGRAFunctor()
     {
+        alpha = ColorChannel<T>::max();
     }
 
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        if (ippiColorConvertGeneral == 0 || ippiColorConvertReorder == 0)
-            return false;
-
-        const void* srcarray[3] = { src, src, src };
-        Mat temp(rows, cols, CV_MAKETYPE(depth, 3));
-        if(CV_INSTRUMENT_FUN_IPP(ippiColorConvertGeneral, srcarray, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
-            return false;
-        int order[4] = {0, 1, 2, 3};
-        return CV_INSTRUMENT_FUN_IPP(ippiColorConvertReorder, temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return ippiGrayToRGB_C1C4R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows), alpha) >= 0;
     }
-private:
-    ippiGeneralFunc ippiColorConvertGeneral;
-    ippiReorderFunc ippiColorConvertReorder;
-    int depth;
+
+    T alpha;
 };
 
 struct IPPReorderGeneralFunctor
@@ -9744,18 +9748,27 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
     CV_IPP_CHECK()
     {
+        bool ippres = false;
         if(dcn == 3)
         {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                            IPPGray2BGRFunctor(ippiCopyP3C3RTab[depth])) )
-                return;
+            if( depth == CV_8U )
+                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp8u>());
+            else if( depth == CV_16U )
+                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp16u>());
+            else
+                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp32f>());
         }
         else if(dcn == 4)
         {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                            IPPGray2BGRAFunctor(ippiCopyP3C3RTab[depth], ippiSwapChannelsC3C4RTab[depth], depth)) )
-                return;
+            if( depth == CV_8U )
+                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRAFunctor<Ipp8u>());
+            else if( depth == CV_16U )
+                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRAFunctor<Ipp16u>());
+            else
+                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRAFunctor<Ipp32f>());
         }
+        if(ippres)
+            return;
     }
 #endif
 

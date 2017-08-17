@@ -3078,6 +3078,16 @@ void printVersionInfo(bool useStdOut)
     ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
     if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
 #endif
+
+#ifdef HAVE_IPP
+    const char * ipp_optimization = cv::ipp::useIPP()? "enabled" : "disabled";
+    ::testing::Test::RecordProperty("cv_ipp_optimization", ipp_optimization);
+    if (useStdOut) std::cout << "Intel(R) IPP optimization: " << ipp_optimization << std::endl;
+
+    cv::String ippVer = cv::ipp::getIppVersion();
+    ::testing::Test::RecordProperty("cv_ipp_version", ippVer);
+    if(useStdOut) std::cout << "Intel(R) IPP version: " << ippVer.c_str() << std::endl;
+#endif
 }
 
 
