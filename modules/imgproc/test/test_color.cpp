@@ -2369,14 +2369,15 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
 
     RNG rng(0);
     // blueIdx x srgb x direction
-    for(int c = 0; c < 8; c++)
+    bool next = true;
+    for(int c = 0; next && c < 8; c++)
     {
         int v = c;
         int  blueIdx = (v % 2 != 0) ? 2 : 0; v /=2;
         bool    srgb = (v % 2 == 0); v /= 2;
         bool forward = (v % 2 == 0);
 
-        for(int iter = 0; iter < nIterations; iter++)
+        for(int iter = 0; next && iter < nIterations; iter++)
         {
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
@@ -2392,7 +2393,6 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
 
                 vector<uchar> goldBuf(probe.cols*4);
                 uchar* goldRow = &goldBuf[0];
-                bool next = true;
                 for(int y = 0; next && y < probe.rows; y++)
                 {
                     uchar* probeRow = probe.ptr(y);
