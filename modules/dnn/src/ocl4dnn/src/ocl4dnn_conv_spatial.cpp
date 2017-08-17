@@ -112,27 +112,31 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     output_w_ = im_out_shape_[1];
     bottom_dim_ = channels_ * in_spatial_dim_;
     top_dim_ = num_output_ * out_spatial_dim_;
+    auto_tuning_ = false;
 
-    if (std::getenv("HOME")) {
-        cache_path_ << std::getenv("HOME") << "/.cache/clCaffe";
+    if (std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH")) {
+        cache_path_ << std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH");
+    } else if (std::getenv("HOME")) {
+        cache_path_ << std::getenv("HOME");
     }
-    cache_path_ << "/spatialkernels/";
 
-#if defined(__linux__)
-    struct stat stat_buf;
     bool hasCacheDir = false;
+#if defined(__linux__)
+    cache_path_ << "/spatialkernels/";
+    struct stat stat_buf;
     if (0 != stat(cache_path_.str().c_str(), &stat_buf)) {
         hasCacheDir = !mkdir(cache_path_.str().c_str(), 0755);
     } else if (S_ISDIR(stat_buf.st_mode)) {
         hasCacheDir = true;
     }
-
     if (hasCacheDir != true) {
-        std::cout << "Failed to create cache directory, "
-                  << "will tune again for next running" << std::endl;
-        return;
+        std::cout << "Failed to create cache directory: "
+                  << cache_path_.str()
+                  << ", disable auto-tuning." << std::endl;
     }
 #endif
+    auto_tuning_ = (getenv("OPENCV_OCL4DNN_ENABLE_AUTO_TUNING") != NULL)
+                   && hasCacheDir;
 }
 
 template<typename Dtype>
@@ -2070,7 +2074,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const float *bottom,
     cv::ocl::Timer timer;
     timer.start();
     cl_int err;
-    dbgPrint(std::cout << "Bechmarking kernel: " << config->kernelName << std::endl);
+    dbgPrint(std::cout << "Benchmarking kernel: " << config->kernelName << std::endl);
     tuned_ = true;
     int loop_cnt = 4;
     for (int i = 0; i < loop_cnt; i++) {
@@ -2392,8 +2396,7 @@ template<>
 void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top,
                                                  const float *verify_blob)
 {
-    char *auto_tuning = getenv("OPENCV_OPENCL_ENABLE_PROFILING");
-    if (auto_tuning && ocl::Device::getDefault().intelSubgroupsSupport()) {
+    if (auto_tuning_ && ocl::Device::getDefault().intelSubgroupsSupport()) {
         /* IDLF kernels are using Intel specific extension which make
            them intel only. */
         // Generates static key_
@@ -2538,7 +2541,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
         dbgPrint(std::cout << "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
                  "> passed verification" << std::endl);
     } else {
-        if (auto_tuning)
+        if (auto_tuning_)
             dbgPrint(std::cout << "Verification was not successful, " <<
                      "fallback to basic kernel" << std::endl);
         else
@@ -2566,7 +2569,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
 
     tuned_ = true;
 
-    if (auto_tuning) {
+    if (auto_tuning_) {
         std::string outputFile;
         outputFile = cache_path_.str() + key_;
         std::ifstream cachedKernel(outputFile.c_str());

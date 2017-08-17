@@ -290,6 +290,7 @@ class OCL4DNNConvSpatial
         std::string options_;
         std::string kernel_;
         int32_t prev_kernel_type_;
+        bool auto_tuning_;
 };
 
 typedef enum {
