@@ -3101,7 +3101,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
 #if ARITHM_USE_IPP
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, src1, len*sizeof(uchar), src2, len*sizeof(uchar), ippiSize(len, 1), &r) >= 0, r);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, src1, len*sizeof(uchar), src2, len*sizeof(uchar), ippiSize(len, 1), &r) >= 0, r);
 #endif
     int i = 0;
 
