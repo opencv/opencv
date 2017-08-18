@@ -58,6 +58,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_basic_geometric_drawing
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
