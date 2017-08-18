@@ -2678,6 +2678,7 @@ bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
                 clReleaseMemObject((cl_mem)swizzled_weights_);
             swizzled_weights_ = NULL;
         }
+        tuned_ = true;
         return true;
     }
     else
