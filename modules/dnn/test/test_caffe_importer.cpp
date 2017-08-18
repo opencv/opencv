@@ -84,6 +84,8 @@ TEST(Reproducibility_AlexNet, Accuracy)
     Mat out = net.forward("prob");
     Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
     normAssert(ref, out);
+    // Network must produce the same output if input isn't changed.
+    normAssert(ref, net.forward("prob"), "Second run");
 }
 
 #if !defined(_WIN32) || defined(_WIN64)

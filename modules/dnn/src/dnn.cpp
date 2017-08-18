@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include "op_halide.hpp"
 #include "halide_scheduler.hpp"
+#include "memory_manager.hpp"
 #include <set>
 #include <algorithm>
 #include <iostream>
@@ -279,233 +280,6 @@ private:
     std::vector<String> outNames;
 };
 
-struct BlobManager
-{
-public:
-    // Increase references counter to layer output.
-    void addReference(const LayerPin& lp)
-    {
-        std::map<LayerPin, int>::iterator it = refCounter.find(lp);
-        if (it == refCounter.end())
-            refCounter[lp] = 1;
-        else
-            it->second += 1;
-    }
-
-    void addReferences(const std::vector<LayerPin>& pins)
-    {
-        for (int i = 0; i < pins.size(); i++)
-        {
-            addReference(pins[i]);
-        }
-    }
-
-    // Returns number of references to allocated memory that used in specific
-    // layer blob.
-    int numReferences(const LayerPin& lp)
-    {
-        std::map<LayerPin, LayerPin>::iterator mapIt = reuseMap.find(lp);
-        CV_Assert(mapIt != reuseMap.end());
-        LayerPin memHost = mapIt->second;
-
-        std::map<LayerPin, int>::iterator refIt = refCounter.find(memHost);
-        CV_Assert(refIt != refCounter.end());
-        return refIt->second;
-    }
-
-    // Reuse data allocated in <host> inside the <user> blob.
-    void reuse(const LayerPin& host, const LayerPin& user)
-    {
-        CV_Assert(reuseMap.find(user) == reuseMap.end());
-        CV_Assert(reuseMap.find(host) != reuseMap.end());
-        LayerPin memHost = reuseMap[host];
-        reuseMap[user] = memHost;
-        if (refCounter.find(memHost) != refCounter.end())
-        {
-            std::map<LayerPin, int>::iterator userRefIt = refCounter.find(user);
-            if (userRefIt != refCounter.end())
-            {
-                refCounter[memHost] += userRefIt->second;
-                refCounter.erase(userRefIt);
-            }
-            else
-                refCounter[memHost] += 1;
-        }
-    }
-
-    // Decrease references counter to allocated memory inside specific blob.
-    void releaseReference(const LayerPin& lp)
-    {
-        std::map<LayerPin, LayerPin>::iterator mapIt = reuseMap.find(lp);
-        CV_Assert(mapIt != reuseMap.end());
-
-        std::map<LayerPin, int>::iterator refIt = refCounter.find(mapIt->second);
-        CV_Assert(refIt != refCounter.end());
-        CV_Assert(refIt->second > 0);
-        refIt->second -= 1;
-    }
-
-    void releaseReferences(const std::vector<LayerPin>& pins)
-    {
-        for (int i = 0; i < pins.size(); i++)
-        {
-            releaseReference(pins[i]);
-        }
-    }
-
-    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool force)
-    {
-        Mat bestBlob;
-        LayerPin bestBlobPin;
-
-        if( !force )
-        {
-            std::map<LayerPin, Mat>::iterator hostIt;
-            std::map<LayerPin, int>::iterator refIt;
-
-            const int targetTotal = total(shape);
-            int bestBlobTotal = INT_MAX;
-
-            for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
-            {
-                refIt = refCounter.find(hostIt->first);
-                // Use only blobs that had references before because if not,
-                // it might be used as output.
-                if (refIt != refCounter.end() && refIt->second == 0)
-                {
-                    Mat& unusedBlob = hostIt->second;
-                    if (unusedBlob.total() >= targetTotal &&
-                        unusedBlob.total() < bestBlobTotal)
-                    {
-                        bestBlobPin = hostIt->first;
-                        bestBlob = unusedBlob;
-                        bestBlobTotal = unusedBlob.total();
-                    }
-                }
-            }
-        }
-        if (!bestBlob.empty())
-        {
-            reuse(bestBlobPin, lp);
-            dst = Mat(shape, CV_32F, bestBlob.data);
-        }
-        else
-        {
-            // if dst already has been allocated with total(shape) elements,
-            // it won't be recrreated and pointer of dst.data remains the same.
-            dst.create(shape, CV_32F);
-            addHost(lp, dst);
-        }
-    }
-
-    void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes,
-                               std::vector<LayerPin>& pinsForInternalBlobs,
-                               bool maximizeReuse)
-    {
-        CV_TRACE_FUNCTION();
-
-        pinsForInternalBlobs.clear();
-
-        std::vector<Mat>& outputBlobs = ld.outputBlobs,
-                &internalBlobs = ld.internals;
-
-        const ShapesVec& outShapes = layerShapes.out,
-                internalShapes = layerShapes.internal;
-
-        outputBlobs.resize(std::max((size_t)1, outShapes.size())); //layer produce at least one output blob
-        internalBlobs.resize(internalShapes.size());
-
-        CV_Assert(ld.requiredOutputs.size() <= outShapes.size());
-
-        // Check that layer could work in-place.
-        bool inPlace = false;
-        if (layerShapes.supportInPlace)
-        {
-            if (ld.inputBlobs.size() == 1)
-            {
-                // Get number of references to the input memory.
-                int numRef = numReferences(ld.inputBlobsId[0]);
-                // If current layer is one and only customer of this blob.
-                inPlace = numRef == 1;
-            }
-        }
-
-        ShapesVec shapes(outShapes);
-        shapes.insert(shapes.end(), internalShapes.begin(), internalShapes.end());
-        std::vector<Mat*> blobs;
-        for(int i = 0; i < outputBlobs.size(); i++)
-        {
-            blobs.push_back(&outputBlobs[i]);
-        }
-
-        for(int i = 0; i < internalBlobs.size(); i++)
-        {
-            blobs.push_back(&internalBlobs[i]);
-            if (total(internalShapes[i]))
-            {
-                pinsForInternalBlobs.push_back(LayerPin(ld.id, ld.outputBlobs.size() + i));
-            }
-        }
-
-        addReferences(pinsForInternalBlobs);
-
-        std::map<int, std::vector<int> > idxSizes;
-        for(int i = 0; i < shapes.size(); i++)
-        {
-            idxSizes[total(shapes[i])].push_back(i);
-        }
-
-        std::map<int, std::vector<int> >::reverse_iterator it;
-        bool force = !maximizeReuse && ld.inputBlobsId.size() > 1;
-        for(it = idxSizes.rbegin(); it != idxSizes.rend(); it++)
-        {
-            for(int j = 0; j < it->second.size(); j++)
-            {
-                int index = it->second[j];
-                if (total(shapes[index]))
-                {
-                    LayerPin blobPin(ld.id, index);
-                    if (index < outShapes.size() && inPlace && !force)
-                    {
-                        CV_Assert(ld.inputBlobs[0]->total() == total(shapes[index]));
-                        ld.outputBlobs[index] = ld.inputBlobs[0]->reshape(1, shapes[index]);
-                        reuse(ld.inputBlobsId[0], blobPin);
-                    }
-                    else
-                    {
-                        reuseOrCreate(shapes[index], blobPin, *blobs[index], force);
-                    }
-                }
-            }
-        }
-    }
-
-    // Clear internal state. Calls before an every reallocation.
-    void reset()
-    {
-        CV_TRACE_FUNCTION();
-
-        refCounter.clear();
-        reuseMap.clear();
-        memHosts.clear();
-    }
-
-private:
-    // Register allocated memory.
-    void addHost(const LayerPin& lp, const Mat& mat)
-    {
-        CV_Assert(memHosts.find(lp) == memHosts.end());
-        reuseMap[lp] = lp;
-        memHosts[lp] = mat;
-    }
-
-    std::map<LayerPin, int> refCounter;
-    // Maps pin to origin blob (for whom memory was allocated firstly).
-    // For origin blobs key == value.
-    std::map<LayerPin, LayerPin> reuseMap;
-    std::map<LayerPin, Mat> memHosts;
-};
-
 static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, const cv::Mat& m)
 {
     if (backendId == DNN_BACKEND_DEFAULT)
@@ -523,6 +297,297 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, const cv::Mat& m
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     return Ptr<BackendWrapper>();
 }
+
+// Network's output layers memory allocator.
+struct BlobManager
+{
+public:
+    // Clear state of blob manager and resolve new one memory management task.
+    void reset(const std::map<int, LayerData>& layers,
+               const std::map<int, LayerShapes>& layersShapes,
+               const std::vector<LayerPin>& blobsToKeep,
+               int backendId_, int targetId_)
+    {
+        CV_TRACE_FUNCTION();
+
+        memUsers.clear();
+        inPlaceMap.clear();
+        hostMemPoses.clear();
+        devMemPoses.clear();
+        devMemoryBuffers.clear();
+        memoryBuffer.release();
+
+        backendId = backendId_;
+        targetId = targetId_;
+        // References counter to layer outputs.
+        std::map<LayerPin, int> refCounter;
+        std::map<int, LayerData>::const_iterator it;
+
+        // Represent memory management task as a schedule where every memory
+        // user is characterized by start iteration, end iteration and required
+        // memory size (in bytes).
+
+        // Collect references counters, register output and internal blobs.
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            const LayerData& ld = it->second;
+            if (ld.id == 0)  // Don't process input layer.
+                continue;
+            const LayerShapes& shapes = layersShapes.find(ld.id)->second;
+            incRefsToInputs(ld, refCounter);
+            registerOutputs(ld, shapes);
+            registerInternals(ld, shapes);
+        }
+
+        // Fake references to blobsToKeep.
+        for (int i = 0; i < blobsToKeep.size(); ++i)
+        {
+            if (refCounter.find(blobsToKeep[i]) != refCounter.end())
+            {
+                refCounter[blobsToKeep[i]] += 1;
+            }
+        }
+
+        // Set end iterations of users. It's a moment when references counter to
+        // them equals zero.
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            const LayerData& ld = it->second;
+            if (ld.id == 0)  // Don't process input layer.
+                continue;
+            const LayerShapes& shapes = layersShapes.find(ld.id)->second;
+
+            // Prolong input blobs up to current layer.
+            for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+            {
+                LayerPin id = ld.inputBlobsId[i];
+                if (id.lid == 0)  // Don't process input layer.
+                    continue;
+                jumpOverInPlace(id);
+                CV_Assert(refCounter.find(id) != refCounter.end());
+                CV_Assert(refCounter[id] >= 1);
+                CV_Assert(memUsers[id].endIter <= ld.id);
+
+                // If layer work in-place and it's input is not used anymore,
+                // we should keep only one memory user entity.
+                bool inPlace = shapes.supportInPlace &&
+                               ld.inputBlobsId.size() == 1 &&
+                               refCounter[id] == 1;
+                if (inPlace)
+                {
+                    for (int i = 0; i < shapes.out.size(); ++i)
+                    {
+                        LayerPin pin(ld.id, i);
+                        CV_Assert(inPlaceMap.find(pin) == inPlaceMap.end());
+                        CV_Assert(memUsers.find(pin) != memUsers.end());
+                        inPlaceMap[pin] = id;
+                        refCounter[id] += refCounter[pin];
+                        memUsers.erase(pin);
+                    }
+                }
+                memUsers[id].endIter = ld.id;
+                refCounter[id] -= 1;
+            }
+
+            // Special case - concat layer.
+            // There is some optimization that skip concat layer in case of
+            // concatenation by channels. That means input layer of concat layer
+            // are processed directly in right positions of concat layer blob.
+            //
+            // To protect concat layer memory during all it's inputs processing,
+            // we manually decreace concat layer start iteration.
+            // std::map<LayerPin, MemoryUser>::iterator inputUserIt;
+            Ptr<ConcatLayer> concatLayer = ld.layerInstance.dynamicCast<ConcatLayer>();
+            if(!concatLayer.empty() && shapes.out.size() == 1)
+            {
+                CV_Assert(memUsers.find(LayerPin(ld.id, 0)) != memUsers.end());
+                MemoryUser& concatMemUser = memUsers[LayerPin(ld.id, 0)];
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                {
+                    if (ld.inputBlobsId[i].lid != 0)  // Not input layer.
+                    {
+                        LayerPin id = ld.inputBlobsId[i];
+                        jumpOverInPlace(id);
+                        concatMemUser.startIter = std::min(concatMemUser.startIter,
+                                                           memUsers[id].startIter);
+                    }
+                }
+            }
+        }
+
+        // For blobsToKeep we increase end iteration up to the end of pipeline
+        // (make them impossible for reusing).
+        for (int i = 0; i < blobsToKeep.size(); ++i)
+        {
+            LayerPin pin = blobsToKeep[i];
+            jumpOverInPlace(pin);
+            memUsers[pin].endIter = layers.size() - 1;
+        }
+
+        // Solve the task.
+        std::vector<MemoryUser> memUsersVec;
+        memUsersVec.reserve(memUsers.size());
+        for (std::map<LayerPin, MemoryUser>::iterator it = memUsers.begin();
+             it != memUsers.end(); ++it)
+        {
+            it->second.id = memUsersVec.size();
+            memUsersVec.push_back(it->second);
+        }
+
+        uint64_t hostMemUsage;
+        MemoryManager::solveOpt(memUsersVec, hostMemPoses, &hostMemUsage);
+        memoryBuffer.create(std::vector<int>(1, hostMemUsage), CV_32F);
+
+        if (targetId != DNN_TARGET_CPU)
+        {
+            uint64_t devMemUsage;
+            std::vector<int> buffersIds;
+            MemoryManager::solveReuseOrCreate(memUsersVec, devMemPoses, buffersIds, &devMemUsage);
+            for (int i = 0; i < buffersIds.size(); ++i)
+            {
+                int id = buffersIds[i];
+                uint64_t hostMemPos = hostMemPoses[id];
+                uint64_t devMemPos = devMemPoses[id];
+                unsigned char* host = memoryBuffer.data + hostMemPos;
+                CV_Assert(devMemoryBuffers.find(devMemPos) == devMemoryBuffers.end());
+
+                std::vector<int> shape(1, memUsersVec[id].memSize);
+                devMemoryBuffers[devMemPos] =
+                    wrapMat(backendId, targetId, Mat(shape, CV_32F, host));
+            }
+        }
+    }
+
+    // Assign memory into output blobs. Also wrap to specific backend and target.
+    void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes)
+    {
+        CV_TRACE_FUNCTION();
+
+        std::vector<Mat>& outputBlobs = ld.outputBlobs,
+                &internalBlobs = ld.internals;
+
+        const ShapesVec& outShapes = layerShapes.out,
+                internalShapes = layerShapes.internal;
+
+        outputBlobs.resize(std::max((size_t)1, outShapes.size())); //layer produce at least one output blob
+        internalBlobs.resize(internalShapes.size());
+
+        CV_Assert(ld.requiredOutputs.size() <= outShapes.size());
+
+        ld.outputBlobsWrappers.assign(outputBlobs.size(), Ptr<BackendWrapper>());
+        for(int i = 0; i < outputBlobs.size(); i++)
+        {
+            allocate(outShapes[i], LayerPin(ld.id, i), outputBlobs[i]);
+            if (backendId != DNN_BACKEND_DEFAULT)
+            {
+                ld.outputBlobsWrappers[i] = wrap(outShapes[i], LayerPin(ld.id, i), outputBlobs[i]);
+            }
+        }
+        for(int i = 0; i < internalBlobs.size(); i++)
+        {
+            allocate(internalShapes[i], LayerPin(ld.id, outputBlobs.size() + i),
+                     internalBlobs[i]);
+        }
+    }
+
+private:
+    static void incRefsToInputs(const LayerData& ld, std::map<LayerPin, int>& refCounter)
+    {
+        for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+        {
+            const LayerPin& id = ld.inputBlobsId[i];
+            std::map<LayerPin, int>::iterator it = refCounter.find(id);
+            if (it == refCounter.end())
+            {
+                refCounter[id] = 1;
+            }
+            else
+            {
+                it->second += 1;
+            }
+        }
+    }
+
+    void registerOutputs(const LayerData& ld, const LayerShapes& layerShapes)
+    {
+        const int numOuts = layerShapes.out.size();
+        for (int i = 0; i < numOuts; ++i)
+        {
+            LayerPin pin(ld.id, i);
+            uint64_t memSize = total(layerShapes.out[i]) * sizeof(float);
+            CV_Assert(memUsers.find(pin) == memUsers.end());
+            memUsers[pin] = MemoryUser(ld.id, ld.id, memSize);
+        }
+    }
+
+    void registerInternals(const LayerData& ld, const LayerShapes& layerShapes)
+    {
+        const int numOuts = layerShapes.out.size();
+        for (int i = 0; i < layerShapes.internal.size(); ++i)
+        {
+            LayerPin pin(ld.id, numOuts + i);
+            uint64_t memSize = total(layerShapes.internal[i]) * sizeof(float);
+            CV_Assert(memUsers.find(pin) == memUsers.end());
+            memUsers[pin] = MemoryUser(ld.id, ld.id, memSize);
+        }
+    }
+
+    void jumpOverInPlace(LayerPin& lp)
+    {
+        if (inPlaceMap.find(lp) != inPlaceMap.end())
+        {
+            CV_Assert(memUsers.find(lp) == memUsers.end());
+            lp = inPlaceMap[lp];
+            CV_Assert(inPlaceMap.find(lp) == inPlaceMap.end());
+        }
+        CV_Assert(memUsers.find(lp) != memUsers.end());
+    }
+
+    void allocate(const MatShape& shape, LayerPin lp, Mat& dst)
+    {
+        jumpOverInPlace(lp);
+        uint64_t memPos = hostMemPoses[memUsers[lp].id];
+        dst = Mat(shape, CV_32F, memoryBuffer.data + memPos);
+    }
+
+    Ptr<BackendWrapper> wrap(const MatShape& shape, LayerPin lp, const Mat& host)
+    {
+        jumpOverInPlace(lp);
+
+        Ptr<BackendWrapper> wrapper;
+        if (targetId == DNN_TARGET_CPU)
+        {
+            wrapper = wrapMat(backendId, targetId, host);
+        }
+        else
+        {
+            uint64_t memPos = devMemPoses[memUsers[lp].id];
+            CV_Assert(devMemoryBuffers.find(memPos) != devMemoryBuffers.end());
+            Ptr<BackendWrapper> baseBuffer = devMemoryBuffers[memPos];
+
+            if (backendId == DNN_BACKEND_HALIDE)
+            {
+                CV_Assert(haveHalide());
+#ifdef HAVE_HALIDE
+                wrapper = Ptr<BackendWrapper>(new HalideBackendWrapper(baseBuffer, shape, host));
+#endif  // HAVE_HALIDE
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+        }
+        return wrapper;
+    }
+
+    std::map<LayerPin, MemoryUser> memUsers;
+    std::map<LayerPin, LayerPin> inPlaceMap;
+
+    std::vector<uint64_t> hostMemPoses;
+    std::vector<uint64_t> devMemPoses;
+    std::map<uint64_t, Ptr<BackendWrapper> > devMemoryBuffers;
+    cv::Mat memoryBuffer;
+
+    int backendId, targetId;
+};
 
 struct Net::Impl
 {
@@ -556,43 +621,12 @@ struct Net::Impl
     int preferableBackend;
     int preferableTarget;
     String halideConfigFile;
-    // Map host data to backend specific wrapper.
-    std::map<void*, Ptr<BackendWrapper> > backendWrappers;
 
     int lastLayerId;
 
     bool netWasAllocated;
     bool fusion;
     std::vector<int64> layersTimings;
-
-    Ptr<BackendWrapper> wrap(const Mat& host)
-    {
-        if (preferableBackend == DNN_BACKEND_DEFAULT)
-            return Ptr<BackendWrapper>();
-
-        MatShape shape(host.dims);
-        for (int i = 0; i < host.dims; ++i)
-            shape[i] = host.size[i];
-
-        void* data = host.data;
-        if (backendWrappers.find(data) != backendWrappers.end())
-        {
-            Ptr<BackendWrapper> baseBuffer = backendWrappers[data];
-            if (preferableBackend == DNN_BACKEND_HALIDE)
-            {
-                CV_Assert(haveHalide());
-  #ifdef HAVE_HALIDE
-                return Ptr<BackendWrapper>(new HalideBackendWrapper(baseBuffer, shape));
-  #endif  // HAVE_HALIDE
-            }
-            else
-                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
-        }
-
-        Ptr<BackendWrapper> wrapper = wrapMat(preferableBackend, preferableTarget, host);
-        backendWrappers[data] = wrapper;
-        return wrapper;
-    }
 
 #ifdef HAVE_HALIDE
     void compileHalide()
@@ -989,13 +1023,17 @@ struct Net::Impl
 
         CV_Assert(layerShapesIt != layersShapes.end());
 
-        std::vector<LayerPin> pinsForInternalBlobs;
-        bool maximizeReuse = preferableBackend == DNN_BACKEND_HALIDE;
-        blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs, maximizeReuse);
-        ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
-        for (int i = 0; i < ld.outputBlobs.size(); ++i)
+        if (ld.id != 0)
+            blobManager.allocateBlobsForLayer(ld, layerShapesIt->second);
+        else
         {
-            ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
+            ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
+            for (int i = 0; i < ld.outputBlobs.size(); ++i)
+            {
+                ld.outputBlobsWrappers[i] = wrapMat(preferableBackend,
+                                                    preferableTarget,
+                                                    ld.outputBlobs[i]);
+            }
         }
 
         Ptr<Layer> layerPtr = ld.getLayerInstance();
@@ -1012,10 +1050,6 @@ struct Net::Impl
             std::cout << "\n";
 #endif
         }
-
-        // After allocation of layer, we decrease counters to it's input blobs.
-        blobManager.releaseReferences(ld.inputBlobsId);
-        blobManager.releaseReferences(pinsForInternalBlobs);
 
         ld.flag = 1;
     }
@@ -1233,19 +1267,8 @@ struct Net::Impl
         LayersShapesMap layersShapes;
         getLayersShapes(inputShapes, layersShapes);
 
-        blobManager.reset();
-        backendWrappers.clear();
-        blobManager.addReference(LayerPin(0, 0));
-        for (it = layers.begin(); it != layers.end(); ++it)
-        {
-            const LayerData& ld = it->second;
-            blobManager.addReferences(ld.inputBlobsId);
-        }
-
-        for (int i = 0; i < blobsToKeep_.size(); i++)
-        {
-            blobManager.addReference(blobsToKeep_[i]);
-        }
+        blobManager.reset(layers, layersShapes, blobsToKeep_, preferableBackend,
+                          preferableTarget);
 
         for (it = layers.begin(); it != layers.end(); it++)
         {
@@ -1412,14 +1435,15 @@ struct Net::Impl
             CV_Error(Error::StsOutOfRange, "Layer \"" + ld.name + "\" produce only " + toString(ld.outputBlobs.size()) +
                                            " outputs, the #" + toString(pin.oid) + " was requsted");
         }
-        if (preferableBackend != DNN_TARGET_CPU)
+        if (!ld.outputBlobsWrappers[pin.oid].empty())
         {
             // Transfer data to CPU if it's require.
             ld.outputBlobsWrappers[pin.oid]->copyToHost();
         }
         else
         {
-            CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_OPENCL);
+            CV_Assert(preferableTarget == DNN_TARGET_CPU ||
+                      (preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_OPENCL));
         }
         return ld.outputBlobs[pin.oid];
     }
@@ -2252,18 +2276,6 @@ BackendNode::~BackendNode() {};
 
 BackendWrapper::BackendWrapper(int backendId, int targetId)
     : backendId(backendId), targetId(targetId) {}
-
-BackendWrapper::BackendWrapper(int targetId, const cv::Mat& m)
-{
-    CV_Error(Error::StsNotImplemented,
-             "Constructor of backend wrapper must be implemented");
-}
-
-BackendWrapper::BackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& shape)
-{
-    CV_Error(Error::StsNotImplemented,
-             "Constructor of backend wrapper must be implemented");
-}
 
 BackendWrapper::~BackendWrapper() {}
 

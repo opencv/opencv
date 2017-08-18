@@ -112,13 +112,12 @@ HalideBackendWrapper::HalideBackendWrapper(int targetId, const cv::Mat& m)
 }
 
 HalideBackendWrapper::HalideBackendWrapper(const Ptr<BackendWrapper>& base,
-                                           const MatShape& shape)
+                                           const MatShape& shape, const Mat& host)
     : BackendWrapper(DNN_BACKEND_HALIDE, base->targetId)
 {
     managesDevMemory = false;
     Halide::Buffer<float> baseBuffer = halideBuffer(base);
-    buffer = Halide::Buffer<float>((float*)baseBuffer.raw_buffer()->host,
-                                   getBufferShape(shape));
+    buffer = Halide::Buffer<float>((float*)host.data, getBufferShape(shape));
     if (baseBuffer.has_device_allocation())
     {
         buffer.raw_buffer()->device = baseBuffer.raw_buffer()->device;
@@ -195,7 +194,6 @@ void compileHalide(const std::vector<Mat> &outputs, Ptr<BackendNode>& node, int 
        .bound(c, 0, outC).bound(n, 0, outN);
 
     Halide::Target target = Halide::get_host_target();
-    target.set_feature(Halide::Target::NoAsserts);
     if (targetId == DNN_TARGET_OPENCL)
     {
         target.set_feature(Halide::Target::OpenCL);

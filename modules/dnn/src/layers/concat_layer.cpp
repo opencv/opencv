@@ -269,15 +269,22 @@ public:
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
+
+        std::vector<Halide::Func> bounded(inputBuffers.size());
+        for (int i = 0; i < inputBuffers.size(); ++i)
+        {
+            bounded[i] = Halide::BoundaryConditions::repeat_edge(inputBuffers[i]);
+        }
+
         int offset = inputBuffers[0].channels();
         Halide::Expr topExpr = select(c < offset,
-                                      inputBuffers[0](x, y, c, n),
-                                      inputBuffers[1](x, y, c - offset, n));
+                                      bounded[0](x, y, c, n),
+                                      bounded[1](x, y, c - offset, n));
         for (int i = 2; i < input.size(); ++i)
         {
             offset += inputBuffers[i - 1].channels();
             topExpr = select(c < offset, topExpr,
-                             inputBuffers[i](x, y, c - offset, n));
+                             bounded[i](x, y, c - offset, n));
         }
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode(top));

@@ -118,27 +118,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     public:
         BackendWrapper(int backendId, int targetId);
 
-        /**
-         * @brief Wrap cv::Mat for specific backend and target.
-         * @param[in] targetId Target identifier.
-         * @param[in] m cv::Mat for wrapping.
-         *
-         * Make CPU->GPU data transfer if it's require for the target.
-         */
-        BackendWrapper(int targetId, const cv::Mat& m);
-
-        /**
-         * @brief Make wrapper for reused cv::Mat.
-         * @param[in] base Wrapper of cv::Mat that will be reused.
-         * @param[in] shape Specific shape.
-         *
-         * Initialize wrapper from another one. It'll wrap the same host CPU
-         * memory and mustn't allocate memory on device(i.e. GPU). It might
-         * has different shape. Use in case of CPU memory reusing for reuse
-         * associented memory on device too.
-         */
-        BackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& shape);
-
         virtual ~BackendWrapper(); //!< Virtual destructor to make polymorphism.
 
         /**

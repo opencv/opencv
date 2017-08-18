@@ -40,6 +40,7 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "op_halide.hpp"
 
 namespace cv
 {
@@ -62,6 +63,12 @@ public:
         return true;
     }
 
+    virtual bool supportBackend(int backendId)
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_HALIDE && haveHalide();
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -70,6 +77,40 @@ public:
         for (int i = 0, n = outputs.size(); i < n; ++i)
             if (outputs[i].data != inputs[i]->data)
                 inputs[i]->copyTo(outputs[i]);
+    }
+
+    // Identity function just to prevent CPU->GPU->CPU data transferring in case
+    // of mixed backends.
+    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node)
+    {
+        switch (node->backendId)
+        {
+            case DNN_BACKEND_HALIDE:
+            {
+#ifdef HAVE_HALIDE
+                auto base = node.dynamicCast<HalideBackendNode>();
+                Halide::Func& input = base->funcs.back();
+                Halide::Var x("x"), y("y"), c("c"), n("n");
+                Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
+                top(x, y, c, n) = input(x, y, c, n);
+                return Ptr<BackendNode>(new HalideBackendNode(base, top));
+#endif  // HAVE_HALIDE
+                break;
+            }
+        }
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    {
+#ifdef HAVE_HALIDE
+        Halide::Buffer<float> input = halideBuffer(inputs[0]);
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
+        top(x, y, c, n) = input(x, y, c, n);
+        return Ptr<BackendNode>(new HalideBackendNode(top));
+#endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
     }
 };
 

@@ -56,12 +56,15 @@ static void test(const std::string& weights, const std::string& proto,
 
     normAssert(outputDefault, outputHalide, "First run", l1, lInf);
 
+    // Expect to achieve the same output.
+    normAssert(netHalide.forward(outputLayer), outputHalide, "Second run", l1, lInf);
+
     // An extra test: change input.
     input *= 0.1f;
     netDefault.setInput(blobFromImage(input.clone(), 1.0, Size(), Scalar(), false));
     netHalide.setInput(blobFromImage(input.clone(), 1.0, Size(), Scalar(), false));
 
-    normAssert(outputDefault, outputHalide, "Second run", l1, lInf);
+    normAssert(outputDefault, outputHalide, "Third run", l1, lInf);
     std::cout << "." << std::endl;
 
     // Swap backends.
@@ -87,13 +90,12 @@ TEST(Reproducibility_MobileNetSSD_Halide, Accuracy)
          "", 300, 300, "detection_out", "caffe", DNN_TARGET_CPU);
 };
 
-// TODO: Segmentation fault from time to time.
-// TEST(Reproducibility_SSD_Halide, Accuracy)
-// {
-//     test(findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false),
-//          findDataFile("dnn/ssd_vgg16.prototxt", false),
-//          "", 300, 300, "detection_out", "caffe", DNN_TARGET_CPU);
-// };
+TEST(Reproducibility_SSD_Halide, Accuracy)
+{
+    test(findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false),
+         findDataFile("dnn/ssd_vgg16.prototxt", false),
+         "", 300, 300, "detection_out", "caffe", DNN_TARGET_CPU);
+};
 
 TEST(Reproducibility_GoogLeNet_Halide, Accuracy)
 {

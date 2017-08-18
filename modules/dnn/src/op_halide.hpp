@@ -53,9 +53,9 @@ namespace dnn
     class HalideBackendWrapper : public BackendWrapper
     {
     public:
-        HalideBackendWrapper(int targetId, const cv::Mat& m);
+        HalideBackendWrapper(int targetId, const Mat& m);
 
-        HalideBackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& shape);
+        HalideBackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& shape, const Mat& host);
 
         ~HalideBackendWrapper();
 
