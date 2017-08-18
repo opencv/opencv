@@ -122,13 +122,19 @@ static inline int getGaussianKernelSize(float sigma) {
  *
  * @param Lflow conductivity image
  * @param Lt diffusion image
- * @param r_buf buffer for previous row, storing original values from previous step
+ * @param lt_row_prev buffer for previous row, storing original values from previous step
+ * @param buf buffer storing current values of the row (before the function was called)
  * @param j row number
  * @param step_size coefficient for current step
  */
 static inline void
-nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *r_buf, int j, float step_size)
+nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *lt_row_prev, float *buf, int j, float step_size)
 {
+  /* The labeling scheme for this five star stencil:
+   [    a    ]
+   [ cp c cn ]
+   [    b    ]
+  */
   // handle edge conditions
   int prev_row_idx = std::max(0, j-1); // handle first row
   int next_row_idx = std::min(Lt.rows-1, j+1); // handle last row
@@ -143,16 +149,16 @@ nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *r_buf, int j, float step_s
   // first column
   float step = (lf_row[0] + lf_row[1]     )*(lt_row[1] - lt_row[0]) +
                (lf_row[0] + lf_row_next[0])*(lt_row_next[0] - lt_row[0]) +
-               (lf_row[0] + lf_row_prev[0])*(r_buf[0] - lt_row[0]);
+               (lf_row[0] + lf_row_prev[0])*(lt_row_prev[0] - lt_row[0]);
   // save original value without step (for next row)
-  r_buf[0] = lt_row[0];
+  buf[0] = lt_row[0];
   lt_row[0] += step * step_size; // add step to lt
 
   // hot loop
   int k = 1;
 
   // vectorized version
-  __m128 lt_c = _mm_set1_ps(r_buf[0]);
+  __m128 lt_c = _mm_set1_ps(buf[0]);
   __m128 v_step_size = _mm_set1_ps(step_size);
   int vec_total = Lt.cols - 1 - 4; // max elems we can proceed vectorized without last column
   for (; k <= vec_total; k += 4) {
@@ -168,7 +174,7 @@ nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *r_buf, int j, float step_s
     lt_c = new_lt_c;
 
     __m128 lt_cn = _mm_loadu_ps(lt_row + (k + 1));
-    __m128 lt_a = _mm_loadu_ps(r_buf + k);
+    __m128 lt_a = _mm_loadu_ps(lt_row_prev + k);
     __m128 lt_b = _mm_loadu_ps(lt_row_next + k);
 
     __m128 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
@@ -178,52 +184,104 @@ nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *r_buf, int j, float step_s
     // add step according to stepsize to lt
     __m128 next_lt = lt_c + (v_step * v_step_size);
 
-    _mm_storeu_ps(r_buf + k, lt_c);
+    _mm_storeu_ps(buf + k, lt_c);
     _mm_storeu_ps(lt_row + k, next_lt);
   }
 
   for (; k < Lt.cols - 1; ++k) {
     step = (lf_row[k] + lf_row[k + 1] )*(lt_row[k + 1] - lt_row[k]) +
-           (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1]  - lt_row[k]) +
+           (lf_row[k] + lf_row[k - 1] )*(buf[k - 1]  - lt_row[k]) +
            (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
-           (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
+           (lf_row[k] + lf_row_prev[k])*(lt_row_prev[k] - lt_row[k]);
     // save original value without step (for next row)
-    r_buf[k] = lt_row[k];
+    buf[k] = lt_row[k];
     lt_row[k] += step * step_size; // add step to lt
   }
 
   // last column
-  step = (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1] - lt_row[k]) +
+  step = (lf_row[k] + lf_row[k - 1] )*(buf[k - 1] - lt_row[k]) +
          (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
-         (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
+         (lf_row[k] + lf_row_prev[k])*(lt_row_prev[k] - lt_row[k]);
   // save original value without step (for next row)
-  r_buf[k] = lt_row[k];
+  buf[k] = lt_row[k];
   lt_row[k] += step * step_size; // add step to lt
 }
 
 /**
-* @brief This function computes a scalar non-linear diffusion step. Output will be
+* @brief This function computes a scalar non-linear diffusion. Output will be
 * added to Lt
 * @param Lt Base image in the evolution
-* @param Lf Conductivity image
+* @param Lflow Conductivity image
+* @param Lstep buffer to use
+* @param tsteps steps sizes
 * @note Forward Euler Scheme 3x3 stencil
 * The function c is a scalar value that depends on the gradient norm
 * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
 */
 static inline void
-nld_step_scalar_add(const Mat& Lflow, Mat& Lt, Mat& Lstep, float step_size)
+non_linear_diffusion_kernel(const Mat& Lflow, Mat& Lt, Mat& Lstep, const std::vector<float> &tsteps)
 {
-  /* The labeling scheme for this five star stencil:
-   [    a    ]
-   [ cp c cn ]
-   [    b    ]
-  */
-  // saves original values for upper row of kernel
-  Lt.row(0).copyTo(Lstep);
-  float *r_buf = Lstep.ptr<float>();
+  /*
+  Instead of processing image one step at time, we proceed all steps together
+  in steps window, saving previous values we need to Lstep buffers. This
+  requires just one pass over image and improves cache locality.
 
-  for (int j = 0; j < Lt.rows; ++j) {
-    nld_step_scalar_row(Lflow, Lt, r_buf, j, step_size);
+  for example for steps = 3, algorithm is:
+  before:
+         *
+   [ 0* 1   ]
+   [* 0     ]
+   [        ]
+  update:
+   [  0 1* 2 ]
+   [  0* 1   ]
+   [* 0      ]
+  move window by 1.
+
+  numbers represents iteration (step) that we have performed for the row e.g.
+  [ 0 1 2 ] means all iterations have been performed. Stars show what is saved in buffers.
+  */
+
+  const int steps = tsteps.size();
+  CV_Assert(Lt.rows >= steps);
+  // Lstep will hold buffers for rows in window. buffers are rotated by moduling.
+  Lstep.create(steps + 1, Lt.cols, Lt.type());
+
+  // init first steps window
+  for (int i = steps - 1, s = 0; i > 0; --i, ++s) {
+    for (int j = 0; j < i; ++j) {
+      const int row = j;
+      // for first row we just handle the first row of Lt to do BORDER_REPLICATE
+      float *prev_row = row == 0 ? Lt.ptr<float>() :
+                                   Lstep.ptr<float>((row - 1) % (steps + 1));
+      float *buf = Lstep.ptr<float>(row % (steps + 1));
+      float step_size = tsteps[s];
+      nld_step_scalar_row(Lflow, Lt, prev_row, buf, row, step_size);
+    }
+  }
+
+  // do steps window
+  for (int i = 0; i <= Lt.rows - steps; ++i) {
+    for (int j = steps - 1; j >= 0; --j) {
+      const int row = i + j;
+      float *prev_row = row == 0 ? Lt.ptr<float>() :
+                                   Lstep.ptr<float>((row - 1) % (steps + 1));
+      float *buf = Lstep.ptr<float>(row % (steps + 1));
+      float step_size = tsteps[steps - 1 - j];
+      nld_step_scalar_row(Lflow, Lt, prev_row, buf, row, step_size);
+    }
+  }
+
+  // finish at the end
+  for (int i = steps - 1; i > 0; --i) {
+    for (int j = 0; j < i; ++j) {
+      const int row = Lt.rows - 1 - j;
+      // row - 1 is always positive here
+      float *prev_row = Lstep.ptr<float>((row - 1) % (steps + 1));
+      float *buf = Lstep.ptr<float>(row % (steps + 1));
+      float step_size = tsteps[steps - i + j];
+      nld_step_scalar_row(Lflow, Lt, prev_row, buf, row, step_size);
+    }
   }
 }
 
@@ -233,6 +291,8 @@ ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_
 {
   if(!Lt_.isContinuous())
     return false;
+
+  Lstep_.create(Lt_.size(), Lt_.type());
 
   UMat Lt = Lt_.getUMat();
   UMat Lf = Lf_.getUMat();
@@ -262,17 +322,13 @@ non_linear_diffusion(InputArray Lf_, InputOutputArray Lt_, OutputArray Lstep_, c
 {
   CV_INSTRUMENT_REGION()
 
-  Lstep_.create(Lt_.size(), Lt_.type());
-
   CV_OCL_RUN(Lt_.isUMat() && Lf_.isUMat() && Lstep_.isUMat(),
     ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, tsteps[0]));
 
   Mat Lt = Lt_.getMat();
   Mat Lf = Lf_.getMat();
   Mat Lstep = Lstep_.getMat();
-  for (size_t i = 0; i < tsteps.size(); ++i) {
-    nld_step_scalar_add(Lf, Lt, Lstep, tsteps[i]);
-  }
+  non_linear_diffusion_kernel(Lf, Lt, Lstep, tsteps);
 }
 
 /**
