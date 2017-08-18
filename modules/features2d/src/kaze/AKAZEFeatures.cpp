@@ -93,6 +93,10 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
     ttime = evolution_[i].etime - evolution_[i - 1].etime;
     naux = fed_tau_by_process_time(ttime, 1, 0.25f, reordering_, tau);
     nsteps_.push_back(naux);
+    // originally step was multiplied by 0.5 in nld_ functions, in AKAZE it is done here
+    for (size_t j = 0; j < tau.size(); j++) {
+      tau[j] *= 0.5f;
+    }
     tsteps_.push_back(tau);
     ncycles_++;
   }
@@ -112,142 +116,105 @@ static inline int getGaussianKernelSize(float sigma) {
 }
 
 /* ************************************************************************* */
+
 /**
-* @brief This function computes a scalar non-linear diffusion step
+* @brief This function computes a scalar non-linear diffusion step. Output will be
+* added to Lt
 * @param Lt Base image in the evolution
 * @param Lf Conductivity image
-* @param Lstep Output image that gives the difference between the current
-* Ld and the next Ld being evolved
-* @param row_begin row where to start
-* @param row_end last row to fill exclusive. the range is [row_begin, row_end).
 * @note Forward Euler Scheme 3x3 stencil
 * The function c is a scalar value that depends on the gradient norm
 * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
 */
 static inline void
-nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size, int row_begin, int row_end)
+nld_step_scalar_add(const Mat& Lflow, Mat& Lt, Mat& Lstep, float step_size)
 {
-  CV_INSTRUMENT_REGION()
   /* The labeling scheme for this five star stencil:
    [    a    ]
-   [ -1 c +1 ]
+   [ cp c cn ]
    [    b    ]
-   */
+  */
+  // saves original values for upper row of kernel
+  Lt.row(0).copyTo(Lstep);
+  float *r_buf = Lstep.ptr<float>();
 
-  Lstep.create(Lt.size(), Lt.type());
-  const int cols = Lt.cols - 2;
-  int row = row_begin;
+  for (int j = 0; j < Lt.rows; ++j) {
+    // handle edge conditions
+    int prev_row_idx = std::max(0, j-1); // handle first row
+    int next_row_idx = std::min(Lt.rows-1, j+1); // handle last row
+    // fetch kernel sources from lt, from matrices and buffers
+    float *lt_row = Lt.ptr<float>(j);
+    const float *lt_row_next = Lt.ptr<float>(next_row_idx);
+    // same for lf
+    const float *lf_row = Lflow.ptr<float>(j);
+    const float *lf_row_next = Lflow.ptr<float>(next_row_idx);
+    const float *lf_row_prev = Lflow.ptr<float>(prev_row_idx);
 
-  const float *lt_a, *lt_c, *lt_b;
-  const float *lf_a, *lf_c, *lf_b;
-  float *dst;
-  float step_r = 0.f;
+    // first column
+    float step = (lf_row[0] + lf_row[1]     )*(lt_row[1] - lt_row[0]) +
+                 (lf_row[0] + lf_row_next[0])*(lt_row_next[0] - lt_row[0]) +
+                 (lf_row[0] + lf_row_prev[0])*(r_buf[0] - lt_row[0]);
+    // save original value without step (for next row)
+    r_buf[0] = lt_row[0];
+    lt_row[0] += step * step_size; // add step to lt
 
-  // Process the top row
-  if (row == 0) {
-    lt_c = Lt.ptr<float>(0) + 1;  /* Skip the left-most column by +1 */
-    lf_c = Lf.ptr<float>(0) + 1;
-    lt_b = Lt.ptr<float>(1) + 1;
-    lf_b = Lf.ptr<float>(1) + 1;
+    // hot loop
+    int k = 1;
 
-    // fill the corner to prevent uninitialized values
-    dst = Lstep.ptr<float>(0);
-    dst[0] = 0.0f;
-    ++dst;
+    // vectorized version
+    __m128 lt_c = _mm_set1_ps(r_buf[0]);
+    __m128 lf_c = _mm_set1_ps(lf_row[0]);
+    __m128 v_step_size = _mm_set1_ps(step_size);
+    int vec_total = Lt.cols - 1 - 4; // max elems we can proceed vectorized without last column
+    for (; k <= vec_total; k += 4) {
+      // save 1 load
+      __m128 new_lf_c = _mm_loadu_ps(lf_row + k);
+      __m128 lf_cp = (__m128)_mm_alignr_epi8((__m128i)new_lf_c, (__m128i)lf_c, 3 * sizeof(float));
+      lf_c = new_lf_c;
 
-    for (int j = 0; j < cols; j++) {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
+      __m128 lf_cn = _mm_loadu_ps(lf_row + (k + 1));
+      __m128 lf_a = _mm_loadu_ps(lf_row_prev + k);
+      __m128 lf_b = _mm_loadu_ps(lf_row_next + k);
+
+      // reconstruct previous value, first elem has been already overwriten in memory
+      __m128 new_lt_c = _mm_loadu_ps(lt_row + k);
+      __m128 lt_cp = (__m128)_mm_alignr_epi8((__m128i)new_lt_c, (__m128i)lt_c, 3 * sizeof(float));
+      lt_c = new_lt_c;
+
+      __m128 lt_cn = _mm_loadu_ps(lt_row + (k + 1));
+      __m128 lt_a = _mm_loadu_ps(r_buf + k);
+      __m128 lt_b = _mm_loadu_ps(lt_row_next + k);
+
+      __m128 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
+      (lf_c + lf_cp)*(lt_cp - lt_c) +
+      (lf_c + lf_b )*(lt_b  - lt_c) +
+      (lf_c + lf_a )*(lt_a  - lt_c));
+      // add step according to stepsize to lt
+      __m128 next_lt = lt_c + (v_step * v_step_size);
+
+      _mm_storeu_ps(r_buf + k, lt_c);
+      _mm_storeu_ps(lt_row + k, next_lt);
     }
 
-    // fill the corner to prevent uninitialized values
-    dst[cols] = 0.0f;
-    ++row;
-  }
-
-  // Process the middle rows
-  int middle_end = std::min(Lt.rows - 1, row_end);
-  for (; row < middle_end; ++row)
-  {
-    lt_a = Lt.ptr<float>(row - 1);
-    lf_a = Lf.ptr<float>(row - 1);
-    lt_c = Lt.ptr<float>(row    );
-    lf_c = Lf.ptr<float>(row    );
-    lt_b = Lt.ptr<float>(row + 1);
-    lf_b = Lf.ptr<float>(row + 1);
-    dst = Lstep.ptr<float>(row);
-
-    // The left-most column
-    step_r = (lf_c[0] + lf_c[1])*(lt_c[1] - lt_c[0]) +
-             (lf_c[0] + lf_b[0])*(lt_b[0] - lt_c[0]) +
-             (lf_c[0] + lf_a[0])*(lt_a[0] - lt_c[0]);
-    dst[0] = step_r * step_size;
-
-    lt_a++; lt_c++; lt_b++;
-    lf_a++; lf_c++; lf_b++;
-    dst++;
-
-    // The middle columns
-    for (int j = 0; j < cols; j++)
-    {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]) +
-               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
+    for (; k < Lt.cols - 1; ++k) {
+      step = (lf_row[k] + lf_row[k + 1] )*(lt_row[k + 1] - lt_row[k]) +
+             (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1]  - lt_row[k]) +
+             (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
+             (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
+      // save original value without step (for next row)
+      r_buf[k] = lt_row[k];
+      lt_row[k] += step * step_size; // add step to lt
     }
 
-    // The right-most column
-    step_r = (lf_c[cols] + lf_c[cols - 1])*(lt_c[cols - 1] - lt_c[cols]) +
-             (lf_c[cols] + lf_b[cols    ])*(lt_b[cols    ] - lt_c[cols]) +
-             (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
-    dst[cols] = step_r * step_size;
-  }
-
-  // Process the bottom row (row == Lt.rows - 1)
-  if (row_end == Lt.rows) {
-    lt_a = Lt.ptr<float>(row - 1) + 1;  /* Skip the left-most column by +1 */
-    lf_a = Lf.ptr<float>(row - 1) + 1;
-    lt_c = Lt.ptr<float>(row    ) + 1;
-    lf_c = Lf.ptr<float>(row    ) + 1;
-
-    // fill the corner to prevent uninitialized values
-    dst = Lstep.ptr<float>(row);
-    dst[0] = 0.0f;
-    ++dst;
-
-    for (int j = 0; j < cols; j++) {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
-    }
-
-    // fill the corner to prevent uninitialized values
-    dst[cols] = 0.0f;
+    // last column
+    step = (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1] - lt_row[k]) +
+             (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
+             (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
+    // save original value without step (for next row)
+    r_buf[k] = lt_row[k];
+    lt_row[k] += step * step_size; // add step to lt
   }
 }
-
-class NonLinearScalarDiffusionStep : public ParallelLoopBody
-{
-public:
-  NonLinearScalarDiffusionStep(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size)
-    : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep), step_size_(step_size)
-  {}
-
-  void operator()(const Range& range) const
-  {
-    nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, step_size_, range.start, range.end);
-  }
-
-private:
-  const Mat* Lt_;
-  const Mat* Lf_;
-  Mat* Lstep_;
-  float step_size_;
-};
 
 #ifdef HAVE_OPENCL
 static inline bool
@@ -271,23 +238,30 @@ ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_
     ocl::KernelArg::PtrReadOnly(Lf),
     ocl::KernelArg::PtrWriteOnly(Lstep),
     step_size).run(2, globalSize, 0, true);
+
+  // add(e.Lt, Lstep, e.Lt);
 }
 #endif // HAVE_OPENCL
 
+/**
+ * @brief Performs fast explicit diffusion on Lt while using Lstep as a buffer
+ */
 static inline void
-non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
+non_linear_diffusion(InputArray Lf_, InputOutputArray Lt_, OutputArray Lstep_, const std::vector<float> &tsteps)
 {
   CV_INSTRUMENT_REGION()
 
   Lstep_.create(Lt_.size(), Lt_.type());
 
   CV_OCL_RUN(Lt_.isUMat() && Lf_.isUMat() && Lstep_.isUMat(),
-    ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, step_size));
+    ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, tsteps[0]));
 
   Mat Lt = Lt_.getMat();
   Mat Lf = Lf_.getMat();
   Mat Lstep = Lstep_.getMat();
-  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt, Lf, Lstep, step_size));
+  for (size_t i = 0; i < tsteps.size(); ++i) {
+    nld_step_scalar_add(Lf, Lt, Lstep, tsteps[i]);
+  }
 }
 
 /**
@@ -485,11 +459,7 @@ create_nonlinear_scale_space(InputArray image, const AKAZEOptions &options,
 
     // Perform Fast Explicit Diffusion on Lt
     const std::vector<float> &tsteps = tsteps_evolution[i - 1];
-    for (size_t j = 0; j < tsteps.size(); j++) {
-      const float step_size = tsteps[j] * 0.5f;
-      non_linear_diffusion_step(e.Lt, Lflow, Lstep, step_size);
-      add(e.Lt, Lstep, e.Lt);
-    }
+    non_linear_diffusion(Lflow, e.Lt, Lstep, tsteps);
   }
 
   Compute_Determinant_Hessian_Response(evolution);
