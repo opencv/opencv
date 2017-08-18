@@ -599,775 +599,6 @@ std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
         ss << "}" << std::endl;
         ss << "}" << std::endl;
         ss << "}" << std::endl;
-    } else if (kernelType == KERNEL_TYPE_GEMM_LIKE) {
-        simd_size = blockK;
-        kernelUKey = generateSpecificKey(kernelType, blockM, blockK, blockN);
-        // kernel name
-        kernel_name_ = "U_GEMM_LIKE_CONV_";
-        kernel_name_ += kernelUKey.c_str();
-        if (simd_size == 8)
-            kernel_name_ += "_SIMD8";
-        else
-            kernel_name_ += "_SIMD16";
-
-        // kernel specific options
-        std::stringstream kernelDef;
-        kernelDef << "GEMM_LIKE_CONV_" << blockN << "_" << blockM;
-        if (simd_size == 8) {
-            kernelDef << "_SIMD8";
-        } else {
-            kernelDef << "_SIMD16";
-        }
-        opts << "-cl-fast-relaxed-math -cl-mad-enable -D "
-            << kernelDef.str() << " -D Conv_Interleaved="
-            << kernel_name_.c_str();
-        options_ = opts.str();
-
-        int32_t tile_n_last_div8 = (M_ % 32) / 8;
-        addDef(ss, "INPUT_DEPTH", channels_);
-        addDef(ss, "WIDTH1", M_);
-        addDef(ss, "OUT_PADDING_LEFT", 0);
-        addDef(ss, "OUT_PADDING_HEIGHT", 0);
-        addDef(ss, "OUT_DEPTH", M_);
-        addDef(ss, "KERNEL_WIDTH_DIV2", kernel_w_ / 2);
-        addDef(ss, "KERNEL_SLICE_DIV2", (kernel_w_*kernel_h_)/2);
-        addDef(ss, "TILE_N_LAST", M_ % 32);
-        addDef(ss, "TILE_N_LAST_DIV8", tile_n_last_div8);
-        addDef(ss, "TILE_M", blockM);
-        addDef(ss, "TILE_N_PER_LANE", 32 / simd_size);
-
-        #define TYPEDEF_FLOAT_N(ele_num) \
-        do { \
-            ss << "typedef struct float" << ele_num << " { "; \
-                for (int i = 0; i < ele_num; i++) { ss << "float s" << i << "; ";} \
-                    ss << "} float" << ele_num << ";" << std::endl; \
-        } while (0)
-
-        TYPEDEF_FLOAT_N(1);
-        TYPEDEF_FLOAT_N(5);
-        TYPEDEF_FLOAT_N(6);
-        TYPEDEF_FLOAT_N(7);
-        TYPEDEF_FLOAT_N(9);
-        TYPEDEF_FLOAT_N(10);
-        TYPEDEF_FLOAT_N(11);
-        TYPEDEF_FLOAT_N(12);
-        TYPEDEF_FLOAT_N(13);
-        TYPEDEF_FLOAT_N(14);
-        TYPEDEF_FLOAT_N(15);
-        // never used but makes compiler happy.
-        ss << "typedef struct float0 { float s0; } float0;" << std::endl;
-
-        addDef(ss, "OUT_PITCH_X", "output_width");
-        addDef(ss, "OUT_PITCH_Y", "(output_width * output_height)");
-        addDef(ss, "ROW_PITCH", "input_width");
-        addDef(ss, "SLICE_PITCH", "(input_width * input_height)");
-        addDef(ss, "TILE_K", kernel_w_);
-        addDef(ss, "TILE_N", 32);
-        addDef(ss, "OUT_PITCH_Z",
-                "(output_width * output_height * OUT_DEPTH)");
-        addDef(ss, "ALIGNED_INPUT_SIZE",
-                "(input_height * input_width * INPUT_DEPTH)");
-
-        std::vector<std::string> elems16({
-                "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
-                "s8", "s9", "sa", "sb", "sc", "sd", "se", "sf" });
-
-        #define GENERATE_DOT_PRODUCT(ele_num) \
-        do { \
-            ss << "#define DOT_PRODUCT_" << ele_num \
-                << "( _result, _rowA, colB ) {   "; \
-                for (int i = 0; i < ele_num; i++) { \
-                    if (i < 10) {\
-                        ss << "_result.s" << i \
-                            << " = mad( _rowA, sub_group_broadcast( colB, " << i \
-                            << "), _result.s" << i << " );"; \
-                    } else {\
-                        ss << "_result." << elems16[i] \
-                            << " = mad( _rowA, sub_group_broadcast( colB, " << i \
-                            << "), _result." << elems16[i] << " );"; \
-                    }\
-                } \
-            ss << "    }" << std::endl; \
-        } while (0)
-
-        GENERATE_DOT_PRODUCT(8);
-        GENERATE_DOT_PRODUCT(16);
-
-        // kernel source
-        if (simd_size == 8)
-            ss << "__attribute__((intel_reqd_sub_group_size(8)))" << std::endl;
-        else if (!isBeignet())
-            ss << "__attribute__((intel_reqd_sub_group_size(16)))" << std::endl;
-        ss << "__kernel void Conv_Interleaved(" << std::endl;
-        ss << "const __global float *src0," << std::endl;
-        ss << "const __global float *src1," << std::endl;
-        ss << "const __global float *biases," << std::endl;
-        ss << "__global float *dst," << std::endl;
-        ss << "const ushort input_width," << std::endl;
-        ss << "const ushort input_height," << std::endl;
-        ss << "const ushort output_width," << std::endl;
-        ss << "const ushort output_height)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "const int group_x = get_group_id(0);" << std::endl;
-        ss << "const int group_y = get_group_id(1);" << std::endl;
-        ss << "const int global_x = get_global_id(0);" << std::endl;
-        ss << "const int global_y = get_global_id(1);" << std::endl;
-        ss << "const int global_z = get_global_id(2);" << std::endl;
-        ss << "int interleaved_y;" << std::endl;
-        ss << "int kernel_y;" << std::endl;
-        ss << "int kernel_idx;" << std::endl;
-        ss << "typedef CAT( float, KERNEL_WIDTH ) float_t;" << std::endl;
-        // True for all threads if filter_width is multiple of TILE_N
-        // else, true for all but right-most column of threads.
-        ss << "if( TILE_N_LAST == 0 || global_x < WIDTH1 / TILE_N ) " << std::endl;
-        ss << "{" << std::endl;
-        // Result ctile (*dst) is M rows x N columns
-        // LWG size is 1x8 or 1x16.
-        // Thus each thread calculates (8 or 16) *M rows x N cols of ctile.
-        if (simd_size == 16) {
-            ss << "float16  blockC00 = 0.f;" << std::endl;
-            ss << "float16  blockC10 = 0.f;" << std::endl;
-        } else {
-            ss << "float8  blockC00 = 0.f;" << std::endl;
-            ss << "float8  blockC10 = 0.f;" << std::endl;
-            ss << "float8  blockC20 = 0.f;" << std::endl;
-            ss << "float8  blockC30 = 0.f;" << std::endl;
-        }
-        if (blockM == 2 && simd_size == 8) {
-            ss << "float8  blockC01 = 0.f;" << std::endl;
-            ss << "float8  blockC11 = 0.f;" << std::endl;
-            ss << "float8  blockC21 = 0.f;" << std::endl;
-            ss << "float8  blockC31 = 0.f;" << std::endl;
-        }
-        // Src0 (patch input) is directly used as atile.
-        // Each work item points to the start of a different patch.
-        // atile is M rows x K columns." << std::endl
-        ss << "int curr_x = ( (global_y * TILE_M) % output_width ) * STRIDE_X;"
-           << std::endl;
-        ss << "int curr_y = ( (global_y * TILE_M) / output_width ) * STRIDE_Y;"
-           << std::endl;
-        if (blockM == 2) {
-            ss << "int curr_x1 = ((global_y * TILE_M + 1) % output_width) * STRIDE_X;"
-               << std::endl;
-            ss << "int curr_y1 = ((global_y * TILE_M + 1) / output_width) * STRIDE_Y;"
-               << std::endl;
-        }
-        if (pad_h_ != 0 || pad_w_ != 0 || dilation_w_ != 1 || dilation_h_ != 1) {
-            ss << "int saved_y = curr_y;" << std::endl;
-            if (blockM == 2) {
-                ss << "int saved_y1 = curr_y1;" << std::endl;
-            }
-        }
-        ss << "const __global float *src0_read = src0" << std::endl;
-        // batch offset
-        ss << "+ ALIGNED_INPUT_SIZE * global_z" << std::endl;
-        // y offset
-        ss << "+ (curr_y - INPUT_PAD_H) * ROW_PITCH" << std::endl;
-        // x offset
-        ss << "+ (curr_x - INPUT_PAD_W);" << std::endl;
-        if (blockM == 2) {
-            ss << "const __global float *src0_read1 = src0" << std::endl;
-            // batch offset
-            ss << "+ ALIGNED_INPUT_SIZE * global_z" << std::endl;
-            // y offset
-            ss << "+ (curr_y1 - INPUT_PAD_H) * ROW_PITCH" << std::endl;
-            // x offset
-            ss << "+ curr_x1 - INPUT_PAD_W;" << std::endl;
-        }
-        // Src1 (filter) is directly used as btile.
-        // It starts at the top of src1 and walks down.
-        // btile is K rows x N columns.
-        ss << "const __global float *src1_read = src1 + ( global_x * TILE_N  * 2);"
-            << std::endl;
-        // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
-        // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
-        // and KERNEL_WIDTH/2 rows of interleaved filter.
-        ss << "int patch_depth = 0;" << std::endl;
-        if (!isBeignet() && simd_size == 16)
-            ss << "__attribute__((opencl_unroll_hint(1)))" << std::endl;
-        ss << "do" << std::endl;
-        ss << "{" << std::endl;
-        ss << "int patch_row = 0;" << std::endl;
-        if (pad_h_ != 0 || pad_w_ != 0 || dilation_w_ != 1 || dilation_h_ != 1) {
-            ss << "curr_y = saved_y;" << std::endl;
-            if (blockM == 2)
-                ss << "curr_y1 = saved_y1;" << std::endl;
-        }
-        if (!isBeignet() && simd_size == 16)
-            ss << "__attribute__((opencl_unroll_hint(1)))" << std::endl;
-        ss << "do" << std::endl;
-        ss << "{" << std::endl;
-        /*
-         * Load atile and btile.
-         *
-         * Kernel data is partially interleaved.
-         * Every 2 rows are interleaved at float8 granularity.
-         * The exception is that if KERNEL_WIDTH is odd the last row is not
-         * interleaved.
-         * The non interleaved row is padded with zero to ensure same size
-         * as interleaved rows.
-         * This interleaving is done to ensure 0% GDR bank conflicts.
-         * For example, this is how the
-         * kernel data would be arranged before/after interleaving for
-         * KERNEL_WIDTH=3.
-         * (0, 0) (8, 0) (16, 0) (24, 0) ...    (0, 0) (0, 1) (8, 0) (8, 1)
-         * (0, 1) (8, 1) (16, 1) (24, 1) ... => (0, 2) (8, 2) (16, 2) (24, 2) ...
-         * (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
-         * ...
-         */
-        ss << "const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;"
-           << std::endl;
-        if (pad_h_ == 0 && pad_w_ == 0 && dilation_w_ == 1 && dilation_h_ == 1) {
-            ss << "float_t blockA00 = ( (const __global float_t*)src0_read )[0];"
-               << std::endl;
-            ss << "float*  pblockA00 = (float*)(&blockA00);" << std::endl;
-            if (blockM == 2) {
-                ss << "float_t blockA01 = ( (const __global float_t*)src0_read1 )[0];"
-                   << std::endl;
-                ss << "float*  pblockA01 = (float*)(&blockA01);" << std::endl;
-            }
-        } else {
-            ss << "float_t blockA00;" << std::endl;
-            ss << "float*  pblockA00 = (float*)(&blockA00);" << std::endl;
-            ss << "int pos = 0;" << std::endl;
-            ss << "LOOP(KERNEL_WIDTH, pos," << std::endl;
-            ss << "{" << std::endl;
-            ss << "if (curr_y >= INPUT_PAD_H && "
-               << "curr_y < input_height + INPUT_PAD_H && "
-               << "curr_x + pos * DILATION_X >= INPUT_PAD_W && "
-               << "curr_x + pos * DILATION_X < input_width + INPUT_PAD_W)"
-               << std::endl;
-            ss << "pblockA00[pos] = src0_read[pos * DILATION_X];" << std::endl;
-            ss << "else" << std::endl;
-            ss << "pblockA00[pos] = 0;" << std::endl;
-            ss << "})" << std::endl;
-            ss << "curr_y += DILATION_Y;" << std::endl;
-            if (blockM == 2) {
-                ss << "float_t blockA01;" << std::endl;
-                ss << "float*  pblockA01 = (float*)(&blockA01);" << std::endl;
-                ss << "pos = 0;" << std::endl;
-                ss << "LOOP(KERNEL_WIDTH, pos," << std::endl;
-                ss << "{" << std::endl;
-                ss << "if (curr_y1 >= INPUT_PAD_H && "
-                   << "curr_y1 < input_height + INPUT_PAD_H && "
-                   << "curr_x1 + pos * DILATION_X >= INPUT_PAD_W && "
-                   << "curr_x1 + pos * DILATION_X < input_width + INPUT_PAD_W)"
-                   << std::endl;
-                ss << "pblockA01[pos] = src0_read1[pos * DILATION_X];" << std::endl;
-                ss << "else" << std::endl;
-                ss << "pblockA01[pos] = 0;" << std::endl;
-                ss << "})" << std::endl;
-                ss << "curr_y1 += DILATION_Y;" << std::endl;
-            }
-        }
-        ss << "src0_read += (ROW_PITCH * DILATION_Y);" << std::endl;
-        if (blockM == 2) {
-            ss << "src0_read1 += (ROW_PITCH * DILATION_Y);" << std::endl;
-        }
-        ss << "uint blockB00[KERNEL_WIDTH * (TILE_N_PER_LANE)];" << std::endl;
-        ss << "float8* p8BlockB00 = (float8*)blockB00;" << std::endl;
-        ss << "float4* p4BlockB00 = (float4*)blockB00;" << std::endl;
-        ss << "float2* p2BlockB00 = (float2*)blockB00;" << std::endl;
-        ss << "float*  pBlockB00 =  (float* )blockB00;" << std::endl;
-        ss << "interleaved_y = 0;" << std::endl;
-        ss << "LOOP(KERNEL_WIDTH_DIV2, interleaved_y, " << std::endl;
-        ss << "{ " << std::endl;
-        if (simd_size == 8) {
-            ss << "p8BlockB00[interleaved_y] = as_float8("
-               << "intel_sub_group_block_read8( (const __global uint*)src1_read ) ); "
-               << std::endl;
-        } else {
-            ss << "p4BlockB00[interleaved_y] = as_float4("
-               << "intel_sub_group_block_read4( (const __global uint*)src1_read ) ); "
-               << std::endl;
-        }
-        ss << "src1_read += WIDTH1 * 2;" << std::endl;
-        ss << "} )" << std::endl;
-        ss << "if ( kernel_width_is_odd )" << std::endl;
-        ss << "{" << std::endl;
-        if (simd_size == 8) {
-            ss << "p4BlockB00[KERNEL_WIDTH - 1] = as_float4("
-               << "intel_sub_group_block_read4( (const __global uint*)src1_read ) ); "
-               << std::endl;
-        } else {
-            ss << "p2BlockB00[KERNEL_WIDTH - 1] = as_float2("
-               << "intel_sub_group_block_read2( (const __global uint*)src1_read ) ); "
-               << std::endl;
-        }
-        ss << "src1_read += WIDTH1 * 2;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "// Perform MADs" << std::endl;
-        ss << "kernel_idx = 0;" << std::endl;
-        ss << "interleaved_y = 0;" << std::endl;
-        ss << "LOOP(KERNEL_WIDTH_DIV2, interleaved_y, " << std::endl;
-        ss << "{" << std::endl;
-        ss << "kernel_y = interleaved_y * 2;" << std::endl;
-        if (simd_size == 16) {
-            ss << "DOT_PRODUCT_16("
-               << "blockC00, pblockA00[kernel_y    ], pBlockB00[kernel_idx] ); "
-               << "kernel_idx++;"
-               << std::endl;
-            ss << "DOT_PRODUCT_16("
-               << "blockC00, pblockA00[kernel_y + 1], pBlockB00[kernel_idx] ); "
-               << "kernel_idx++;"
-               << std::endl;
-            ss << "DOT_PRODUCT_16("
-               << "blockC10, pblockA00[kernel_y    ], pBlockB00[kernel_idx] ); "
-               << "kernel_idx++;"
-               << std::endl;
-            ss << "DOT_PRODUCT_16("
-               << "blockC10, pblockA00[kernel_y + 1], pBlockB00[kernel_idx] ); "
-               << "kernel_idx++;"
-               << std::endl;
-        } else {
-            ss << "DOT_PRODUCT_8( blockC00, pblockA00[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC00, pblockA00[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC10, pblockA00[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC10, pblockA00[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC20, pblockA00[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC20, pblockA00[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC30, pblockA00[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC30, pblockA00[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-        }
-        if (blockM == 2) {
-            ss << "kernel_idx -= 8;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC01, pblockA01[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC01, pblockA01[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC11, pblockA01[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC11, pblockA01[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC21, pblockA01[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC21, pblockA01[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC31, pblockA01[kernel_y    ], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC31, pblockA01[kernel_y + 1], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-        }
-        ss << "} )" << std::endl;
-        ss << "kernel_y = interleaved_y * 2;" << std::endl;
-        ss << "if ( kernel_width_is_odd )" << std::endl;
-        ss << "{" << std::endl;
-        if (simd_size == 16) {
-            ss << "DOT_PRODUCT_16( blockC00, pblockA00[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_16( blockC10, pblockA00[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-        } else {
-            ss << "DOT_PRODUCT_8( blockC00, pblockA00[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC10, pblockA00[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC20, pblockA00[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC30, pblockA00[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-        }
-        if (blockM == 2) {
-            ss << "kernel_idx -= 4;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC01, pblockA01[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC11, pblockA01[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC21, pblockA01[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC31, pblockA01[kernel_y], "
-               << "pBlockB00[kernel_idx] ); kernel_idx++;" << std::endl;
-        }
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "while( ++patch_row < KERNEL_HEIGHT );" << std::endl;
-        // reset to start of next slice of patch
-        ss << "src0_read += "
-           << "SLICE_PITCH - ( KERNEL_HEIGHT * ROW_PITCH * DILATION_Y);"
-           << std::endl;
-        if (blockM == 2) {
-            // reset to start of next slice of patch
-            ss << "src0_read1 += "
-               << "SLICE_PITCH - ( KERNEL_HEIGHT * ROW_PITCH * DILATION_Y);"
-               << std::endl;
-        }
-        ss << "} " << std::endl;
-        ss << "while ( ++patch_depth < INPUT_DEPTH );" << std::endl;
-        // Dst resembles a cube of width x height x (output channel * batches).
-        // Each tile writes: (SIMD * TILE_M) x 1 x TILE_N.
-        // Partial writes most likely generated if padding used.
-        ss << "__global float *out = dst " << std::endl;
-        // batch offset
-        ss << "+ global_z * OUT_PITCH_Z" << std::endl;
-        // channel offset
-        ss << "+ ( group_x * TILE_N ) * OUT_PITCH_Y" << std::endl;
-        // y offset
-        ss << "+ ( ( global_y * TILE_M ) / output_width + OUT_PADDING_HEIGHT) * "
-            << "OUT_PITCH_X" << std::endl;
-        // x offset
-        ss << "+ ( ( global_y * TILE_M ) % output_width ) + OUT_PADDING_LEFT;"
-            << std::endl;
-        if (blockM == 2) {
-            ss << "__global float *out1 = dst " << std::endl;
-            ss << "+ global_z * OUT_PITCH_Z" << std::endl;
-            ss << "+ ( group_x * TILE_N ) * OUT_PITCH_Y" << std::endl;
-            ss << "+ ((global_y * TILE_M + 1) / output_width + OUT_PADDING_HEIGHT)*"
-               << "OUT_PITCH_X" << std::endl;
-            ss << "+ ( ( global_y * TILE_M + 1 ) % output_width ) + OUT_PADDING_LEFT;"
-               << std::endl;
-        }
-        ss << "float bias[TILE_N_PER_LANE];" << std::endl;
-        ss << "typedef CAT( float, TILE_N_PER_LANE) float_flex;" << std::endl;
-        ss << "float_flex *bias_vec;" << std::endl;
-        ss << "bias_vec = (float_flex*)bias;" << std::endl;
-        if (simd_size == 16) {
-            ss << "*bias_vec = "
-               << "as_float2(intel_sub_group_block_read2("
-               << "(__global uint *)biases + group_x * TILE_N));"
-               << std::endl;
-            // Work around a potential compiler bug
-            ss << "if (group_x > 0xFFFFFFFEul)" << std::endl;
-            ss << "out[0] = bias[0] + bias[1];" << std::endl;
-        } else {
-            ss << "*bias_vec = "
-               << "as_float4(intel_sub_group_block_read4("
-               << "(__global uint *)biases + group_x * TILE_N));"
-               << std::endl;
-        }
-        ss << "if (global_y * TILE_M < output_width * output_height )" << std::endl;
-        ss << "{" << std::endl;
-        if (simd_size == 16) {
-            ss << "for (int i = 0; i < 16; i++)" << std::endl;
-            ss << "{" << std::endl;
-            ss << "out[( 0+i) * OUT_PITCH_Y] = "
-               << "blockC00[i] + intel_sub_group_shuffle(bias[0], i);" << std::endl;
-            ss << "out[(16+i) * OUT_PITCH_Y] = "
-               << "blockC10[i] + intel_sub_group_shuffle(bias[1], i);;" << std::endl;
-            ss << "}" << std::endl;
-        } else {
-            ss << "for (int i = 0; i < 8; i++)" << std::endl;
-            ss << "{" << std::endl;
-            ss << "out[( 0+i) * OUT_PITCH_Y] = "
-               << "blockC00[i] + intel_sub_group_shuffle(bias[0], i);" << std::endl;
-            ss << "out[( 8+i) * OUT_PITCH_Y] = "
-               << "blockC10[i] + intel_sub_group_shuffle(bias[1], i);" << std::endl;
-            ss << "out[(16+i) * OUT_PITCH_Y] = "
-               << "blockC20[i] + intel_sub_group_shuffle(bias[2], i);" << std::endl;
-            ss << "out[(24+i) * OUT_PITCH_Y] = "
-               << "blockC30[i] + intel_sub_group_shuffle(bias[3], i);" << std::endl;
-            ss << "}" << std::endl;
-        }
-        if (blockM == 2) {
-            ss << "if( global_y * TILE_M + 1 < output_width * output_height )"
-               << std::endl;
-            ss << "{" << std::endl;
-            ss << "for( int i = 0; i < 8; i++ )" << std::endl;
-            ss << "{" << std::endl;
-            ss << "out1[( 0+i) * OUT_PITCH_Y] = "
-               << "blockC01[i] + intel_sub_group_shuffle(bias[0], i);" << std::endl;
-            ss << "out1[( 8+i) * OUT_PITCH_Y] = "
-               << "blockC11[i] + intel_sub_group_shuffle(bias[1], i);" << std::endl;
-            ss << "out1[(16+i) * OUT_PITCH_Y] = "
-               << "blockC21[i] + intel_sub_group_shuffle(bias[2], i);" << std::endl;
-            ss << "out1[(24+i) * OUT_PITCH_Y] = "
-               << "blockC31[i] + intel_sub_group_shuffle(bias[3], i);" << std::endl;
-            ss << "}" << std::endl;
-            ss << "}" << std::endl;
-        }
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "#if TILE_N_LAST > 0" << std::endl;
-        ss << "else" << std::endl;
-        ss << "{" << std::endl;
-        // Result ctile (*dst) is M rows x N columns
-        // LWG size is 1x8.  Thus each thread calculates 8*M rows x N cols of ctile.
-        ss << "int i = 0;" << std::endl;
-        ss << "float8  blockC[TILE_N_LAST_DIV8];" << std::endl;
-        ss << "LOOP(TILE_N_LAST_DIV8, i," << std::endl;
-        ss << "{" << std::endl;
-        ss << "blockC[i] = 0.f;" << std::endl;
-        ss << "} )" << std::endl;
-        ss << "int curr_x = ( global_y % output_width ) * STRIDE_X;" << std::endl;
-        ss << "int curr_y = ( global_y / output_width ) * STRIDE_Y;" << std::endl;
-        if (pad_h_ != 0 || pad_w_ != 0 || dilation_w_ != 1 || dilation_h_ != 1) {
-            ss << "int saved_y = curr_y;" << std::endl;
-        }
-        ss << "const __global float *src0_read = src0" << std::endl;
-        ss << "+ ALIGNED_INPUT_SIZE * global_z" << std::endl;
-        ss << "+ (curr_y - INPUT_PAD_H) * ROW_PITCH" << std::endl;
-        ss << "+ (curr_x - INPUT_PAD_W);" << std::endl;
-        if (blockM == 2) {
-            ss << "i = 0;" << std::endl;
-            ss << "float8  blockC1[TILE_N_LAST_DIV8];" << std::endl;
-            ss << "LOOP(TILE_N_LAST_DIV8, i," << std::endl;
-            ss << "{" << std::endl;
-            ss << "blockC1[i] = 0.f;" << std::endl;
-            ss << "} )" << std::endl;
-            ss << "int curr_x1 = ((global_y * TILE_M + 1) % output_width) * STRIDE_X;"
-               << std::endl;
-            ss << "int curr_y1 = ((global_y * TILE_M + 1) / output_width) * STRIDE_Y;"
-               << std::endl;
-            if (pad_h_ != 0 || pad_w_ != 0 || dilation_w_ != 1 || dilation_h_ != 1) {
-                ss << "int saved_y1 = curr_y1;" << std::endl;
-            }
-            ss << "const __global float *src0_read1 = src0" << std::endl;
-            ss << "+ ALIGNED_INPUT_SIZE * global_z" << std::endl;
-            ss << "+ (curr_y1 - INPUT_PAD_H) * ROW_PITCH" << std::endl;
-            ss << "+ (curr_x1 - INPUT_PAD_W);" << std::endl;
-        }
-        ss << "const __global float *src1_read = src1 + ( global_x * TILE_N  * 2);"
-           << std::endl;
-        ss << "int patch_depth = 0;" << std::endl;
-        ss << "do" << std::endl;
-        ss << "{" << std::endl;
-        ss << "int patch_row = 0;" << std::endl;
-        if (pad_h_ != 0 || pad_w_ != 0 || dilation_w_ != 1 || dilation_h_ != 1) {
-            ss << "curr_y = saved_y;" << std::endl;
-            if (blockM == 2) {
-                ss << "curr_y1 = saved_y1;" << std::endl;
-            }
-        }
-        ss << "do" << std::endl;
-        ss << "{" << std::endl;
-        ss << "const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;"
-           << std::endl;
-        if (pad_h_ == 0 && pad_w_ == 0 && dilation_w_ == 1 && dilation_h_ == 1) {
-            ss << "float_t blockA00 = ( (const __global float_t*)src0_read )[0];"
-               << std::endl;
-            ss << "float*  pblockA00 = (float*)(&blockA00);" << std::endl;
-            if (blockM == 2) {
-                ss << "float_t blockA01 = ( (const __global float_t*)src0_read1 )[0];"
-                   << std::endl;
-                ss << "float*  pblockA01 = (float*)(&blockA01);" << std::endl;
-            }
-        } else {
-            ss << "float_t blockA00;" << std::endl;
-            ss << "float*  pblockA00 = (float*)(&blockA00);" << std::endl;
-            ss << "int pos = 0;" << std::endl;
-            ss << "LOOP(KERNEL_WIDTH, pos," << std::endl;
-            ss << "{" << std::endl;
-            ss << "if (curr_y >= INPUT_PAD_H && "
-               << "curr_y < input_height + INPUT_PAD_H && "
-               << "curr_x + pos * DILATION_X >= INPUT_PAD_W && "
-               << "curr_x + pos * DILATION_X < input_width + INPUT_PAD_W)"
-               << std::endl;
-            ss << "pblockA00[pos] = src0_read[pos * DILATION_X];" << std::endl;
-            ss << "else" << std::endl;
-            ss << "pblockA00[pos] = 0;" << std::endl;
-            ss << "})" << std::endl;
-            ss << "curr_y += DILATION_Y;" << std::endl;
-            if (blockM == 2) {
-                ss << "float_t blockA01;" << std::endl;
-                ss << "float*  pblockA01 = (float*)(&blockA01);" << std::endl;
-                ss << "pos = 0;" << std::endl;
-                ss << "LOOP(KERNEL_WIDTH, pos," << std::endl;
-                ss << "{" << std::endl;
-                ss << "if (curr_y1 >= INPUT_PAD_H && "
-                   << "curr_y1 < input_height + INPUT_PAD_H && "
-                   << "curr_x1 + pos * DILATION_X >= INPUT_PAD_W && "
-                   << "curr_x1 + pos * DILATION_X < input_width + INPUT_PAD_W)"
-                   << std::endl;
-                ss << "pblockA01[pos] = src0_read1[pos * DILATION_X];" << std::endl;
-                ss << "else" << std::endl;
-                ss << "pblockA01[pos] = 0;" << std::endl;
-                ss << "})" << std::endl;
-                ss << "curr_y1 += DILATION_Y;" << std::endl;
-            }
-        }
-        ss << "src0_read += (ROW_PITCH * DILATION_Y);" << std::endl;
-        if (blockM == 2) {
-            ss << "src0_read1 += (ROW_PITCH * DILATION_Y);" << std::endl;
-        }
-        ss << "float blockB[KERNEL_WIDTH * TILE_N_LAST_DIV8];" << std::endl;
-        ss << "interleaved_y = 0;" << std::endl;
-        ss << "LOOP(KERNEL_WIDTH_DIV2, interleaved_y, " << std::endl;
-        ss << "{ " << std::endl;
-        ss << "#if TILE_N_LAST_DIV8 == 1" << std::endl;
-        ss << "float2* p2BlockB = (float2* )blockB;" << std::endl;
-        ss << "p2BlockB[interleaved_y] = as_float2("
-           << "intel_sub_group_block_read2( (const __global uint*)src1_read ) );"
-           << std::endl;
-        ss << "#elif TILE_N_LAST_DIV8 == 2" << std::endl;
-        ss << "float4* p4BlockB = (float4* )blockB;" << std::endl;
-        ss << "p4BlockB[interleaved_y] = as_float4("
-           << "intel_sub_group_block_read4( (const __global uint*)src1_read ) );"
-           << std::endl;
-        ss << "#elif TILE_N_LAST_DIV8 == 3" << std::endl;
-        ss << "//TODO: broken.  No block_read6" << std::endl;
-        ss << "float6* p6BlockB = (float6* )blockB;" << std::endl;
-        ss << "(*((float8*)(&p6BlockB[interleaved_y]))).s0123 = as_float4("
-           << "intel_sub_group_block_read4( (const __global uint*)src1_read ) );"
-           << std::endl;
-        ss << "(*((float8*)(&p6BlockB[interleaved_y]))).s45 = as_float2("
-           << "intel_sub_group_block_read2("
-           << "(const __global uint*)(src1_read + 4 * 8)));" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "src1_read += WIDTH1 * 2;" << std::endl;
-        ss << "} )" << std::endl;
-        ss << "if ( kernel_width_is_odd )" << std::endl;
-        ss << "{" << std::endl;
-        ss << "#if TILE_N_LAST_DIV8 == 1" << std::endl;
-        ss << "float* pBlockB = (float* )blockB;" << std::endl;
-        ss << "pBlockB[KERNEL_WIDTH - 1] = as_float("
-           << "intel_sub_group_block_read( (const __global uint*)src1_read ) );"
-           << std::endl;
-        ss << "#elif TILE_N_LAST_DIV8 == 2" << std::endl;
-        ss << "float2* p2BlockB = (float2* )blockB;" << std::endl;
-        ss << "p2BlockB[KERNEL_WIDTH - 1] = as_float2("
-           << "intel_sub_group_block_read2( (const __global uint*)src1_read ) );"
-           << std::endl;
-        ss << "#elif TILE_N_LAST_DIV8 == 3" << std::endl;
-        ss << "float3* p3BlockB = (float3* )blockB;" << std::endl;
-        ss << "p3BlockB[KERNEL_WIDTH - 1].s01 = as_float2("
-           << "intel_sub_group_block_read2( (const __global uint*)src1_read ) );"
-           << std::endl;
-        ss << "p3BlockB[KERNEL_WIDTH - 1].s2 = as_float("
-           << "intel_sub_group_block_read( (const __global uint*)"
-           << "(src1_read + 2 * 8)));" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "src1_read += WIDTH1 * 2;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "// Perform MADs" << std::endl;
-        ss << "float* pBlockB = (float*)blockB;" << std::endl;
-        ss << "kernel_idx = 0;" << std::endl;
-        ss << "interleaved_y = 0;" << std::endl;
-        ss << "LOOP(KERNEL_WIDTH_DIV2, interleaved_y, " << std::endl;
-        ss << "{" << std::endl;
-        ss << "kernel_y = interleaved_y * 2;" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[0], pblockA00[kernel_y    ],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[0], pblockA00[kernel_y + 1],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "#if TILE_N_LAST_DIV8 >= 2" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[1], pblockA00[kernel_y    ],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[1], pblockA00[kernel_y + 1],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "#if TILE_N_LAST_DIV8 >= 3" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[2], pblockA00[kernel_y    ],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[2], pblockA00[kernel_y + 1],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "#endif" << std::endl;
-        if (blockM == 2) {
-            ss << "kernel_idx -= TILE_N_LAST_DIV8 * 2;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[0], pblockA01[kernel_y    ],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[0], pblockA01[kernel_y + 1],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "#if TILE_N_LAST_DIV8 >= 2" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[1], pblockA01[kernel_y    ],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[1], pblockA01[kernel_y + 1],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "#if TILE_N_LAST_DIV8 >= 3" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[2], pblockA01[kernel_y    ],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[2], pblockA01[kernel_y + 1],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "#endif" << std::endl;
-            ss << "#endif" << std::endl;
-        }
-        ss << "} )" << std::endl;
-        ss << "kernel_y = interleaved_y * 2;" << std::endl;
-        ss << "if ( kernel_width_is_odd )" << std::endl;
-        ss << "{" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[0], pblockA00[kernel_y],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "#if TILE_N_LAST_DIV8 >= 2" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[1], pblockA00[kernel_y],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "#if TILE_N_LAST_DIV8 >= 3" << std::endl;
-        ss << "DOT_PRODUCT_8( blockC[2], pblockA00[kernel_y],"
-           << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "#endif" << std::endl;
-        if (blockM == 2) {
-            ss << "kernel_idx -= TILE_N_LAST_DIV8;" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[0], pblockA01[kernel_y],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "#if TILE_N_LAST_DIV8 >= 2" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[1], pblockA01[kernel_y],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "#if TILE_N_LAST_DIV8 >= 3" << std::endl;
-            ss << "DOT_PRODUCT_8( blockC1[2], pblockA01[kernel_y],"
-               << "pBlockB[kernel_idx] ); kernel_idx++;" << std::endl;
-            ss << "#endif" << std::endl;
-            ss << "#endif" << std::endl;
-        }
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "//while( ++patch_row < 1 ); //debug" << std::endl;
-        ss << "while( ++patch_row < KERNEL_HEIGHT );" << std::endl;
-        ss << "src0_read += "
-           << "SLICE_PITCH - ( KERNEL_HEIGHT * ROW_PITCH * DILATION_Y );"
-           << std::endl;
-        ss << "} " << std::endl;
-        ss << "while ( ++patch_depth < INPUT_DEPTH );" << std::endl;
-        ss << "__global float *out = dst " << std::endl;
-        ss << "+ global_z * OUT_PITCH_Z" << std::endl;
-        ss << "+ (group_x * TILE_N) * OUT_PITCH_Y" << std::endl;
-        ss << "+ ((global_y * TILE_M) / output_width + "
-           << "OUT_PADDING_HEIGHT) * OUT_PITCH_X" << std::endl;
-        ss << "+ ((global_y * TILE_M) % output_width ) + OUT_PADDING_LEFT;"
-           << std::endl;
-        if (blockM == 2) {
-            ss << "__global float *out1 = dst " << std::endl;
-            ss << "+ global_z * OUT_PITCH_Z" << std::endl;
-            ss << "+ ( group_x * TILE_N ) * OUT_PITCH_Y" << std::endl;
-            ss << "+ ((global_y * TILE_M + 1) / output_width + OUT_PADDING_HEIGHT ) *"
-                << "OUT_PITCH_X" << std::endl;
-            ss << "+ ((global_y * TILE_M + 1) % output_width ) + OUT_PADDING_LEFT;"
-                << std::endl;
-        }
-        ss << "float bias[4];" << std::endl;
-        ss << "float4 *bias_vec;" << std::endl;
-        ss << "bias_vec = (float4*)bias;" << std::endl;
-        ss << "*bias_vec = as_float4(intel_sub_group_block_read4("
-           << "(__global uint *)biases + group_x * TILE_N));" << std::endl;
-        ss << "if (global_y * TILE_M < output_width * output_height )" << std::endl;
-        ss << "{" << std::endl;
-        ss << "for (int i = 0; i < 8; i++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "if ( TILE_N_LAST_DIV8 > 0 ) out[( 0+i) * OUT_PITCH_Y] = "
-           << "blockC[0][i] + intel_sub_group_shuffle(bias[0], i);" << std::endl;
-        ss << "if ( TILE_N_LAST_DIV8 > 1 ) out[( 8+i) * OUT_PITCH_Y] = "
-           << "blockC[1][i] + intel_sub_group_shuffle(bias[1], i);" << std::endl;
-        ss << "if ( TILE_N_LAST_DIV8 > 2 ) out[(16+i) * OUT_PITCH_Y] = "
-           << "blockC[2][i] + intel_sub_group_shuffle(bias[2], i);" << std::endl;
-        ss << "if ( TILE_N_LAST_DIV8 > 3 ) out[(24+i) * OUT_PITCH_Y] = "
-           << "blockC[3][i] + intel_sub_group_shuffle(bias[3], i);" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        if (blockM == 2) {
-            ss << "if( global_y * TILE_M + 1 < output_width * output_height )"
-               << std::endl;
-            ss << "{" << std::endl;
-            ss << "for( int i = 0; i < 8; i++ )" << std::endl;
-            ss << "{" << std::endl;
-            ss << "if ( TILE_N_LAST_DIV8 > 0 ) out1[( 0+i) * OUT_PITCH_Y] = "
-               << "blockC1[0][i] + intel_sub_group_shuffle(bias[0], i);" << std::endl;
-            ss << "if ( TILE_N_LAST_DIV8 > 1 ) out1[( 8+i) * OUT_PITCH_Y] = "
-               << "blockC1[1][i] + intel_sub_group_shuffle(bias[1], i);" << std::endl;
-            ss << "if ( TILE_N_LAST_DIV8 > 2 ) out1[(16+i) * OUT_PITCH_Y] = "
-               << "blockC1[2][i] + intel_sub_group_shuffle(bias[2], i);" << std::endl;
-            ss << "if ( TILE_N_LAST_DIV8 > 3 ) out1[(24+i) * OUT_PITCH_Y] = "
-               << "blockC1[3][i] + intel_sub_group_shuffle(bias[3], i);" << std::endl;
-            ss << "}" << std::endl;
-            ss << "}" << std::endl;
-        }
-        ss << "}" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "}" << std::endl;
     } else if (kernelType == KERNEL_TYPE_BASIC) {
         kernelUKey = generateSpecificKey(4, blockM, blockK, blockN);
         kernel_name_ = "BASIC_";
@@ -2011,11 +1242,36 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                 kernel.set(argIdx++, (uint16_t)height_);
                 kernel.set(argIdx++, (uint16_t)output_w_);
                 kernel.set(argIdx++, (uint16_t)output_h_);
+                int out_pitch_y = output_w_ * output_h_;
+                int out_pitch_z = out_pitch_y * M_;
+                int aligned_input_size = height_ * width_ * channels_ / group_;
+                int slice_pitch = width_ * height_;
+                kernel.set(argIdx++, (uint32_t)out_pitch_y);
+                kernel.set(argIdx++, (uint32_t)out_pitch_z);
+                kernel.set(argIdx++, (uint32_t)aligned_input_size);
+                kernel.set(argIdx++, (uint32_t)slice_pitch);
+
+                int blockM = config->workItem_output[0];
+                int blockK = config->workItem_output[1];
+                int blockN = config->workItem_output[2];
+                int alignedFilterWidth = ALIGN(M_, blockN);
+                int alignedExpandHeight = ALIGN(output_w_ * output_h_, blockM);
+                int globalWorkSizeDX = blockN;
+                int globalWorkSizeDY = blockM;
+                size_t sgemm_m = alignedExpandHeight;
+                size_t sgemm_n = alignedFilterWidth;
+                size_t gx = (size_t) ceil( (float) sgemm_n /
+                        (float) globalWorkSizeDX );
+                size_t gy = (size_t) ceil( (float) sgemm_m /
+                        (float) globalWorkSizeDY );
+                gy = ALIGN(gy, blockK);
+                size_t global_size[3] = { gx, gy, config->global_work_size[2] };
+
                 ocl::Queue queue = ocl::Queue::getDefault();
                 err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
                                              (cl_kernel)kernel.ptr(), 3,
                                              NULL,
-                                             config->global_work_size,
+                                             global_size,
                                              config->local_work_size, 0, NULL,
                                              NULL);
                 OCL_CHECK(err);
@@ -2208,34 +1464,77 @@ ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
 }
 
 template<>
-bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
-                                                        int32_t blockK,
-                                                        int32_t blockN)
+std::string OCL4DNNConvSpatial<float>::programEntryToString(ocl::ProgramSource& src)
 {
+    return src.source();
+}
 
-    int32_t workItemOutput[3] = { blockM, blockK, blockN };
-    int32_t output_width = output_w_;
-    int32_t output_height = output_h_;
-    int32_t simd_size = blockK;
-    int32_t num_batches = num_;
-    int32_t alignedFilterWidth = ALIGN(M_, blockN);
-    int32_t alignedExpandHeight = ALIGN(output_width * output_height, blockM);
-    int32_t globalWorkSizeDX = blockN;
-    int32_t globalWorkSizeDY = blockM;
+template<>
+bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
+                                                         int32_t blockK,
+                                                         int32_t blockN)
+{
+    std::stringstream optionsString;
+    std::string kernelUKey = generateSpecificKey(5,
+                                                 blockM,
+                                                 blockK,
+                                                 blockN);
+    int workItemOutput[3] = { blockM, blockK, blockN };
+    int simd_size = blockK;
+    int num_batches = num_;
+    int output_width = output_w_;
+    int output_height = output_h_;
+    int alignedFilterWidth = ALIGN(M_, blockN);
+    int alignedExpandHeight = ALIGN(output_width * output_height, blockM);
+    int globalWorkSizeDX = blockN;
+    int globalWorkSizeDY = blockM;
     size_t sgemm_m = alignedExpandHeight;
     size_t sgemm_n = alignedFilterWidth;
-    size_t gx = (size_t) ceil( (float) sgemm_n / (float) globalWorkSizeDX );  // NOLINT
-    size_t gy = (size_t) ceil( (float) sgemm_m / (float) globalWorkSizeDY );  // NOLINT
+    size_t gx = (size_t) ceil( (float) sgemm_n / (float) globalWorkSizeDX );
+    size_t gy = (size_t) ceil( (float) sgemm_m / (float) globalWorkSizeDY );
     gy = ALIGN(gy, blockK);
     size_t gz = num_batches;
     size_t global_size[3] = { gx, gy, gz };
     size_t local_size[3] = { 1, static_cast<size_t>(simd_size), 1 };
 
-    kernelType_ = 5;
-    blockM_ = blockM;
-    blockK_ = blockK;
-    blockN_ = blockN;
-    generateKernelSrc();
+    kernel_name_ = "U_GEMM_LIKE_CONV_";
+    kernel_name_ += kernelUKey.c_str();
+    if (blockK == 8)
+        kernel_name_ += "_SIMD8";
+    else
+        kernel_name_ += "_SIMD16";
+    std::stringstream kernelDef;
+    kernelDef << "GEMM_LIKE_CONV_" << blockN << "_" << blockM;
+    if (blockK == 16)
+        kernelDef << "_SIMD16";
+
+    // Build list of options and defines
+    optionsString.str("");
+    optionsString << "-cl-fast-relaxed-math " << " -D " << kernelDef.str()
+        << " -D Conv_Interleaved=" << kernel_name_.c_str();
+    optionsString <<
+        " -cl-mad-enable" <<
+        " -DKERNEL_WIDTH=" << kernel_w_ <<
+        " -DKERNEL_HEIGHT=" << kernel_h_ <<
+        " -DSTRIDE_X=" << stride_w_ <<
+        " -DSTRIDE_Y=" << stride_h_ <<
+        " -DDILATION_X=" << dilation_w_ <<
+        " -DDILATION_Y=" << dilation_h_ <<
+        " -DINPUT_DEPTH=" << channels_ <<
+        " -DWIDTH1=" << M_ <<
+        " -DOUT_PADDING_LEFT=" << 0 <<
+        " -DOUT_PADDING_HEIGHT=" << 0 <<
+        " -DOUT_DEPTH=" << M_ <<
+        " -DNUM_BATCHES=" << num_ <<
+        " -DDY=" << globalWorkSizeDY <<
+        " -DDX=" << globalWorkSizeDX <<
+        " -DKERNEL_WIDTH_DIV2=" << kernel_w_ / 2 <<
+        " -DKERNEL_SLICE_DIV2=" << (kernel_w_ * kernel_h_) / 2 <<
+        " -DTILE_N_LAST=" << M_ % 32 <<
+        " -DTILE_N_LAST_DIV8=" << (M_ % 32) / 8 <<
+        " -DINPUT_PAD_W=" << pad_w_ << " -DINPUT_PAD_H=" << pad_h_;
+    options_ = optionsString.str();
+    kernel_ = programEntryToString(ocl::dnn::conv_layer_spatial_oclsrc);
     ocl::Program program = compileKernel();
 
     size_t workgroupSize_used;
@@ -2252,8 +1551,14 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
     }
 
     if (err == CL_SUCCESS) {
-        kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
-                                               false, true, false, 5));
+        kernelQueue.push_back(new kernelConfig(kernel_name_,
+                                               global_size,
+                                               local_size,
+                                               workItemOutput,
+                                               false,
+                                               true,
+                                               false,
+                                               5));
         return true;
     } else {
         phash.erase(kernel_name_);

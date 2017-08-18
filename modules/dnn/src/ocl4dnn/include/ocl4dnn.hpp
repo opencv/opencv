@@ -232,6 +232,7 @@ class OCL4DNNConvSpatial
                                 bool preserved);
         void cleanTmpSubBuffers(const Dtype *bottom,
                                 const Dtype *top);
+        std::string programEntryToString(ocl::ProgramSource& src);
 
         int32_t group_;
         bool bias_term_;
