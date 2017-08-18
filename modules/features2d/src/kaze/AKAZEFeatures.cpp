@@ -118,6 +118,90 @@ static inline int getGaussianKernelSize(float sigma) {
 /* ************************************************************************* */
 
 /**
+ * @brief Performs one step of nonlinear diffusion for one row
+ *
+ * @param Lflow conductivity image
+ * @param Lt diffusion image
+ * @param r_buf buffer for previous row, storing original values from previous step
+ * @param j row number
+ * @param step_size coefficient for current step
+ */
+static inline void
+nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *r_buf, int j, float step_size)
+{
+  // handle edge conditions
+  int prev_row_idx = std::max(0, j-1); // handle first row
+  int next_row_idx = std::min(Lt.rows-1, j+1); // handle last row
+  // fetch kernel sources from lt, from matrices and buffers
+  float *lt_row = Lt.ptr<float>(j);
+  const float *lt_row_next = Lt.ptr<float>(next_row_idx);
+  // same for lf
+  const float *lf_row = Lflow.ptr<float>(j);
+  const float *lf_row_next = Lflow.ptr<float>(next_row_idx);
+  const float *lf_row_prev = Lflow.ptr<float>(prev_row_idx);
+
+  // first column
+  float step = (lf_row[0] + lf_row[1]     )*(lt_row[1] - lt_row[0]) +
+               (lf_row[0] + lf_row_next[0])*(lt_row_next[0] - lt_row[0]) +
+               (lf_row[0] + lf_row_prev[0])*(r_buf[0] - lt_row[0]);
+  // save original value without step (for next row)
+  r_buf[0] = lt_row[0];
+  lt_row[0] += step * step_size; // add step to lt
+
+  // hot loop
+  int k = 1;
+
+  // vectorized version
+  __m128 lt_c = _mm_set1_ps(r_buf[0]);
+  __m128 v_step_size = _mm_set1_ps(step_size);
+  int vec_total = Lt.cols - 1 - 4; // max elems we can proceed vectorized without last column
+  for (; k <= vec_total; k += 4) {
+    __m128 lf_c = _mm_loadu_ps(lf_row + k);
+    __m128 lf_cp = _mm_loadu_ps(lf_row + (k - 1));
+    __m128 lf_cn = _mm_loadu_ps(lf_row + (k + 1));
+    __m128 lf_a = _mm_loadu_ps(lf_row_prev + k);
+    __m128 lf_b = _mm_loadu_ps(lf_row_next + k);
+
+    // reconstruct previous value, first elem has been already overwriten in memory
+    __m128 new_lt_c = _mm_loadu_ps(lt_row + k);
+    __m128 lt_cp = (__m128)_mm_alignr_epi8((__m128i)new_lt_c, (__m128i)lt_c, 3 * sizeof(float));
+    lt_c = new_lt_c;
+
+    __m128 lt_cn = _mm_loadu_ps(lt_row + (k + 1));
+    __m128 lt_a = _mm_loadu_ps(r_buf + k);
+    __m128 lt_b = _mm_loadu_ps(lt_row_next + k);
+
+    __m128 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
+                     (lf_c + lf_cp)*(lt_cp - lt_c) +
+                     (lf_c + lf_b )*(lt_b  - lt_c) +
+                     (lf_c + lf_a )*(lt_a  - lt_c));
+    // add step according to stepsize to lt
+    __m128 next_lt = lt_c + (v_step * v_step_size);
+
+    _mm_storeu_ps(r_buf + k, lt_c);
+    _mm_storeu_ps(lt_row + k, next_lt);
+  }
+
+  for (; k < Lt.cols - 1; ++k) {
+    step = (lf_row[k] + lf_row[k + 1] )*(lt_row[k + 1] - lt_row[k]) +
+           (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1]  - lt_row[k]) +
+           (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
+           (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
+    // save original value without step (for next row)
+    r_buf[k] = lt_row[k];
+    lt_row[k] += step * step_size; // add step to lt
+  }
+
+  // last column
+  step = (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1] - lt_row[k]) +
+         (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
+         (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
+  // save original value without step (for next row)
+  r_buf[k] = lt_row[k];
+  lt_row[k] += step * step_size; // add step to lt
+}
+
+/**
 * @brief This function computes a scalar non-linear diffusion step. Output will be
 * added to Lt
 * @param Lt Base image in the evolution
@@ -139,80 +223,7 @@ nld_step_scalar_add(const Mat& Lflow, Mat& Lt, Mat& Lstep, float step_size)
   float *r_buf = Lstep.ptr<float>();
 
   for (int j = 0; j < Lt.rows; ++j) {
-    // handle edge conditions
-    int prev_row_idx = std::max(0, j-1); // handle first row
-    int next_row_idx = std::min(Lt.rows-1, j+1); // handle last row
-    // fetch kernel sources from lt, from matrices and buffers
-    float *lt_row = Lt.ptr<float>(j);
-    const float *lt_row_next = Lt.ptr<float>(next_row_idx);
-    // same for lf
-    const float *lf_row = Lflow.ptr<float>(j);
-    const float *lf_row_next = Lflow.ptr<float>(next_row_idx);
-    const float *lf_row_prev = Lflow.ptr<float>(prev_row_idx);
-
-    // first column
-    float step = (lf_row[0] + lf_row[1]     )*(lt_row[1] - lt_row[0]) +
-                 (lf_row[0] + lf_row_next[0])*(lt_row_next[0] - lt_row[0]) +
-                 (lf_row[0] + lf_row_prev[0])*(r_buf[0] - lt_row[0]);
-    // save original value without step (for next row)
-    r_buf[0] = lt_row[0];
-    lt_row[0] += step * step_size; // add step to lt
-
-    // hot loop
-    int k = 1;
-
-    // vectorized version
-    __m128 lt_c = _mm_set1_ps(r_buf[0]);
-    __m128 lf_c = _mm_set1_ps(lf_row[0]);
-    __m128 v_step_size = _mm_set1_ps(step_size);
-    int vec_total = Lt.cols - 1 - 4; // max elems we can proceed vectorized without last column
-    for (; k <= vec_total; k += 4) {
-      // save 1 load
-      __m128 new_lf_c = _mm_loadu_ps(lf_row + k);
-      __m128 lf_cp = (__m128)_mm_alignr_epi8((__m128i)new_lf_c, (__m128i)lf_c, 3 * sizeof(float));
-      lf_c = new_lf_c;
-
-      __m128 lf_cn = _mm_loadu_ps(lf_row + (k + 1));
-      __m128 lf_a = _mm_loadu_ps(lf_row_prev + k);
-      __m128 lf_b = _mm_loadu_ps(lf_row_next + k);
-
-      // reconstruct previous value, first elem has been already overwriten in memory
-      __m128 new_lt_c = _mm_loadu_ps(lt_row + k);
-      __m128 lt_cp = (__m128)_mm_alignr_epi8((__m128i)new_lt_c, (__m128i)lt_c, 3 * sizeof(float));
-      lt_c = new_lt_c;
-
-      __m128 lt_cn = _mm_loadu_ps(lt_row + (k + 1));
-      __m128 lt_a = _mm_loadu_ps(r_buf + k);
-      __m128 lt_b = _mm_loadu_ps(lt_row_next + k);
-
-      __m128 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
-      (lf_c + lf_cp)*(lt_cp - lt_c) +
-      (lf_c + lf_b )*(lt_b  - lt_c) +
-      (lf_c + lf_a )*(lt_a  - lt_c));
-      // add step according to stepsize to lt
-      __m128 next_lt = lt_c + (v_step * v_step_size);
-
-      _mm_storeu_ps(r_buf + k, lt_c);
-      _mm_storeu_ps(lt_row + k, next_lt);
-    }
-
-    for (; k < Lt.cols - 1; ++k) {
-      step = (lf_row[k] + lf_row[k + 1] )*(lt_row[k + 1] - lt_row[k]) +
-             (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1]  - lt_row[k]) +
-             (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
-             (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
-      // save original value without step (for next row)
-      r_buf[k] = lt_row[k];
-      lt_row[k] += step * step_size; // add step to lt
-    }
-
-    // last column
-    step = (lf_row[k] + lf_row[k - 1] )*(r_buf[k - 1] - lt_row[k]) +
-             (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
-             (lf_row[k] + lf_row_prev[k])*(r_buf[k] - lt_row[k]);
-    // save original value without step (for next row)
-    r_buf[k] = lt_row[k];
-    lt_row[k] += step * step_size; // add step to lt
+    nld_step_scalar_row(Lflow, Lt, r_buf, j, step_size);
   }
 }
 
