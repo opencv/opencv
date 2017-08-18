@@ -40,6 +40,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_adding_images
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
