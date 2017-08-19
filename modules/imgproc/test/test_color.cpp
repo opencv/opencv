@@ -1256,7 +1256,10 @@ void CV_ColorLuvTest::get_test_array_types_and_sizes( int test_case_idx, vector<
 double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = test_mat[i][j].depth();
-    return depth == CV_8U ? 48 : depth == CV_16U ? 32 : 5e-2;
+    // j == 0 is for forward code, j == 1 is for inverse code
+    return (depth ==  CV_8U) ? (srgb ? 36 : 8) :
+           //(depth == CV_16U) ? 32 : // 16u is disabled
+           5e-2;
 }
 
 
