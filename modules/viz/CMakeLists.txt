@@ -24,6 +24,8 @@ if(NOT BUILD_SHARED_LIBS)
   endif()
 endif()
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Winconsistent-missing-override)
+
 ocv_define_module(viz opencv_core WRAP python)
 ocv_target_link_libraries(${the_module} LINK_PRIVATE ${VTK_LIBRARIES})
 
