@@ -1556,7 +1556,7 @@ macro(CUDA_ADD_LIBRARY cuda_target)
   # variable will have been defined.
   CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${link_file}" ${cuda_target} "${_options}" "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
-  target_link_libraries(${cuda_target}
+  target_link_libraries(${cuda_target} LINK_PRIVATE
     ${CUDA_LIBRARIES}
     )
 
@@ -1600,7 +1600,7 @@ macro(CUDA_ADD_EXECUTABLE cuda_target)
   # variable will have been defined.
   CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${link_file}" ${cuda_target} "${_options}" "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
-  target_link_libraries(${cuda_target}
+  target_link_libraries(${cuda_target} LINK_PRIVATE
     ${CUDA_LIBRARIES}
     )
 
@@ -1675,9 +1675,9 @@ endmacro()
 ###############################################################################
 macro(CUDA_ADD_CUFFT_TO_TARGET target)
   if (CUDA_BUILD_EMULATION)
-    target_link_libraries(${target} ${CUDA_cufftemu_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cufftemu_LIBRARY})
   else()
-    target_link_libraries(${target} ${CUDA_cufft_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cufft_LIBRARY})
   endif()
 endmacro()
 
@@ -1688,9 +1688,9 @@ endmacro()
 ###############################################################################
 macro(CUDA_ADD_CUBLAS_TO_TARGET target)
   if (CUDA_BUILD_EMULATION)
-    target_link_libraries(${target} ${CUDA_cublasemu_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cublasemu_LIBRARY})
   else()
-    target_link_libraries(${target} ${CUDA_cublas_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cublas_LIBRARY})
   endif()
 endmacro()
 

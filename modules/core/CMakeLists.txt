@@ -4,7 +4,6 @@ ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2)
 ocv_add_dispatched_file(stat SSE4_2 AVX2)
 
 ocv_add_module(core
-               "${OPENCV_HAL_LINKER_LIBS}"
                OPTIONAL opencv_cudev
                WRAP java python)
 
@@ -57,10 +56,11 @@ endif()
 
 ocv_create_module(${extra_libs})
 
-ocv_target_link_libraries(${the_module}
+ocv_target_link_libraries(${the_module} LINK_PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
+    "${OPENCV_HAL_LINKER_LIBS}"
 )
 
 ocv_add_accuracy_tests()
