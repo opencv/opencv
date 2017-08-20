@@ -76,6 +76,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_discrete_fourier_transform
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
