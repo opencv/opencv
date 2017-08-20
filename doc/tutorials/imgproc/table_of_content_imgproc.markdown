@@ -29,7 +29,9 @@ In this section you will learn about the image processing (manipulation) functio
 
     Here we investigate different morphology operators
 
--	@subpage tutorial_hitOrMiss
+-   @subpage tutorial_hitOrMiss
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.4
 
