@@ -5,6 +5,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_gausian_median_blur_bilateral_filter
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
