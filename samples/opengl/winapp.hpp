@@ -212,6 +212,8 @@ public:
         } while (!m_end_loop);
 
         return 0;
+#else
+        return 0;
 #endif
     }
 
