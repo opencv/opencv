@@ -14,6 +14,6 @@ endif()
 set(OPENCV_SOVERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}")
 set(OPENCV_LIBVERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
 
-# create a dependency on version file
-# we never use output of the following command but cmake will rerun automatically if the version file changes
+# create a dependency on the version file
+# we never use the output of the following command but cmake will rerun automatically if the version file changes
 configure_file("${OPENCV_VERSION_FILE}" "${CMAKE_BINARY_DIR}/junk/version.junk" COPYONLY)
