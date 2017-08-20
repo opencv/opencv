@@ -57,6 +57,7 @@
 
 #ifdef HAVE_CUDA
 #  include <cuda.h>
+#  include <cuda_fp16.h>
 #  include <cuda_runtime.h>
 #  include <npp.h>
 #  include "opencv2/core/cuda_stream_accessor.hpp"
