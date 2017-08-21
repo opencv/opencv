@@ -12,7 +12,7 @@ static void help(char* progName)
         <<  "This program shows how to filter images with mask: the write it yourself and the"
         << "filter2d way. " << endl
         <<  "Usage:"                                                                        << endl
-        << progName << " [image_name -- default ../data/lena.jpg] [G -- grayscale] "        << endl << endl;
+        << progName << " [image_path -- default ../data/lena.jpg] [G -- grayscale] "        << endl << endl;
 }
 
 
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     Sharpen( src, dst0 );
 
     t = ((double)getTickCount() - t)/getTickFrequency();
-    cout << "Hand written function times passed in seconds: " << t << endl;
+    cout << "Hand written function time passed in seconds: " << t << endl;
 
     imshow( "Output", dst0 );
     waitKey();
@@ -62,7 +62,7 @@ int main( int argc, char* argv[])
     filter2D( src, dst1, src.depth(), kernel );
   //![filter2D]
     t = ((double)getTickCount() - t)/getTickFrequency();
-    cout << "Built-in filter2D time passed in seconds:      " << t << endl;
+    cout << "Built-in filter2D time passed in seconds:     " << t << endl;
 
     imshow( "Output", dst1 );
 
