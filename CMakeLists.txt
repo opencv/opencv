@@ -37,11 +37,11 @@ endif(NOT CMAKE_TOOLCHAIN_FILE)
 # Top level OpenCV project
 # --------------------------------------------------------------
 if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
-  cmake_minimum_required(VERSION 2.8.8)
+  cmake_minimum_required(VERSION 3.0)
 elseif(IOS)
-  cmake_minimum_required(VERSION 2.8.0)
+  cmake_minimum_required(VERSION 3.0)
 else()
-  cmake_minimum_required(VERSION 2.6.3)
+  cmake_minimum_required(VERSION 2.8.12.2)
 endif()
 
 if(POLICY CMP0017)
