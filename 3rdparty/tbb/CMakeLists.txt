@@ -187,7 +187,7 @@ if (HAVE_LIBPTHREAD)
   add_definitions(-DUSE_PTHREAD) #required for Unix
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_COMPILER_IS_CLANGCXX)
   add_definitions(-DTBB_USE_GCC_BUILTINS=1) #required for ARM GCC
 endif()
 
