@@ -39,7 +39,9 @@ In this section you will learn about the image processing (manipulation) functio
 
     Learn how to find patterns in binary images using the Hit-or-Miss operation
 
--   @subpage tutorial_moprh_lines_detection
+-   @subpage tutorial_morph_lines_detection
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
