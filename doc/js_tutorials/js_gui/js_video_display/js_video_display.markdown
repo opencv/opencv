@@ -132,6 +132,7 @@ loopIndex = setInterval(
     <video id="video">Your browser does not support the video tag.</video>
     <canvas id="canvasOutput"></canvas>
 </div>
+<script src="adapter.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
 // In this case, We set width 320, and the height will be computed based on the input stream.
