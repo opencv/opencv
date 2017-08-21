@@ -387,7 +387,7 @@ macro(ocv_warnings_disable)
   endif(NOT ENABLE_NOISY_WARNINGS)
 endmacro()
 
-macro(ocv_append_sourge_file_compile_definitions source)
+macro(ocv_append_source_file_compile_definitions source)
   get_source_file_property(_value "${source}" COMPILE_DEFINITIONS)
   if(_value)
     set(_value ${_value} ${ARGN})
