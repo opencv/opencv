@@ -592,7 +592,7 @@ panel.
 
 @param trackbarname Name of the trackbar.
 @param winname Name of the window that is the parent of trackbar.
-@param minval New maximum position.
+@param minval New minimum position.
  */
 CV_EXPORTS_W void setTrackbarMin(const String& trackbarname, const String& winname, int minval);
 
