@@ -2622,7 +2622,7 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
     bool next = true;
     for(size_t c = 0; next && c < nCodes; c++)
     {
-        int v = c;
+        size_t v = c;
         int  blueIdx = (v % 2 != 0) ? 2 : 0; v /=2;
         /* bool    srgb = (v % 2 == 0); v /= 2; */
         /* bool forward = (v % 2 == 0); */

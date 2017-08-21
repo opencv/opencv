@@ -6580,9 +6580,9 @@ struct Lab2RGBfloat
                 else
                     c[j] = XYZ2sRGB_D65[i+j*3];
 
-            coeffs[i+(blueIdx^2)*3] = c[0]*whitePt[i];
-            coeffs[i+3]             = c[1]*whitePt[i];
-            coeffs[i+blueIdx*3]     = c[2]*whitePt[i];
+            coeffs[i+(blueIdx^2)*3] = (float)(c[0]*whitePt[i]);
+            coeffs[i+3]             = (float)(c[1]*whitePt[i]);
+            coeffs[i+blueIdx*3]     = (float)(c[2]*whitePt[i]);
         }
 
         lThresh = softfloat(8); // 0.008856f * 903.3f  = (6/29)^3*(29/3)^3 = 8
@@ -7459,7 +7459,7 @@ struct RGB2Luvfloat
                 if(_coeffs)
                     coeffs[i*3+j] = _coeffs[i*3+j];
                 else
-                    coeffs[i*3+j] = sRGB2XYZ_D65[i*3+j];
+                    coeffs[i*3+j] = (float)(sRGB2XYZ_D65[i*3+j]);
 
             if( blueIdx == 0 )
                 std::swap(coeffs[i*3], coeffs[i*3+2]);
@@ -9782,9 +9782,9 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             for( int i = 0; i < 3; i++ )
             {
-                coeffs[i+(bidx^2)*3] = XYZ2sRGB_D65[i  ]*(lab ? whitePt[i] : softdouble::one());
-                coeffs[i+3]          = XYZ2sRGB_D65[i+3]*(lab ? whitePt[i] : softdouble::one());
-                coeffs[i+bidx*3]     = XYZ2sRGB_D65[i+6]*(lab ? whitePt[i] : softdouble::one());
+                coeffs[i+(bidx^2)*3] = (float)(XYZ2sRGB_D65[i  ]*(lab ? whitePt[i] : softdouble::one()));
+                coeffs[i+3]          = (float)(XYZ2sRGB_D65[i+3]*(lab ? whitePt[i] : softdouble::one()));
+                coeffs[i+bidx*3]     = (float)(XYZ2sRGB_D65[i+6]*(lab ? whitePt[i] : softdouble::one()));
             }
 
             softfloat d = whitePt[0] +
