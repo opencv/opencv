@@ -76,7 +76,7 @@ private:
 
 static void printHelp()
 {
-    cout << "Usage: stereo_match_gpu\n"
+    cout << "Usage: stereo_match\n"
         << "\t--left <left_view> --right <right_view> # must be rectified\n"
         << "\t--method <stereo_match_method> # BM | BP | CSBP\n"
         << "\t--ndisp <number> # number of disparity levels\n";

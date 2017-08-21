@@ -28,7 +28,7 @@ using namespace cv;
 
 int main(int argc, char* argv[])
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||show help message}{@image||input image}");
+    cv::CommandLineParser parser(argc, argv, "{help h||show help message}{@image|../data/lena.jpg|input image}");
     if (parser.has("help"))
     {
         parser.printMessage();

@@ -8,7 +8,11 @@ from pprint import PrettyPrinter as PP
 LONG_TESTS_DEBUG_VALGRIND = [
     ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
     ('dnn', 'Reproducibility*', 1000), # large DNN models
-    ('features2d', 'Features2d_Feature2d.no_crash', 1235.68),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/3', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/4', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/5', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/6', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/7', 1000),
     ('imgcodecs', 'Imgcodecs_Png.write_big', 1000), # memory limit
     ('imgcodecs', 'Imgcodecs_Tiff.decode_tile16384x16384', 1000), # memory limit
     ('ml', 'ML_RTrees.regression', 1423.47),

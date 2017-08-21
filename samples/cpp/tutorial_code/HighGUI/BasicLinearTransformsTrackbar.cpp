@@ -40,10 +40,15 @@ static void on_trackbar( int, void* )
  * @function main
  * @brief Main function
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
    /// Read image given by user
-   image = imread( argv[1] );
+   String imageName("../data/lena.jpg"); // by default
+   if (argc > 1)
+   {
+      imageName = argv[1];
+   }
+   image = imread( imageName );
 
    /// Initialize values
    alpha = 1;
@@ -54,8 +59,8 @@ int main( int, char** argv )
    namedWindow("New Image", 1);
 
    /// Create Trackbars
-   createTrackbar( "Contrast Trackbar", "New Image", &alpha, alpha_max, on_trackbar );
-   createTrackbar( "Brightness Trackbar", "New Image", &beta, beta_max, on_trackbar );
+   createTrackbar( "Contrast", "New Image", &alpha, alpha_max, on_trackbar );
+   createTrackbar( "Brightness", "New Image", &beta, beta_max, on_trackbar );
 
    /// Show some stuff
    imshow("Original Image", image);

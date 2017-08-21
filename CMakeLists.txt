@@ -29,9 +29,9 @@ else()
   cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 endif()
 
-# Following block can broke build in case of cross-compilng
+# Following block can break build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
-# so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
+# so we will try to detect cross-compiling by presense of CMAKE_TOOLCHAIN_FILE
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
   if(NOT CMAKE_TOOLCHAIN_FILE)
     # it _must_ go before project(OpenCV) in order to work
@@ -43,7 +43,7 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
   else(NOT CMAKE_TOOLCHAIN_FILE)
     #Android: set output folder to ${CMAKE_BINARY_DIR}
     set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
-    # any crosscompiling
+    # any cross-compiling
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
   endif(NOT CMAKE_TOOLCHAIN_FILE)
 endif()
@@ -77,21 +77,8 @@ if(WINRT)
   endif()
 endif()
 
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 OLD)
-endif()
-
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 OLD)
-endif()
-
-if(POLICY CMP0023)
-  cmake_policy(SET CMP0023 NEW)
-endif()
-
 if(POLICY CMP0026)
-  # silence cmake 3.0+ warnings about reading LOCATION attribute
-  cmake_policy(SET CMP0026 OLD)
+  cmake_policy(SET CMP0026 NEW)
 endif()
 
 if(POLICY CMP0042)
@@ -99,7 +86,7 @@ if(POLICY CMP0042)
 endif()
 
 if(POLICY CMP0046)
-  cmake_policy(SET CMP0046 OLD)
+  cmake_policy(SET CMP0046 NEW)
 endif()
 
 if(POLICY CMP0051)
@@ -141,7 +128,7 @@ include(cmake/OpenCVDownload.cmake)
 # ----------------------------------------------------------------------------
 if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
   message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
-  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
 # ----------------------------------------------------------------------------
@@ -551,9 +538,10 @@ if(UNIX)
   endif()
   include(CheckFunctionExists)
   include(CheckIncludeFile)
+  include(CheckSymbolExists)
 
   if(NOT APPLE)
-    CHECK_INCLUDE_FILE(pthread.h HAVE_LIBPTHREAD)
+    CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD)
     if(ANDROID)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD|NetBSD|DragonFly|OpenBSD")
@@ -564,7 +552,13 @@ if(UNIX)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
     endif()
   else()
-    set(HAVE_LIBPTHREAD YES)
+    set(HAVE_PTHREAD 1)
+  endif()
+
+  CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
+  CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+  if(HAVE_MALLOC_H)
+    CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
   endif()
 endif()
 
@@ -1373,7 +1367,7 @@ if(HAVE_OPENCL)
     set(__libs "")
     foreach(l ${OPENCL_LIBRARIES})
       if(TARGET ${l})
-        get_target_property(p ${l} LOCATION)
+        get_target_property(p ${l} IMPORTED_LOCATION)
         if(p MATCHES NOTFOUND)
           list(APPEND __libs "${l}")
         else()

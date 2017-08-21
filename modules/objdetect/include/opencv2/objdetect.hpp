@@ -215,6 +215,8 @@ public:
     virtual Ptr<MaskGenerator> getMaskGenerator() = 0;
 };
 
+/** @example facedetect.cpp
+*/
 /** @brief Cascade classifier class for object detection.
  */
 class CV_EXPORTS_W CascadeClassifier
@@ -348,6 +350,8 @@ struct DetectionROI
    std::vector<double> confidences;
 };
 
+/**@example peopledetect.cpp
+ */
 struct CV_EXPORTS_W HOGDescriptor
 {
 public:

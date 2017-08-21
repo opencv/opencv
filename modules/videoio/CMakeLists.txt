@@ -261,11 +261,6 @@ if(MSVC)
   endif()
 endif()
 
-#stop automatic dependencies propagation for this module
-if(NOT BUILD_opencv_world)
-  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
-endif()
-
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
 if(WIN32 AND HAVE_FFMPEG)
