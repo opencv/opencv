@@ -69,6 +69,15 @@ static const char* get_type_name(int type)
     return "unknown";
 }
 
+static bool parse_bool(std::string str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    std::istringstream is(str);
+    bool b;
+    is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> b;
+    return b;
+}
+
 static void from_str(const String& str, int type, void* dst)
 {
     std::stringstream ss(str.c_str());
@@ -78,7 +87,7 @@ static void from_str(const String& str, int type, void* dst)
     {
         std::string temp;
         ss >> temp;
-        *(bool*) dst = temp == "true";
+        *(bool*) dst = parse_bool(temp);
     }
     else if( type == Param::UNSIGNED_INT )
         ss >> *(unsigned*)dst;
@@ -113,7 +122,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
                     if (space_delete)
                         v = cat_string(v);
 
-                    // the key was neither specified nor has it a default value
+                    // the key was neither specified nor has a default value
                     if((v.empty() && type != Param::STRING) || v == noneValue) {
                         impl->error = true;
                         impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
@@ -148,7 +157,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
                 String v = impl->data[i].def_value;
                 if (space_delete == true) v = cat_string(v);
 
-                // the key was neither specified nor has it a default value
+                // the key was neither specified nor has a default value
                 if((v.empty() && type != Param::STRING) || v == noneValue) {
                     impl->error = true;
                     impl->error_message = impl->error_message + format("Missing parameter #%d\n", index);
