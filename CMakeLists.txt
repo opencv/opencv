@@ -44,10 +44,6 @@ else()
   cmake_minimum_required(VERSION 2.8.12.2)
 endif()
 
-if(POLICY CMP0017)
-  cmake_policy(SET CMP0017 NEW)
-endif()
-
 if(POLICY CMP0022)
   cmake_policy(SET CMP0022 OLD)
 endif()
