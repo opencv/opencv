@@ -2054,6 +2054,37 @@ void printDiff(Mat a, string what, const char* channel, double* maxMaxError, int
     std::cout << std::endl;
 }
 
+bool checkXYZ(uchar LL, uchar uu, uchar vv)
+{
+    Luv2RGBinteger luv(3, 0, 0, 0, true);
+
+    float L = ((float)LL)*100.f/255.f;
+    float u = ((float)uu)*uRange/255.f + (float)uLow;
+    float v = ((float)vv)*vRange/255.f + (float)vLow;
+
+    float _un = luv.un, _vn = luv.vn;
+
+    float X, Y, Z;
+    if(L >= 8)
+    {
+        Y = (L + 16.f) * (1.f/116.f);
+        Y = Y*Y*Y;
+    }
+    else
+    {
+        Y = L * (1.0f/903.3f); // L*(3./29.)^3
+    }
+    float up = 3.f*(u + L*_un);
+    float vp = 0.25f/(v + L*_vn);
+    if(vp >  0.25f) vp =  0.25f;
+    if(vp < -0.25f) vp = -0.25f;
+    X = Y*3.f*up*vp;
+    Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
+
+    return X >= 0   && Y >= 0   && Z >= 0 &&
+           X <= 2.f && Y <= 2.f && Z <= 2.f;
+}
+
 TEST(ImgProc_Color, LuvCheckWorking)
 {
     //settings
@@ -2159,9 +2190,20 @@ TEST(ImgProc_Color, LuvCheckWorking)
                 {
                     if(TO_BGR)
                     {
-                        pRow_b[3*q + 0] = dim0;
-                        pRow_b[3*q + 1] = dim1;
-                        pRow_b[3*q + 2] = dim2;
+                        //Luv fix
+                        //TODO: just 'member it
+                        if(checkXYZ(dim0, dim1, dim2))
+                        {
+                            pRow_b[3*q + 0] = dim0;
+                            pRow_b[3*q + 1] = dim1;
+                            pRow_b[3*q + 2] = dim2;
+                        }
+                        else
+                        {
+                            pRow_b[3*q + 0] = 128;
+                            pRow_b[3*q + 1] = cvRound(-uLow/uRange);
+                            pRow_b[3*q + 2] = cvRound(-vLow/vRange);
+                        }
                     }
                     else
                     {
