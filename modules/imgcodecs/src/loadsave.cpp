@@ -591,32 +591,47 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     return imreadmulti_(filename, flags, mats);
 }
 
-static bool imwrite_( const String& filename, const Mat& image,
+static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& params, bool flipv )
 {
+    bool isMultiImg = img_vec.size() > 1;
+    std::vector<Mat> write_vec;
     Mat temp;
-    const Mat* pimage = &image;
-
-    CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+    const Mat* pimage = &img_vec[0]; //to suppress compiler warning
 
     ImageEncoder encoder = findEncoder( filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
-    if( !encoder->isFormatSupported(image.depth()) )
+
+    for (std::vector<Mat>::const_iterator it = img_vec.begin(); it != img_vec.end(); ++it )
     {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
-        image.convertTo( temp, CV_8U );
-        pimage = &temp;
+        pimage = &(*it);
+        CV_Assert( it->channels() == 1 || it->channels() == 3 || it->channels() == 4 );
+
+        if( !encoder->isFormatSupported(it->depth()) )
+        {
+            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            it->convertTo( temp, CV_8U );
+            pimage = &temp;
+        }
+
+        if( flipv )
+        {
+            flip(*pimage, temp, 0);
+            pimage = &temp;
+        }
+
+        write_vec.push_back(*pimage);
     }
 
-    if( flipv )
-    {
-        flip(*pimage, temp, 0);
-        pimage = &temp;
-    }
+
 
     encoder->setDestination( filename );
-    bool code = encoder->write( *pimage, params );
+    bool code;
+    if (!isMultiImg)
+        code = encoder->write( write_vec[0], params );
+    else
+        code = encoder->writemulti( write_vec, params ); //to be implemented
 
     //    CV_Assert( code );
     return code;
@@ -625,10 +640,15 @@ static bool imwrite_( const String& filename, const Mat& image,
 bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
+    std::vector<Mat> img_vec;
     CV_TRACE_FUNCTION();
+    //Did we get a Mat or a vector of Mats?
+    if (_img.isMat())
+        img_vec.push_back(_img.getMat());
+    else if (_img.isMatVector())
+        _img.getMatVector(img_vec);
 
-    Mat img = _img.getMat();
-    return imwrite_(filename, img, params, false);
+    return imwrite_(filename, img_vec, params, false);
 }
 
 static void*

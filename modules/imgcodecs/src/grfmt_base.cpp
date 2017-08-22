@@ -127,6 +127,11 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
+bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
+{
+    return false;
+}
+
 ImageEncoder BaseImageEncoder::newEncoder() const
 {
     return ImageEncoder();

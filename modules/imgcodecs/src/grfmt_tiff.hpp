@@ -125,6 +125,11 @@ public:
     bool isFormatSupported( int depth ) const;
 
     bool  write( const Mat& img, const std::vector<int>& params );
+
+    #ifdef HAVE_TIFF
+    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+    #endif
+
     ImageEncoder newEncoder() const;
 
 protected:
@@ -132,7 +137,7 @@ protected:
                     TiffFieldType fieldType,
                     int count, int value );
 
-    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
+    bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
     bool writeHdr( const Mat& img );
 };
 
