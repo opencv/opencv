@@ -117,6 +117,25 @@ static inline int getGaussianKernelSize(float sigma) {
 
 /* ************************************************************************* */
 
+// Unlike _mm256_alignr_epi8 this one works across lanes
+template <int N>
+__m256i _mm256_alignr_ex_epi8_emul(__m256i const & high, __m256i const & low)
+{
+    __m256i high0low1 = _mm256_permute2f128_si256(low, high, _MM_SHUFFLE(0, 2, 0, 1));
+
+    if (N == 0)       return low;
+    else if (N == 32) return high;
+    else if (N == 16) return high0low1;
+    else if (N < 16)
+    {
+        return _mm256_alignr_epi8(high0low1, low, N & 15);
+    }
+
+    return _mm256_alignr_epi8(high, high0low1, N & 15);;
+}
+
+#define _mm256_alignr_ex_epi8(x, y, n) _mm256_alignr_ex_epi8_emul<(n)>((x), (y))
+
 /**
  * @brief Performs one step of nonlinear diffusion for one row
  *
@@ -158,6 +177,7 @@ nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *lt_row_prev, float *buf, i
   int k = 1;
 
   // vectorized version
+  #if 0
   __m128 lt_c = _mm_set1_ps(buf[0]);
   __m128 v_step_size = _mm_set1_ps(step_size);
   int vec_total = Lt.cols - 1 - 4; // max elems we can proceed vectorized without last column
@@ -186,6 +206,38 @@ nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *lt_row_prev, float *buf, i
 
     _mm_storeu_ps(buf + k, lt_c);
     _mm_storeu_ps(lt_row + k, next_lt);
+  }
+
+  #endif
+
+  __m256 lt_c = _mm256_set1_ps(buf[0]);
+  __m256 v_step_size = _mm256_set1_ps(step_size);
+  int vec_total = Lt.cols - 1 - 8; // max elems we can proceed vectorized without last column
+  for (; k <= vec_total; k += 8) {
+    __m256 lf_c = _mm256_loadu_ps(lf_row + k);
+    __m256 lf_cp = _mm256_loadu_ps(lf_row + (k - 1));
+    __m256 lf_cn = _mm256_loadu_ps(lf_row + (k + 1));
+    __m256 lf_a = _mm256_loadu_ps(lf_row_prev + k);
+    __m256 lf_b = _mm256_loadu_ps(lf_row_next + k);
+
+    // reconstruct previous value, first elem has been already overwriten in memory
+    __m256 new_lt_c = _mm256_loadu_ps(lt_row + k);
+    __m256 lt_cp = (__m256)_mm256_alignr_ex_epi8((__m256i)new_lt_c, (__m256i)lt_c, 7 * sizeof(float));
+    lt_c = new_lt_c;
+
+    __m256 lt_cn = _mm256_loadu_ps(lt_row + (k + 1));
+    __m256 lt_a = _mm256_loadu_ps(lt_row_prev + k);
+    __m256 lt_b = _mm256_loadu_ps(lt_row_next + k);
+
+    __m256 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
+                     (lf_c + lf_cp)*(lt_cp - lt_c) +
+                     (lf_c + lf_b )*(lt_b  - lt_c) +
+                     (lf_c + lf_a )*(lt_a  - lt_c));
+    // add step according to stepsize to lt
+    __m256 next_lt = lt_c + (v_step * v_step_size);
+
+    _mm256_storeu_ps(buf + k, lt_c);
+    _mm256_storeu_ps(lt_row + k, next_lt);
   }
 
   for (; k < Lt.cols - 1; ++k) {
