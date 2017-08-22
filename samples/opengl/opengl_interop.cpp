@@ -528,6 +528,8 @@ int main(int argc, char** argv)
     string wndname = "WGL Window";
 #elif defined(__linux__)
     string wndname = "GLX Window";
+#else
+    string wndname = "GL? Window";
 #endif
 
     GLWinApp app(width, height, wndname, cap);
