@@ -80,7 +80,7 @@ String::String(const std::string& str)
     if (!str.empty())
     {
         size_t len = str.size();
-        memcpy(allocate(len), str.c_str(), len);
+        if (len) memcpy(allocate(len), str.c_str(), len);
     }
 }
 
@@ -102,7 +102,7 @@ String& String::operator = (const std::string& str)
     if (!str.empty())
     {
         size_t len = str.size();
-        memcpy(allocate(len), str.c_str(), len);
+        if (len) memcpy(allocate(len), str.c_str(), len);
     }
     return *this;
 }
@@ -126,8 +126,8 @@ String operator + (const String& lhs, const std::string& rhs)
     String s;
     size_t rhslen = rhs.size();
     s.allocate(lhs.len_ + rhslen);
-    memcpy(s.cstr_, lhs.cstr_, lhs.len_);
-    memcpy(s.cstr_ + lhs.len_, rhs.c_str(), rhslen);
+    if (lhs.len_) memcpy(s.cstr_, lhs.cstr_, lhs.len_);
+    if (rhslen) memcpy(s.cstr_ + lhs.len_, rhs.c_str(), rhslen);
     return s;
 }
 
@@ -137,8 +137,8 @@ String operator + (const std::string& lhs, const String& rhs)
     String s;
     size_t lhslen = lhs.size();
     s.allocate(lhslen + rhs.len_);
-    memcpy(s.cstr_, lhs.c_str(), lhslen);
-    memcpy(s.cstr_ + lhslen, rhs.cstr_, rhs.len_);
+    if (lhslen) memcpy(s.cstr_, lhs.c_str(), lhslen);
+    if (rhs.len_) memcpy(s.cstr_ + lhslen, rhs.cstr_, rhs.len_);
     return s;
 }
 

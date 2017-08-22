@@ -77,21 +77,8 @@ if(WINRT)
   endif()
 endif()
 
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 OLD)
-endif()
-
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 OLD)
-endif()
-
-if(POLICY CMP0023)
-  cmake_policy(SET CMP0023 NEW)
-endif()
-
 if(POLICY CMP0026)
-  # silence cmake 3.0+ warnings about reading LOCATION attribute
-  cmake_policy(SET CMP0026 OLD)
+  cmake_policy(SET CMP0026 NEW)
 endif()
 
 if(POLICY CMP0042)
@@ -99,7 +86,7 @@ if(POLICY CMP0042)
 endif()
 
 if(POLICY CMP0046)
-  cmake_policy(SET CMP0046 OLD)
+  cmake_policy(SET CMP0046 NEW)
 endif()
 
 if(POLICY CMP0051)
@@ -140,7 +127,7 @@ include(cmake/OpenCVDownload.cmake)
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
 if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
-  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
   Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
@@ -956,10 +943,6 @@ endif()
 # ========================== C/C++ options ==========================
 if(CMAKE_CXX_COMPILER_VERSION)
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CXX_COMPILER_VERSION})")
-elseif(CMAKE_COMPILER_IS_CLANGCXX)
-  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CLANG_REGEX_VERSION})")
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_GCC_REGEX_VERSION})")
 else()
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
 endif()
@@ -1380,7 +1363,7 @@ if(HAVE_OPENCL)
     set(__libs "")
     foreach(l ${OPENCL_LIBRARIES})
       if(TARGET ${l})
-        get_target_property(p ${l} LOCATION)
+        get_target_property(p ${l} IMPORTED_LOCATION)
         if(p MATCHES NOTFOUND)
           list(APPEND __libs "${l}")
         else()

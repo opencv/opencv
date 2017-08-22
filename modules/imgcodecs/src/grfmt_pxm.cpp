@@ -43,50 +43,58 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 #include "grfmt_pxm.hpp"
+#include <iostream>
 
 namespace cv
 {
 
 ///////////////////////// P?M reader //////////////////////////////
 
-static int ReadNumber( RLByteStream& strm, int maxdigits )
+static int ReadNumber(RLByteStream& strm, int maxdigits = 0)
 {
     int code;
-    int val = 0;
+    int64 val = 0;
     int digits = 0;
 
     code = strm.getByte();
 
-    if( !isdigit(code))
+    while (!isdigit(code))
     {
-        do
+        if (code == '#' )
         {
-            if( code == '#' )
+            do
             {
-                do
-                {
-                    code = strm.getByte();
-                }
-                while( code != '\n' && code != '\r' );
+                code = strm.getByte();
             }
-
+            while (code != '\n' && code != '\r');
             code = strm.getByte();
-
-            while( isspace(code))
+        }
+        else if (isspace(code))
+        {
+            while (isspace(code))
                 code = strm.getByte();
         }
-        while( !isdigit( code ));
+        else
+        {
+#if 1
+            CV_ErrorNoReturn_(Error::StsError, ("PXM: Unexpected code in ReadNumber(): 0x%x (%d)", code, code));
+#else
+            code = strm.getByte();
+#endif
+        }
     }
 
     do
     {
-        val = val*10 + code - '0';
-        if( ++digits >= maxdigits ) break;
+        val = val*10 + (code - '0');
+        CV_Assert(val <= INT_MAX && "PXM: ReadNumber(): result is too large");
+        digits++;
+        if (maxdigits != 0 && digits >= maxdigits) break;
         code = strm.getByte();
     }
-    while( isdigit(code));
+    while (isdigit(code));
 
-    return val;
+    return (int)val;
 }
 
 
@@ -122,13 +130,13 @@ ImageDecoder PxMDecoder::newDecoder() const
     return makePtr<PxMDecoder>();
 }
 
-void  PxMDecoder::close()
+void PxMDecoder::close()
 {
     m_strm.close();
 }
 
 
-bool  PxMDecoder::readHeader()
+bool PxMDecoder::readHeader()
 {
     bool result = false;
 
@@ -158,10 +166,10 @@ bool  PxMDecoder::readHeader()
         m_binary = code >= '4';
         m_type = m_bpp > 8 ? CV_8UC3 : CV_8UC1;
 
-        m_width = ReadNumber( m_strm, INT_MAX );
-        m_height = ReadNumber( m_strm, INT_MAX );
+        m_width = ReadNumber(m_strm);
+        m_height = ReadNumber(m_strm);
 
-        m_maxval = m_bpp == 1 ? 1 : ReadNumber( m_strm, INT_MAX );
+        m_maxval = m_bpp == 1 ? 1 : ReadNumber(m_strm);
         if( m_maxval > 65535 )
             throw RBS_BAD_HEADER;
 
@@ -175,8 +183,14 @@ bool  PxMDecoder::readHeader()
             result = true;
         }
     }
-    catch(...)
+    catch (const cv::Exception&)
     {
+        throw;
+    }
+    catch (...)
+    {
+        std::cerr << "PXM::readHeader(): unknown C++ exception" << std::endl << std::flush;
+        throw;
     }
 
     if( !result )
@@ -189,33 +203,28 @@ bool  PxMDecoder::readHeader()
 }
 
 
-bool  PxMDecoder::readData( Mat& img )
+bool PxMDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
     uchar* data = img.ptr();
     PaletteEntry palette[256];
     bool   result = false;
-    int  bit_depth = CV_ELEM_SIZE1(m_type)*8;
-    int  src_pitch = (m_width*m_bpp*bit_depth/8 + 7)/8;
+    const int bit_depth = CV_ELEM_SIZE1(m_type)*8;
+    const int src_pitch = divUp(m_width*m_bpp*(bit_depth/8), 8);
     int  nch = CV_MAT_CN(m_type);
     int  width3 = m_width*nch;
-    int  i, x, y;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    AutoBuffer<uchar> _src(src_pitch + 32);
-    uchar* src = _src;
-    AutoBuffer<uchar> _gray_palette;
-    uchar* gray_palette = _gray_palette;
+    uchar gray_palette[256] = {0};
 
     // create LUT for converting colors
     if( bit_depth == 8 )
     {
-        _gray_palette.allocate(m_maxval + 1);
-        gray_palette = _gray_palette;
+        CV_Assert(m_maxval < 256);
 
-        for( i = 0; i <= m_maxval; i++ )
+        for (int i = 0; i <= m_maxval; i++)
             gray_palette[i] = (uchar)((i*255/m_maxval)^(m_bpp == 1 ? 255 : 0));
 
         FillGrayPalette( palette, m_bpp==1 ? 1 : 8 , m_bpp == 1 );
@@ -229,12 +238,16 @@ bool  PxMDecoder::readData( Mat& img )
         {
         ////////////////////////// 1 BPP /////////////////////////
         case 1:
+            CV_Assert(CV_MAT_DEPTH(m_type) == CV_8U);
             if( !m_binary )
             {
-                for( y = 0; y < m_height; y++, data += img.step )
+                AutoBuffer<uchar> _src(m_width);
+                uchar* src = _src;
+
+                for (int y = 0; y < m_height; y++, data += img.step)
                 {
-                    for( x = 0; x < m_width; x++ )
-                        src[x] = ReadNumber( m_strm, 1 ) != 0;
+                    for (int x = 0; x < m_width; x++)
+                        src[x] = ReadNumber(m_strm, 1) != 0;
 
                     if( color )
                         FillColorRow8( data, src, m_width, palette );
@@ -244,7 +257,10 @@ bool  PxMDecoder::readData( Mat& img )
             }
             else
             {
-                for( y = 0; y < m_height; y++, data += img.step )
+                AutoBuffer<uchar> _src(src_pitch);
+                uchar* src = _src;
+
+                for (int y = 0; y < m_height; y++, data += img.step)
                 {
                     m_strm.getBytes( src, src_pitch );
 
@@ -260,13 +276,17 @@ bool  PxMDecoder::readData( Mat& img )
         ////////////////////////// 8 BPP /////////////////////////
         case 8:
         case 24:
-            for( y = 0; y < m_height; y++, data += img.step )
+        {
+            AutoBuffer<uchar> _src(std::max<size_t>(width3*2, src_pitch));
+            uchar* src = _src;
+
+            for (int y = 0; y < m_height; y++, data += img.step)
             {
                 if( !m_binary )
                 {
-                    for( x = 0; x < width3; x++ )
+                    for (int x = 0; x < width3; x++)
                     {
-                        int code = ReadNumber( m_strm, INT_MAX );
+                        int code = ReadNumber(m_strm);
                         if( (unsigned)code > (unsigned)m_maxval ) code = m_maxval;
                         if( bit_depth == 8 )
                             src[x] = gray_palette[code];
@@ -279,7 +299,7 @@ bool  PxMDecoder::readData( Mat& img )
                     m_strm.getBytes( src, src_pitch );
                     if( bit_depth == 16 && !isBigEndian() )
                     {
-                        for( x = 0; x < width3; x++ )
+                        for (int x = 0; x < width3; x++)
                         {
                             uchar v = src[x * 2];
                             src[x * 2] = src[x * 2 + 1];
@@ -290,7 +310,7 @@ bool  PxMDecoder::readData( Mat& img )
 
                 if( img.depth() == CV_8U && bit_depth == 16 )
                 {
-                    for( x = 0; x < width3; x++ )
+                    for (int x = 0; x < width3; x++)
                     {
                         int v = ((ushort *)src)[x];
                         src[x] = (uchar)(v >> 8);
@@ -331,12 +351,19 @@ bool  PxMDecoder::readData( Mat& img )
             }
             result = true;
             break;
+        }
         default:
-            assert(0);
+            CV_ErrorNoReturn(Error::StsError, "m_bpp is not supported");
         }
     }
-    catch(...)
+    catch (const cv::Exception&)
     {
+        throw;
+    }
+    catch (...)
+    {
+        std::cerr << "PXM::readData(): unknown exception" << std::endl << std::flush;
+        throw;
     }
 
     return result;
@@ -412,8 +439,9 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
     char* buffer = _buffer;
 
     // write header;
-    sprintf( buffer, "P%c\n%d %d\n%d\n",
+    sprintf( buffer, "P%c\n# Generated by OpenCV %s\n%d %d\n%d\n",
              '2' + (channels > 1 ? 1 : 0) + (isBinary ? 3 : 0),
+             CV_VERSION,
              width, height, (1 << depth) - 1 );
 
     strm.putBytes( buffer, (int)strlen(buffer) );
