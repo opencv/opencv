@@ -788,6 +788,8 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
                         (cl_mem)top_data_,
                         (cl_mem)verify_data, 0, 0,
                         sizeof(float) * num_ * top_dim_, 0, NULL, NULL);
+    CV_Assert(phash.find(kernelQueue[kernel_index_]->kernelName) != phash.end());
+    unloadProgram(phash.find(kernelQueue[kernel_index_]->kernelName)->second);
     phash.erase(kernelQueue[kernel_index_]->kernelName);
     kernelQueue.pop_back();
     return;
@@ -1138,7 +1140,7 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
     cl_int err = CL_SUCCESS;
 
     int32_t bias_offset;
-    if (config->kernelType == 2) {
+    if (config->kernelType == KERNEL_TYPE_INTEL_IDLF) {
         swizzleWeights(bottom, top, config->workItem_output[2], false);
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
@@ -1199,7 +1201,7 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
         }
         if (err != CL_SUCCESS)
             return err;
-    } else if (config->kernelType == 5) {
+    } else if (config->kernelType == KERNEL_TYPE_GEMM_LIKE) {
         swizzleWeights(bottom, top, config->workItem_output[1], true);
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
@@ -1452,14 +1454,21 @@ out:
 }
 
 template<typename Dtype>
+void OCL4DNNConvSpatial<Dtype>::unloadProgram(ocl::Program& prog)
+{
+    ocl::Context ctx = ocl::Context::getDefault();
+    ctx.unloadProg(prog);
+}
+
+template<typename Dtype>
 ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
 {
     String errmsg;
     ocl::Context ctx = ocl::Context::getDefault();
     ocl::ProgramSource src(kernel_.c_str());
     ocl::Program program = ctx.getProg(src, options_, errmsg);
-    if (!kernel_name_.empty())
-        phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
+    CV_Assert(!kernel_name_.empty());
+    phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
     return program;
 }
 
@@ -1547,6 +1556,7 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
 
     if (workgroupSize_used != simd_size) {
         phash.erase(kernel_name_);
+        unloadProgram(program);
         return false;
     }
 
@@ -1562,6 +1572,7 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
         return true;
     } else {
         phash.erase(kernel_name_);
+        unloadProgram(program);
         return false;
     }
 }
@@ -1604,6 +1615,7 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
 
     if (workgroupSize_used != simd_size) {
         phash.erase(kernel_name_);
+        unloadProgram(program);
         return false;
     }
 
@@ -1613,6 +1625,7 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
         return true;
     } else {
         phash.erase(kernel_name_);
+        unloadProgram(program);
         return false;
     }
 }
@@ -1707,11 +1720,11 @@ void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
                                                        int32_t blockHeight,
                                                        int32_t blockDepth)
 {
-    if (kernelType == 2)
+    if (kernelType == KERNEL_TYPE_INTEL_IDLF)
         setupIDLF(blockWidth, blockHeight, blockDepth);
-    else if (kernelType == 4)
+    else if (kernelType == KERNEL_TYPE_BASIC)
         createBasicKernel(blockWidth, blockHeight, blockDepth);
-    else if (kernelType == 5)
+    else if (kernelType == KERNEL_TYPE_GEMM_LIKE)
         createGEMMLikeConvKernel(blockWidth, blockHeight, blockDepth);
     else
         assert(0);
@@ -1886,6 +1899,8 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
 
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
         if (x != kernel_index_) {
+            CV_Assert(phash.find(kernelQueue[x]->kernelName) != phash.end());
+            unloadProgram(phash.find(kernelQueue[x]->kernelName)->second);
             phash.erase(kernelQueue[x]->kernelName);
             delete kernelQueue[x];
         }
@@ -1893,7 +1908,6 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
     kernelQueue.clear();
 
     tuned_ = true;
-
     if (auto_tuning_) {
         std::string outputFile;
         outputFile = cache_path_.str() + key_;
@@ -1925,6 +1939,8 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel()
     if (bestKernelConfig)
     {
         prev_kernel_type_ = bestKernelConfig->kernelType;
+        CV_Assert(phash.find(bestKernelConfig->kernelName) != phash.end());
+        unloadProgram(phash.find(bestKernelConfig->kernelName)->second);
         phash.erase(bestKernelConfig->kernelName);
         delete bestKernelConfig;
         bestKernelConfig = NULL;
@@ -1950,7 +1966,7 @@ bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
         cachedKernel >> y;
         cachedKernel >> z;
         cachedKernel >> type;
-        if (type == 2)
+        if (type == KERNEL_TYPE_INTEL_IDLF)
         {
             if (z == 1)
                 z = 16;
@@ -1977,7 +1993,8 @@ bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
         // If kernel type changed to type 2 or 4, we need to reset the swizzled
         // weights pointer to invalidate the previous swizzled weights data.
         if (prev_kernel_type_ != bestKernelConfig->kernelType &&
-            (bestKernelConfig->kernelType == 2 || bestKernelConfig->kernelType == 5))
+            (bestKernelConfig->kernelType == KERNEL_TYPE_INTEL_IDLF ||
+             bestKernelConfig->kernelType == KERNEL_TYPE_GEMM_LIKE))
         {
             if (swizzled_weights_)
                 clReleaseMemObject((cl_mem)swizzled_weights_);
