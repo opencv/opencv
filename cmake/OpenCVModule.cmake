@@ -578,12 +578,12 @@ macro(ocv_create_module)
     ${${the_module}_pch})
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
-    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
-    target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS})
+    target_link_libraries(${the_module} LINK_PUBLIC ${OPENCV_MODULE_${the_module}_DEPS})
+    target_link_libraries(${the_module} LINK_PUBLIC ${OPENCV_MODULE_${the_module}_DEPS})
     set(extra_deps ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
     ocv_extract_simple_libs(extra_deps _simple_deps _other_deps)
-    target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${_simple_deps}) # this list goes to "export"
-    target_link_libraries(${the_module} ${extra_deps})
+    target_link_libraries(${the_module} LINK_PRIVATE ${_simple_deps}) # this list goes to "export"
+    target_link_libraries(${the_module} LINK_PRIVATE ${extra_deps})
   endif()
 
   add_dependencies(opencv_modules ${the_module})
