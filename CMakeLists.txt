@@ -127,7 +127,7 @@ include(cmake/OpenCVDownload.cmake)
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
 if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
-  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
   Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
