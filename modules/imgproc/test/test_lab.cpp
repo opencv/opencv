@@ -1619,27 +1619,19 @@ struct Luv2RGBinteger
 
         float _un = un, _vn = vn;
 
-        float X, Y, Z;
-        if(L >= 8)
-        {
-            Y = (L + 16.f) * (1.f/116.f);
-            Y = Y*Y*Y;
-        }
-        else
-        {
-            Y = L * (1.0f/903.3f); // L*(3./29.)^3
-        }
+        ushort y = LabToYF_b[LL*2];
+
+        float X, Z;
         float up = 3.f*(u + L*_un);
         float vp = 0.25f/(v + L*_vn);
         if(vp >  0.25f) vp =  0.25f;
         if(vp < -0.25f) vp = -0.25f;
-        X = Y*3.f*up*vp;
-        Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
+        X = y*3.f*up*vp;
+        Z = y*(((12.f*13.f)*L - up)*vp - 5.f);
 
-        int x = X*BASE, y = Y*BASE, z = Z*BASE;
-        //TODO: make an effective way to measure only good colors
+        int x = X, z = Z;
         //limit X, Y, Z to [0, 2] to fit white point
-        x = max(0, min(2*BASE, x)); y = max(0, min(2*BASE, y)); z = max(0, min(2*BASE, z));
+        x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
 
         /*
         static float minup = 100.f, maxup = -100.f;
