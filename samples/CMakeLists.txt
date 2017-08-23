@@ -12,7 +12,6 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
 
 add_subdirectory(cpp)
 add_subdirectory(java/tutorial_code)
-add_subdirectory(python/tutorial_code)
 add_subdirectory(dnn)
 add_subdirectory(gpu)
 add_subdirectory(tapi)
