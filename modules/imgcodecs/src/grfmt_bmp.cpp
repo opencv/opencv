@@ -193,7 +193,7 @@ bool  BmpDecoder::readHeader()
 bool  BmpDecoder::readData( Mat& img )
 {
     uchar* data = img.ptr();
-    int step = (int)img.step;
+    int step = validateToInt(img.step);
     bool color = img.channels() > 1;
     uchar  gray_palette[256] = {0};
     bool   result = false;
@@ -206,7 +206,7 @@ bool  BmpDecoder::readData( Mat& img )
 
     if( m_origin == IPL_ORIGIN_BL )
     {
-        data += (m_height - 1)*step;
+        data += (m_height - 1)*(size_t)step;
         step = -step;
     }
 
@@ -530,7 +530,7 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     int  bitmapHeaderSize = 40;
     int  paletteSize = channels > 1 ? 0 : 1024;
     int  headerSize = 14 /* fileheader */ + bitmapHeaderSize + paletteSize;
-    int  fileSize = fileStep*height + headerSize;
+    size_t fileSize = (size_t)fileStep*height + headerSize;
     PaletteEntry palette[256];
 
     if( m_buf )
@@ -540,7 +540,7 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     strm.putBytes( fmtSignBmp, (int)strlen(fmtSignBmp) );
 
     // write file header
-    strm.putDWord( fileSize ); // file size
+    strm.putDWord( validateToInt(fileSize) ); // file size
     strm.putDWord( 0 );
     strm.putDWord( headerSize );
 
