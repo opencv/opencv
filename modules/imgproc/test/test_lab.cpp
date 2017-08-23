@@ -431,7 +431,7 @@ static void initLabTabs()
                 {
                     softfloat u = softfloat(uu)*uRange/f255 + uLow;
                     softfloat up = softfloat(3)*(u + L*un);
-                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE));
+                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//256 was OK, 2048 gave maxerr 3
                 }
                 for(int vv = 0; vv < 256; vv++)
                 {
@@ -1673,14 +1673,14 @@ struct Luv2RGBinteger
         // vp: +/- 0.25*BASE*1024
         int up = LuToUp_b[LL*256+uu];
         int vp = LvToVp_b[LL*256+vv];
-        X = y*3.f*up/((float)BASE)*vp/((float)BASE*1024);
+        X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
         //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
         //int x = X, z = Z;
         int x = X;
         //works well
         //int z = y*( ((12*13*100*(int)LL)/255.f - up*1.f/BASE )*vp/(BASE*1024.f) - 5.f);
-        int z = y*( ((12*13*100*(int)LL) - up*255.f/BASE )/255.f*vp/(BASE*1024.f) - 5.f);
+        int z = y*( ((12*13*100*(int)LL) - up*255.f/(BASE/1024) )/255.f*vp/(BASE*1024.f) - 5.f);
 
         //TODO: this
         /*
