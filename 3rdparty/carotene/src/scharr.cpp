@@ -109,7 +109,7 @@ void ScharrDeriv(const Size2D &size, s32 cn,
             internal::prefetch(srow0 + x);
             internal::prefetch(srow1 + x);
             internal::prefetch(srow2 + x);
-#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
             __asm__ (
                 "vld1.8 {d0}, [%[src0]]                                \n\t"
                 "vld1.8 {d2}, [%[src2]]                                \n\t"
@@ -161,7 +161,7 @@ void ScharrDeriv(const Size2D &size, s32 cn,
         x = 0;
         for( ; x < roiw8; x += 8 )
         {
-#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 6
             __asm__ (
                 "vld1.16 {d4-d5}, [%[s2ptr]]                           \n\t"
                 "vld1.16 {d8-d9}, [%[s4ptr]]                           \n\t"
