@@ -2,7 +2,7 @@
  * jcmarker.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2003-2012 by Guido Vollbeding.
+ * Modified 2003-2013 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -172,7 +172,7 @@ emit_dqt (j_compress_ptr cinfo, int index)
       /* The table entries must be emitted in zigzag order. */
       unsigned int qval = qtbl->quantval[cinfo->natural_order[i]];
       if (prec)
-        emit_byte(cinfo, (int) (qval >> 8));
+	emit_byte(cinfo, (int) (qval >> 8));
       emit_byte(cinfo, (int) (qval & 0xFF));
     }
 
@@ -189,7 +189,7 @@ emit_dht (j_compress_ptr cinfo, int index, boolean is_ac)
 {
   JHUFF_TBL * htbl;
   int length, i;
-
+  
   if (is_ac) {
     htbl = cinfo->ac_huff_tbl_ptrs[index];
     index += 0x10;		/* output index has AC bit set */
@@ -199,23 +199,23 @@ emit_dht (j_compress_ptr cinfo, int index, boolean is_ac)
 
   if (htbl == NULL)
     ERREXIT1(cinfo, JERR_NO_HUFF_TABLE, index);
-
+  
   if (! htbl->sent_table) {
     emit_marker(cinfo, M_DHT);
-
+    
     length = 0;
     for (i = 1; i <= 16; i++)
       length += htbl->bits[i];
-
+    
     emit_2bytes(cinfo, length + 2 + 1 + 16);
     emit_byte(cinfo, index);
-
+    
     for (i = 1; i <= 16; i++)
       emit_byte(cinfo, htbl->bits[i]);
-
+    
     for (i = 0; i < length; i++)
       emit_byte(cinfo, htbl->huffval[i]);
-
+    
     htbl->sent_table = TRUE;
   }
 }
@@ -257,12 +257,12 @@ emit_dac (j_compress_ptr cinfo)
 
     for (i = 0; i < NUM_ARITH_TBLS; i++) {
       if (dc_in_use[i]) {
-        emit_byte(cinfo, i);
-        emit_byte(cinfo, cinfo->arith_dc_L[i] + (cinfo->arith_dc_U[i]<<4));
+	emit_byte(cinfo, i);
+	emit_byte(cinfo, cinfo->arith_dc_L[i] + (cinfo->arith_dc_U[i]<<4));
       }
       if (ac_in_use[i]) {
-        emit_byte(cinfo, i + 0x10);
-        emit_byte(cinfo, cinfo->arith_ac_K[i]);
+	emit_byte(cinfo, i + 0x10);
+	emit_byte(cinfo, cinfo->arith_ac_K[i]);
       }
     }
   }
@@ -275,7 +275,7 @@ emit_dri (j_compress_ptr cinfo)
 /* Emit a DRI marker */
 {
   emit_marker(cinfo, M_DRI);
-
+  
   emit_2bytes(cinfo, 4);	/* fixed length */
 
   emit_2bytes(cinfo, (int) cinfo->restart_interval);
@@ -292,7 +292,7 @@ emit_lse_ict (j_compress_ptr cinfo)
     ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
 
   emit_marker(cinfo, M_JPG8);
-
+  
   emit_2bytes(cinfo, 24);	/* fixed length */
 
   emit_byte(cinfo, 0x0D);	/* ID inverse transform specification */
@@ -319,9 +319,9 @@ emit_sof (j_compress_ptr cinfo, JPEG_MARKER code)
 {
   int ci;
   jpeg_component_info *compptr;
-
+  
   emit_marker(cinfo, code);
-
+  
   emit_2bytes(cinfo, 3 * cinfo->num_components + 2 + 5 + 1); /* length */
 
   /* Make sure image isn't bigger than SOF field can handle */
@@ -350,13 +350,13 @@ emit_sos (j_compress_ptr cinfo)
 {
   int i, td, ta;
   jpeg_component_info *compptr;
-
+  
   emit_marker(cinfo, M_SOS);
-
+  
   emit_2bytes(cinfo, 2 * cinfo->comps_in_scan + 2 + 1 + 3); /* length */
-
+  
   emit_byte(cinfo, cinfo->comps_in_scan);
-
+  
   for (i = 0; i < cinfo->comps_in_scan; i++) {
     compptr = cinfo->cur_comp_info[i];
     emit_byte(cinfo, compptr->component_id);
@@ -384,9 +384,9 @@ emit_pseudo_sos (j_compress_ptr cinfo)
 /* Emit a pseudo SOS marker */
 {
   emit_marker(cinfo, M_SOS);
-
+  
   emit_2bytes(cinfo, 2 + 1 + 3); /* length */
-
+  
   emit_byte(cinfo, 0); /* Ns */
 
   emit_byte(cinfo, 0); /* Ss */
@@ -410,9 +410,9 @@ emit_jfif_app0 (j_compress_ptr cinfo)
    * Thumbnail X size		(1 byte)
    * Thumbnail Y size		(1 byte)
    */
-
+  
   emit_marker(cinfo, M_APP0);
-
+  
   emit_2bytes(cinfo, 2 + 4 + 1 + 2 + 1 + 2 + 2 + 1 + 1); /* length */
 
   emit_byte(cinfo, 0x4A);	/* Identifier: ASCII "JFIF" */
@@ -449,9 +449,9 @@ emit_adobe_app14 (j_compress_ptr cinfo)
    * YCbCr, 2 if it's YCCK, 0 otherwise.  Adobe's definition has to do with
    * whether the encoder performed a transformation, which is pretty useless.
    */
-
+  
   emit_marker(cinfo, M_APP14);
-
+  
   emit_2bytes(cinfo, 2 + 5 + 2 + 2 + 2 + 1); /* length */
 
   emit_byte(cinfo, 0x41);	/* Identifier: ASCII "Adobe" */
@@ -508,8 +508,8 @@ write_marker_byte (j_compress_ptr cinfo, int val)
  * Write datastream header.
  * This consists of an SOI and optional APPn markers.
  * We recommend use of the JFIF marker, but not the Adobe marker,
- * when using YCbCr or grayscale data.  The JFIF marker should NOT
- * be used for any other JPEG colorspace.  The Adobe marker is helpful
+ * when using YCbCr or grayscale data.  The JFIF marker is also used
+ * for other standard JPEG colorspaces.  The Adobe marker is helpful
  * to distinguish RGB, CMYK, and YCCK colorspaces.
  * Note that an application can write additional header markers after
  * jpeg_start_compress returns.
@@ -547,7 +547,7 @@ write_frame_header (j_compress_ptr cinfo)
   int ci, prec;
   boolean is_baseline;
   jpeg_component_info *compptr;
-
+  
   /* Emit DQT for each quantization table.
    * Note that emit_dqt() suppresses any duplicate tables.
    */
@@ -567,9 +567,9 @@ write_frame_header (j_compress_ptr cinfo)
   } else {
     is_baseline = TRUE;
     for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
-         ci++, compptr++) {
+	 ci++, compptr++) {
       if (compptr->dc_tbl_no > 1 || compptr->ac_tbl_no > 1)
-        is_baseline = FALSE;
+	is_baseline = FALSE;
     }
     if (prec && is_baseline) {
       is_baseline = FALSE;
@@ -630,10 +630,10 @@ write_scan_header (j_compress_ptr cinfo)
       compptr = cinfo->cur_comp_info[i];
       /* DC needs no table for refinement scan */
       if (cinfo->Ss == 0 && cinfo->Ah == 0)
-        emit_dht(cinfo, compptr->dc_tbl_no, FALSE);
+	emit_dht(cinfo, compptr->dc_tbl_no, FALSE);
       /* AC needs no table when not present */
       if (cinfo->Se)
-        emit_dht(cinfo, compptr->ac_tbl_no, TRUE);
+	emit_dht(cinfo, compptr->ac_tbl_no, TRUE);
     }
   }
 
@@ -682,9 +682,9 @@ write_tables_only (j_compress_ptr cinfo)
   if (! cinfo->arith_code) {
     for (i = 0; i < NUM_HUFF_TBLS; i++) {
       if (cinfo->dc_huff_tbl_ptrs[i] != NULL)
-        emit_dht(cinfo, i, FALSE);
+	emit_dht(cinfo, i, FALSE);
       if (cinfo->ac_huff_tbl_ptrs[i] != NULL)
-        emit_dht(cinfo, i, TRUE);
+	emit_dht(cinfo, i, TRUE);
     }
   }
 
@@ -704,7 +704,7 @@ jinit_marker_writer (j_compress_ptr cinfo)
   /* Create the subobject */
   marker = (my_marker_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                SIZEOF(my_marker_writer));
+				SIZEOF(my_marker_writer));
   cinfo->marker = &marker->pub;
   /* Initialize method pointers */
   marker->pub.write_file_header = write_file_header;

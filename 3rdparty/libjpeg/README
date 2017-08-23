@@ -1,8 +1,8 @@
 The Independent JPEG Group's JPEG software
 ==========================================
 
-README for release 9 of 13-Jan-2013
-===================================
+README for release 9b of 17-Jan-2016
+====================================
 
 This distribution contains the ninth public release of the Independent JPEG
 Group's free JPEG software.  You are welcome to redistribute this software and
@@ -14,7 +14,7 @@ Julian Minguillon, Luis Ortiz, George Phillips, Davide Rossi, Ge' Weijers,
 and other members of the Independent JPEG Group.
 
 IJG is not affiliated with the ISO/IEC JTC1/SC29/WG1 standards committee
-(also known as JPEG, together with ITU-T SG16).
+(previously known as JPEG, together with ITU-T SG16).
 
 
 DOCUMENTATION ROADMAP
@@ -60,7 +60,7 @@ OVERVIEW
 
 This package contains C software to implement JPEG image encoding, decoding,
 and transcoding.  JPEG (pronounced "jay-peg") is a standardized compression
-method for full-color and gray-scale images.
+method for full-color and grayscale images.
 
 This software implements JPEG baseline, extended-sequential, and progressive
 compression processes.  Provision is made for supporting all variants of these
@@ -115,7 +115,7 @@ with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2013, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2016, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this
@@ -153,16 +153,11 @@ ltmain.sh).  Another support script, install-sh, is copyright by X Consortium
 but is also freely distributable.
 
 The IJG distribution formerly included code to read and write GIF files.
-To avoid entanglement with the Unisys LZW patent, GIF reading support has
-been removed altogether, and the GIF writer has been simplified to produce
-"uncompressed GIFs".  This technique does not use the LZW algorithm; the
-resulting GIF files are larger than usual, but are readable by all standard
-GIF decoders.
-
-We are required to state that
-    "The Graphics Interchange Format(c) is the Copyright property of
-    CompuServe Incorporated.  GIF(sm) is a Service Mark property of
-    CompuServe Incorporated."
+To avoid entanglement with the Unisys LZW patent (now expired), GIF reading
+support has been removed altogether, and the GIF writer has been simplified
+to produce "uncompressed GIFs".  This technique does not use the LZW
+algorithm; the resulting GIF files are larger than usual, but are readable
+by all standard GIF decoders.
 
 
 REFERENCES
@@ -176,8 +171,8 @@ The best short technical introduction to the JPEG compression algorithm is
 	Communications of the ACM, April 1991 (vol. 34 no. 4), pp. 30-44.
 (Adjacent articles in that issue discuss MPEG motion picture compression,
 applications of JPEG, and related topics.)  If you don't have the CACM issue
-handy, a PostScript file containing a revised version of Wallace's article is
-available at http://www.ijg.org/files/wallace.ps.gz.  The file (actually
+handy, a PDF file containing a revised version of Wallace's article is
+available at http://www.ijg.org/files/Wallace.JPEG.pdf.  The file (actually
 a preprint for an article that appeared in IEEE Trans. Consumer Electronics)
 omits the sample images that appeared in CACM, but it includes corrections
 and some added material.  Note: the Wallace article is copyright ACM and IEEE,
@@ -225,14 +220,13 @@ WG1 N 6080 with title "JPEG 9 Lossless Coding", June/July 2012, Paris,
 France.
 
 The JPEG standard does not specify all details of an interchangeable file
-format.  For the omitted details we follow the "JFIF" conventions, revision
-1.02.  JFIF 1.02 has been adopted as an Ecma International Technical Report
-and thus received a formal publication status.  It is available as a free
-download in PDF format from
-http://www.ecma-international.org/publications/techreports/E-TR-098.htm.
-A PostScript version of the JFIF document is available at
-http://www.ijg.org/files/jfif.ps.gz.  There is also a plain text version at
-http://www.ijg.org/files/jfif.txt.gz, but it is missing the figures.
+format.  For the omitted details we follow the "JFIF" conventions, version 2.
+JFIF version 1 has been adopted as Recommendation ITU-T T.871 (05/2011) :
+Information technology - Digital compression and coding of continuous-tone
+still images: JPEG File Interchange Format (JFIF).  It is available as a
+free download in PDF file format from http://www.itu.int/rec/T-REC-T.871.
+A PDF file of the older JFIF document is available at
+http://www.w3.org/Graphics/JPEG/jfif3.pdf.
 
 The TIFF 6.0 file format specification can be obtained by FTP from
 ftp://ftp.sgi.com/graphics/tiff/TIFF6.ps.gz.  The JPEG incorporation scheme
@@ -252,8 +246,8 @@ ARCHIVE LOCATIONS
 The "official" archive site for this software is www.ijg.org.
 The most recent released version can always be found there in
 directory "files".  This particular version will be archived as
-http://www.ijg.org/files/jpegsrc.v9.tar.gz, and in Windows-compatible
-"zip" archive format as http://www.ijg.org/files/jpegsr9.zip.
+http://www.ijg.org/files/jpegsrc.v9b.tar.gz, and in Windows-compatible
+"zip" archive format as http://www.ijg.org/files/jpegsr9b.zip.
 
 The JPEG FAQ (Frequently Asked Questions) article is a source of some
 general information about JPEG.
@@ -280,7 +274,7 @@ Thank to Thomas Wiegand and Gary Sullivan for inviting me to the
 Joint Video Team (MPEG & ITU) meeting in Geneva, Switzerland.
 
 Thank to Thomas Richter and Daniel Lee for inviting me to the
-ISO/IEC JTC1/SC29/WG1 (also known as JPEG, together with ITU-T SG16)
+ISO/IEC JTC1/SC29/WG1 (previously known as JPEG, together with ITU-T SG16)
 meeting in Berlin, Germany.
 
 Thank to John Korejwa and Massimo Ballerini for inviting me to
@@ -306,10 +300,10 @@ design and development of this singular software package.
 FILE FORMAT WARS
 ================
 
-The ISO/IEC JTC1/SC29/WG1 standards committee (also known as JPEG, together
-with ITU-T SG16) currently promotes different formats containing the name
-"JPEG" which is misleading because these formats are incompatible with
-original DCT-based JPEG and are based on faulty technologies.
+The ISO/IEC JTC1/SC29/WG1 standards committee (previously known as JPEG,
+together with ITU-T SG16) currently promotes different formats containing
+the name "JPEG" which is misleading because these formats are incompatible
+with original DCT-based JPEG and are based on faulty technologies.
 IJG therefore does not and will not support such momentary mistakes
 (see REFERENCES).
 There exist also distributions under the name "OpenJPEG" promoting such
@@ -322,9 +316,13 @@ Don't use an incompatible file format!
 (In any case, our decoder will remain capable of reading existing JPEG
 image files indefinitely.)
 
-Furthermore, the ISO committee pretends to be "responsible for the popular
-JPEG" in their public reports which is not true because they don't respond to
-actual requirements for the maintenance of the original JPEG specification.
+The ISO committee pretends to be "responsible for the popular JPEG" in their
+public reports which is not true because they don't respond to actual
+requirements for the maintenance of the original JPEG specification.
+Furthermore, the ISO committee pretends to "ensure interoperability" with
+their standards which is not true because their "standards" support only
+application-specific and proprietary use cases and contain mathematically
+incorrect code.
 
 There are currently different distributions in circulation containing the
 name "libjpeg" which is misleading because they don't have the features and
@@ -332,19 +330,46 @@ are incompatible with formats supported by actual IJG libjpeg distributions.
 One of those fakes is released by members of the ISO committee and just uses
 the name of libjpeg for misdirection of people, similar to the abuse of the
 name JPEG as described above, while having nothing in common with actual IJG
-libjpeg distributions.
-The other one claims to be a "derivative" or "fork" of the original libjpeg
-and violates the license conditions as described under LEGAL ISSUES above.
-We have no sympathy for the release of misleading and illegal distributions
-derived from obsolete code bases.
+libjpeg distributions and containing mathematically incorrect code.
+The other one claims to be a "derivative" or "fork" of the original libjpeg,
+but violates the license conditions as described under LEGAL ISSUES above
+and violates basic C programming properties.
+We have no sympathy for the release of misleading, incorrect and illegal
+distributions derived from obsolete code bases.
 Don't use an obsolete code base!
+
+According to the UCC (Uniform Commercial Code) law, IJG has the lawful and
+legal right to foreclose on certain standardization bodies and other
+institutions or corporations that knowingly perform substantial and
+systematic deceptive acts and practices, fraud, theft, and damaging of the
+value of the people of this planet without their knowing, willing and
+intentional consent.
+The titles, ownership, and rights of these institutions and all their assets
+are now duly secured and held in trust for the free people of this planet.
+People of the planet, on every country, may have a financial interest in
+the assets of these former principals, agents, and beneficiaries of the
+foreclosed institutions and corporations.
+IJG asserts what is: that each man, woman, and child has unalienable value
+and rights granted and deposited in them by the Creator and not any one of
+the people is subordinate to any artificial principality, corporate fiction
+or the special interest of another without their appropriate knowing,
+willing and intentional consent made by contract or accommodation agreement.
+IJG expresses that which already was.
+The people have already determined and demanded that public administration
+entities, national governments, and their supporting judicial systems must
+be fully transparent, accountable, and liable.
+IJG has secured the value for all concerned free people of the planet.
+
+A partial list of foreclosed institutions and corporations ("Hall of Shame")
+is currently prepared and will be published later.
 
 
 TO DO
 =====
 
 Version 9 is the second release of a new generation JPEG standard
-to overcome the limitations of the original JPEG specification.
+to overcome the limitations of the original JPEG specification,
+and is the first true source reference JPEG codec.
 More features are being prepared for coming releases...
 
 Please send bug reports, offers of help, etc. to jpeg-info@jpegclub.org.
