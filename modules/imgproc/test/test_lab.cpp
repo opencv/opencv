@@ -431,7 +431,7 @@ static void initLabTabs()
                 {
                     softfloat u = softfloat(uu)*uRange/f255 + uLow;
                     softfloat up = softfloat(3)*(u + L*un);
-                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//256 was OK, 2048 gave maxerr 3
+                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
                 }
                 for(int vv = 0; vv < 256; vv++)
                 {
@@ -442,11 +442,7 @@ static void initLabTabs()
                     LvToVp_b[LL*256+vv] = cvRound(vp*softfloat(BASE*1024));
                 }
             }
-
-
         }
-
-
 
         //try to suppress warning
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
@@ -1667,20 +1663,30 @@ struct Luv2RGBinteger
     {
         ushort y = LabToYF_b[LL*2];
 
-        float X, Z;
         // y : [0, BASE]
-        // up: [-402, 1431.57]*BASE
+        // up: [-402, 1431.57]*(BASE/1024)
         // vp: +/- 0.25*BASE*1024
+        //TODO: we can shrink this to 16 bit
         int up = LuToUp_b[LL*256+uu];
         int vp = LvToVp_b[LL*256+vv];
-        X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
+        //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
         //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
-        //int x = X, z = Z;
-        int x = X;
         //works well
-        //int z = y*( ((12*13*100*(int)LL)/255.f - up*1.f/BASE )*vp/(BASE*1024.f) - 5.f);
-        int z = y*( ((12*13*100*(int)LL) - up*255.f/(BASE/1024) )/255.f*vp/(BASE*1024.f) - 5.f);
+        //int x = y*(int)(3*(long long)up*(long long)(vp)/(long long)BASE)/BASE;
+        long long int xv = (long long)up*(long long)vp*3;
+        xv /= BASE;
+        int x = (int)xv;
+        x = y*x/BASE;
+
+        //works well
+        //int z = y*( ((int)(((12*13*100*(int)LL) - up*255/(BASE/1024))*(BASE/1024))*(long long)(vp)/BASE) - 5*255*BASE)/(BASE*255);
+        int zv = (12*13*100*(BASE/1024)*(int)LL) - up*255;
+        long long int zp = (long long)zv*(long long)vp;
+        zp /= BASE;
+        long long int zq = zp - (long long)(5*255*BASE);
+        int zm = (int)(y*zq/BASE);
+        int z = zm/256 + zm/65536;
 
         //TODO: this
         /*
@@ -2249,7 +2255,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
                         }
                         else
                         {
-                            pRow_b[3*q + 0] = 128;
+                            pRow_b[3*q + 0] = 0;
                             pRow_b[3*q + 1] = cvRound(-uLow/uRange);
                             pRow_b[3*q + 2] = cvRound(-vLow/vRange);
                         }
