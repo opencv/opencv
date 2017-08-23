@@ -10,7 +10,7 @@
 #   PYLINT_VERSION
 #       A string denoting the version of pylint that has been found
 
-find_program(PYLINT_EXECUTABLE pylint PATHS /usr/bin)
+find_host_program(PYLINT_EXECUTABLE pylint PATHS /usr/bin)
 
 if(PYLINT_EXECUTABLE)
   execute_process(COMMAND ${PYLINT_EXECUTABLE} --version OUTPUT_VARIABLE PYLINT_VERSION_RAW ERROR_QUIET)
