@@ -680,12 +680,12 @@ void gaussianPyramidDown(const Size2D &srcSize,
     register float32x4_t vc4d64f32 asm ("q14") = vmovq_n_f32(0.0625f);   //4/4/16
     register float32x4_t vc6d64f32 asm ("q15") = vmovq_n_f32(0.09375f);  //6/4/16
 #else
-    register float32x4_t vc6d4f32  = vmovq_n_f32(1.5f);  // 6/4
-    register float32x4_t vc1d4f32  = vmovq_n_f32(0.25f); // 1/4
+    float32x4_t vc6d4f32  = vmovq_n_f32(1.5f);  // 6/4
+    float32x4_t vc1d4f32  = vmovq_n_f32(0.25f); // 1/4
 
-    register float32x4_t vc1d64f32 = vmovq_n_f32(0.015625f); //1/4/16
-    register float32x4_t vc4d64f32 = vmovq_n_f32(0.0625f);   //4/4/16
-    register float32x4_t vc6d64f32 = vmovq_n_f32(0.09375f);  //6/4/16
+    float32x4_t vc1d64f32 = vmovq_n_f32(0.015625f); //1/4/16
+    float32x4_t vc4d64f32 = vmovq_n_f32(0.0625f);   //4/4/16
+    float32x4_t vc6d64f32 = vmovq_n_f32(0.09375f);  //6/4/16
 #endif
 
     for (size_t i = 0; i < dstSize.height; ++i)
