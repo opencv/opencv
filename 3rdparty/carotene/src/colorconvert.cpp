@@ -1087,12 +1087,12 @@ inline uint8x8x3_t convertToHSV(const uint8x8_t vR, const uint8x8_t vG, const ui
                                 const s32 hrange )
 {
     const s32 hsv_shift = 12;
-    register const f32 vsdiv_table = f32(255 << hsv_shift);
-    register f32 vhdiv_table = f32(hrange << hsv_shift);
-    register const s32 vhrange = hrange;
-    register const s32 v0 = s32(0);
-    register const s32 vshift = s32(1 << (hsv_shift-1));
-    register const s32 v6 = s32(6);
+    const f32 vsdiv_table = f32(255 << hsv_shift);
+    f32 vhdiv_table = f32(hrange << hsv_shift);
+    const s32 vhrange = hrange;
+    const s32 v0 = s32(0);
+    const s32 vshift = s32(1 << (hsv_shift-1));
+    const s32 v6 = s32(6);
 
     uint8x8_t vMin = vmin_u8(vR, vG);
     uint8x8_t vMax = vmax_u8(vR, vG);
