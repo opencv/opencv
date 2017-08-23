@@ -401,6 +401,18 @@ CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
  */
 CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 
+/** @brief Resizes window to the specified size
+
+@note
+
+-   The specified window size is for the image area. Toolbars are not counted.
+-   Only windows created without cv::WINDOW_AUTOSIZE flag can be resized.
+
+@param winname Window name.
+@param size The new window size.
+*/
+CV_EXPORTS_W void resizeWindow(const String& winname, const cv::Size& size);
+
 /** @brief Moves window to the specified position
 
 @param winname Name of the window.
