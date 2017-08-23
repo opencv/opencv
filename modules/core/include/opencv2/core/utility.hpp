@@ -822,7 +822,7 @@ public:
 
     This method returns the path to the executable from the command line (`argv[0]`).
 
-    For example, if the application has been started with such command:
+    For example, if the application has been started with such a command:
     @code{.sh}
     $ ./bin/my-executable
     @endcode
@@ -928,7 +928,7 @@ public:
     */
     void printMessage() const;
 
-    /** @brief Print list of errors occured
+    /** @brief Print list of errors occurred
 
     @sa check
     */
