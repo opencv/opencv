@@ -260,6 +260,8 @@ static const bool enablePackedRGB2Luv = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
+static int LuToUp_b[256*256];
+static int LvToVp_b[256*256];
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -389,6 +391,63 @@ static void initLabTabs()
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
         }
 
+        //Luv LUT
+        if(enableBitExactness)
+        {
+            softfloat d = softfloat(D65[0]) +
+                          softfloat(D65[1])*softfloat(15) +
+                          softfloat(D65[2])*softfloat(3);
+            d = softfloat::one()/max(d, softfloat::eps());
+            softfloat un = softfloat(4*13)*d*softfloat(D65[0]);
+            softfloat vn = softfloat(9*13)*d*softfloat(D65[1]);
+            softfloat oneof4 = softfloat::one()/softfloat(4);
+
+            /*
+            float L = ((float)LL)*100.f/255.f;
+            float u = ((float)uu)*uRange/255.f + (float)uLow;
+            float v = ((float)vv)*vRange/255.f + (float)vLow;
+
+            float up = 3.f*(u + L*un);
+            float vp = 0.25f/(v + L*vn);
+            if(vp >  0.25f) vp =  0.25f;
+            if(vp < -0.25f) vp = -0.25f;
+            */
+
+            /*
+                //when XYZ are limited to [0, 2]
+                min up: -402
+                min abs diff up: 0.010407
+                max up: 1431.57
+
+                min vp: -0.25
+                min abs(vp): 0.00034207
+                max vp:  0.25
+            */
+
+            for(int LL = 0; LL < 256; LL++)
+            {
+                softfloat L = softfloat(LL*100)/f255;
+                for(int uu = 0; uu < 256; uu++)
+                {
+                    softfloat u = softfloat(uu)*uRange/f255 + uLow;
+                    softfloat up = softfloat(3)*(u + L*un);
+                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE));
+                }
+                for(int vv = 0; vv < 256; vv++)
+                {
+                    softfloat v = softfloat(vv)*vRange/f255 + vLow;
+                    softfloat vp = oneof4/(v + L*vn);
+                    if(vp >  oneof4) vp =  oneof4;
+                    if(vp < -oneof4) vp = -oneof4;
+                    LvToVp_b[LL*256+vv] = cvRound(vp*softfloat(BASE*1024));
+                }
+            }
+
+
+        }
+
+
+
         //try to suppress warning
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
         if(calcLUT)
@@ -421,7 +480,7 @@ static void initLabTabs()
             softfloat dd = softfloat(D65[0]) +
                            softfloat(D65[1])*softfloat(15) +
                            softfloat(D65[2])*softfloat(3);
-            dd = softfloat::one()/max(dd, softfloat(FLT_EPSILON));
+            dd = softfloat::one()/max(dd, softfloat::eps());
             softfloat un = dd*softfloat(13*4)*softfloat(D65[0]);
             softfloat vn = dd*softfloat(13*9)*softfloat(D65[1]);
 
@@ -477,7 +536,7 @@ static void initLabTabs()
                             softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
                             L = L*f116 - f16;
 
-                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
+                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat::eps());
                             softfloat u = L*(X*d - un);
                             softfloat v = L*(f9of4*Y*d - vn);
 
@@ -697,7 +756,7 @@ struct RGB2Luvfloat
         softfloat d = softfloat(whitept[0]) +
                       softfloat(whitept[1])*softfloat(15) +
                       softfloat(whitept[2])*softfloat(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        d = softfloat::one()/max(d, softfloat::eps());
         un = d*softfloat(13*4)*softfloat(whitept[0]);
         vn = d*softfloat(13*9)*softfloat(whitept[1]);
 
@@ -1013,7 +1072,7 @@ struct Luv2RGBfloat
         softfloat d = softfloat(whitept[0]) +
                       softfloat(whitept[1])*softfloat(15) +
                       softfloat(whitept[2])*softfloat(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        d = softfloat::one()/max(d, softfloat::eps());
         un = softfloat(4*13)*d*softfloat(whitept[0]);
         vn = softfloat(9*13)*d*softfloat(whitept[1]);
         #if CV_SSE2
@@ -1581,13 +1640,15 @@ struct Luv2RGBinteger
 
 
     Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
-                    const float* _whitept, bool _srgb )
+                    const float* /*_whitept*/, bool _srgb )
     : dstcn(_dstcn)
     {
         initLabTabs();
 
+        //TODO: whitept fixed for fixed-point
+        //but any coeffs can be used
         if(!_coeffs)  _coeffs = XYZ2sRGB_D65;
-        if(!_whitept) _whitept = D65;
+        //if(!_whitept) _whitept = D65;
 
         static const softfloat lshift(1 << lab_shift);
         for(int i = 0; i < 3; i++)
@@ -1597,15 +1658,6 @@ struct Luv2RGBinteger
             coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6]));
         }
 
-        softfloat d = softfloat(_whitept[0]) +
-                      softfloat(_whitept[1])*softfloat(15) +
-                      softfloat(_whitept[2])*softfloat(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
-        un = softfloat(4*13)*d*softfloat(_whitept[0]);
-        vn = softfloat(9*13)*d*softfloat(_whitept[1]);
-
-        CV_Assert(_whitept[1] == 1.f);
-
         tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
     }
 
@@ -1613,36 +1665,41 @@ struct Luv2RGBinteger
     // L, u, v should be in their natural range
     inline void process(const uchar LL, const uchar uu, const uchar vv, int& ro, int& go, int& bo) const
     {
-        float L = ((float)LL)*100.f/255.f;
-        float u = ((float)uu)*uRange/255.f + (float)uLow;
-        float v = ((float)vv)*vRange/255.f + (float)vLow;
-
-        float _un = un, _vn = vn;
-
         ushort y = LabToYF_b[LL*2];
 
         float X, Z;
-        float up = 3.f*(u + L*_un);
-        float vp = 0.25f/(v + L*_vn);
-        if(vp >  0.25f) vp =  0.25f;
-        if(vp < -0.25f) vp = -0.25f;
-        X = y*3.f*up*vp;
-        Z = y*(((12.f*13.f)*L - up)*vp - 5.f);
+        // y : [0, BASE]
+        // up: [-402, 1431.57]*BASE
+        // vp: +/- 0.25*BASE*1024
+        int up = LuToUp_b[LL*256+uu];
+        int vp = LvToVp_b[LL*256+vv];
+        X = y*3.f*up/((float)BASE)*vp/((float)BASE*1024);
+        //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
-        int x = X, z = Z;
+        //int x = X, z = Z;
+        int x = X;
+        //works well
+        //int z = y*( ((12*13*100*(int)LL)/255.f - up*1.f/BASE )*vp/(BASE*1024.f) - 5.f);
+        int z = y*( ((12*13*100*(int)LL) - up*255.f/BASE )/255.f*vp/(BASE*1024.f) - 5.f);
+
+        //TODO: this
+        /*
+        if(x >= 0 && x <= 2*BASE && z >= 0 && z <= 2*BASE)
+        {
+            static float minup = 100.f, maxup = -100.f;
+            static float minvp = 100.f, maxvp = -100.f;
+            if(up > maxup) { maxup = up; cout << "max up: " << maxup << endl; }
+            if(up < minup) { minup = up; cout << "min up: " << minup << endl; }
+            if(vp > maxvp) { maxvp = vp; cout << "max vp: " << maxvp << endl; }
+            if(abs(vp) < minvp) { minvp = abs(vp); cout << "min abs(vp): " << minvp << endl; }
+        }
+        */
+
         //limit X, Y, Z to [0, 2] to fit white point
         x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
 
         /*
-        static float minup = 100.f, maxup = -100.f;
-        static float minvp = 100.f, maxvp = -100.f;
-        if(up > maxup) { maxup = up; cout << "max up: " << maxup << endl; }
-        if(up < minup) { minup = up; cout << "min up: " << minup << endl; }
-        if(vp > maxvp) { maxvp = vp; cout << "max vp: " << maxvp << endl; }
-        if(abs(vp) < minvp) { minvp = abs(vp); cout << "min abs(vp): " << minvp << endl; }
-        */
-
-        /*
+            //when XYZ are limited to [0, 2]
             min up: -402
             min abs diff up: 0.010407
             max up: 1431.57
@@ -1651,6 +1708,7 @@ struct Luv2RGBinteger
             min abs(vp): 0.00034207
             max vp:  0.25
 
+            //original values
         min x: -382561 = -23,34967041015625*BASE
         max x: 395723 = 24,15301513671875*BASE
 
@@ -1763,7 +1821,6 @@ struct Luv2RGBinteger
     int dstcn;
     //TODO: rewrite this
     int coeffs[9];
-    float un, vn;
     //int coeffs[9];
     ushort* tab;
 };
@@ -2048,7 +2105,7 @@ void printDiff(Mat a, string what, const char* channel, double* maxMaxError, int
 
 bool checkXYZ(uchar LL, uchar uu, uchar vv)
 {
-    Luv2RGBinteger luv(3, 0, 0, 0, true);
+    Luv2RGBfloat luv(3, 0, 0, 0, true);
 
     float L = ((float)LL)*100.f/255.f;
     float u = ((float)uu)*uRange/255.f + (float)uLow;
