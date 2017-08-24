@@ -70,12 +70,12 @@
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./opencv.js');
+    let cv = require('./opencv.js');
 }
 
-QUnit.module( "Core", {});
+QUnit.module('Core', {});
 
-QUnit.test("test_mat_creation", function(assert) {
+QUnit.test('test_mat_creation', function(assert) {
     // Mat constructors.
     // Mat::Mat(int rows, int cols, int type)
     {
@@ -94,25 +94,24 @@ QUnit.test("test_mat_creation", function(assert) {
     }
 
     // Mat::Mat(const Mat &)
-    //{
-        //  : Copy from another Mat
-        //let mat1 = new cv.Mat(10, 20, cv.CV_8UC3);
-        //let mat2 = new cv.Mat(mat1);
+    {
+        // Copy from another Mat
+        let mat1 = new cv.Mat(10, 20, cv.CV_8UC3);
+        let mat2 = new cv.Mat(mat1);
 
-        //assert.equal(mat2.type(), mat1.type());
-        //assert.equal(mat2.depth(), mat1.depth());
-        //assert.equal(mat2.channels(), mat1.channels());
-        //assert.equal(mat2.empty(), mat1.empty());
+        assert.equal(mat2.type(), mat1.type());
+        assert.equal(mat2.depth(), mat1.depth());
+        assert.equal(mat2.channels(), mat1.channels());
+        assert.equal(mat2.empty(), mat1.empty());
 
-        //let size1 = mat1.size;
-        //let size2 = mat2.size();
-        //assert.ok(size1.size === size2.size);
-        //assert.ok(size1.get(0) === size2.get(0));
-        //assert.ok(size1.get(1) === size2.get(1));
+        let size1 = mat1.size;
+        let size2 = mat2.size();
+        assert.ok(size1[0] === size2[0]);
+        assert.ok(size1[1] === size2[1]);
 
-        //mat1.delete();
-        //mat2.delete();
-    //}
+        mat1.delete();
+        mat2.delete();
+    }
 
     // Mat::Mat(int rows, int cols, int type, void *data, size_t step=AUTO_STEP)
     {
@@ -342,7 +341,7 @@ QUnit.test("test_mat_creation", function(assert) {
         canvas.width = 2;
         canvas.height = 2;
         let ctx = canvas.getContext('2d');
-        ctx.fillStyle="#FF0000";
+        ctx.fillStyle='#FF0000';
         ctx.fillRect(0, 0, 1, 1);
         ctx.fillRect(1, 1, 1, 1);
 
@@ -400,7 +399,7 @@ QUnit.test("test_mat_creation", function(assert) {
     }
 });
 
-QUnit.test("test_mat_ptr", function(assert) {
+QUnit.test('test_mat_ptr', function(assert) {
     const RValue = 3;
     const GValue = 7;
     const BValue = 197;
@@ -527,10 +526,9 @@ QUnit.test("test_mat_ptr", function(assert) {
 
         mat.delete();
     }
-
 });
 
-QUnit.test("test_mat_zeros", function(assert) {
+QUnit.test('test_mat_zeros', function(assert) {
     zeros = new Uint8Array(10*10).fill(0);
     // Mat::zeros(int, int, int)
     {
@@ -553,47 +551,47 @@ QUnit.test("test_mat_zeros", function(assert) {
     }
 });
 
-QUnit.test("test_mat_ones", function(assert) {
+QUnit.test('test_mat_ones', function(assert) {
     let ones = new Uint8Array(10*10).fill(1);
     // Mat::ones(int, int, int)
     {
-        var mat = cv.Mat.ones(10, 10, cv.CV_8UC1);
-        var view = mat.data;
+        let mat = cv.Mat.ones(10, 10, cv.CV_8UC1);
+        let view = mat.data;
 
         assert.deepEqual(view, ones);
     }
     // Mat::ones(Size, int)
     {
-        var mat = cv.Mat.ones({height: 10, width: 10}, cv.CV_8UC1);
-        var view = mat.data;
+        let mat = cv.Mat.ones({height: 10, width: 10}, cv.CV_8UC1);
+        let view = mat.data;
 
         assert.deepEqual(view, ones);
     }
 });
 
-QUnit.test("test_mat_eye", function(assert) {
+QUnit.test('test_mat_eye', function(assert) {
     let eye4by4 = new Uint8Array([1, 0, 0, 0,
                                   0, 1, 0, 0,
                                   0, 0, 1, 0,
-                                  0, 0, 0, 1])
+                                  0, 0, 0, 1]);
     // Mat::eye(int, int, int)
     {
-        var mat = cv.Mat.eye(4, 4, cv.CV_8UC1);
-        var view = mat.data;
+        let mat = cv.Mat.eye(4, 4, cv.CV_8UC1);
+        let view = mat.data;
 
         assert.deepEqual(view, eye4by4);
     }
 
     // Mat::eye(Size, int)
     {
-        var mat = cv.Mat.eye({height: 4, width: 4}, cv.CV_8UC1);
-        var view = mat.data;
+        let mat = cv.Mat.eye({height: 4, width: 4}, cv.CV_8UC1);
+        let view = mat.data;
 
         assert.deepEqual(view, eye4by4);
     }
 });
 
-QUnit.test("test_mat_miscs", function(assert) {
+QUnit.test('test_mat_miscs', function(assert) {
     // Mat::col(int)
     {
         let mat = cv.matFromArray(2, 2, cv.CV_8UC2, [1, 2, 3, 4, 5, 6, 7, 8]);
@@ -643,10 +641,7 @@ QUnit.test("test_mat_miscs", function(assert) {
         mat.delete();
     }
 
-    // C++
-    //   void split(InputArray, OutputArrayOfArrays)
-    // Embind
-    //   void split(VecotrMat, VectorMat)
+    // split
     {
         const R =7;
         const G =13;
@@ -658,31 +653,30 @@ QUnit.test("test_mat_miscs", function(assert) {
         view[1] = G;
         view[2] = B;
 
-        let bgr_planes = new cv.MatVector();
-        cv.split(mat, bgr_planes);
-        assert.equal(bgr_planes.size(), 3);
+        let bgrPlanes = new cv.MatVector();
+        cv.split(mat, bgrPlanes);
+        assert.equal(bgrPlanes.size(), 3);
 
-        let rMat = bgr_planes.get(0);
+        let rMat = bgrPlanes.get(0);
         view = rMat.data;
         assert.equal(view[0], R);
 
-        let gMat = bgr_planes.get(1);
+        let gMat = bgrPlanes.get(1);
         view = gMat.data;
         assert.equal(view[0], G);
 
-        let bMat = bgr_planes.get(2);
+        let bMat = bgrPlanes.get(2);
         view = bMat.data;
         assert.equal(view[0], B);
 
         mat.delete();
         rMat.delete();
         gMat.delete();
-        bgr_planes.delete();
+        bgrPlanes.delete();
         bMat.delete();
     }
 
-    // C++
-    //   size_t Mat::elemSize() const
+    // elemSize
     {
         let mat = cv.Mat.ones(5, 5, cv.CV_8UC3);
         assert.equal(mat.elemSize(), 3);
@@ -701,8 +695,7 @@ QUnit.test("test_mat_miscs", function(assert) {
         mat3.delete();
     }
 
-    // C++
-    //   size_t Mat::step
+    // step
     {
         let mat = cv.Mat.ones(5, 5, cv.CV_8UC3);
         assert.equal(mat.step[0], 15);
@@ -721,10 +714,10 @@ QUnit.test("test_mat_miscs", function(assert) {
         mat3.delete();
     }
 
-    //   double Mat::dot(const Mat&) const
+    // dot
     {
-        let mat = cv.Mat.ones(5, 5, cv.CV_8UC1),
-            mat2 = cv.Mat.eye(5, 5, cv.CV_8UC1);
+        let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
+        let mat2 = cv.Mat.eye(5, 5, cv.CV_8UC1);
 
         assert.equal(mat.dot(mat), 25);
         assert.equal(mat.dot(mat2), 5);
@@ -734,17 +727,16 @@ QUnit.test("test_mat_miscs", function(assert) {
         mat2.delete();
     }
 
-    //   Element-wise multiplication
-    //   double Mat::mul(const Mat&) const
+    // mul
     {
         const FACTOR = 5;
-        let mat = cv.Mat.ones(4, 4, cv.CV_8UC1),
-            mat2 = cv.Mat.eye(4, 4, cv.CV_8UC1);
+        let mat = cv.Mat.ones(4, 4, cv.CV_8UC1);
+        let mat2 = cv.Mat.eye(4, 4, cv.CV_8UC1);
 
         let expected = new Uint8Array([FACTOR, 0, 0, 0,
                                       0, FACTOR, 0, 0,
                                       0, 0, FACTOR, 0,
-                                      0, 0, 0, FACTOR])
+                                      0, 0, 0, FACTOR]);
         let mat3 = mat.mul(mat2, FACTOR);
 
         assert.deepEqual(mat3.data, expected);
@@ -753,15 +745,14 @@ QUnit.test("test_mat_miscs", function(assert) {
         mat2.delete();
         mat3.delete();
     }
-
 });
 
 
-QUnit.test("test mat access", function(assert) {
+QUnit.test('test mat access', function(assert) {
     // test memory view
     {
-        let data = new Uint8Array([0, 0, 0, 255, 0, 1, 2, 3]),
-            dataPtr = cv._malloc(8);
+        let data = new Uint8Array([0, 0, 0, 255, 0, 1, 2, 3]);
+        let dataPtr = cv._malloc(8);
 
         let dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr, 8);
         dataHeap.set(new Uint8Array(data.buffer));
@@ -769,13 +760,13 @@ QUnit.test("test mat access", function(assert) {
         let mat = new cv.Mat(8, 1, cv.CV_8UC1, dataPtr, 0);
 
 
-        let unsignedCharView = new Uint8Array(data.buffer),
-        charView = new Int8Array(data.buffer),
-        shortView = new Int16Array(data.buffer),
-        unsignedShortView = new Uint16Array(data.buffer),
-        intView = new Int32Array(data.buffer),
-        float32View = new Float32Array(data.buffer),
-        float64View = new Float64Array(data.buffer);
+        let unsignedCharView = new Uint8Array(data.buffer);
+        let charView = new Int8Array(data.buffer);
+        let shortView = new Int16Array(data.buffer);
+        let unsignedShortView = new Uint16Array(data.buffer);
+        let intView = new Int32Array(data.buffer);
+        let float32View = new Float32Array(data.buffer);
+        let float64View = new Float64Array(data.buffer);
 
 
         assert.deepEqual(unsignedCharView, mat.data);
@@ -789,8 +780,8 @@ QUnit.test("test mat access", function(assert) {
 
     // test ucharAt(i)
     {
-        let data = new Uint8Array([0, 0, 0, 255, 0, 1, 2, 3]),
-        dataPtr = cv._malloc(8);
+        let data = new Uint8Array([0, 0, 0, 255, 0, 1, 2, 3]);
+        let dataPtr = cv._malloc(8);
 
         let dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr, 8);
         dataHeap.set(new Uint8Array(data.buffer));
@@ -809,8 +800,8 @@ QUnit.test("test mat access", function(assert) {
 
     // test ushortAt(i)
     {
-        let data = new Uint16Array([0, 1000, 65000, 255, 0, 1, 2, 3]),
-            dataPtr = cv._malloc(16);
+        let data = new Uint16Array([0, 1000, 65000, 255, 0, 1, 2, 3]);
+        let dataPtr = cv._malloc(16);
 
         let dataHeap = new Uint16Array(cv.HEAPU8.buffer, dataPtr, 8);
         dataHeap.set(new Uint16Array(data.buffer));
@@ -829,8 +820,8 @@ QUnit.test("test mat access", function(assert) {
 
     // test intAt(i)
     {
-        let data = new Int32Array([0, -1000, 65000, 255, -2000000, -1, 2, 3]),
-            dataPtr = cv._malloc(32);
+        let data = new Int32Array([0, -1000, 65000, 255, -2000000, -1, 2, 3]);
+        let dataPtr = cv._malloc(32);
 
         let dataHeap = new Int32Array(cv.HEAPU32.buffer, dataPtr, 8);
         dataHeap.set(new Int32Array(data.buffer));
@@ -850,22 +841,22 @@ QUnit.test("test mat access", function(assert) {
     // test floatAt(i)
     {
         const EPSILON = 0.001;
-        let data = new Float32Array([0, -10.5, 650.001, 255, -20.1, -1.2, 2, 3.5]),
-            dataPtr = cv._malloc(32);
+        let data = new Float32Array([0, -10.5, 650.001, 255, -20.1, -1.2, 2, 3.5]);
+        let dataPtr = cv._malloc(32);
 
         let dataHeap = new Float32Array(cv.HEAPU32.buffer, dataPtr, 8);
         dataHeap.set(new Float32Array(data.buffer));
 
         let mat = new cv.Mat(8, 1, cv.CV_32FC1, dataPtr, 0);
 
-        assert.equal(Math.abs(mat.floatAt(0)-0)       < EPSILON, true);
-        assert.equal(Math.abs(mat.floatAt(1)+10.5)    < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(0)-0) < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(1)+10.5) < EPSILON, true);
         assert.equal(Math.abs(mat.floatAt(2)-650.001) < EPSILON, true);
-        assert.equal(Math.abs(mat.floatAt(3)-255)     < EPSILON, true);
-        assert.equal(Math.abs(mat.floatAt(4)+20.1)    < EPSILON, true);
-        assert.equal(Math.abs(mat.floatAt(5)+1.2)     < EPSILON, true);
-        assert.equal(Math.abs(mat.floatAt(6)-2)       < EPSILON, true);
-        assert.equal(Math.abs(mat.floatAt(7)-3.5)     < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(3)-255) < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(4)+20.1) < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(5)+1.2) < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(6)-2) < EPSILON, true);
+        assert.equal(Math.abs(mat.floatAt(7)-3.5) < EPSILON, true);
     }
 
     // test intAt(i,j)
@@ -884,10 +875,9 @@ QUnit.test("test mat access", function(assert) {
 
         mat.delete();
     }
-
 });
 
-QUnit.test("test mat operations", function(assert) {
+QUnit.test('test_mat_operations', function(assert) {
     // test minMaxLoc
     {
         let src = cv.Mat.ones(4, 4, cv.CV_8UC1);
@@ -906,11 +896,10 @@ QUnit.test("test mat operations", function(assert) {
     }
 });
 
-QUnit.test("test mat roi", function(assert) {
+QUnit.test('test_mat_roi', function(assert) {
     // test minMaxLoc
     {
-        let mat = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3])
-
+        let mat = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3]);
         let roi = mat.roi(new cv.Rect(1, 1, 1, 1));
 
         assert.equal(roi.rows, 1);
@@ -923,10 +912,9 @@ QUnit.test("test mat roi", function(assert) {
 });
 
 
-QUnit.test("test mat range", function(assert) {
+QUnit.test('test_mat_range', function(assert) {
     {
-        let src = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3])
-
+        let src = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3]);
         let mat = src.colRange(0, 1);
 
         assert.equal(mat.isContinuous(), false);
@@ -967,11 +955,10 @@ QUnit.test("test mat range", function(assert) {
     }
 });
 
-QUnit.test("test mat diag", function(assert) {
-    // test minMaxLoc
+QUnit.test('test_mat_diag', function(assert) {
+    // test diag
     {
-        let mat = cv.matFromArray(3, 3, cv.CV_8UC1, [0, 1, 2, 3, 4, 5, 6, 7, 8])
-
+        let mat = cv.matFromArray(3, 3, cv.CV_8UC1, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
         let d = mat.diag();
         let d1 = mat.diag(1);
         let d_1 = mat.diag(-1);
