@@ -16,4 +16,9 @@ std::vector<cv::String> List_to_vector_String(JNIEnv* env, jobject list);
 
 void Copy_vector_String_to_List(JNIEnv* env, std::vector<cv::String>& vs, jobject list);
 
+#if defined(HAVE_OPENCV_DNN)
+#include "opencv2/dnn.hpp"
+void Copy_vector_MatShape_to_List(JNIEnv* env, std::vector<cv::dnn::MatShape>& vs, jobject list);
+#endif
+
 #endif	/* LISTCONVERTERS_HPP */
