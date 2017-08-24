@@ -160,7 +160,7 @@ public:
                 break;
         }
         new_pos = std::min(new_pos, size);
-        decoder->m_buf_pos = new_pos;
+        decoder->m_buf_pos = (size_t)new_pos;
         return new_pos;
     }
 
@@ -613,7 +613,7 @@ public:
     static tmsize_t write( thandle_t handle, void* buffer, tmsize_t n )
     {
         TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
-        size_t begin = helper->m_buf_pos;
+        size_t begin = (size_t)helper->m_buf_pos;
         size_t end = begin + n;
         if ( helper->m_buf->size() < end )
         {
