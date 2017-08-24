@@ -693,8 +693,14 @@ CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, c
                              int line = 0);
 CV_EXPORTS   int getIppStatus();
 CV_EXPORTS   String getIppErrorLocation();
-CV_EXPORTS_W bool useIPP();
-CV_EXPORTS_W void setUseIPP(bool flag);
+CV_EXPORTS_W bool   useIPP();
+CV_EXPORTS_W void   setUseIPP(bool flag);
+CV_EXPORTS_W String getIppVersion();
+
+// IPP Not-Exact mode. This function may force use of IPP then both IPP and OpenCV provide proper results
+// but have internal accuracy differences which have to much direct or indirect impact on accuracy tests.
+CV_EXPORTS_W bool useIPP_NE();
+CV_EXPORTS_W void setUseIPP_NE(bool flag);
 
 } // ipp
 
