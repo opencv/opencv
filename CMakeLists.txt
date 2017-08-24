@@ -312,6 +312,7 @@ OCV_OPTION(CV_ENABLE_INTRINSICS       "Use intrinsic-based optimized code" ON )
 OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatched code/intrinsics/loop unrolling/etc)" OFF )
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 
+OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -615,6 +616,11 @@ else()
   find_package(JNI)
 endif()
 
+if(ENABLE_PYLINT)
+  include(cmake/OpenCVPylint.cmake)
+endif()
+
+
 if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
   SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
 else()
@@ -747,7 +753,6 @@ endif()
 # Extra OpenCV targets: uninstall, package_source, perf, etc.
 include(cmake/OpenCVExtraTargets.cmake)
 
-
 # ----------------------------------------------------------------------------
 # Process subdirectories
 # ----------------------------------------------------------------------------
@@ -845,6 +850,13 @@ if(ANDROID OR NOT UNIX)
             PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
             DESTINATION ./ COMPONENT libs)
   endif()
+endif()
+
+if(COMMAND ocv_pylint_finalize)
+  ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/samples/python)
+  ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/samples/dnn)
+  ocv_pylint_add_directory_recurse(${CMAKE_CURRENT_LIST_DIR}/samples/python/tutorial_code)
+  ocv_pylint_finalize()
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1404,6 +1416,9 @@ endif()
 
 status("")
 status("  Python (for build):"  PYTHON_DEFAULT_AVAILABLE THEN "${PYTHON_DEFAULT_EXECUTABLE}" ELSE NO)
+if(PYLINT_FOUND AND PYLINT_EXECUTABLE)
+status("    Pylint:"  PYLINT_FOUND THEN "${PYLINT_EXECUTABLE} (ver: ${PYLINT_VERSION}, checks: ${PYLINT_TOTAL_TARGETS})" ELSE NO)
+endif()
 
 # ========================== java ==========================
 status("")
