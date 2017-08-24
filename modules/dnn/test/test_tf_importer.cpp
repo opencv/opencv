@@ -125,4 +125,9 @@ TEST(Test_TensorFlow, pooling)
     runTensorFlowNet("max_pool_odd_same");
 }
 
+TEST(Test_TensorFlow, deconvolution)
+{
+    runTensorFlowNet("deconvolution");
+}
+
 }
