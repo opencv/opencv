@@ -257,6 +257,7 @@ static int abToXZ_b[LAB_BASE*9/4];
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
+static const bool enablePackedLuv2RGB = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
@@ -1666,103 +1667,35 @@ struct Luv2RGBinteger
         // y : [0, BASE]
         // up: [-402, 1431.57]*(BASE/1024)
         // vp: +/- 0.25*BASE*1024
-        //TODO: we can shrink this to 16 bit
         int up = LuToUp_b[LL*256+uu];
         int vp = LvToVp_b[LL*256+vv];
         //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
         //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
         //works well
-        //int x = y*(int)(3*(long long)up*(long long)(vp)/(long long)BASE)/BASE;
-        long long int xv = (long long)up*(long long)vp*3;
-        xv /= BASE;
-        int x = (int)xv;
+        long long int xv = ((int)up*3)*(long long)vp;
+        int x = (int)(xv/BASE);
         x = y*x/BASE;
 
         //works well
-        //int z = y*( ((int)(((12*13*100*(int)LL) - up*255/(BASE/1024))*(BASE/1024))*(long long)(vp)/BASE) - 5*255*BASE)/(BASE*255);
-        int zv = (12*13*100*(BASE/1024)*(int)LL) - up*255;
-        long long int zp = (long long)zv*(long long)vp;
+        int vpl = vp*(int)LL;
+        long long int zp = (12*13*100*(BASE/1024))*(long long)vpl - xv*(255/3);
         zp /= BASE;
         long long int zq = zp - (long long)(5*255*BASE);
         int zm = (int)(y*zq/BASE);
         int z = zm/256 + zm/65536;
 
-        //TODO: this
-        /*
-        if(x >= 0 && x <= 2*BASE && z >= 0 && z <= 2*BASE)
-        {
-            static float minup = 100.f, maxup = -100.f;
-            static float minvp = 100.f, maxvp = -100.f;
-            if(up > maxup) { maxup = up; cout << "max up: " << maxup << endl; }
-            if(up < minup) { minup = up; cout << "min up: " << minup << endl; }
-            if(vp > maxvp) { maxvp = vp; cout << "max vp: " << maxvp << endl; }
-            if(abs(vp) < minvp) { minvp = abs(vp); cout << "min abs(vp): " << minvp << endl; }
-        }
-        */
-
         //limit X, Y, Z to [0, 2] to fit white point
         x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
-
-        /*
-            //when XYZ are limited to [0, 2]
-            min up: -402
-            min abs diff up: 0.010407
-            max up: 1431.57
-
-            min vp: -0.25
-            min abs(vp): 0.00034207
-            max vp:  0.25
-
-            //original values
-        min x: -382561 = -23,34967041015625*BASE
-        max x: 395723 = 24,15301513671875*BASE
-
-        min y: 0      = 0
-        max y: 16384  = BASE
-
-        min z: -579186 = -35,3507080078125*BASE
-        max z: 599806  = 36,6092529296875*BASE
-        */
-
-        /*
-        static int maxx = 0, minx = 0, maxy = 0, miny = 0, maxz = 0, minz = 0;
-        if(x > maxx) { maxx = x; cout << "max x: " << maxx << endl; }
-        if(x < minx) { minx = x; cout << "min x: " << minx << endl; }
-        if(y > maxy) { maxy = y; cout << "max y: " << maxy << endl; }
-        if(y < miny) { miny = y; cout << "min y: " << miny << endl; }
-        if(z > maxz) { maxz = z; cout << "max z: " << maxz << endl; }
-        if(z < minz) { minz = z; cout << "min z: " << minz << endl; }
-        */
-        //cout << "grepstring";
-        //cout << " " << L;
-        //cout << " " << u;
-        //cout << " " << v;
-        //cout << " " << up;
-        //cout << " " << vp;
-        //cout << " " << X;
-        //cout << " " << Y;
-        //cout << " " << Z;
-        //cout << endl;
 
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
         int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
         int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
-        //TODO: is this overflow here?
         ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
         go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
         bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
 
-//        float R = X*C0 + Y*C1 + Z*C2;
-//        float G = X*C3 + Y*C4 + Z*C5;
-//        float B = X*C6 + Y*C7 + Z*C8;
-
-//        ro = R*((int)INV_GAMMA_TAB_SIZE-1);
-//        go = G*((int)INV_GAMMA_TAB_SIZE-1);
-//        bo = B*((int)INV_GAMMA_TAB_SIZE-1);
-
-        //TODO: up to this
         ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
         go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
         bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
@@ -1770,35 +1703,40 @@ struct Luv2RGBinteger
         ro = tab[ro];
         go = tab[go];
         bo = tab[bo];
+    }
 
+    inline void processLuvToXYZ(const v_uint8x16& lv, const v_uint8x16& uv, const v_uint8x16& vv,
+                                int32_t* xyz) const
+    {
+        uint8_t CV_DECL_ALIGNED(16) lvstore[16], uvstore[16], vvstore[16];
+        v_store_aligned(lvstore, lv); v_store_aligned(uvstore, uv); v_store_aligned(vvstore, vv);
 
+        for(int i = 0; i < 16; i++)
+        {
+            int LL = lvstore[i];
+            int u = uvstore[i];
+            int v = vvstore[i];
+            int y = LabToYF_b[LL*2];
 
-//        int x, y, z;
-//        int ify;
+            int up = LuToUp_b[LL*256+u];
+            int vp = LvToVp_b[LL*256+v];
 
-//        y   = LabToYF_b[LL*2  ];
-//        ify = LabToYF_b[LL*2+1];
+            long long int xv = (up*3)*(long long int)vp;
+            int vpl = vp*LL;
+            long long int zp = (12*13*100*(BASE/1024))*(long long)vpl - xv*(255/3);
+            zp = zp >> base_shift;
+            long long int zq = zp - (5*255*BASE);
+            int zm = (int)((y*zq) >> base_shift);
 
-//        //float fxz[] = { ai / 500.0f + fy, fy - bi / 200.0f };
-//        int adiv, bdiv;
-//        adiv = aa*BASE/500 - 128*BASE/500, bdiv = bb*BASE/200 - 128*BASE/200;
+            int x = (int)(xv >> base_shift);
+            x = (y*x) >> base_shift;
 
-//        int ifxz[] = {ify + adiv, ify - bdiv};
+            int z = zm/256 + zm/65536;
+            x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
 
-//        for(int k = 0; k < 2; k++)
-//        {
-//            int& v = ifxz[k];
-//            v = abToXZ_b[v-minABvalue];
-//        }
-//        x = ifxz[0]; /* y = y */; z = ifxz[1];
-
-//        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
-//        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
-//        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-
-//        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
-//        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
-//        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+            //TODO: try interleave for better multiplication
+            xyz[i] = x; xyz[i + 16] = y; xyz[i + 32] = z;
+        }
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -1807,8 +1745,78 @@ struct Luv2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
+        if(enablePackedLuv2RGB)
+        {
+            static const int nPixels = 16;
+            for (; i < n*3-3*nPixels; i += 3*nPixels, dst += dcn*nPixels)
+            {
+                v_uint8x16 u8l, u8u, u8v;
+                v_load_deinterleave(src + i, u8l, u8u, u8v);
 
-        //TODO: add packed version
+                int32_t CV_DECL_ALIGNED(16) xyz[48];
+                processLuvToXYZ(u8l, u8u, u8v, xyz);
+
+                v_int32x4 xiv[4], yiv[4], ziv[4];
+                for(int k = 0; k < 4; k++)
+                {
+                    xiv[k] = v_load_aligned(xyz + 4*k);
+                    yiv[k] = v_load_aligned(xyz + 4*k + 16);
+                    ziv[k] = v_load_aligned(xyz + 4*k + 32);
+                }
+
+                /*
+                        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+                        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+                        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+                */
+                v_int32x4 C0 = v_setall_s32(coeffs[0]), C1 = v_setall_s32(coeffs[1]), C2 = v_setall_s32(coeffs[2]);
+                v_int32x4 C3 = v_setall_s32(coeffs[3]), C4 = v_setall_s32(coeffs[4]), C5 = v_setall_s32(coeffs[5]);
+                v_int32x4 C6 = v_setall_s32(coeffs[6]), C7 = v_setall_s32(coeffs[7]), C8 = v_setall_s32(coeffs[8]);
+                v_int32x4 descaleShift = v_setall_s32(1 << (shift-1));
+                v_int32x4 tabsz = v_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
+                v_uint32x4 r_vecs[4], g_vecs[4], b_vecs[4];
+                for(int k = 0; k < 4; k++)
+                {
+                    v_int32x4 i_r, i_g, i_b;
+                    i_r = (xiv[k]*C0 + yiv[k]*C1 + ziv[k]*C2 + descaleShift) >> shift;
+                    i_g = (xiv[k]*C3 + yiv[k]*C4 + ziv[k]*C5 + descaleShift) >> shift;
+                    i_b = (xiv[k]*C6 + yiv[k]*C7 + ziv[k]*C8 + descaleShift) >> shift;
+
+                    //limit indices in table and then substitute
+                    //ro = tab[ro]; go = tab[go]; bo = tab[bo];
+                    int32_t CV_DECL_ALIGNED(16) rshifts[4], gshifts[4], bshifts[4];
+                    v_int32x4 rs = v_max(v_setzero_s32(), v_min(tabsz, i_r));
+                    v_int32x4 gs = v_max(v_setzero_s32(), v_min(tabsz, i_g));
+                    v_int32x4 bs = v_max(v_setzero_s32(), v_min(tabsz, i_b));
+
+                    v_store_aligned(rshifts, rs);
+                    v_store_aligned(gshifts, gs);
+                    v_store_aligned(bshifts, bs);
+
+                    r_vecs[k] = v_uint32x4(tab[rshifts[0]], tab[rshifts[1]], tab[rshifts[2]], tab[rshifts[3]]);
+                    g_vecs[k] = v_uint32x4(tab[gshifts[0]], tab[gshifts[1]], tab[gshifts[2]], tab[gshifts[3]]);
+                    b_vecs[k] = v_uint32x4(tab[bshifts[0]], tab[bshifts[1]], tab[bshifts[2]], tab[bshifts[3]]);
+                }
+
+                v_uint16x8 u_rvec0 = v_pack(r_vecs[0], r_vecs[1]), u_rvec1 = v_pack(r_vecs[2], r_vecs[3]);
+                v_uint16x8 u_gvec0 = v_pack(g_vecs[0], g_vecs[1]), u_gvec1 = v_pack(g_vecs[2], g_vecs[3]);
+                v_uint16x8 u_bvec0 = v_pack(b_vecs[0], b_vecs[1]), u_bvec1 = v_pack(b_vecs[2], b_vecs[3]);
+
+                v_uint8x16 u8_b, u8_g, u8_r;
+                u8_b = v_pack(u_bvec0, u_bvec1);
+                u8_g = v_pack(u_gvec0, u_gvec1);
+                u8_r = v_pack(u_rvec0, u_rvec1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(dst, u8_b, u8_g, u8_r, v_setall_u8(alpha));
+                }
+                else
+                {
+                    v_store_interleave(dst, u8_b, u8_g, u8_r);
+                }
+            }
+        }
 
         for (; i < n*3; i += 3, dst += dcn)
         {
