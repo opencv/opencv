@@ -1,10 +1,17 @@
 #include "test_precomp.hpp"
-#include "test_intrin_utils.hpp"
 #include <climits>
+
+#include "test_intrin_utils.hpp"
+
+#define CV_CPU_SIMD_FILENAME "test_intrin_utils.hpp"
+#define CV_CPU_DISPATCH_MODE FP16
+#include "opencv2/core/private/cv_cpu_include_simd_declarations.hpp"
+
 
 using namespace cv;
 
 namespace cvtest { namespace hal {
+using namespace CV_CPU_OPTIMIZATION_NAMESPACE;
 
 //=============  8-bit integer =====================================================================
 
@@ -219,5 +226,11 @@ TEST(hal_intrin, float64x2) {
         ;
 }
 #endif
+
+TEST(hal_intrin,float16x4)
+{
+    CV_CPU_CALL_FP16(test_hal_intrin_float16x4, ());
+    throw SkipTestException("Unsupported hardware: FP16 is not available");
+}
 
 }}
