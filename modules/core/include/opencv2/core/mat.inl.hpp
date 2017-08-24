@@ -1665,7 +1665,7 @@ void Mat_<_Tp>::release()
 {
     Mat::release();
 #ifdef _DEBUG
-    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<_Tp>::type;
+    flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
 #endif
 }
 
