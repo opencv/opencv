@@ -6,7 +6,7 @@ project(${IPP_IW_LIBRARY})
 
 ocv_include_directories(${IPP_INCLUDE_DIRS} ${IPP_IW_PATH}/include)
 add_definitions(-DIW_BUILD)
-if(HAVE_IPP_ICV_ONLY)
+if(HAVE_IPP_ICV)
   add_definitions(-DICV_BASE)
 endif()
 
@@ -21,7 +21,10 @@ add_library(${IPP_IW_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-unused-function")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-unused-function -Wno-missing-braces -Wno-missing-field-initializers")
+  endif()
+  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-self-assign")
   endif()
 endif()
 

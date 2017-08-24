@@ -2971,8 +2971,8 @@ public:
 
         try
         {
-            ::ipp::IwiRoi roi = ::ipp::IwiRect(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiResize, &m_src, &m_dst, &roi);
+            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
+            CV_INSTRUMENT_FUN_IPP(iwiResize, m_src, m_dst, ippBorderRepl, tile);
         }
         catch(::ipp::IwException)
         {
@@ -3007,7 +3007,7 @@ public:
             {0,      scaleY, shift+0.5*scaleY}
         };
 
-        iwiWarpAffine.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, ippWarpForward, inter, ::ipp::IwiWarpAffineParams(0, 0.75, 0), ippBorderRepl);
+        iwiWarpAffine.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
 
         m_ok = true;
     }
@@ -3021,8 +3021,8 @@ public:
 
         try
         {
-            ::ipp::IwiRoi roi = ::ipp::IwiRect(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiWarpAffine, &m_src, &m_dst, &roi);
+            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
+            CV_INSTRUMENT_FUN_IPP(iwiWarpAffine, m_src, m_dst, tile);
         }
         catch(::ipp::IwException)
         {
@@ -3053,23 +3053,28 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
     if(ippInter < 0)
         return false;
 
-#if IPP_DISABLE_RESIZE_NEAREST
-    if(ippInter == ippNearest)
-        return false;
-#endif
-
-#if IPP_DISABLE_RESIZE_AREA
-    if(ippInter == ippSuper)
-        return false;
-#endif
+    // Resize which doesn't match OpenCV exactly
+    if(!cv::ipp::useIPP_NE())
+    {
+        if(ippInter == ippNearest || ippInter == ippSuper || (ippDataType == ipp8u && ippInter == ippLinear))
+            return false;
+    }
 
     if(ippInter != ippLinear && ippDataType == ipp64f)
         return false;
 
-    // Accuracy mismatch is 1 but affects detectors greatly
-#if IPP_DISABLE_RESIZE_8U
-    if(ippDataType == ipp8u && ippInter == ippLinear)
-        return false;
+#if IPP_VERSION_X100 < 201801
+    // Degradations on int^2 linear downscale
+    if(ippDataType != ipp64f && ippInter == ippLinear && inv_scale_x < 1 && inv_scale_y < 1) // if downscale
+    {
+        int scale_x = (int)(1/inv_scale_x);
+        int scale_y = (int)(1/inv_scale_y);
+        if(1/inv_scale_x - scale_x < DBL_EPSILON && 1/inv_scale_y - scale_y < DBL_EPSILON) // if integer
+        {
+            if(!(scale_x&(scale_x-1)) && !(scale_y&(scale_y-1))) // if power of 2
+                return false;
+        }
+    }
 #endif
 
     bool  affine = false;
