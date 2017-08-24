@@ -847,6 +847,13 @@ obtained. For example, the function can be used to compute horizontal and vertic
 raster image. In case of REDUCE_MAX and REDUCE_MIN , the output image should have the same type as the source one.
 In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
 And multi-channel arrays are also supported in these two reduction modes.
+
+The following code demonstrates its usage for a single channel matrix.
+@snippet snippets/core_reduce.cpp example
+
+And the following code demonstrates its usage for a two-channel matrix.
+@snippet snippets/core_reduce.cpp example2
+
 @param src input 2D matrix.
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
@@ -866,6 +873,10 @@ elements of i-th input array are treated as mv[i].channels()-element vectors.
 
 The function cv::split does the reverse operation. If you need to shuffle channels in some other
 advanced way, use cv::mixChannels.
+
+The following example shows how to merge 3 single channel matrices into a single 3-channel matrix.
+@snippet snippets/core_merge.cpp example
+
 @param mv input array of matrices to be merged; all the matrices in mv must have the same
 size and the same depth.
 @param count number of input matrices when mv is a plain C array; it must be greater than zero.
@@ -889,6 +900,10 @@ The function cv::split splits a multi-channel array into separate single-channel
 \f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
 If you need to extract a single channel or do some other sophisticated channel permutation, use
 mixChannels .
+
+The following example demonstrates how to split a 3-channel matrix into 3 single channel matrices.
+@snippet snippets/core_split.cpp example
+
 @param src input multi-channel array.
 @param mvbegin output array; the number of arrays must match src.channels(); the arrays themselves are
 reallocated, if needed.
