@@ -27,12 +27,12 @@ const char* about = "This sample uses Single-Shot Detector "
                     "(https://arxiv.org/abs/1512.02325)"
                     "to detect objects on image.\n"
                     ".caffemodel model's file is avaliable here: "
-                    "https://github.com/chuanqi305/MobileNet-SSD/blob/master/MobileNetSSD_train.caffemodel\n";
+                    "https://github.com/chuanqi305/MobileNet-SSD\n";
 
 const char* params
     = "{ help           | false | print usage         }"
-      "{ proto          | MobileNetSSD_300x300.prototxt | model configuration }"
-      "{ model          |       | model weights       }"
+      "{ proto          | MobileNetSSD_deploy.prototxt | model configuration }"
+      "{ model          | MobileNetSSD_deploy.caffemodel | model weights }"
       "{ video          |       | video for detection }"
       "{ out            |       | path to output video file}"
       "{ min_confidence | 0.2   | min confidence      }";
