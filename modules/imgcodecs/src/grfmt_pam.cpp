@@ -479,7 +479,7 @@ bool  PAMDecoder::readData( Mat& img )
 {
     uchar* data = img.ptr();
     int target_channels = img.channels();
-    int imp_stride = (int)img.step;
+    size_t imp_stride = img.step;
     int sample_depth = CV_ELEM_SIZE1(m_type);
     int src_elems_per_row = m_width*m_channels;
     int src_stride = src_elems_per_row*sample_depth;
