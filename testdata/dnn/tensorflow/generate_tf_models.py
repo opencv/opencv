@@ -48,26 +48,30 @@ def save(inp, out, name):
               '--input_names ' + inp.name[:inp.name.rfind(':')] +
               ' --output_names ' + out.name[:out.name.rfind(':')])
 
-# Test cases ####################################################################
+# Test cases ###################################################################
 # shape: NHWC
 inp = tf.placeholder(tf.float32, [1, 6, 5, 3], 'input')
 conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
-                        activation=tf.nn.relu)
+                        activation=tf.nn.relu,
+                        bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'single_conv')
 ################################################################################
 inp = tf.placeholder(tf.float32, [3, 7, 5, 4], 'input')
-conv = tf.layers.conv2d(inputs=inp, filters=5, kernel_size=[5, 3], padding='SAME')
+conv = tf.layers.conv2d(inputs=inp, filters=5, kernel_size=[5, 3], padding='SAME',
+                        use_bias=False)
 activation_abs = tf.abs(conv)
 save(inp, activation_abs, 'padding_same')
 ################################################################################
 inp = tf.placeholder(tf.float32, [2, 4, 6, 5], 'input')
 conv = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[3, 5], padding='VALID',
-                        activation=tf.nn.elu)
+                        activation=tf.nn.elu, bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'padding_valid')
 ################################################################################
 inp = tf.placeholder(tf.float32, [3, 2, 3, 4], 'input')
-conv = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[1, 1], activation=tf.nn.tanh)
-conv2 = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[1, 1], activation=tf.nn.sigmoid)
+conv = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[1, 1], activation=tf.nn.tanh,
+                        bias_initializer=tf.random_uniform_initializer(0, 1))
+conv2 = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[1, 1], activation=tf.nn.sigmoid,
+                         bias_initializer=None)
 eltwise_add_mul = (inp * 0.31 + 2 * conv) * conv2
 save(inp, eltwise_add_mul, 'eltwise_add_mul')
 ################################################################################
@@ -78,7 +82,13 @@ merged = tf.concat([padded, inp], axis=3)
 save(inp, merged, 'pad_and_concat')
 ################################################################################
 inp = tf.placeholder(tf.float32, [2, 5, 4, 3], 'input')
-bn = tf.contrib.layers.batch_norm(inputs=inp, fused=True, is_training=False)
+bn = tf.contrib.layers.batch_norm(inputs=inp, fused=True, is_training=False,
+                                  scale=True, param_initializers={
+                                    'beta': tf.random_normal_initializer(),
+                                    'gamma': tf.random_normal_initializer(),
+                                    'moving_mean': tf.random_uniform_initializer(-2, -1),
+                                    'moving_variance': tf.random_uniform_initializer(1, 2)
+                                  })
 save(inp, bn, 'fused_batch_norm')
 ################################################################################
 inp = tf.placeholder(tf.float32, [1, 6, 6, 2], 'input')
@@ -96,6 +106,20 @@ conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[3, 3], padding='SAME
 pool = tf.layers.max_pooling2d(inputs=conv, pool_size=2, strides=2, padding='SAME')
 save(inp, pool, 'max_pool_odd_same')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 5, 6, 2], 'input')
+deconv_weights = tf.Variable(tf.random_normal([5, 3, 4, 2]), name='deconv_weights')
+deconv = tf.nn.conv2d_transpose(value=inp, filter=deconv_weights,
+                                output_shape=[1, 9, 8, 4], strides=[1, 1, 1, 1],
+                                padding='VALID')
+deconv_bias = tf.contrib.layers.bias_add(deconv, activation_fn=tf.nn.relu,
+                                         initializer=tf.random_normal_initializer())
+save(inp, deconv_bias, 'deconvolution')
+
+# Uncomment to print the final graph.
+# with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
+#     graph_def = tf.GraphDef()
+#     graph_def.ParseFromString(f.read())
+#     print graph_def
 
 os.remove('checkpoint')
 os.remove('graph.pb')
