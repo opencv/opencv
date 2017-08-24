@@ -87,7 +87,7 @@ let sum = new cv.Mat();
 let rect = new cv.Rect(0, 0, logo.cols, logo.rows);
 
 // I want to put logo on top-left corner, So I create a ROI
-roi = src.getRoiRect(rect);
+roi = src.roi(rect);
 
 // Create a mask of logo and create its inverse mask also
 cv.cvtColor(logo, mask, cv.COLOR_RGBA2GRAY, 0);

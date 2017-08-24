@@ -873,7 +873,7 @@ QUnit.test("test mat roi", function(assert) {
     {
         let mat = cv.matFromArray(2, 2, cv.CV_8UC1, [0, 1, 2, 3])
 
-        let roi = mat.getRoiRect(new cv.Rect(1, 1, 1, 1));
+        let roi = mat.roi(new cv.Rect(1, 1, 1, 1));
 
         assert.equal(roi.rows, 1);
         assert.equal(roi.cols, 1);

@@ -130,8 +130,8 @@ let msize = new cv.Size(0, 0);
 face_cascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
 for(let i = 0; i < faces.size(); ++i)
 {
-    let roiGray = gray.getRoiRect(faces.get(i));
-    let roiSrc = src.getRoiRect(faces.get(i));
+    let roiGray = gray.roi(faces.get(i));
+    let roiSrc = src.roi(faces.get(i));
     let point1 = new cv.Point(faces.get(i).x, faces.get(i).y);
     let point2 = new cv.Point(faces.get(i).x + faces.get(i).width, faces.get(i).y + faces.get(i).height);
     cv.rectangle(src, point1, point2, [255, 0, 0, 255]);

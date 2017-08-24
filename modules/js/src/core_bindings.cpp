@@ -302,7 +302,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("mul", select_overload<Mat(const Mat&, const Mat&, double)>(&Utils::matMul))
         .function("inv", select_overload<Mat(const Mat&, int)>(&Utils::matInv))
         .function("t", select_overload<Mat(const Mat&)>(&Utils::matT))
-        .function("getRoiRect", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()))
+        .function("roi", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()))
         .function("diag", select_overload<Mat(const Mat&, int)>(&Utils::matDiag))
         .function("diag", select_overload<Mat(const Mat&)>(&Utils::matDiag_1))
         .function("isContinuous", select_overload<bool()const>(&cv::Mat::isContinuous))

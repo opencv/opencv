@@ -76,7 +76,7 @@ cap.read(msFrame);
 let trackWindow = new cv.Rect(300, 120, 125, 250); // simply hardcoded the values 300, 120, 125, 250
 
 // set up the ROI for tracking
-let msRoi = msFrame.getRoiRect(trackWindow);
+let msRoi = msFrame.roi(trackWindow);
 let msHsvRoi = new cv.Mat();
 cv.cvtColor(msRoi, msHsvRoi, cv.COLOR_RGBA2RGB);
 cv.cvtColor(msHsvRoi, msHsvRoi, cv.COLOR_RGB2HSV);
@@ -260,7 +260,7 @@ cap.read(csFrame);
 let trackWindow = new cv.Rect(300, 120, 125, 250); // simply hardcoded the values 300, 120, 125, 250
 
 // set up the ROI for tracking
-let csRoi = csFrame.getRoiRect(trackWindow);
+let csRoi = csFrame.roi(trackWindow);
 let csHsvRoi = new cv.Mat();
 cv.cvtColor(csRoi, csHsvRoi, cv.COLOR_RGBA2RGB);
 cv.cvtColor(csHsvRoi, csHsvRoi, cv.COLOR_RGB2HSV);

@@ -134,7 +134,7 @@ cv.log(mag, mag);
 
 // crop the spectrum, if it has an odd number of rows or columns
 let rect = new cv.Rect(0, 0, mag.cols & -2, mag.rows & -2);
-mag = mag.getRoiRect(rect);
+mag = mag.roi(rect);
 
 // rearrange the quadrants of Fourier image
 // so that the origin is at the image center
@@ -147,10 +147,10 @@ let rect1 = new cv.Rect(cx, 0, cx, cy);
 let rect2 = new cv.Rect(0, cy, cx, cy);
 let rect3 = new cv.Rect(cx, cy, cx, cy);
 
-let q0 = mag.getRoiRect(rect0);
-let q1 = mag.getRoiRect(rect1);
-let q2 = mag.getRoiRect(rect2);
-let q3 = mag.getRoiRect(rect3);
+let q0 = mag.roi(rect0);
+let q1 = mag.roi(rect1);
+let q2 = mag.roi(rect2);
+let q3 = mag.roi(rect3);
 
 // exchange 1 and 4 quadrants
 q0.copyTo(tmp);

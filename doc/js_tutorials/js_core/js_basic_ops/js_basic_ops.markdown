@@ -198,7 +198,7 @@ face detection is done all over the image and when face is obtained, we select t
 and search for eyes inside it instead of searching whole image. It improves accuracy (because eyes
 are always on faces) and performance (because we search for a small area)
 
-We use the function: **getRoiRect (rect)**
+We use the function: **roi (rect)**
 @param rect    rectangle Region of Interest.
 
 Try it
@@ -228,7 +228,7 @@ let src = cv.imread("roiCanvasInput");
 let dst = new cv.Mat();
 // You can try more different parameters
 let rect = new cv.Rect(100, 100, 200, 200);
-dst = src.getRoiRect(rect); 
+dst = src.roi(rect); 
 cv.imshow("roiCanvasOutput", dst);
 src.delete(); dst.delete(); 
 </textarea>
