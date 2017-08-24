@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -37,53 +37,53 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
+//
 
-Module["imread"] = function(imageSource) {
+Module['imread'] = function(imageSource) {
     var img = null;
-    if (typeof imageSource === "string")
+    if (typeof imageSource === 'string')
         img = document.getElementById(imageSource);
     else
         img = imageSource;
     var canvas = null;
     var ctx = null;
     if (img instanceof HTMLImageElement) {
-        canvas = document.createElement("canvas");
+        canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
-        ctx = canvas.getContext("2d");
+        ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, img.width, img.height);
     } else if (img instanceof HTMLCanvasElement) {
         canvas = img;
-        ctx = canvas.getContext("2d");
+        ctx = canvas.getContext('2d');
     } else {
-        throw("Please input the valid canvas or img id.");
+        throw new Error('Please input the valid canvas or img id.');
         return;
     }
 
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     return cv.matFromImageData(imgData);
-}
+};
 
-Module["imshow"] = function(canvasSource, mat) {
+Module['imshow'] = function(canvasSource, mat) {
     var canvas = null;
-    if (typeof canvasSource === "string")
+    if (typeof canvasSource === 'string')
         canvas = document.getElementById(canvasSource);
     else
         canvas = canvasSource;
     if (!(canvas instanceof HTMLCanvasElement)) {
-        throw("Please input the valid canvas element or id.");
+        throw new Error('Please input the valid canvas element or id.');
         return;
     }
     if (!(mat instanceof cv.Mat)) {
-        throw("Please input the valid cv.Mat instance.");
+        throw new Error('Please input the valid cv.Mat instance.');
         return;
     }
 
     // convert the mat type to cv.CV_8U
     var img = new cv.Mat();
     var depth = mat.type()%8;
-    var scale = depth <= cv.CV_8S? 1.0 : (depth <= cv.CV_32S? 1.0/256.0 : 255.0)
+    var scale = depth <= cv.CV_8S? 1.0 : (depth <= cv.CV_32S? 1.0/256.0 : 255.0);
     var shift = (depth === cv.CV_8S || depth === cv.CV_16S)? 128.0 : 0.0;
     mat.convertTo(img, cv.CV_8U, scale, shift);
 
@@ -98,74 +98,73 @@ Module["imshow"] = function(canvasSource, mat) {
         case cv.CV_8UC4:
             break;
         default:
-            throw("Bad number of channels (Source image must have 1, 3 or 4 channels)");
+            throw new Error('Bad number of channels (Source image must have 1, 3 or 4 channels)');
             return;
     }
     var imgData = new ImageData(new Uint8ClampedArray(img.data), img.cols, img.rows);
-    var ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     canvas.width = imgData.width;
     canvas.height = imgData.height;
     ctx.putImageData(imgData, 0, 0);
     img.delete();
-}
+};
 
-Module["VideoCapture"] = function(videoSource) {
+Module['VideoCapture'] = function(videoSource) {
     var video = null;
-    if (typeof videoSource === "string")
+    if (typeof videoSource === 'string')
         video = document.getElementById(videoSource);
     else
         video = videoSource;
     if (!(video instanceof HTMLVideoElement)) {
-        throw("Please input the valid video element or id.");
+        throw new Error('Please input the valid video element or id.');
         return;
     }
-    var canvas = document.createElement("canvas");
+    var canvas = document.createElement('canvas');
     canvas.width = video.width;
     canvas.height = video.height;
-    var ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext('2d');
 
     this.read = function(frame) {
         if (!(frame instanceof cv.Mat)) {
-            throw("Please input the valid cv.Mat instance.");
+            throw new Error('Please input the valid cv.Mat instance.');
             return;
         }
         if (frame.type() !== cv.CV_8UC4) {
-            throw("Bad type of input mat: the type should be cv.CV_8UC4.");
+            throw new Error('Bad type of input mat: the type should be cv.CV_8UC4.');
             return;
         }
         if (frame.cols !== video.width || frame.rows !== video.height) {
-            throw("Bad size of input mat: the size should be same as the video.");
+            throw new Error('Bad size of input mat: the size should be same as the video.');
             return;
         }
         ctx.drawImage(video, 0, 0, video.width, video.height);
         frame.data.set(ctx.getImageData(0, 0, video.width, video.height).data);
     };
-}
+};
 
 function Range(start, end) {
-    this.start = typeof(start) === "undefined" ? 0 : start;
-    this.end = typeof(end) === "undefined" ? 0 : end;
+    this.start = typeof(start) === 'undefined' ? 0 : start;
+    this.end = typeof(end) === 'undefined' ? 0 : end;
 }
 
-Module["Range"] = Range;
+Module['Range'] = Range;
 
 function Point(x, y) {
-    this.x = typeof(x) === "undefined" ? 0 : x;
-    this.y = typeof(y) === "undefined" ? 0 : y;
+    this.x = typeof(x) === 'undefined' ? 0 : x;
+    this.y = typeof(y) === 'undefined' ? 0 : y;
 }
 
-Module["Point"] = Point;
+Module['Point'] = Point;
 
 function Size(width, height) {
-    this.width = typeof(width) === "undefined" ? 0 : width;
-    this.height = typeof(height) === "undefined" ? 0 : height;
+    this.width = typeof(width) === 'undefined' ? 0 : width;
+    this.height = typeof(height) === 'undefined' ? 0 : height;
 }
 
-Module["Size"] = Size;
+Module['Size'] = Size;
 
 function Rect() {
-    var x, y, width, height;
     switch (arguments.length) {
         case 0: {
             // new cv.Rect()
@@ -200,15 +199,15 @@ function Rect() {
             this.y = arguments[1];
             this.width = arguments[2];
             this.height = arguments[3];
-            break
+            break;
         }
         default: {
-            throw("Invalid arguments");
+            throw new Error('Invalid arguments');
         }
     }
 }
 
-Module["Rect"] = Rect;
+Module['Rect'] = Rect;
 
 function RotatedRect() {
     switch (arguments.length) {
@@ -225,24 +224,24 @@ function RotatedRect() {
             break;
         }
         default: {
-            throw("Invalid arguments");
+            throw new Error('Invalid arguments');
         }
     }
 }
 
 RotatedRect.points = function (obj) {
     return Module.rotatedRectPoints(obj);
-}
+};
 
 RotatedRect.boundingRect = function (obj) {
     return Module.rotatedRectBoundingRect(obj);
-}
+};
 
 RotatedRect.boundingRect2f = function (obj) {
     return Module.rotatedRectBoundingRect2f(obj);
-}
+};
 
-Module["RotatedRect"] = RotatedRect;
+Module['RotatedRect'] = RotatedRect;
 
 function Scalar(v0, v1, v2, v3) {
     this.push(typeof(v0) === 'undefined' ? 0 : v0);
@@ -255,9 +254,9 @@ Scalar.prototype = new Array;
 
 Scalar.all = function(v) {
     return new Scalar(v, v, v, v);
-}
+};
 
-Module["Scalar"] = Scalar;
+Module['Scalar'] = Scalar;
 
 function MinMaxLoc() {
     switch (arguments.length) {
@@ -276,12 +275,12 @@ function MinMaxLoc() {
             break;
         }
         default: {
-            throw("Invalid arguments");
+            throw new Error('Invalid arguments');
         }
     }
 }
 
-Module["MinMaxLoc"] = MinMaxLoc;
+Module['MinMaxLoc'] = MinMaxLoc;
 
 function Circle() {
     switch (arguments.length) {
@@ -296,12 +295,12 @@ function Circle() {
             break;
         }
         default: {
-            throw("Invalid arguments");
+            throw new Error('Invalid arguments');
         }
     }
 }
 
-Module["Circle"] = Circle;
+Module['Circle'] = Circle;
 
 function TermCriteria() {
     switch (arguments.length) {
@@ -318,14 +317,14 @@ function TermCriteria() {
             break;
         }
         default: {
-            throw("Invalid arguments");
+            throw new Error('Invalid arguments');
         }
     }
 }
 
-Module["TermCriteria"] = TermCriteria;
+Module['TermCriteria'] = TermCriteria;
 
-Module["matFromArray"] = function(rows, cols, type, array) {
+Module['matFromArray'] = function(rows, cols, type, array) {
     var mat = new cv.Mat(rows, cols, type);
     switch (type) {
         case cv.CV_8U:
@@ -385,14 +384,14 @@ Module["matFromArray"] = function(rows, cols, type, array) {
             break;
         }
         default: {
-            throw("Type is unsupported");
+            throw new Error('Type is unsupported');
         }
     }
     return mat;
-}
+};
 
-Module["matFromImageData"] = function(imageData) {
+Module['matFromImageData'] = function(imageData) {
     var mat = new cv.Mat(imageData.height, imageData.width, cv.CV_8UC4);
     mat.data.set(imageData.data);
     return mat;
-}
+};
