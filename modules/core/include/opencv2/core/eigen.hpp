@@ -64,13 +64,13 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
 {
     if( !(src.Flags & Eigen::RowMajorBit) )
     {
-        Mat _src(src.cols(), src.rows(), DataType<_Tp>::type,
+        Mat _src(src.cols(), src.rows(), traits::Type<_Tp>::value,
               (void*)src.data(), src.stride()*sizeof(_Tp));
         transpose(_src, dst);
     }
     else
     {
-        Mat _src(src.rows(), src.cols(), DataType<_Tp>::type,
+        Mat _src(src.rows(), src.cols(), traits::Type<_Tp>::value,
                  (void*)src.data(), src.stride()*sizeof(_Tp));
         _src.copyTo(dst);
     }
@@ -98,7 +98,7 @@ void cv2eigen( const Mat& src,
     CV_DbgAssert(src.rows == _rows && src.cols == _cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
@@ -112,7 +112,7 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
@@ -125,13 +125,13 @@ void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
 {
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(_cols, _rows, DataType<_Tp>::type,
+        const Mat _dst(_cols, _rows, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(_rows, _cols, DataType<_Tp>::type,
+        const Mat _dst(_rows, _cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
@@ -144,7 +144,7 @@ void cv2eigen( const Mat& src,
     dst.resize(src.rows, src.cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
              dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
@@ -158,7 +158,7 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
@@ -172,13 +172,13 @@ void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
     dst.resize(_rows, _cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(_cols, _rows, DataType<_Tp>::type,
+        const Mat _dst(_cols, _rows, traits::Type<_Tp>::value,
              dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(_rows, _cols, DataType<_Tp>::type,
+        const Mat _dst(_rows, _cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
@@ -193,7 +193,7 @@ void cv2eigen( const Mat& src,
 
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
@@ -202,7 +202,7 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
@@ -217,13 +217,13 @@ void cv2eigen( const Matx<_Tp, _rows, 1>& src,
 
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(1, _rows, DataType<_Tp>::type,
+        const Mat _dst(1, _rows, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(_rows, 1, DataType<_Tp>::type,
+        const Mat _dst(_rows, 1, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         src.copyTo(_dst);
     }
@@ -238,7 +238,7 @@ void cv2eigen( const Mat& src,
     dst.resize(src.cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
@@ -247,7 +247,7 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
@@ -261,13 +261,13 @@ void cv2eigen( const Matx<_Tp, 1, _cols>& src,
     dst.resize(_cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(_cols, 1, DataType<_Tp>::type,
+        const Mat _dst(_cols, 1, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(1, _cols, DataType<_Tp>::type,
+        const Mat _dst(1, _cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
