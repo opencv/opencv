@@ -1,11 +1,11 @@
-#ifndef _TEST_UTILS_HPP_
-#define _TEST_UTILS_HPP_
-
 #include "opencv2/core/hal/intrin.hpp"
-#include "opencv2/ts.hpp"
-#include <ostream>
-#include <algorithm>
-#include <climits>
+
+namespace cvtest { namespace hal {
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+void test_hal_intrin_float16x4();
+
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 template <typename R> struct Data;
 template <int N> struct initializer;
@@ -155,8 +155,6 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     out << " }";
     return out;
 }
-
-namespace cvtest { namespace hal {
 
 template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
 template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
@@ -962,7 +960,8 @@ template<typename R> struct TheTest
     }
 
 };
-  }
-}
 
 #endif
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+}} // namespace
