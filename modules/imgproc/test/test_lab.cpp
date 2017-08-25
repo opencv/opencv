@@ -187,18 +187,36 @@ template<> struct ColorChannel<float>
 
 ///////////
 
-static const float sRGB2XYZ_D65[] =
+// 0.412453, 0.357580, 0.180423,
+// 0.212671, 0.715160, 0.072169,
+// 0.019334, 0.119193, 0.950227
+static const softdouble sRGB2XYZ_D65[] =
 {
-    0.412453f, 0.357580f, 0.180423f,
-    0.212671f, 0.715160f, 0.072169f,
-    0.019334f, 0.119193f, 0.950227f
+    softdouble::fromRaw(0x3fda65a14488c60d),
+    softdouble::fromRaw(0x3fd6e297396d0918),
+    softdouble::fromRaw(0x3fc71819d2391d58),
+    softdouble::fromRaw(0x3fcb38cda6e75ff6),
+    softdouble::fromRaw(0x3fe6e297396d0918),
+    softdouble::fromRaw(0x3fb279aae6c8f755),
+    softdouble::fromRaw(0x3f93cc4ac6cdaf4b),
+    softdouble::fromRaw(0x3fbe836eb4e98138),
+    softdouble::fromRaw(0x3fee68427418d691)
 };
 
-static const float XYZ2sRGB_D65[] =
+//  3.240479, -1.53715, -0.498535,
+// -0.969256, 1.875991, 0.041556,
+//  0.055648, -0.204043, 1.057311
+static const softdouble XYZ2sRGB_D65[] =
 {
-    3.240479f, -1.53715f, -0.498535f,
-   -0.969256f,  1.875991f, 0.041556f,
-    0.055648f, -0.204043f, 1.057311f
+    softdouble::fromRaw(0x4009ec804102ff8f),
+    softdouble::fromRaw(0xbff8982a9930be0e),
+    softdouble::fromRaw(0xbfdfe7ff583a53b9),
+    softdouble::fromRaw(0xbfef042528ae74f3),
+    softdouble::fromRaw(0x3ffe040f23897204),
+    softdouble::fromRaw(0x3fa546d3f9e7b80b),
+    softdouble::fromRaw(0x3fac7de5082cf52c),
+    softdouble::fromRaw(0xbfca1e14bdfd2631),
+    softdouble::fromRaw(0x3ff0eabef06b3786)
 };
 
 enum
@@ -218,7 +236,10 @@ static const float _1_3f = static_cast<float>(_1_3);
 
 ///////////////////////////////////// RGB <-> L*a*b* /////////////////////////////////////
 
-static const float D65[] = { 0.950456f, 1.f, 1.088754f };
+//0.950456, 1., 1.088754
+static const softdouble D65[] = {softdouble::fromRaw(0x3fee6a22b3892ee8),
+                                 softdouble::one(),
+                                 softdouble::fromRaw(0x3ff16b8950763a19)};
 
 enum { LAB_CBRT_TAB_SIZE = 1024, GAMMA_TAB_SIZE = 1024 };
 static float LabCbrtTab[LAB_CBRT_TAB_SIZE*4];
@@ -396,12 +417,12 @@ static void initLabTabs()
         //Luv LUT
         if(enableBitExactness)
         {
-            softfloat d = softfloat(D65[0]) +
-                          softfloat(D65[1])*softfloat(15) +
-                          softfloat(D65[2])*softfloat(3);
+            softfloat d = D65[0] +
+                          D65[1]*softdouble(15) +
+                          D65[2]*softdouble(3);
             d = softfloat::one()/max(d, softfloat::eps());
-            softfloat un = softfloat(4*13)*d*softfloat(D65[0]);
-            softfloat vn = softfloat(9*13)*d*softfloat(D65[1]);
+            softfloat un = softfloat(4*13)*d*D65[0];
+            softfloat vn = softfloat(9*13)*d*D65[1];
             softfloat oneof4 = softfloat::one()/softfloat(4);
 
             /*
@@ -442,22 +463,21 @@ static void initLabTabs()
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
         if(calcLUT)
         {
-            const float* _whitept = D65;
             softfloat scaledCoeffs[9], coeffs[9];
 
             //RGB2Lab coeffs
-            softfloat scaleWhite[] = { softfloat::one()/softfloat(_whitept[0]),
-                                       softfloat::one(),
-                                       softfloat::one()/softfloat(_whitept[2]) };
+            softdouble scaleWhite[] = { softdouble::one()/D65[0],
+                                        softdouble::one(),
+                                        softdouble::one()/D65[2] };
 
             for(i = 0; i < 3; i++ )
             {
-                coeffs[i*3+2] = softfloat(sRGB2XYZ_D65[i*3  ]);
-                coeffs[i*3+1] = softfloat(sRGB2XYZ_D65[i*3+1]);
-                coeffs[i*3  ] = softfloat(sRGB2XYZ_D65[i*3+2]);
-                scaledCoeffs[i*3+2] = scaleWhite[i] * coeffs[i*3+2];
-                scaledCoeffs[i*3+1] = scaleWhite[i] * coeffs[i*3+1];
-                scaledCoeffs[i*3+0] = scaleWhite[i] * coeffs[i*3  ];
+                coeffs[i*3+2] = sRGB2XYZ_D65[i*3+0];
+                coeffs[i*3+1] = sRGB2XYZ_D65[i*3+1];
+                coeffs[i*3+0] = sRGB2XYZ_D65[i*3+2];
+                scaledCoeffs[i*3+0] = sRGB2XYZ_D65[i*3+2] * scaleWhite[i];
+                scaledCoeffs[i*3+1] = sRGB2XYZ_D65[i*3+1] * scaleWhite[i];
+                scaledCoeffs[i*3+2] = sRGB2XYZ_D65[i*3+0] * scaleWhite[i];
             }
 
             softfloat S0 = scaledCoeffs[0], S1 = scaledCoeffs[1], S2 = scaledCoeffs[2],
@@ -467,12 +487,10 @@ static void initLabTabs()
                       C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
                       C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
-            softfloat dd = softfloat(D65[0]) +
-                           softfloat(D65[1])*softfloat(15) +
-                           softfloat(D65[2])*softfloat(3);
+            softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
             dd = softfloat::one()/max(dd, softfloat::eps());
-            softfloat un = dd*softfloat(13*4)*softfloat(D65[0]);
-            softfloat vn = dd*softfloat(13*9)*softfloat(D65[1]);
+            softfloat un = dd*softfloat(13*4)*D65[0];
+            softfloat vn = dd*softfloat(13*9)*D65[1];
 
             //u, v: [-134.0, 220.0], [-140.0, 122.0]
             static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
@@ -727,14 +745,21 @@ struct RGB2Luvfloat
         volatile int i;
         initLabTabs();
 
-        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
-        if(!whitept) whitept = D65;
+        softdouble whitePt[3];
+        for( i = 0; i < 3; i++ )
+            if(whitept)
+                whitePt[i] = softdouble(whitept[i]);
+            else
+                whitePt[i] = D65[i];
 
         for( i = 0; i < 3; i++ )
         {
-            coeffs[i*3] = _coeffs[i*3];
-            coeffs[i*3+1] = _coeffs[i*3+1];
-            coeffs[i*3+2] = _coeffs[i*3+2];
+            for(int j = 0; j < 3; j++)
+                if(_coeffs)
+                    coeffs[i*3+j] = _coeffs[i*3+j];
+                else
+                    coeffs[i*3+j] = (float)(sRGB2XYZ_D65[i*3+j]);
+
             if( blueIdx == 0 )
                 std::swap(coeffs[i*3], coeffs[i*3+2]);
             CV_Assert( coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
@@ -743,18 +768,18 @@ struct RGB2Luvfloat
                       softfloat(coeffs[i*3+2]) < softfloat(1.5f) );
         }
 
-        softfloat d = softfloat(whitept[0]) +
-                      softfloat(whitept[1])*softfloat(15) +
-                      softfloat(whitept[2])*softfloat(3);
+        softfloat d = whitePt[0] +
+                      whitePt[1]*softdouble(15) +
+                      whitePt[2]*softdouble(3);
         d = softfloat::one()/max(d, softfloat::eps());
-        un = d*softfloat(13*4)*softfloat(whitept[0]);
-        vn = d*softfloat(13*9)*softfloat(whitept[1]);
+        un = d*softfloat(13*4)*whitePt[0];
+        vn = d*softfloat(13*9)*whitePt[1];
 
         #if CV_SSE2
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
         #endif
 
-        CV_Assert(whitept[1] == 1.f);
+        CV_Assert(whitePt[1] == softdouble::one());
     }
 
     #if CV_NEON
@@ -1049,27 +1074,38 @@ struct Luv2RGBfloat
     {
         initLabTabs();
 
-        if(!_coeffs) _coeffs = XYZ2sRGB_D65;
-        if(!whitept) whitept = D65;
+        softdouble whitePt[3];
+        for(int i = 0; i < 3; i++)
+            if(whitept)
+                whitePt[i] = softdouble(whitept[i]);
+            else
+                whitePt[i] = D65[i];
 
         for( int i = 0; i < 3; i++ )
         {
-            coeffs[i+(blueIdx^2)*3] = _coeffs[i];
-            coeffs[i+3] = _coeffs[i+3];
-            coeffs[i+blueIdx*3] = _coeffs[i+6];
+            softfloat c[3];
+            for(int j = 0; j < 3; j++)
+                if(_coeffs)
+                    c[j] = softfloat(_coeffs[i+j*3]);
+                else
+                    c[j] = XYZ2sRGB_D65[i+j*3];
+
+            coeffs[i+(blueIdx^2)*3] = c[0];
+            coeffs[i+3]             = c[1];
+            coeffs[i+blueIdx*3]     = c[2];
         }
 
-        softfloat d = softfloat(whitept[0]) +
-                      softfloat(whitept[1])*softfloat(15) +
-                      softfloat(whitept[2])*softfloat(3);
+        softfloat d = whitePt[0] +
+                      whitePt[1]*softdouble(15) +
+                      whitePt[2]*softdouble(3);
         d = softfloat::one()/max(d, softfloat::eps());
-        un = softfloat(4*13)*d*softfloat(whitept[0]);
-        vn = softfloat(9*13)*d*softfloat(whitept[1]);
+        un = softfloat(4*13)*d*whitePt[0];
+        vn = softfloat(9*13)*d*whitePt[1];
         #if CV_SSE2
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
         #endif
 
-        CV_Assert(whitept[1] == 1.f);
+        CV_Assert(whitePt[1] == softdouble::one());
     }
 
     #if CV_SSE2
@@ -1621,21 +1657,26 @@ struct Luv2RGBinteger
     static const int BASE = (1 << base_shift);
     static const int shift = lab_shift+(base_shift-inv_gamma_shift);
 
+    // whitept is fixed for int calculations
     Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
                     const float* /*_whitept*/, bool _srgb )
     : dstcn(_dstcn)
     {
         initLabTabs();
 
-        if(!_coeffs)  _coeffs = XYZ2sRGB_D65;
-        // whitept is fixed for int calculations
-
-        static const softfloat lshift(1 << lab_shift);
+        static const softdouble lshift(1 << lab_shift);
         for(int i = 0; i < 3; i++)
         {
-            coeffs[i+blueIdx*3]     = cvRound(lshift*softfloat(_coeffs[i]));
-            coeffs[i+3]             = cvRound(lshift*softfloat(_coeffs[i+3]));
-            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6]));
+            softdouble c[3];
+            for(int j = 0; j < 3; j++)
+                if(_coeffs)
+                    c[j] = softdouble(_coeffs[i + j*3]);
+                else
+                    c[j] = XYZ2sRGB_D65[i + j*3];
+
+            coeffs[i+blueIdx*3]     = cvRound(lshift*c[0]);
+            coeffs[i+3]             = cvRound(lshift*c[1]);
+            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*c[2]);
         }
 
         tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
@@ -1827,6 +1868,7 @@ struct Luv2RGB_b
       fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
       icvt(_dstcn, blueIdx, _coeffs, _whitept, _srgb)
     {
+        // whitept is fixed for int calculations
         useBitExactness = (!_whitept && enableBitExactness);
 
         #if CV_NEON
