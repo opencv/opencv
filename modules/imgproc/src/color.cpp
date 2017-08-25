@@ -6017,48 +6017,40 @@ static void initLabTabs()
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
         }
 
+        softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
+        dd = softfloat::one()/max(dd, softfloat::eps());
+        softfloat un = dd*softfloat(13*4)*D65[0];
+        softfloat vn = dd*softfloat(13*9)*D65[1];
+        softfloat oneof4 = softfloat::one()/softfloat(4);
+
+        //when XYZ are limited to [0, 2]
+        /*
+            up: [-402, 1431.57]
+            min abs diff up: 0.010407
+            vp: [-0.25, 0.25]
+            min abs(vp): 0.00034207
+        */
+
         //Luv LUT
-        if(enableBitExactness)
+        for(int LL = 0; LL < 256; LL++)
         {
-            softfloat d = D65[0] +
-                          D65[1]*softdouble(15) +
-                          D65[2]*softdouble(3);
-            d = softfloat::one()/max(d, softfloat::eps());
-            softfloat un = softfloat(4*13)*d*D65[0];
-            softfloat vn = softfloat(9*13)*d*D65[1];
-            softfloat oneof4 = softfloat::one()/softfloat(4);
-
-            /*
-                //when XYZ are limited to [0, 2]
-                min up: -402
-                min abs diff up: 0.010407
-                max up: 1431.57
-
-                min vp: -0.25
-                min abs(vp): 0.00034207
-                max vp:  0.25
-            */
-
-            for(int LL = 0; LL < 256; LL++)
+            softfloat L = softfloat(LL*100)/f255;
+            for(int uu = 0; uu < 256; uu++)
             {
-                softfloat L = softfloat(LL*100)/f255;
-                for(int uu = 0; uu < 256; uu++)
-                {
-                    softfloat u = softfloat(uu)*uRange/f255 + uLow;
-                    softfloat up = softfloat(9)*(u + L*un);
-                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
-                }
-                for(int vv = 0; vv < 256; vv++)
-                {
-                    softfloat v = softfloat(vv)*vRange/f255 + vLow;
-                    softfloat vp = oneof4/(v + L*vn);
-                    if(vp >  oneof4) vp =  oneof4;
-                    if(vp < -oneof4) vp = -oneof4;
-                    int ivp = cvRound(vp*softfloat(BASE*1024));
-                    LvToVp_b[LL*256+vv] = ivp;
-                    int vpl = ivp*LL;
-                    LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
-                }
+                softfloat u = softfloat(uu)*uRange/f255 + uLow;
+                softfloat up = softfloat(9)*(u + L*un);
+                LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
+            }
+            for(int vv = 0; vv < 256; vv++)
+            {
+                softfloat v = softfloat(vv)*vRange/f255 + vLow;
+                softfloat vp = oneof4/(v + L*vn);
+                if(vp >  oneof4) vp =  oneof4;
+                if(vp < -oneof4) vp = -oneof4;
+                int ivp = cvRound(vp*softfloat(BASE*1024));
+                LvToVp_b[LL*256+vv] = ivp;
+                int vpl = ivp*LL;
+                LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
             }
         }
 
@@ -6089,11 +6081,6 @@ static void initLabTabs()
             softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
                       C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
                       C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-
-            softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
-            dd = softfloat::one()/max(dd, softfloat::eps());
-            softfloat un = dd*softfloat(13*4)*D65[0];
-            softfloat vn = dd*softfloat(13*9)*D65[1];
 
             //u, v: [-134.0, 220.0], [-140.0, 122.0]
             static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
