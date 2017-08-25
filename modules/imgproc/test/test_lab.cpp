@@ -263,6 +263,7 @@ static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
 static int LuToUp_b[256*256];
 static int LvToVp_b[256*256];
+static long long int LvToVpl_b[256*256];
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -431,7 +432,7 @@ static void initLabTabs()
                 for(int uu = 0; uu < 256; uu++)
                 {
                     softfloat u = softfloat(uu)*uRange/f255 + uLow;
-                    softfloat up = softfloat(3)*(u + L*un);
+                    softfloat up = softfloat(9)*(u + L*un);
                     LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
                 }
                 for(int vv = 0; vv < 256; vv++)
@@ -440,7 +441,10 @@ static void initLabTabs()
                     softfloat vp = oneof4/(v + L*vn);
                     if(vp >  oneof4) vp =  oneof4;
                     if(vp < -oneof4) vp = -oneof4;
-                    LvToVp_b[LL*256+vv] = cvRound(vp*softfloat(BASE*1024));
+                    int ivp = cvRound(vp*softfloat(BASE*1024));
+                    LvToVp_b[LL*256+vv] = ivp;
+                    int vpl = ivp*LL;
+                    LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
                 }
             }
         }
@@ -1673,13 +1677,13 @@ struct Luv2RGBinteger
         //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
         //works well
-        long long int xv = ((int)up*3)*(long long)vp;
+        long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
         x = y*x/BASE;
 
         //works well
-        int vpl = vp*(int)LL;
-        long long int zp = (12*13*100*(BASE/1024))*(long long)vpl - xv*(255/3);
+        long long int vpl = LvToVpl_b[LL*256+vv];
+        long long int zp = vpl - xv*(255/3);
         zp /= BASE;
         long long int zq = zp - (long long)(5*255*BASE);
         int zm = (int)(y*zq/BASE);
@@ -1721,9 +1725,9 @@ struct Luv2RGBinteger
             int up = LuToUp_b[LL*256+u];
             int vp = LvToVp_b[LL*256+v];
 
-            long long int xv = (up*3)*(long long int)vp;
-            int vpl = vp*LL;
-            long long int zp = (12*13*100*(BASE/1024))*(long long)vpl - xv*(255/3);
+            long long int xv = up*(long long int)vp;
+            long long int vpl = LvToVpl_b[LL*256+v];
+            long long int zp = vpl - xv*(255/3);
             zp = zp >> base_shift;
             long long int zq = zp - (5*255*BASE);
             int zm = (int)((y*zq) >> base_shift);
@@ -1734,7 +1738,6 @@ struct Luv2RGBinteger
             int z = zm/256 + zm/65536;
             x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
 
-            //TODO: try interleave for better multiplication
             xyz[i] = x; xyz[i + 16] = y; xyz[i + 32] = z;
         }
     }
