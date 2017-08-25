@@ -70,53 +70,39 @@
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./opencv.js');
+    let cv = require('./opencv.js');
 }
 
-QUnit.module ("Video", {});
-//QUnit.test("Tracking", function(assert) {
-// meanShift
-//{
-//}
-// buildOpticalFlowPyramid
-//{
-//}
-// DualTVL1OpticalFlow
-//{
-//}
-//});
+QUnit.module('Video', {});
+QUnit.test('Background Segmentation', function(assert) {
+    // BackgroundSubtractorMOG2
+    {
+        const history = 600;
+        const varThreshold = 15;
+        const detectShadows = true;
 
-QUnit.test("Background Segmentation", function(assert) {
+        let mog2 = new cv.BackgroundSubtractorMOG2(history, varThreshold, detectShadows);
 
-	// BackgroundSubtractorMOG2
-	{
-		let history= 600,
-			varThreshold=15,
-			detectShadows=true;
+        assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
 
-		let mog2 = new cv.BackgroundSubtractorMOG2(history, varThreshold, detectShadows);
+        mog2.delete();
 
-		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
+        mog2 = new cv.BackgroundSubtractorMOG2();
 
-		mog2.delete();
+        assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
 
-		mog2 = new cv.BackgroundSubtractorMOG2();
+        mog2.delete();
 
-		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
+        mog2 = new cv.BackgroundSubtractorMOG2(history);
 
-		mog2.delete();
+        assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
 
-		mog2 = new cv.BackgroundSubtractorMOG2(history);
+        mog2.delete();
 
-		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
+        mog2 = new cv.BackgroundSubtractorMOG2(history, varThreshold);
 
-		mog2.delete();
+        assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
 
-		mog2 = new cv.BackgroundSubtractorMOG2(history, varThreshold);
-
-		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
-
-		mog2.delete();
-	}
-
+        mog2.delete();
+    }
 });
