@@ -5881,9 +5881,13 @@ static int abToXZ_b[LAB_BASE*9/4];
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
+static const bool enablePackedLuv2RGB = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
+static int LuToUp_b[256*256];
+static int LvToVp_b[256*256];
+static long long int LvToVpl_b[256*256];
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -6013,6 +6017,51 @@ static void initLabTabs()
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
         }
 
+        //Luv LUT
+        if(enableBitExactness)
+        {
+            softfloat d = D65[0] +
+                          D65[1]*softdouble(15) +
+                          D65[2]*softdouble(3);
+            d = softfloat::one()/max(d, softfloat::eps());
+            softfloat un = softfloat(4*13)*d*D65[0];
+            softfloat vn = softfloat(9*13)*d*D65[1];
+            softfloat oneof4 = softfloat::one()/softfloat(4);
+
+            /*
+                //when XYZ are limited to [0, 2]
+                min up: -402
+                min abs diff up: 0.010407
+                max up: 1431.57
+
+                min vp: -0.25
+                min abs(vp): 0.00034207
+                max vp:  0.25
+            */
+
+            for(int LL = 0; LL < 256; LL++)
+            {
+                softfloat L = softfloat(LL*100)/f255;
+                for(int uu = 0; uu < 256; uu++)
+                {
+                    softfloat u = softfloat(uu)*uRange/f255 + uLow;
+                    softfloat up = softfloat(9)*(u + L*un);
+                    LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
+                }
+                for(int vv = 0; vv < 256; vv++)
+                {
+                    softfloat v = softfloat(vv)*vRange/f255 + vLow;
+                    softfloat vp = oneof4/(v + L*vn);
+                    if(vp >  oneof4) vp =  oneof4;
+                    if(vp < -oneof4) vp = -oneof4;
+                    int ivp = cvRound(vp*softfloat(BASE*1024));
+                    LvToVp_b[LL*256+vv] = ivp;
+                    int vpl = ivp*LL;
+                    LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
+                }
+            }
+        }
+
         //try to suppress warning
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
         if(calcLUT)
@@ -6042,7 +6091,7 @@ static void initLabTabs()
                       C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
             softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
-            dd = softfloat::one()/max(dd, softfloat(FLT_EPSILON));
+            dd = softfloat::one()/max(dd, softfloat::eps());
             softfloat un = dd*softfloat(13*4)*D65[0];
             softfloat vn = dd*softfloat(13*9)*D65[1];
 
@@ -7472,7 +7521,7 @@ struct RGB2Luvfloat
         softfloat d = whitePt[0] +
                       whitePt[1]*softdouble(15) +
                       whitePt[2]*softdouble(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        d = softfloat::one()/max(d, softfloat::eps());
         un = d*softfloat(13*4)*whitePt[0];
         vn = d*softfloat(13*9)*whitePt[1];
 
@@ -7764,13 +7813,13 @@ struct RGB2Luv_f
     int srccn;
 };
 
-struct Luv2RGB_f
+struct Luv2RGBfloat
 {
     typedef float channel_type;
 
-    Luv2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
-              const float* whitept, bool _srgb )
-    : dstcn(_dstcn), srgb(_srgb)
+    Luv2RGBfloat( int _dstcn, int blueIdx, const float* _coeffs,
+                  const float* whitept, bool _srgb )
+    : dstcn(_dstcn),  srgb(_srgb)
     {
         initLabTabs();
 
@@ -7798,7 +7847,7 @@ struct Luv2RGB_f
         softfloat d = whitePt[0] +
                       whitePt[1]*softdouble(15) +
                       whitePt[2]*softdouble(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        d = softfloat::one()/max(d, softfloat::eps());
         un = softfloat(4*13)*d*whitePt[0];
         vn = softfloat(9*13)*d*whitePt[1];
         #if CV_SSE2
@@ -8008,6 +8057,25 @@ struct Luv2RGB_f
     #if CV_SSE2
     bool haveSIMD;
     #endif
+};
+
+
+struct Luv2RGB_f
+{
+    typedef float channel_type;
+
+    Luv2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
+              const float* whitept, bool _srgb )
+    : fcvt(_dstcn, blueIdx, _coeffs, whitept, _srgb), dstcn(_dstcn)
+    { }
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        fcvt(src, dst, n);
+    }
+
+    Luv2RGBfloat fcvt;
+    int dstcn;
 };
 
 struct RGB2Luvinterpolate
@@ -8329,22 +8397,235 @@ struct RGB2Luv_b
 };
 
 
+struct Luv2RGBinteger
+{
+    typedef uchar channel_type;
+
+    static const int base_shift = 14;
+    static const int BASE = (1 << base_shift);
+    static const int shift = lab_shift+(base_shift-inv_gamma_shift);
+
+    // whitept is fixed for int calculations
+    Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
+                    const float* /*_whitept*/, bool _srgb )
+    : dstcn(_dstcn)
+    {
+        initLabTabs();
+
+        static const softdouble lshift(1 << lab_shift);
+        for(int i = 0; i < 3; i++)
+        {
+            softdouble c[3];
+            for(int j = 0; j < 3; j++)
+                if(_coeffs)
+                    c[j] = softdouble(_coeffs[i + j*3]);
+                else
+                    c[j] = XYZ2sRGB_D65[i + j*3];
+
+            coeffs[i+blueIdx*3]     = cvRound(lshift*c[0]);
+            coeffs[i+3]             = cvRound(lshift*c[1]);
+            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*c[2]);
+        }
+
+        tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
+    }
+
+    // L, u, v should be in their natural range
+    inline void process(const uchar LL, const uchar uu, const uchar vv, int& ro, int& go, int& bo) const
+    {
+        ushort y = LabToYF_b[LL*2];
+
+        // y : [0, BASE]
+        // up: [-402, 1431.57]*(BASE/1024)
+        // vp: +/- 0.25*BASE*1024
+        int up = LuToUp_b[LL*256+uu];
+        int vp = LvToVp_b[LL*256+vv];
+        //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
+        //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
+
+        long long int xv = ((int)up)*(long long)vp;
+        int x = (int)(xv/BASE);
+        x = y*x/BASE;
+
+        long long int vpl = LvToVpl_b[LL*256+vv];
+        long long int zp = vpl - xv*(255/3);
+        zp /= BASE;
+        long long int zq = zp - (long long)(5*255*BASE);
+        int zm = (int)(y*zq/BASE);
+        int z = zm/256 + zm/65536;
+
+        //limit X, Y, Z to [0, 2] to fit white point
+        x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
+        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
+        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+
+        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
+        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
+        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+
+        ro = tab[ro];
+        go = tab[go];
+        bo = tab[bo];
+    }
+
+    inline void processLuvToXYZ(const v_uint8x16& lv, const v_uint8x16& uv, const v_uint8x16& vv,
+                                int32_t* xyz) const
+    {
+        uint8_t CV_DECL_ALIGNED(16) lvstore[16], uvstore[16], vvstore[16];
+        v_store_aligned(lvstore, lv); v_store_aligned(uvstore, uv); v_store_aligned(vvstore, vv);
+
+        for(int i = 0; i < 16; i++)
+        {
+            int LL = lvstore[i];
+            int u = uvstore[i];
+            int v = vvstore[i];
+            int y = LabToYF_b[LL*2];
+
+            int up = LuToUp_b[LL*256+u];
+            int vp = LvToVp_b[LL*256+v];
+
+            long long int xv = up*(long long int)vp;
+            long long int vpl = LvToVpl_b[LL*256+v];
+            long long int zp = vpl - xv*(255/3);
+            zp = zp >> base_shift;
+            long long int zq = zp - (5*255*BASE);
+            int zm = (int)((y*zq) >> base_shift);
+
+            int x = (int)(xv >> base_shift);
+            x = (y*x) >> base_shift;
+
+            int z = zm/256 + zm/65536;
+            x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+
+            xyz[i] = x; xyz[i + 16] = y; xyz[i + 32] = z;
+        }
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int i, dcn = dstcn;
+        uchar alpha = ColorChannel<uchar>::max();
+
+        i = 0;
+        if(enablePackedLuv2RGB)
+        {
+            static const int nPixels = 16;
+            for (; i < n*3-3*nPixels; i += 3*nPixels, dst += dcn*nPixels)
+            {
+                v_uint8x16 u8l, u8u, u8v;
+                v_load_deinterleave(src + i, u8l, u8u, u8v);
+
+                int32_t CV_DECL_ALIGNED(16) xyz[48];
+                processLuvToXYZ(u8l, u8u, u8v, xyz);
+
+                v_int32x4 xiv[4], yiv[4], ziv[4];
+                for(int k = 0; k < 4; k++)
+                {
+                    xiv[k] = v_load_aligned(xyz + 4*k);
+                    yiv[k] = v_load_aligned(xyz + 4*k + 16);
+                    ziv[k] = v_load_aligned(xyz + 4*k + 32);
+                }
+
+                /*
+                        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+                        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+                        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+                */
+                v_int32x4 C0 = v_setall_s32(coeffs[0]), C1 = v_setall_s32(coeffs[1]), C2 = v_setall_s32(coeffs[2]);
+                v_int32x4 C3 = v_setall_s32(coeffs[3]), C4 = v_setall_s32(coeffs[4]), C5 = v_setall_s32(coeffs[5]);
+                v_int32x4 C6 = v_setall_s32(coeffs[6]), C7 = v_setall_s32(coeffs[7]), C8 = v_setall_s32(coeffs[8]);
+                v_int32x4 descaleShift = v_setall_s32(1 << (shift-1));
+                v_int32x4 tabsz = v_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
+                v_uint32x4 r_vecs[4], g_vecs[4], b_vecs[4];
+                for(int k = 0; k < 4; k++)
+                {
+                    v_int32x4 i_r, i_g, i_b;
+                    i_r = (xiv[k]*C0 + yiv[k]*C1 + ziv[k]*C2 + descaleShift) >> shift;
+                    i_g = (xiv[k]*C3 + yiv[k]*C4 + ziv[k]*C5 + descaleShift) >> shift;
+                    i_b = (xiv[k]*C6 + yiv[k]*C7 + ziv[k]*C8 + descaleShift) >> shift;
+
+                    //limit indices in table and then substitute
+                    //ro = tab[ro]; go = tab[go]; bo = tab[bo];
+                    int32_t CV_DECL_ALIGNED(16) rshifts[4], gshifts[4], bshifts[4];
+                    v_int32x4 rs = v_max(v_setzero_s32(), v_min(tabsz, i_r));
+                    v_int32x4 gs = v_max(v_setzero_s32(), v_min(tabsz, i_g));
+                    v_int32x4 bs = v_max(v_setzero_s32(), v_min(tabsz, i_b));
+
+                    v_store_aligned(rshifts, rs);
+                    v_store_aligned(gshifts, gs);
+                    v_store_aligned(bshifts, bs);
+
+                    r_vecs[k] = v_uint32x4(tab[rshifts[0]], tab[rshifts[1]], tab[rshifts[2]], tab[rshifts[3]]);
+                    g_vecs[k] = v_uint32x4(tab[gshifts[0]], tab[gshifts[1]], tab[gshifts[2]], tab[gshifts[3]]);
+                    b_vecs[k] = v_uint32x4(tab[bshifts[0]], tab[bshifts[1]], tab[bshifts[2]], tab[bshifts[3]]);
+                }
+
+                v_uint16x8 u_rvec0 = v_pack(r_vecs[0], r_vecs[1]), u_rvec1 = v_pack(r_vecs[2], r_vecs[3]);
+                v_uint16x8 u_gvec0 = v_pack(g_vecs[0], g_vecs[1]), u_gvec1 = v_pack(g_vecs[2], g_vecs[3]);
+                v_uint16x8 u_bvec0 = v_pack(b_vecs[0], b_vecs[1]), u_bvec1 = v_pack(b_vecs[2], b_vecs[3]);
+
+                v_uint8x16 u8_b, u8_g, u8_r;
+                u8_b = v_pack(u_bvec0, u_bvec1);
+                u8_g = v_pack(u_gvec0, u_gvec1);
+                u8_r = v_pack(u_rvec0, u_rvec1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(dst, u8_b, u8_g, u8_r, v_setall_u8(alpha));
+                }
+                else
+                {
+                    v_store_interleave(dst, u8_b, u8_g, u8_r);
+                }
+            }
+        }
+
+        for (; i < n*3; i += 3, dst += dcn)
+        {
+            int ro, go, bo;
+            process(src[i + 0], src[i + 1], src[i + 2], ro, go, bo);
+
+            dst[0] = saturate_cast<uchar>(bo);
+            dst[1] = saturate_cast<uchar>(go);
+            dst[2] = saturate_cast<uchar>(ro);
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
+
+    }
+
+    int dstcn;
+    int coeffs[9];
+    ushort* tab;
+};
+
+
 struct Luv2RGB_b
 {
     typedef uchar channel_type;
 
     Luv2RGB_b( int _dstcn, int blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb )
+    : dstcn(_dstcn),
+      fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
+      icvt(_dstcn, blueIdx, _coeffs, _whitept, _srgb)
     {
-        // 1.388235294117647 = (220+134)/255
-        // 1.027450980392157 = (140+122)/255
+        // whitept is fixed for int calculations
+        useBitExactness = (!_whitept && enableBitExactness);
+
         #if CV_NEON
-        v_scale_inv = vdupq_n_f32(100.f/255.f);
-        v_coeff1 = vdupq_n_f32(1.388235294117647f);
-        v_coeff2 = vdupq_n_f32(1.027450980392157f);
-        v_134 = vdupq_n_f32(134.f);
-        v_140 = vdupq_n_f32(140.f);
+        static const softfloat f255(255);
+        v_scale_inv = vdupq_n_f32(softfloat(100)/f255);
+        v_coeff1 = vdupq_n_f32(uRange/f255);
+        v_coeff2 = vdupq_n_f32(vRange/f255);
+        v_134 = vdupq_n_f32(-uLow);
+        v_140 = vdupq_n_f32(-vLow);
         v_scale = vdupq_n_f32(255.f);
         v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
         #elif CV_SSE2
@@ -8404,13 +8685,23 @@ struct Luv2RGB_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        if(useBitExactness)
+        {
+            icvt(src, dst, n);
+            return;
+        }
+
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 
+        static const softfloat f255(255);
+        static const softfloat f100by255 = softfloat(100)/f255;
+        static const softfloat fu = uRange/f255;
+        static const softfloat fv = vRange/f255;
         #if CV_SSE2
-        __m128 v_coeffs = _mm_set_ps(100.f/255.f, 1.027450980392157f, 1.388235294117647f, 100.f/255.f);
-        __m128 v_res = _mm_set_ps(0.f, 140.f, 134.f, 0.f);
+        __m128 v_coeffs = _mm_set_ps(f100by255, fv, fu, f100by255);
+        __m128 v_res = _mm_set_ps(0.f, -vLow, -uLow, 0.f);
         #endif
 
         for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
@@ -8455,11 +8746,11 @@ struct Luv2RGB_b
             #endif
             for( ; j < dn*3; j += 3 )
             {
-                buf[j] = src[j]*(100.f/255.f);
-                buf[j+1] = (float)(src[j+1]*1.388235294117647f - 134.f);
-                buf[j+2] = (float)(src[j+2]*1.027450980392157f - 140.f);
+                buf[j] = src[j]*((float)f100by255);
+                buf[j+1] = (float)(src[j+1]*(float)fu + (float)uLow);
+                buf[j+2] = (float)(src[j+2]*(float)fv + (float)vLow);
             }
-            cvt(buf, buf, dn);
+            fcvt(buf, buf, dn);
 
             j = 0;
             #if CV_NEON
@@ -8553,7 +8844,8 @@ struct Luv2RGB_b
     }
 
     int dstcn;
-    Luv2RGB_f cvt;
+    Luv2RGBfloat   fcvt;
+    Luv2RGBinteger icvt;
 
     #if CV_NEON
     float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_134, v_140;
@@ -8564,6 +8856,7 @@ struct Luv2RGB_b
     __m128i v_zero;
     bool haveSIMD;
     #endif
+    bool useBitExactness;
 };
 
 #undef clip
