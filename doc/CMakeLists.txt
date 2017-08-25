@@ -134,7 +134,9 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(faqfile "${CMAKE_CURRENT_SOURCE_DIR}/faq.markdown")
   set(tutorial_path "${CMAKE_CURRENT_SOURCE_DIR}/tutorials")
   set(tutorial_py_path "${CMAKE_CURRENT_SOURCE_DIR}/py_tutorials")
-  set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
+  if(BUILD_opencv_js)
+    set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
+  endif()
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
   # set export variables
@@ -175,23 +177,25 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   # make sure the build directory exists
   file(MAKE_DIRECTORY "${opencv_tutorial_html_dir}")
 
-  # gather and copy specific files for js tutorials
-  file(GLOB_RECURSE js_assets RELATIVE "${js_tutorials_assets_dir}" "${js_tutorials_assets_dir}/*")
-  foreach(f ${js_assets})
-    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
-                       DEPENDS "${js_tutorials_assets_dir}/${f}"
-                       COMMENT "Copying ${f}"
+  if(BUILD_opencv_js)
+    # gather and copy specific files for js tutorials
+    file(GLOB_RECURSE js_assets RELATIVE "${js_tutorials_assets_dir}" "${js_tutorials_assets_dir}/*")
+    foreach(f ${js_assets})
+      add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
+                         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
+                         DEPENDS "${js_tutorials_assets_dir}/${f}"
+                         COMMENT "Copying ${f}"
+      )
+      list(APPEND js_tutorials_assets_deps "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
+    endforeach()
+    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${ocv_js}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
+                       DEPENDS ${ocv_js}
+                       DEPENDS "${ocv_js_dir}/${ocv_js}"
+                       COMMENT "Copying ${ocv_js}"
     )
-    list(APPEND js_tutorials_assets_deps "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
-  endforeach()
-  add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${ocv_js}"
-                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
-                     DEPENDS ${ocv_js}
-                     DEPENDS "${ocv_js_dir}/${ocv_js}"
-                     COMMENT "Copying ${ocv_js}"
-  )
-  list(APPEND js_tutorials_assets_deps ${ocv_js} "${opencv_tutorial_html_dir}/${ocv_js}")
+    list(APPEND js_tutorials_assets_deps ${ocv_js} "${opencv_tutorial_html_dir}/${ocv_js}")
+  endif()
 
   add_custom_target(doxygen
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
