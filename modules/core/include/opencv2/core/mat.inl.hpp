@@ -1108,7 +1108,7 @@ _Tp& Mat::at(int i0)
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
-    CV_DbgAssert(elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value));
+    CV_DbgAssert(elemSize() == sizeof(_Tp));
     if( isContinuous() || size.p[0] == 1 )
         return ((_Tp*)data)[i0];
     if( size.p[1] == 1 )
@@ -1123,7 +1123,7 @@ const _Tp& Mat::at(int i0) const
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
-    CV_DbgAssert(elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value));
+    CV_DbgAssert(elemSize() == sizeof(_Tp));
     if( isContinuous() || size.p[0] == 1 )
         return ((const _Tp*)data)[i0];
     if( size.p[1] == 1 )
@@ -1135,42 +1135,42 @@ const _Tp& Mat::at(int i0) const
 template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1, int i2)
 {
-    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value) );
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return *(_Tp*)ptr(i0, i1, i2);
 }
 
 template<typename _Tp> inline
 const _Tp& Mat::at(int i0, int i1, int i2) const
 {
-    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value) );
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return *(const _Tp*)ptr(i0, i1, i2);
 }
 
 template<typename _Tp> inline
 _Tp& Mat::at(const int* idx)
 {
-    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value) );
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return *(_Tp*)ptr(idx);
 }
 
 template<typename _Tp> inline
 const _Tp& Mat::at(const int* idx) const
 {
-    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value) );
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return *(const _Tp*)ptr(idx);
 }
 
 template<typename _Tp, int n> inline
 _Tp& Mat::at(const Vec<int, n>& idx)
 {
-    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value) );
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return *(_Tp*)ptr(idx.val);
 }
 
 template<typename _Tp, int n> inline
 const _Tp& Mat::at(const Vec<int, n>& idx) const
 {
-    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(traits::Type<_Tp>::value) );
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return *(const _Tp*)ptr(idx.val);
 }
 
