@@ -248,6 +248,7 @@ public:
     const Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
+    void unloadProg(Program& prog);
 
     static Context& getDefault(bool initialize = true);
     void* ptr() const;
