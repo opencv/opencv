@@ -93,6 +93,10 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
     ttime = evolution_[i].etime - evolution_[i - 1].etime;
     naux = fed_tau_by_process_time(ttime, 1, 0.25f, reordering_, tau);
     nsteps_.push_back(naux);
+    // originally step was multiplied by 0.5 in nld_ functions, in AKAZE it is done here
+    for (size_t j = 0; j < tau.size(); j++) {
+      tau[j] *= 0.5f;
+    }
     tsteps_.push_back(tau);
     ncycles_++;
   }
@@ -112,142 +116,231 @@ static inline int getGaussianKernelSize(float sigma) {
 }
 
 /* ************************************************************************* */
+
+#if CV_AVX2
+// Unlike _mm256_alignr_epi8 this one works across lanes
+template <int N>
+__m256i _mm256_alignr_ex_epi8_emul(__m256i const & high, __m256i const & low)
+{
+    __m256i high0low1 = _mm256_permute2f128_si256(low, high, _MM_SHUFFLE(0, 2, 0, 1));
+
+    if (N == 0)       return low;
+    else if (N == 32) return high;
+    else if (N == 16) return high0low1;
+    else if (N < 16)
+    {
+        return _mm256_alignr_epi8(high0low1, low, N & 15);
+    }
+
+    return _mm256_alignr_epi8(high, high0low1, N & 15);;
+}
+
+#define _mm256_alignr_ex_epi8(x, y, n) _mm256_alignr_ex_epi8_emul<(n)>((x), (y))
+
+#endif
+
 /**
-* @brief This function computes a scalar non-linear diffusion step
+ * @brief Performs one step of nonlinear diffusion for one row
+ *
+ * @param Lflow conductivity image
+ * @param Lt diffusion image
+ * @param lt_row_prev buffer for previous row, storing original values from previous step
+ * @param buf buffer storing current values of the row (before the function was called)
+ * @param j row number
+ * @param step_size coefficient for current step
+ */
+static inline void
+nld_step_scalar_row(const Mat& Lflow, Mat& Lt, float *lt_row_prev, float *buf, int j, float step_size)
+{
+  /* The labeling scheme for this five star stencil:
+   [    a    ]
+   [ cp c cn ]
+   [    b    ]
+  */
+  // handle edge conditions
+  int prev_row_idx = std::max(0, j-1); // handle first row
+  int next_row_idx = std::min(Lt.rows-1, j+1); // handle last row
+  // fetch kernel sources from lt, from matrices and buffers
+  float *lt_row = Lt.ptr<float>(j);
+  const float *lt_row_next = Lt.ptr<float>(next_row_idx);
+  // same for lf
+  const float *lf_row = Lflow.ptr<float>(j);
+  const float *lf_row_next = Lflow.ptr<float>(next_row_idx);
+  const float *lf_row_prev = Lflow.ptr<float>(prev_row_idx);
+
+  // first column
+  float step = (lf_row[0] + lf_row[1]     )*(lt_row[1] - lt_row[0]) +
+               (lf_row[0] + lf_row_next[0])*(lt_row_next[0] - lt_row[0]) +
+               (lf_row[0] + lf_row_prev[0])*(lt_row_prev[0] - lt_row[0]);
+  // save original value without step (for next row)
+  buf[0] = lt_row[0];
+  lt_row[0] += step * step_size; // add step to lt
+
+  // hot loop
+  int k = 1;
+
+#if CV_AVX2
+
+  __m256 lt_c = _mm256_set1_ps(buf[0]);
+  __m256 v_step_size = _mm256_set1_ps(step_size);
+  int vec_total = Lt.cols - 1 - 8; // max elems we can proceed vectorized without last column
+  for (; k <= vec_total; k += 8) {
+    __m256 lf_c = _mm256_loadu_ps(lf_row + k);
+    __m256 lf_cp = _mm256_loadu_ps(lf_row + (k - 1));
+    __m256 lf_cn = _mm256_loadu_ps(lf_row + (k + 1));
+    __m256 lf_a = _mm256_loadu_ps(lf_row_prev + k);
+    __m256 lf_b = _mm256_loadu_ps(lf_row_next + k);
+
+    // reconstruct previous value, first elem has been already overwriten in memory
+    __m256 new_lt_c = _mm256_loadu_ps(lt_row + k);
+    __m256 lt_cp = (__m256)_mm256_alignr_ex_epi8((__m256i)new_lt_c, (__m256i)lt_c, 7 * sizeof(float));
+    lt_c = new_lt_c;
+
+    __m256 lt_cn = _mm256_loadu_ps(lt_row + (k + 1));
+    __m256 lt_a = _mm256_loadu_ps(lt_row_prev + k);
+    __m256 lt_b = _mm256_loadu_ps(lt_row_next + k);
+
+    __m256 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
+                     (lf_c + lf_cp)*(lt_cp - lt_c) +
+                     (lf_c + lf_b )*(lt_b  - lt_c) +
+                     (lf_c + lf_a )*(lt_a  - lt_c));
+    // add step according to stepsize to lt
+    __m256 next_lt = lt_c + (v_step * v_step_size);
+
+    _mm256_storeu_ps(buf + k, lt_c);
+    _mm256_storeu_ps(lt_row + k, next_lt);
+  }
+
+#elif CV_SSSE3
+
+  __m128 lt_c = _mm_set1_ps(buf[0]);
+  __m128 v_step_size = _mm_set1_ps(step_size);
+  int vec_total = Lt.cols - 1 - 4; // max elems we can proceed vectorized without last column
+  for (; k <= vec_total; k += 4) {
+    __m128 lf_c = _mm_loadu_ps(lf_row + k);
+    __m128 lf_cp = _mm_loadu_ps(lf_row + (k - 1));
+    __m128 lf_cn = _mm_loadu_ps(lf_row + (k + 1));
+    __m128 lf_a = _mm_loadu_ps(lf_row_prev + k);
+    __m128 lf_b = _mm_loadu_ps(lf_row_next + k);
+
+    // reconstruct previous value, first elem has been already overwriten in memory
+    __m128 new_lt_c = _mm_loadu_ps(lt_row + k);
+    __m128 lt_cp = (__m128)_mm_alignr_epi8((__m128i)new_lt_c, (__m128i)lt_c, 3 * sizeof(float));
+    lt_c = new_lt_c;
+
+    __m128 lt_cn = _mm_loadu_ps(lt_row + (k + 1));
+    __m128 lt_a = _mm_loadu_ps(lt_row_prev + k);
+    __m128 lt_b = _mm_loadu_ps(lt_row_next + k);
+
+    __m128 v_step = ((lf_c + lf_cn)*(lt_cn - lt_c) +
+                     (lf_c + lf_cp)*(lt_cp - lt_c) +
+                     (lf_c + lf_b )*(lt_b  - lt_c) +
+                     (lf_c + lf_a )*(lt_a  - lt_c));
+    // add step according to stepsize to lt
+    __m128 next_lt = lt_c + (v_step * v_step_size);
+
+    _mm_storeu_ps(buf + k, lt_c);
+    _mm_storeu_ps(lt_row + k, next_lt);
+  }
+
+#endif
+
+  for (; k < Lt.cols - 1; ++k) {
+    step = (lf_row[k] + lf_row[k + 1] )*(lt_row[k + 1] - lt_row[k]) +
+           (lf_row[k] + lf_row[k - 1] )*(buf[k - 1]  - lt_row[k]) +
+           (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
+           (lf_row[k] + lf_row_prev[k])*(lt_row_prev[k] - lt_row[k]);
+    // save original value without step (for next row)
+    buf[k] = lt_row[k];
+    lt_row[k] += step * step_size; // add step to lt
+  }
+
+  // last column
+  step = (lf_row[k] + lf_row[k - 1] )*(buf[k - 1] - lt_row[k]) +
+         (lf_row[k] + lf_row_next[k])*(lt_row_next[k] - lt_row[k]) +
+         (lf_row[k] + lf_row_prev[k])*(lt_row_prev[k] - lt_row[k]);
+  // save original value without step (for next row)
+  buf[k] = lt_row[k];
+  lt_row[k] += step * step_size; // add step to lt
+}
+
+/**
+* @brief This function computes a scalar non-linear diffusion. Output will be
+* added to Lt
 * @param Lt Base image in the evolution
-* @param Lf Conductivity image
-* @param Lstep Output image that gives the difference between the current
-* Ld and the next Ld being evolved
-* @param row_begin row where to start
-* @param row_end last row to fill exclusive. the range is [row_begin, row_end).
+* @param Lflow Conductivity image
+* @param Lstep buffer to use
+* @param tsteps steps sizes
 * @note Forward Euler Scheme 3x3 stencil
 * The function c is a scalar value that depends on the gradient norm
 * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
 */
 static inline void
-nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size, int row_begin, int row_end)
+non_linear_diffusion_kernel(const Mat& Lflow, Mat& Lt, Mat& Lstep, const std::vector<float> &tsteps)
 {
-  CV_INSTRUMENT_REGION()
-  /* The labeling scheme for this five star stencil:
-   [    a    ]
-   [ -1 c +1 ]
-   [    b    ]
-   */
+  /*
+  Instead of processing image one step at time, we proceed all steps together
+  in steps window, saving previous values we need to Lstep buffers. This
+  requires just one pass over image and improves cache locality.
 
-  Lstep.create(Lt.size(), Lt.type());
-  const int cols = Lt.cols - 2;
-  int row = row_begin;
+  for example for steps = 3, algorithm is:
+  before:
+         *
+   [ 0* 1   ]
+   [* 0     ]
+   [        ]
+  update:
+   [  0 1* 2 ]
+   [  0* 1   ]
+   [* 0      ]
+  move window by 1.
 
-  const float *lt_a, *lt_c, *lt_b;
-  const float *lf_a, *lf_c, *lf_b;
-  float *dst;
-  float step_r = 0.f;
+  numbers represents iteration (step) that we have performed for the row e.g.
+  [ 0 1 2 ] means all iterations have been performed. Stars show what is saved in buffers.
+  */
 
-  // Process the top row
-  if (row == 0) {
-    lt_c = Lt.ptr<float>(0) + 1;  /* Skip the left-most column by +1 */
-    lf_c = Lf.ptr<float>(0) + 1;
-    lt_b = Lt.ptr<float>(1) + 1;
-    lf_b = Lf.ptr<float>(1) + 1;
+  const int steps = tsteps.size();
+  CV_Assert(Lt.rows >= steps);
+  // Lstep will hold buffers for rows in window. buffers are rotated by moduling.
+  Lstep.create(steps + 1, Lt.cols, Lt.type());
 
-    // fill the corner to prevent uninitialized values
-    dst = Lstep.ptr<float>(0);
-    dst[0] = 0.0f;
-    ++dst;
-
-    for (int j = 0; j < cols; j++) {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
+  // init first steps window
+  for (int i = steps - 1, s = 0; i > 0; --i, ++s) {
+    for (int j = 0; j < i; ++j) {
+      const int row = j;
+      // for first row we just handle the first row of Lt to do BORDER_REPLICATE
+      float *prev_row = row == 0 ? Lt.ptr<float>() :
+                                   Lstep.ptr<float>((row - 1) % (steps + 1));
+      float *buf = Lstep.ptr<float>(row % (steps + 1));
+      float step_size = tsteps[s];
+      nld_step_scalar_row(Lflow, Lt, prev_row, buf, row, step_size);
     }
-
-    // fill the corner to prevent uninitialized values
-    dst[cols] = 0.0f;
-    ++row;
   }
 
-  // Process the middle rows
-  int middle_end = std::min(Lt.rows - 1, row_end);
-  for (; row < middle_end; ++row)
-  {
-    lt_a = Lt.ptr<float>(row - 1);
-    lf_a = Lf.ptr<float>(row - 1);
-    lt_c = Lt.ptr<float>(row    );
-    lf_c = Lf.ptr<float>(row    );
-    lt_b = Lt.ptr<float>(row + 1);
-    lf_b = Lf.ptr<float>(row + 1);
-    dst = Lstep.ptr<float>(row);
-
-    // The left-most column
-    step_r = (lf_c[0] + lf_c[1])*(lt_c[1] - lt_c[0]) +
-             (lf_c[0] + lf_b[0])*(lt_b[0] - lt_c[0]) +
-             (lf_c[0] + lf_a[0])*(lt_a[0] - lt_c[0]);
-    dst[0] = step_r * step_size;
-
-    lt_a++; lt_c++; lt_b++;
-    lf_a++; lf_c++; lf_b++;
-    dst++;
-
-    // The middle columns
-    for (int j = 0; j < cols; j++)
-    {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]) +
-               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
+  // do steps window
+  for (int i = 0; i <= Lt.rows - steps; ++i) {
+    for (int j = steps - 1; j >= 0; --j) {
+      const int row = i + j;
+      float *prev_row = row == 0 ? Lt.ptr<float>() :
+                                   Lstep.ptr<float>((row - 1) % (steps + 1));
+      float *buf = Lstep.ptr<float>(row % (steps + 1));
+      float step_size = tsteps[steps - 1 - j];
+      nld_step_scalar_row(Lflow, Lt, prev_row, buf, row, step_size);
     }
-
-    // The right-most column
-    step_r = (lf_c[cols] + lf_c[cols - 1])*(lt_c[cols - 1] - lt_c[cols]) +
-             (lf_c[cols] + lf_b[cols    ])*(lt_b[cols    ] - lt_c[cols]) +
-             (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
-    dst[cols] = step_r * step_size;
   }
 
-  // Process the bottom row (row == Lt.rows - 1)
-  if (row_end == Lt.rows) {
-    lt_a = Lt.ptr<float>(row - 1) + 1;  /* Skip the left-most column by +1 */
-    lf_a = Lf.ptr<float>(row - 1) + 1;
-    lt_c = Lt.ptr<float>(row    ) + 1;
-    lf_c = Lf.ptr<float>(row    ) + 1;
-
-    // fill the corner to prevent uninitialized values
-    dst = Lstep.ptr<float>(row);
-    dst[0] = 0.0f;
-    ++dst;
-
-    for (int j = 0; j < cols; j++) {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
+  // finish at the end
+  for (int i = steps - 1; i > 0; --i) {
+    for (int j = 0; j < i; ++j) {
+      const int row = Lt.rows - 1 - j;
+      // row - 1 is always positive here
+      float *prev_row = Lstep.ptr<float>((row - 1) % (steps + 1));
+      float *buf = Lstep.ptr<float>(row % (steps + 1));
+      float step_size = tsteps[steps - i + j];
+      nld_step_scalar_row(Lflow, Lt, prev_row, buf, row, step_size);
     }
-
-    // fill the corner to prevent uninitialized values
-    dst[cols] = 0.0f;
   }
 }
-
-class NonLinearScalarDiffusionStep : public ParallelLoopBody
-{
-public:
-  NonLinearScalarDiffusionStep(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size)
-    : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep), step_size_(step_size)
-  {}
-
-  void operator()(const Range& range) const
-  {
-    nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, step_size_, range.start, range.end);
-  }
-
-private:
-  const Mat* Lt_;
-  const Mat* Lf_;
-  Mat* Lstep_;
-  float step_size_;
-};
 
 #ifdef HAVE_OPENCL
 static inline bool
@@ -255,6 +348,8 @@ ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_
 {
   if(!Lt_.isContinuous())
     return false;
+
+  Lstep_.create(Lt_.size(), Lt_.type());
 
   UMat Lt = Lt_.getUMat();
   UMat Lf = Lf_.getUMat();
@@ -271,23 +366,26 @@ ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_
     ocl::KernelArg::PtrReadOnly(Lf),
     ocl::KernelArg::PtrWriteOnly(Lstep),
     step_size).run(2, globalSize, 0, true);
+
+  // add(e.Lt, Lstep, e.Lt);
 }
 #endif // HAVE_OPENCL
 
+/**
+ * @brief Performs fast explicit diffusion on Lt while using Lstep as a buffer
+ */
 static inline void
-non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
+non_linear_diffusion(InputArray Lf_, InputOutputArray Lt_, OutputArray Lstep_, const std::vector<float> &tsteps)
 {
   CV_INSTRUMENT_REGION()
 
-  Lstep_.create(Lt_.size(), Lt_.type());
-
   CV_OCL_RUN(Lt_.isUMat() && Lf_.isUMat() && Lstep_.isUMat(),
-    ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, step_size));
+    ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, tsteps[0]));
 
   Mat Lt = Lt_.getMat();
   Mat Lf = Lf_.getMat();
   Mat Lstep = Lstep_.getMat();
-  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt, Lf, Lstep, step_size));
+  non_linear_diffusion_kernel(Lf, Lt, Lstep, tsteps);
 }
 
 /**
@@ -485,11 +583,7 @@ create_nonlinear_scale_space(InputArray image, const AKAZEOptions &options,
 
     // Perform Fast Explicit Diffusion on Lt
     const std::vector<float> &tsteps = tsteps_evolution[i - 1];
-    for (size_t j = 0; j < tsteps.size(); j++) {
-      const float step_size = tsteps[j] * 0.5f;
-      non_linear_diffusion_step(e.Lt, Lflow, Lstep, step_size);
-      add(e.Lt, Lstep, e.Lt);
-    }
+    non_linear_diffusion(Lflow, e.Lt, Lstep, tsteps);
   }
 
   Compute_Determinant_Hessian_Response(evolution);
