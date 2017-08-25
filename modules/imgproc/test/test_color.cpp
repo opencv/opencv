@@ -2385,11 +2385,11 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
             cvtColor(probe, result, codes[c]);
 
             uint32_t h = adler32(result);
+            uint32_t goodHash = hashes[c*nIterations + iter];
 
-            if(h != hashes[c*nIterations + iter])
+            if(h != goodHash)
             {
                 initLabTabs();
-                cvtest::TS* ts = cvtest::TS::ptr();
 
                 vector<uchar> goldBuf(probe.cols*4);
                 uchar* goldRow = &goldBuf[0];
@@ -2407,15 +2407,18 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
                         if(gx[0] != rx[0] || gx[1] != rx[1] || gx[2] != rx[2])
                         {
                             next = false;
-                            ts->printf(cvtest::TS::SUMMARY, "Error in: (%d, %d)\n", x,  y);
-                            ts->printf(cvtest::TS::SUMMARY, "Conversion code: %s\n", names[c].c_str());
-                            ts->printf(cvtest::TS::SUMMARY, "Reference value: %d %d %d\n", gx[0], gx[1], gx[2]);
-                            ts->printf(cvtest::TS::SUMMARY, "Actual value: %d %d %d\n", rx[0], rx[1], rx[2]);
-                            ts->printf(cvtest::TS::SUMMARY, "Src value: %d %d %d\n", px[0], px[1], px[2]);
-                            ts->printf(cvtest::TS::SUMMARY, "Size: (%d, %d)\n", probe.rows, probe.cols);
 
-                            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                            ts->set_gtest_status();
+                            FAIL() << "Bad accuracy" << endl;
+
+                            FAIL() << "Conversion code: " << names[c] << endl;
+                            FAIL() << "Iteration: " << iter << endl;
+                            FAIL() << "Hash vs Correct hash: " << h << ", " << goodHash << endl;
+                            FAIL() << "Error in: (" << x << ", " << y << ")" << endl;
+                            FAIL() << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl;
+                            FAIL() << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl;
+                            FAIL() << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl;
+                            FAIL() << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
+
                             break;
                         }
                     }
