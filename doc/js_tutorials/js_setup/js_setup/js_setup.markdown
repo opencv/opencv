@@ -80,11 +80,11 @@ Building OpenCV.js from Source Using CMake
     @note
     Pass `-DCMAKE_C_FLAGS="-s WASM=1"` and `-DCMAKE_CXX_FLAGS="-s WASM=1"` to `cmake` if you are targeting WebAssembly.
 
--#  To build, execute *make*, from the build directory. it is recommended to do this in several threads.
+-#  To build, run make with target "opencv.js" from the build directory. It is recommended to do this in several threads.
 
     For example:
     @code{.bash}
-    make -j7 # runs 7 jobs in parallel
+    make -j7 opencv.js # runs 7 jobs in parallel
     @endcode
 
     The `opencv.js` found \<cmake_build_dir\>/bin folder is the final product to include into your web pages.
@@ -93,7 +93,7 @@ Building OpenCV.js from Source Using CMake
 
     For example:
     @code{.bash}
-    make -j7 doxygen
+    make doxygen
     @endcode
 
     The built documents are located in the \<cmake_build_dir\>/doc/doxygen/html folder.
@@ -101,7 +101,14 @@ Building OpenCV.js from Source Using CMake
     @note
     You may need to install `doxygen` tool for your development environment.
 
--#  [optional] o run a test, run a local web server in \<cmake_build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
+-#  [optional] To run tests, first run make with target "opencv_js_test"
+
+    For example:
+    @code{.bash}
+    make opencv_js_test
+    @endcode
+
+    Then run a local web server in \<cmake_build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
 
     Navigate the web browser to `http://localhost:8000/tests.html`, which runs the unit tests automatically.
 
