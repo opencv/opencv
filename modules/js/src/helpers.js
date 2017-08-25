@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -37,14 +37,14 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//
 
 Module['imread'] = function(imageSource) {
     var img = null;
-    if (typeof imageSource === 'string')
+    if (typeof imageSource === 'string') {
         img = document.getElementById(imageSource);
-    else
+    } else {
         img = imageSource;
+    }
     var canvas = null;
     var ctx = null;
     if (img instanceof HTMLImageElement) {
@@ -67,10 +67,11 @@ Module['imread'] = function(imageSource) {
 
 Module['imshow'] = function(canvasSource, mat) {
     var canvas = null;
-    if (typeof canvasSource === 'string')
+    if (typeof canvasSource === 'string') {
         canvas = document.getElementById(canvasSource);
-    else
+    } else {
         canvas = canvasSource;
+    }
     if (!(canvas instanceof HTMLCanvasElement)) {
         throw new Error('Please input the valid canvas element or id.');
         return;
@@ -112,10 +113,11 @@ Module['imshow'] = function(canvasSource, mat) {
 
 Module['VideoCapture'] = function(videoSource) {
     var video = null;
-    if (typeof videoSource === 'string')
+    if (typeof videoSource === 'string') {
         video = document.getElementById(videoSource);
-    else
+    } else {
         video = videoSource;
+    }
     if (!(video instanceof HTMLVideoElement)) {
         throw new Error('Please input the valid video element or id.');
         return;
@@ -229,15 +231,15 @@ function RotatedRect() {
     }
 }
 
-RotatedRect.points = function (obj) {
+RotatedRect.points = function(obj) {
     return Module.rotatedRectPoints(obj);
 };
 
-RotatedRect.boundingRect = function (obj) {
+RotatedRect.boundingRect = function(obj) {
     return Module.rotatedRectBoundingRect(obj);
 };
 
-RotatedRect.boundingRect2f = function (obj) {
+RotatedRect.boundingRect2f = function(obj) {
     return Module.rotatedRectBoundingRect2f(obj);
 };
 
@@ -250,7 +252,7 @@ function Scalar(v0, v1, v2, v3) {
     this.push(typeof(v3) === 'undefined' ? 0 : v3);
 }
 
-Scalar.prototype = new Array;
+Scalar.prototype = new Array; // eslint-disable-line no-array-constructor
 
 Scalar.all = function(v) {
     return new Scalar(v, v, v, v);
