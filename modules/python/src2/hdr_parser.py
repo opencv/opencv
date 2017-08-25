@@ -411,6 +411,7 @@ class CppHeaderParser(object):
 
         virtual_method = False
         pure_virtual_method = False
+        const_method = False
         if not self._js:
             # filter off some common prefixes, which are meaningless for Python wrappers.
             # note that we do not strip "static" prefix, which does matter;
