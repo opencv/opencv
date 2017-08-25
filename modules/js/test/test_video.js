@@ -70,7 +70,7 @@
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    let cv = require('./opencv.js');
+    var cv = require('./opencv.js');
 }
 
 QUnit.module('Video', {});
