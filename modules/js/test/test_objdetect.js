@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -37,9 +37,9 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
+//
 
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 // Author: Sajjad Taheri, University of California, Irvine. sajjadt[at]uci[dot]edu
 //
 //                             LICENSE AGREEMENT
@@ -66,12 +66,12 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//M*/
+//
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./opencv.js');
-    cv.FS_createLazyFile('/', 'haarcascade_frontalface_default.xml',
+    var cv = require('./opencv.js'); // eslint-disable-line no-var
+    cv.FS_createLazyFile('/', 'haarcascade_frontalface_default.xml', // eslint-disable-line new-cap
                          'haarcascade_frontalface_default.xml', true, false);
 }
 
@@ -118,15 +118,15 @@ QUnit.test('Cascade classification', function(assert) {
         const maxSize = {height: 10, width: 10};
 
         classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-        minNeighbors, flags, minSize, maxSize);
+                                     minNeighbors, flags, minSize, maxSize);
 
         // test default parameters
         classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-        minNeighbors, flags, minSize);
+                                     minNeighbors, flags, minSize);
         classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-        minNeighbors, flags);
+                                     minNeighbors, flags);
         classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-        minNeighbors);
+                                     minNeighbors);
         classifier.detectMultiScale2(image, objects, numDetections, scaleFactor);
 
         classifier.delete();

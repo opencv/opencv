@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+//  //////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -37,9 +37,8 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
 
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 // Author: Sajjad Taheri, University of California, Irvine. sajjadt[at]uci[dot]edu
 //
 //                             LICENSE AGREEMENT
@@ -66,11 +65,11 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//M*/
+//
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./opencv.js');
+    var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
 QUnit.module('Video', {});

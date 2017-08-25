@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -37,9 +37,9 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
+//
 
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 // Author: Sajjad Taheri, University of California, Irvine. sajjadt[at]uci[dot]edu
 //
 //                             LICENSE AGREEMENT
@@ -66,11 +66,11 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//M*/
+//
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./opencv.js');
+    var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
 QUnit.module('Image Processing', {});
@@ -78,7 +78,7 @@ QUnit.module('Image Processing', {});
 QUnit.test('test_imgProc', function(assert) {
     // calcHist
     {
-        let vec1 = new cv.Mat.ones({height: 20, width: 20}, cv.CV_8UC1);
+        let vec1 = new cv.Mat.ones(new cv.Size(20, 20), cv.CV_8UC1); // eslint-disable-line new-cap
         let source = new cv.MatVector();
         source.push_back(vec1);
         let channels = [0];
@@ -157,7 +157,7 @@ QUnit.test('test_segmentation', function(assert) {
     {
         let source = new cv.Mat(1, 5, cv.CV_8UC1);
         let sourceView = source.data;
-        sourceView[0] = 0;   // < threshold
+        sourceView[0] = 0; // < threshold
         sourceView[1] = 100; // < threshold
         sourceView[2] = 200; // > threshold
 
@@ -193,37 +193,37 @@ QUnit.test('test_segmentation', function(assert) {
 });
 
 QUnit.test('test_shape', function(assert) {
-  // moments
-  {
-    let points = new cv.Mat(1, 4, cv.CV_32SC2);
-    let data32S = points.data32S;
-    data32S[0]=50;
-    data32S[1]=56;
-    data32S[2]=53;
-    data32S[3]=53;
-    data32S[4]=46;
-    data32S[5]=54;
-    data32S[6]=49;
-    data32S[7]=51;
+    // moments
+    {
+        let points = new cv.Mat(1, 4, cv.CV_32SC2);
+        let data32S = points.data32S;
+        data32S[0]=50;
+        data32S[1]=56;
+        data32S[2]=53;
+        data32S[3]=53;
+        data32S[4]=46;
+        data32S[5]=54;
+        data32S[6]=49;
+        data32S[7]=51;
 
-    let m = cv.moments(points, false);
-    let area = cv.contourArea(points, false);
+        let m = cv.moments(points, false);
+        let area = cv.contourArea(points, false);
 
-    assert.equal(m.m00, 0);
-    assert.equal(m.m01, 0);
-    assert.equal(m.m10, 0);
-    assert.equal(area, 0);
+        assert.equal(m.m00, 0);
+        assert.equal(m.m01, 0);
+        assert.equal(m.m10, 0);
+        assert.equal(area, 0);
 
-    // default parameters
-    m = cv.moments(points);
-    area = cv.contourArea(points);
-    assert.equal(m.m00, 0);
-    assert.equal(m.m01, 0);
-    assert.equal(m.m10, 0);
-    assert.equal(area, 0);
+        // default parameters
+        m = cv.moments(points);
+        area = cv.contourArea(points);
+        assert.equal(m.m00, 0);
+        assert.equal(m.m01, 0);
+        assert.equal(m.m10, 0);
+        assert.equal(area, 0);
 
-    points.delete();
-  }
+        points.delete();
+    }
 });
 
 QUnit.test('test_min_enclosing', function(assert) {
@@ -287,7 +287,8 @@ QUnit.test('test_filter', function(assert) {
         let mat1 = cv.Mat.ones(7, 7, cv.CV_8UC1);
         let mat2 = new cv.Mat();
 
-        cv.GaussianBlur(mat1, mat2, {height: 3, width: 3}, 0, 0, cv.BORDER_DEFAULT);
+        cv.GaussianBlur(mat1, mat2, new cv.Size(3, 3), 0, 0, // eslint-disable-line new-cap
+                        cv.BORDER_DEFAULT);
 
         // Verify result.
         let size = mat2.size();
@@ -707,30 +708,30 @@ QUnit.test('test_filter', function(assert) {
 
 
         let data1 = new Float32Array([1, 0, 0,
-                                    0, 1, 0,
-                                    0, 0, 1]);
+                                      0, 1, 0,
+                                      0, 0, 1]);
         let data2 = new Float32Array([0, 0, 0,
-                                    0, 5, 0,
-                                    0, 0, 0]);
+                                      0, 5, 0,
+                                      0, 0, 0]);
         let data3 = new Float32Array([1, 1, 1, 0,
-                                    0, 3, 1, 2,
-                                    2, 3, 1, 0,
-                                    1, 0, 2, 1]);
+                                      0, 3, 1, 2,
+                                      2, 3, 1, 0,
+                                      1, 0, 2, 1]);
         let data4 = new Float32Array([1, 4, 5,
-                                    4, 2, 2,
-                                    5, 2, 2]);
+                                      4, 2, 2,
+                                      5, 2, 2]);
 
         let expected1 = new Float32Array([1, 0, 0,
-                                        0, 1, 0,
-                                        0, 0, 1]);
+                                          0, 1, 0,
+                                          0, 0, 1]);
         // Inverse does not exist!
         let expected3 = new Float32Array([-3, -1/2, 3/2, 1,
-                                        1, 1/4, -1/4, -1/2,
-                                        3, 1/4, -5/4, -1/2,
-                                        -3, 0, 1, 1]);
+                                          1, 1/4, -1/4, -1/2,
+                                          3, 1/4, -5/4, -1/2,
+                                          -3, 0, 1, 1]);
         let expected4 = new Float32Array([0, -1, 1,
-                                        -1, 23/2, -9,
-                                        1, -9, 7]);
+                                          -1, 23/2, -9,
+                                          1, -9, 7]);
 
         let dataPtr1 = cv._malloc(3*3*4);
         let dataPtr2 = cv._malloc(3*3*4);
@@ -752,11 +753,11 @@ QUnit.test('test_filter', function(assert) {
         let mat4 = new cv.Mat(3, 3, cv.CV_32FC1, dataPtr4, 0);
 
         QUnit.assert.deepEqualWithTolerance = function( value, expected, tolerance ) {
-        for (i = 0; i < value.length; i= i+1) {
-            this.pushResult( {
-                result: Math.abs(value[i]-expected[i]) < tolerance,
-                actual: value[i],
-                expected: expected[i],
+            for (i = 0; i < value.length; i= i+1) {
+                this.pushResult( {
+                    result: Math.abs(value[i]-expected[i]) < tolerance,
+                    actual: value[i],
+                    expected: expected[i],
                 } );
             }
         };
@@ -781,8 +782,6 @@ QUnit.test('test_filter', function(assert) {
         assert.equal(size.height, 4);
         assert.equal(size.width, 4);
         assert.deepEqualWithTolerance(inv3.data32F, expected3, 0.0001);
-        //console.log(inv3.data32F);
-
 
         cv.invert(mat3, inv3, 1);
         // Verify result.

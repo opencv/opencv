@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -37,9 +37,9 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
+//
 
-/*M///////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 // Author: Sajjad Taheri, University of California, Irvine. sajjadt[at]uci[dot]edu
 //
 //                             LICENSE AGREEMENT
@@ -66,11 +66,11 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//M*/
+//
 
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./opencv.js');
+    var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
 QUnit.module('Core', {});
@@ -335,8 +335,9 @@ QUnit.test('test_mat_creation', function(assert) {
     // matFromImageData
     {
         // Only test in browser
-        if (typeof window === 'undefined')
+        if (typeof window === 'undefined') {
             return;
+        }
         let canvas = window.document.createElement('canvas');
         canvas.width = 2;
         canvas.height = 2;
@@ -734,9 +735,9 @@ QUnit.test('test_mat_miscs', function(assert) {
         let mat2 = cv.Mat.eye(4, 4, cv.CV_8UC1);
 
         let expected = new Uint8Array([FACTOR, 0, 0, 0,
-                                      0, FACTOR, 0, 0,
-                                      0, 0, FACTOR, 0,
-                                      0, 0, 0, FACTOR]);
+                                       0, FACTOR, 0, 0,
+                                       0, 0, FACTOR, 0,
+                                       0, 0, 0, FACTOR]);
         let mat3 = mat.mul(mat2, FACTOR);
 
         assert.deepEqual(mat3.data, expected);
@@ -961,12 +962,12 @@ QUnit.test('test_mat_diag', function(assert) {
         let mat = cv.matFromArray(3, 3, cv.CV_8UC1, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
         let d = mat.diag();
         let d1 = mat.diag(1);
-        let d_1 = mat.diag(-1);
+        let d2 = mat.diag(-1);
 
         assert.equal(mat.isContinuous(), true);
         assert.equal(d.isContinuous(), false);
         assert.equal(d1.isContinuous(), false);
-        assert.equal(d_1.isContinuous(), false);
+        assert.equal(d2.isContinuous(), false);
 
         assert.equal(d.ucharAt(0), 0);
         assert.equal(d.ucharAt(1), 4);
@@ -975,12 +976,12 @@ QUnit.test('test_mat_diag', function(assert) {
         assert.equal(d1.ucharAt(0), 1);
         assert.equal(d1.ucharAt(1), 5);
 
-        assert.equal(d_1.ucharAt(0), 3);
-        assert.equal(d_1.ucharAt(1), 7);
+        assert.equal(d2.ucharAt(0), 3);
+        assert.equal(d2.ucharAt(1), 7);
 
         mat.delete();
         d.delete();
         d1.delete();
-        d_1.delete();
+        d2.delete();
     }
 });

@@ -5,6 +5,10 @@
   "dependencies" : { 
     "qunit" : "latest"
   },
+  "devDependencies": {
+    "eslint" : "latest",
+    "eslint-config-google" : "latest"
+  },
   "scripts": {
     "test": "node tests.js"
   },
