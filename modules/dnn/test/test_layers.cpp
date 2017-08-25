@@ -289,7 +289,8 @@ public:
 
     Layer_LSTM_Test() {}
 
-    void init(const MatShape &inpShape_, const MatShape &outShape_)
+    void init(const MatShape &inpShape_, const MatShape &outShape_,
+              bool produceCellOutput, bool useTimestampDim)
     {
         numInp = total(inpShape_);
         numOut = total(outShape_);
@@ -298,8 +299,15 @@ public:
         Wx = Mat::ones(4 * numOut, numInp, CV_32F);
         b  = Mat::ones(4 * numOut, 1, CV_32F);
 
-        layer = LSTMLayer::create(LayerParams());
-        layer->setWeights(Wh, Wx, b);
+        LayerParams lp;
+        lp.blobs.resize(3);
+        lp.blobs[0] = Wh;
+        lp.blobs[1] = Wx;
+        lp.blobs[2] = b;
+        lp.set<bool>("produce_cell_output", produceCellOutput);
+        lp.set<bool>("use_timestamp_dim", useTimestampDim);
+
+        layer = LSTMLayer::create(lp);
         layer->setOutShape(outShape_);
     }
 };
@@ -312,9 +320,7 @@ TEST_F(Layer_LSTM_Test, get_set_test)
     MatShape inpResShape = concat(shape(TN), inpShape);
     MatShape outResShape = concat(shape(TN), outShape);
 
-    init(inpShape, outShape);
-    layer->setProduceCellOutput(true);
-    layer->setUseTimstampsDim(false);
+    init(inpShape, outShape, true, false);
     layer->setOutShape(outShape);
 
     Mat C((int)outResShape.size(), &outResShape[0], CV_32F);
@@ -344,12 +350,12 @@ TEST_F(Layer_LSTM_Test, get_set_test)
 
 TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
 {
-    Ptr<LSTMLayer> layer = LSTMLayer::create(LayerParams());
-
-    Mat Wx = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));
-    Mat Wh = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));
-    Mat b  = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));
-    layer->setWeights(Wh, Wx, b);
+    LayerParams lp;
+    lp.blobs.resize(3);
+    lp.blobs[0] = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));  // Wh
+    lp.blobs[1] = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));  // Wx
+    lp.blobs[2] = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));  // bias
+    Ptr<LSTMLayer> layer = LSTMLayer::create(lp);
 
     Mat inp = blobFromNPY(_tf("recurrent.input.npy"));
     std::vector<Mat> inputs(1, inp), outputs;
