@@ -405,17 +405,6 @@ static void initLabTabs()
             softfloat oneof4 = softfloat::one()/softfloat(4);
 
             /*
-            float L = ((float)LL)*100.f/255.f;
-            float u = ((float)uu)*uRange/255.f + (float)uLow;
-            float v = ((float)vv)*vRange/255.f + (float)vLow;
-
-            float up = 3.f*(u + L*un);
-            float vp = 0.25f/(v + L*vn);
-            if(vp >  0.25f) vp =  0.25f;
-            if(vp < -0.25f) vp = -0.25f;
-            */
-
-            /*
                 //when XYZ are limited to [0, 2]
                 min up: -402
                 min abs diff up: 0.010407
@@ -1628,17 +1617,9 @@ struct Luv2RGBinteger
 {
     typedef uchar channel_type;
 
-    //TODO: rewrite it
     static const int base_shift = 14;
     static const int BASE = (1 << base_shift);
-    // lThresh == (6/29)^3 * (29/3)^3 * BASE/100
-    static const int lThresh = 1311;
-    // fThresh == ((29/3)^3/(29*4) * (6/29)^3 + 16/116)*BASE
-    static const int fThresh = 3390;
-    // base16_116 == BASE*16/116
-    static const int base16_116 = 2260;
     static const int shift = lab_shift+(base_shift-inv_gamma_shift);
-
 
     Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
                     const float* /*_whitept*/, bool _srgb )
@@ -1646,10 +1627,8 @@ struct Luv2RGBinteger
     {
         initLabTabs();
 
-        //TODO: whitept fixed for fixed-point
-        //but any coeffs can be used
         if(!_coeffs)  _coeffs = XYZ2sRGB_D65;
-        //if(!_whitept) _whitept = D65;
+        // whitept is fixed for int calculations
 
         static const softfloat lshift(1 << lab_shift);
         for(int i = 0; i < 3; i++)
@@ -1662,7 +1641,6 @@ struct Luv2RGBinteger
         tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
     }
 
-    //TODO: rewrite this
     // L, u, v should be in their natural range
     inline void process(const uchar LL, const uchar uu, const uchar vv, int& ro, int& go, int& bo) const
     {
@@ -1676,12 +1654,10 @@ struct Luv2RGBinteger
         //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
         //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
-        //works well
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
         x = y*x/BASE;
 
-        //works well
         long long int vpl = LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
         zp /= BASE;
@@ -1836,9 +1812,7 @@ struct Luv2RGBinteger
     }
 
     int dstcn;
-    //TODO: rewrite this
     int coeffs[9];
-    //int coeffs[9];
     ushort* tab;
 };
 
@@ -1853,9 +1827,7 @@ struct Luv2RGB_b
       fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
       icvt(_dstcn, blueIdx, _coeffs, _whitept, _srgb)
     {
-        //TODO: check correctness of this condition
-        useBitExactness = (!_coeffs && !_whitept && _srgb
-                           && enableBitExactness);
+        useBitExactness = (!_whitept && enableBitExactness);
 
         #if CV_NEON
         static const softfloat f255(255);
@@ -2257,7 +2229,6 @@ TEST(ImgProc_Color, LuvCheckWorking)
                     if(TO_BGR)
                     {
                         //Luv fix
-                        //TODO: just 'member it
                         if(checkXYZ(dim0, dim1, dim2))
                         {
                             pRow_b[3*q + 0] = dim0;
