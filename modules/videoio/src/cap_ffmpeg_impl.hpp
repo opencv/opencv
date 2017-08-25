@@ -1191,7 +1191,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
     {
         int64_t _frame_number_temp = std::max(_frame_number-delta, (int64_t)0);
         double sec = (double)_frame_number_temp / get_fps();
-        int64_t time_stamp = ic->streams[video_stream]->start_time;
+        int64_t time_stamp = ic->streams[video_stream]->first_dts;
         double  time_base  = r2d(ic->streams[video_stream]->time_base);
         time_stamp += (int64_t)(sec / time_base + 0.5);
         if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
