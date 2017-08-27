@@ -460,18 +460,18 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
     }
     __u32 try_order[] = {
             V4L2_PIX_FMT_BGR24,
+            V4L2_PIX_FMT_RGB24,
             V4L2_PIX_FMT_YVU420,
             V4L2_PIX_FMT_YUV411P,
+            V4L2_PIX_FMT_YUYV,
+            V4L2_PIX_FMT_UYVY,
+            V4L2_PIX_FMT_SBGGR8,
+            V4L2_PIX_FMT_SGBRG8,
+            V4L2_PIX_FMT_SN9C10X,
 #ifdef HAVE_JPEG
             V4L2_PIX_FMT_MJPEG,
             V4L2_PIX_FMT_JPEG,
 #endif
-            V4L2_PIX_FMT_YUYV,
-            V4L2_PIX_FMT_UYVY,
-            V4L2_PIX_FMT_SN9C10X,
-            V4L2_PIX_FMT_SBGGR8,
-            V4L2_PIX_FMT_SGBRG8,
-            V4L2_PIX_FMT_RGB24,
             V4L2_PIX_FMT_Y16
     };
 
