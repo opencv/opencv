@@ -263,14 +263,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<SoftmaxLayer> create(const LayerParams& params);
     };
 
-    class CV_EXPORTS LPNormalizeLayer : public Layer
-    {
-    public:
-        float pnorm, epsilon;
-
-        static Ptr<LPNormalizeLayer> create(const LayerParams& params);
-    };
-
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
@@ -545,9 +537,37 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<DetectionOutputLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief \f$ L_p \f$ - normalization layer.
+     * @param p Normalization factor. The most common `p = 1` for \f$ L_1 \f$ -
+     *          normalization or `p = 2` for \f$ L_2 \f$ - normalization or a custom one.
+     * @param eps Parameter \f$ \epsilon \f$ to prevent a division by zero.
+     * @param across_spatial If true, normalize an input across all non-batch dimensions.
+     *                       Otherwise normalize an every channel separately.
+     *
+     * Across spatial:
+     * @f[
+     * norm = \sqrt[p]{\epsilon + \sum_{x, y, c} |src(x, y, c)|^p } \\
+     * dst(x, y, c) = \frac{ src(x, y, c) }{norm}
+     * @f]
+     *
+     * Channel wise normalization:
+     * @f[
+     * norm(c) = \sqrt[p]{\epsilon + \sum_{x, y} |src(x, y, c)|^p } \\
+     * dst(x, y, c) = \frac{ src(x, y, c) }{norm(c)}
+     * @f]
+     *
+     * Where `x, y` - spatial cooridnates, `c` - channel.
+     *
+     * An every sample in the batch is normalized separately. Optionally,
+     * output is scaled by the trained parameters.
+     */
     class NormalizeBBoxLayer : public Layer
     {
     public:
+        float pnorm, epsilon;
+        bool acrossSpatial;
+
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
     };
 
