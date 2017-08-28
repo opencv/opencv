@@ -1027,9 +1027,27 @@ class PythonWrapperGenerator(object):
                     print("Generator error: unable to resolve base %s for %s"
                         % (classinfo.base, classinfo.name))
                     sys.exit(-1)
+                base_instance = self.classes[base]
                 classinfo.base = base
-                classinfo.isalgorithm |= self.classes[base].isalgorithm
+                classinfo.isalgorithm |= base_instance.isalgorithm  # wrong processing of 'isalgorithm' flag:
+                                                                    # doesn't work for trees(graphs) with depth > 2
                 self.classes[name] = classinfo
+
+        # tree-based propagation of 'isalgorithm'
+        processed = dict()
+        def process_isalgorithm(classinfo):
+            if classinfo.isalgorithm or classinfo in processed:
+                return classinfo.isalgorithm
+            res = False
+            if classinfo.base:
+                res = process_isalgorithm(self.classes[classinfo.base])
+                #assert not (res == True or classinfo.isalgorithm is False), "Internal error: " + classinfo.name + " => " + classinfo.base
+                classinfo.isalgorithm |= res
+                res = classinfo.isalgorithm
+            processed[classinfo] = True
+            return res
+        for name, classinfo in self.classes.items():
+            process_isalgorithm(classinfo)
 
         # step 2: generate code for the classes and their methods
         classlist = list(self.classes.items())
