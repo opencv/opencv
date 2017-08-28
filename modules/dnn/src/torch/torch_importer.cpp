@@ -706,7 +706,7 @@ struct TorchImporter : public ::cv::dnn::Importer
                 if (scalarParams.has("eps"))
                     layerParams.set("eps", scalarParams.get<float>("eps"));
 
-                newModule->apiType = "LPNormalize";
+                newModule->apiType = "Normalize";
                 curModule->modules.push_back(newModule);
             }
             else if (nnName == "Padding")
