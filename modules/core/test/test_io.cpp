@@ -1345,3 +1345,25 @@ TEST(Core_InputOutput, FileStorage_json_bool)
     ASSERT_EQ((int)fs["bool_false"], 0);
     fs.release();
 }
+
+TEST(Core_InputOutput, FileStorage_free_file_after_exception)
+{
+    const std::string fileName = "test.yml";
+    const std::string content = "%YAML:1.0\n cameraMatrix;:: !<tag:yaml.org,2002:opencv-matrix>\n";
+
+    fstream testFile;
+    testFile.open(fileName.c_str(), std::fstream::out);
+    if(!testFile.is_open()) FAIL();
+    testFile << content;
+    testFile.close();
+
+    try
+    {
+        FileStorage fs(fileName, FileStorage::READ + FileStorage::FORMAT_YAML);
+        FAIL();
+    }
+    catch (const std::exception&)
+    {
+    }
+    ASSERT_EQ(std::remove(fileName.c_str()), 0);
+}
