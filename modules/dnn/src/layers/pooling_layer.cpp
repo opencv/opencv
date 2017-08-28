@@ -54,7 +54,6 @@ namespace cv
 namespace dnn
 {
 
-//TODO: add ceil_mode param
 class PoolingLayerImpl : public PoolingLayer
 {
 public:
@@ -79,6 +78,7 @@ public:
         getPoolingKernelParams(params, kernel.height, kernel.width, globalPooling,
                                pad.height, pad.width, stride.height, stride.width, padMode);
         setParamsFrom(params);
+        ceilMode = params.get<bool>("ceil_mode", true);
     }
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
@@ -572,11 +572,10 @@ public:
         }
         else if (padMode.empty())
         {
-            //Yeah, something strange Caffe scheme-)
-            out.height = static_cast<int>(ceil(static_cast<float>(in.height + 2 * pad.height -
-                                                                  kernel.height) / stride.height)) + 1;
-            out.width = static_cast<int>(ceil(static_cast<float>(in.width + 2 * pad.width -
-                                                                 kernel.width) / stride.width)) + 1;
+            float height = (float)(in.height + 2 * pad.height - kernel.height) / stride.height;
+            float width = (float)(in.width + 2 * pad.width - kernel.width) / stride.width;
+            out.height = 1 + (ceilMode ? ceil(height) : floor(height));
+            out.width = 1 + (ceilMode ? ceil(width) : floor(width));
 
             if (pad.height || pad.width)
             {
