@@ -1177,7 +1177,7 @@ struct Net::Impl
             // (and so we eliminate the concatenation layer, because the channels
             // are concatenated implicitly).
             Ptr<ConcatLayer> concatLayer = ld.layerInstance.dynamicCast<ConcatLayer>();
-            if( !concatLayer.empty() && concatLayer->axis == 1 &&
+            if( !concatLayer.empty() && concatLayer->axis == 1 && !concatLayer->padding &&
                 ld.outputBlobs.size() == 1 )
             {
                 Mat& output = ld.outputBlobs[0];
