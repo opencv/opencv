@@ -130,6 +130,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 {
     CV_INSTRUMENT_REGION()
 
+    CV_Assert(_points.getObj() != _hull.getObj());
     Mat points = _points.getMat();
     int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
