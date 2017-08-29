@@ -53,6 +53,10 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
+#ifdef CV_CXX11
+#include <type_traits>
+#endif
+
 namespace cv
 {
 
@@ -988,7 +992,8 @@ public:
 #ifdef CV_CXX11
     /** @overload
     */
-    template<typename _Tp> explicit Mat(const std::initializer_list<_Tp> list);
+    template<typename _Tp, typename = typename std::enable_if<std::is_arithmetic<_Tp>::value>::type>
+    explicit Mat(const std::initializer_list<_Tp> list);
 #endif
 
 #ifdef CV_CXX_STD_ARRAY
