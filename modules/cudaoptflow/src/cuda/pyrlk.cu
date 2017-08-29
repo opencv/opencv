@@ -1050,16 +1050,45 @@ namespace pyrlk
         }
     }
 
-    void loadConstants(int2 winSize, int iters, cudaStream_t stream)
+    void loadWinSize(int* winSize, int* halfWinSize, cudaStream_t stream)
     {
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x, &winSize.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y, &winSize.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x, winSize, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y, winSize + 1, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
 
-        int2 halfWin = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_x, &halfWin.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y, &halfWin.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_x, halfWinSize, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y, halfWinSize + 1, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+    }
 
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters, &iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+    void loadIters(int* iters, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters, iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+    }
+
+    void loadConstants(int2 winSize_, int iters_, cudaStream_t stream)
+    {
+        static int2 winSize = make_int2(0,0);
+        if(winSize.x != winSize_.x || winSize.y != winSize_.y)
+        {
+            winSize = winSize_;
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x, &winSize.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y, &winSize.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        }
+
+        static int2 halfWin = make_int2(0,0);
+        int2 half = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);
+        if(halfWin.x != half.x || halfWin.y != half.y)
+        {
+            halfWin = half;
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_x, &halfWin.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y, &halfWin.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        }
+
+        static int iters = 0;
+        if(iters != iters_)
+        {
+            iters = iters_;
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters, &iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        }
     }
 
     template<typename T, int cn> struct pyrLK_caller
