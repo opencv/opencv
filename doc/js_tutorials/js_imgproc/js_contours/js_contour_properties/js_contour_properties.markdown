@@ -5,7 +5,7 @@ Goal
 ----
 
 -   Here we will learn to extract some frequently used properties of objects like Solidity, Equivalent
-Diameter, Mask image, Mean Intensity etc. 
+Diameter, Mask image, Mean Intensity etc.
 
 1. Aspect Ratio
 ---------------
@@ -68,9 +68,9 @@ let angle = rotatedRect.angle;
 6. Mask and Pixel Points
 ------------------------
 
-In some cases, we may need all the points which comprises that object. 
+In some cases, we may need all the points which comprises that object.
 
-We use the function: **cv.transpose (src, dst)** 
+We use the function: **cv.transpose (src, dst)**
 @param src   input array.
 @param dst   output array of the same type as src.
 
@@ -144,7 +144,7 @@ if (typeof cv !== 'undefined') {
 7. Maximum Value, Minimum Value and their locations
 ---------------------------------------------------
 
-We use the function: **cv.minMaxLoc(src, mask)** 
+We use the function: **cv.minMaxLoc(src, mask)**
 @param src      input single-channel array.
 @param mask     optional mask used to select a sub-array.
 
@@ -162,11 +162,10 @@ let maxLoc = result.maxLoc;
 Here, we can find the average color of an object. Or it can be average intensity of the object in
 grayscale mode. We again use the same mask to do it.
 
-We use the function: **cv.mean (src, mask)** 
+We use the function: **cv.mean (src, mask)**
 @param src   input array that should have from 1 to 4 channels so that the result can be stored in Scalar.
 @param mask  optional operation mask.
 
 @code{.js}
 let average = cv.mean(src, mask);
 @endcode
-

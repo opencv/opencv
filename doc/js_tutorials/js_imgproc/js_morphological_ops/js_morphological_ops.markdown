@@ -32,7 +32,7 @@ kernel. So the thickness or size of the foreground object decreases or simply wh
 in the image. It is useful for removing small white noises (as we have seen in colorspace chapter),
 detach two connected objects etc.
 
-We use the function: **cv.erode (src, dst, kernel, anchor = new cv.Point(-1, -1), iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())** 
+We use the function: **cv.erode (src, dst, kernel, anchor = new cv.Point(-1, -1), iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())**
 @param src          input image; the number of channels can be arbitrary, but the depth should be one of cv.CV_8U, cv.CV_16U, cv.CV_16S, cv.CV_32F or cv.CV_64F.
 @param dst          output image of the same size and type as src.
 @param kernel       structuring element used for erosion.
@@ -71,7 +71,7 @@ let anchor = new cv.Point(-1, -1);
 // You can try more different parameters
 cv.erode(src, dst, M, anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 cv.imshow("erodeCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="erodeErr"></p>
 </div>
@@ -114,7 +114,7 @@ Normally, in cases like noise removal, erosion is followed by dilation. Because,
 white noises, but it also shrinks our object. So we dilate it. Since noise is gone, they won't come
 back, but our object area increases. It is also useful in joining broken parts of an object.
 
-We use the function: **cv.dilate (src, dst, kernel, anchor = new cv.Point(-1, -1), iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())** 
+We use the function: **cv.dilate (src, dst, kernel, anchor = new cv.Point(-1, -1), iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())**
 @param src          input image; the number of channels can be arbitrary, but the depth should be one of cv.CV_8U, cv.CV_16U, cv.CV_16S, cv.CV_32F or cv.CV_64F.
 @param dst          output image of the same size and type as src.
 @param kernel       structuring element used for dilation.
@@ -145,7 +145,7 @@ let anchor = new cv.Point(-1, -1);
 // You can try more different parameters
 cv.dilate(src, dst, M, anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 cv.imshow("dilateCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="dilateErr"></p>
 </div>
@@ -182,7 +182,7 @@ function dilateHandleFiles(e) {
 
 Opening is just another name of **erosion followed by dilation**. It is useful in removing noise.
 
-We use the function: **cv.morphologyEx (src, dst, op, kernel, anchor = new cv.Point(-1, -1), iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())** 
+We use the function: **cv.morphologyEx (src, dst, op, kernel, anchor = new cv.Point(-1, -1), iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())**
 @param src          source image. The number of channels can be arbitrary. The depth should be one of cv.CV_8U, cv.CV_16U, cv.CV_16S, cv.CV_32F or cv.CV_64F
 @param dst          destination image of the same size and type as source image.
 @param op           type of a morphological operation, (see cv.MorphTypes).
@@ -214,7 +214,7 @@ let anchor = new cv.Point(-1, -1);
 // You can try more different parameters
 cv.morphologyEx(src, dst, cv.MORPH_OPEN, M, anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 cv.imshow("openingCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="openingErr"></p>
 </div>
@@ -273,7 +273,7 @@ let M = cv.Mat.ones(5, 5, cv.CV_8U);
 // You can try more different parameters
 cv.morphologyEx(src, dst, cv.MORPH_CLOSE, M);
 cv.imshow("closingCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="closingErr"></p>
 </div>
@@ -369,7 +369,7 @@ function gradientHandleFiles(e) {
 
 ### 6. Top Hat
 
-It is the difference between input image and Opening of the image. 
+It is the difference between input image and Opening of the image.
 
 Try it
 ------
@@ -452,7 +452,7 @@ let M = cv.Mat.ones(53, 53, cv.CV_8U);
 // You can try more different parameters
 cv.morphologyEx(src, dst, cv.MORPH_BLACKHAT, M);
 cv.imshow("blackHatCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="blackHatErr"></p>
 </div>
@@ -493,7 +493,7 @@ rectangular shape. But in some cases, you may need elliptical/circular shaped ke
 purpose, OpenCV has a function, **cv.getStructuringElement()**. You just pass the shape and size of
 the kernel, you get the desired kernel.
 
-We use the function: **cv.getStructuringElement (shape, ksize, anchor = new cv.Point(-1, -1))** 
+We use the function: **cv.getStructuringElement (shape, ksize, anchor = new cv.Point(-1, -1))**
 @param shape          element shape that could be one of cv.MorphShapes
 @param ksize          size of the structuring element.
 @param anchor         anchor position within the element. The default value [−1,−1] means that the anchor is at the center. Note that only the shape of a cross-shaped element depends on the anchor position. In other cases the anchor just regulates how much the result of the morphological operation is shifted.
@@ -522,7 +522,7 @@ let ksize = new cv.Size(5, 5);
 M = cv.getStructuringElement(cv.MORPH_CROSS, ksize);
 cv.morphologyEx(src, dst, cv.MORPH_GRADIENT, M);
 cv.imshow("getStructuringElementCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="getStructuringElementErr"></p>
 </div>

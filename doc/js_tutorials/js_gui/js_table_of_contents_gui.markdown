@@ -12,4 +12,3 @@ GUI Features {#tutorial_js_table_of_contents_gui}
 -   @subpage tutorial_js_trackbar
 
     Create trackbar to control certain parameters
-

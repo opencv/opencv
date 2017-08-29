@@ -64,7 +64,7 @@ Building OpenCV.js from Source Using CMake
     @endcode
 
 -#  To configure, run cmake [\<some optional parameters\>] \<path to the OpenCV source directory\>
-	To build OpenCV.js, you need to append `-D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake`.
+    To build OpenCV.js, you need to append `-D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake`.
 
     For example:
     @code{.bash}
@@ -115,11 +115,11 @@ Building OpenCV.js from Source Using CMake
     You can also run tests using Node.js.
 
     For example:
-	@code{.sh}
-	cd bin
-	npm install
-	node tests.js
-	@endcode
+    @code{.sh}
+    cd bin
+    npm install
+    node tests.js
+    @endcode
 
-	@note
-	You may need to install `node` for your development environment.
+    @note
+    You may need to install `node` for your development environment.

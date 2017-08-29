@@ -20,9 +20,9 @@ line joining start point and end point, then draw a circle at the farthest point
 @note Remember we have to pass returnPoints = False while finding convex hull, in order to find
 convexity defects.
 
-We use the function: **cv.convexityDefects (contour, convexhull, convexityDefect)** 
+We use the function: **cv.convexityDefects (contour, convexhull, convexityDefect)**
 @param contour              input contour.
-@param convexhull           convex hull obtained using convexHull that should contain indices of the contour points that make the hull 
+@param convexhull           convex hull obtained using convexHull that should contain indices of the contour points that make the hull
 @param convexityDefect      the output vector of convexity defects. Each convexity defect is represented as 4-element(start_index, end_index, farthest_pt_index, fixpt_depth), where indices are 0-based indices in the original contour of the convexity defect beginning, end and the farthest point, and fixpt_depth is fixed-point approximation (with 8 fractional bits) of the distance between the farthest contour point and the hull. That is, to get the floating-point value of the depth will be fixpt_depth/256.0.
 
 Try it
@@ -62,8 +62,8 @@ let lineColor = new cv.Scalar(255, 0, 0), circleColor = new cv.Scalar(255, 255, 
 cv.convexHull(cnt, hull, false, false);
 cv.convexityDefects (cnt, hull, defect);
 for (let i = 0 ; i < defect.rows; ++i) {
-    let start = new cv.Point(cnt.data32S[defect.data32S[i * 4] * 2], cnt.data32S[defect.data32S[i * 4] * 2 + 1]); 
-    let end = new cv.Point(cnt.data32S[defect.data32S[i * 4 + 1] * 2], cnt.data32S[defect.data32S[i * 4 + 1] * 2 + 1]); 
+    let start = new cv.Point(cnt.data32S[defect.data32S[i * 4] * 2], cnt.data32S[defect.data32S[i * 4] * 2 + 1]);
+    let end = new cv.Point(cnt.data32S[defect.data32S[i * 4 + 1] * 2], cnt.data32S[defect.data32S[i * 4 + 1] * 2 + 1]);
     let far = new cv.Point(cnt.data32S[defect.data32S[i * 4 + 2] * 2], cnt.data32S[defect.data32S[i * 4 + 2] * 2 + 1]);
     cv.line(dst, start, end, lineColor, 2, cv.LINE_AA, 0);
     cv.circle(dst, far, 3, circleColor, -1);
@@ -109,7 +109,7 @@ This function finds the shortest distance between a point in the image and a con
 distance which is negative when point is outside the contour, positive when point is inside and zero
 if point is on the contour.
 
-We use the function: **cv.pointPolygonTest (contour, pt, measureDist)** 
+We use the function: **cv.pointPolygonTest (contour, pt, measureDist)**
 @param contour      input contour.
 @param pt           point tested against the contour.
 @param measureDist  if true, the function estimates the signed distance from the point to the nearest contour edge. Otherwise, the function only checks if the point is inside a contour or not.
@@ -125,7 +125,7 @@ contours and returns a metric showing the similarity. The lower the result, the 
 It is calculated based on the hu-moment values. Different measurement methods are explained in the
 docs.
 
-We use the function: **cv.matchShapes (contour1, contour2, method, parameter)** 
+We use the function: **cv.matchShapes (contour1, contour2, method, parameter)**
 @param contour1      first contour or grayscale image.
 @param contour2      second contour or grayscale image.
 @param method        comparison method, see cv::ShapeMatchModes

@@ -19,7 +19,7 @@ will try an averaging filter on an image. A 5x5 averaging filter kernel will loo
 
 \f[K =  \frac{1}{25} \begin{bmatrix} 1 & 1 & 1 & 1 & 1  \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \end{bmatrix}\f]
 
-We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = new cv.Point(-1, -1), delta = 0, borderType = cv.BORDER_DEFAULT)** 
+We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = new cv.Point(-1, -1), delta = 0, borderType = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      desired depth of the destination image.
@@ -110,11 +110,11 @@ specify the width and height of kernel. A 3x3 normalized box filter would look l
 
 \f[K =  \frac{1}{9} \begin{bmatrix} 1 & 1 & 1  \\ 1 & 1 & 1 \\ 1 & 1 & 1 \end{bmatrix}\f]
 
-We use the functions: **cv.blur (src, dst, ksize, anchor = new cv.Point(-1, -1), borderType = cv.BORDER_DEFAULT)** 
+We use the functions: **cv.blur (src, dst, ksize, anchor = new cv.Point(-1, -1), borderType = cv.BORDER_DEFAULT)**
 @param src         input image; it can have any number of channels, which are processed independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst         output image of the same size and type as src.
 @param ksize       blurring kernel size.
-@param anchor      anchor point; anchor = new cv.Point(-1, -1) means that the anchor is at the kernel center. 
+@param anchor      anchor point; anchor = new cv.Point(-1, -1) means that the anchor is at the kernel center.
 @param borderType  border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
 **cv.boxFilter (src, dst, ddepth, ksize, anchor = new cv.Point(-1, -1), normalize = true, borderType = cv.BORDER_DEFAULT)**
@@ -122,7 +122,7 @@ We use the functions: **cv.blur (src, dst, ksize, anchor = new cv.Point(-1, -1),
 @param dst         output image of the same size and type as src.
 @param ddepth      the output image depth (-1 to use src.depth()).
 @param ksize       blurring kernel size.
-@param anchor      anchor point; anchor = new cv.Point(-1, -1) means that the anchor is at the kernel center. 
+@param anchor      anchor point; anchor = new cv.Point(-1, -1) means that the anchor is at the kernel center.
 @param normalize   flag, specifying whether the kernel is normalized by its area or not.
 @param borderType  border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
@@ -190,7 +190,7 @@ function blurHandleFiles(e) {
 
 In this, instead of box filter, gaussian kernel is used.
 
-We use the function: **cv.GaussianBlur (src, dst, ksize, sigmaX, sigmaY = 0, borderType = cv.BORDER_DEFAULT)** 
+We use the function: **cv.GaussianBlur (src, dst, ksize, sigmaX, sigmaY = 0, borderType = cv.BORDER_DEFAULT)**
 @param src         input image; the image can have any number of channels, which are processed independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst         output image of the same size and type as src.
 @param ksize       blurring kernel size.
@@ -262,7 +262,7 @@ calculated value which may be a pixel value in the image or a new value. But in 
 central element is always replaced by some pixel value in the image. It reduces the noise
 effectively. Its kernel size should be a positive odd integer.
 
-We use the function: **cv.medianBlur (src, dst, ksize)** 
+We use the function: **cv.medianBlur (src, dst, ksize)**
 @param src         input 1, 3, or 4 channel image; when ksize is 3 or 5, the image depth should be cv.CV_8U, cv.CV_16U, or cv.CV_32F, for larger aperture sizes, it can only be cv.CV_8U.
 @param dst         destination array of the same size and type as src.
 @param ksize       aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
@@ -338,7 +338,7 @@ for blurring while gaussian function of intensity difference make sure only thos
 similar intensity to central pixel is considered for blurring. So it preserves the edges since
 pixels at edges will have large intensity variation.
 
-We use the function: **cv.bilateralFilter (src, dst, d, sigmaColor, sigmaSpace, borderType = cv.BORDER_DEFAULT)** 
+We use the function: **cv.bilateralFilter (src, dst, d, sigmaColor, sigmaSpace, borderType = cv.BORDER_DEFAULT)**
 @param src          source 8-bit or floating-point, 1-channel or 3-channel image.
 @param dst          output image of the same size and type as src.
 @param d            diameter of each pixel neighborhood that is used during filtering. If it is non-positive, it is computed from sigmaSpace.

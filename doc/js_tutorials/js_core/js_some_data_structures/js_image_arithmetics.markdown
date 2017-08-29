@@ -14,7 +14,7 @@ Point
 There are 2 ways to construct a Point and they are the same:
 @code{.js}
 // The first way
-let point = new cv.Point(x, y); 
+let point = new cv.Point(x, y);
 // The second way
 let point = {x: x, y: y};
 @endcode
@@ -28,7 +28,7 @@ Scalar
 There are 2 ways to construct a Scalar and they are the same:
 @code{.js}
 // The first way
-let scalar = new cv.Scalar(R, G, B, Alpha); 
+let scalar = new cv.Scalar(R, G, B, Alpha);
 // The second way
 let scalar = [R, G, B, Alpha];
 @endcode
@@ -44,7 +44,7 @@ Size
 There are 2 ways to construct a Size and they are the same:
 @code{.js}
 // The first way
-let size = new cv.Size(width, height); 
+let size = new cv.Size(width, height);
 // The second way
 let size = {width : width, height : height};
 @endcode
@@ -58,7 +58,7 @@ Circle
 There are 2 ways to construct a Circle and they are the same:
 @code{.js}
 // The first way
-let circle = new cv.Circle(center, radius); 
+let circle = new cv.Circle(center, radius);
 // The second way
 let circle = {center : center, radius : radius};
 @endcode
@@ -72,7 +72,7 @@ Rect
 There are 2 ways to construct a Rect and they are the same:
 @code{.js}
 // The first way
-let rect = new cv.Rect(x, y, width, height); 
+let rect = new cv.Rect(x, y, width, height);
 // The second way
 let rect = {x : x, y : y, width : width, height : height};
 @endcode
@@ -88,7 +88,7 @@ RotatedRect
 There are 2 ways to construct a RotatedRect and they are the same:
 @code{.js}
 // The first way
-let rotatedRect = new cv.RotatedRect(center, size, angle); 
+let rotatedRect = new cv.RotatedRect(center, size, angle);
 // The second way
 let rotatedRect = {center : center, size : size, angle : angle};
 @endcode

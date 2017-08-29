@@ -12,13 +12,13 @@ Simple Thresholding
 -------------------
 
 Here, the matter is straight forward. If pixel value is greater than a threshold value, it is
-assigned one value (may be white), else it is assigned another value (may be black). 
+assigned one value (may be white), else it is assigned another value (may be black).
 
 We use the function: **cv.threshold (src, dst, thresh, maxval, type)**
 @param src    input array.
-@param dst    output array of the same size and type and the same number of channels as src. 
+@param dst    output array of the same size and type and the same number of channels as src.
 @param thresh threshold value.
-@param maxval maximum value to use with the cv.THRESH_BINARY and cv.THRESH_BINARY_INV thresholding types. 
+@param maxval maximum value to use with the cv.THRESH_BINARY and cv.THRESH_BINARY_INV thresholding types.
 @param type   thresholding type(see cv.ThresholdTypes).
 
 **thresholding type** - OpenCV provides different styles of thresholding and it is decided
@@ -36,7 +36,7 @@ by the fourth parameter of the function. Different types are:
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named thresholdCanvasInput and thresholdCanvasOutput have been prepared. Choose an image and 
+Try this demo using the code above. Canvas elements named thresholdCanvasInput and thresholdCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -108,7 +108,7 @@ results for images with varying illumination.
 
 We use the function: **cv.adaptiveThreshold (src, dst, maxValue, adaptiveMethod, thresholdType, blockSize, C)**
 @param src             source 8-bit single-channel image.
-@param dst             dstination image of the same size and the same type as src. 
+@param dst             dstination image of the same size and the same type as src.
 @param maxValue        non-zero value assigned to the pixels for which the condition is satisfied
 @param adaptiveMethod  adaptive thresholding algorithm to use.
 @param thresholdType   thresholding type that must be either cv.THRESH_BINARY or cv.THRESH_BINARY_INV.
@@ -116,8 +116,8 @@ We use the function: **cv.adaptiveThreshold (src, dst, maxValue, adaptiveMethod,
 @param C               constant subtracted from the mean or weighted mean (see the details below). Normally, it is positive but may be zero or negative as well.
 
 **adaptiveMethod** - It decides how thresholding value is calculated:
-    -   cv.ADAPTIVE_THRESH_MEAN_C 
-    -   cv.ADAPTIVE_THRESH_GAUSSIAN_C 
+    -   cv.ADAPTIVE_THRESH_MEAN_C
+    -   cv.ADAPTIVE_THRESH_GAUSSIAN_C
 
 Try it
 ------

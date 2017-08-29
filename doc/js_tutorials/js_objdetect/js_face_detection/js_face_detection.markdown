@@ -82,10 +82,10 @@ Here we will deal with detection. OpenCV already contains many pre-trained class
 eyes, smile etc. Those XML files are stored in opencv/data/haarcascades/ folder. Let's create a face
 and eye detector with OpenCV.
 
-We use the function: **detectMultiScale (image, objects, scaleFactor = 1.1, minNeighbors = 3, flags = 0, minSize = new cv.Size(0, 0), maxSize = new cv.Size(0, 0))** 
+We use the function: **detectMultiScale (image, objects, scaleFactor = 1.1, minNeighbors = 3, flags = 0, minSize = new cv.Size(0, 0), maxSize = new cv.Size(0, 0))**
 
-@param image               matrix of the type CV_8U containing an image where objects are detected. 
-@param objects             vector of rectangles where each rectangle contains the detected object. The rectangles may be partially outside the original image.    
+@param image               matrix of the type CV_8U containing an image where objects are detected.
+@param objects             vector of rectangles where each rectangle contains the detected object. The rectangles may be partially outside the original image.
 @param scaleFactor         parameter specifying how much the image size is reduced at each image scale.
 @param minNeighbors        parameter specifying how many neighbors each candidate rectangle should have to retain it.
 @param flags               parameter with the same meaning for an old cascade as in the function cvHaarDetectObjects. It is not used for a new cascade.
@@ -125,7 +125,7 @@ let face_cascade = new cv.CascadeClassifier(), eye_cascade = new cv.CascadeClass
 // load pre-trained classifiers
 face_cascade.load("haarcascade_frontalface_default.xml");
 eye_cascade.load("haarcascade_eye.xml");
-// detect faces 
+// detect faces
 let msize = new cv.Size(0, 0);
 face_cascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
 for(let i = 0; i < faces.size(); ++i)
@@ -189,9 +189,9 @@ if (typeof cv !== 'undefined') {
 
 let Module = {
 preRun: [function() {
-	Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml', 'haarcascade_eye.xml', true, false);
-	Module.FS_createPreloadedFile('/', 'haarcascade_frontalface_default.xml', 'haarcascade_frontalface_default.xml', true, false);
-	}],
+    Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml', 'haarcascade_eye.xml', true, false);
+    Module.FS_createPreloadedFile('/', 'haarcascade_frontalface_default.xml', 'haarcascade_frontalface_default.xml', true, false);
+    }],
 };
 </script>
 </body>

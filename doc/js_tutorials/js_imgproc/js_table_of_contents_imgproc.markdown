@@ -73,5 +73,3 @@ Image Processing {#tutorial_js_table_of_contents_imgproc}
 -   @subpage tutorial_js_grabcut
 
     Learn how to extract foreground with GrabCut algorithm.
-
-

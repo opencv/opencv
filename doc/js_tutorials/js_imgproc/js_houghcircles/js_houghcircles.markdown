@@ -16,7 +16,7 @@ equation, we can see we have 3 parameters, so we need a 3D accumulator for hough
 would be highly ineffective. So OpenCV uses more trickier method, **Hough Gradient Method** which
 uses the gradient information of edges.
 
-We use the function: **cv.HoughCircles (image, circles, method, dp, minDist, param1 = 100, param2 = 100, minRadius = 0, maxRadius = 0)** 
+We use the function: **cv.HoughCircles (image, circles, method, dp, minDist, param1 = 100, param2 = 100, minRadius = 0, maxRadius = 0)**
 
 @param image       8-bit, single-channel, grayscale input image.
 @param circles     output vector of found circles(cv.CV_32FC3 type). Each vector is encoded as a 3-element floating-point vector (x,y,radius) .

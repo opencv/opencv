@@ -26,7 +26,7 @@ after reading that.
 Histograms Equalization in OpenCV
 ---------------------------------
 
-We use the function: **cv.equalizeHist (src, dst)** 
+We use the function: **cv.equalizeHist (src, dst)**
 
 @param src      source 8-bit single channel image.
 @param dst      destination image of the same size and type as src.
@@ -61,22 +61,22 @@ cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.equalizeHist(src, dst);
 cv.imshow("imageGrayCanvasOutput", src);
 cv.imshow("equalizeHistCanvasOutput", dst);
-src.delete(); dst.delete(); 
+src.delete(); dst.delete();
 </textarea>
 <p class="err" id="equalizeHistErr"></p>
 </div>
 <div id="equalizeHistShowcase">
     <div>
-   	    <p>Original</p>
+        <p>Original</p>
         <canvas id="equalizeHistCanvasInput"></canvas>
         <input type="file" id="equalizeHistInput" name="file" />
     </div>
     <div>
-    	<p>Gray Image</p>
+        <p>Gray Image</p>
         <canvas id="imageGrayCanvasOutput"></canvas>
     </div>
     <div>
-    	<p>EqualizeHist Image</p>
+        <p>EqualizeHist Image</p>
         <canvas id="equalizeHistCanvasOutput"></canvas>
     </div>
 </div>
@@ -110,7 +110,7 @@ CLAHE (Contrast Limited Adaptive Histogram Equalization)
 In **adaptive histogram equalization**, image is divided into small blocks called "tiles" (tileSize is 8x8 by default in OpenCV). Then each of these blocks are histogram equalized as usual. So in a small area, histogram would confine to a small region
 (unless there is noise). If noise is there, it will be amplified. To avoid this, **contrast limiting** is applied. If any histogram bin is above the specified contrast limit (by default 40 in OpenCV), those pixels are clipped and distributed uniformly to other bins before applying histogram equalization. After equalization, to remove artifacts in tile borders, bilinear interpolation is applied.
 
-We use the class: **cv.CLAHE (clipLimit = 40, tileGridSize = new cv.Size(8, 8))** 
+We use the class: **cv.CLAHE (clipLimit = 40, tileGridSize = new cv.Size(8, 8))**
 
 @param clipLimit      threshold for contrast limiting.
 @param tileGridSize   size of grid for histogram equalization. Input image will be divided into equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.

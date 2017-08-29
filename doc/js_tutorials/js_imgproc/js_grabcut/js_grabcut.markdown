@@ -56,7 +56,7 @@ It is illustrated in below image (Image Courtesy: <http://www.cs.ru.ac.za/resear
 Demo
 ----
 
-We use the function: **cv.grabCut (image, mask, rect, bgdModel, fgdModel, iterCount, mode = cv.GC_EVAL)** 
+We use the function: **cv.grabCut (image, mask, rect, bgdModel, fgdModel, iterCount, mode = cv.GC_EVAL)**
 
 @param image      input 8-bit 3-channel image.
 @param mask       input/output 8-bit single-channel mask. The mask is initialized by the function when mode is set to GC_INIT_WITH_RECT. Its elements may have one of the cv.rabCutClasses.
@@ -64,7 +64,7 @@ We use the function: **cv.grabCut (image, mask, rect, bgdModel, fgdModel, iterCo
 @param bgdModel   temporary array for the background model. Do not modify it while you are processing the same image.
 @param fgdModel   temporary arrays for the foreground model. Do not modify it while you are processing the same image.
 @param iterCount  number of iterations the algorithm should make before returning the result. Note that the result can be refined with further calls with mode==GC_INIT_WITH_MASK or mode==GC_EVAL .
-@param mode       operation mode that could be one of the cv::GrabCutModes 
+@param mode       operation mode that could be one of the cv::GrabCutModes
 
 Try it
 ------
@@ -96,7 +96,7 @@ let rect = new cv.Rect(50, 50, 260, 280);
 cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
 // draw foreground
 for (let i = 0; i < src.rows; i++)
-    for (let j = 0; j < src.cols; j++) 
+    for (let j = 0; j < src.cols; j++)
         if (mask.ucharPtr(i, j)[0] == 0 || mask.ucharPtr(i, j)[0] == 2) {
             src.ucharPtr(i, j)[0] = 0;
             src.ucharPtr(i, j)[1] = 0;
@@ -108,7 +108,7 @@ let point1 = new cv.Point(rect.x, rect.y);
 let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
 cv.rectangle(src, point1, point2, color);
 cv.imshow("grabCutCanvasOutput", src);
-src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete(); 
+src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
 </textarea>
 <p class="err" id="grabCutErr"></p>
 </div>

@@ -4,7 +4,7 @@ Face Detection in Video Capture {#tutorial_js_face_detection_camera}
 Goal
 ----
 
--   learn how to detect faces in video capture. 
+-   learn how to detect faces in video capture.
 
 @note  If you don't know how to capture video from camera, please review @ref tutorial_js_video_display.
 
@@ -32,7 +32,7 @@ let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC4);
 let gray = new cv.Mat();
 let faceFrontal = new cv.RectVector();
-let faceFrontalCascadeFrontal = new cv.CascadeClassifier(); 
+let faceFrontalCascadeFrontal = new cv.CascadeClassifier();
 
 // load pre-trained classifiers
 faceFrontalCascadeFrontal.load("haarcascade_frontalface_default.xml");
@@ -45,7 +45,7 @@ loopIndex = setInterval(
             cap.read(src);
             src.copyTo(dst);
             cv.cvtColor(dst, gray, cv.COLOR_RGBA2GRAY, 0);
-            // detect faceFrontal 
+            // detect faceFrontal
             faceFrontalCascadeFrontal.detectMultiScale(gray, faceFrontal, 1.1, 3, 0, {width : 0, height : 0}, {width : 0, height : 0});
             for (let i = 0; i < faceFrontal.size(); ++i) {
                 let point1 = new cv.Point(faceFrontal.get(i).x, faceFrontal.get(i).y);
@@ -90,7 +90,7 @@ let src = null;
 let dst = null;
 let gray = null;
 let faceFrontal = null;
-let faceFrontalCascadeFrontal = null; 
+let faceFrontalCascadeFrontal = null;
 
 function initVideo(ev){
     if (!streaming) {

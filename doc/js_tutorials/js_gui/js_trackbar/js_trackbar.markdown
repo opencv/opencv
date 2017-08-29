@@ -12,14 +12,14 @@ Code Demo
 Here, we will create a simple application that blends two images. We will let the user enter the
 weight by using the trackbar.
 
-First, we need to create three canvas elements: two for input and one for output. Please refer to 
+First, we need to create three canvas elements: two for input and one for output. Please refer to
 the tutorial @ref tutorial_js_image_display.
 @code{.js}
 let src1 = cv.imread("canvasInput1");
 let src2 = cv.imread("canvasInput2");
 @endcode
 
-Then, we use HTML DOM Input Range Object to implement the trackbar, which is shown as below. 
+Then, we use HTML DOM Input Range Object to implement the trackbar, which is shown as below.
 ![](images/Trackbar_Tutorial_Range.png)
 
 @note &lt;input&gt; elements with type="range" are not supported in Internet Explorer 9 and earlier versions.
@@ -35,9 +35,9 @@ You can access an &lt;input&gt; element with type="range" with getElementById():
 let x = document.getElementById("myRange");
 @endcode
 
-As a trackbar, the range element need a trackbar name, the default value, minimum value, maximum value, 
-step and the callback function which is executed everytime trackbar value changes. The callback function 
-always has a default argument, which is the trackbar position. Additionally, a text element to display the 
+As a trackbar, the range element need a trackbar name, the default value, minimum value, maximum value,
+step and the callback function which is executed everytime trackbar value changes. The callback function
+always has a default argument, which is the trackbar position. Additionally, a text element to display the
 trackbar value is fine. In our case, we can create the trackbar as below:
 @code{.html}
 Weight: <input type="range" id="trackbar" value="50" min="0" max="100" step="1" oninput="addWeighted(this.value)">
@@ -62,7 +62,7 @@ function addWeighted(value) {
 Try it
 ------
 
-Try this demo using the code above. Trackbar and input images are ready. Slide the trackbar to see the result. 
+Try this demo using the code above. Trackbar and input images are ready. Slide the trackbar to see the result.
 You can change the callback function and investigate more.
 
 \htmlonly
@@ -94,7 +94,7 @@ dst.delete();
         <canvas id="canvasInput1"></canvas>
         <canvas id="canvasInput2"></canvas>
     </div>
-    Weight: <input type="range" id="trackbar" disabled="true" value="50" min="0" max="100" step="1" 
+    Weight: <input type="range" id="trackbar" disabled="true" value="50" min="0" max="100" step="1"
     oninput="addWeighted(this.value)"><input type="text" id="weightValue" size="3" value="50"><br>
     <canvas id="canvasOutput"></canvas>
 </div>
@@ -105,7 +105,7 @@ let weightValue = document.getElementById('weightValue');
 let trackbar = document.getElementById('trackbar');
 
 function addWeighted(value) {
-    weightValue.value = value;    
+    weightValue.value = value;
     let text = document.getElementById("TestCode").value;
     try {
         eval(text);

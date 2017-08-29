@@ -25,7 +25,7 @@ For RGB \f$\rightarrow\f$ Gray conversion we use the code cv.COLOR_RGBA2GRAY.
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named cvtColorCanvasInput and cvtColorCanvasOutput have been prepared. Choose an image and 
+Try this demo using the code above. Canvas elements named cvtColorCanvasInput and cvtColorCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -92,14 +92,14 @@ Checks if array elements lie between the elements of two other arrays.
 
 We use the function: **cv.inRange (src, lowerb, upperb, dst)**
 @param src     first input image.
-@param lowerb  inclusive lower boundary Mat of the same size as src. 
-@param upperb  inclusive upper boundary Mat of the same size as src. 
+@param lowerb  inclusive lower boundary Mat of the same size as src.
+@param upperb  inclusive upper boundary Mat of the same size as src.
 @param dst     output image of the same size as src and cv.CV_8U type.
 
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named inRangeCanvasInput and inRangeCanvasOutput have been prepared. Choose an image and 
+Try this demo using the code above. Canvas elements named inRangeCanvasInput and inRangeCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
 \htmlonly

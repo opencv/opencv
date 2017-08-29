@@ -30,16 +30,16 @@ resulting output on proper thresholding gives us the ground alone.
 Backprojection in OpenCV
 ------------------------
 
-We use the functions: **cv.calcBackProject (images, channels, hist, dst, ranges, scale)** 
+We use the functions: **cv.calcBackProject (images, channels, hist, dst, ranges, scale)**
 
 @param images       source arrays. They all should have the same depth, cv.CV_8U, cv.CV_16U or cv.CV_32F , and the same size. Each of them can have an arbitrary number of channels.
-@param channels     the list of channels used to compute the back projection. The number of channels must match the histogram dimensionality. 
+@param channels     the list of channels used to compute the back projection. The number of channels must match the histogram dimensionality.
 @param hist         input histogram that can be dense or sparse.
 @param dst          destination back projection array that is a single-channel array of the same size and depth as images[0].
 @param ranges       array of arrays of the histogram bin boundaries in each dimension(see cv.calcHist).
 @param scale        optional scale factor for the output back projection.
 
-**cv.normalize (src, dst, alpha = 1, beta = 0, norm_type = cv.NORM_L2, dtype = -1, mask = new cv.Mat())** 
+**cv.normalize (src, dst, alpha = 1, beta = 0, norm_type = cv.NORM_L2, dtype = -1, mask = new cv.Mat())**
 
 @param src        input array.
 @param dst        output array of the same size as src .
@@ -92,17 +92,17 @@ src.delete(); dst.delete(); srcVec.delete(); dstVec.delete(); backproj.delete();
 </div>
 <div id="calcBackProjectShowcase">
     <div>
-   	    <p>SrcInput</p>
+        <p>SrcInput</p>
         <canvas id="calcBackProjectCanvasSrcInput"></canvas>
         <input type="file" id="calcBackProjectSrcInput" name="file" />
     </div>
     <div>
-    	<p>DstInput</p>
+        <p>DstInput</p>
         <canvas id="calcBackProjectCanvasDstInput"></canvas>
         <input type="file" id="calcBackProjectDstInput" name="file" />
     </div>
     <div>
-    	<p>BackProject</p>
+        <p>BackProject</p>
         <canvas id="calcBackProjectCanvasOutput"></canvas>
     </div>
 </div>

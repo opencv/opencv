@@ -6,7 +6,7 @@ Goals
 
 -   Learn how to apply different geometric transformation to images like translation, rotation, affine
     transformation etc.
--   You will learn these functions: **cv.resize**, **cv.warpAffine**, **cv.getAffineTransform** and **cv.warpPerspective** 
+-   You will learn these functions: **cv.resize**, **cv.warpAffine**, **cv.getAffineTransform** and **cv.warpPerspective**
 
 Transformations
 ---------------
@@ -17,17 +17,17 @@ Transformations
 Scaling is just resizing of the image. OpenCV comes with a function **cv.resize()** for this
 purpose. The size of the image can be specified manually, or you can specify the scaling factor.
 Different interpolation methods are used. Preferable interpolation methods are **cv.INTER_AREA**
-for shrinking and **cv.INTER_CUBIC** (slow) & **cv.INTER_LINEAR** for zooming. 
+for shrinking and **cv.INTER_CUBIC** (slow) & **cv.INTER_LINEAR** for zooming.
 
 We use the function: **cv.resize (src, dst, dsize, fx = 0, fy = 0, interpolation = cv.INTER_LINEAR)**
 @param src    input image
-@param dst    output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src. 
-@param dsize  output image size; if it equals zero, it is computed as:      
+@param dst    output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src.
+@param dsize  output image size; if it equals zero, it is computed as:
                  \f[𝚍𝚜𝚒𝚣𝚎 = 𝚂𝚒𝚣𝚎(𝚛𝚘𝚞𝚗𝚍(𝚏𝚡*𝚜𝚛𝚌.𝚌𝚘𝚕𝚜), 𝚛𝚘𝚞𝚗𝚍(𝚏𝚢*𝚜𝚛𝚌.𝚛𝚘𝚠𝚜))\f]
-                 Either dsize or both fx and fy must be non-zero. 
-@param fx     scale factor along the horizontal axis; when it equals 0, it is computed as  \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚠𝚒𝚍𝚝𝚑/𝚜𝚛𝚌.𝚌𝚘𝚕𝚜\f]        
-                 
-@param fy     scale factor along the vertical axis; when it equals 0, it is computed as \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚑𝚎𝚒𝚐𝚑𝚝/𝚜𝚛𝚌.𝚛𝚘𝚠𝚜\f] 
+                 Either dsize or both fx and fy must be non-zero.
+@param fx     scale factor along the horizontal axis; when it equals 0, it is computed as  \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚠𝚒𝚍𝚝𝚑/𝚜𝚛𝚌.𝚌𝚘𝚕𝚜\f]
+
+@param fy     scale factor along the vertical axis; when it equals 0, it is computed as \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚑𝚎𝚒𝚐𝚑𝚝/𝚜𝚛𝚌.𝚛𝚘𝚠𝚜\f]
 @param interpolation    interpolation method(see **cv.InterpolationFlags**)
 
 Try it
@@ -106,8 +106,8 @@ We use the function: **cv.warpAffine (src, dst, M, dsize, flags = cv.INTER_LINEA
 @param dst          output image that has the size dsize and the same type as src.
 @param Mat          2 × 3 transformation matrix(cv.CV_64FC1 type).
 @param dsize        size of the output image.
-@param flags        combination of interpolation methods(see cv.InterpolationFlags) and the optional flag WARP_INVERSE_MAP that means that M is the inverse transformation ( 𝚍𝚜𝚝→𝚜𝚛𝚌 )        
-@param borderMode   pixel extrapolation method (see cv.BorderTypes); when borderMode = BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.      
+@param flags        combination of interpolation methods(see cv.InterpolationFlags) and the optional flag WARP_INVERSE_MAP that means that M is the inverse transformation ( 𝚍𝚜𝚝→𝚜𝚛𝚌 )
+@param borderMode   pixel extrapolation method (see cv.BorderTypes); when borderMode = BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
 @param borderValue  value used in case of a constant border; by default, it is 0.
 
 rows.
@@ -210,7 +210,7 @@ let center = new cv.Point(src.cols / 2, src.rows / 2);
 let M = cv.getRotationMatrix2D(center, 45, 1);
 cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("rotateWarpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); 
+src.delete(); dst.delete(); M.delete();
 </textarea>
 <p class="err" id="rotateWarpAffineErr"></p>
 </div>
@@ -276,14 +276,14 @@ let dst = new cv.Mat();
 // (data32F[0], data32F[1]) is the first point
 // (data32F[2], data32F[3]) is the sescond point
 // (data32F[4], data32F[5]) is the third point
-let srcTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0, 0, 0, 1, 1, 0]); 
+let srcTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0, 0, 0, 1, 1, 0]);
 let dstTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0.6, 0.2, 0.1, 1.3, 1.5, 0.3]);
 let dsize = new cv.Size(src.rows, src.cols);
 let M = cv.getAffineTransform(srcTri, dstTri);
 // You can try more different parameters
 cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("getAffineTransformCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete(); 
+src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
 </textarea>
 <p class="err" id="getAffineTransformErr"></p>
 </div>
@@ -326,7 +326,7 @@ We use the functions: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER
 @param dst          output image that has the size dsize and the same type as src.
 @param Mat          3 × 3 transformation matrix(cv.CV_64FC1 type).
 @param dsize        size of the output image.
-@param flags        combination of interpolation methods (cv.INTER_LINEAR or cv.INTER_NEAREST) and the optional flag WARP_INVERSE_MAP, that sets M as the inverse transformation (𝚍𝚜𝚝→𝚜𝚛𝚌).    
+@param flags        combination of interpolation methods (cv.INTER_LINEAR or cv.INTER_NEAREST) and the optional flag WARP_INVERSE_MAP, that sets M as the inverse transformation (𝚍𝚜𝚝→𝚜𝚛𝚌).
 @param borderMode   pixel extrapolation method (cv.BORDER_CONSTANT or cv.BORDER_REPLICATE).
 @param borderValue  value used in case of a constant border; by default, it is 0.
 
@@ -357,7 +357,7 @@ let dsize = new cv.Size(src.rows, src.cols);
 // (data32F[2], data32F[3]) is the sescond point
 // (data32F[4], data32F[5]) is the third point
 // (data32F[6], data32F[7]) is the fourth point
-let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [56, 65, 368, 52, 28, 387, 389, 390]); 
+let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [56, 65, 368, 52, 28, 387, 389, 390]);
 let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 300, 0, 0, 300, 300, 300]);
 let M = cv.getPerspectiveTransform(srcTri, dstTri);
 // You can try more different parameters

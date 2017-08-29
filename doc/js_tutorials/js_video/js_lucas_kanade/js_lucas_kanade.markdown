@@ -83,44 +83,44 @@ Lucas-Kanade there, we get optical flow along with the scale.
 Lucas-Kanade Optical Flow in OpenCV.js
 -----------------------------------
 
-We use the function: **cv.calcOpticalFlowPyrLK (prevImg, nextImg, prevPts, nextPts, status, err, winSize = 
+We use the function: **cv.calcOpticalFlowPyrLK (prevImg, nextImg, prevPts, nextPts, status, err, winSize =
 new cv.Size(21, 21), maxLevel = 3, criteria = new cv.TermCriteria(cv.TermCriteria_COUNT+
 cv.TermCriteria_EPS, 30, 0.01), flags = 0, minEigThreshold = 1e-4)**.
 @param prevImg          first 8-bit input image or pyramid constructed by buildOpticalFlowPyramid.
 @param nextImg          second input image or pyramid of the same size and the same type as prevImg.
-@param prevPts          vector of 2D points for which the flow needs to be found; point coordinates must 
+@param prevPts          vector of 2D points for which the flow needs to be found; point coordinates must
 be single-precision floating-point numbers.
-@param nextPts          output vector of 2D points (with single-precision floating-point coordinates) 
+@param nextPts          output vector of 2D points (with single-precision floating-point coordinates)
 containing the calculated new positions of input features in the second image; when cv.OPTFLOW_USE_
 INITIAL_FLOW flag is passed, the vector must have the same size as in the input.
-@param status           output status vector (of unsigned chars); each element of the vector is set to 1 
+@param status           output status vector (of unsigned chars); each element of the vector is set to 1
 if the flow for the corresponding features has been found, otherwise, it is set to 0.
-@param err              output vector of errors; each element of the vector is set to an error for the 
-corresponding feature, type of the error measure can be set in flags parameter; if the flow wasn't 
+@param err              output vector of errors; each element of the vector is set to an error for the
+corresponding feature, type of the error measure can be set in flags parameter; if the flow wasn't
 found then the error is not defined (use the status parameter to find such cases).
 @param winSize          size of the search window at each pyramid level.
-@param maxLevel         0-based maximal pyramid level number; if set to 0, pyramids are not used (single 
-level), if set to 1, two levels are used, and so on; if pyramids are passed to input then algorithm 
+@param maxLevel         0-based maximal pyramid level number; if set to 0, pyramids are not used (single
+level), if set to 1, two levels are used, and so on; if pyramids are passed to input then algorithm
 will use as many levels as pyramids have but no more than maxLevel.
-@param criteria         parameter, specifying the termination criteria of the iterative search algorithm 
-(after the specified maximum number of iterations criteria.maxCount or when the search window moves 
+@param criteria         parameter, specifying the termination criteria of the iterative search algorithm
+(after the specified maximum number of iterations criteria.maxCount or when the search window moves
 by less than criteria.epsilon.
-@param flags            operation flags: 
-- cv.OPTFLOW_USE_INITIAL_FLOW uses initial estimations, stored in nextPts; if the flag is not set, 
+@param flags            operation flags:
+- cv.OPTFLOW_USE_INITIAL_FLOW uses initial estimations, stored in nextPts; if the flag is not set,
 then prevPts is copied to nextPts and is considered the initial estimate.
-- cv.OPTFLOW_LK_GET_MIN_EIGENVALS use minimum eigen values as an error measure (see minEigThreshold 
-description); if the flag is not set, then L1 distance between patches around the original and a moved 
+- cv.OPTFLOW_LK_GET_MIN_EIGENVALS use minimum eigen values as an error measure (see minEigThreshold
+description); if the flag is not set, then L1 distance between patches around the original and a moved
 point, divided by number of pixels in a window, is used as a error measure.
-@param minEigThreshold  the algorithm calculates the minimum eigen value of a 2x2 normal matrix of 
-optical flow equations, divided by number of pixels in a window; if this value is less than 
-minEigThreshold, then a corresponding feature is filtered out and its flow is not processed, so it 
+@param minEigThreshold  the algorithm calculates the minimum eigen value of a 2x2 normal matrix of
+optical flow equations, divided by number of pixels in a window; if this value is less than
+minEigThreshold, then a corresponding feature is filtered out and its flow is not processed, so it
 allows to remove bad points and get a performance boost.
 
 ### Try it
 
 Here, we create a simple application which tracks some points in a video. To decide the points, we use
 **cv.goodFeaturesToTrack()**. We take the first frame, detect some Shi-Tomasi corner points in it,
-then we iteratively track those points using cv.calcOpticalFlowPyrLK. Some core code is in the textbox, 
+then we iteratively track those points using cv.calcOpticalFlowPyrLK. Some core code is in the textbox,
 and you can click `try it` to investigate more.
 
 \htmlonly
@@ -211,10 +211,10 @@ lkofLoopIndex = setInterval(
             p0.data32F[i*2] = goodNew[i].x;
             p0.data32F[i*2+1] = goodNew[i].y;
         }
-    }, 33); 
+    }, 33);
 </textarea>
 <p class="err" id="lkofErr"></p>
-</div> 
+</div>
 <div id="contentarea">
     <button id="lkofStartup" disabled="true" onclick="lkofStartup()">try it</button>
     <button id="lkofStop" disabled="true" onclick="lkofStopVideo()">stop</button><br>
@@ -261,7 +261,7 @@ function lkofStartup() {
         document.getElementById("lkofErr").innerHTML = " ";
     } catch(err) {
         document.getElementById("lkofErr").innerHTML = err;
-    }   
+    }
     document.getElementById("lkofStartup").disabled = true;
 }
 
@@ -321,37 +321,37 @@ computes the optical flow for all the points in the frame. It is based on Gunner
 algorithm which is explained in "Two-Frame Motion Estimation Based on Polynomial Expansion" by
 Gunner Farneback in 2003.
 
-We use the function: **cv.calcOpticalFlowFarneback (prev, next, flow, pyrScale, levels, winsize, 
+We use the function: **cv.calcOpticalFlowFarneback (prev, next, flow, pyrScale, levels, winsize,
 iterations, polyN, polySigma, flags)**
 @param prev        first 8-bit single-channel input image.
 @param next        second input image of the same size and the same type as prev.
 @param flow        computed flow image that has the same size as prev and type CV_32FC2.
-@param pyrScale    parameter, specifying the image scale (<1) to build pyramids for each image; 
+@param pyrScale    parameter, specifying the image scale (<1) to build pyramids for each image;
 pyrScale=0.5 means a classical pyramid, where each next layer is twice smaller than the previous one.
-@param levels      number of pyramid layers including the initial image; levels=1 means that no extra 
+@param levels      number of pyramid layers including the initial image; levels=1 means that no extra
 layers are created and only the original images are used.
-@param winsize     averaging window size; larger values increase the algorithm robustness to image noise 
+@param winsize     averaging window size; larger values increase the algorithm robustness to image noise
 and give more chances for fast motion detection, but yield more blurred motion field.
 @param iterations  number of iterations the algorithm does at each pyramid level.
-@param polyN       size of the pixel neighborhood used to find polynomial expansion in each pixel; larger 
-values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm 
+@param polyN       size of the pixel neighborhood used to find polynomial expansion in each pixel; larger
+values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm
 and more blurred motion field, typically polyN =5 or 7.
-@param polySigma   standard deviation of the Gaussian that is used to smooth derivatives used as a 
-basis for the polynomial expansion; for polyN=5, you can set polySigma=1.1, for polyN=7, a good 
+@param polySigma   standard deviation of the Gaussian that is used to smooth derivatives used as a
+basis for the polynomial expansion; for polyN=5, you can set polySigma=1.1, for polyN=7, a good
 value would be polySigma=1.5.
-@param flags       operation flags that can be a combination of the following: 
+@param flags       operation flags that can be a combination of the following:
 - cv.OPTFLOW_USE_INITIAL_FLOW uses the input flow as an initial flow approximation.
-- cv.OPTFLOW_FARNEBACK_GAUSSIAN uses the Gaussian 𝚠𝚒𝚗𝚜𝚒𝚣𝚎×𝚠𝚒𝚗𝚜𝚒𝚣𝚎 filter instead of a box filter of 
-the same size for optical flow estimation; usually, this option gives z more accurate flow than with 
-a box filter, at the cost of lower speed; normally, winsize for a Gaussian window should be set to a 
+- cv.OPTFLOW_FARNEBACK_GAUSSIAN uses the Gaussian 𝚠𝚒𝚗𝚜𝚒𝚣𝚎×𝚠𝚒𝚗𝚜𝚒𝚣𝚎 filter instead of a box filter of
+the same size for optical flow estimation; usually, this option gives z more accurate flow than with
+a box filter, at the cost of lower speed; normally, winsize for a Gaussian window should be set to a
 larger value to achieve the same level of robustness.
 
 ### Try it
 
-Below sample shows how to find the dense optical flow using cv.calcOpticalFlowFarneback(). We get a 
-2-channel array with optical flow vectors, \f$(u,v)\f$. We find their magnitude and direction. We 
-color code the result for better visualization. Direction corresponds to Hue value of the image. 
-Magnitude corresponds to Value plane. Some core code is in the textbox, and you can click `try it` to 
+Below sample shows how to find the dense optical flow using cv.calcOpticalFlowFarneback(). We get a
+2-channel array with optical flow vectors, \f$(u,v)\f$. We find their magnitude and direction. We
+color code the result for better visualization. Direction corresponds to Hue value of the image.
+Magnitude corresponds to Value plane. Some core code is in the textbox, and you can click `try it` to
 investigate more.
 
 \htmlonly
@@ -416,7 +416,7 @@ dofLoopIndex = setInterval(
         cv.cvtColor(hsv, rgb, cv.COLOR_HSV2RGB);
         cv.imshow("dofCanvasOutput", rgb);
         next.copyTo(prvs);
-    }, 33);    
+    }, 33);
 </textarea>
 <p class="err" id="dofErr"></p>
 </div>

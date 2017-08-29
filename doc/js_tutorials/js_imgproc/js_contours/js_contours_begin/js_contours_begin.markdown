@@ -27,17 +27,17 @@ How to draw the contours?
 To draw the contours, cv.drawContours function is used. It can also be used to draw any shape
 provided you have its boundary points.
 
-We use the functions: **cv.findContours (image, contours, hierarchy, mode, method, offset = new cv.Point(0, 0))** 
-@param image         source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as binary. 
-@param contours      detected contours. 
-@param hierarchy     containing information about the image topology. It has as many elements as the number of contours. 
+We use the functions: **cv.findContours (image, contours, hierarchy, mode, method, offset = new cv.Point(0, 0))**
+@param image         source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as binary.
+@param contours      detected contours.
+@param hierarchy     containing information about the image topology. It has as many elements as the number of contours.
 @param mode          contour retrieval mode(see cv.RetrievalModes).
 @param method        contour approximation method(see cv.ContourApproximationModes).
 @param offset        optional offset by which every contour point is shifted. This is useful if the contours are extracted from the image ROI and then they should be analyzed in the whole image context.
 
-**cv.drawContours (image, contours, contourIdx, color, thickness = 1, lineType = cv.LINE_8, hierarchy = new cv.Mat(), maxLevel = INT_MAX, offset = new cv.Point(0, 0))** 
+**cv.drawContours (image, contours, contourIdx, color, thickness = 1, lineType = cv.LINE_8, hierarchy = new cv.Mat(), maxLevel = INT_MAX, offset = new cv.Point(0, 0))**
 @param image         destination image.
-@param contours      all the input contours. 
+@param contours      all the input contours.
 @param contourIdx    parameter indicating a contour to draw. If it is negative, all the contours are drawn.
 @param color         color of the contours.
 @param thickness     thickness of lines the contours are drawn with. If it is negative, the contour interiors are drawn.
@@ -45,7 +45,7 @@ We use the functions: **cv.findContours (image, contours, hierarchy, mode, metho
 @param hierarchy     optional information about hierarchy. It is only needed if you want to draw only some of the contours(see maxLevel).
 
 @param maxLevel      maximal level for drawn contours. If it is 0, only the specified contour is drawn. If it is 1, the function draws the contour(s) and all the nested contours. If it is 2, the function draws the contours, all the nested contours, all the nested-to-nested contours, and so on. This parameter is only taken into account when there is hierarchy available.
-@param offset        optional contour shift parameter. 
+@param offset        optional contour shift parameter.
 
 Try it
 ------
@@ -84,7 +84,7 @@ for (let i = 0; i < contours.size(); ++i) {
     cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
 }
 cv.imshow("contoursCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); 
+src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
 </textarea>
 <p class="err" id="contoursErr"></p>
 </div>

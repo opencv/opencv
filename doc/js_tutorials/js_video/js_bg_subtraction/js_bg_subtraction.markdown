@@ -34,22 +34,22 @@ in 2006. One important feature of this algorithm is that it selects the appropri
 gaussian distribution for each pixel. It provides better adaptibility to varying scenes due illumination
 changes etc.
 
-While coding, we use the constructor: **cv.BackgroundSubtractorMOG2 (history = 500, varThreshold = 16, 
+While coding, we use the constructor: **cv.BackgroundSubtractorMOG2 (history = 500, varThreshold = 16,
 detectShadows = true)**
 @param history         Length of the history.
-@param varThreshold    Threshold on the squared distance between the pixel and the sample to decide 
+@param varThreshold    Threshold on the squared distance between the pixel and the sample to decide
 whether a pixel is close to that sample. This parameter does not affect the background update.
-@param detectShadows   If true, the algorithm will detect shadows and mark them. It decreases the 
+@param detectShadows   If true, the algorithm will detect shadows and mark them. It decreases the
 speed a bit, so if you do not need this feature, set the parameter to false.
 @return                instance of cv.BackgroundSubtractorMOG2
 
 Use **apply (image, fgmask, learningRate = -1)** method to get the foreground mask
-@param image         Next video frame. Floating point frame will be used without scaling and should 
+@param image         Next video frame. Floating point frame will be used without scaling and should
 be in range [0,255].
 @param fgmask        The output foreground mask as an 8-bit binary image.
-@param learningRate  The value between 0 and 1 that indicates how fast the background model is learnt. 
-Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means 
-that the background model is not updated at all, 1 means that the background model is completely 
+@param learningRate  The value between 0 and 1 that indicates how fast the background model is learnt.
+Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means
+that the background model is not updated at all, 1 means that the background model is completely
 reinitialized from the last frame.
 
 @note The instance of cv.BackgroundSubtractorMOG2 should be deleted manually.
@@ -57,7 +57,7 @@ reinitialized from the last frame.
 Try it
 ------
 
-Try this demo for cv.BackgroundSubtractorMOG2. Some core code is in the textbox, and you can click 
+Try this demo for cv.BackgroundSubtractorMOG2. Some core code is in the textbox, and you can click
 `try it` to investigate more.
 
 \htmlonly
@@ -95,10 +95,10 @@ bgsLoopIndex = setInterval(
         cap.read(frame);
         fgbg.apply(frame, fgmask);
         cv.imshow("bgsCanvasOutput", fgmask);
-    }, 33);  
+    }, 33);
 </textarea>
 <p class="err" id="bgsErr"></p>
-</div> 
+</div>
 <div id="contentarea">
     <button id="bgsStartup" disabled="true" onclick="bgsStartup()">try it</button>
     <button id="bgsStop" disabled="true" onclick="bgsStopVideo()">stop</button><br>

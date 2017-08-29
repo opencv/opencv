@@ -94,7 +94,7 @@ canvas {
 let src = cv.imread("imgCanvasInput");
 let dst = new cv.Mat(), gray = new cv.Mat();
 
-// gray and threshold image 
+// gray and threshold image
 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
 
@@ -184,12 +184,12 @@ Watershed algorithm should find it. These areas are normally around the boundari
 foreground and background meet (Or even two different coins meet). We call it border. It can be
 obtained from subtracting sure_fg area from sure_bg area.
 
-We use the function: **cv.distanceTransform (src, dst, distanceType, maskSize, labelType = cv.CV_32F)** 
+We use the function: **cv.distanceTransform (src, dst, distanceType, maskSize, labelType = cv.CV_32F)**
 
 @param src           8-bit, single-channel (binary) source image.
 @param dst           output image with calculated distances. It is a 8-bit or 32-bit floating-point, single-channel image of the same size as src.
 @param distanceType  type of distance(see cv.DistanceTypes).
-@param maskSize      size of the distance transform mask, see (cv.DistanceTransformMasks). 
+@param maskSize      size of the distance transform mask, see (cv.DistanceTransformMasks).
 @param labelType     type of output image. It can be cv.CV_8U or cv.CV_32F. Type cv.CV_8U can be used only for the first variant of the function and distanceType == DIST_L1.
 
 \htmlonly
@@ -332,8 +332,8 @@ click `Try it` to see the result. You can change the code in the textbox to inve
 <button id="watershedTryIt" disabled="true" onclick="watershedExecuteCode()">Try it</button><br>
 <textarea rows="25" cols="90" id="watershedTestCode" spellcheck="false">
 let src = cv.imread("watershedCanvasInput");
-let dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat(), coinsFg = new cv.Mat(), distTrans = new cv.Mat(), unknown = new cv.Mat(), markers = new cv.Mat(); 
-// gray and threshold image 
+let dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat(), coinsFg = new cv.Mat(), distTrans = new cv.Mat(), unknown = new cv.Mat(), markers = new cv.Mat();
+// gray and threshold image
 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
 // get background

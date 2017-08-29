@@ -62,9 +62,9 @@ Hough Transform in OpenCV
 
 Everything explained above is encapsulated in the OpenCV function, **cv.HoughLines()**. It simply returns an array of (\f$(\rho, \theta)\f$ values. \f$\rho\f$ is measured in pixels and \f$\theta\f$ is measured in radians. First parameter,
 Input image should be a binary image, so apply threshold or use canny edge detection before
-applying hough transform. 
+applying hough transform.
 
-We use the function: **cv.HoughLines (image, lines, rho, theta, threshold, srn = 0, stn = 0, min_theta = 0, max_theta = Math.PI)** 
+We use the function: **cv.HoughLines (image, lines, rho, theta, threshold, srn = 0, stn = 0, min_theta = 0, max_theta = Math.PI)**
 @param image       8-bit, single-channel binary source image. The image may be modified by the function.
 @param lines       output vector of lines(cv.32FC2 type). Each line is represented by a two-element vector (ρ,θ) . ρ is the distance from the coordinate origin (0,0). θ is the line rotation angle in radians.
 @param rho    	   distance resolution of the accumulator in pixels.
@@ -115,7 +115,7 @@ for (let i = 0; i < lines.rows; ++i) {
     cv.line(dst, startPoint, endPoint, [255, 0, 0, 255]);
 }
 cv.imshow("HoughLinesCanvasOutput", dst);
-src.delete(); dst.delete(); lines.delete(); 
+src.delete(); dst.delete(); lines.delete();
 </textarea>
 <p class="err" id="HoughLinesErr"></p>
 </div>
@@ -165,7 +165,7 @@ Hough Transform and Probabilistic Hough Transform in Hough space. (Image Courtes
 OpenCV implementation is based on Robust Detection of Lines Using the Progressive Probabilistic
 Hough Transform by Matas, J. and Galambos, C. and Kittler, J.V. @cite Matas00.
 
-We use the function: **cv.HoughLinesP (image, lines, rho, theta, threshold, minLineLength = 0, maxLineGap = 0)** 
+We use the function: **cv.HoughLinesP (image, lines, rho, theta, threshold, minLineLength = 0, maxLineGap = 0)**
 
 @param image          8-bit, single-channel binary source image. The image may be modified by the function.
 @param lines          output vector of lines(cv.32SC4 type). Each line is represented by a 4-element vector (x1,y1,x2,y2) ,where (x1,y1) and (x2,y2) are the ending points of each detected line segment.

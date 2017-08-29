@@ -9,9 +9,9 @@ Goals
 Read an image
 -------------
 
-OpenCV.js saves images as cv.Mat type. We use HTML canvas element to transfer cv.Mat to the web  
-or in reverse. The ImageData interface can represent or set the underlying pixel data of an area of a 
-canvas element. 
+OpenCV.js saves images as cv.Mat type. We use HTML canvas element to transfer cv.Mat to the web
+or in reverse. The ImageData interface can represent or set the underlying pixel data of an area of a
+canvas element.
 
 @sa Please refer to canvas docs for more details.
 
@@ -27,8 +27,8 @@ Then, use cv.matFromImageData to construct a cv.Mat:
 let src = cv.matFromImageData(imgData);
 @endcode
 
-@note Because canvas only support 8-bit RGBA image with continuous storage, the cv.Mat type is cv.CV_8UC4. 
-It is different from native OpenCV because images returned and shown by the native **imread** and 
+@note Because canvas only support 8-bit RGBA image with continuous storage, the cv.Mat type is cv.CV_8UC4.
+It is different from native OpenCV because images returned and shown by the native **imread** and
 **imshow** have the channels stored in BGR order.
 
 Display an image
@@ -38,9 +38,9 @@ First, convert the type of src to cv.CV_8UC4:
 @code{.js}
 let dst = new cv.Mat();
 // scale and shift are used to map the data to [0, 255].
-src.convertTo(dst, cv.CV_8U, scale, shift); 
+src.convertTo(dst, cv.CV_8U, scale, shift);
 // *** is GRAY, RGB, or RGBA, according to src.channels() is 1, 3 or 4.
-cv.cvtColor(dst, dst, cv.COLOR_***2RGBA); 
+cv.cvtColor(dst, dst, cv.COLOR_***2RGBA);
 @endcode
 
 Then, new an ImageData obj from dst:
@@ -67,12 +67,12 @@ We use **cv.imread (imageSource)** to read an image from html canvas or img elem
 @param imageSource   canvas element or id, or img element or id.
 @return              mat with channels stored in RGBA order.
 
-We use **cv.imshow (canvasSource, mat)** to display it. The function may scale the mat, 
+We use **cv.imshow (canvasSource, mat)** to display it. The function may scale the mat,
 depending on its depth:
 - If the mat is 8-bit unsigned, it is displayed as is.
-- If the mat is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That 
+- If the mat is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That
 is, the value range [0,255*256] is mapped to [0,255].
-- If the mat is 32-bit floating-point, the pixel values are multiplied by 255. That is, 
+- If the mat is 32-bit floating-point, the pixel values are multiplied by 255. That is,
 the value range [0,1] is mapped to [0,255].
 
 @param canvasSource  canvas element or id.
@@ -88,8 +88,8 @@ img.delete();
 Try it
 ------
 
-Try this demo using the code above. Canvas "canvasInput" and canvas "canvasOutput" have been prepared. 
-Choose an image and click `Try it` to see the result. You can change the code in the textbox to 
+Try this demo using the code above. Canvas "canvasInput" and canvas "canvasOutput" have been prepared.
+Choose an image and click `Try it` to see the result. You can change the code in the textbox to
 investigate more.
 
 \htmlonly

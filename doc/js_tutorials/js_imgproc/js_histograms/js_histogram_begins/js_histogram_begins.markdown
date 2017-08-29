@@ -31,9 +31,9 @@ brighter region, and amount of midtones (pixel values in mid-range, say around 1
 Find Histogram
 --------------
 
-We use the function: **cv.calcHist (image, channels, mask, hist, histSize, ranges, accumulate = false)** 
+We use the function: **cv.calcHist (image, channels, mask, hist, histSize, ranges, accumulate = false)**
 
-@param image        source arrays. They all should have the same depth, cv.CV_8U, cv.CV_16U or cv.CV_32F , and the same size. Each of them can have an arbitrary number of channels. 
+@param image        source arrays. They all should have the same depth, cv.CV_8U, cv.CV_16U or cv.CV_32F , and the same size. Each of them can have an arbitrary number of channels.
 @param channels     list of the dims channels used to compute the histogram.
 @param mask         optional mask. If the matrix is not empty, it must be an 8-bit array of the same size as images[i] . The non-zero mask elements mark the array elements counted in the histogram.
 @param hist        	output histogram(cv.CV_32F type), which is a dense or sparse dims -dimensional array.

@@ -39,7 +39,7 @@ backproject the target on each frame for calculation of meanshift. We also need 
 location of window. For histogram, only Hue is considered here. Also, to avoid false values due to
 low light, low light values are discarded using **cv.inRange()** function.
 
-We use the function: **cv.meanShift (probImage, window, criteria)**      
+We use the function: **cv.meanShift (probImage, window, criteria)**
 @param probImage     Back projection of the object histogram. See cv.calcBackProject for details.
 @param window        Initial search window.
 @param criteria      Stop criteria for the iterative search algorithm.
@@ -47,7 +47,7 @@ We use the function: **cv.meanShift (probImage, window, criteria)**
 
 ### Try it
 
-Try this demo for cv.meanShift. Some core code is in the textbox, and you can click `try it` to 
+Try this demo for cv.meanShift. Some core code is in the textbox, and you can click `try it` to
 investigate more.
 
 \htmlonly
@@ -107,14 +107,14 @@ msLoopIndex = setInterval(
         if(msVideo.ended) {
             msStopVideo();
             return;
-        }       
+        }
         cap.read(msFrame);
         cv.cvtColor(msFrame, msHsv, cv.COLOR_RGBA2RGB);
         cv.cvtColor(msHsv, msHsv, cv.COLOR_RGB2HSV);
         cv.calcBackProject(msHsvVec, [0], msRoiHist, msDst, [0,180], 1);
 
         // Apply meanshift to get the new location
-        // and it also returns number of iterations meanShift took to converge, 
+        // and it also returns number of iterations meanShift took to converge,
         // which is useless in this demo.
         [ , trackWindow] = cv.meanShift(msDst, trackWindow, termCrit);
 
@@ -125,7 +125,7 @@ msLoopIndex = setInterval(
     }, 33);
 </textarea>
 <p class="err" id="msErr"></p>
-</div> 
+</div>
 <div id="contentarea">
     <button id="msStartup" disabled="true" onclick="msStartup()">try it</button>
     <button id="msStop" disabled="true" onclick="msStopVideo()">stop</button><br>
@@ -221,9 +221,9 @@ The process is continued until required accuracy is met.
 ### Camshift in OpenCV.js
 
 It is almost same as meanshift, but it returns a rotated rectangle (that is our result) and box
-parameters (used to be passed as search window in next iteration). 
+parameters (used to be passed as search window in next iteration).
 
-We use the function: **cv.CamShift (probImage, window, criteria)**      
+We use the function: **cv.CamShift (probImage, window, criteria)**
 @param probImage     Back projection of the object histogram. See cv.calcBackProject for details.
 @param window        Initial search window.
 @param criteria      Stop criteria for the iterative search algorithm.
@@ -231,7 +231,7 @@ We use the function: **cv.CamShift (probImage, window, criteria)**
 
 ### Try it
 
-Try this demo for cv.CamShift. Some core code is in the textbox, and you can click `try it` to 
+Try this demo for cv.CamShift. Some core code is in the textbox, and you can click `try it` to
 investigate more.
 
 \htmlonly
@@ -308,7 +308,7 @@ csLoopIndex = setInterval(
         cv.line(csFrame, pts[2], pts[3], [255, 0, 0, 255], 3);
         cv.line(csFrame, pts[3], pts[0], [255, 0, 0, 255], 3);
         cv.imshow("csCanvasOutput", csFrame);
-    }, 33);  
+    }, 33);
 </textarea>
 <p class="err" id="csErr"></p>
 </div>

@@ -9,8 +9,8 @@ Goal
 Capture video from camera
 -------------------------
 
-Often, we have to capture live stream with a camera. In OpenCV.js, we use [WebRTC](https://webrtc.org/) 
-and HTML canvas element to implement this. Let's capture a video from the camera(built-in 
+Often, we have to capture live stream with a camera. In OpenCV.js, we use [WebRTC](https://webrtc.org/)
+and HTML canvas element to implement this. Let's capture a video from the camera(built-in
 or a usb), convert it into grayscale video and display it.
 
 To capture a video, you need to add some HTML elements to the web page:
@@ -31,15 +31,15 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
 });
 @endcode
 
-@note This function is unnecessary when you capture video from a video file. But notice that 
+@note This function is unnecessary when you capture video from a video file. But notice that
 HTML video element only supports video formats of Ogg(Theora), WebM(VP8/VP9) or MP4(H.264).
 
 Playing video
 -------------
-Now, the browser gets the camera stream. Then, we use CanvasRenderingContext2D.drawImage() method 
+Now, the browser gets the camera stream. Then, we use CanvasRenderingContext2D.drawImage() method
 of the Canvas 2D API to draw video onto the canvas. Finally, we can use the method in @ref tutorial_js_image_display
- to read and display image in canvas. For playing video, cv.imshow() should be executed every delay 
-milliseconds. We recommend setInterval() method. And if the video is 30fps, the delay milliseconds 
+ to read and display image in canvas. For playing video, cv.imshow() should be executed every delay
+milliseconds. We recommend setInterval() method. And if the video is 30fps, the delay milliseconds
 should be 33.
 @code{.js}
 let canvasFrame = document.getElementById("canvasFrame"); // canvasFrame is the id of <canvas>
@@ -55,13 +55,13 @@ let loopIndex = setInterval(
     }, 33);
 @endcode
 
-OpenCV.js implements **cv.VideoCapture (videoSource)** using the above method. You need not to 
+OpenCV.js implements **cv.VideoCapture (videoSource)** using the above method. You need not to
 add the hidden canvas element manually.
 @param videoSource   the video id or element.
 @return              cv.VideoCapture instance
 
-We use **read (image)** to get one frame of the video. For performance reasons, the image should be 
-constructed with cv.CV_8UC4 type and same size as the video. 
+We use **read (image)** to get one frame of the video. For performance reasons, the image should be
+constructed with cv.CV_8UC4 type and same size as the video.
 @param image         image with cv.CV_8UC4 type and same size as the video.
 
 The above code of playing video could be simplified as below.
@@ -82,9 +82,9 @@ let loopIndex = setInterval(
 Try it
 ------
 
-Try this demo using the code above. Click `start` to start your camera and play it. The left video is from 
-your camera directly, and the right one is from OpenCV.js. Click `processing` to gray the video. 
-Here, we set the video width as 320, and the height will be computed based on the input stream. Some core 
+Try this demo using the code above. Click `start` to start your camera and play it. The left video is from
+your camera directly, and the right one is from OpenCV.js. Click `processing` to gray the video.
+Here, we set the video width as 320, and the height will be computed based on the input stream. Some core
 code is in the textbox, and you can change it to investigate more.
 
 \htmlonly

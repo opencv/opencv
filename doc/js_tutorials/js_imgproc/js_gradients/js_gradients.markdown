@@ -21,7 +21,7 @@ resistant to noise. You can specify the direction of derivatives to be taken, ve
 argument ksize. If ksize = -1, a 3x3 Scharr filter is used which gives better results than 3x3 Sobel
 filter. Please see the docs for kernels used.
 
-We use the functions: **cv.Sobel (src, dst, ddepth, dx, dy, ksize = 3, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)** 
+We use the functions: **cv.Sobel (src, dst, ddepth, dx, dy, ksize = 3, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      output image depth(see cv.combinations); in the case of 8-bit input images it will result in truncated derivatives.
@@ -32,7 +32,7 @@ We use the functions: **cv.Sobel (src, dst, ddepth, dx, dy, ksize = 3, scale = 1
 @param delta       optional delta value that is added to the results prior to storing them in dst.
 @param borderType  pixel extrapolation method(see cv.BorderTypes).
 
-**cv.Scharr (src, dst, ddepth, dx, dy, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)** 
+**cv.Scharr (src, dst, ddepth, dx, dy, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      output image depth(see cv.combinations).
@@ -75,7 +75,7 @@ cv.Sobel(src, dsty, cv.CV_8U, 0, 1, 3, 1, 0, cv.BORDER_DEFAULT);
 // cv.Scharr(src, dstx, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
 // cv.Scharr(src, dsty, cv.CV_8U, 0, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("SobelCanvasOutputX", dstx);
-cv.imshow("SobelCanvasOutputY", dsty); 
+cv.imshow("SobelCanvasOutputY", dsty);
 src.delete(); dstx.delete(); dsty.delete();
 </textarea>
 <p class="err" id="SobelErr"></p>
@@ -85,7 +85,7 @@ src.delete(); dstx.delete(); dsty.delete();
         <p>Original</p>
         <canvas id="SobelCanvasInput"></canvas>
         <input type="file" id="SobelInput" name="file" />
-    </div>       
+    </div>
     <div>
         <p>Sobel X</p>
         <canvas id="SobelCanvasOutputX"></canvas>
@@ -128,7 +128,7 @@ filtering:
 
 \f[kernel = \begin{bmatrix} 0 & 1 & 0 \\ 1 & -4 & 1 \\ 0 & 1 & 0  \end{bmatrix}\f]
 
-We use the function: **cv.Laplacian (src, dst, ddepth, ksize = 1, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)** 
+We use the function: **cv.Laplacian (src, dst, ddepth, ksize = 1, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      output image depth.
@@ -209,7 +209,7 @@ Try it
 Try this demo using the code above. Canvas elements named absSobelCanvasInput, absSobelCanvasOutput8U and absSobelCanvasOutput64F have been prepared. Choose an image and
 click `Try it` to see the result. You can change the code in the textbox to investigate more.
 
-We use the function: **cv.convertScaleAbs (src, dst, alpha = 1, beta = 0)** 
+We use the function: **cv.convertScaleAbs (src, dst, alpha = 1, beta = 0)**
 @param src     input array.
 @param dst     output array.
 @param alpha   optional scale factor.
@@ -233,7 +233,7 @@ cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.convertScaleAbs(absDstx, absDstx, 1, 0);
 cv.imshow("absSobelCanvasOutput8U", dstx);
-cv.imshow("absSobelCanvasOutput64F", absDstx); 
+cv.imshow("absSobelCanvasOutput64F", absDstx);
 src.delete(); dstx.delete(); absDstx.delete();
 </textarea>
 <p class="err" id="absSobelErr"></p>
@@ -243,7 +243,7 @@ src.delete(); dstx.delete(); absDstx.delete();
         <p>Original</p>
         <canvas id="absSobelCanvasInput"></canvas>
         <input type="file" id="absSobelInput" name="file" />
-    </div>       
+    </div>
     <div>
         <p>Sobel X(cv.CV_8U)</p>
         <canvas id="absSobelCanvasOutput8U"></canvas>

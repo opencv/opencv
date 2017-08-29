@@ -31,12 +31,12 @@ Similarly while expanding, area becomes 4 times in each level. We can find Gauss
 Laplacian Pyramids are formed from the Gaussian Pyramids. There is no exclusive function for that.
 Laplacian pyramid images are like edge images only. Most of its elements are zeros. They are used in
 image compression. A level in Laplacian Pyramid is formed by the difference between that level in
-Gaussian Pyramid and expanded version of its upper level in Gaussian Pyramid. 
+Gaussian Pyramid and expanded version of its upper level in Gaussian Pyramid.
 
 Downsample
 ------
 
-We use the function: **cv.pyrDown (src, dst, dstsize = new cv.Size(0, 0), borderType  = cv.BORDER_DEFAULT)** 
+We use the function: **cv.pyrDown (src, dst, dstsize = new cv.Size(0, 0), borderType  = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image; it has the specified size and the same type as src.
 @param dstsize     size of the output image.
@@ -108,7 +108,7 @@ function pyrDownHandleFiles(e) {
 Upsample
 ------
 
-We use the function: **cv.pyrUp (src, dst, dstsize = new cv.Size(0, 0), borderType  = cv.BORDER_DEFAULT)** 
+We use the function: **cv.pyrUp (src, dst, dstsize = new cv.Size(0, 0), borderType  = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image; it has the specified size and the same type as src.
 @param dstsize     size of the output image.

@@ -2,7 +2,7 @@
   "name": "opencv_js_tests",
   "description": "Tests for opencv js bindings",
   "version": "1.0.0",
-  "dependencies" : { 
+  "dependencies" : {
     "qunit" : "latest"
   },
   "devDependencies": {
@@ -24,4 +24,3 @@
   },
   "homepage": "https://github.com/opencv/opencv"
 }
-

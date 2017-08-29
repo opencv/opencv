@@ -27,7 +27,7 @@ and height of the rectangle. That rectangle is your region of template.
 Template Matching in OpenCV
 ---------------------------
 
-We use the function: **cv.matchTemplate (image, templ, result, method, mask = new cv.Mat())** 
+We use the function: **cv.matchTemplate (image, templ, result, method, mask = new cv.Mat())**
 
 @param image      image where the search is running. It must be 8-bit or 32-bit floating-point.
 @param templ      searched template. It must be not greater than the source image and have the same data type.

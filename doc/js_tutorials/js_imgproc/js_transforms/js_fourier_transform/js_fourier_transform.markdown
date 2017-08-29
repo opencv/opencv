@@ -32,7 +32,7 @@ much changes in amplitude, it is a low frequency component.
 Performance of DFT calculation is better for some array size. It is fastest when array size is power
 of two. The arrays whose size is a product of 2’s, 3’s, and 5’s are also processed quite
 efficiently. So if you are worried about the performance of your code, you can modify the size of
-the array to any optimal size (by padding zeros) before finding DFT. OpenCV provides a function, **cv.getOptimalDFTSize()** for this. 
+the array to any optimal size (by padding zeros) before finding DFT. OpenCV provides a function, **cv.getOptimalDFTSize()** for this.
 
 Now we will see how to find the Fourier Transform.
 
@@ -41,7 +41,7 @@ Fourier Transform in OpenCV
 
 Performance of DFT calculation is better for some array size. It is fastest when array size is power of two. The arrays whose size is a product of 2’s, 3’s, and 5’s are also processed quite efficiently. So if you are worried about the performance of your code, you can modify the size of the array to any optimal size (by padding zeros). So how do we find this optimal size ? OpenCV provides a function, cv.getOptimalDFTSize() for this.
 
-We use the functions: **cv.dft (src, dst, flags = 0, nonzeroRows = 0)** 
+We use the functions: **cv.dft (src, dst, flags = 0, nonzeroRows = 0)**
 
 @param src           input array that could be real or complex.
 @param dst           output array whose size and type depends on the flags.
@@ -56,17 +56,17 @@ We use the functions: **cv.dft (src, dst, flags = 0, nonzeroRows = 0)**
 
 @param src           input array that could be real or complex.
 @param dst           output array whose size and type depends on the flags.
-@param top           parameter specifying how many top pixels in each direction from the source image rectangle to extrapolate. 
-@param bottom        parameter specifying how many bottom pixels in each direction from the source image rectangle to extrapolate. 
-@param left          parameter specifying how many left pixels in each direction from the source image rectangle to extrapolate. 
-@param right         parameter specifying how many right pixels in each direction from the source image rectangle to extrapolate. 
-@param borderType    border type.        
+@param top           parameter specifying how many top pixels in each direction from the source image rectangle to extrapolate.
+@param bottom        parameter specifying how many bottom pixels in each direction from the source image rectangle to extrapolate.
+@param left          parameter specifying how many left pixels in each direction from the source image rectangle to extrapolate.
+@param right         parameter specifying how many right pixels in each direction from the source image rectangle to extrapolate.
+@param borderType    border type.
 @param value         border value if borderType == cv.BORDER_CONSTANT.
 
 **cv.magnitude (x, y, magnitude)**
 
 @param x          floating-point array of x-coordinates of the vectors.
-@param y          floating-point array of y-coordinates of the vectors; it must have the same size as x.        
+@param y          floating-point array of y-coordinates of the vectors; it must have the same size as x.
 @param magnitude  output array of the same size and type as x.
 
 **cv.split (m, mv)**
@@ -166,7 +166,7 @@ tmp.copyTo(q2);
 cv.normalize(mag, mag, 0, 1, cv.NORM_MINMAX);
 
 cv.imshow("dftCanvasOutput", mag);
-src.delete(); padded.delete(); planes.delete(); complexI.delete(); m1.delete(); tmp.delete(); 
+src.delete(); padded.delete(); planes.delete(); complexI.delete(); m1.delete(); tmp.delete();
 </textarea>
 <p class="err" id="dftErr"></p>
 </div>

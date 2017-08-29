@@ -105,10 +105,10 @@ cv.add(imgBg, imgFg, sum);
 
 dst = src.clone();
 for(let i = 0; i < logo.rows; i++)
-    for(let j = 0; j < logo.cols; j++) 
+    for(let j = 0; j < logo.cols; j++)
         dst.ucharPtr(i, j)[0] = sum.ucharPtr(i, j)[0];
 cv.imshow("bitwiseCanvasOutput", dst);
-src.delete(); dst.delete(); logo.delete(); roi.delete(); mask.delete(); maskInv.delete(); imgBg.delete(); imgFg.delete(); sum.delete(); 
+src.delete(); dst.delete(); logo.delete(); roi.delete(); mask.delete(); maskInv.delete(); imgBg.delete(); imgFg.delete(); sum.delete();
 </textarea>
 <p class="err" id="bitwiseErr"></p>
 </div>

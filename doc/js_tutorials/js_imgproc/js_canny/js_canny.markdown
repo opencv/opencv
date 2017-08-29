@@ -69,14 +69,14 @@ So what we finally get is strong edges in the image.
 Canny Edge Detection in OpenCV
 ------------------------------
 
-We use the function: **cv.Canny(image, edges, threshold1, threshold2, apertureSize = 3, L2gradient = false)** 
+We use the function: **cv.Canny(image, edges, threshold1, threshold2, apertureSize = 3, L2gradient = false)**
 @param image         8-bit input image.
 @param edges         output edge map; single channels 8-bit image, which has the same size as image.
 @param threshold1    first threshold for the hysteresis procedure.
 @param threshold2    second threshold for the hysteresis procedure..
 @param apertureSize  aperture size for the Sobel operator.
 @param L2gradient    specifies the equation for finding gradient
-magnitude. If it is True, it uses the equation mentioned above which is more accurate, otherwise it uses this function: \f$Edge\_Gradient \; (G) = |G_x| + |G_y|\f$. 
+magnitude. If it is True, it uses the equation mentioned above which is more accurate, otherwise it uses this function: \f$Edge\_Gradient \; (G) = |G_x| + |G_y|\f$.
 
 Try it
 ------

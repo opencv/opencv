@@ -95,7 +95,7 @@ contours, but doesn't create any parent-child relationship. **Parents and kids a
 rule, and they are just contours**. ie they all belongs to same hierarchy level.
 
 So here, 3rd and 4th term in hierarchy array is always -1. But obviously, Next and Previous terms
-will have their corresponding values. 
+will have their corresponding values.
 
 ### 2. RETR_EXTERNAL
 
