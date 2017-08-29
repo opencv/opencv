@@ -132,6 +132,11 @@ models = [
         url='https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/daef68a6c2f5fbb8c88404266aa28180646d17e0/MobileNetSSD_deploy.prototxt',
         sha='d77c9cf09619470d49b82a9dd18704813a2043cd',
         filename='MobileNetSSD_deploy.prototxt'),
+    Model(
+        name='OpenFace',  # https://github.com/cmusatyalab/openface
+        url='https://storage.cmusatyalab.org/openface-models/nn4.small2.v1.t7',
+        sha='ac8161a4376fb5a79ceec55d85bbb57ef81da9fe',
+        filename='openface_nn4.small2.v1.t7'),
 ]
 
 # Note: models will be downloaded to current working directory
