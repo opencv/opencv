@@ -118,7 +118,7 @@ bool  BmpDecoder::readHeader()
 
                 if( m_bpp <= 8 )
                 {
-                    CV_Assert(clrused < 256);
+                    CV_Assert(clrused <= 256);
                     memset(m_palette, 0, sizeof(m_palette));
                     m_strm.getBytes(m_palette, (clrused == 0? 1<<m_bpp : clrused)*4 );
                     iscolor = IsColorPalette( m_palette, m_bpp );
@@ -174,6 +174,7 @@ bool  BmpDecoder::readHeader()
     }
     catch(...)
     {
+        throw;
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
@@ -483,11 +484,12 @@ decode_rle8_bad: ;
             result = true;
             break;
         default:
-            assert(0);
+            CV_ErrorNoReturn(cv::Error::StsError, "Invalid/unsupported mode");
         }
     }
     catch(...)
     {
+        throw;
     }
 
     return result;

@@ -120,3 +120,12 @@ const string exts[] = {
 };
 
 INSTANTIATE_TEST_CASE_P(imgcodecs, Imgcodecs_Image, testing::ValuesIn(exts));
+
+TEST(Imgcodecs_Image, regression_9376)
+{
+    String path = findDataFile("readwrite/regression_9376.bmp");
+    Mat m = imread(path);
+    ASSERT_FALSE(m.empty());
+    EXPECT_EQ(32, m.cols);
+    EXPECT_EQ(32, m.rows);
+}
