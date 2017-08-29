@@ -58,14 +58,16 @@
 #ifdef HAVE_CUDA
 #  include <cuda.h>
 #  include <cuda_runtime.h>
-#  if defined (__GNUC__)
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#   include <cuda_fp16.h>
-#   pragma GCC diagnostic pop
-#  else
-#   include <cuda_fp16.h>
-#  endif /* __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) */
+#  if defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
+#    if defined (__GNUC__) && !defined(__CUDACC__)
+#     pragma GCC diagnostic push
+#     pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#     include <cuda_fp16.h>
+#     pragma GCC diagnostic pop
+#    else
+#     include <cuda_fp16.h>
+#    endif
+#  endif // defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
 #  include <npp.h>
 #  include "opencv2/core/cuda_stream_accessor.hpp"
 #  include "opencv2/core/cuda/common.hpp"
