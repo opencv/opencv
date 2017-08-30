@@ -386,6 +386,8 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
     if(!fourcc || !fps)
         TRY_OPEN(result, cvCreateVideoWriter_Images(filename))
 
+    CV_Assert(result || fps != 0);
+
     switch(apiPreference)
     {
         default:
