@@ -35,6 +35,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
   list(APPEND blacklist "ts" "java" "python2" "python3" "js" "world" "contrib_world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
+  unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
 
   # gathering headers
   set(paths_include)
@@ -135,6 +136,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(tutorial_path "${CMAKE_CURRENT_SOURCE_DIR}/tutorials")
   set(tutorial_py_path "${CMAKE_CURRENT_SOURCE_DIR}/py_tutorials")
   if(BUILD_opencv_js)
+    set(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT "- @ref tutorial_js_root")
     set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
   endif()
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
