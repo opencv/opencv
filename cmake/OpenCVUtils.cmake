@@ -940,6 +940,12 @@ function(ocv_target_link_libraries target)
   endif()
 endfunction()
 
+function(ocv_target_compile_definitions target)
+  _ocv_fix_target(target)
+  target_compile_definitions(${target} ${ARGN})
+endfunction()
+
+
 function(_ocv_append_target_includes target)
   if(DEFINED OCV_TARGET_INCLUDE_DIRS_${target})
     target_include_directories(${target} PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
