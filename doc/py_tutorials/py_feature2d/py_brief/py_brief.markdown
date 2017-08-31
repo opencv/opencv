@@ -81,4 +81,4 @@ Additional Resources
 -#  Michael Calonder, Vincent Lepetit, Christoph Strecha, and Pascal Fua, "BRIEF: Binary Robust
     Independent Elementary Features", 11th European Conference on Computer Vision (ECCV), Heraklion,
     Crete. LNCS Springer, September 2010.
-2.  LSH (Locality Sensitive Hasing) at wikipedia.
+2.  [LSH (Locality Sensitive Hashing)](https://en.wikipedia.org/wiki/Locality-sensitive_hashing) at wikipedia.
