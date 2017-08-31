@@ -64,12 +64,6 @@ namespace cv
 const int INTER_RESIZE_COEF_BITS=11;
 const int INTER_RESIZE_COEF_SCALE=1 << INTER_RESIZE_COEF_BITS;
 
-static inline void interpolateLinear( float x, float* coeffs )
-{
-    coeffs[0] = 1.f - x;
-    coeffs[1] = x;
-}
-
 static inline void interpolateCubic( float x, float* coeffs )
 {
     const float A = -0.75f;
