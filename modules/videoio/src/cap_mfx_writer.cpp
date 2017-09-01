@@ -11,6 +11,13 @@ using namespace cv;
 
 inline mfxU32 codecIdByFourCC(int fourcc)
 {
+    const int CC_MPG2 = FourCC('M', 'P', 'G', '2').vali32;
+    const int CC_H264 = FourCC('H', '2', '6', '4').vali32;
+    const int CC_X264 = FourCC('X', '2', '6', '4').vali32;
+    const int CC_AVC = FourCC('A', 'V', 'C', ' ').vali32;
+    const int CC_H265 = FourCC('H', '2', '6', '5').vali32;
+    const int CC_HEVC = FourCC('H', 'E', 'V', 'C').vali32;
+
     if (fourcc == CC_X264 || fourcc == CC_H264 || fourcc == CC_AVC)
         return MFX_CODEC_AVC;
     else if (fourcc == CC_H265 || fourcc == CC_HEVC)
