@@ -720,7 +720,7 @@ macro(ocv_glob_module_sources)
   if(cl_kernels)
     set(OCL_NAME opencl_kernels_${name})
     add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp"
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp"
       COMMAND ${CMAKE_COMMAND} "-DMODULE_NAME=${name}" "-DCL_DIR=${CMAKE_CURRENT_LIST_DIR}/src/opencl" "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
       DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
     ocv_source_group("Src\\opencl\\kernels" FILES ${cl_kernels})
