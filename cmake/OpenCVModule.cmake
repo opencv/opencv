@@ -1047,6 +1047,8 @@ function(ocv_add_perf_tests)
         set(OPENCV_PERF_${the_module}_SOURCES ${perf_srcs} ${perf_hdrs})
       endif()
 
+      ocv_compiler_optimization_process_sources(OPENCV_PERF_${the_module}_SOURCES OPENCV_PERF_${the_module}_DEPS ${the_target})
+
       if(NOT BUILD_opencv_world)
         get_native_precompiled_header(${the_target} perf_precomp.hpp)
       endif()
@@ -1123,6 +1125,8 @@ function(ocv_add_accuracy_tests)
         ocv_source_group("Include" DIRBASE "${test_path}" FILES ${test_hdrs})
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
       endif()
+
+      ocv_compiler_optimization_process_sources(OPENCV_TEST_${the_module}_SOURCES OPENCV_TEST_${the_module}_DEPS ${the_target})
 
       if(NOT BUILD_opencv_world)
         get_native_precompiled_header(${the_target} test_precomp.hpp)
