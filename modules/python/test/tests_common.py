@@ -70,7 +70,7 @@ def intersectionRate(s1, s2):
     x1, y1, x2, y2 = s2
     s2 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
-    area, intersection = cv2.intersectConvexConvex(s1, s2)
+    area, _intersection = cv2.intersectConvexConvex(s1, s2)
     return 2 * area / (cv2.contourArea(s1) + cv2.contourArea(s2))
 
 def isPointInRect(p, rect):

@@ -11,7 +11,7 @@ class stitching_test(NewOpenCVTests):
         img2 = self.get_sample('stitching/a2.png')
 
         stitcher = cv2.createStitcher(False)
-        (result, pano) = stitcher.stitch((img1, img2))
+        (_result, pano) = stitcher.stitch((img1, img2))
 
         #cv2.imshow("pano", pano)
         #cv2.waitKey()
