@@ -21,3 +21,6 @@ class shape_test(NewOpenCVTests):
 
         self.assertAlmostEqual(d1, 26.4196891785, 3, "HausdorffDistanceExtractor")
         self.assertAlmostEqual(d2, 0.25804194808, 3, "ShapeContextDistanceExtractor")
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

@@ -58,3 +58,7 @@ class gaussian_mix_test(NewOpenCVTests):
                     matches_count += 1
 
         self.assertEqual(matches_count, cluster_n)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

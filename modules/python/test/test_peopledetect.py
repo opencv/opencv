@@ -60,3 +60,6 @@ class peopledetect_test(NewOpenCVTests):
                         matches += 1
 
             self.assertGreater(matches, 0)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

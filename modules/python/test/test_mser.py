@@ -67,3 +67,6 @@ class mser_test(NewOpenCVTests):
             self.assertEqual(nmsers, len(boxes))
             self.assertLessEqual(minRegs, nmsers)
             self.assertGreaterEqual(maxRegs, nmsers)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

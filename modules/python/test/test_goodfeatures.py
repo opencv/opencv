@@ -34,3 +34,7 @@ class TestGoodFeaturesToTrack_test(NewOpenCVTests):
             # Increasing thresh should monly truncate result list
             for i in range(len(r1)):
                 self.assertTrue(cv2.norm(r1[i][0] - r0[i][0])==0)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

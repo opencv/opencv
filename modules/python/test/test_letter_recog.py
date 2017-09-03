@@ -165,3 +165,7 @@ class letter_recog_test(NewOpenCVTests):
 
             self.assertLess(train_rate - testErrors[Model][0], eps)
             self.assertLess(test_rate - testErrors[Model][1], eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

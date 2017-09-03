@@ -94,3 +94,6 @@ class squares_test(NewOpenCVTests):
 
         self.assertGreater(matches_counter / len(testSquares), 0.9)
         self.assertLess( (len(squares) - matches_counter) / len(squares), 0.2)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

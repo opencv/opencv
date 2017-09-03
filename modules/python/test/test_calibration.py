@@ -66,3 +66,8 @@ class calibration_test(NewOpenCVTests):
         self.assertLess(abs(rms - 0.196334638034), eps)
         self.assertLess(cv2.norm(camera_matrix - cameraMatrixTest, cv2.NORM_L1), normCamEps)
         self.assertLess(cv2.norm(dist_coefs - distCoeffsTest, cv2.NORM_L1), normDistEps)
+
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

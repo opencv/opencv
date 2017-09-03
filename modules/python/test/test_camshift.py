@@ -90,3 +90,7 @@ class camshift_test(NewOpenCVTests):
     def test_camshift(self):
         self.prepareRender()
         self.runTracker()
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

@@ -68,3 +68,7 @@ class kmeans_test(NewOpenCVTests):
             confidence = getMainLabelConfidence(labels[offset : (offset + clusterSizes[i])], cluster_n)
             offset += clusterSizes[i]
             self.assertGreater(confidence, 0.9)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

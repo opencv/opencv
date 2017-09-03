@@ -83,5 +83,4 @@ class UMat(NewOpenCVTests):
         #         self.assertTrue(np.allclose(data, data_umat))
 
 if __name__ == '__main__':
-    import unittest
-    unittest.main()
+    NewOpenCVTests.bootstrap()

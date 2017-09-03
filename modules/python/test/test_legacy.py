@@ -84,6 +84,6 @@ class Hackathon244Tests(NewOpenCVTests):
         self.check_close_pairs(mc, mc0, 5)
         self.assertLessEqual(abs(mr - mr0), 5)
 
+
 if __name__ == '__main__':
-    import unittest
-    unittest.main()
+    NewOpenCVTests.bootstrap()
