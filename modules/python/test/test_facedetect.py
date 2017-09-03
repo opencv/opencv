@@ -86,3 +86,7 @@ class facedetect_test(NewOpenCVTests):
 
         self.assertEqual(faces_matches, 2)
         self.assertEqual(eyes_matches, 2)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

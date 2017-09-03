@@ -94,3 +94,7 @@ class lk_homography_test(NewOpenCVTests):
                 self.p0 = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
 
         self.assertEqual(isForegroundHomographyFound, True)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

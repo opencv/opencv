@@ -195,3 +195,7 @@ class digits_test(NewOpenCVTests):
 
         self.assertLess(errors[0] - 0.034, eps)
         self.assertLess(errors[1] - 0.018, eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

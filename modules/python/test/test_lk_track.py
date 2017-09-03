@@ -109,3 +109,7 @@ class lk_track_test(NewOpenCVTests):
 
             if self.frame_idx > 300:
                 break
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

@@ -19,5 +19,4 @@ class Bindings(NewOpenCVTests):
         boost.isClassifier() # from ml::StatModel
 
 if __name__ == '__main__':
-    import unittest
-    unittest.main()
+    NewOpenCVTests.bootstrap()

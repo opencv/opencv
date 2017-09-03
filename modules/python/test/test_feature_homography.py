@@ -158,3 +158,7 @@ class PlaneTracker:
         if descrs is None:  # detectAndCompute returns descs=None if no keypoints found
             descrs = []
         return keypoints, descrs
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()
