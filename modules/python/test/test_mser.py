@@ -37,7 +37,7 @@ class mser_test(NewOpenCVTests):
         mserExtractor.setDelta(kDelta)
         np.random.seed(10)
 
-        for i in range(100):
+        for _i in range(100):
 
             use_big_image = int(np.random.rand(1,1)*7) != 0
             invert = int(np.random.rand(1,1)*2) != 0

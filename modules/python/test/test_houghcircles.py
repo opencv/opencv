@@ -17,7 +17,6 @@ from tests_common import NewOpenCVTests
 def circleApproximation(circle):
 
     nPoints = 30
-    phi = 0
     dPhi = 2*pi / nPoints
     contour = []
     for i in range(nPoints):

@@ -28,7 +28,7 @@ def intersectionRate(s1, s2):
     x1, y1, x2, y2 = s1
     s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
-    area, intersection = cv2.intersectConvexConvex(s1, np.array(s2))
+    area, _intersection = cv2.intersectConvexConvex(s1, np.array(s2))
     return 2 * area / (cv2.contourArea(s1) + cv2.contourArea(np.array(s2)))
 
 from tests_common import NewOpenCVTests

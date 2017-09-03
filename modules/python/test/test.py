@@ -75,7 +75,6 @@ class Hackathon244Tests(NewOpenCVTests):
         fd = cv2.FastFeatureDetector_create(30, True)
         img = self.get_sample("samples/data/right02.jpg", 0)
         img = cv2.medianBlur(img, 3)
-        imgc = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         keypoints = fd.detect(img)
         self.assertTrue(600 <= len(keypoints) <= 700)
         for kpt in keypoints:
@@ -99,7 +98,6 @@ class Hackathon244Tests(NewOpenCVTests):
         np.random.seed(244)
         a = np.random.randn(npt,2).astype('float32')*50 + 150
 
-        img = np.zeros((300, 300, 3), dtype='uint8')
         be = cv2.fitEllipse(a)
         br = cv2.minAreaRect(a)
         mc, mr = cv2.minEnclosingCircle(a)
@@ -138,10 +136,10 @@ class Hackathon244Tests(NewOpenCVTests):
 
     def test_umat_handle(self):
         a_um = cv2.UMat(256, 256, cv2.CV_32F)
-        ctx_handle = cv2.UMat.context()  # obtain context handle
-        queue_handle = cv2.UMat.queue()  # obtain queue handle
-        a_handle = a_um.handle(cv2.ACCESS_READ)  # obtain buffer handle
-        offset = a_um.offset  # obtain buffer offset
+        _ctx_handle = cv2.UMat.context()  # obtain context handle
+        _queue_handle = cv2.UMat.queue()  # obtain queue handle
+        _a_handle = a_um.handle(cv2.ACCESS_READ)  # obtain buffer handle
+        _offset = a_um.offset  # obtain buffer offset
 
     def test_umat_matching(self):
         img1 = self.get_sample("samples/data/right01.jpg")
@@ -186,11 +184,11 @@ class Hackathon244Tests(NewOpenCVTests):
         p0_umat = cv2.UMat(np.array(sorted(p0_umat.get(), key=lambda p: tuple(p[0]))))
         self.assertTrue(np.allclose(p0_umat.get(), p0))
 
-        p1_mask_err = cv2.calcOpticalFlowPyrLK(img1, img2, p0, None)
+        _p1_mask_err = cv2.calcOpticalFlowPyrLK(img1, img2, p0, None)
 
-        p1_mask_err_umat0 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(img1, img2, p0_umat, None))
-        p1_mask_err_umat1 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(cv2.UMat(img1), img2, p0_umat, None))
-        p1_mask_err_umat2 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(img1, cv2.UMat(img2), p0_umat, None))
+        _p1_mask_err_umat0 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(img1, img2, p0_umat, None))
+        _p1_mask_err_umat1 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(cv2.UMat(img1), img2, p0_umat, None))
+        _p1_mask_err_umat2 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(img1, cv2.UMat(img2), p0_umat, None))
 
         # # results of OCL optical flow differs from CPU implementation, so result can not be easily compared
         # for p1_mask_err_umat in [p1_mask_err_umat0, p1_mask_err_umat1, p1_mask_err_umat2]:
@@ -212,5 +210,5 @@ if __name__ == '__main__':
     except KeyError:
         print('Missing opencv extra repository. Some of tests may fail.')
     random.seed(0)
-    unit_argv = [sys.argv[0]] + other;
+    unit_argv = [sys.argv[0]] + other
     unittest.main(argv=unit_argv)
