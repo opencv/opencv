@@ -42,3 +42,6 @@ class texture_flow_test(NewOpenCVTests):
         for i in range(len(textureVectors)):
             self.assertTrue(cv2.norm(textureVectors[i], cv2.NORM_L2) < eps
             or abs(cv2.norm(textureVectors[i], cv2.NORM_L2) - d) < eps)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

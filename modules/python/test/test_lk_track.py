@@ -63,8 +63,8 @@ class lk_track_test(NewOpenCVTests):
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1][0] for tr in self.tracks]).reshape(-1, 1, 2)
-                p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-                p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+                p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+                p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
                 d = abs(p0-p0r).reshape(-1, 2).max(-1)
                 good = d < 1
                 new_tracks = []
@@ -109,3 +109,7 @@ class lk_track_test(NewOpenCVTests):
 
             if self.frame_idx > 300:
                 break
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

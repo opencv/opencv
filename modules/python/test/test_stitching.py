@@ -11,10 +11,13 @@ class stitching_test(NewOpenCVTests):
         img2 = self.get_sample('stitching/a2.png')
 
         stitcher = cv2.createStitcher(False)
-        (result, pano) = stitcher.stitch((img1, img2))
+        (_result, pano) = stitcher.stitch((img1, img2))
 
         #cv2.imshow("pano", pano)
         #cv2.waitKey()
 
         self.assertAlmostEqual(pano.shape[0], 685, delta=100, msg="rows: %r" % list(pano.shape))
         self.assertAlmostEqual(pano.shape[1], 1025, delta=100, msg="cols: %r" % list(pano.shape))
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

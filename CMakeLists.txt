@@ -853,6 +853,7 @@ if(ANDROID OR NOT UNIX)
 endif()
 
 if(COMMAND ocv_pylint_finalize)
+  ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/modules/python/test)
   ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/samples/python)
   ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/samples/dnn)
   ocv_pylint_add_directory_recurse(${CMAKE_CURRENT_LIST_DIR}/samples/python/tutorial_code)
