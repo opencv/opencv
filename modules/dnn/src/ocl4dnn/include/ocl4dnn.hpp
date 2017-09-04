@@ -390,7 +390,6 @@ class OCL4DNNInnerProduct
         bool image_copied_;
         bool phase_test_;
         UMat bias_multiplier_;
-        UMat weight_image_;
 };
 
 typedef enum {

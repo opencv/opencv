@@ -70,7 +70,6 @@ template<typename Dtype>
 OCL4DNNInnerProduct<Dtype>::~OCL4DNNInnerProduct()
 {
     bias_multiplier_.release();
-    weight_image_.release();
 }
 
 template<typename Dtype>
@@ -102,27 +101,11 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
 
-            if (phase_test_ == false || image_copied_ == false)
-            {
-                int height = !transpose_ ? N_ : K_;
-                int width = !transpose_ ? K_ : N_;
-                int padded_height = !transpose_ ? height : (height + ((height & 7) ? 1 : 0));
-                int padded_width = !transpose_ ? width : (width + ((width & 7) ? 1 : 0));
-                cl_mem weight_image = (cl_mem )weight_image_.handle(ACCESS_WRITE);
-                ocl4dnnGEMMCopyBufferToImage<Dtype>(0,
-                                                    &weight_image, (cl_mem) weight.handle(ACCESS_READ), 0,
-                                                    false, !transpose_,
-                                                    true, padded_height, padded_width,
-                                                    height, width, width,
-                                                    (int)(0), NULL, NULL);
-                image_copied_ = true;
-            }
-
             ocl4dnnGEMMCommon<Dtype>(0,
                                      transpose_ ? CblasNoTrans : CblasTrans,
                                      M_, N_, K_, (cl_mem) bottom.handle(ACCESS_READ),
                                      (cl_mem) weight.handle(ACCESS_READ),
-                                     (cl_mem) weight_image_.handle(ACCESS_READ),
+                                     NULL,
                                      (cl_mem) top.handle(ACCESS_WRITE),
                                      max_image_size);
         } else
