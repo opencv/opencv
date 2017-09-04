@@ -353,26 +353,38 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
         return;
     }
 
-    CV_Assert( src.size == mask.size && mask.type() == CV_8U );
+    int mcn = mask.channels();
+    CV_Assert( src.size == mask.size && mask.depth() == CV_8U
+               && (mcn == 1 || mcn == src.channels()) );
 
     const Mat *arrays[]={&src, &dst, &mask, 0};
     Mat planes[3];
 
     NAryMatIterator it(arrays, planes);
-    size_t j, k, elemSize = src.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = src.elemSize(), maskElemSize = mask.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
+    size_t elemSize1 = src.elemSize1();
 
     for( i = 0; i < nplanes; i++, ++it)
     {
         const uchar* sptr = planes[0].ptr();
         uchar* dptr = planes[1].ptr();
         const uchar* mptr = planes[2].ptr();
-
-        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize )
+        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize, mptr += maskElemSize )
         {
-            if( (mptr[j] != 0) ^ invertMask )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = sptr[k];
+            if( mcn == 1)
+            {
+                if( (mptr[0] != 0) ^ invertMask )
+                    for( k = 0; k < elemSize; k++ )
+                        dptr[k] = sptr[k];
+            }
+            else
+            {
+                for( int c = 0; c < mcn; c++ )
+                    if( (mptr[c] != 0) ^ invertMask )
+                        for( k = 0; k < elemSize1; k++ )
+                            dptr[k + c * elemSize1] = sptr[k + c * elemSize1];
+            }
         }
     }
 }
@@ -414,25 +426,37 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
         return;
     }
 
-    CV_Assert( dst.size == mask.size && mask.type() == CV_8U );
+    int cn = dst.channels(), mcn = mask.channels();
+    CV_Assert( dst.size == mask.size && (mcn == 1 || mcn == cn) );
 
     const Mat *arrays[]={&dst, &mask, 0};
     Mat planes[2];
 
     NAryMatIterator it(arrays, planes);
-    size_t j, k, elemSize = dst.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = dst.elemSize(), maskElemSize = mask.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
+    size_t elemSize1 = dst.elemSize1();
 
     for( i = 0; i < nplanes; i++, ++it)
     {
         uchar* dptr = planes[0].ptr();
         const uchar* mptr = planes[1].ptr();
 
-        for( j = 0; j < total; j++, dptr += elemSize )
+        for( j = 0; j < total; j++, dptr += elemSize, mptr += maskElemSize )
         {
-            if( mptr[j] )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = gptr[k];
+            if( mcn == 1)
+            {
+                if( mptr[0] )
+                    for( k = 0; k < elemSize; k++ )
+                        dptr[k] = gptr[k];
+            }
+            else
+            {
+                for( int c = 0; c < mcn; c++ )
+                    if( mptr[c] )
+                        for( k = 0; k < elemSize1; k++ )
+                            dptr[k + c * elemSize1] = gptr[k + c * elemSize1];
+            }
         }
     }
 }
@@ -2574,11 +2598,11 @@ void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 
 
 template<typename _Tp> static void
-mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int& nz)
+mean_(const _Tp* src, const uchar* mask, size_t total, int cn, int mcn, Scalar& sum, Scalar_<int>& nz)
 {
     if( !mask )
     {
-        nz += (int)total;
+        nz += Scalar_<int>::all((int)total);
         total *= cn;
         for( size_t i = 0; i < total; i += cn )
         {
@@ -2586,23 +2610,41 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
                 sum[c] += src[i + c];
         }
     }
-    else
+    else if( mcn == 1 )
     {
         for( size_t i = 0; i < total; i++ )
             if( mask[i] )
             {
-                nz++;
                 for( int c = 0; c < cn; c++ )
+                {
+                    nz[c]++;
                     sum[c] += src[i*cn + c];
+                }
             }
+    }
+    else
+    {
+        total *= cn;
+        for( size_t i = 0; i < total; i += cn )
+        {
+            for( int c = 0; c < cn; c++ )
+            {
+                if( mask[i + c] )
+                {
+                    nz[c]++;
+                    sum[c] += src[i + c];
+                }
+            }
+        }
     }
 }
 
 Scalar mean(const Mat& src, const Mat& mask)
 {
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size == src.size));
+    CV_Assert(mask.empty() || (mask.depth() == CV_8U && mask.size == src.size &&
+                               (mask.channels() == 1 || mask.channels() == src.channels())));
     Scalar sum;
-    int nz = 0;
+    Scalar_<int> nz = Scalar_<int>::all(0);
 
     const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
@@ -2610,7 +2652,7 @@ Scalar mean(const Mat& src, const Mat& mask)
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-    int depth = src.depth(), cn = src.channels();
+    int c, depth = src.depth(), cn = src.channels(), mcn = mask.channels();
 
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -2620,32 +2662,34 @@ Scalar mean(const Mat& src, const Mat& mask)
         switch( depth )
         {
         case CV_8U:
-            mean_((const uchar*)sptr, mptr, total, cn, sum, nz);
+            mean_((const uchar*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         case CV_8S:
-            mean_((const schar*)sptr, mptr, total, cn, sum, nz);
+            mean_((const schar*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         case CV_16U:
-            mean_((const ushort*)sptr, mptr, total, cn, sum, nz);
+            mean_((const ushort*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         case CV_16S:
-            mean_((const short*)sptr, mptr, total, cn, sum, nz);
+            mean_((const short*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         case CV_32S:
-            mean_((const int*)sptr, mptr, total, cn, sum, nz);
+            mean_((const int*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         case CV_32F:
-            mean_((const float*)sptr, mptr, total, cn, sum, nz);
+            mean_((const float*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         case CV_64F:
-            mean_((const double*)sptr, mptr, total, cn, sum, nz);
+            mean_((const double*)sptr, mptr, total, cn, mcn, sum, nz);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 
-    return sum * (1./std::max(nz, 1));
+    for( c = 0; c < cn; c++ )
+        sum[c] *= (1./std::max(nz[c], 1));
+    return sum;
 }
 
 
