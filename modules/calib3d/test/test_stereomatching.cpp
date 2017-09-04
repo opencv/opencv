@@ -560,7 +560,7 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     {
         absdiff( trueRightDisp, Scalar(params.dispUnknVal), rightUnknMask );
         rightUnknMask = rightUnknMask < numeric_limits<float>::epsilon();
-        assert(leftUnknMask.type() == CV_8UC1);
+        assert(rightUnknMask.type() == CV_8UC1);
     }
 
     // calculate errors
