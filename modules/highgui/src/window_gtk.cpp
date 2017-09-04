@@ -291,7 +291,7 @@ cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gin
 
   if(image_widget->scaled_image != NULL) {
     *natural_height = *minimal_height < image_widget->scaled_image->rows ?
-      image_widget->scaled_image->cols : *minimal_height;
+      image_widget->scaled_image->rows : *minimal_height;
   }
   else {
     *natural_height = *minimal_height;
