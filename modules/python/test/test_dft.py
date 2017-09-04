@@ -44,3 +44,7 @@ class dft_test(NewOpenCVTests):
         img_back = cv2.normalize(img_back, 0.0, 1.0, cv2.NORM_MINMAX)
 
         self.assertLess(cv2.norm(img_back - img_backTest), eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

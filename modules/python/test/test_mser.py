@@ -37,7 +37,7 @@ class mser_test(NewOpenCVTests):
         mserExtractor.setDelta(kDelta)
         np.random.seed(10)
 
-        for i in range(100):
+        for _i in range(100):
 
             use_big_image = int(np.random.rand(1,1)*7) != 0
             invert = int(np.random.rand(1,1)*2) != 0
@@ -67,3 +67,6 @@ class mser_test(NewOpenCVTests):
             self.assertEqual(nmsers, len(boxes))
             self.assertLessEqual(minRegs, nmsers)
             self.assertGreaterEqual(maxRegs, nmsers)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

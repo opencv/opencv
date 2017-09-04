@@ -23,8 +23,6 @@ from tests_common import NewOpenCVTests, intersectionRate
 class facedetect_test(NewOpenCVTests):
 
     def test_facedetect(self):
-        import sys, getopt
-
         cascade_fn = self.repoPath + '/data/haarcascades/haarcascade_frontalface_alt.xml'
         nested_fn  = self.repoPath + '/data/haarcascades/haarcascade_eye.xml'
 
@@ -88,3 +86,7 @@ class facedetect_test(NewOpenCVTests):
 
         self.assertEqual(faces_matches, 2)
         self.assertEqual(eyes_matches, 2)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()
