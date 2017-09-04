@@ -89,7 +89,6 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     prev_kernel_type_ = -1;
     bias_ = NULL;
     tuned_ = false;
-    swizzled_weights_ = NULL;
     kernel_dim_ = channels_ / group_;
     out_spatial_dim_ = 1;
 
@@ -161,9 +160,8 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 template<typename Dtype>
 OCL4DNNConvSpatial<Dtype>::~OCL4DNNConvSpatial()
 {
-    if (swizzled_weights_) {
-        clReleaseMemObject((cl_mem)swizzled_weights_);
-    }
+    swizzled_weights_.release();
+
     if (bestKernelConfig) {
         delete bestKernelConfig;
     }
@@ -756,20 +754,15 @@ void OCL4DNNConvSpatial<Dtype>::tune(Dtype* top_data,
                                     const Dtype* bottom_data,
                                     int32_t batch_size)
 {
-    cl_int err;
+    UMat verify_mat;
     Dtype *verify_data;
-    ocl::Context &ctx = ocl::Context::getDefault();
 
-    verify_data =
-        reinterpret_cast<Dtype*>(clCreateBuffer((cl_context)ctx.ptr(),
-                                                CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
-                                                batch_size * num_output_ * out_spatial_dim_ * sizeof(Dtype),
-                                                NULL, &err));
-    CHECK_EQ(err, CL_SUCCESS) << "Failed to create verify buffer." << std::endl;
+    verify_mat.create(1, batch_size * num_output_ * out_spatial_dim_, CV_32FC1);
+    verify_data = reinterpret_cast<Dtype*>(verify_mat.handle(ACCESS_WRITE));
 
     calculateBenchmark(bottom_data, weight, bias, verify_data);
     setupConvolution(bottom_data, top_data, verify_data);
-    clReleaseMemObject((cl_mem)verify_data);
+    verify_mat.release();
     CHECK_EQ(tuned_, true) << "Spatial convolution auto-tuning failed.";
 }
 
@@ -951,19 +944,12 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
     // in test phase and not in auto tuning
     // This requires we always call convolve again with the winner configuration
     // during the auto tuning stage.
-    if (tuned_ && swizzled_weights_ != NULL)
+    if (tuned_ && !swizzled_weights_.empty())
         return;
 
-    cl_int err;
-    ocl::Context ocl_ctx = ocl::Context::getDefault();
-    if (swizzled_weights_ == NULL) {
-        swizzled_weights_ = reinterpret_cast<Dtype*>(clCreateBuffer((cl_context)ocl_ctx.ptr(),
-                                                                    CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
-                                                                    sizeof(Dtype) *
-                                                                    ((num_output_ + 15) & ~15) *
-                                                                    channels_ * kernel_h_ * ((kernel_w_ + 1) & ~1),
-                                                                    NULL, &err));
-        CHECK_EQ(err, CL_SUCCESS) << "Failed to create swizzled_weights buffer.";
+    if (swizzled_weights_.empty()) {
+        swizzled_weights_.create(1, ((num_output_ + 15) & ~15) * channels_ *
+                                 kernel_h_ * ((kernel_w_ + 1) & ~1), CV_32FC1);
     }
 
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -974,7 +960,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
 
         int32_t channels = channels_ / group_;
         oclk_copy_weight.set(argIdx++, (cl_mem) weight_);
-        oclk_copy_weight.set(argIdx++, (cl_mem) swizzled_weights_);
+        oclk_copy_weight.set(argIdx++, (cl_mem) swizzled_weights_.handle(ACCESS_WRITE));
         oclk_copy_weight.set(argIdx++, kernel_w_);
         oclk_copy_weight.set(argIdx++, kernel_h_);
         oclk_copy_weight.set(argIdx++, channels);
@@ -997,7 +983,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
         // assumption: kernel dimesion is 2
         Dtype* cpu_swizzled_weight =
             reinterpret_cast<Dtype*>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
-                                                        (cl_mem)swizzled_weights_,
+                                                        (cl_mem)swizzled_weights_.handle(ACCESS_READ),
                                                         true, CL_MAP_WRITE, 0,
                                                         sizeof(Dtype) *
                                                         ((num_output_ + 15) & ~15) *
@@ -1030,7 +1016,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
                                 cpu_weight, 0, NULL,
                                 NULL);
         clEnqueueUnmapMemObject((cl_command_queue)queue.ptr(),
-                                (cl_mem)swizzled_weights_,
+                                (cl_mem)swizzled_weights_.handle(ACCESS_READ),
                                 cpu_swizzled_weight, 0, NULL,
                                 NULL);
         free(tmpSwizzledWeight);
@@ -1160,7 +1146,7 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                                    total_bottom_size - image_offset,
                                    true, false);
                 setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) swizzled_weights_,
+                                   (cl_mem) swizzled_weights_.handle(ACCESS_READ),
                                    kernel_offset,
                                    total_kernel_size - kernel_offset,
                                    true, true);
@@ -1220,7 +1206,7 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                                    total_bottom_size - image_offset,
                                    true, false);
                 setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
-                                   (cl_mem) swizzled_weights_,
+                                   (cl_mem) swizzled_weights_.handle(ACCESS_READ),
                                    kernel_offset,
                                    total_kernel_size - kernel_offset,
                                    true, true);
@@ -1897,7 +1883,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const float *bottom, float *top
     dbgPrint(std::cout << "Convolution Time:" << kernelQueue[kernel_index_]->executionTime << std::endl);
 
     if (bestKernelConfig->kernelType != 2 && bestKernelConfig->kernelType != 5)
-        swizzled_weights_ = NULL;
+        swizzled_weights_.release();
 
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
         if (x != kernel_index_) {
@@ -1998,9 +1984,7 @@ bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
             (bestKernelConfig->kernelType == KERNEL_TYPE_INTEL_IDLF ||
              bestKernelConfig->kernelType == KERNEL_TYPE_GEMM_LIKE))
         {
-            if (swizzled_weights_)
-                clReleaseMemObject((cl_mem)swizzled_weights_);
-            swizzled_weights_ = NULL;
+            swizzled_weights_.release();
         }
         tuned_ = true;
         return true;

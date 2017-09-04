@@ -242,7 +242,7 @@ class OCL4DNNConvSpatial
         const Dtype* bottom_data_;
         Dtype* top_data_;
         const Dtype* weight_;
-        Dtype* swizzled_weights_;
+        UMat swizzled_weights_;
         const Dtype* bias_;
         int32_t bottom_index_;
         int32_t output_h_;
