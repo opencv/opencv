@@ -26,7 +26,7 @@ gen_template_call_constructor_prelude = Template("""new (&(self->v)) Ptr<$cname>
 
 gen_template_call_constructor = Template("""self->v.reset(new ${cname}${args})""")
 
-gen_template_simple_call_constructor_prelude = Template(""" if(self) """)
+gen_template_simple_call_constructor_prelude = Template("""if(self) """)
 
 gen_template_simple_call_constructor = Template("""new (&(self->v)) ${cname}${args}""")
 
