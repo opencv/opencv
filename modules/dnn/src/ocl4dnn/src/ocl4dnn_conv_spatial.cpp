@@ -323,9 +323,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
 
         // options
         opts << "-cl-fast-relaxed-math -D convolve_simd=" << kernel_name_;
-        if (isBeignet())
-            opts << " -D__BEIGNET__ ";
-        else
+        if (build_option_check())
             opts << " -cl-no-subgroup-ifp ";
         options_ = opts.str();
 
@@ -603,9 +601,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
 
         // opts
         opts << " -cl-fast-relaxed-math -D CFMultiNoPadding=" << kernel_name_;
-        if (isBeignet())
-            opts << " -D__BEIGNET__ ";
-        else
+        if (build_option_check())
             opts << " -cl-no-subgroup-ifp ";
         options_ = opts.str();
 

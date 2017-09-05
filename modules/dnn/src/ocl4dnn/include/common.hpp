@@ -56,7 +56,7 @@
         CHECK_EQ(error, CL_SUCCESS) << " " << cv::ocl::getOpenCLErrorString(error); \
     } while (0)
 
-bool isBeignet();
+bool build_option_check();
 
 #endif // HAVE_OPENCL
 #endif

@@ -46,9 +46,12 @@
 using namespace cv;
 
 #ifdef HAVE_OPENCL
-bool isBeignet()
+
+bool build_option_check()
 {
-    return ocl::Device::getDefault().OpenCL_C_Version().find("beignet") != std::string::npos;
+    int major = ocl::Device::getDefault().deviceVersionMajor();
+    int minor = ocl::Device::getDefault().deviceVersionMinor();
+    return (major >= 2) && (minor >= 1);
 }
 
 #endif // HAVE_OPENCL
