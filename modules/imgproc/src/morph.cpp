@@ -2077,23 +2077,23 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
         dilate( dst, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
         erode( dst, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
         dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
         dst -= temp;
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         if( src.data != dst.data )
             temp = dst;
         erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
         dilate( temp, temp, kernel, anchor, iterations, borderType, borderValue );
         dst = src - temp;
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         if( src.data != dst.data )
             temp = dst;
         dilate( src, temp, kernel, anchor, iterations, borderType, borderValue );

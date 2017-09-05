@@ -2556,7 +2556,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                                 break;
                             }
                         }
-                        assert( k < 16 );
+                        CV_Assert( k < 16 );
 
                         /* Update corresponding histogram segment */
                         if ( luc[c][k] <= j-r )
@@ -2593,7 +2593,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                                 break;
                             }
                         }
-                        assert( b < 16 );
+                        CV_Assert( b < 16 );
                     }
                 }
                 else
@@ -2619,7 +2619,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                                 break;
                             }
                         }
-                        assert( k < 16 );
+                        CV_Assert( k < 16 );
 
                         /* Update corresponding histogram segment */
                         if ( luc[c][k] <= j-r )
@@ -2656,7 +2656,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                                 break;
                             }
                         }
-                        assert( b < 16 );
+                        CV_Assert( b < 16 );
                     }
                 }
             }

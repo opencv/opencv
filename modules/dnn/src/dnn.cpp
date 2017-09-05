@@ -1333,7 +1333,7 @@ struct Net::Impl
 
         //forward parents
         MapIdToLayerData::iterator it;
-        for (it = layers.begin(); it->second.id < ld.id; it++)
+        for (it = layers.begin(); it != layers.end() && (it->second.id < ld.id); ++it)
         {
             LayerData &ld = it->second;
             if (ld.flag)
@@ -1349,7 +1349,9 @@ struct Net::Impl
     {
         CV_TRACE_FUNCTION();
 
-        forwardToLayer(layers.rbegin()->second, true);
+        MapIdToLayerData::reverse_iterator last_layer = layers.rbegin();
+        CV_Assert(last_layer != layers.rend());
+        forwardToLayer(last_layer->second, true);
     }
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)

@@ -2003,7 +2003,7 @@ public:
 
         // Disable AVX1 since we don't track regressions for it. SSE42 will be used instead
         if(cpuFeatures&ippCPUID_AVX && !(cpuFeatures&ippCPUID_AVX2))
-            ippFeatures &= ~ippCPUID_AVX;
+            ippFeatures &= ~((Ipp64u)ippCPUID_AVX);
 
         // IPP integrations in OpenCV support only SSE4.2, AVX2 and AVX-512 optimizations.
         if(!(
