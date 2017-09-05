@@ -79,8 +79,5 @@ void ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
                 const cl_mem x, const int32_t offx, cl_mem y,
                 const int32_t offy);
 
-template<typename Dtype>
-void ocl4dnnSet(const int32_t ctx_id, const int32_t N, const Dtype alpha,
-                      cl_mem Y, const int32_t offY);
 #endif  // HAVE_OPENCL
 #endif

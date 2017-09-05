@@ -61,8 +61,7 @@ OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config
     // Set up the bias multiplier
     if (bias_term_)
     {
-        bias_multiplier_.create(1, M_, CV_32FC1);
-        ocl4dnnSet(0, M_, Dtype(1), (cl_mem) bias_multiplier_.handle(ACCESS_WRITE), 0);
+        bias_multiplier_ = UMat(1, M_, 1.0f, CV_32FC1);
     }
 }
 

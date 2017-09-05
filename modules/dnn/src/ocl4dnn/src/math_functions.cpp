@@ -630,27 +630,4 @@ template void ocl4dnnAXPY<float>(const int32_t ctx_id, const int32_t N,
                                  const int32_t offX, cl_mem Y,
                                  const int32_t offY);
 
-template<typename Dtype>
-void ocl4dnnSet(const int32_t ctx_id, const int32_t N, const Dtype alpha,
-                cl_mem Y, const int32_t offY)
-{
-    ocl::Kernel oclk_fill(CL_KERNEL_SELECT("fill"), cv::ocl::dnn::fillbuffer_oclsrc);
-    size_t global[] = { 128 * 128 };
-    size_t local[] = { 128 };
-
-    cl_uint argIdx = 0;
-    oclk_fill.set(argIdx++, N);
-    oclk_fill.set(argIdx++, alpha);
-    oclk_fill.set(argIdx++, (cl_mem) Y);
-    oclk_fill.set(argIdx++, offY);
-
-    oclk_fill.run(1, global, local, false);
-}
-
-template void ocl4dnnSet<int32_t>(const int32_t ctx_id, const int32_t N,
-                                  const int32_t alpha, cl_mem Y,
-                                  const int32_t offY);
-template void ocl4dnnSet<float>(const int32_t ctx_id, const int32_t N,
-                                const float alpha, cl_mem Y,
-                                const int32_t offY);
 #endif  // HAVE_OPENCL
