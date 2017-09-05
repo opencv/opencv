@@ -47,8 +47,6 @@
 
 #ifdef HAVE_OPENCL
 
-#define ALIGN(val,N) (( (val) + (N) - 1 ) & ~( (N) - 1 ))
-
 // Macro to select the single (_float) or double (_double) precision kernel
 #define CL_KERNEL_SELECT(kernel) kernel "_float"
 

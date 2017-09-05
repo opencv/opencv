@@ -361,7 +361,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
         addDef(ss, "TILE_Y", tile_y);
         addDef(ss, "TILE_Y_STRIDE", tile_y_stride);
         addDef(ss, "INVEC_SIZE", invec_size);
-        addDef(ss, "ALIGNED_NUM_FILTERS", ALIGN(M_, simd_size));
+        addDef(ss, "ALIGNED_NUM_FILTERS", alignSize(M_, simd_size));
         addDef(ss, "OUT_BLOCK_SIZE", (output_block_width*output_block_height));
 
         // kernel source
@@ -799,7 +799,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
 // to feed al the EUs.
 // FIXME for the gemm like convolution, switch back to eaxct image size.
 
-#define TUNING_SIZE(x) ((x) > 256 ? 256 : (ALIGN(x, 16)))
+#define TUNING_SIZE(x) ((x) > 256 ? 256 : (alignSize(x, 16)))
 
 // Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
 template<typename Dtype>
@@ -967,7 +967,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
         oclk_copy_weight.set(argIdx++, this->num_output_);
         oclk_copy_weight.set(argIdx++, swizzled_factor);
         const size_t global_work_size_Copy[3] = {
-            (size_t) (ALIGN(this->num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
+            (size_t) (alignSize(this->num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
 
         OCL_CHECK(clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
                                          (cl_kernel)oclk_copy_weight.ptr(), 3, NULL,
@@ -1241,8 +1241,8 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                 int blockM = config->workItem_output[0];
                 int blockK = config->workItem_output[1];
                 int blockN = config->workItem_output[2];
-                int alignedFilterWidth = ALIGN(M_, blockN);
-                int alignedExpandHeight = ALIGN(output_w_ * output_h_, blockM);
+                int alignedFilterWidth = alignSize(M_, blockN);
+                int alignedExpandHeight = alignSize(output_w_ * output_h_, blockM);
                 int globalWorkSizeDX = blockN;
                 int globalWorkSizeDY = blockM;
                 size_t sgemm_m = alignedExpandHeight;
@@ -1251,7 +1251,7 @@ cl_int OCL4DNNConvSpatial<float>::convolve(const float *bottom, const float *top
                         (float) globalWorkSizeDX );
                 size_t gy = (size_t) ceil( (float) sgemm_m /
                         (float) globalWorkSizeDY );
-                gy = ALIGN(gy, blockK);
+                gy = alignSize(gy, blockK);
                 size_t global_size[3] = { gx, gy, config->global_work_size[2] };
 
                 ocl::Queue queue = ocl::Queue::getDefault();
@@ -1478,15 +1478,15 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
     int num_batches = num_;
     int output_width = output_w_;
     int output_height = output_h_;
-    int alignedFilterWidth = ALIGN(M_, blockN);
-    int alignedExpandHeight = ALIGN(output_width * output_height, blockM);
+    int alignedFilterWidth = alignSize(M_, blockN);
+    int alignedExpandHeight = alignSize(output_width * output_height, blockM);
     int globalWorkSizeDX = blockN;
     int globalWorkSizeDY = blockM;
     size_t sgemm_m = alignedExpandHeight;
     size_t sgemm_n = alignedFilterWidth;
     size_t gx = (size_t) ceil( (float) sgemm_n / (float) globalWorkSizeDX );
     size_t gy = (size_t) ceil( (float) sgemm_m / (float) globalWorkSizeDY );
-    gy = ALIGN(gy, blockK);
+    gy = alignSize(gy, blockK);
     size_t gz = num_batches;
     size_t global_size[3] = { gx, gy, gz };
     size_t local_size[3] = { 1, static_cast<size_t>(simd_size), 1 };
@@ -1578,7 +1578,7 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
     size_t global_size[3] = {
         (size_t) (output_width + output_block_width - 1) / output_block_width,
         (size_t) (output_height + output_block_height - 1) / output_block_height,
-        (size_t) num_batches * ALIGN(num_output_maps, simd_size) };
+        (size_t) num_batches * alignSize(num_output_maps, simd_size) };
     size_t local_size[3] = { 1, 1, static_cast<size_t>(simd_size) };
 
     kernelType_ = KERNEL_TYPE_INTEL_IDLF;
