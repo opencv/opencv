@@ -48,17 +48,28 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h")
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h"
+)
+
+set(OPENCV_${PYTHON}_SIGNATURES_FILE "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_signatures.json" CACHE INTERNAL "")
+
+set(cv2_generated_files ${cv2_generated_hdrs}
+    "${OPENCV_${PYTHON}_SIGNATURES_FILE}"
+)
 
 string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
 add_custom_command(
-   OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${PYTHON}"
-   DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
-   DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
-   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-   DEPENDS ${opencv_hdrs})
+    OUTPUT ${cv2_generated_files}
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${PYTHON}"
+    DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
+    DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
+    DEPENDS ${opencv_hdrs}
+    COMMENT "Generate files for ${the_module}"
+)
+
+add_custom_target(gen_${the_module} DEPENDS ${cv2_generated_files})
 
 set(cv2_custom_hdr "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_custom_headers.h")
 file(WRITE ${cv2_custom_hdr} "//user-defined headers\n")
@@ -67,6 +78,7 @@ foreach(uh ${opencv_userdef_hdrs})
 endforeach(uh)
 
 ocv_add_library(${the_module} MODULE ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs} ${opencv_userdef_hdrs} ${cv2_custom_hdr})
+add_dependencies(${the_module} gen_${the_module})
 
 if(APPLE)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
