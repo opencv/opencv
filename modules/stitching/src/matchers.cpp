@@ -625,7 +625,7 @@ MatchesInfo::MatchesInfo() : src_img_idx(-1), dst_img_idx(-1), num_inliers(0), c
 
 MatchesInfo::MatchesInfo(const MatchesInfo &other) { *this = other; }
 
-const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
+MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 {
     src_img_idx = other.src_img_idx;
     dst_img_idx = other.dst_img_idx;

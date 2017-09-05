@@ -284,6 +284,7 @@ public:
                     history->parent_ = h;
                 }
             }
+            CV_Assert(h != NULL);
             h->val = gray_level;
             h->size = size;
             h->head = head;

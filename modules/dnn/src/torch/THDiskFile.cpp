@@ -12,7 +12,6 @@ typedef struct THDiskFile__
     THFile file;
 
     FILE *handle;
-    char *name;
     int isNativeEncoding;
     int longSize;
 
@@ -22,12 +21,6 @@ static int THDiskFile_isOpened(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)self;
   return (dfself->handle != NULL);
-}
-
-const char *THDiskFile_name(THFile *self)
-{
-  THDiskFile *dfself = (THDiskFile*)self;
-  return dfself->name;
 }
 
 /* workaround mac osx lion ***insane*** fread bug */
@@ -265,7 +258,6 @@ static void THDiskFile_free(THFile *self)
   THDiskFile *dfself = (THDiskFile*)(self);
   if(dfself->handle)
     fclose(dfself->handle);
-  THFree(dfself->name);
   THFree(dfself);
 }
 
@@ -460,8 +452,7 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
   return 0;
 }
 
-
-THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
+THFile *THDiskFile_new(const std::string &name, const char *mode, int isQuiet)
 {
   static struct THFileVTable vtable = {
     THDiskFile_isOpened,
@@ -490,11 +481,12 @@ THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
   THArgCheck(THDiskFile_mode(mode, &isReadable, &isWritable), 2, "file mode should be 'r','w' or 'rw'");
 
   CV_Assert(isReadable && !isWritable);
+
 #ifdef _MSC_VER
-  if (fopen_s(&handle, name, "rb") != 0)
+  if (fopen_s(&handle, name.c_str(), "rb") != 0)
       handle = NULL;
 #else
-  handle = fopen(name,"rb");
+  handle = fopen(name.c_str(),"rb");
 #endif
 
   if(!handle)
@@ -502,7 +494,7 @@ THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
     if(isQuiet)
       return 0;
     else
-      THError("cannot open <%s> in mode %c%c", name, (isReadable ? 'r' : ' '), (isWritable ? 'w' : ' '));
+      THError("cannot open <%s> in mode %c%c", name.c_str(), (isReadable ? 'r' : ' '), (isWritable ? 'w' : ' '));
   }
 
   self = (THDiskFile*)THAlloc(sizeof(THDiskFile));
@@ -510,10 +502,6 @@ THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
       THError("cannot allocate memory for self");
 
   self->handle = handle;
-  self->name = (char*)THAlloc(strlen(name)+1);
-  if (!self->name)
-      THError("cannot allocate memory for self->name");
-  strcpy(self->name, name);
   self->isNativeEncoding = 1;
   self->longSize = 0;
 

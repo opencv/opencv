@@ -79,6 +79,10 @@ CvHeapElem;
 
 class CvPriorityQueueFloat
 {
+private:
+    CvPriorityQueueFloat(const CvPriorityQueueFloat & ); // copy disabled
+    CvPriorityQueueFloat& operator=(const CvPriorityQueueFloat &); // assign disabled
+
 protected:
     CvHeapElem *mem,*empty,*head,*tail;
     int num,in;

@@ -126,7 +126,7 @@ struct TorchImporter : public ::cv::dnn::Importer
         rootModule = curModule = NULL;
         moduleCounter = 0;
 
-        file = cv::Ptr<THFile>(THDiskFile_new(filename.c_str(), "r", 0), THFile_free);
+        file = cv::Ptr<THFile>(THDiskFile_new(filename, "r", 0), THFile_free);
         CV_Assert(file && THFile_isOpened(file));
 
         if (isBinary)
