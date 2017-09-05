@@ -190,7 +190,7 @@ public:
         int top_concat_axis = outputs[0].size[1];
         int offset_concat_axis = 0;
         UMat inpMat, outMat;
-        outMat = outputs[0].getUMat(ACCESS_READ);
+        outMat = outputs[0].getUMat(ACCESS_WRITE);
 
         ocl::Kernel ker;
         String buildopt = String("-DDtype=") + ocl::typeToStr(inputs[0]->type()) + String(" ");
@@ -224,7 +224,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs, outputs, internals))
 
         int cAxis = clamp(axis, inputs[0]->dims);

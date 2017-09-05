@@ -86,7 +86,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<OCL4DNNPool<float>> poolOp;
+    Ptr<OCL4DNNPool<float> > poolOp;
 #endif
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
@@ -128,7 +128,7 @@ public:
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
                                                LIBDNN_POOLING_METHOD_STO);
-            poolOp = Ptr<OCL4DNNPool<float>>(new OCL4DNNPool<float>(config));
+            poolOp = Ptr<OCL4DNNPool<float> >(new OCL4DNNPool<float>(config));
         }
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
@@ -161,7 +161,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs, outputs, internals))
 
         for (size_t ii = 0; ii < inputs.size(); ii++)

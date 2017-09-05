@@ -202,14 +202,9 @@ __kernel void TEMPLATE(lrn_within_channel_forward,Dtype)(
 }
 
 
-// !!!!!!!!
-// The following macros are duplicated in lrn_optimized_layer.cu since we currently
-// don't have a simple solution for sharing between cl and cpp files.
-// You must keep both locations in sync!
 #define SIMD_SIZE 16
 #define TILE_HEIGHT 32
 #define TILE_WIDTH (SIMD_SIZE - 2)
-// !!!!!!!!
 
 #define KERNEL_SIZE 3.0f
 #define POOL_SIZE (KERNEL_SIZE * KERNEL_SIZE)

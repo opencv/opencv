@@ -100,11 +100,11 @@ void ocl4dnnGEMMCopyBufferToImage(int32_t ctx_id,
         // we have to use CL_FLOAT type with read_imagef to get the row.
         cl_int err;
         format.image_channel_data_type = CL_FLOAT;
+        format.image_channel_order = CL_R;
         desc.image_type = CL_MEM_OBJECT_IMAGE2D;
         desc.image_width = width;
-        format.image_channel_order = CL_R;
-
         desc.image_height = height;
+
         if (*image == NULL)
         {
             *image = clCreateImage((cl_context)ctx.ptr(),
@@ -537,71 +537,60 @@ void ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
 {
     ocl::Context ctx = ocl::Context::getDefault();
 
-    if (ocl::Device::getDefault().type() == CL_DEVICE_TYPE_CPU)
+    if (std::is_same<Dtype, float>::value && TransA == CblasNoTrans)
     {
-        LOG(FATAL) << "Not Support CPU device";
-    }
-    else
-    {
-        if (std::is_same<Dtype, float>::value && TransA == CblasNoTrans)
+        ocl::Kernel k(CL_KERNEL_SELECT("matvec_mul4"), cv::ocl::dnn::matvec_mul_oclsrc);
+        uint row_size = M;
+        uint col_size = N;
+        size_t localsize = 128;
+        size_t globalsize = row_size / 4 * localsize;
+
+        uint argId = 0;
+        k.set(argId++, (cl_mem) A);
+        k.set(argId++, offA);
+        k.set(argId++, cl_uint(col_size));
+        k.set(argId++, cl_uint(col_size%4));
+        k.set(argId++, (cl_mem) x);
+        k.set(argId++, offx);
+        k.set(argId++, alpha);
+        k.set(argId++, beta);
+        k.set(argId++, (cl_mem) y);
+        k.set(argId++, offy);
+        clSetKernelArg((cl_kernel)k.ptr(), argId++, localsize * sizeof(cl_float4), NULL);
+
+        clEnqueueNDRangeKernel((cl_command_queue)ocl::Queue::getDefault().ptr(),
+                               (cl_kernel)k.ptr(), 1,
+                               NULL,
+                               &globalsize,
+                               &localsize, 0, NULL,
+                               NULL);
+        if ((row_size % 4) != 0)
         {
-            ocl::Kernel k(CL_KERNEL_SELECT("matvec_mul4"), cv::ocl::dnn::matvec_mul_oclsrc);
-            uint row_size = M;
-            uint col_size = N;
+            ocl::Kernel k_1(CL_KERNEL_SELECT("matvec_mul1"), cv::ocl::dnn::matvec_mul_oclsrc);
             size_t localsize = 128;
-            size_t globalsize = row_size / 4 * localsize;
+            size_t globalsize = row_size % 4 * localsize;
+            uint row_offset = row_size - (row_size % 4);
 
             uint argId = 0;
-            k.set(argId++, (cl_mem) A);
-            k.set(argId++, offA);
-            k.set(argId++, cl_uint(col_size));
-            k.set(argId++, cl_uint(col_size%4));
-            k.set(argId++, (cl_mem) x);
-            k.set(argId++, offx);
-            k.set(argId++, alpha);
-            k.set(argId++, beta);
-            k.set(argId++, (cl_mem) y);
-            k.set(argId++, offy);
-            clSetKernelArg((cl_kernel)k.ptr(), argId++, localsize * sizeof(cl_float4), NULL);
+            k_1.set(argId++, (cl_mem) A);
+            k_1.set(argId++, offA);
+            k_1.set(argId++, cl_uint(col_size));
+            k_1.set(argId++, cl_uint(row_offset));
+            k_1.set(argId++, cl_uint(col_size%4));
+            k_1.set(argId++, (cl_mem) x);
+            k_1.set(argId++, offx);
+            k_1.set(argId++, alpha);
+            k_1.set(argId++, beta);
+            k_1.set(argId++, (cl_mem) y);
+            k_1.set(argId++, offy);
+            clSetKernelArg((cl_kernel)k_1.ptr(), argId++, localsize * sizeof(cl_float), NULL);
 
             clEnqueueNDRangeKernel((cl_command_queue)ocl::Queue::getDefault().ptr(),
-                                   (cl_kernel)k.ptr(), 1,
+                                   (cl_kernel)k_1.ptr(), 1,
                                    NULL,
                                    &globalsize,
                                    &localsize, 0, NULL,
                                    NULL);
-            if ((row_size % 4) != 0)
-            {
-                ocl::Kernel k_1(CL_KERNEL_SELECT("matvec_mul1"), cv::ocl::dnn::matvec_mul_oclsrc);
-                size_t localsize = 128;
-                size_t globalsize = row_size % 4 * localsize;
-                uint row_offset = row_size - (row_size % 4);
-
-                uint argId = 0;
-                k_1.set(argId++, (cl_mem) A);
-                k_1.set(argId++, offA);
-                k_1.set(argId++, cl_uint(col_size));
-                k_1.set(argId++, cl_uint(row_offset));
-                k_1.set(argId++, cl_uint(col_size%4));
-                k_1.set(argId++, (cl_mem) x);
-                k_1.set(argId++, offx);
-                k_1.set(argId++, alpha);
-                k_1.set(argId++, beta);
-                k_1.set(argId++, (cl_mem) y);
-                k_1.set(argId++, offy);
-                clSetKernelArg((cl_kernel)k_1.ptr(), argId++, localsize * sizeof(cl_float), NULL);
-
-                clEnqueueNDRangeKernel((cl_command_queue)ocl::Queue::getDefault().ptr(),
-                                       (cl_kernel)k_1.ptr(), 1,
-                                       NULL,
-                                       &globalsize,
-                                       &localsize, 0, NULL,
-                                       NULL);
-            }
-        }
-        else
-        {
-            /* FIXME add implementation here */
         }
     }
 }
@@ -621,26 +610,19 @@ void ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
 {
     ocl::Context ctx = ocl::Context::getDefault();
 
-    if (ocl::Device::getDefault().type() == CL_DEVICE_TYPE_CPU)
-    {
-        LOG(FATAL) << "Not Support CPU device";
-    }
-    else
-    {
-        ocl::Kernel oclk_axpy(CL_KERNEL_SELECT("axpy"), cv::ocl::dnn::math_oclsrc);
-        size_t global[] = { 128 * 128 };
-        size_t local[] = { 128 };
+    ocl::Kernel oclk_axpy(CL_KERNEL_SELECT("axpy"), cv::ocl::dnn::math_oclsrc);
+    size_t global[] = { 128 * 128 };
+    size_t local[] = { 128 };
 
-        cl_uint argIdx = 0;
-        oclk_axpy.set(argIdx++, N);
-        oclk_axpy.set(argIdx++, alpha);
-        oclk_axpy.set(argIdx++, (cl_mem) X);
-        oclk_axpy.set(argIdx++, offX);
-        oclk_axpy.set(argIdx++, (cl_mem) Y);
-        oclk_axpy.set(argIdx++, offY);
+    cl_uint argIdx = 0;
+    oclk_axpy.set(argIdx++, N);
+    oclk_axpy.set(argIdx++, alpha);
+    oclk_axpy.set(argIdx++, (cl_mem) X);
+    oclk_axpy.set(argIdx++, offX);
+    oclk_axpy.set(argIdx++, (cl_mem) Y);
+    oclk_axpy.set(argIdx++, offY);
 
-        oclk_axpy.run(1, global, local, false);
-    }
+    oclk_axpy.run(1, global, local, false);
 }
 
 template void ocl4dnnAXPY<float>(const int32_t ctx_id, const int32_t N,

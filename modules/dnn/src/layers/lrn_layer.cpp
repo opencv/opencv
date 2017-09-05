@@ -84,7 +84,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<OCL4DNNLRN<float>> lrnOp;
+    Ptr<OCL4DNNLRN<float> > lrnOp;
 #endif
 
     virtual bool supportBackend(int backendId)
@@ -116,7 +116,7 @@ public:
             config.width = inputs[0]->size[3];
             config.norm_by_size = normBySize;
 
-            lrnOp = Ptr<OCL4DNNLRN<float>>(new OCL4DNNLRN<float>(config));
+            lrnOp = Ptr<OCL4DNNLRN<float> >(new OCL4DNNLRN<float>(config));
         }
 
         UMat inpMat, outMat;
@@ -137,7 +137,8 @@ public:
 
         CV_Assert(inputs.size() == outputs.size());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs, outputs, internals))
 
         for (int i = 0; i < inputs.size(); i++)

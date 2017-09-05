@@ -61,7 +61,7 @@ public:
     enum { VEC_ALIGN = 8 };
 
 #ifdef HAVE_OPENCL
-    Ptr<OCL4DNNInnerProduct<float>> innerProductOp;
+    Ptr<OCL4DNNInnerProduct<float> > innerProductOp;
     std::vector<UMat> umat_blobs;
 #endif
 
@@ -271,7 +271,7 @@ public:
             config.M = outerSize;
             config.K = innerSize;
 
-            innerProductOp = Ptr<OCL4DNNInnerProduct<float>>(new OCL4DNNInnerProduct<float>(config));
+            innerProductOp = Ptr<OCL4DNNInnerProduct<float> >(new OCL4DNNInnerProduct<float>(config));
         }
 
         UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
@@ -322,7 +322,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(input, output))
 
         int axisCan = clamp(axis, input[0]->dims);

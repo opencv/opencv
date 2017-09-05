@@ -68,7 +68,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<OCL4DNNSoftmax<float>> softmaxOp;
+    Ptr<OCL4DNNSoftmax<float> > softmaxOp;
 #endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -104,7 +104,7 @@ public:
             config.axis = axisRaw;
             config.channels = inputs[0]->size[axisRaw];
 
-            softmaxOp = Ptr<OCL4DNNSoftmax<float>>(new OCL4DNNSoftmax<float>(config));
+            softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
         }
 
         UMat srcMat, dstMat;
@@ -174,7 +174,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) && ocl::Device::getDefault().isIntel(),
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs, outputs, internals))
 
         const Mat &src = *inputs[0];
