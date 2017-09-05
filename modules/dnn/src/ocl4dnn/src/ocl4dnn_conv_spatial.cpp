@@ -1025,16 +1025,19 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
     blockK_ = blockHeight;
     blockN_ = blockDepth;
     generateKernelSrc();
-    compileKernel();
 
-    size_t localSize[3] = { 1, 1, 1 };
-    size_t globalSize[3];
-
-    computeGlobalSize(1, workItemOutput, localSize, globalSize);
-    kernelQueue.push_back(new kernelConfig(kernel_name_, globalSize, localSize, workItemOutput,
-                                           false, false, true, 4));
-
-    return true;
+    ocl::Program program = compileKernel();
+    if (program.ptr())
+    {
+        size_t localSize[3] = { 1, 1, 1 };
+        size_t globalSize[3];
+        computeGlobalSize(1, workItemOutput, localSize, globalSize);
+        kernelQueue.push_back(new kernelConfig(kernel_name_, globalSize, localSize, workItemOutput,
+                                               false, false, true, KERNEL_TYPE_BASIC));
+        return true;
+    }
+    else
+        return false;
 }
 
 template<>
@@ -1392,8 +1395,18 @@ ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
     ocl::Context ctx = ocl::Context::getDefault();
     ocl::ProgramSource src(kernel_.c_str());
     ocl::Program program = ctx.getProg(src, options_, errmsg);
+
     CV_Assert(!kernel_name_.empty());
-    phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
+    if (program.ptr())
+    {
+        phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
+    }
+    else
+    {
+        std::cout << "Failed to compile kernel: " << kernel_name_
+                  << ", buildflags: " << options_
+                  << ", errmsg: " << errmsg << std::endl;
+    }
     return program;
 }
 
@@ -1470,22 +1483,26 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
     options_ = optionsString.str();
     kernel_ = programEntryToString(ocl::dnn::conv_layer_spatial_oclsrc);
     ocl::Program program = compileKernel();
-
-    size_t workgroupSize_used;
-    ocl::Kernel kernel(kernel_name_.c_str(), program);
-    workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
-    if (workgroupSize_used != simd_size)
+    if (program.ptr())
     {
-        phash.erase(kernel_name_);
-        unloadProgram(program);
-        return false;
+        size_t workgroupSize_used;
+        ocl::Kernel kernel(kernel_name_.c_str(), program);
+        workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
+        if (workgroupSize_used != simd_size)
+        {
+            phash.erase(kernel_name_);
+            unloadProgram(program);
+            return false;
+        }
+        else
+        {
+            kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
+                                                   false, true, false, KERNEL_TYPE_GEMM_LIKE));
+            return true;
+        }
     }
     else
-    {
-       kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
-                                               false, true, false, 5));
-       return true;
-    }
+        return false;
 }
 
 template<>
@@ -1514,23 +1531,26 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
 
     generateKernelSrc();
     ocl::Program program = compileKernel();
-
-    // ClKernel kernel;
-    size_t workgroupSize_used;
-    ocl::Kernel kernel(kernel_name_.c_str(), program);
-    workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
-    if (workgroupSize_used != simd_size)
+    if (program.ptr())
     {
-        phash.erase(kernel_name_);
-        unloadProgram(program);
-        return false;
+        size_t workgroupSize_used;
+        ocl::Kernel kernel(kernel_name_.c_str(), program);
+        workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
+        if (workgroupSize_used != simd_size)
+        {
+            phash.erase(kernel_name_);
+            unloadProgram(program);
+            return false;
+        }
+        else
+        {
+            kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
+                                                   false, true, false, KERNEL_TYPE_INTEL_IDLF));
+            return true;
+        }
     }
     else
-    {
-        kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
-                                               false, true, false, 2));
-        return true;
-    }
+        return false;
 }
 
 template<>
