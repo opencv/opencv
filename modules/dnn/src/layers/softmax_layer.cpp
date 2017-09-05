@@ -135,6 +135,7 @@ public:
         if (!ksum.create("kernel_channel_sum", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
+        if (logSoftMax) buildOpts += " -DLOG_SOFTMAX ";
         if (!kdiv.create("kernel_channel_div", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
@@ -159,7 +160,7 @@ public:
         if (!ksum.run(1, &bufSize, &wgSize, false))
             return false;
 
-        kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize, (int)logSoftMax,
+        kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
         if (!kdiv.run(1, &totalSize, &wgSize, false))
             return false;
