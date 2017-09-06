@@ -1076,7 +1076,7 @@ template<typename _Tp> struct pyopencvVecConverter
         int i, j, n = (int)PySequence_Fast_GET_SIZE(seq);
         value.resize(n);
 
-        int type = DataType<_Tp>::type;
+        int type = traits::Type<_Tp>::value;
         int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
         PyObject** items = PySequence_Fast_ITEMS(seq);
 
@@ -1159,7 +1159,9 @@ template<typename _Tp> struct pyopencvVecConverter
     {
         if(value.empty())
             return PyTuple_New(0);
-        Mat src((int)value.size(), DataType<_Tp>::channels, DataType<_Tp>::depth, (uchar*)&value[0]);
+        int type = traits::Type<_Tp>::value;
+        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+        Mat src((int)value.size(), channels, depth, (uchar*)&value[0]);
         return pyopencv_from(src);
     }
 };
