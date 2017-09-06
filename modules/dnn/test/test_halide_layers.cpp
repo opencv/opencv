@@ -646,6 +646,48 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*num convs*/  Values(1, 2, 3),
 /*weighted(for sum only)*/ Bool()
 ));
+
+////////////////////////////////////////////////////////////////////////////
+// Mixed backends
+////////////////////////////////////////////////////////////////////////////
+TEST(MixedBackends_Halide_Default_Halide, Accuracy)
+{
+    // Just a layer that supports Halide backend.
+    LayerParams lrn;
+    lrn.type = "LRN";
+    lrn.name = "testLRN";
+
+    // Some of layers that doesn't supports Halide backend yet.
+    LayerParams mvn;
+    mvn.type = "MVN";
+    mvn.name = "testMVN";
+
+    // Halide layer again.
+    LayerParams lrn2;
+    lrn2.type = "LRN";
+    lrn2.name = "testLRN2";
+
+    Net net;
+    int lrnId = net.addLayer(lrn.name, lrn.type, lrn);
+    net.connect(0, 0, lrnId, 0);
+    net.addLayerToPrev(mvn.name, mvn.type, mvn);
+    net.addLayerToPrev(lrn2.name, lrn2.type, lrn2);
+
+    Mat input({4, 3, 5, 6}, CV_32F);
+    randu(input, -1.0f, 1.0f);
+    net.setInput(input);
+    Mat outputDefault = net.forward().clone();
+
+    net.setPreferableBackend(DNN_BACKEND_HALIDE);
+    net.setInput(input);
+    Mat outputHalide = net.forward().clone();
+    normAssert(outputDefault, outputHalide);
+
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+    net.setInput(input);
+    outputHalide = net.forward().clone();
+    normAssert(outputDefault, outputHalide);
+}
 #endif  // HAVE_HALIDE
 
 }  // namespace cvtest
