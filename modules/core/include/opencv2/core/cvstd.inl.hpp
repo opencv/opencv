@@ -233,7 +233,7 @@ template<typename _Tp, int n> static inline
 std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-    if(Vec<_Tp, n>::depth < CV_32F)
+    if (cv::traits::Depth<_Tp>::value <= CV_32S)
     {
         for (int i = 0; i < n - 1; ++i) {
             out << (int)vec[i] << ", ";
