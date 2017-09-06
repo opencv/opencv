@@ -235,7 +235,7 @@ bool TiffDecoder::readHeader()
             m_hdr = false;
 
             if( bpp > 8 &&
-               ((photometric != 2 && photometric != 1) ||
+               ((photometric > 2) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
