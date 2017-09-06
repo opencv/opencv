@@ -62,8 +62,8 @@ template<typename Dtype>
 OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 {
     bias_term_ = config.bias_term;
-    int32_t dims = config.in_shape.size();
-    int32_t spatial_dims = config.kernel.size();
+    int dims = config.in_shape.size();
+    int spatial_dims = 2;
 
     channels_   = config.in_shape[dims - spatial_dims - 1];
     num_output_ = config.out_shape[dims - spatial_dims - 1];
@@ -76,11 +76,11 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     std::vector<int32_t> im_in_shape_;
     std::vector<int32_t> im_out_shape_;
 
-    for (int32_t i = 0; i < spatial_dims; ++i) {
-        kernel_shape_.push_back(config.kernel[i]);
-        pad_.push_back(config.pad[i]);
-        stride_.push_back(config.stride[i]);
-        dilation_.push_back(config.dilation[i]);
+    for (int i = 0; i < spatial_dims; ++i) {
+        kernel_shape_.push_back(i == 0 ? config.kernel.height : config.kernel.width);
+        pad_.push_back(i == 0 ? config.pad.height : config.pad.width);
+        stride_.push_back(i == 0 ? config.stride.height : config.stride.width);
+        dilation_.push_back(i == 0 ? config.dilation.height : config.dilation.width);
         im_in_shape_.push_back(config.in_shape[dims - spatial_dims + i]);
         im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
     }
@@ -92,9 +92,9 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     kernel_dim_ = channels_ / group_;
     out_spatial_dim_ = 1;
 
-    int32_t in_spatial_dim_ = 1;
-    for (int32_t i = 0; i < spatial_dims; ++i) {
-        kernel_dim_ *= config.kernel[i];
+    int in_spatial_dim_ = 1;
+    for (int i = 0; i < spatial_dims; ++i) {
+        kernel_dim_ *= i == 0 ? config.kernel.height : config.kernel.width;
         in_spatial_dim_ *= config.in_shape[dims - spatial_dims + i];
         out_spatial_dim_ *= config.out_shape[dims - spatial_dims + i];
     }
@@ -173,7 +173,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateHeader()
 {
     std::stringstream ss;
 
-    if (std::is_same<Dtype, double>::value) {
+    if (cv::traits::Depth<Dtype>::value == CV_64F) {
         // Test/enable KHR 64 bit (double)
         ss << "#if defined(cl_khr_fp64)" << std::endl;
         ss << "#pragma OPENCL EXTENSION cl_khr_fp64 : enable" << std::endl;
@@ -199,7 +199,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateHeader()
     ss << "#endif" << std::endl;
 
     // 64 bit integers
-    if (sizeof(int32_t) == 8 || std::is_same<Dtype, double>::value) {
+    if (sizeof(int32_t) == 8 || cv::traits::Depth<Dtype>::value == CV_64F) {
         // Test/enable 64 bit atomics
         ss << "#if defined(cl_khr_int64_base_atomics)" << std::endl;
         ss << "#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable"
@@ -208,7 +208,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateHeader()
         ss << "#endif" << std::endl;
     }
 
-    if (std::is_same<Dtype, double>::value) {
+    if (cv::traits::Depth<Dtype>::value == CV_64F) {
         ss << "#define Dtype double" << std::endl;
         ss << "#define Dtype1 double" << std::endl;
         // double2, double4, double8, double16
@@ -845,9 +845,9 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
     std::string prefix = ocl::Device::getDefault().name() +
                          ocl::Device::getDefault().vendorName() +
                          ocl::Device::getDefault().driverVersion() +
-                         std::to_string(ocl::Device::getDefault().maxComputeUnits());
+                         cv::format("%d", ocl::Device::getDefault().maxComputeUnits());
     prefix = prefix + keyBuilder.str();
-    key_ = std::to_string(crc64((uchar*)prefix.c_str(), prefix.size()));
+    key_ = cv::format("%08x", crc64((uchar*)prefix.c_str(), prefix.size()));
     short_key_ = keyBuilder.str();
 }
 

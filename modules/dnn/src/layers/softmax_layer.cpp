@@ -97,10 +97,7 @@ public:
         {
             OCL4DNNSoftmaxConfig config;
 
-            int dims = inputs[0]->dims;
-            config.in_shape.resize(dims);
-            for (int i = 0; i < dims; i++)
-                config.in_shape[i] = inputs[0]->size[i];
+            config.in_shape = shape(*inputs[0]);
             config.axis = axisRaw;
             config.channels = inputs[0]->size[axisRaw];
 

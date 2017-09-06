@@ -97,7 +97,7 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
         if (M_ <= max_image_size &&
             N_ <= max_image_size &&
             K_ <= max_image_size &&
-            std::is_same<Dtype, float>::value &&
+            cv::traits::Depth<Dtype>::value == CV_32F &&
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
             ret = ocl4dnnGEMMCommon<Dtype>(transpose_ ? CblasNoTrans : CblasTrans,

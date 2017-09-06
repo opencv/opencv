@@ -436,10 +436,20 @@ bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
                  const int32_t offx, const Dtype beta, UMat y,
                  const int32_t offy)
 {
+    return false;
+}
+
+template<>
+bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
+                 const int32_t M, const int32_t N, const float alpha,
+                 const UMat A, const int32_t offA, const UMat x,
+                 const int32_t offx, const float beta, UMat y,
+                 const int32_t offy)
+{
     ocl::Queue queue = ocl::Queue::getDefault();
     bool ret = false;
 
-    if (std::is_same<Dtype, float>::value && TransA == CblasNoTrans)
+    if (TransA == CblasNoTrans)
     {
         ocl::Kernel k(CL_KERNEL_SELECT("matvec_mul4"), cv::ocl::dnn::matvec_mul_oclsrc);
         if (k.empty())
@@ -491,13 +501,6 @@ bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
     }
     return ret;
 }
-
-template bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
-                                 const int32_t M, const int32_t N,
-                                 const float alpha, const UMat A,
-                                 const int32_t offA, const UMat x,
-                                 const int32_t offx, const float beta,
-                                 UMat y, const int32_t offy);
 
 template<typename Dtype>
 bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,

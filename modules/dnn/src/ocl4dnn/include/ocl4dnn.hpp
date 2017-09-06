@@ -54,24 +54,28 @@ namespace cv { namespace dnn { namespace ocl4dnn {
 #ifdef HAVE_OPENCL
 struct OCL4DNNConvConfig
 {
-    OCL4DNNConvConfig() : in_shape(3, 1),
-                         out_shape(3, 1),
-                         kernel(1, 1),
-                         pad(0, 0),
-                         stride(1, 1),
-                         dilation(1, 1)
+    OCL4DNNConvConfig() :
+        kernel(1, 1),
+        pad(0, 0),
+        stride(1, 1),
+        dilation(1, 1),
+        group(1),
+        bias_term(false),
+        weights_backward(true),
+        bias_backward(true),
+        phase_test(true)
     {}
-    std::vector<int32_t> in_shape;
-    std::vector<int32_t> out_shape;
-    std::vector<int32_t> kernel;
-    std::vector<int32_t> pad;
-    std::vector<int32_t> stride;
-    std::vector<int32_t> dilation;
-    int32_t group = 1;
-    bool bias_term = false;
-    bool weights_backward = true;
-    bool bias_backward = true;
-    bool phase_test = true;
+    MatShape in_shape;
+    MatShape out_shape;
+    Size kernel;
+    Size pad;
+    Size stride;
+    Size dilation;
+    int group; // = 1;
+    bool bias_term; // = false;
+    bool weights_backward; // = true;
+    bool bias_backward; // = true;
+    bool phase_test; // = true;
 };
 
 template<typename Dtype>
@@ -127,30 +131,22 @@ class OCL4DNNConvSpatial
         inline void addDef(std::stringstream& ss,  // NOLINT
                            const char* name, T value)
         {
-            ss << "#ifdef " << name << std::endl;
             ss << "#undef " << name << std::endl;
-            ss << "#endif" << std::endl;
-            if (std::is_same<T, float>::value)
-            {
-                ss << "#define " << name << " (float) " << std::setprecision(32) << value
-                   << std::endl;
-            }
-            else if (std::is_same<T, double>::value)
-            {
-                ss << "#define " << name << " (double) " << std::setprecision(32) << value
-                   << std::endl;
-            }
-            else
-            {
-                ss << "#define " << name << " " << value << std::endl;
-            }
+            ss << "#define " << name << " " << value << std::endl;
         }
 
-        template<class T>
         inline void addDef(std::stringstream& ss,  // NOLINT
-                            const std::string name, T value)
+                           const char* name, float value)
         {
-            addDef(ss, name.c_str(), value);
+            ss << "#undef " << name << std::endl;
+            ss << "#define " << name << " (float) " << std::setprecision(32) << value << std::endl;
+        }
+
+        inline void addDef(std::stringstream& ss,  // NOLINT
+                           const char* name, double value)
+        {
+            ss << "#undef " << name << std::endl;
+            ss << "#define " << name << " (double) " << std::setprecision(32) << value << std::endl;
         }
 
         void tune(UMat &bottom,
@@ -299,23 +295,25 @@ typedef enum {
 
 struct OCL4DNNPoolConfig
 {
-    OCL4DNNPoolConfig() : in_shape(3, 1),
-                         out_shape(3, 1),
-                         kernel(1, 1),
-                         pad(0, 0),
-                         stride(1, 1),
-                         dilation(1, 1)
+    OCL4DNNPoolConfig() :
+        kernel(1, 1),
+        pad(0, 0),
+        stride(1, 1),
+        dilation(1, 1),
+        channels(0),
+        pool_method(LIBDNN_POOLING_METHOD_MAX),
+        global_pooling(false)
     {}
-    std::vector<int32_t> in_shape;
-    std::vector<int32_t> out_shape;
-    std::vector<int32_t> kernel;
-    std::vector<int32_t> pad;
-    std::vector<int32_t> stride;
-    std::vector<int32_t> dilation;
+    MatShape in_shape;
+    MatShape out_shape;
+    Size kernel;
+    Size pad;
+    Size stride;
+    Size dilation;
 
-    int32_t channels;
-    ocl4dnnPoolingMethod_t pool_method = LIBDNN_POOLING_METHOD_MAX;
-    bool global_pooling = false;
+    int channels;
+    ocl4dnnPoolingMethod_t pool_method; // = LIBDNN_POOLING_METHOD_MAX;
+    bool global_pooling; // = false;
 };
 
 template<typename Dtype>
@@ -355,12 +353,16 @@ class OCL4DNNPool
 
 struct OCL4DNNInnerProductConfig
 {
-    int32_t num_output;
-    int32_t M;
-    int32_t K;
+    OCL4DNNInnerProductConfig() :
+        num_output(0), M(0), K(0),
+        bias_term(false), transpose(false), phase_test(true)
+    {}
+    int num_output;
+    int M;
+    int K;
     bool bias_term;
-    bool transpose = false;
-    bool phase_test = true;
+    bool transpose; // = false;
+    bool phase_test; // = true;
 };
 
 template<typename Dtype>
@@ -394,12 +396,13 @@ typedef enum {
 
 struct OCL4DNNLRNConfig
 {
-    OCL4DNNLRNConfig()
+    OCL4DNNLRNConfig() :
+        phase_test(true)
     {}
-    std::vector<int32_t> in_shape;
+    MatShape in_shape;
     LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type;
-    bool phase_test = true;
-    int32_t local_size;
+    bool phase_test; // = true;
+    int local_size;
     float alpha;
     float beta;
     float k;
@@ -436,9 +439,9 @@ struct OCL4DNNSoftmaxConfig
 {
     OCL4DNNSoftmaxConfig()
     {}
-    std::vector<int32_t> in_shape;
-    int32_t axis;
-    int32_t channels;
+    MatShape in_shape;
+    int axis;
+    int channels;
 };
 
 template<typename Dtype>

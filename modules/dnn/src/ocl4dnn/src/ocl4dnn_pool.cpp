@@ -51,18 +51,18 @@ namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
 OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
 {
-    int32_t dims = config.in_shape.size();
-    int32_t spatial_dims = config.kernel.size();
+    int dims = config.in_shape.size();
+    int spatial_dims = 2;
 
     batch_size_ = config.in_shape[0];
     channels_ = config.channels;
     pool_method_ = config.pool_method;
 
-    for (int32_t i = 0; i < spatial_dims; ++i)
+    for (int i = 0; i < spatial_dims; ++i)
     {
-        kernel_shape_.push_back(config.kernel[i]);
-        pad_.push_back(config.pad[i]);
-        stride_.push_back(config.stride[i]);
+        kernel_shape_.push_back(i == 0 ? config.kernel.height : config.kernel.width);
+        pad_.push_back(i == 0 ? config.pad.height : config.pad.width);
+        stride_.push_back(i == 0 ? config.stride.height : config.stride.width);
         im_in_shape_.push_back(config.in_shape[dims - spatial_dims + i]);
         im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
     }
@@ -79,7 +79,7 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     pooled_width_ = im_out_shape_[1];
 
     count_ = 1;
-    for (int32_t i = 0; i < config.out_shape.size(); ++i)
+    for (int i = 0; i < config.out_shape.size(); ++i)
     {
         count_ *= config.out_shape[i];
     }

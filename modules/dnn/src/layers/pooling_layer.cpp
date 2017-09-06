@@ -119,11 +119,11 @@ public:
         {
             OCL4DNNPoolConfig config;
 
-            config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
-            config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
-            config.kernel = {kernel.height, kernel.width};
-            config.pad = {pad.height, pad.width};
-            config.stride = {stride.height, stride.width};
+            config.in_shape = shape(*inputs[0]);
+            config.out_shape = shape(outputs[0]);
+            config.kernel = kernel;
+            config.pad = pad;
+            config.stride = stride;
             config.channels = inputs[0]->size[1];
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :

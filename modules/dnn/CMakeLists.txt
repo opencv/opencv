@@ -22,7 +22,6 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninit
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4701 /wd4100)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
@@ -75,11 +74,7 @@ ocv_source_group("Src\\protobuf" FILES ${Protobuf_SRCS} ${Protobuf_HDRS})
 ocv_module_include_directories(include ${Protobuf_INCLUDE_DIRS})
 
 ocv_glob_module_sources(${Protobuf_SRCS} ${Protobuf_HDRS} ${CBLAS_H_PROXY_PATH})
-if(APPLE)
-  ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES} ${OPENCL_LIBRARIES})
-else()
-  ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES})
-endif()
+ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES})
 ocv_add_samples()
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
