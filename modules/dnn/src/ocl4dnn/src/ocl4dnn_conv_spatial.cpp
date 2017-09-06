@@ -1561,7 +1561,7 @@ bool OCL4DNNConvSpatial<float>::tuneLocalSize(UMat &bottom, UMat &top,
     if (config->use_null_local || !config->autoTune)
         return true;
 
-    float fastestTime = 999999990000000000000000000.0f;
+    float fastestTime = std::numeric_limits<float>::infinity();
     uint32_t multiplier = 4;
     uint32_t localSize[3] = { 1, 1, 1 };
 
@@ -1777,7 +1777,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
     if (kernelQueue.size()) {
         while (failures < kernelQueue.size()) {
             int32_t fastestKernel = -1;
-            float fastestTime = 999999990000000000000000000.0f;
+            float fastestTime = std::numeric_limits<float>::infinity();
 
             for (int32_t x = 0; x < kernelQueue.size(); x++) {
                 if (kernelQueue[x]->executionTime < fastestTime &&
