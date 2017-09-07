@@ -106,7 +106,7 @@ class OCL4DNNConvSpatial
             kernelConfig()
             {}
 
-            kernelConfig(std::string name, size_t* global_size, size_t* local_size,
+            kernelConfig(const std::string& name, size_t* global_size, size_t* local_size,
                          int32_t* workItem,
                          bool tune, bool swizzle, bool null_local,
                          int32_t type = 0)
@@ -127,26 +127,29 @@ class OCL4DNNConvSpatial
             }
         };
 
-        template<class T>
-        inline void addDef(std::stringstream& ss,  // NOLINT
-                           const char* name, T value)
+        inline void addDef(const char* name)
         {
-            ss << "#undef " << name << std::endl;
-            ss << "#define " << name << " " << value << std::endl;
+            options_ << " -D " << name;
         }
 
-        inline void addDef(std::stringstream& ss,  // NOLINT
-                           const char* name, float value)
+        inline void addDef(const char* name, const int value)
         {
-            ss << "#undef " << name << std::endl;
-            ss << "#define " << name << " (float) " << std::setprecision(32) << value << std::endl;
+            options_ << " -D " << name << "=" << value;
         }
 
-        inline void addDef(std::stringstream& ss,  // NOLINT
-                           const char* name, double value)
+        inline void addDef(const char* name, const float value)
         {
-            ss << "#undef " << name << std::endl;
-            ss << "#define " << name << " (double) " << std::setprecision(32) << value << std::endl;
+            options_ << " -D " << name << "=(float)" << value;
+        }
+
+        inline void addDef(const char* name, const double value)
+        {
+            options_ << " -D " << name << "=(double)" << value;
+        }
+
+        inline void addDef(const char* name, const char* value)
+        {
+            options_ << " -D " << name << "=" << value;
         }
 
         void tune(UMat &bottom,
@@ -154,14 +157,13 @@ class OCL4DNNConvSpatial
                   UMat &weight,
                   UMat &bias,
                   int32_t numImages);
-        void generateKernelSrc();
-        uint64 crc64(const uchar* data, size_t size, uint64 crc0 = 0);
-        std::string generateHeader();
-        std::string generateDefs();
-        std::string generateKernels(int32_t kernelType,
-                                    int32_t blockM,
-                                    int32_t blockK,
-                                    int32_t blockN);
+
+        void setupKernel();
+        void collectCommonInformation();
+        void setupKernelDetails(int32_t kernelType,
+                                int32_t blockM,
+                                int32_t blockK,
+                                int32_t blockN);
 
         ocl::Program compileKernel();
         typedef std::map<std::string, ocl::Program> phash_t;
@@ -223,8 +225,8 @@ class OCL4DNNConvSpatial
                                size_t* localSizes,
                                size_t* globalSizes);
         bool loadCachedConfig();
-        std::string programEntryToString(ocl::ProgramSource& src);
-        void unloadProgram(ocl::Program& prog);
+
+        void unloadProgram(const std::string& kernelName);
         void prepareKernel(UMat &bottom, UMat &top,
                            UMat &weight, UMat &bias,
                            int32_t numImages);
@@ -266,8 +268,8 @@ class OCL4DNNConvSpatial
         std::string kernel_name_;
         std::stringstream cache_path_;
         int32_t kernel_index_;
-        std::vector<kernelConfig*> kernelQueue;
-        kernelConfig* bestKernelConfig;
+        std::vector< cv::Ptr<kernelConfig> > kernelQueue;
+        cv::Ptr<kernelConfig> bestKernelConfig;
 
         int32_t bottom_dim_;
         int32_t top_dim_;
@@ -281,8 +283,8 @@ class OCL4DNNConvSpatial
         int32_t blockM_;
         int32_t blockK_;
         int32_t blockN_;
-        std::string options_;
-        std::string kernel_;
+        std::stringstream options_;
+        cv::ocl::ProgramSource src_;
         int32_t prev_kernel_type_;
         bool auto_tuning_;
 };

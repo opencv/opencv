@@ -85,7 +85,6 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
         im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
     }
 
-    bestKernelConfig = NULL;
     prev_kernel_type_ = -1;
     bias_ = NULL;
     tuned_ = false;
@@ -163,134 +162,24 @@ OCL4DNNConvSpatial<Dtype>::~OCL4DNNConvSpatial()
     if (!swizzled_weights_umat.empty()) {
         swizzled_weights_umat.release();
     }
-    if (bestKernelConfig) {
-        delete bestKernelConfig;
-    }
 }
 
 template<typename Dtype>
-std::string OCL4DNNConvSpatial<Dtype>::generateHeader()
+void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
 {
-    std::stringstream ss;
-
-    if (cv::traits::Depth<Dtype>::value == CV_64F) {
-        // Test/enable KHR 64 bit (double)
-        ss << "#if defined(cl_khr_fp64)" << std::endl;
-        ss << "#pragma OPENCL EXTENSION cl_khr_fp64 : enable" << std::endl;
-        ss << "#define DOUBLE_SUPPORT_AVAILABLE" << std::endl;
-
-        // Test/enable AMD 64 bit (double)
-        ss << "#elif defined(cl_amd_fp64)" << std::endl;
-        ss << "#pragma OPENCL EXTENSION cl_amd_fp64 : enable" << std::endl;
-        ss << "#define DOUBLE_SUPPORT_AVAILABLE" << std::endl;
-        ss << "#endif" << std::endl;
+    if (cv::traits::Depth<Dtype>::value == CV_64F)
+    {
+        addDef("DOUBLE_SUPPORT");
+        addDef("Dtype", "double");
+        addDef("Dtype_ID", CV_64F);
+    }
+    else
+    {
+        addDef("Dtype", "float");
+        addDef("Dtype_ID", CV_32F);
     }
 
-    // Test/enable 32 bit atomics
-    ss << "#if defined(cl_khr_int32_base_atomics)" << std::endl;
-    ss << "#pragma OPENCL EXTENSION cl_khr_int32_base_atomics : enable"
-       << std::endl;
-    ss << "#define ATOMICS_32_AVAILABLE" << std::endl;
-    ss << "#endif" << std::endl;
-    ss << "#if defined(cl_khr_global_int32_base_atomics)" << std::endl;
-    ss << "#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable"
-       << std::endl;
-    ss << "#define ATOMICS_32_AVAILABLE" << std::endl;
-    ss << "#endif" << std::endl;
-
-    // 64 bit integers
-    if (sizeof(int32_t) == 8 || cv::traits::Depth<Dtype>::value == CV_64F) {
-        // Test/enable 64 bit atomics
-        ss << "#if defined(cl_khr_int64_base_atomics)" << std::endl;
-        ss << "#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable"
-           << std::endl;
-        ss << "#define ATOMICS_64_AVAILABLE" << std::endl;
-        ss << "#endif" << std::endl;
-    }
-
-    if (cv::traits::Depth<Dtype>::value == CV_64F) {
-        ss << "#define Dtype double" << std::endl;
-        ss << "#define Dtype1 double" << std::endl;
-        // double2, double4, double8, double16
-        for (int32_t i = 2; i <= 16; i *= 2) {
-            ss << "#define Dtype" << i << " double" << i << std::endl;
-        }
-    } else {
-        ss << "#define Dtype float" << std::endl;
-        ss << "#define Dtype1 float" << std::endl;
-        // float2, float4, float8, float16
-        for (int32_t i = 2; i <= 16; i *= 2) {
-            ss << "#define Dtype" << i << " float" << i << std::endl;
-        }
-    }
-
-    if (sizeof(int32_t) == 8) {
-        ss << "#define int32_t long" << std::endl;
-        ss << "#define uint32_t unsigned long" << std::endl;
-        ss << "#define int32_tc long" << std::endl;
-        ss << "#define uint32_tc unsigned long" << std::endl;
-    } else {
-        ss << "#define int32_t int" << std::endl;
-        ss << "#define uint32_t unsigned int" << std::endl;
-        ss << "#define int32_tc int" << std::endl;
-        ss << "#define uint32_tc unsigned int" << std::endl;
-    }
-
-    return ss.str();
-}
-
-template<typename Dtype>
-std::string OCL4DNNConvSpatial<Dtype>::generateDefs()
-{
-    std::stringstream ss;
-
-    ss << "#define __CAT(x, y) x##y" << std::endl;
-    ss << "#define CAT(x, y) __CAT(x, y)" << std::endl;
-    ss << "#define LOOP0(VAR, STMT)" << std::endl;
-    ss << "#define LOOP1(VAR, STMT) (STMT); (VAR)++;" << std::endl;
-    ss << "#define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP3(VAR, STMT) LOOP2(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP4(VAR, STMT) LOOP3(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP5(VAR, STMT) LOOP4(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP6(VAR, STMT) LOOP5(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP7(VAR, STMT) LOOP6(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP8(VAR, STMT) LOOP7(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP9(VAR, STMT) LOOP8(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP10(VAR, STMT) LOOP9(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP11(VAR, STMT) LOOP10(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP12(VAR, STMT) LOOP11(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP13(VAR, STMT) LOOP12(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP14(VAR, STMT) LOOP13(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP15(VAR, STMT) LOOP14(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP16(VAR, STMT) LOOP15(VAR, STMT); (STMT); (VAR)++;"
-       << std::endl;
-    ss << "#define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))"
-       << std::endl;
-
-    addDef(ss, "KERNEL_WIDTH", kernel_w_);
-    addDef(ss, "KERNEL_HEIGHT" , kernel_h_);
-    addDef(ss, "STRIDE_X", stride_w_);
-    addDef(ss, "STRIDE_Y", stride_h_);
-    addDef(ss, "DILATION_X", dilation_w_);
-    addDef(ss, "DILATION_Y", dilation_h_);
-    addDef(ss, "INPUT_PAD_W", pad_w_);
-    addDef(ss, "INPUT_PAD_H", pad_h_);
-
-    return ss.str();
+    addDef(sizeof(int32_t) == 8 ? "SYSTEM_INT_64BIT" : "SYSTEM_INT_32BIT");
 }
 
 typedef enum {
@@ -300,33 +189,30 @@ typedef enum {
 } ocl4dnnConvSpatialKernelType_t;
 
 template<typename Dtype>
-std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
-                                                       int32_t blockM,
-                                                       int32_t blockK,
-                                                       int32_t blockN)
+void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
+                                                   int32_t blockM,
+                                                   int32_t blockK,
+                                                   int32_t blockN)
 {
-    std::stringstream ss;
-    std::stringstream opts;
     std::string kernelUKey;
     int32_t simd_size;
 
     if (kernelType == KERNEL_TYPE_INTEL_IDLF) {
         simd_size = blockN;
-        kernelUKey = generateSpecificKey(2, blockM, blockK, 1);
+        kernelUKey = generateSpecificKey(KERNEL_TYPE_INTEL_IDLF, blockM, blockK, 1);
 
         // kernel name
         kernel_name_ = "IDLF_";
-        kernel_name_ += kernelUKey.c_str();
+        kernel_name_ += kernelUKey;
         if (simd_size == 16)
             kernel_name_ += "_SIMD16";
         else
             kernel_name_ += "_SIMD8";
 
         // options
-        opts << "-cl-fast-relaxed-math -D convolve_simd=" << kernel_name_;
+        options_ << " -cl-fast-relaxed-math -D KERNEL_IDLF -D convolve_simd=" << kernel_name_;
         if (build_option_check())
-            opts << " -cl-no-subgroup-ifp ";
-        options_ = opts.str();
+            options_ << " -cl-no-subgroup-ifp ";
 
         // defs
         int32_t output_width = output_w_;
@@ -342,387 +228,102 @@ std::string OCL4DNNConvSpatial<Dtype>::generateKernels(int32_t kernelType,
         int tile_y_stride = (4 * simd_size) / tile_x;
         int invec_size = (tile_y + tile_y_stride - 1) / tile_y_stride;
 
-        addDef(ss, "SIMD_SIZE", simd_size);
-        addDef(ss, "filter_qualifier", "__global");
-        addDef(ss, "OUT_BLOCK_WIDTH", output_block_width);
-        addDef(ss, "OUT_BLOCK_HEIGHT", output_block_height);
-        addDef(ss, "LAST_BLOCK_WIDTH", last_block_width);
-        addDef(ss, "LAST_BLOCK_HEIGHT", last_block_height);
-        addDef(ss, "INPUT_DEPTH", channels_ / group_);
-        addDef(ss, "TOTAL_INPUT_DEPTH_SIZE", channels_);
-        addDef(ss, "TOTAL_OUTPUT_DEPTH", num_output_);
-        addDef(ss, "INPUT_START_X", 0);
-        addDef(ss, "INPUT_START_Y", 0);
-        addDef(ss, "INPUT_START_Z", 0);
-        addDef(ss, "NUM_FILTERS", M_);
-        addDef(ss, "OUT_BUFF_OFFSET", 0);
-        addDef(ss, "TILE_X", tile_x);
-        addDef(ss, "TILE_Y", tile_y);
-        addDef(ss, "TILE_Y_STRIDE", tile_y_stride);
-        addDef(ss, "INVEC_SIZE", invec_size);
-        addDef(ss, "ALIGNED_NUM_FILTERS", alignSize(M_, simd_size));
-        addDef(ss, "OUT_BLOCK_SIZE", (output_block_width*output_block_height));
+        addDef("SIMD_SIZE", simd_size);
+        addDef("filter_qualifier", "__global");
+        addDef("OUT_BLOCK_WIDTH", output_block_width);
+        addDef("OUT_BLOCK_HEIGHT", output_block_height);
+        addDef("LAST_BLOCK_WIDTH", last_block_width);
+        addDef("LAST_BLOCK_HEIGHT", last_block_height);
+        addDef("INPUT_DEPTH", channels_ / group_);
+        addDef("TOTAL_INPUT_DEPTH_SIZE", channels_);
+        addDef("TOTAL_OUTPUT_DEPTH", num_output_);
+        addDef("INPUT_START_X", 0);
+        addDef("INPUT_START_Y", 0);
+        addDef("INPUT_START_Z", 0);
+        addDef("NUM_FILTERS", M_);
+        addDef("OUT_BUFF_OFFSET", 0);
+        addDef("TILE_X", tile_x);
+        addDef("TILE_Y", tile_y);
+        addDef("TILE_Y_STRIDE", tile_y_stride);
+        addDef("INVEC_SIZE", invec_size);
+        addDef("ALIGNED_NUM_FILTERS", (int)alignSize(M_, simd_size));
+        addDef("OUT_BLOCK_SIZE", (output_block_width*output_block_height));
 
-        // kernel source
-        // Each work-item computes
-        // a OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT region of one output map.
-        // Each work-group (which will be mapped to 1 SIMD16/SIMD8 EU thread)
-        // will compute 16/8 different feature maps,
-        // but each feature map is for the same region of the imput image.
-        // NDRange:  (output_width+pad)/ OUT_BLOCK_WIDTH,
-        //           (output_height+pad)/OUT_BLOCK_HEIGHT,
-        //           NUM_FILTERS/OUT_BLOCK_DEPTH
-        // NOTE: for beignet
-        // this reqd_work_group_size does not guarantee that
-        // SIMD16/8 mode will be used,
-        // the compiler could choose to use two SIMD8 threads,
-        // and if that happens the code will break.
-        ss << "#define activation_function(x) (x)" << std::endl;
-        ss << "__attribute__((reqd_work_group_size(1, 1, SIMD_SIZE)))" << std::endl;
-        ss << "kernel void" << std::endl;
-        ss << "convolve_simd(" << std::endl;
-        ss << "__global float* inputs_base," << std::endl;
-        ss << "filter_qualifier float* weights_base," << std::endl;
-        ss << "__global float* biases_base," << std::endl;
-        ss << "__global float* outputs_base," << std::endl;
-        ss << "const ushort input_width," << std::endl;
-        ss << "const ushort input_height," << std::endl;
-        ss << "const ushort output_width," << std::endl;
-        ss << "const ushort output_height)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "__global float* outputs = outputs_base;" << std::endl;
-        ss << "__global float* inputs = inputs_base;" << std::endl;
-        ss << "filter_qualifier float* weights = weights_base;" << std::endl;
-        ss << "__global float* biases = biases_base;" << std::endl;
-        // oc = Output Column
-        ss << "uint32_t oc = get_global_id(0) * OUT_BLOCK_WIDTH;" << std::endl;
-        // or = Output Row
-        ss << "uint32_t or = get_global_id(1) * OUT_BLOCK_HEIGHT;" << std::endl;
-        // fm = Feature Map = od = Output Depth
-        ss << "uint32_t fm = get_global_id(2);" << std::endl;
-        ss << "uint32_t fmg = get_group_id(2);" << std::endl;
-        ss << "uint32_t lid = get_local_id(2);" << std::endl;
-        ss << "float out[OUT_BLOCK_SIZE];" << std::endl;
-        ss << "int32_t in_addr;" << std::endl;
-        // find weights adress of given neuron (lid is index)
-        ss << "uint32_t weight_addr = (fmg % (ALIGNED_NUM_FILTERS/SIMD_SIZE)) * "
-           << "INPUT_DEPTH * KERNEL_WIDTH * KERNEL_HEIGHT * SIMD_SIZE + lid;"
-           << std::endl;
-        ss << "for(int32_t i=0;i<OUT_BLOCK_SIZE;i++) {" << std::endl;
-        ss << "out[i]=0.0f;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "uint32_t num_in_batch = ( fm ) / ALIGNED_NUM_FILTERS;" << std::endl;
-        ss << "uint32_t input_batch_offset = "
-           << "num_in_batch * input_height * input_width * TOTAL_INPUT_DEPTH_SIZE;"
-           << std::endl;
-        ss << "int curr_y = or * STRIDE_Y + INPUT_START_Y + (lid / (TILE_X/4));"
-           << std::endl;
-        ss << "int curr_x = oc * STRIDE_X + INPUT_START_X + (lid % (TILE_X/4)) * 4;"
-           << std::endl;
-        ss << "#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0" << std::endl;
-        ss << "int saved_y = curr_y;" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "in_addr = "
-           << "input_batch_offset + INPUT_START_Z * input_height * input_width"
-            // y tile offset
-           << "+  (curr_y - INPUT_PAD_H) * input_width"
-            // x tile offset
-           << "+   curr_x - INPUT_PAD_W;"
-           << std::endl;
-        ss << "union {" << std::endl;
-        ss << "float4 in_vec[INVEC_SIZE];" << std::endl;
-        ss << "float in_array[INVEC_SIZE * 4];" << std::endl;
-        ss << "} in_buf;" << std::endl;
-        ss << "for(int32_t kd = 0; kd < INPUT_DEPTH; kd++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "int32_t in_offset = in_addr;" << std::endl;
-        ss << "int32_t reg = 0;" << std::endl;
-        ss << "LOOP(INVEC_SIZE, reg," << std::endl;
-        ss << "{" << std::endl;
-        ss << "#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0" << std::endl;
-        ss << "if (curr_y >= INPUT_PAD_H && "
-           << "curr_y < input_height + INPUT_PAD_H && "
-           << "curr_x + 3 >= INPUT_PAD_W && "
-           << "curr_x < input_width + INPUT_PAD_W) {" << std::endl;
-        ss << "if (curr_x < INPUT_PAD_W) {" << std::endl;
-        ss << "in_buf.in_vec[reg].s0 = 0;" << std::endl;
-        ss << "if (curr_x + 1 >= INPUT_PAD_W)" << std::endl;
-        ss << "in_buf.in_vec[reg].s1 = *(inputs + in_offset + 1);" << std::endl;
-        ss << "else" << std::endl;
-        ss << "in_buf.in_vec[reg].s1 = 0;" << std::endl;
-        ss << "if (curr_x + 2 >= INPUT_PAD_W)" << std::endl;
-        ss << "in_buf.in_vec[reg].s2 = *(inputs + in_offset + 2);" << std::endl;
-        ss << "else" << std::endl;
-        ss << "in_buf.in_vec[reg].s2 = 0;" << std::endl;
-        ss << "in_buf.in_vec[reg].s3 = *(inputs + in_offset + 3);" << std::endl;
-        ss << "} else {" << std::endl;
-        // read SIMD_SIZE elements
-        ss << "in_buf.in_vec[reg] = *(global float4*)(inputs + in_offset);"
-           << std::endl;
-        ss << "if (curr_x + 1 >= input_width + INPUT_PAD_W)" << std::endl;
-        ss << "in_buf.in_vec[reg].s1 = 0;" << std::endl;
-        ss << "if (curr_x + 2 >= input_width + INPUT_PAD_W)" << std::endl;
-        ss << "in_buf.in_vec[reg].s2 = 0;" << std::endl;
-        ss << "if (curr_x + 3 >= input_width + INPUT_PAD_W)" << std::endl;
-        ss << "in_buf.in_vec[reg].s3 = 0;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "} else {" << std::endl;
-        ss << "in_buf.in_vec[reg] = 0;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "curr_y += TILE_Y_STRIDE;" << std::endl;
-        ss << "#else" << std::endl;
-        // read SIMD_SIZE elements
-        ss << "in_buf.in_vec[reg] = *(global float4*)(inputs + in_offset);"
-           << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "in_offset += input_width * TILE_Y_STRIDE;" << std::endl;
-        ss << "});" << std::endl;
-        ss << "in_addr += input_height * input_width;" << std::endl;
-        ss << "#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0" << std::endl;
-        ss << "curr_y = saved_y;" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "#if KERNEL_WIDTH * KERNEL_HEIGHT != 1" << std::endl;
-        ss << "#define WEIGHT_PREF 8" << std::endl;
-        ss << "#else" << std::endl;
-        ss << "#define WEIGHT_PREF 1" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "union {" << std::endl;
-        ss << "float w[WEIGHT_PREF];" << std::endl;
-        ss << "#if KERNEL_WIDTH * KERNEL_HEIGHT != 1" << std::endl;
-        ss << "uint8 ui8;" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "} weight_buf;" << std::endl;
-        ss << "int32_t w_idx=0;" << std::endl;
-        ss << "uint32_t orig_weight_addr = weight_addr;" << std::endl;
-        ss << "#if KERNEL_WIDTH * KERNEL_HEIGHT != 1" << std::endl;
-        ss << "weight_buf.ui8 = "
-           << "intel_sub_group_block_read8((__global uint *)&weights[weight_addr]);"
-           << std::endl;
-        ss << "weight_addr += SIMD_SIZE * WEIGHT_PREF;" << std::endl;
-        ss << "#else" << std::endl;
-        ss << "weight_buf.w[0] = as_float("
-           << "intel_sub_group_block_read((__global uint *)&weights[weight_addr]));"
-           << std::endl;
-        ss << "weight_addr += SIMD_SIZE * 1;" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "#define BLOCK_IN(n) "
-           << "sub_group_broadcast("
-           << "in_buf.in_array[((n)%4) + ((n) / (TILE_Y_STRIDE * TILE_X)) * 4], "
-           << "(((n) % (TILE_Y_STRIDE * TILE_X))/4))" << std::endl;
-        // kr = Kernel Row
-        ss << "int32_t kr = 0;" << std::endl;
-        ss << "LOOP(KERNEL_HEIGHT, kr," << std::endl;
-        ss << "{" << std::endl;
-        // kc = Kernel Column
-        ss << "int32_t kc = 0;" << std::endl;
-        ss << "LOOP(KERNEL_WIDTH, kc," << std::endl;
-        ss << "{" << std::endl;
-        ss << "for(int32_t br=0; br < OUT_BLOCK_HEIGHT; br++) {" << std::endl;
-        ss << "for(int32_t bc=0; bc < OUT_BLOCK_WIDTH; bc++) {" << std::endl;
-        ss << "float input = BLOCK_IN((br * STRIDE_Y + kr * DILATION_Y) * "
-           << "TILE_X + bc * STRIDE_X + kc * DILATION_X);" << std::endl;
-        ss << "out[br * OUT_BLOCK_WIDTH + bc] = "
-           << "mad(weight_buf.w[w_idx % WEIGHT_PREF], "
-           << "input, out[br * OUT_BLOCK_WIDTH + bc]);" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "#if KERNEL_WIDTH * KERNEL_HEIGHT > WEIGHT_PREF" << std::endl;
-        // We assume KERNEL_WIDTH is equal to KERNEL_HEIGHT here.
-        ss << "if ((w_idx + 1) % WEIGHT_PREF == 0" << std::endl;
-        ss << "#if KERNEL_WIDTH * KERNEL_HEIGHT % 8 != 0" << std::endl;
-        ss << "&& ((w_idx + 1) <= (KERNEL_WIDTH * KERNEL_HEIGHT - WEIGHT_PREF))"
-           << std::endl;
-        ss << "#endif" << std::endl;
-        ss << ") {" << std::endl;
-        ss << "weight_buf.ui8 = "
-           << "intel_sub_group_block_read8((__global uint *)&weights[weight_addr]);"
-           << std::endl;
-        // weights must be stored in just the right SIMD swizzled format
-        // for this to work, see host code for details.
-        ss << "weight_addr += SIMD_SIZE * WEIGHT_PREF;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "#if KERNEL_WIDTH*KERNEL_HEIGHT % 8 == 0" << std::endl;
-        // need to do nothing
-        ss << "#else" << std::endl;
-        ss << "else if ((w_idx + 1) %  WEIGHT_PREF == 0 && "
-           << "((w_idx + 1) > (KERNEL_WIDTH * KERNEL_HEIGHT - WEIGHT_PREF)))"
-           << std::endl;
-        ss << "#if KERNEL_WIDTH * KERNEL_HEIGHT % 8 == 1" << std::endl;
-        ss << "weight_buf.w[0] = weights[weight_addr];" << std::endl;
-        ss << "#elif KERNEL_WIDTH * KERNEL_HEIGHT % 8 == 2" << std::endl;
-        ss << "weight_buf.ui8.s01 = "
-           << "intel_sub_group_block_read2((__global uint *)&weights[weight_addr]);"
-           << std::endl;
-        ss << "#elif KERNEL_WIDTH * KERNEL_HEIGHT % 8 <= 4" << std::endl;
-        ss << "weight_buf.ui8.s0123 = "
-           << "intel_sub_group_block_read4((__global uint *)&weights[weight_addr]);"
-           << std::endl;
-        ss << "#else" << std::endl;
-        ss << "weight_buf.ui8 = "
-           << "intel_sub_group_block_read8((__global uint *)&weights[weight_addr]);"
-           << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "#endif" << std::endl;
-        ss << "++w_idx;" << std::endl;
-        ss << "});" << std::endl;
-        ss << "});" << std::endl;
-        ss << "weight_addr = "
-           << "orig_weight_addr + KERNEL_WIDTH * KERNEL_HEIGHT * SIMD_SIZE;"
-           << std::endl;
-        ss << "}" << std::endl;
-        // dead code to work around possible compiler bug.
-        ss << "if (ALIGNED_NUM_FILTERS != NUM_FILTERS && fm > 0xfffffffeul) {"
-           << std::endl;
-        ss << "outputs[0] = BLOCK_IN(fm % SIMD_SIZE);" << std::endl;
-        ss << "}" << std::endl;
-        ss << "fm = fm % ALIGNED_NUM_FILTERS;" << std::endl;
-        ss << "if ((ALIGNED_NUM_FILTERS == NUM_FILTERS || fm < NUM_FILTERS)) {"
-           << std::endl;
-        ss << "uint32_t out_addr = "
-           << "OUT_BUFF_OFFSET + "
-           << "( num_in_batch * TOTAL_OUTPUT_DEPTH + fm ) * "
-           << "output_width * output_height;"
-           << std::endl;
-        ss << "out_addr += or * output_width + oc;" << std::endl;
-        ss << "float bias = biases[fm];" << std::endl;
-        ss << "for(uint32_t r = 0; r < OUT_BLOCK_HEIGHT; r++) {" << std::endl;
-        ss << "if (r + or >= output_height) break;" << std::endl;
-        ss << "for(uint32_t c = 0; c < OUT_BLOCK_WIDTH; c++) {" << std::endl;
-        ss << "if (c + oc >= output_width) break;" << std::endl;
-        ss << "outputs[out_addr + r * output_width + c] = activation_function(bias + out[r * OUT_BLOCK_WIDTH + c]);" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-    } else if (kernelType == KERNEL_TYPE_BASIC) {
-        kernelUKey = generateSpecificKey(4, blockM, blockK, blockN);
+        src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
+    }
+    else if (kernelType == KERNEL_TYPE_BASIC)
+    {
+        addDef("KERNEL_BASIC");
+
+        kernelUKey = generateSpecificKey(KERNEL_TYPE_BASIC, blockM, blockK, blockN);
         kernel_name_ = "BASIC_";
-        kernel_name_ += kernelUKey.c_str();
+        kernel_name_ += kernelUKey;
 
         // opts
-        opts << " -cl-fast-relaxed-math -D CFMultiNoPadding=" << kernel_name_;
+        options_ << " -cl-fast-relaxed-math -D ConvolveBasic=" << kernel_name_;
         if (build_option_check())
-            opts << " -cl-no-subgroup-ifp ";
-        options_ = opts.str();
+            options_ << " -cl-no-subgroup-ifp ";
 
         // defs
-        addDef(ss, "CHANNELS", channels_ / group_);
-        addDef(ss, "APPLY_BIAS", bias_term_);
-        addDef(ss, "OUTPUT_Z", M_);
-        addDef(ss, "ZPAR", 1);
+        addDef("CHANNELS", channels_ / group_);
+        addDef("APPLY_BIAS", bias_term_);
+        addDef("OUTPUT_Z", M_);
+        addDef("ZPAR", 1);
 
-        // kernel
-        ss << "#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) "
-           << "do { (_dst_)[(_offset_)] = (_data_);} while(0)" << std::endl;
-        ss << "__kernel void CFMultiNoPadding(" << std::endl;
-        ss << "__global Dtype* image_data," << std::endl;
-        ss << "int32_t image_offset," << std::endl;
-        ss << "__global Dtype* kernel_data, " << std::endl;
-        ss << "int32_t kernel_offset," << std::endl;
-        ss << "__global Dtype* bias," << std::endl;
-        ss << "const int32_t bias_offset," << std::endl;
-        ss << "__global Dtype* convolved_image, " << std::endl;
-        ss << "const int32_t convolved_image_offset," << std::endl;
-        ss << "const ushort input_width," << std::endl;
-        ss << "const ushort input_height," << std::endl;
-        ss << "const ushort output_width," << std::endl;
-        ss << "const ushort output_height," << std::endl;
-        ss << "const ushort pad_w," << std::endl;
-        ss << "const ushort pad_h) {" << std::endl;
-        ss << "const int32_t outputX = get_global_id(0);" << std::endl;
-        ss << "const int32_t outputY = get_global_id(1);" << std::endl;
-        ss << "const int32_t kernelNum = get_global_id(2)*ZPAR;" << std::endl;
-        ss << "if(outputX < output_width && outputY < output_height)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "Dtype sum[ZPAR];" << std::endl;
-        ss << "for(int32_t kern =0; kern < ZPAR; kern++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "sum[kern] = 0.0f;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "const int32_t org_y = outputY * STRIDE_Y - pad_h;" << std::endl;
-        ss << "const int32_t org_x = outputX * STRIDE_X - pad_w;" << std::endl;
-        ss << "const int32_t currentKernelOffset = "
-           << "kernel_offset + kernelNum*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS;"
-           << std::endl;
-        ss << "const int32_t biasIndex=bias_offset + kernelNum;" << std::endl;
-        ss << "const int32_t local_image_offset = org_y*input_width + org_x;"
-           << std::endl;
-        ss << "const int32_t imageSize = input_width*input_height;" << std::endl;
-        ss << "__global Dtype* image_dataPtrFloat = "
-           << "(image_data + (image_offset + local_image_offset));" << std::endl;
-        ss << "__global Dtype* kernel_dataPtrFloat = "
-           << "(kernel_data + (currentKernelOffset));" << std::endl;
-        ss << "for(int32_t c = 0; c < CHANNELS; c++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "for(int32_t y = 0; y < KERNEL_HEIGHT; y++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "for(int32_t x = 0; x < KERNEL_WIDTH; x++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "if(!(org_y + y * DILATION_Y >= 0 && "
-           << "org_y + y * DILATION_Y < input_height && "
-           << "org_x + x * DILATION_X >= 0 && "
-           << "org_x + x * DILATION_X < input_width))" << std::endl;
-        ss << "{" << std::endl;
-        ss << "continue;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "for(int32_t kern =0; kern < ZPAR; kern++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "sum[kern] += image_dataPtrFloat[x * DILATION_X] * "
-           << "kernel_dataPtrFloat[kern*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS + x];"
-           << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "image_dataPtrFloat += input_width * DILATION_Y;" << std::endl;
-        ss << "kernel_dataPtrFloat += KERNEL_WIDTH;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "image_dataPtrFloat += "
-           << "imageSize - input_width*KERNEL_HEIGHT*DILATION_Y;" << std::endl;
-        ss << "}" << std::endl;
-        ss << "if(APPLY_BIAS == 1)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "for(int32_t kern = 0; kern < ZPAR; kern++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "if(kernelNum+kern < OUTPUT_Z)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "int32_t offset = convolved_image_offset + "
-           << "(kernelNum+kern)*output_height*output_width + "
-           << "outputY*output_width + outputX;" << std::endl;
-        ss << "ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + "
-           << "bias[biasIndex +kern]);" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "else" << std::endl;
-        ss << "{" << std::endl;
-        ss << "for(int32_t kern = 0; kern < ZPAR; kern++)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "if(kernelNum+kern < OUTPUT_Z)" << std::endl;
-        ss << "{" << std::endl;
-        ss << "int32_t offset = convolved_image_offset + "
-           << "(kernelNum+kern)*output_height*output_width + "
-           << "outputY*output_width + outputX;" << std::endl;
-        ss << "ACTIVATION_FUNCTION(convolved_image, offset, sum[kern]);"
-           << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
-        ss << "}" << std::endl;
+        src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
     }
-    return ss.str();
+    else if (kernelType == KERNEL_TYPE_GEMM_LIKE)
+    {
+        simd_size = blockK;
+        kernelUKey = generateSpecificKey(KERNEL_TYPE_GEMM_LIKE, blockM, blockK, blockN);
+
+        kernel_name_ = "U_GEMM_LIKE_CONV_";
+        kernel_name_ += kernelUKey.c_str();
+        kernel_name_ += (blockK == 8) ? "_SIMD8" : "_SIMD16";
+        std::stringstream kernelDef;
+        kernelDef << "GEMM_LIKE_CONV_" << blockN << "_" << blockM;
+        if (blockK == 16)
+            kernelDef << "_SIMD16";
+
+        // Build list of options and defines
+        options_ << " -cl-fast-relaxed-math " << " -D " << kernelDef.str()
+            << " -D Conv_Interleaved=" << kernel_name_.c_str();
+        options_ << " -cl-mad-enable";
+
+        addDef("INPUT_DEPTH", channels_);
+        addDef("WIDTH1", M_);
+        addDef("OUT_PADDING_LEFT", 0);
+        addDef("OUT_PADDING_HEIGHT", 0);
+        addDef("OUT_DEPTH", M_);
+        addDef("NUM_BATCHES", num_);
+        addDef("DY", blockM);
+        addDef("DX", blockN);
+        addDef("KERNEL_WIDTH_DIV2", kernel_w_ / 2);
+        addDef("KERNEL_SLICE_DIV2", (kernel_w_ * kernel_h_) / 2);
+        addDef("TILE_N_LAST", M_ % 32);
+        addDef("TILE_N_LAST_DIV8", (M_ % 32) / 8);
+        src_ = ocl::dnn::conv_layer_spatial_oclsrc;
+    }
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::generateKernelSrc()
+void OCL4DNNConvSpatial<Dtype>::setupKernel()
 {
-    std::stringstream ss;
+    collectCommonInformation();
 
-    ss << generateHeader();
-    ss << generateDefs();
-    ss << generateKernels(kernelType_, blockM_, blockK_, blockN_);
+    addDef("KERNEL_WIDTH", kernel_w_);
+    addDef("KERNEL_HEIGHT" , kernel_h_);
+    addDef("STRIDE_X", stride_w_);
+    addDef("STRIDE_Y", stride_h_);
+    addDef("DILATION_X", dilation_w_);
+    addDef("DILATION_Y", dilation_h_);
+    if (kernelType_ != KERNEL_TYPE_BASIC)
+    {
+        addDef("INPUT_PAD_W", pad_w_);
+        addDef("INPUT_PAD_H", pad_h_);
+    }
 
-    kernel_ = ss.str();
+    setupKernelDetails(kernelType_, blockM_, blockK_, blockN_);
 }
 
 template<typename Dtype>
@@ -771,12 +372,12 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(UMat &bottom, UMat &verifyTop
                                                    UMat &weight, UMat &bias,
                                                    int32_t numImages)
 {
+    options_.str(""); options_.clear(); // clear contents and state flags
     createBasicKernel(1, 1, 1);
     kernel_index_ = kernelQueue.size() - 1;
     convolve(bottom, verifyTop, weight, bias, numImages, kernelQueue[kernel_index_]);
     CV_Assert(phash.find(kernelQueue[kernel_index_]->kernelName) != phash.end());
-    unloadProgram(phash.find(kernelQueue[kernel_index_]->kernelName)->second);
-    phash.erase(kernelQueue[kernel_index_]->kernelName);
+    //unloadProgram(kernelQueue[kernel_index_]->kernelName);
     kernelQueue.pop_back();
     return;
 }
@@ -796,8 +397,8 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(UMat &bottom, UMat &verifyTop
 #define TUNING_SIZE(x) ((x) > 256 ? 256 : (alignSize(x, 16)))
 
 // Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
-template<typename Dtype>
-uint64 OCL4DNNConvSpatial<Dtype>::crc64(const uchar* data, size_t size, uint64 crc0)
+static
+uint64 crc64(const uchar* data, size_t size, uint64 crc0 = 0)
 {
     static uint64 table[256];
     static bool initialized = false;
@@ -847,7 +448,7 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
                          ocl::Device::getDefault().driverVersion() +
                          cv::format("%d", ocl::Device::getDefault().maxComputeUnits());
     prefix = prefix + keyBuilder.str();
-    key_ = cv::format("%08x", crc64((uchar*)prefix.c_str(), prefix.size()));
+    key_ = cv::format("%08llx", crc64((uchar*)prefix.c_str(), prefix.size()));
     short_key_ = keyBuilder.str();
 }
 
@@ -1018,16 +619,13 @@ template<>
 bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
                                                   int32_t blockHeight, int32_t blockDepth)
 {
-    int32_t workItemOutput[3];
-    workItemOutput[0] = 1;
-    workItemOutput[1] = 1;
-    workItemOutput[2] = 1;
+    int32_t workItemOutput[3] = {1, 1, 1};
 
-    kernelType_ = 4;
+    kernelType_ = KERNEL_TYPE_BASIC;
     blockM_ = blockWidth;
     blockK_ = blockHeight;
     blockN_ = blockDepth;
-    generateKernelSrc();
+    setupKernel();
 
     ocl::Program program = compileKernel();
     if (program.ptr())
@@ -1035,8 +633,8 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
         size_t localSize[3] = { 1, 1, 1 };
         size_t globalSize[3];
         computeGlobalSize(1, workItemOutput, localSize, globalSize);
-        kernelQueue.push_back(new kernelConfig(kernel_name_, globalSize, localSize, workItemOutput,
-                                               false, false, true, KERNEL_TYPE_BASIC));
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], &localSize[0], &workItemOutput[0],
+                                                    false, false, true, KERNEL_TYPE_BASIC));
         return true;
     }
     else
@@ -1454,38 +1052,45 @@ out:
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::unloadProgram(ocl::Program& prog)
+void OCL4DNNConvSpatial<Dtype>::unloadProgram(const std::string& kernelName)
 {
+    ocl::Program program;
+    phash_t::iterator it = phash.find(kernelName);
+    if (it != phash.end())
+    {
+        program = it->second;
+        it->second = ocl::Program();
+    }
+    else
+        return;
+
     ocl::Context ctx = ocl::Context::getDefault();
-    ctx.unloadProg(prog);
+    ctx.unloadProg(program);
 }
 
 template<typename Dtype>
 ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
 {
+    phash_t::iterator it = phash.find(kernel_name_);
+    if (it != phash.end())
+    {
+        return it->second;
+    }
+
     String errmsg;
     ocl::Context ctx = ocl::Context::getDefault();
-    ocl::ProgramSource src(kernel_.c_str());
-    ocl::Program program = ctx.getProg(src, options_, errmsg);
+    std::string options = options_.str();
+    CV_Assert(options.size() != 0);
+    ocl::Program program = ctx.getProg(src_, options, errmsg);
 
-    CV_Assert(!kernel_name_.empty());
-    if (program.ptr())
-    {
-        phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
-    }
-    else
+    phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
+    if (!program.ptr())
     {
         std::cout << "Failed to compile kernel: " << kernel_name_
-                  << ", buildflags: " << options_
+                  << ", buildflags: " << options
                   << ", errmsg: " << errmsg << std::endl;
     }
     return program;
-}
-
-template<>
-std::string OCL4DNNConvSpatial<float>::programEntryToString(ocl::ProgramSource& src)
-{
-    return src.source();
 }
 
 template<>
@@ -1493,67 +1098,22 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
                                                          int32_t blockK,
                                                          int32_t blockN)
 {
-    std::stringstream optionsString;
-    std::string kernelUKey = generateSpecificKey(5,
-                                                 blockM,
-                                                 blockK,
-                                                 blockN);
+    int32_t simd_size = blockK;
+
     int workItemOutput[3] = { blockM, blockK, blockN };
-    int simd_size = blockK;
-    int num_batches = num_;
-    int output_width = output_w_;
-    int output_height = output_h_;
-    int alignedFilterWidth = alignSize(M_, blockN);
-    int alignedExpandHeight = alignSize(output_width * output_height, blockM);
-    int globalWorkSizeDX = blockN;
-    int globalWorkSizeDY = blockM;
-    size_t sgemm_m = alignedExpandHeight;
-    size_t sgemm_n = alignedFilterWidth;
-    size_t gx = (size_t) ceil( (float) sgemm_n / (float) globalWorkSizeDX );
-    size_t gy = (size_t) ceil( (float) sgemm_m / (float) globalWorkSizeDY );
-    gy = alignSize(gy, blockK);
-    size_t gz = num_batches;
+    size_t gx = (size_t)divUp(M_, blockN);
+    size_t gy = (size_t)divUp(output_w_ * output_h_, blockM);
+    gy = alignSize(gy, simd_size);
+    size_t gz = num_;
     size_t global_size[3] = { gx, gy, gz };
     size_t local_size[3] = { 1, static_cast<size_t>(simd_size), 1 };
 
-    kernel_name_ = "U_GEMM_LIKE_CONV_";
-    kernel_name_ += kernelUKey.c_str();
-    if (blockK == 8)
-        kernel_name_ += "_SIMD8";
-    else
-        kernel_name_ += "_SIMD16";
-    std::stringstream kernelDef;
-    kernelDef << "GEMM_LIKE_CONV_" << blockN << "_" << blockM;
-    if (blockK == 16)
-        kernelDef << "_SIMD16";
+    kernelType_ = KERNEL_TYPE_GEMM_LIKE;
+    blockM_ = blockM;
+    blockK_ = blockK;
+    blockN_ = blockN;
+    setupKernel();
 
-    // Build list of options and defines
-    optionsString.str("");
-    optionsString << "-cl-fast-relaxed-math " << " -D " << kernelDef.str()
-        << " -D Conv_Interleaved=" << kernel_name_.c_str();
-    optionsString <<
-        " -cl-mad-enable" <<
-        " -DKERNEL_WIDTH=" << kernel_w_ <<
-        " -DKERNEL_HEIGHT=" << kernel_h_ <<
-        " -DSTRIDE_X=" << stride_w_ <<
-        " -DSTRIDE_Y=" << stride_h_ <<
-        " -DDILATION_X=" << dilation_w_ <<
-        " -DDILATION_Y=" << dilation_h_ <<
-        " -DINPUT_DEPTH=" << channels_ <<
-        " -DWIDTH1=" << M_ <<
-        " -DOUT_PADDING_LEFT=" << 0 <<
-        " -DOUT_PADDING_HEIGHT=" << 0 <<
-        " -DOUT_DEPTH=" << M_ <<
-        " -DNUM_BATCHES=" << num_ <<
-        " -DDY=" << globalWorkSizeDY <<
-        " -DDX=" << globalWorkSizeDX <<
-        " -DKERNEL_WIDTH_DIV2=" << kernel_w_ / 2 <<
-        " -DKERNEL_SLICE_DIV2=" << (kernel_w_ * kernel_h_) / 2 <<
-        " -DTILE_N_LAST=" << M_ % 32 <<
-        " -DTILE_N_LAST_DIV8=" << (M_ % 32) / 8 <<
-        " -DINPUT_PAD_W=" << pad_w_ << " -DINPUT_PAD_H=" << pad_h_;
-    options_ = optionsString.str();
-    kernel_ = programEntryToString(ocl::dnn::conv_layer_spatial_oclsrc);
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
@@ -1565,14 +1125,13 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
         workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
         if (workgroupSize_used != simd_size)
         {
-            phash.erase(kernel_name_);
-            unloadProgram(program);
+            unloadProgram(kernel_name_);
             return false;
         }
         else
         {
-            kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
-                                                   false, true, false, KERNEL_TYPE_GEMM_LIKE));
+            kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
+                                                        false, true, false, KERNEL_TYPE_GEMM_LIKE));
             return true;
         }
     }
@@ -1594,9 +1153,9 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
     int32_t num_batches = num_;
 
     size_t global_size[3] = {
-        (size_t) (output_width + output_block_width - 1) / output_block_width,
-        (size_t) (output_height + output_block_height - 1) / output_block_height,
-        (size_t) num_batches * alignSize(num_output_maps, simd_size) };
+        (size_t)divUp(output_width, output_block_width),
+        (size_t)divUp(output_height, output_block_height),
+        (size_t)num_batches * alignSize(num_output_maps, simd_size) };
     size_t local_size[3] = { 1, 1, static_cast<size_t>(simd_size) };
 
     kernelType_ = KERNEL_TYPE_INTEL_IDLF;
@@ -1604,7 +1163,8 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
     blockK_ = blockHeight;
     blockN_ = simd_size;
 
-    generateKernelSrc();
+    setupKernel();
+
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
@@ -1616,14 +1176,13 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
         workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
         if (workgroupSize_used != simd_size)
         {
-            phash.erase(kernel_name_);
-            unloadProgram(program);
+            unloadProgram(kernel_name_);
             return false;
         }
         else
         {
-            kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
-                                                   false, true, false, KERNEL_TYPE_INTEL_IDLF));
+            kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
+                                                        false, true, false, KERNEL_TYPE_INTEL_IDLF));
             return true;
         }
     }
@@ -1721,6 +1280,10 @@ void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
                                                         int32_t blockHeight,
                                                         int32_t blockDepth)
 {
+    kernelType_ = kernelType;
+    options_.str(""); options_.clear(); // clear contents and state flags
+    src_ = ocl::ProgramSource();
+
     if (kernelType == KERNEL_TYPE_INTEL_IDLF)
         setupIDLF(blockWidth, blockHeight, blockDepth);
     else if (kernelType == KERNEL_TYPE_BASIC)
@@ -1728,7 +1291,7 @@ void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
     else if (kernelType == KERNEL_TYPE_GEMM_LIKE)
         createGEMMLikeConvKernel(blockWidth, blockHeight, blockDepth);
     else
-        assert(0);
+        CV_Assert(0 && "Internal error");
 }
 
 template<>
@@ -1746,10 +1309,10 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
         int max_compute_units = ocl::Device::getDefault().maxComputeUnits();
         int kernelCnt = 0;
         if (group_ == 1 && ((M_ % 8 == 0) && (M_ % 32 != 24))) {
-            createConvolutionKernel(5, 1, 8, 32);
-            createConvolutionKernel(5, 2, 8, 32);
+            createConvolutionKernel(KERNEL_TYPE_GEMM_LIKE, 1, 8, 32);
+            createConvolutionKernel(KERNEL_TYPE_GEMM_LIKE, 2, 8, 32);
             if (kernel_w_ < 4 && M_ % 32 == 0)
-                createConvolutionKernel(5, 1, 16, 32);
+                createConvolutionKernel(KERNEL_TYPE_GEMM_LIKE, 1, 16, 32);
         }
 
         for (int simd_size = 8; simd_size <= 16; simd_size += 8) {
@@ -1792,7 +1355,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
                     int tile_y_stride = (4 * simd_size) / tile_x;
 
                     if ((tile_y + tile_y_stride - 1) / tile_y_stride < 4) {
-                        createConvolutionKernel(2, width, height, simd_size);
+                        createConvolutionKernel(KERNEL_TYPE_INTEL_IDLF, width, height, simd_size);
                         candidate++;
                     }
                     if (candidate >= 4 && height == 2)
@@ -1890,6 +1453,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
                      "fallback to basic kernel" << std::endl);
         else
             dbgPrint(std::cout << "Auto-tuning disabled, fallback to basic kernel" << std::endl);
+        options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
         verification = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernel_index_], verifyTop);
@@ -1906,9 +1470,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
         if (x != kernel_index_) {
             CV_Assert(phash.find(kernelQueue[x]->kernelName) != phash.end());
-            unloadProgram(phash.find(kernelQueue[x]->kernelName)->second);
-            phash.erase(kernelQueue[x]->kernelName);
-            delete kernelQueue[x];
+            unloadProgram(kernelQueue[x]->kernelName);
         }
     }
     kernelQueue.clear();
@@ -1948,10 +1510,8 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(UMat &bottom, UMat &top,
     {
         prev_kernel_type_ = bestKernelConfig->kernelType;
         CV_Assert(phash.find(bestKernelConfig->kernelName) != phash.end());
-        unloadProgram(phash.find(bestKernelConfig->kernelName)->second);
         phash.erase(bestKernelConfig->kernelName);
-        delete bestKernelConfig;
-        bestKernelConfig = NULL;
+        bestKernelConfig.release();
     }
 
     if (loadCachedConfig())

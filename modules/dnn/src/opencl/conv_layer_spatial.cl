@@ -40,37 +40,6 @@
 //
 //M*/
 
-#if defined(cl_khr_fp64)
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif defined(cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#endif
-
-#if defined(cl_khr_int64_base_atomics)
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#endif
-
-#if defined(cl_khr_int32_base_atomics)
-#pragma OPENCL EXTENSION cl_khr_int32_base_atomics : enable
-#endif
-
-#if defined(cl_khr_global_int32_base_atomics)
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#endif
-
-
-#ifdef FUSED_CONV_RELU
-#define ACTIVATION_RELU_FUNCTION(x) max((float)(x), (float)0.0f)
-#else
-#define ACTIVATION_RELU_FUNCTION(x) (x)
-#endif
-
-#ifdef FUSED_CONV_ELTWISE
-#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(eltwise_data[(_offset_)] + (_data_));} while(0)
-#else
-#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_data_);} while(0)
-#endif
-
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 #define LOOP0(VAR, STMT)
@@ -92,10 +61,88 @@
 #define LOOP16(VAR, STMT) LOOP15(VAR, STMT); (STMT); (VAR)++;
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
-#ifdef IDLF
+#ifdef KERNEL_BASIC
+
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) do { (_dst_)[(_offset_)] = (_data_);} while(0)
+
+__kernel void ConvolveBasic(
+    __global Dtype* image_data,
+    int image_offset,
+    __global Dtype* kernel_data,
+    int kernel_offset,
+    __global Dtype* bias,
+    const int bias_offset,
+    __global Dtype* convolved_image,
+    const int convolved_image_offset,
+    const ushort input_width,
+    const ushort input_height,
+    const ushort output_width,
+    const ushort output_height,
+    const ushort pad_w,
+    const ushort pad_h
+)
+{
+    const int outputX = get_global_id(0);
+    const int outputY = get_global_id(1);
+    const int kernelNum = get_global_id(2) * ZPAR;
+    if (outputX < output_width && outputY < output_height)
+    {
+        Dtype sum[ZPAR];
+        for (int kern = 0; kern < ZPAR; kern++)
+        {
+            sum[kern] = 0.0f;
+        }
+        const int org_y = outputY * STRIDE_Y - pad_h;
+        const int org_x = outputX * STRIDE_X - pad_w;
+        const int currentKernelOffset = kernel_offset + kernelNum*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS;
+#if APPLY_BIAS
+        const int biasIndex = bias_offset + kernelNum;
+#endif
+        const int local_image_offset = org_y * input_width + org_x;
+        const int imageSize = input_width * input_height;
+        __global Dtype* image_dataPtr = (image_data + (image_offset + local_image_offset));
+        __global Dtype* kernel_dataPtr = (kernel_data + (currentKernelOffset));
+        for (int c = 0; c < CHANNELS; c++)
+        {
+            for (int y = 0; y < KERNEL_HEIGHT; y++)
+            {
+                for (int x = 0; x < KERNEL_WIDTH; x++)
+                {
+                    int y_ = org_y + y * DILATION_Y;
+                    int x_ = org_x + x * DILATION_X;
+                    if (!(y_ >= 0 && y_ < input_height && x_ >= 0 && x_ < input_width))
+                    {
+                        continue;
+                    }
+                    for (int kern = 0; kern < ZPAR; kern++)
+                    {
+                        sum[kern] += image_dataPtr[x * DILATION_X] * kernel_dataPtr[kern*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS + x];
+                    }
+                }
+                image_dataPtr += input_width * DILATION_Y;
+                kernel_dataPtr += KERNEL_WIDTH;
+            }
+            image_dataPtr += imageSize - input_width*KERNEL_HEIGHT*DILATION_Y;
+        }
+
+        for (int kern = 0; kern < ZPAR; kern++)
+        {
+            if (kernelNum + kern < OUTPUT_Z)
+            {
+                int offset = convolved_image_offset + (kernelNum+kern)*output_height*output_width + outputY*output_width + outputX;
+#if APPLY_BIAS
+                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + bias[biasIndex + kern]);
+#else
+                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern]);
+#endif
+            }
+        }
+    }
+}
+
+#elif defined KERNEL_IDLF
 
 #define activation_function(x) (x)
-#define OUT_BLOCK_SIZE (OUT_BLOCK_WIDTH*OUT_BLOCK_HEIGHT)
 
 // Each work-item computes a OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT region of one output map.
 // Each work-group (which will be mapped to 1 SIMD16/SIMD8 EU thread) will compute 16/8 different feature maps, but each feature map is for the same region of the imput image.
@@ -112,7 +159,8 @@ convolve_simd(  // __global float *inputs, __global float* weights, __global flo
     const ushort input_width,
     const ushort input_height,
     const ushort output_width,
-    const ushort output_height)
+    const ushort output_height
+)
 {
   __global float* outputs = outputs_base;
   __global float* inputs = inputs_base;
@@ -140,8 +188,8 @@ convolve_simd(  // __global float *inputs, __global float* weights, __global flo
 
   unsigned int input_batch_offset = num_in_batch * input_height * input_width * TOTAL_INPUT_DEPTH_SIZE;
 
-  int curr_y = or * STRIDEY + INPUT_START_Y + ( lid / ( TILE_X / 4 ) );
-  int curr_x = oc * STRIDEX + INPUT_START_X + ( lid % ( TILE_X / 4 ) ) * 4;
+  int curr_y = or * STRIDE_Y + INPUT_START_Y + ( lid / ( TILE_X / 4 ) );
+  int curr_x = oc * STRIDE_X + INPUT_START_X + ( lid % ( TILE_X / 4 ) ) * 4;
 #if INPUT_PAD_W != 0 || INPUT_PAD_H != 0
   int saved_y = curr_y;
 #endif
@@ -227,7 +275,7 @@ convolve_simd(  // __global float *inputs, __global float* weights, __global flo
               {
                 for(int br=0; br < OUT_BLOCK_HEIGHT; br++) {
                   for(int bc=0; bc < OUT_BLOCK_WIDTH; bc++) {
-                    float input = BLOCK_IN((br * STRIDEY + kr * DILATION_Y) * TILE_X + bc * STRIDEX + kc * DILATION_X);
+                    float input = BLOCK_IN((br * STRIDE_Y + kr * DILATION_Y) * TILE_X + bc * STRIDE_X + kc * DILATION_X);
                     out[br * OUT_BLOCK_WIDTH + bc] = mad(weight_buf.w[w_idx % WEIGHT_PREF], input, out[br * OUT_BLOCK_WIDTH + bc]);
                   }
                 }
@@ -314,7 +362,22 @@ convolve_simd(  // __global float *inputs, __global float* weights, __global flo
   #endif //#ifndef WRITE_PADDED_VALUES
   }
 }
+
+
+#else // KERNEL_GEMM_LIKE
+
+#ifdef FUSED_CONV_RELU
+#define ACTIVATION_RELU_FUNCTION(x) max((float)(x), (float)0.0f)
+#else
+#define ACTIVATION_RELU_FUNCTION(x) (x)
 #endif
+
+#ifdef FUSED_CONV_ELTWISE
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(eltwise_data[(_offset_)] + (_data_));} while(0)
+#else
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_data_);} while(0)
+#endif
+
 
 #ifdef Conv_Interleaved
 typedef struct float1 { float s0; } float1;
@@ -1404,3 +1467,5 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #endif
 }
 #endif
+
+#endif // KERNEL_BASIC/IDLF/GEMM_LIKE
