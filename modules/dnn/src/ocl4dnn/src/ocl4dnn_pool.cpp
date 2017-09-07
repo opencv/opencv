@@ -114,6 +114,9 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             ocl::Kernel oclk_max_pool_forward(CL_KERNEL_SELECT("max_pool_forward"),
                                               cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
 
+            if (oclk_max_pool_forward.empty())
+                return false;
+
             argIdx = 0;
             oclk_max_pool_forward.set(argIdx++, count_);
             oclk_max_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
@@ -135,13 +138,16 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                                       (cl_mem) mask_idx_.handle(ACCESS_WRITE));
             oclk_max_pool_forward.set(argIdx++, (cl_mem) top_mask.handle(ACCESS_WRITE));
 
-            oclk_max_pool_forward.run(1, global, local, false);
+            ret = oclk_max_pool_forward.run(1, global, local, false);
         }
         break;
     case LIBDNN_POOLING_METHOD_AVE:
         {
             ocl::Kernel oclk_ave_pool_forward(CL_KERNEL_SELECT("ave_pool_forward"),
                                               cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
+
+            if (oclk_ave_pool_forward.empty())
+                return false;
 
             argIdx = 0;
             oclk_ave_pool_forward.set(argIdx++, count_);
@@ -160,13 +166,16 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_ave_pool_forward.set(argIdx++, pad_w_);
             oclk_ave_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
 
-            oclk_ave_pool_forward.run(1, global, local, false);
+            ret = oclk_ave_pool_forward.run(1, global, local, false);
         }
         break;
     case LIBDNN_POOLING_METHOD_STO:
         {
             ocl::Kernel oclk_sto_pool_forward(CL_KERNEL_SELECT("sto_pool_forward_test"),
                                               cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
+
+            if (oclk_sto_pool_forward.empty())
+                return false;
 
             argIdx = 0;
             oclk_sto_pool_forward.set(argIdx++, count_);
@@ -183,7 +192,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_sto_pool_forward.set(argIdx++, stride_w_);
             oclk_sto_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
 
-            oclk_sto_pool_forward.run(1, global, local, false);
+            ret = oclk_sto_pool_forward.run(1, global, local, false);
         }
         break;
     default:

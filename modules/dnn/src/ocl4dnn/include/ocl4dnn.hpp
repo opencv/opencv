@@ -214,7 +214,7 @@ class OCL4DNNConvSpatial
         bool tuneLocalSize(UMat &bottom, UMat &top,
                            UMat &weight, UMat &bias,
                            kernelConfig* config);
-        void swizzleWeight(UMat &weight,
+        bool swizzleWeight(UMat &weight,
                            int32_t swizzled_factor,
                            bool interleave = false);
 
@@ -418,7 +418,7 @@ class OCL4DNNLRN
         bool Forward(const UMat& bottom_data, UMat& top_data);
 
     private:
-        void crossChannelForward(const UMat& bottom_data, UMat& top_data);
+        bool crossChannelForward(const UMat& bottom_data, UMat& top_data);
         LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type_;
         bool phase_test_;
         int32_t size_;

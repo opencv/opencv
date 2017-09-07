@@ -43,37 +43,6 @@
 #define TEMPLATE(name,type) CONCAT(name,type)
 #define Dtype float
 
-__kernel void TEMPLATE(copyImage, Dtype)
-    (__global Dtype* image_data,
-     int image_offset,
-     const int channels, const int height, const int width,
-     const int adjustedHeight, const int adjustedWidth,
-     const int pad_h, const int pad_w,
-     __global Dtype* output_image,
-     const int output_offset,
-     const int batch_size) {
-
-  unsigned int sX = get_global_id(0);
-  unsigned int sY = get_global_id(1);
-  unsigned int sZ = get_global_id(2);
-
-  int in_y = sY - pad_h;
-  int in_x = sX - pad_w;
-
-  int batch_offset = 0;
-  int adjusted_batch_offset = 0;
-  for(unsigned int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
-    int dst_offset = adjusted_batch_offset + output_offset + sZ*adjustedHeight*adjustedWidth + sY*adjustedWidth +sX;
-    int src_offset = batch_offset + image_offset + sZ*height*width + in_y*width + in_x;
-    if((in_y >= 0 && in_y < height && in_x >= 0 && in_x < width))
-      output_image[dst_offset] = image_data[src_offset];
-    else
-      output_image[dst_offset] = 0;
-    batch_offset += height * width * channels;
-    adjusted_batch_offset += adjustedHeight * adjustedWidth * channels;
-  }
-}
-
 __kernel void TEMPLATE(copyWeightsSwizzled, Dtype)
     (__global Dtype* weightIn,
      __global Dtype* weightOut,

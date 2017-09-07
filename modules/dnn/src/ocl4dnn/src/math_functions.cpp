@@ -221,7 +221,7 @@ enum gemm_type_t
 };
 
 template<typename Dtype>
-static void ocl4dnnFastImageGEMM(const int32_t ctx_id,
+static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
                                  const CBLAS_TRANSPOSE TransA,
                                  const CBLAS_TRANSPOSE TransB, const int32_t M,
                                  const int32_t N, const int32_t K, const Dtype alpha,
@@ -235,10 +235,16 @@ static void ocl4dnnFastImageGEMM(const int32_t ctx_id,
              gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE, true) << "Invalid fast image gemm type." << std::endl;
 
     if (is_image_a)
+    {
         CHECK_EQ(offA, 0) << "Invalid input image offset." << std::endl;
+        return false;
+    }
 
     if (is_image_b)
+    {
         CHECK_EQ(offB, 0) << "Invalid input image offset." << std::endl;
+        return false;
+    }
 
     int widthA = (TransA == CblasNoTrans) ? K : M;
     int heightA = (TransA == CblasNoTrans) ? M : K;
@@ -310,6 +316,9 @@ static void ocl4dnnFastImageGEMM(const int32_t ctx_id,
     kernel_name += "_float";
 
     ocl::Kernel oclk_gemm_float(kernel_name.c_str(), ocl::dnn::gemm_image_oclsrc);
+    if (oclk_gemm_float.empty())
+        return false;
+
     while (C_start_y < M)
     {
         blockC_width = std::min(static_cast<int>(N) - C_start_x, blocksize);
@@ -494,10 +503,12 @@ static void ocl4dnnFastImageGEMM(const int32_t ctx_id,
         clReleaseMemObject(ImA);
     if (ImB && !is_image_b)
         clReleaseMemObject(ImB);
+
+    return true;
 }
 
 template<typename Dtype>
-void ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
+bool ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
                        const int32_t M, const int32_t N, const int32_t K,
                        const cl_mem A, const cl_mem B,
                        const cl_mem B_image, cl_mem C,
@@ -508,42 +519,47 @@ void ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
     if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 ||
         gemm_type == GEMM_TYPE_FAST_IMAGE_32_2)
     {
-        ocl4dnnFastImageGEMM<Dtype>(ctx_id, CblasNoTrans, TransB, M, N, K,
-                                    (Dtype)1., A, 0, B, 0, (Dtype)0., C,
-                                    0, false, false, gemm_type, max_image_size);
+        return ocl4dnnFastImageGEMM<Dtype>(ctx_id, CblasNoTrans, TransB, M, N, K,
+                                           (Dtype)1., A, 0, B, 0, (Dtype)0., C,
+                                           0, false, false, gemm_type, max_image_size);
     }
     else if (gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE)
     {
-        ocl4dnnFastImageGEMM<Dtype>(ctx_id, CblasNoTrans, TransB, M, N, K,
-                                    (Dtype)1., A, 0, B_image, 0, (Dtype)0., C,
-                                    0, false, true,
-                                    GEMM_TYPE_FAST_IMAGE_B_IMAGE,
-                                    max_image_size);
+        return ocl4dnnFastImageGEMM<Dtype>(ctx_id, CblasNoTrans, TransB, M, N, K,
+                                           (Dtype)1., A, 0, B_image, 0, (Dtype)0., C,
+                                           0, false, true,
+                                           GEMM_TYPE_FAST_IMAGE_B_IMAGE,
+                                           max_image_size);
     }
+    return false;
 }
 
-template void ocl4dnnGEMMCommon<float>(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
+template bool ocl4dnnGEMMCommon<float>(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
                                        const int32_t M, const int32_t N, const int32_t K,
                                        const cl_mem A, const cl_mem B,
                                        const cl_mem B_image, cl_mem C,
                                        const size_t max_image_size);
 
 template<typename Dtype>
-void ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+bool ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
                  const int32_t M, const int32_t N, const Dtype alpha,
                  const cl_mem A, const int32_t offA, const cl_mem x,
                  const int32_t offx, const Dtype beta, cl_mem y,
                  const int32_t offy)
 {
-    ocl::Context ctx = ocl::Context::getDefault();
+    ocl::Queue queue = ocl::Queue::getDefault();
+    bool ret = false;
 
     if (std::is_same<Dtype, float>::value && TransA == CblasNoTrans)
     {
         ocl::Kernel k(CL_KERNEL_SELECT("matvec_mul4"), cv::ocl::dnn::matvec_mul_oclsrc);
+        if (k.empty())
+            return false;
+
         uint row_size = M;
         uint col_size = N;
-        size_t localsize = 128;
-        size_t globalsize = row_size / 4 * localsize;
+        size_t localsize[] = { 128 };
+        size_t globalsize[] = { row_size / 4 * localsize[0] };
 
         uint argId = 0;
         k.set(argId++, (cl_mem) A);
@@ -556,19 +572,15 @@ void ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
         k.set(argId++, beta);
         k.set(argId++, (cl_mem) y);
         k.set(argId++, offy);
-        clSetKernelArg((cl_kernel)k.ptr(), argId++, localsize * sizeof(cl_float4), NULL);
+        k.set(argId++, NULL, localsize[0] * sizeof(cl_float4));
 
-        clEnqueueNDRangeKernel((cl_command_queue)ocl::Queue::getDefault().ptr(),
-                               (cl_kernel)k.ptr(), 1,
-                               NULL,
-                               &globalsize,
-                               &localsize, 0, NULL,
-                               NULL);
-        if ((row_size % 4) != 0)
+        ret = k.run(1, globalsize, localsize, false);
+
+        if ((row_size % 4) != 0 && ret)
         {
             ocl::Kernel k_1(CL_KERNEL_SELECT("matvec_mul1"), cv::ocl::dnn::matvec_mul_oclsrc);
-            size_t localsize = 128;
-            size_t globalsize = row_size % 4 * localsize;
+            size_t localsize[] = { 128 };
+            size_t globalsize[] = { row_size % 4 * localsize[0] };
             uint row_offset = row_size - (row_size % 4);
 
             uint argId = 0;
@@ -583,19 +595,15 @@ void ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
             k_1.set(argId++, beta);
             k_1.set(argId++, (cl_mem) y);
             k_1.set(argId++, offy);
-            clSetKernelArg((cl_kernel)k_1.ptr(), argId++, localsize * sizeof(cl_float), NULL);
+            k_1.set(argId++, NULL, localsize[0] * sizeof(cl_float));
 
-            clEnqueueNDRangeKernel((cl_command_queue)ocl::Queue::getDefault().ptr(),
-                                   (cl_kernel)k_1.ptr(), 1,
-                                   NULL,
-                                   &globalsize,
-                                   &localsize, 0, NULL,
-                                   NULL);
+            ret = k_1.run(1, globalsize, localsize, false);
         }
     }
+    return ret;
 }
 
-template void ocl4dnnGEMV<float>(const int32_t ctx_id,
+template bool ocl4dnnGEMV<float>(const int32_t ctx_id,
                                  const CBLAS_TRANSPOSE TransA,
                                  const int32_t M, const int32_t N,
                                  const float alpha, const cl_mem A,
@@ -604,13 +612,16 @@ template void ocl4dnnGEMV<float>(const int32_t ctx_id,
                                  cl_mem y, const int32_t offy);
 
 template<typename Dtype>
-void ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+bool ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
                  const cl_mem X, const int32_t offX, cl_mem Y,
                  const int32_t offY)
 {
     ocl::Context ctx = ocl::Context::getDefault();
 
     ocl::Kernel oclk_axpy(CL_KERNEL_SELECT("axpy"), cv::ocl::dnn::math_oclsrc);
+    if (oclk_axpy.empty())
+        return false;
+
     size_t global[] = { 128 * 128 };
     size_t local[] = { 128 };
 
@@ -622,10 +633,10 @@ void ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
     oclk_axpy.set(argIdx++, (cl_mem) Y);
     oclk_axpy.set(argIdx++, offY);
 
-    oclk_axpy.run(1, global, local, false);
+    return oclk_axpy.run(1, global, local, false);
 }
 
-template void ocl4dnnAXPY<float>(const int32_t ctx_id, const int32_t N,
+template bool ocl4dnnAXPY<float>(const int32_t ctx_id, const int32_t N,
                                  const float alpha, const cl_mem X,
                                  const int32_t offX, cl_mem Y,
                                  const int32_t offY);

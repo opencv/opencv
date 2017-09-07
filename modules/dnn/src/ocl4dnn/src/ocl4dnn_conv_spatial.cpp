@@ -929,7 +929,7 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
+bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
                                               int32_t swizzled_factor,
                                               bool interleave)
 {
@@ -938,7 +938,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
     // This requires we always call convolve again with the winner configuration
     // during the auto tuning stage.
     if (tuned_ && !swizzled_weights_umat.empty())
-        return;
+        return true;
 
     ocl::Context ocl_ctx = ocl::Context::getDefault();
     if (swizzled_weights_umat.empty())
@@ -952,6 +952,9 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
 
         ocl::Kernel oclk_copy_weight(CL_KERNEL_SELECT("copyWeightsSwizzled"),
                                      cv::ocl::dnn::conv_spatial_helper_oclsrc);
+        if (oclk_copy_weight.empty())
+            return false;
+
         oclk_copy_weight.set(argIdx++, weight.handle(ACCESS_READ));
         oclk_copy_weight.set(argIdx++, swizzled_weights_umat.handle(ACCESS_WRITE));
         oclk_copy_weight.set(argIdx++, kernel_w_);
@@ -968,6 +971,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
                                             NULL);
         if (err != CL_SUCCESS) {
             std::cout << "Swizzle kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+            return false;
         }
     } else {
         // assumption: kernel dimesion is 2
@@ -998,6 +1002,7 @@ void OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
                          rowAlignment);
         free(tmpSwizzledWeight);
     }
+    return true;
 }
 
 template<>
@@ -1054,10 +1059,14 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
     else
         return false;
     ocl::Kernel kernel(config->kernelName.c_str(), program);
+    if (kernel.empty())
+        return false;
+
     int32_t bias_offset;
 
     if (config->kernelType == KERNEL_TYPE_INTEL_IDLF) {
-        swizzleWeight(weight, config->workItem_output[2], false);
+        if (!swizzleWeight(weight, config->workItem_output[2], false))
+            return false;
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
         size_t total_bias_size = M_ * group_;
@@ -1131,7 +1140,8 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
         }
     } else if (config->kernelType == KERNEL_TYPE_GEMM_LIKE) {
-        swizzleWeight(weight, config->workItem_output[1], true);
+        if (!swizzleWeight(weight, config->workItem_output[1], true))
+            return false;
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
         size_t total_bias_size = M_ * group_;
@@ -1487,6 +1497,9 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
     {
         size_t workgroupSize_used;
         ocl::Kernel kernel(kernel_name_.c_str(), program);
+        if (kernel.empty())
+            return false;
+
         workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
         if (workgroupSize_used != simd_size)
         {
@@ -1535,6 +1548,9 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
     {
         size_t workgroupSize_used;
         ocl::Kernel kernel(kernel_name_.c_str(), program);
+        if (kernel.empty())
+            return false;
+
         workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
         if (workgroupSize_used != simd_size)
         {

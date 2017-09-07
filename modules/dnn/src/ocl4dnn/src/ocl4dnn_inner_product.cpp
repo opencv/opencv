@@ -77,20 +77,24 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
                                          const UMat& bias,
                                          UMat& top)
 {
+    bool ret;
+
     if (M_ == 1)
     {
-        ocl4dnnGEMV<Dtype>(0, CblasNoTrans, N_,
-                           K_, (Dtype) 1., (cl_mem) weight.handle(ACCESS_READ), 0,
-                           (cl_mem) bottom.handle(ACCESS_READ), 0, (Dtype) 0.,
-                           (cl_mem) top.handle(ACCESS_WRITE), 0);
-        if (bias_term_)
-            ocl4dnnAXPY<Dtype>(0, N_,
-                               1,
-                               (cl_mem) bias.handle(ACCESS_READ), 0,
-                               (cl_mem) top.handle(ACCESS_WRITE), 0);
+        ret = ocl4dnnGEMV<Dtype>(0, CblasNoTrans, N_,
+                                 K_, (Dtype) 1., (cl_mem) weight.handle(ACCESS_READ), 0,
+                                 (cl_mem) bottom.handle(ACCESS_READ), 0, (Dtype) 0.,
+                                 (cl_mem) top.handle(ACCESS_WRITE), 0);
+        if (bias_term_ && ret)
+            ret = ocl4dnnAXPY<Dtype>(0, N_,
+                                     1,
+                                     (cl_mem) bias.handle(ACCESS_READ), 0,
+                                     (cl_mem) top.handle(ACCESS_WRITE), 0);
+        return ret;
     }
     else
     {
+        ret = false;
         size_t max_image_size = std::min(ocl::Device::getDefault().image2DMaxWidth(),
                                          ocl::Device::getDefault().image2DMaxHeight());
         if (M_ <= max_image_size &&
@@ -100,17 +104,16 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
 
-            ocl4dnnGEMMCommon<Dtype>(0,
-                                     transpose_ ? CblasNoTrans : CblasTrans,
-                                     M_, N_, K_, (cl_mem) bottom.handle(ACCESS_READ),
-                                     (cl_mem) weight.handle(ACCESS_READ),
-                                     NULL,
-                                     (cl_mem) top.handle(ACCESS_WRITE),
-                                     max_image_size);
-        } else
-            return false;
+            ret = ocl4dnnGEMMCommon<Dtype>(0,
+                                           transpose_ ? CblasNoTrans : CblasTrans,
+                                           M_, N_, K_, (cl_mem) bottom.handle(ACCESS_READ),
+                                           (cl_mem) weight.handle(ACCESS_READ),
+                                           NULL,
+                                           (cl_mem) top.handle(ACCESS_WRITE),
+                                           max_image_size);
+        }
+        return ret;
     }
-    return true;
 }
 
 template class OCL4DNNInnerProduct<float>;

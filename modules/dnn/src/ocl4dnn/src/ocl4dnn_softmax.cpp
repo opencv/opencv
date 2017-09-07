@@ -87,13 +87,16 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
     if (intel_subgroup && inner_num_ < 128)
     {
         String opts = build_option_check() ? " -cl-no-subgroup-ifp " : "";
+        String kname;
         ocl::Kernel oclk_softmax_forward_kernel;
+
         if (use_slm_)
-            oclk_softmax_forward_kernel.create(CL_KERNEL_SELECT("softmax_forward_slm"),
-                                               cv::ocl::dnn::softmax_loss_oclsrc, opts);
+            kname = CL_KERNEL_SELECT("softmax_forward_slm");
         else
-            oclk_softmax_forward_kernel.create(CL_KERNEL_SELECT("softmax_forward"),
-                                               cv::ocl::dnn::softmax_loss_oclsrc, opts);
+            kname = CL_KERNEL_SELECT("softmax_forward");
+
+        if (!oclk_softmax_forward_kernel.create(kname.c_str(), ocl::dnn::softmax_loss_oclsrc, opts))
+            return false;
 
         size_t global_size[] = { 256, (size_t)outer_num_, 1 };
         size_t local_size[] = { 256, 1, 1 };

@@ -192,9 +192,10 @@ public:
         UMat inpMat, outMat;
         outMat = outputs[0].getUMat(ACCESS_WRITE);
 
-        ocl::Kernel ker;
+        ocl::Kernel kernel;
         String buildopt = String("-DDtype=") + ocl::typeToStr(inputs[0]->type()) + String(" ");
-        CV_Assert(ker.create("concat", ocl::dnn::concat_oclsrc, buildopt));
+        if (!kernel.create("concat", ocl::dnn::concat_oclsrc, buildopt))
+            return false;
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -202,16 +203,18 @@ public:
             bottom_concat_axis = inputs[i]->size[1];
             size_t nthreads = inputs[i]->total();
 
-            ker.set(0, (int)nthreads);
-            ker.set(1, ocl::KernelArg::PtrReadOnly(inpMat));
-            ker.set(2, (int)inputs[i]->size[0]);
-            ker.set(3, (int)concat_size);
-            ker.set(4, (int)top_concat_axis);
-            ker.set(5, (int)bottom_concat_axis);
-            ker.set(6, (int)offset_concat_axis);
-            ker.set(7, ocl::KernelArg::PtrWriteOnly(outMat));
+            kernel.set(0, (int)nthreads);
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(inpMat));
+            kernel.set(2, (int)inputs[i]->size[0]);
+            kernel.set(3, (int)concat_size);
+            kernel.set(4, (int)top_concat_axis);
+            kernel.set(5, (int)bottom_concat_axis);
+            kernel.set(6, (int)offset_concat_axis);
+            kernel.set(7, ocl::KernelArg::PtrWriteOnly(outMat));
 
-            CV_Assert(ker.run(1, &nthreads, NULL, false));
+            if (!kernel.run(1, &nthreads, NULL, false))
+                return false;
+
             offset_concat_axis += bottom_concat_axis;
         }
 

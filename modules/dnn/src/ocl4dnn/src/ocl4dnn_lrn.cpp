@@ -71,7 +71,7 @@ bool OCL4DNNLRN<Dtype>::Forward(const UMat& bottom, UMat& top)
     switch (lrn_type_)
     {
     case LRNParameter_NormRegion_ACROSS_CHANNELS:
-        crossChannelForward(bottom, top);
+        ret = crossChannelForward(bottom, top);
         break;
     case LRNParameter_NormRegion_WITHIN_CHANNEL:
         //TODO
@@ -86,7 +86,7 @@ bool OCL4DNNLRN<Dtype>::Forward(const UMat& bottom, UMat& top)
 }
 
 template<typename Dtype>
-void OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
+bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
 {
     ocl::Queue queue = ocl::Queue::getDefault();
     CHECK_EQ(phase_test_, true) << "Only support forward inference.";
@@ -96,7 +96,8 @@ void OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
     size_t global_work_size_[1] = {(size_t)n_threads};
     String opts = build_option_check() ? " -cl-no-subgroup-ifp " : "";
     ocl::Kernel oclk_lrn_fill;
-    oclk_lrn_fill.create(CL_KERNEL_SELECT("lrn_full_no_scale"), cv::ocl::dnn::ocl4dnn_lrn_oclsrc, opts);
+    if (!oclk_lrn_fill.create(CL_KERNEL_SELECT("lrn_full_no_scale"), ocl::dnn::ocl4dnn_lrn_oclsrc, opts))
+        return false;
 
     oclk_lrn_fill.set(argIdx++, n_threads);
     oclk_lrn_fill.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
@@ -110,7 +111,8 @@ void OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
     oclk_lrn_fill.set(argIdx++, k_);
     oclk_lrn_fill.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
     oclk_lrn_fill.set(argIdx++, -beta_);
-    oclk_lrn_fill.run(1, global_work_size_, NULL, false);
+
+    return oclk_lrn_fill.run(1, global_work_size_, NULL, false);
 }
 
 template class OCL4DNNLRN<float>;
