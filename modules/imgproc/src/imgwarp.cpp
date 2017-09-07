@@ -2547,6 +2547,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
          (!doubleSupport && depth == CV_64F) || cn > 4)
         return false;
 
+    bool useDouble = depth == CV_64F;
+
     const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
     ocl::ProgramSource program = op_type == OCL_OP_AFFINE ?
                 ocl::imgproc::warp_affine_oclsrc : ocl::imgproc::warp_perspective_oclsrc;
@@ -2561,8 +2563,10 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     String opts;
     if (interpolation == INTER_NEAREST)
     {
-        opts = format("-D INTER_NEAREST -D T=%s%s -D T1=%s -D ST=%s -D cn=%d -D rowsPerWI=%d",
-                      ocl::typeToStr(type), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+        opts = format("-D INTER_NEAREST -D T=%s%s -D CT=%s -D T1=%s -D ST=%s -D cn=%d -D rowsPerWI=%d",
+                      ocl::typeToStr(type),
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                      useDouble ? "double" : "float",
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype), cn, rowsPerWI);
     }
@@ -2570,14 +2574,16 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     {
         char cvt[2][50];
         opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d"
-                      " -D convertToWT=%s -D convertToT=%s%s -D cn=%d -D rowsPerWI=%d",
+                      " -D convertToWT=%s -D convertToT=%s%s -D CT=%s -D cn=%d -D rowsPerWI=%d",
                       interpolationMap[interpolation], ocl::typeToStr(type),
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype),
                       ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
                       ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
                       ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
-                      doubleSupport ? " -D DOUBLE_SUPPORT" : "", cn, rowsPerWI);
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                      useDouble ? "double" : "float",
+                      cn, rowsPerWI);
     }
 
     k.create(kernelName, program, opts);
@@ -2614,7 +2620,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
             M[2] = b1; M[5] = b2;
         }
     }
-    matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
+    matM.convertTo(M0, useDouble ? CV_64F : CV_32F);
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
            ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
