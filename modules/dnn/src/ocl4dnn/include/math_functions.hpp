@@ -50,7 +50,7 @@
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
 
 template<typename Dtype>
-bool ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
+bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
                        const int32_t M, const int32_t N, const int32_t K,
                        const cl_mem A, const cl_mem B,
                        const cl_mem B_image,
@@ -58,8 +58,7 @@ bool ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
                        const size_t max_image_size);
 
 template<typename Dtype>
-void ocl4dnnGEMMCopyBufferToImage(int32_t ctx_id,
-                                  cl_mem *image, cl_mem buffer, int offset,
+void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
                                   bool is_matrix_a, bool transpose,
                                   bool padding, int padded_height,
                                   int padded_width, int height,
@@ -68,14 +67,14 @@ void ocl4dnnGEMMCopyBufferToImage(int32_t ctx_id,
                                   cl_event *event);
 
 template<typename Dtype>
-bool ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
                  const int32_t M, const int32_t N, const Dtype alpha,
                  const cl_mem A, const int32_t offA, const cl_mem x,
                  const int32_t offx, const Dtype beta, cl_mem y,
                  const int32_t offy);
 
 template<typename Dtype>
-bool ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
                  const cl_mem x, const int32_t offx, cl_mem y,
                  const int32_t offy);
 

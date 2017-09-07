@@ -81,13 +81,12 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
 
     if (M_ == 1)
     {
-        ret = ocl4dnnGEMV<Dtype>(0, CblasNoTrans, N_,
+        ret = ocl4dnnGEMV<Dtype>(CblasNoTrans, N_,
                                  K_, (Dtype) 1., (cl_mem) weight.handle(ACCESS_READ), 0,
                                  (cl_mem) bottom.handle(ACCESS_READ), 0, (Dtype) 0.,
                                  (cl_mem) top.handle(ACCESS_WRITE), 0);
         if (bias_term_ && ret)
-            ret = ocl4dnnAXPY<Dtype>(0, N_,
-                                     1,
+            ret = ocl4dnnAXPY<Dtype>(N_, 1,
                                      (cl_mem) bias.handle(ACCESS_READ), 0,
                                      (cl_mem) top.handle(ACCESS_WRITE), 0);
         return ret;
@@ -104,8 +103,7 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
 
-            ret = ocl4dnnGEMMCommon<Dtype>(0,
-                                           transpose_ ? CblasNoTrans : CblasTrans,
+            ret = ocl4dnnGEMMCommon<Dtype>(transpose_ ? CblasNoTrans : CblasTrans,
                                            M_, N_, K_, (cl_mem) bottom.handle(ACCESS_READ),
                                            (cl_mem) weight.handle(ACCESS_READ),
                                            NULL,

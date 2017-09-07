@@ -77,8 +77,7 @@ static void CL_CALLBACK gemmCallback(cl_event event,
 // will use the image directly. It's caller's responsibility to
 // release the created image.
 template<typename Dtype>
-void ocl4dnnGEMMCopyBufferToImage(int32_t ctx_id,
-                                  cl_mem *image, cl_mem buffer, int offset,
+void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
                                   bool is_matrix_a, bool transpose,
                                   bool padding, int padded_height,
                                   int padded_width, int height,
@@ -201,8 +200,7 @@ void ocl4dnnGEMMCopyBufferToImage(int32_t ctx_id,
 }
 
 template
-void ocl4dnnGEMMCopyBufferToImage<float>(int32_t ctx_id,
-                                         cl_mem *image, cl_mem buffer, int offset,
+void ocl4dnnGEMMCopyBufferToImage<float>(cl_mem *image, cl_mem buffer, int offset,
                                          bool is_matrix_a, bool transpose,
                                          bool padding, int padded_height,
                                          int padded_width, int height,
@@ -221,8 +219,7 @@ enum gemm_type_t
 };
 
 template<typename Dtype>
-static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
-                                 const CBLAS_TRANSPOSE TransA,
+static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                                  const CBLAS_TRANSPOSE TransB, const int32_t M,
                                  const int32_t N, const int32_t K, const Dtype alpha,
                                  const cl_mem A, const int32_t offA, const cl_mem B,
@@ -362,7 +359,7 @@ static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
 
                 if (!is_image_a)
                 {
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(ctx_id, &ImA,
+                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImA,
                                                         A, blockA_offset,
                                                         true, TransA != CblasNoTrans,
                                                         padding_A, imageA_h, imageA_w,
@@ -373,7 +370,7 @@ static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
                 }
                 if (!is_image_b)
                 {
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(ctx_id, &ImB,
+                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImB,
                                                         B, blockB_offset,
                                                         false, false,
                                                         padding_B, imageB_h, imageB_w,
@@ -389,7 +386,7 @@ static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
                 {
                     bool padding;
                     padding = !is_image_b;
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(ctx_id, &ImA,
+                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImA,
                                                         A, blockA_offset,
                                                         true, TransA != CblasNoTrans,
                                                         padding, imageA_h, imageA_w,
@@ -401,7 +398,7 @@ static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
 
                 if (!is_image_b && (K % use_buffer_indicator != 0))
                 {
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(ctx_id, &ImB,
+                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImB,
                                                         B, blockB_offset,
                                                         false, true, false, imageB_h, imageB_w,
                                                         blockB_height, blockB_width, ldB, 0,
@@ -508,7 +505,7 @@ static bool ocl4dnnFastImageGEMM(const int32_t ctx_id,
 }
 
 template<typename Dtype>
-bool ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
+bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
                        const int32_t M, const int32_t N, const int32_t K,
                        const cl_mem A, const cl_mem B,
                        const cl_mem B_image, cl_mem C,
@@ -519,13 +516,13 @@ bool ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
     if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 ||
         gemm_type == GEMM_TYPE_FAST_IMAGE_32_2)
     {
-        return ocl4dnnFastImageGEMM<Dtype>(ctx_id, CblasNoTrans, TransB, M, N, K,
+        return ocl4dnnFastImageGEMM<Dtype>(CblasNoTrans, TransB, M, N, K,
                                            (Dtype)1., A, 0, B, 0, (Dtype)0., C,
                                            0, false, false, gemm_type, max_image_size);
     }
     else if (gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE)
     {
-        return ocl4dnnFastImageGEMM<Dtype>(ctx_id, CblasNoTrans, TransB, M, N, K,
+        return ocl4dnnFastImageGEMM<Dtype>(CblasNoTrans, TransB, M, N, K,
                                            (Dtype)1., A, 0, B_image, 0, (Dtype)0., C,
                                            0, false, true,
                                            GEMM_TYPE_FAST_IMAGE_B_IMAGE,
@@ -534,14 +531,14 @@ bool ocl4dnnGEMMCommon(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
     return false;
 }
 
-template bool ocl4dnnGEMMCommon<float>(const int32_t ctx_id, const CBLAS_TRANSPOSE TransB,
+template bool ocl4dnnGEMMCommon<float>(const CBLAS_TRANSPOSE TransB,
                                        const int32_t M, const int32_t N, const int32_t K,
                                        const cl_mem A, const cl_mem B,
                                        const cl_mem B_image, cl_mem C,
                                        const size_t max_image_size);
 
 template<typename Dtype>
-bool ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
+bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
                  const int32_t M, const int32_t N, const Dtype alpha,
                  const cl_mem A, const int32_t offA, const cl_mem x,
                  const int32_t offx, const Dtype beta, cl_mem y,
@@ -603,8 +600,7 @@ bool ocl4dnnGEMV(const int32_t ctx_id, const CBLAS_TRANSPOSE TransA,
     return ret;
 }
 
-template bool ocl4dnnGEMV<float>(const int32_t ctx_id,
-                                 const CBLAS_TRANSPOSE TransA,
+template bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
                                  const int32_t M, const int32_t N,
                                  const float alpha, const cl_mem A,
                                  const int32_t offA, const cl_mem x,
@@ -612,7 +608,7 @@ template bool ocl4dnnGEMV<float>(const int32_t ctx_id,
                                  cl_mem y, const int32_t offy);
 
 template<typename Dtype>
-bool ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
+bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
                  const cl_mem X, const int32_t offX, cl_mem Y,
                  const int32_t offY)
 {
@@ -636,7 +632,7 @@ bool ocl4dnnAXPY(const int32_t ctx_id, const int32_t N, const Dtype alpha,
     return oclk_axpy.run(1, global, local, false);
 }
 
-template bool ocl4dnnAXPY<float>(const int32_t ctx_id, const int32_t N,
+template bool ocl4dnnAXPY<float>(const int32_t N,
                                  const float alpha, const cl_mem X,
                                  const int32_t offX, cl_mem Y,
                                  const int32_t offY);
