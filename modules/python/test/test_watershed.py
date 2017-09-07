@@ -31,3 +31,6 @@ class watershed_test(NewOpenCVTests):
             cv2.imwrite(self.extraTestDataPath + '/cv/watershed/wshed_segments.png', refSegments)
 
         self.assertLess(cv2.norm(segments - refSegments, cv2.NORM_L1) / 255.0, 50)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

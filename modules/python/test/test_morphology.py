@@ -49,3 +49,6 @@ class morphology_test(NewOpenCVTests):
         for mode in modes:
             res = update(mode)
             self.assertEqual(self.hashimg(res), referenceHashes[mode])
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

@@ -720,7 +720,7 @@ macro(ocv_glob_module_sources)
   if(cl_kernels)
     set(OCL_NAME opencl_kernels_${name})
     add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp"
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp"
       COMMAND ${CMAKE_COMMAND} "-DMODULE_NAME=${name}" "-DCL_DIR=${CMAKE_CURRENT_LIST_DIR}/src/opencl" "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
       DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
     ocv_source_group("Src\\opencl\\kernels" FILES ${cl_kernels})
@@ -1047,6 +1047,8 @@ function(ocv_add_perf_tests)
         set(OPENCV_PERF_${the_module}_SOURCES ${perf_srcs} ${perf_hdrs})
       endif()
 
+      ocv_compiler_optimization_process_sources(OPENCV_PERF_${the_module}_SOURCES OPENCV_PERF_${the_module}_DEPS ${the_target})
+
       if(NOT BUILD_opencv_world)
         get_native_precompiled_header(${the_target} perf_precomp.hpp)
       endif()
@@ -1123,6 +1125,8 @@ function(ocv_add_accuracy_tests)
         ocv_source_group("Include" DIRBASE "${test_path}" FILES ${test_hdrs})
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
       endif()
+
+      ocv_compiler_optimization_process_sources(OPENCV_TEST_${the_module}_SOURCES OPENCV_TEST_${the_module}_DEPS ${the_target})
 
       if(NOT BUILD_opencv_world)
         get_native_precompiled_header(${the_target} test_precomp.hpp)

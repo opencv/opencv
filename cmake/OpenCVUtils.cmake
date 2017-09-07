@@ -48,8 +48,8 @@ macro(ocv_update VAR)
   endif()
 endmacro()
 
-# Search packages for host system instead of packages for target system
-# in case of cross compilation thess macro should be defined by toolchain file
+# Search packages for the host system instead of packages for the target system
+# in case of cross compilation these macros should be defined by the toolchain file
 if(NOT COMMAND find_host_package)
   macro(find_host_package)
     find_package(${ARGN})
@@ -128,7 +128,7 @@ function(ocv_is_opencv_directory result_var dir)
 endfunction()
 
 
-# adds include directories in such way that directories from the OpenCV source tree go first
+# adds include directories in such a way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   ocv_debug_message("ocv_include_directories( ${ARGN} )")
   set(__add_before "")
@@ -162,7 +162,7 @@ function(ocv_append_dependant_targets target)
   set(OPENCV_DEPENDANT_TARGETS_${target} "${OPENCV_DEPENDANT_TARGETS_${target}};${ARGN}" CACHE INTERNAL "" FORCE)
 endfunction()
 
-# adds include directories in such way that directories from the OpenCV source tree go first
+# adds include directories in such a way that directories from the OpenCV source tree go first
 function(ocv_target_include_directories target)
   #ocv_debug_message("ocv_target_include_directories(${target} ${ARGN})")
   _ocv_fix_target(target)
@@ -387,7 +387,7 @@ macro(ocv_warnings_disable)
   endif(NOT ENABLE_NOISY_WARNINGS)
 endmacro()
 
-macro(ocv_append_sourge_file_compile_definitions source)
+macro(ocv_append_source_file_compile_definitions source)
   get_source_file_property(_value "${source}" COMPILE_DEFINITIONS)
   if(_value)
     set(_value ${_value} ${ARGN})
@@ -497,7 +497,7 @@ macro(ocv_check_modules define)
 endmacro()
 
 
-# Macros that checks if module have been installed.
+# Macro that checks if module has been installed.
 # After it adds module to build and define
 # constants passed as second arg
 macro(CHECK_MODULE module_name define cv_module)
@@ -656,7 +656,7 @@ macro(ocv_list_add_suffix LST SUFFIX)
 endmacro()
 
 
-# gets and removes the first element from list
+# gets and removes the first element from the list
 macro(ocv_list_pop_front LST VAR)
   if(${LST})
     list(GET ${LST} 0 ${VAR})
@@ -939,6 +939,12 @@ function(ocv_target_link_libraries target)
     __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
   endif()
 endfunction()
+
+function(ocv_target_compile_definitions target)
+  _ocv_fix_target(target)
+  target_compile_definitions(${target} ${ARGN})
+endfunction()
+
 
 function(_ocv_append_target_includes target)
   if(DEFINED OCV_TARGET_INCLUDE_DIRS_${target})

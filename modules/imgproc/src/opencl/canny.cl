@@ -221,11 +221,11 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     int value = 1;
     if (mag0 > low_thr)
     {
-        int a = (y / (float)x) * TG22;
-        int b = (y / (float)x) * TG67;
+        float x_ = abs(x);
+        float y_ = abs(y);
 
-        a = min((int)abs(a), 1) + 1;
-        b = min((int)abs(b), 1);
+        int a = (y_ * TG22 >= x_) ? 2 : 1;
+        int b = (y_ * TG67 >= x_) ? 1 : 0;
 
         //  a = { 1, 2 }
         //  b = { 0, 1 }
@@ -342,11 +342,11 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
     int value = 1;
     if (mag0 > low_thr)
     {
-        int a = (y / (float)x) * TG22;
-        int b = (y / (float)x) * TG67;
+        float x_ = abs(x);
+        float y_ = abs(y);
 
-        a = min((int)abs(a), 1) + 1;
-        b = min((int)abs(b), 1);
+        int a = (y_ * TG22 >= x_) ? 2 : 1;
+        int b = (y_ * TG67 >= x_) ? 1 : 0;
 
         int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31);
         int dir = a * b + 2 * dir3;

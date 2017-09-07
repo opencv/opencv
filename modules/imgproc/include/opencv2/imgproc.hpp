@@ -3977,6 +3977,8 @@ returns convex hull points. Otherwise, it returns indices of the convex hull poi
 output array is std::vector, the flag is ignored, and the output depends on the type of the
 vector: std::vector\<int\> implies returnPoints=false, std::vector\<Point\> implies
 returnPoints=true.
+
+@note `points` and `hull` should be different arrays, inplace processing isn't supported.
  */
 CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull,
                               bool clockwise = false, bool returnPoints = true );

@@ -1380,6 +1380,23 @@ struct Context::Impl
         return prog;
     }
 
+    void unloadProg(Program& prog)
+    {
+        cv::AutoLock lock(program_cache_mutex);
+        for (CacheList::iterator i = cacheList.begin(); i != cacheList.end(); ++i)
+        {
+              phash_t::iterator it = phash.find(*i);
+              if (it != phash.end())
+              {
+                  if (it->second.ptr() == prog.ptr())
+                  {
+                      phash.erase(*i);
+                      cacheList.erase(i);
+                      return;
+                  }
+              }
+        }
+    }
 
     IMPLEMENT_REFCOUNTABLE();
 
@@ -1643,7 +1660,11 @@ Program Context::getProg(const ProgramSource& prog,
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
 
-
+void Context::unloadProg(Program& prog)
+{
+    if (p)
+        p->unloadProg(prog);
+}
 
 #ifdef HAVE_OPENCL_SVM
 bool Context::useSVM() const

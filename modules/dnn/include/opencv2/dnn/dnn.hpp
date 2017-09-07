@@ -345,7 +345,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         CV_WRAP Ptr<Layer> getLayer(LayerId layerId);
 
         /** @brief Returns pointers to input layers of specific layer. */
-        CV_WRAP std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId);
+        std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId); // FIXIT: CV_WRAP
 
         /** @brief Delete layer for the network (not implemented yet) */
         CV_WRAP void deleteLayer(LayerId layer);
@@ -483,15 +483,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * order is the same as in layersIds
          */
         CV_WRAP void getLayersShapes(const std::vector<MatShape>& netInputShapes,
-                                     std::vector<int>* layersIds,
-                                     std::vector<std::vector<MatShape> >* inLayersShapes,
-                                     std::vector<std::vector<MatShape> >* outLayersShapes) const;
+                                     CV_OUT std::vector<int>& layersIds,
+                                     CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
+                                     CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
 
         /** @overload */
         CV_WRAP void getLayersShapes(const MatShape& netInputShape,
-                                     std::vector<int>* layersIds,
-                                     std::vector<std::vector<MatShape> >* inLayersShapes,
-                                     std::vector<std::vector<MatShape> >* outLayersShapes) const;
+                                     CV_OUT std::vector<int>& layersIds,
+                                     CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
+                                     CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
 
         /** @brief Returns input and output shapes for layer with specified
          * id in loaded model; preliminary inferencing isn't necessary.
@@ -502,16 +502,16 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param outLayerShapes output parameter for output layers shapes;
          * order is the same as in layersIds
          */
-        CV_WRAP void getLayerShapes(const MatShape& netInputShape,
+        void getLayerShapes(const MatShape& netInputShape,
                                     const int layerId,
-                                    std::vector<MatShape>* inLayerShapes,
-                                    std::vector<MatShape>* outLayerShapes) const;
+                                    CV_OUT std::vector<MatShape>& inLayerShapes,
+                                    CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
 
         /** @overload */
-        CV_WRAP void getLayerShapes(const std::vector<MatShape>& netInputShapes,
+        void getLayerShapes(const std::vector<MatShape>& netInputShapes,
                                     const int layerId,
-                                    std::vector<MatShape>* inLayerShapes,
-                                    std::vector<MatShape>* outLayerShapes) const;
+                                    CV_OUT std::vector<MatShape>& inLayerShapes,
+                                    CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
 
         /** @brief Computes FLOP for whole loaded model with specified input shapes.
          * @param netInputShapes vector of shapes for all net inputs.
@@ -544,8 +544,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * @param weights output parameter to store resulting bytes for weights.
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
-        CV_WRAP void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
-                                          CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
+        void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+                                          CV_OUT size_t& weights, CV_OUT size_t& blobs) const; // FIXIT: CV_WRAP
         /** @overload */
         CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
@@ -565,18 +565,28 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * @param weights output parameter to store resulting bytes for weights.
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
-        CV_WRAP void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
-                                          CV_OUT std::vector<int>& layerIds, CV_OUT std::vector<size_t>& weights,
-                                          CV_OUT std::vector<size_t>& blobs) const;
+        void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+                                          CV_OUT std::vector<int>& layerIds,
+                                          CV_OUT std::vector<size_t>& weights,
+                                          CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
         /** @overload */
-        CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
-                                          CV_OUT std::vector<int>& layerIds, CV_OUT std::vector<size_t>& weights,
-                                          CV_OUT std::vector<size_t>& blobs) const;
+        void getMemoryConsumption(const MatShape& netInputShape,
+                                          CV_OUT std::vector<int>& layerIds,
+                                          CV_OUT std::vector<size_t>& weights,
+                                          CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
 
         /** @brief Enables or disables layer fusion in the network.
          * @param fusion true to enable the fusion, false to disable. The fusion is enabled by default.
          */
         CV_WRAP void enableFusion(bool fusion);
+
+        /** @brief Returns overall time for inference and timings (in ticks) for layers.
+         * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,
+         * in this case zero ticks count will be return for that skipped layers.
+         * @param timings vector for tick timings for all layers.
+         * @return overall ticks for model inference.
+         */
+        CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
     private:
         struct Impl;

@@ -49,18 +49,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 
-#ifdef HAVE_IPP_IW
-extern "C" {
-IW_DECL(IppStatus) llwiCopyMask(const void *pSrc, int srcStep, void *pDst, int dstStep,
-    IppiSize size, int typeSize, int channels, const Ipp8u *pMask, int maskStep);
-IW_DECL(IppStatus) llwiSet(const double *pValue, void *pDst, int dstStep,
-    IppiSize size, IppDataType dataType, int channels);
-IW_DECL(IppStatus) llwiSetMask(const double *pValue, void *pDst, int dstStep,
-    IppiSize size, IppDataType dataType, int channels, const Ipp8u *pMask, int maskStep);
-IW_DECL(IppStatus) llwiCopyMakeBorder(const void *pSrc, IppSizeL srcStep, void *pDst, IppSizeL dstStep,
-    IppiSizeL size, IppDataType dataType, int channels, IppiBorderSize *pBorderSize, IppiBorderType border, const Ipp64f *pBorderVal);
-}
-#endif
 
 namespace cv
 {
@@ -480,9 +468,9 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 
     if(dst.dims <= 2)
     {
-        IppiSize       size     = ippiSize(dst.size());
-        IppDataType    dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValue s;
+        IppiSize            size     = ippiSize(dst.size());
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
         convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
 
         return CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, dst.ptr(), (int)dst.step, size, dataType, dst.channels(), mask.ptr(), (int)mask.step) >= 0;
@@ -493,9 +481,9 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
         uchar          *ptrs[2]  = {NULL};
         NAryMatIterator it(arrays, ptrs);
 
-        IppiSize       size     = {(int)it.size, 1};
-        IppDataType    dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValue s;
+        IppiSize            size     = {(int)it.size, 1};
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
         convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
 
         for( size_t i = 0; i < it.nplanes; i++, ++it)
@@ -717,7 +705,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
         ::ipp::IwiImage iwSrc = ippiGetImage(src);
         ::ipp::IwiImage iwDst = ippiGetImage(dst);
 
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, &iwSrc, &iwDst, ippMode);
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
     }
     catch(::ipp::IwException)
     {
@@ -1155,13 +1143,13 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
     if(_src.dims > 2)
         return false;
 
-    Rect dstRect(borderSize.borderLeft, borderSize.borderTop,
-        _dst.cols - borderSize.borderRight - borderSize.borderLeft,
-        _dst.rows - borderSize.borderBottom - borderSize.borderTop);
+    Rect dstRect(borderSize.left, borderSize.top,
+        _dst.cols - borderSize.right - borderSize.left,
+        _dst.rows - borderSize.bottom - borderSize.top);
     Mat  subDst = Mat(_dst, dstRect);
     Mat *pSrc   = &_src;
 
-    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), &borderSize, borderType, &value[0]) >= 0;
+    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), borderSize, borderType, &value[0]) >= 0;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(top); CV_UNUSED(bottom); CV_UNUSED(left); CV_UNUSED(right);
     CV_UNUSED(_borderType); CV_UNUSED(value);

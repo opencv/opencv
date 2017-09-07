@@ -47,6 +47,7 @@
 #include <iostream>
 #include <sstream>
 #include <iterator>
+#include <numeric>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -633,7 +634,7 @@ struct Net::Impl
         inpl.layerInstance = netInputLayer;
         layerNameToId.insert(std::make_pair(inpl.name, inpl.id));
 
-        lastLayerId = 1;
+        lastLayerId = 0;
         netWasAllocated = false;
         fusion = true;
         preferableBackend = DNN_BACKEND_DEFAULT;
@@ -656,6 +657,7 @@ struct Net::Impl
 
     bool netWasAllocated;
     bool fusion;
+    std::vector<int64> layersTimings;
 
     void compileHalide()
     {
@@ -716,6 +718,8 @@ struct Net::Impl
         it = layers.find(0);
         CV_Assert(it != layers.end());
         it->second.skipFlags[DNN_BACKEND_DEFAULT] = true;
+
+        layersTimings.clear();
     }
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>())
@@ -1269,6 +1273,8 @@ struct Net::Impl
             allocateLayer(lid, layersShapes);
         }
 
+        layersTimings.resize(lastLayerId + 1, 0);
+
         fuseLayers(blobsToKeep_);
     }
 
@@ -1278,11 +1284,16 @@ struct Net::Impl
 
         Ptr<Layer> layer = ld.layerInstance;
 
+        TickMeter tm;
+        tm.start();
+
         if (preferableBackend == DNN_BACKEND_DEFAULT ||
             !layer->supportBackend(preferableBackend))
         {
             if( !ld.skipFlags[DNN_BACKEND_DEFAULT] )
                 layer->forward(ld.inputBlobs, ld.outputBlobs, ld.internals);
+            else
+                tm.reset();
         }
         else if (!ld.skipFlags[preferableBackend])
         {
@@ -1298,6 +1309,9 @@ struct Net::Impl
                 CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
             }
         }
+
+        tm.stop();
+        layersTimings[ld.id] = tm.getTimeTicks();
 
         ld.flag = 1;
     }
@@ -1717,16 +1731,13 @@ std::vector<int> Net::getUnconnectedOutLayers() const
 }
 
 void Net::getLayersShapes(const ShapesVec& netInputShapes,
-                          std::vector<int>* layersIds,
-                          std::vector<ShapesVec>* inLayersShapes,
-                          std::vector<ShapesVec>* outLayersShapes) const
+                          std::vector<int>& layersIds,
+                          std::vector<ShapesVec>& inLayersShapes,
+                          std::vector<ShapesVec>& outLayersShapes) const
 {
-    if ((layersIds || inLayersShapes || outLayersShapes) == false)
-        return;
-
-    if (layersIds) layersIds->clear();
-    if (inLayersShapes) inLayersShapes->clear();
-    if (outLayersShapes) outLayersShapes->clear();
+    layersIds.clear();
+    inLayersShapes.clear();
+    outLayersShapes.clear();
 
     Impl::LayersShapesMap inOutShapes;
     impl->getLayersShapes(netInputShapes, inOutShapes);
@@ -1734,19 +1745,16 @@ void Net::getLayersShapes(const ShapesVec& netInputShapes,
     for(Impl::LayersShapesMap::const_iterator it = inOutShapes.begin();
         it != inOutShapes.end(); it++)
     {
-        if (layersIds)
-            layersIds->push_back(it->first);
-        if (inLayersShapes)
-            inLayersShapes->push_back(it->second.in);
-        if (outLayersShapes)
-            outLayersShapes->push_back(it->second.out);
+        layersIds.push_back(it->first);
+        inLayersShapes.push_back(it->second.in);
+        outLayersShapes.push_back(it->second.out);
     }
 }
 
 void Net::getLayersShapes(const MatShape& netInputShape,
-                          std::vector<int>* layerIds,
-                          std::vector<ShapesVec>* inLayersShapes,
-                          std::vector<ShapesVec>* outLayersShapes) const
+                          std::vector<int>& layerIds,
+                          std::vector<ShapesVec>& inLayersShapes,
+                          std::vector<ShapesVec>& outLayersShapes) const
 {
     getLayersShapes(ShapesVec(1, netInputShape),
                     layerIds, inLayersShapes, outLayersShapes);
@@ -1754,8 +1762,8 @@ void Net::getLayersShapes(const MatShape& netInputShape,
 
 void Net::getLayerShapes(const MatShape& netInputShape,
                          const int layerId,
-                         ShapesVec* inLayerShapes,
-                         ShapesVec* outLayerShapes) const
+                         ShapesVec& inLayerShapes,
+                         ShapesVec& outLayerShapes) const
 {
     getLayerShapes(ShapesVec(1, netInputShape),
                    layerId, inLayerShapes, outLayerShapes);
@@ -1764,15 +1772,13 @@ void Net::getLayerShapes(const MatShape& netInputShape,
 
 void Net::getLayerShapes(const ShapesVec& netInputShapes,
                     const int layerId,
-                    ShapesVec* inLayerShapes,
-                    ShapesVec* outLayerShapes) const
+                    ShapesVec& inLayerShapes,
+                    ShapesVec& outLayerShapes) const
 {
     LayerShapes shapes;
     impl->getLayerShapes(netInputShapes, layerId, shapes);
-    if (inLayerShapes)
-        *inLayerShapes = shapes.in;
-    if (outLayerShapes)
-        *outLayerShapes = shapes.out;
+    inLayerShapes = shapes.in;
+    outLayerShapes = shapes.out;
 }
 
 int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes) const
@@ -1782,7 +1788,7 @@ int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes) const
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape> > inShapes, outShapes;
-    getLayersShapes(netInputShapes, &ids, &inShapes, &outShapes);
+    getLayersShapes(netInputShapes, ids, inShapes, outShapes);
     CV_Assert(inShapes.size() == outShapes.size());
     CV_Assert(inShapes.size() == ids.size());
 
@@ -1867,8 +1873,8 @@ void Net::getMemoryConsumption(const int layerId,
         weights += weightsBlob.total()*weightsBlob.elemSize();
     }
 
-    std::vector<MatShape> outLayerShapes;
-    getLayerShapes(netInputShapes, layerId, 0, &outLayerShapes);
+    ShapesVec inLayerShapes, outLayerShapes;
+    getLayerShapes(netInputShapes, layerId, inLayerShapes, outLayerShapes);
     for(int i = 0; i < outLayerShapes.size(); i++)
     {
         blobs += total(outLayerShapes[i]) * sizeof(float);
@@ -1917,9 +1923,9 @@ void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
     weights.clear();
     blobs.clear();
 
-    std::vector<std::vector<MatShape> > outLayerShapes;
+    std::vector<std::vector<MatShape> > inLayerShapes, outLayerShapes;
 
-    getLayersShapes(netInputShapes, &layerIds, 0, &outLayerShapes);
+    getLayersShapes(netInputShapes, layerIds, inLayerShapes, outLayerShapes);
 
     for(int i = 0; i < layerIds.size(); i++)
     {
@@ -1966,6 +1972,13 @@ void Net::setHalideScheduler(const String& scheduler)
     CV_TRACE_ARG_VALUE(scheduler, "scheduler", scheduler.c_str());
 
     impl->halideConfigFile = scheduler;
+}
+
+int64 Net::getPerfProfile(std::vector<double>& timings)
+{
+    timings = std::vector<double>(impl->layersTimings.begin() + 1, impl->layersTimings.end());
+    int64 total = std::accumulate(timings.begin(), timings.end(), 0);
+    return total;
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -75,6 +75,8 @@ TiffDecoder::TiffDecoder()
         TIFFSetWarningHandler( GrFmtSilentTIFFErrorHandler );
     }
     m_hdr = false;
+    m_buf_supported = true;
+    m_buf_pos = 0;
 }
 
 
@@ -115,6 +117,76 @@ ImageDecoder TiffDecoder::newDecoder() const
     return makePtr<TiffDecoder>();
 }
 
+class TiffDecoderBufHelper
+{
+public:
+    static tmsize_t read( thandle_t handle, void* buffer, tmsize_t n )
+    {
+        TiffDecoder *decoder = reinterpret_cast<TiffDecoder*>(handle);
+        const Mat& buf = decoder->m_buf;
+        const tmsize_t size = buf.cols*buf.rows*buf.elemSize();
+        tmsize_t pos = decoder->m_buf_pos;
+        if ( n > (size - pos) )
+        {
+            n = size - pos;
+        }
+        memcpy(buffer, buf.ptr() + pos, n);
+        decoder->m_buf_pos += n;
+        return n;
+    }
+
+    static tmsize_t write( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    {
+        // Not used for decoding.
+        return 0;
+    }
+
+    static toff_t seek( thandle_t handle, toff_t offset, int whence )
+    {
+        TiffDecoder *decoder = reinterpret_cast<TiffDecoder*>(handle);
+        const Mat& buf = decoder->m_buf;
+        const toff_t size = buf.cols*buf.rows*buf.elemSize();
+        toff_t new_pos = decoder->m_buf_pos;
+        switch (whence)
+        {
+            case SEEK_SET:
+                new_pos = offset;
+                break;
+            case SEEK_CUR:
+                new_pos += offset;
+                break;
+            case SEEK_END:
+                new_pos = size + offset;
+                break;
+        }
+        new_pos = std::min(new_pos, size);
+        decoder->m_buf_pos = (size_t)new_pos;
+        return new_pos;
+    }
+
+    static int map( thandle_t handle, void** base, toff_t* size )
+    {
+        TiffDecoder *decoder = reinterpret_cast<TiffDecoder*>(handle);
+        Mat& buf = decoder->m_buf;
+        *base = buf.ptr();
+        *size = buf.cols*buf.rows*buf.elemSize();
+        return 0;
+    }
+
+    static toff_t size( thandle_t handle )
+    {
+        TiffDecoder *decoder = reinterpret_cast<TiffDecoder*>(handle);
+        const Mat& buf = decoder->m_buf;
+        return buf.cols*buf.rows*buf.elemSize();
+    }
+
+    static int close( thandle_t /*handle*/ )
+    {
+        // Do nothing.
+        return 0;
+    }
+};
+
 bool TiffDecoder::readHeader()
 {
     bool result = false;
@@ -124,7 +196,18 @@ bool TiffDecoder::readHeader()
     {
         // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
         // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-        tif = TIFFOpen(m_filename.c_str(), "r");
+        if ( !m_buf.empty() )
+        {
+            m_buf_pos = 0;
+            tif = TIFFClientOpen( "", "r", reinterpret_cast<thandle_t>(this), &TiffDecoderBufHelper::read,
+                                  &TiffDecoderBufHelper::write, &TiffDecoderBufHelper::seek,
+                                  &TiffDecoderBufHelper::close, &TiffDecoderBufHelper::size,
+                                  &TiffDecoderBufHelper::map, /*unmap=*/0 );
+        }
+        else
+        {
+            tif = TIFFOpen(m_filename.c_str(), "r");
+        }
     }
 
     if( tif )
@@ -152,7 +235,7 @@ bool TiffDecoder::readHeader()
             m_hdr = false;
 
             if( bpp > 8 &&
-               ((photometric != 2 && photometric != 1) ||
+               ((photometric > 2) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
@@ -472,11 +555,7 @@ bool TiffDecoder::readHdrData(Mat& img)
 TiffEncoder::TiffEncoder()
 {
     m_description = "TIFF Files (*.tiff;*.tif)";
-#ifdef HAVE_TIFF
-    m_buf_supported = false;
-#else
     m_buf_supported = true;
-#endif
 }
 
 TiffEncoder::~TiffEncoder()
@@ -508,6 +587,81 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
 }
 
 #ifdef HAVE_TIFF
+
+class TiffEncoderBufHelper
+{
+public:
+
+    TiffEncoderBufHelper(std::vector<uchar> *buf)
+            : m_buf(buf), m_buf_pos(0)
+    {}
+
+    TIFF* open ()
+    {
+        return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
+                               &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
+                               &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
+                               /*map=*/0, /*unmap=*/0 );
+    }
+
+    static tmsize_t read( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    {
+        // Not used for encoding.
+        return 0;
+    }
+
+    static tmsize_t write( thandle_t handle, void* buffer, tmsize_t n )
+    {
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        size_t begin = (size_t)helper->m_buf_pos;
+        size_t end = begin + n;
+        if ( helper->m_buf->size() < end )
+        {
+            helper->m_buf->resize(end);
+        }
+        memcpy(&(*helper->m_buf)[begin], buffer, n);
+        helper->m_buf_pos = end;
+        return n;
+    }
+
+    static toff_t seek( thandle_t handle, toff_t offset, int whence )
+    {
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        const toff_t size = helper->m_buf->size();
+        toff_t new_pos = helper->m_buf_pos;
+        switch (whence)
+        {
+            case SEEK_SET:
+                new_pos = offset;
+                break;
+            case SEEK_CUR:
+                new_pos += offset;
+                break;
+            case SEEK_END:
+                new_pos = size + offset;
+                break;
+        }
+        helper->m_buf_pos = new_pos;
+        return new_pos;
+    }
+
+    static toff_t size( thandle_t handle )
+    {
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        return helper->m_buf->size();
+    }
+
+    static int close( thandle_t /*handle*/ )
+    {
+        // Do nothing.
+        return 0;
+    }
+
+private:
+
+    std::vector<uchar>* m_buf;
+    toff_t m_buf_pos;
+};
 
 static void readParam(const std::vector<int>& params, int key, int& value)
 {
@@ -559,7 +713,17 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
 
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
     // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-    TIFF* pTiffHandle = TIFFOpen(m_filename.c_str(), "w");
+    TIFF* pTiffHandle;
+
+    TiffEncoderBufHelper buf_helper(m_buf);
+    if ( m_buf )
+    {
+        pTiffHandle = buf_helper.open();
+    }
+    else
+    {
+        pTiffHandle = TIFFOpen(m_filename.c_str(), "w");
+    }
     if (!pTiffHandle)
     {
         return false;
@@ -655,7 +819,19 @@ bool TiffEncoder::writeHdr(const Mat& _img)
 {
     Mat img;
     cvtColor(_img, img, COLOR_BGR2XYZ);
-    TIFF* tif = TIFFOpen(m_filename.c_str(), "w");
+
+    TIFF* tif;
+
+    TiffEncoderBufHelper buf_helper(m_buf);
+    if ( m_buf )
+    {
+        tif = buf_helper.open();
+    }
+    else
+    {
+        tif = TIFFOpen(m_filename.c_str(), "w");
+    }
+
     if (!tif)
     {
         return false;
@@ -686,8 +862,6 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
 #endif
 {
-    int channels = img.channels();
-    int width = img.cols, height = img.rows;
     int depth = img.depth();
 #ifdef HAVE_TIFF
     if(img.type() == CV_32FC3)
@@ -699,6 +873,11 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     if (depth != CV_8U && depth != CV_16U)
         return false;
 
+#ifdef HAVE_TIFF
+    return writeLibTiff(img, params);
+#else
+    int channels = img.channels();
+    int width = img.cols, height = img.rows;
     int bytesPerChannel = depth == CV_8U ? 1 : 2;
     int fileStep = width * channels * bytesPerChannel;
 
@@ -711,12 +890,8 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     }
     else
     {
-#ifdef HAVE_TIFF
-      return writeLibTiff(img, params);
-#else
       if( !strm.open(m_filename) )
           return false;
-#endif
     }
 
     int rowsPerStrip = (1 << 13)/fileStep;
@@ -876,6 +1051,7 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     }
 
     return true;
+#endif
 }
 
 }
