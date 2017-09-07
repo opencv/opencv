@@ -44,7 +44,7 @@
 #include "precomp.hpp"
 #include <cassert>
 
-#if (defined(__cplusplus) &&  __cplusplus > 199711L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
+#ifdef CV_CXX11
 #define USE_STD_THREADS
 #endif
 
@@ -56,9 +56,9 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#else
+#else //USE_STD_THREADS
 #include <pthread.h>
-#endif
+#endif //USE_STD_THREADS
 
 #if defined(DEBUG) || defined(_DEBUG)
 #undef DEBUGLOGS
@@ -84,7 +84,7 @@
 #define LOGI0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
 #define LOGW0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
 #define LOGE0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
-#endif
+#endif //__ANDROID__
 
 #if DEBUGLOGS
 #define LOGD(_str, ...) LOGD0(_str , ## __VA_ARGS__)
@@ -96,7 +96,7 @@
 #define LOGI(...)
 #define LOGW(...)
 #define LOGE(...)
-#endif
+#endif //DEBUGLOGS
 
 
 using namespace cv;
@@ -1035,4 +1035,4 @@ const cv::DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameter
     return parameters;
 }
 
-#endif
+#endif //defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || defined(USE_STD_THREADS)
