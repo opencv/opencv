@@ -4031,6 +4031,88 @@ border of the containing Mat element.
  */
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
 
+/** @brief Fits an ellipse around a set of 2D points.
+
+ The function calculates the ellipse that fits a set of 2D points.
+ It returns the rotated rectangle in which the ellipse is inscribed.
+ The Approximate Mean Square (AMS) proposed by @cite Taubin1991 is used.
+
+ For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
+ which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
+ However, to specify an ellipse, all that is needed is five numbers; the major and minor axes lengths \f$ (a,b) \f$,
+ the position \f$ (x_0,y_0) \f$, and the orientation \f$ \theta \f$. This is because the basis set includes lines,
+ quadratics, parabolic and hyperbolic functions as well as elliptical functions as possible fits.
+ If the fit is found to be a parabolic or hyperbolic function then the standard fitEllipse method is used.
+ The AMS method restricts the fit to parabolic, hyperbolic and elliptical curves
+ by imposing the condition that \f$ A^T ( D_x^T D_x  +   D_y^T D_y) A = 1 \f$ where
+ the matrices \f$ Dx \f$ and \f$ Dy \f$ are the partial derivatives of the design matrix \f$ D \f$ with
+ respect to x and y. The matrices are formed row by row applying the following to
+ each of the points in the set:
+ \f{align*}{
+ D(i,:)&=\left\{x_i^2, x_i y_i, y_i^2, x_i, y_i, 1\right\} &
+ D_x(i,:)&=\left\{2 x_i,y_i,0,1,0,0\right\} &
+ D_y(i,:)&=\left\{0,x_i,2 y_i,0,1,0\right\}
+ \f}
+ The AMS method minimizes the cost function
+ \f{equation*}{
+ \epsilon ^2=\frac{ A^T D^T D A }{ A^T (D_x^T D_x +  D_y^T D_y) A^T }
+ \f}
+
+ The minimum cost is found by solving the generalized eigenvalue problem.
+
+ \f{equation*}{
+ D^T D A = \lambda  \left( D_x^T D_x +  D_y^T D_y\right) A
+ \f}
+
+ @param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
+
+
+/** @brief Fits an ellipse around a set of 2D points.
+
+ The function calculates the ellipse that fits a set of 2D points.
+ It returns the rotated rectangle in which the ellipse is inscribed.
+ The Direct least square (Direct) method by @cite Fitzgibbon1999 is used.
+
+ For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
+ which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
+ However, to specify an ellipse, all that is needed is five numbers; the major and minor axes lengths \f$ (a,b) \f$,
+ the position \f$ (x_0,y_0) \f$, and the orientation \f$ \theta \f$. This is because the basis set includes lines,
+ quadratics, parabolic and hyperbolic functions as well as elliptical functions as possible fits.
+ The Direct method confines the fit to ellipses by ensuring that \f$ 4 A_{xx} A_{yy}- A_{xy}^2 > 0 \f$.
+ The condition imposed is that \f$ 4 A_{xx} A_{yy}- A_{xy}^2=1 \f$ which satisfies the inequality
+ and as the coefficients can be arbitrarily scaled is not overly restrictive.
+
+ \f{equation*}{
+ \epsilon ^2= A^T D^T D A \quad \text{with} \quad A^T C A =1 \quad \text{and} \quad C=\left(\begin{matrix}
+ 0 & 0  & 2  & 0  & 0  &  0  \\
+ 0 & -1  & 0  & 0  & 0  &  0 \\
+ 2 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0
+ \end{matrix} \right)
+ \f}
+
+ The minimum cost is found by solving the generalized eigenvalue problem.
+
+ \f{equation*}{
+ D^T D A = \lambda  \left( C\right) A
+ \f}
+
+ The system produces only one positive eigenvalue \f$ \lambda\f$ which is chosen as the solution
+ with its eigenvector \f$\mathbf{u}\f$. These are used to find the coefficients
+
+ \f{equation*}{
+ A = \sqrt{\frac{1}{\mathbf{u}^T C \mathbf{u}}}  \mathbf{u}
+ \f}
+ The scaling factor guarantees that  \f$A^T C A =1\f$.
+
+ @param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
 /** @brief Fits a line to a 2D or 3D point set.
 
 The function fitLine fits a line to a 2D or 3D point set by minimizing \f$\sum_i \rho(r_i)\f$ where
