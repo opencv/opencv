@@ -71,7 +71,7 @@ static void setCurrentThreadAffinityMask(int mask)
     if (syscallres)
     {
         int err=errno;
-        err=err;//to avoid warnings about unused variables
+        CV_UNUSED(err);
         LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
     }
 }

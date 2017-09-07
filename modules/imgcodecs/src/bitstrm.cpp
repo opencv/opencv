@@ -209,6 +209,8 @@ int  RLByteStream::getByte()
         current = m_current;
     }
 
+    CV_Assert(current < m_end);
+
     val = *((uchar*)current);
     m_current = current + 1;
     return val;

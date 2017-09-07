@@ -1729,80 +1729,47 @@ namespace cv
 {
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
 {
+#ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-    // Problem with SSE42 optimization for 16s
-#if IPP_DISABLE_PERF_BOX16S_SSE42
-    if(src.depth() == CV_16S && !(ipp::getIppFeatures()&ippCPUID_AVX))
+#if IPP_VERSION_X100 < 201801
+    // Problem with SSE42 optimization for 16s and some 8u modes
+    if(ipp::getIppTopFeatures() == ippCPUID_SSE42 && (((src.depth() == CV_16S || src.depth() == CV_16U) && (src.channels() == 3 || src.channels() == 4)) || (src.depth() == CV_8U && src.channels() == 3 && (ksize.width > 5 || ksize.height > 5))))
+        return false;
+
+    // Other optimizations has some degradations too
+    if((((src.depth() == CV_16S || src.depth() == CV_16U) && (src.channels() == 4)) || (src.depth() == CV_8U && src.channels() == 1 && (ksize.width > 5 || ksize.height > 5))))
         return false;
 #endif
 
-    int stype = src.type(), cn = CV_MAT_CN(stype);
-    IppiBorderType ippBorderType = ippiGetBorderType(borderType & ~BORDER_ISOLATED);
-    IppDataType ippType = ippiGetDataType(stype);
-    Point ocvAnchor, ippAnchor;
-    ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
-    ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
-    ippAnchor.x = ksize.width / 2 - (ksize.width % 2 == 0 ? 1 : 0);
-    ippAnchor.y = ksize.height / 2 - (ksize.height % 2 == 0 ? 1 : 0);
+    if(!normalize)
+        return false;
 
-    if(normalize && (!src.isSubmatrix() || borderType&BORDER_ISOLATED) && stype == dst.type() &&
-        (ippBorderType == ippBorderRepl || /* returns ippStsStepErr: Step value is not valid */
-            ippBorderType == ippBorderConst ||
-            ippBorderType == ippBorderMirror) && ocvAnchor == ippAnchor) // returns ippStsMaskSizeErr: mask has an illegal value
+    if(!ippiCheckAnchor(anchor, ksize))
+        return false;
+
+    try
     {
-        IppStatus status;
-        Ipp32s bufSize = 0;
-        IppiSize roiSize = { dst.cols, dst.rows };
-        IppiSize maskSize = { ksize.width, ksize.height };
-        IppAutoBuffer<Ipp8u> buffer;
-
-        if(ippiFilterBoxBorderGetBufferSize(roiSize, maskSize, ippType, cn, &bufSize) < 0)
+        ::ipp::IwiImage       iwSrc      = ippiGetImage(src);
+        ::ipp::IwiImage       iwDst      = ippiGetImage(dst);
+        ::ipp::IwiSize        iwKSize    = ippiGetSize(ksize);
+        ::ipp::IwiBorderSize  borderSize(iwKSize);
+        ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
+        if(!ippBorder)
             return false;
 
-        buffer.allocate(bufSize);
-
-        #define IPP_FILTER_BOX_BORDER(ippType, flavor)\
-        {\
-            ippType borderValue[4] = { 0, 0, 0, 0 };\
-            status = CV_INSTRUMENT_FUN_IPP(ippiFilterBoxBorder_##flavor, src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(),\
-                                            (int)dst.step, roiSize, maskSize,\
-                                            ippBorderType, borderValue, buffer);\
-        }
-
-        if (stype == CV_8UC1)
-            IPP_FILTER_BOX_BORDER(Ipp8u, 8u_C1R)
-        else if (stype == CV_8UC3)
-            IPP_FILTER_BOX_BORDER(Ipp8u, 8u_C3R)
-        else if (stype == CV_8UC4)
-            IPP_FILTER_BOX_BORDER(Ipp8u, 8u_C4R)
-        else if (stype == CV_16UC1)
-            IPP_FILTER_BOX_BORDER(Ipp16u, 16u_C1R)
-        else if (stype == CV_16UC3)
-            IPP_FILTER_BOX_BORDER(Ipp16u, 16u_C3R)
-        else if (stype == CV_16UC4)
-            IPP_FILTER_BOX_BORDER(Ipp16u, 16u_C4R)
-        else if (stype == CV_16SC1)
-            IPP_FILTER_BOX_BORDER(Ipp16s, 16s_C1R)
-        else if (stype == CV_16SC3)
-            IPP_FILTER_BOX_BORDER(Ipp16s, 16s_C3R)
-        else if (stype == CV_16SC4)
-            IPP_FILTER_BOX_BORDER(Ipp16s, 16s_C4R)
-        else if (stype == CV_32FC1)
-            IPP_FILTER_BOX_BORDER(Ipp32f, 32f_C1R)
-        else if (stype == CV_32FC3)
-            IPP_FILTER_BOX_BORDER(Ipp32f, 32f_C3R)
-        else if (stype == CV_32FC4)
-            IPP_FILTER_BOX_BORDER(Ipp32f, 32f_C4R)
-        else
-            return false;
-
-        if(status >= 0)
-            return true;
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBox, iwSrc, iwDst, iwKSize, ::ipp::IwDefault(), ippBorder);
     }
-#undef IPP_FILTER_BOX_BORDER
+    catch (::ipp::IwException)
+    {
+        return false;
+    }
 
+    return true;
+#else
+    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(ksize); CV_UNUSED(anchor); CV_UNUSED(normalize); CV_UNUSED(borderType);
     return false;
+#endif
 }
 }
 #endif
@@ -2241,8 +2208,11 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #endif
 
 #ifdef HAVE_IPP
-#define IPP_DISABLE_FILTERING_INMEM_PARTIAL 1 // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
+#if IPP_VERSION_X100 == 201702  // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
+#define IPP_GAUSSIANBLUR_PARALLEL 0
+#else
 #define IPP_GAUSSIANBLUR_PARALLEL 1
+#endif
 
 #ifdef HAVE_IPP_IW
 
@@ -2266,8 +2236,8 @@ public:
 
         try
         {
-            ::ipp::IwiRoi roi = ::ipp::IwiRect(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, &m_src, &m_dst, m_kernelSize, m_sigma, m_border, &roi);
+            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, m_src, m_dst, m_kernelSize, m_sigma, ::ipp::IwDefault(), m_border, tile);
         }
         catch(::ipp::IwException e)
         {
@@ -2295,7 +2265,7 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 <= 201702 && ((defined _MSC_VER && defined _M_IX86) || (defined __GNUC__ && defined __i386__))
+#if IPP_VERSION_X100 < 201800 && ((defined _MSC_VER && defined _M_IX86) || (defined __GNUC__ && defined __i386__))
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(ksize); CV_UNUSED(sigma1); CV_UNUSED(sigma2); CV_UNUSED(borderType);
     return false; // bug on ia32
 #else
@@ -2313,17 +2283,15 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     {
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
-        ::ipp::IwiImage iwSrc      = ippiGetImage(src);
-        ::ipp::IwiImage iwDst      = ippiGetImage(dst);
-        ::ipp::IwiBorderSize  borderSize(::ipp::IwiSize(ippiSize(ksize)));
+        ::ipp::IwiImage       iwSrc      = ippiGetImage(src);
+        ::ipp::IwiImage       iwDst      = ippiGetImage(dst);
+        ::ipp::IwiBorderSize  borderSize = ::ipp::iwiSizeToBorderSize(ippiGetSize(ksize));
         ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder.m_borderType)
+        if(!ippBorder)
             return false;
 
-        const bool disableThreading = IPP_DISABLE_FILTERING_INMEM_PARTIAL &&
-            ((ippBorder.m_borderFlags)&ippBorderInMem) && ((ippBorder.m_borderFlags)&ippBorderInMem) != ippBorderInMem;
         const int threads = ippiSuggestThreadsNum(iwDst, 2);
-        if(!disableThreading && IPP_GAUSSIANBLUR_PARALLEL && threads > 1) {
+        if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1) {
             bool ok;
             ipp_gaussianBlurParallel invoker(iwSrc, iwDst, ksize.width, (float) sigma1, ippBorder, &ok);
 
@@ -2335,7 +2303,7 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             if(!ok)
                 return false;
         } else {
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, &iwSrc, &iwDst, ksize.width, (float) sigma1, ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, iwSrc, iwDst, ksize.width, sigma1, ::ipp::IwDefault(), ippBorder);
         }
     }
     catch (::ipp::IwException ex)
@@ -3411,6 +3379,12 @@ static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
 {
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201801
+    // Degradations for big kernel
+    if(ksize > 7)
+        return false;
+#endif
+
     {
         int         bufSize;
         IppiSize    dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
@@ -4279,8 +4253,8 @@ public:
 
         try
         {
-            ::ipp::IwiRoi roi = ::ipp::IwiRect(0, range.start, dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, &src, &dst, radius, valSquareSigma, posSquareSigma, ippiFilterBilateralGauss, ippDistNormL1, borderType, &roi);
+            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, dst.m_size.width, range.end - range.start);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, src, dst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), borderType, tile);
         }
         catch(::ipp::IwException)
         {
@@ -4318,13 +4292,11 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
         ::ipp::IwiImage      iwDst = ippiGetImage(dst);
         ::ipp::IwiBorderSize borderSize(radius);
         ::ipp::IwiBorderType ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder.m_borderType)
+        if(!ippBorder)
             return false;
 
-        const bool disableThreading = IPP_DISABLE_FILTERING_INMEM_PARTIAL &&
-            ((ippBorder.m_borderFlags)&ippBorderInMem) && ((ippBorder.m_borderFlags)&ippBorderInMem) != ippBorderInMem;
         const int threads = ippiSuggestThreadsNum(iwDst, 2);
-        if(!disableThreading && IPP_BILATERAL_PARALLEL && threads > 1) {
+        if(IPP_BILATERAL_PARALLEL && threads > 1) {
             bool  ok      = true;
             Range range(0, (int)iwDst.m_size.height);
             ipp_bilateralFilterParallel invoker(iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ippBorder, &ok);
@@ -4336,7 +4308,7 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
             if(!ok)
                 return false;
         } else {
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, &iwSrc, &iwDst, radius, valSquareSigma, posSquareSigma, ippiFilterBilateralGauss, ippDistNormL1, ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), ippBorder);
         }
     }
     catch (::ipp::IwException)

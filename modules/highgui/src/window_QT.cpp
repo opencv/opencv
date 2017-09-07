@@ -673,30 +673,20 @@ CV_IMPL void cvSetTrackbarPos(const char* name_bar, const char* window_name, int
 
 CV_IMPL void cvSetTrackbarMax(const char* name_bar, const char* window_name, int maxval)
 {
-    if (maxval >= 0)
+    QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
+    if (t)
     {
-        QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
-        if (t)
-        {
-            int minval = t->slider->minimum();
-            maxval = (maxval>minval)?maxval:minval;
-            t->slider->setMaximum(maxval);
-        }
+        t->slider->setMaximum(maxval);
     }
 }
 
 
 CV_IMPL void cvSetTrackbarMin(const char* name_bar, const char* window_name, int minval)
 {
-    if (minval >= 0)
+    QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
+    if (t)
     {
-        QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
-        if (t)
-        {
-            int maxval = t->slider->maximum();
-            minval = (maxval<minval)?maxval:minval;
-            t->slider->setMinimum(minval);
-        }
+        t->slider->setMinimum(minval);
     }
 }
 
@@ -994,6 +984,7 @@ void GuiReceiver::createWindow(QString name, int flags)
 
     nb_windows++;
     new CvWindow(name, flags);
+    cvWaitKey(1);
 }
 
 
@@ -1409,7 +1400,7 @@ void CvTrackbar::update(int myvalue)
 
 void CvTrackbar::setLabel(int myvalue)
 {
-    QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
+    QString nameNormalized = name_bar.leftJustified( 10, ' ', false );
     QString valueMaximum = QString("%1").arg(slider->maximum());
     QString str = QString("%1 (%2/%3)").arg(nameNormalized).arg(myvalue,valueMaximum.length(),10,QChar('0')).arg(valueMaximum);
     label->setText(str);

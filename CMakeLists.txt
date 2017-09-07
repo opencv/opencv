@@ -10,7 +10,7 @@
 if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "
 FATAL: In-source builds are not allowed.
-       You should create separate directory for build files.
+       You should create a separate directory for build files.
 ")
 endif()
 
@@ -77,21 +77,8 @@ if(WINRT)
   endif()
 endif()
 
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 OLD)
-endif()
-
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 OLD)
-endif()
-
-if(POLICY CMP0023)
-  cmake_policy(SET CMP0023 NEW)
-endif()
-
 if(POLICY CMP0026)
-  # silence cmake 3.0+ warnings about reading LOCATION attribute
-  cmake_policy(SET CMP0026 OLD)
+  cmake_policy(SET CMP0026 NEW)
 endif()
 
 if(POLICY CMP0042)
@@ -99,7 +86,7 @@ if(POLICY CMP0042)
 endif()
 
 if(POLICY CMP0046)
-  cmake_policy(SET CMP0046 OLD)
+  cmake_policy(SET CMP0046 NEW)
 endif()
 
 if(POLICY CMP0051)
@@ -140,7 +127,7 @@ include(cmake/OpenCVDownload.cmake)
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
 if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
-  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
   Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
@@ -208,8 +195,8 @@ OCV_OPTION(WITH_CPUFEATURES    "Use cpufeatures Android library"             ON 
 OCV_OPTION(WITH_VTK            "Include VTK library support (and build opencv_viz module eiher)"             ON  IF (NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
 OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"                                         ON  IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (NOT IOS AND NOT WINRT) )
-OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (NOT IOS AND NOT WINRT) )
-OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               OFF IF (NOT IOS AND NOT APPLE) )
+OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" ON IF (NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               ON IF (NOT IOS AND NOT APPLE) )
 OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON   IF (NOT WINRT) )
 OCV_OPTION(WITH_VFW            "Include Video for Windows support"           ON   IF WIN32 )
 OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -255,7 +242,6 @@ OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON 
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
-OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF  IF (MSVC OR X86 OR X86_64) )
 OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
@@ -276,7 +262,7 @@ OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"     
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
-OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
+OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of statically linked CRT for statically linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_WITH_DYNAMIC_IPP   "Enables dynamic linking of IPP (only for standalone IPP)" OFF )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID )
@@ -326,6 +312,7 @@ OCV_OPTION(CV_ENABLE_INTRINSICS       "Use intrinsic-based optimized code" ON )
 OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatched code/intrinsics/loop unrolling/etc)" OFF )
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 
+OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -557,7 +544,7 @@ if(UNIX)
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD)
     if(ANDROID)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
-    elseif(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD|NetBSD|DragonFly|OpenBSD")
+    elseif(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD|NetBSD|DragonFly|OpenBSD|Haiku")
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m pthread)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
@@ -628,6 +615,11 @@ if(ANDROID)
 else()
   find_package(JNI)
 endif()
+
+if(ENABLE_PYLINT)
+  include(cmake/OpenCVPylint.cmake)
+endif()
+
 
 if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
   SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
@@ -761,7 +753,6 @@ endif()
 # Extra OpenCV targets: uninstall, package_source, perf, etc.
 include(cmake/OpenCVExtraTargets.cmake)
 
-
 # ----------------------------------------------------------------------------
 # Process subdirectories
 # ----------------------------------------------------------------------------
@@ -861,6 +852,14 @@ if(ANDROID OR NOT UNIX)
   endif()
 endif()
 
+if(COMMAND ocv_pylint_finalize)
+  ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/modules/python/test)
+  ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/samples/python)
+  ocv_pylint_add_directory(${CMAKE_CURRENT_LIST_DIR}/samples/dnn)
+  ocv_pylint_add_directory_recurse(${CMAKE_CURRENT_LIST_DIR}/samples/python/tutorial_code)
+  ocv_pylint_finalize()
+endif()
+
 # ----------------------------------------------------------------------------
 # Summary:
 # ----------------------------------------------------------------------------
@@ -956,10 +955,6 @@ endif()
 # ========================== C/C++ options ==========================
 if(CMAKE_CXX_COMPILER_VERSION)
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CXX_COMPILER_VERSION})")
-elseif(CMAKE_COMPILER_IS_CLANGCXX)
-  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CLANG_REGEX_VERSION})")
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_GCC_REGEX_VERSION})")
 else()
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
 endif()
@@ -1311,15 +1306,16 @@ status("  Other third-party libraries:")
 if(WITH_IPP AND HAVE_IPP)
   status("    Use Intel IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
   status("               at:" "${IPP_ROOT_DIR}")
-  if(NOT HAVE_IPP_ICV_ONLY)
+  if(NOT HAVE_IPP_ICV)
     status("           linked:" BUILD_WITH_DYNAMIC_IPP THEN "dynamic" ELSE "static")
   endif()
   if(HAVE_IPP_IW)
     if(BUILD_IPP_IW)
-      status("    Use Intel IPP IW:" "build (${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE})")
+      status("    Use Intel IPP IW:" "sources (${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE})")
     else()
-      status("    Use Intel IPP IW:" "prebuilt binaries (${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE})")
+      status("    Use Intel IPP IW:" "binaries (${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE})")
     endif()
+    status("                  at:" "${IPP_IW_PATH}")
   else()
     status("    Use Intel IPP IW:"   NO)
   endif()
@@ -1327,10 +1323,6 @@ else()
   status("    Use Intel IPP:"      WITH_IPP AND NOT HAVE_IPP THEN "IPP not found or implicitly disabled" ELSE NO)
   status("    Use Intel IPP IW:"   WITH_IPP AND NOT HAVE_IPP AND HAVE_IPP_IW THEN "IPP not found or implicitly disabled" ELSE NO)
 endif()
-
-if(DEFINED WITH_IPP_A)
-status("    Use Intel IPP Async:"  HAVE_IPP_A       THEN "YES" ELSE NO)
-endif(DEFINED WITH_IPP_A)
 
 if(DEFINED WITH_VA)
 status("    Use VA:"            HAVE_VA          THEN "YES" ELSE NO)
@@ -1380,7 +1372,7 @@ if(HAVE_OPENCL)
     set(__libs "")
     foreach(l ${OPENCL_LIBRARIES})
       if(TARGET ${l})
-        get_target_property(p ${l} LOCATION)
+        get_target_property(p ${l} IMPORTED_LOCATION)
         if(p MATCHES NOTFOUND)
           list(APPEND __libs "${l}")
         else()
@@ -1425,6 +1417,9 @@ endif()
 
 status("")
 status("  Python (for build):"  PYTHON_DEFAULT_AVAILABLE THEN "${PYTHON_DEFAULT_EXECUTABLE}" ELSE NO)
+if(PYLINT_FOUND AND PYLINT_EXECUTABLE)
+status("    Pylint:"  PYLINT_FOUND THEN "${PYLINT_EXECUTABLE} (ver: ${PYLINT_VERSION}, checks: ${PYLINT_TOTAL_TARGETS})" ELSE NO)
+endif()
 
 # ========================== java ==========================
 status("")

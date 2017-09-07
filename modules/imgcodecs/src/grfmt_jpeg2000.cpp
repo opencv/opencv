@@ -156,7 +156,7 @@ bool  Jpeg2KDecoder::readData( Mat& img )
     bool result = false;
     int color = img.channels() > 1;
     uchar* data = img.ptr();
-    int step = (int)img.step;
+    size_t step = img.step;
     jas_stream_t* stream = (jas_stream_t*)m_stream;
     jas_image_t* image = (jas_image_t*)m_image;
 
@@ -252,9 +252,9 @@ bool  Jpeg2KDecoder::readData( Mat& img )
                         if( !jas_image_readcmpt( image, cmptlut[i], 0, 0, xend / xstep, yend / ystep, buffer ))
                         {
                             if( img.depth() == CV_8U )
-                                result = readComponent8u( data + i, buffer, step, cmptlut[i], maxval, offset, ncmpts );
+                                result = readComponent8u( data + i, buffer, validateToInt(step), cmptlut[i], maxval, offset, ncmpts );
                             else
-                                result = readComponent16u( ((unsigned short *)data) + i, buffer, step / 2, cmptlut[i], maxval, offset, ncmpts );
+                                result = readComponent16u( ((unsigned short *)data) + i, buffer, validateToInt(step / 2), cmptlut[i], maxval, offset, ncmpts );
                             if( !result )
                             {
                                 i = ncmpts;

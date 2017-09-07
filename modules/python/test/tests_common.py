@@ -2,10 +2,13 @@
 
 from __future__ import print_function
 
-import unittest
-import sys
-import hashlib
 import os
+import sys
+import unittest
+import hashlib
+import random
+import argparse
+
 import numpy as np
 import cv2
 
@@ -62,6 +65,26 @@ class NewOpenCVTests(unittest.TestCase):
             if not a > b:
                 self.fail('%s not greater than %s' % (repr(a), repr(b)))
 
+    @staticmethod
+    def bootstrap():
+        parser = argparse.ArgumentParser(description='run OpenCV python tests')
+        parser.add_argument('--repo', help='use sample image files from local git repository (path to folder), '
+                                           'if not set, samples will be downloaded from github.com')
+        parser.add_argument('--data', help='<not used> use data files from local folder (path to folder), '
+                                            'if not set, data files will be downloaded from docs.opencv.org')
+        args, other = parser.parse_known_args()
+        print("Testing OpenCV", cv2.__version__)
+        print("Local repo path:", args.repo)
+        NewOpenCVTests.repoPath = args.repo
+        try:
+            NewOpenCVTests.extraTestDataPath = os.environ['OPENCV_TEST_DATA_PATH']
+        except KeyError:
+            print('Missing opencv extra repository. Some of tests may fail.')
+        random.seed(0)
+        unit_argv = [sys.argv[0]] + other
+        unittest.main(argv=unit_argv)
+
+
 def intersectionRate(s1, s2):
 
     x1, y1, x2, y2 = s1
@@ -70,7 +93,7 @@ def intersectionRate(s1, s2):
     x1, y1, x2, y2 = s2
     s2 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
-    area, intersection = cv2.intersectConvexConvex(s1, s2)
+    area, _intersection = cv2.intersectConvexConvex(s1, s2)
     return 2 * area / (cv2.contourArea(s1) + cv2.contourArea(s2))
 
 def isPointInRect(p, rect):

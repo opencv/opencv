@@ -100,7 +100,7 @@ size_t HOGDescriptor::getDescriptorSize() const
 
 double HOGDescriptor::getWinSigma() const
 {
-    return winSigma >= 0 ? winSigma : (blockSize.width + blockSize.height)/8.;
+    return winSigma > 0 ? winSigma : (blockSize.width + blockSize.height)/8.;
 }
 
 bool HOGDescriptor::checkDetectorSize() const

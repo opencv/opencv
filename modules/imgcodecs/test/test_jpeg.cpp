@@ -123,8 +123,8 @@ TEST(Imgcodecs_Jpeg, encode_decode_progressive_jpeg)
 
     EXPECT_EQ(0, cvtest::norm(img_jpg_progressive, img_jpg_normal, NORM_INF));
 
-    remove(output_progressive.c_str());
-    remove(output_normal.c_str());
+    EXPECT_EQ(0, remove(output_progressive.c_str()));
+    EXPECT_EQ(0, remove(output_normal.c_str()));
 }
 
 TEST(Imgcodecs_Jpeg, encode_decode_optimize_jpeg)
@@ -148,8 +148,8 @@ TEST(Imgcodecs_Jpeg, encode_decode_optimize_jpeg)
 
     EXPECT_EQ(0, cvtest::norm(img_jpg_optimized, img_jpg_normal, NORM_INF));
 
-    remove(output_optimized.c_str());
-    remove(output_normal.c_str());
+    EXPECT_EQ(0, remove(output_optimized.c_str()));
+    EXPECT_EQ(0, remove(output_normal.c_str()));
 }
 
 TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
@@ -173,8 +173,8 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
 
     EXPECT_EQ(0, cvtest::norm(img_jpg_rst, img_jpg_normal, NORM_INF));
 
-    remove(output_rst.c_str());
-    remove(output_normal.c_str());
+    EXPECT_EQ(0, remove(output_rst.c_str()));
+    EXPECT_EQ(0, remove(output_normal.c_str()));
 }
 
 #endif // HAVE_JPEG

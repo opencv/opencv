@@ -339,7 +339,7 @@ typedef struct ImplData
     // convert flags register to more handy variables
     void flagsToVars(int flags)
     {
-#if defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP_ICV)
         ipp    = 0;
         icv    = ((flags&CV_IMPL_IPP) > 0);
 #else

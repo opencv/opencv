@@ -137,7 +137,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
         CvMat c_rvec = rvec, c_tvec = tvec;
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                     c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
+                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         result = true;
     }

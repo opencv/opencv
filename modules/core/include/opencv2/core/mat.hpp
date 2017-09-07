@@ -53,6 +53,10 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
+#ifdef CV_CXX11
+#include <type_traits>
+#endif
+
 namespace cv
 {
 
@@ -988,7 +992,8 @@ public:
 #ifdef CV_CXX11
     /** @overload
     */
-    template<typename _Tp> explicit Mat(const std::initializer_list<_Tp> list);
+    template<typename _Tp, typename = typename std::enable_if<std::is_arithmetic<_Tp>::value>::type>
+    explicit Mat(const std::initializer_list<_Tp> list);
 #endif
 
 #ifdef CV_CXX_STD_ARRAY
@@ -1527,6 +1532,11 @@ public:
     template<typename _Tp> void push_back(const Mat_<_Tp>& elem);
 
     /** @overload
+    @param elem Added element(s).
+    */
+    template<typename _Tp> void push_back(const std::vector<_Tp>& elem);
+
+    /** @overload
     @param m Added line(s).
     */
     void push_back(const Mat& m);
@@ -1656,7 +1666,7 @@ public:
                         inv_scale = 1.f/alpha_scale;
 
             CV_Assert( src1.type() == src2.type() &&
-                       src1.type() == CV_MAKETYPE(DataType<T>::depth, 4) &&
+                       src1.type() == CV_MAKETYPE(traits::Depth<T>::value, 4) &&
                        src1.size() == src2.size());
             Size size = src1.size();
             dst.create(size, src1.type());
@@ -1936,7 +1946,7 @@ public:
                         inv_scale = 1.f/alpha_scale;
 
             CV_Assert( src1.type() == src2.type() &&
-                       src1.type() == DataType<VT>::type &&
+                       src1.type() == traits::Type<VT>::value &&
                        src1.size() == src2.size());
             Size size = src1.size();
             dst.create(size, src1.type());

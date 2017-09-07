@@ -1294,6 +1294,12 @@ static bool ipp_countNonZero( Mat &src, int &res )
 {
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201801
+    // Poor performance of SSE42
+    if(cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
+        return false;
+#endif
+
     Ipp32s  count = 0;
     int     depth = src.depth();
 
@@ -2531,15 +2537,16 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
 #if IPP_VERSION_X100 >= 700
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_DISABLE_MINMAX_NAN_SSE42
+#if IPP_VERSION_X100 < 201800
+    // cv::minMaxIdx problem with NaN input
     // Disable 32F processing only
-    if(src.depth() == CV_32F && !(ipp::getIppFeatures()&ippCPUID_AVX))
+    if(src.depth() == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
         return false;
 #endif
 
+#if IPP_VERSION_X100 < 201801
     // cv::minMaxIdx problem with index positions on AVX
-#if IPP_VERSION_X100 < 201810
-    if(!mask.empty() && _maxIdx && ipp::getIppFeatures()&ippCPUID_AVX)
+    if(!mask.empty() && _maxIdx && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42)
         return false;
 #endif
 
@@ -2550,8 +2557,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
     IppiPoint   minIdx = {-1, -1};
     IppiPoint   maxIdx = {-1, -1};
 
-    float       *pMinVal = (_minVal)?&minVal:NULL;
-    float       *pMaxVal = (_maxVal)?&maxVal:NULL;
+    float       *pMinVal = (_minVal || _minIdx)?&minVal:NULL;
+    float       *pMaxVal = (_maxVal || _maxIdx)?&maxVal:NULL;
     IppiPoint   *pMinIdx = (_minIdx)?&minIdx:NULL;
     IppiPoint   *pMaxIdx = (_maxIdx)?&maxIdx:NULL;
 
@@ -2564,6 +2571,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
             ippMinMaxFun = ipp_minIdx_wrap;
         else if(_maxVal && !_maxIdx && _minVal && !_minIdx)
             ippMinMaxFun = ipp_minMax_wrap;
+        else if(!_maxVal && !_maxIdx && !_minVal && !_minIdx)
+            return false;
         else
             ippMinMaxFun = ipp_minMaxIndex_wrap;
     }
@@ -2582,8 +2591,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
             *_maxVal = maxVal;
         if(_minIdx)
         {
+#if IPP_VERSION_X100 < 201801
             // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
             if(status == ippStsNoOperation && !mask.empty() && !pMinIdx->x && !pMinIdx->y)
+#else
+            if(status == ippStsNoOperation)
+#endif
             {
                 _minIdx[0] = -1;
                 _minIdx[1] = -1;
@@ -2596,8 +2609,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         }
         if(_maxIdx)
         {
+#if IPP_VERSION_X100 < 201801
             // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
             if(status == ippStsNoOperation && !mask.empty() && !pMaxIdx->x && !pMaxIdx->y)
+#else
+            if(status == ippStsNoOperation)
+#endif
             {
                 _maxIdx[0] = -1;
                 _maxIdx[1] = -1;

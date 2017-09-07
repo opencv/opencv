@@ -1058,7 +1058,7 @@ public:
 
     virtual bool isMaskSupported() const { return true; }
 
-    /* @brief Brute-force matcher create method.
+    /** @brief Brute-force matcher create method.
     @param normType One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are
     preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be used with ORB, BRISK and
     BRIEF, NORM_HAMMING2 should be used with ORB when WTA_K==3 or 4 (see ORB::ORB constructor

@@ -64,3 +64,7 @@ class fitline_test(NewOpenCVTests):
 
         for i in range(len(lines)):
             self.assertLessEqual(cv2.norm(refVec - lines[i][0:2], cv2.NORM_L2), eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

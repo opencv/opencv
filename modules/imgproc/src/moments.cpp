@@ -571,6 +571,12 @@ static bool ipp_moments(Mat &src, Moments &m )
 #if IPP_VERSION_X100 >= 900
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201801
+    // Degradations for CV_8UC1
+    if(src.type() == CV_8UC1)
+        return false;
+#endif
+
     IppiSize  roi      = { src.cols, src.rows };
     IppiPoint point    = { 0, 0 };
     int       type     = src.type();
