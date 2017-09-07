@@ -1214,7 +1214,7 @@ void Mat::forEach(const Functor& operation) {
 template<typename _Tp, typename Functor> inline
 void Mat::forEach(const Functor& operation) const {
     // call as not const
-    (const_cast<Mat*>(this))->forEach<const _Tp>(operation);
+    (const_cast<Mat*>(this))->forEach<_Tp>(operation);
 }
 
 template<typename _Tp> inline

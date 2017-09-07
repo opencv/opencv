@@ -671,6 +671,13 @@ struct InitializerFunctor5D{
     }
 };
 
+template<typename Pixel>
+struct EmptyFunctor
+{
+    void operator()(const Pixel &, const int *) const {}
+};
+
+
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
@@ -797,6 +804,17 @@ void Core_ArrayOpTest::run( int /* start_from */)
             ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
             errcount++;
         }
+    }
+
+    // test const cv::Mat::forEach
+    {
+        const Mat a(10, 10, CV_32SC3);
+        Mat b(10, 10, CV_32SC3);
+        const Mat & c = b;
+        a.forEach<Point3i>(EmptyFunctor<Point3i>());
+        b.forEach<Point3i>(EmptyFunctor<const Point3i>());
+        c.forEach<Point3i>(EmptyFunctor<Point3i>());
+        // tests compilation, no runtime check is needed
     }
 
     RNG rng;
