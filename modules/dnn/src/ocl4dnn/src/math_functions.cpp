@@ -55,23 +55,6 @@ struct gemm_callback_arg {
     std::vector<cl_mem> imgs;
 };
 
-static void CL_CALLBACK gemmCallback(cl_event event,
-                                     cl_int event_command_exec_status,
-                                     void *user_data)
-{
-    struct gemm_callback_arg *arg = (struct gemm_callback_arg *) user_data;
-    for(int i = 0; i < arg->evs.size(); i++)
-    {
-        clReleaseEvent(arg->evs[i]);
-    }
-
-    for(int i = 0; i < arg->imgs.size(); i++)
-    {
-        clReleaseMemObject(arg->imgs[i]);
-    }
-    delete arg;
-}
-
 // Create and copy buffer to image for GEMM's matrix A and B.
 // Will return image to caller if the input image is NULL. Otherwise,
 // will use the image directly. It's caller's responsibility to
@@ -81,9 +64,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
                                   bool is_matrix_a, bool transpose,
                                   bool padding, int padded_height,
                                   int padded_width, int height,
-                                  int width, int ld, int wait_list_size,
-                                  cl_event *wait_list,
-                                  cl_event *event)
+                                  int width, int ld)
 {
     ocl::Context ctx = ocl::Context::getDefault();
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -122,8 +103,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
 
             OCL_CHECK(clEnqueueCopyBufferToImage((cl_command_queue)queue.ptr(),
                                                  buffer, *image, src_offset,
-                                                 origin, region, wait_list_size,
-                                                 wait_list, event));
+                                                 origin, region, 0, NULL, NULL));
         } else {
             ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_transpose_float", ocl::dnn::gemm_image_oclsrc);
 
@@ -136,11 +116,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
             oclk_gemm_copy.set(5, ld);
-            OCL_CHECK(clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                             (cl_kernel)oclk_gemm_copy.ptr(),
-                                             2, NULL, global_copy, NULL,
-                                             wait_list_size, wait_list,
-                                             event));
+            oclk_gemm_copy.run(2, global_copy, NULL, false);
         }
     } else {
         if (*image == NULL)
@@ -175,8 +151,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             size_t region[] = {(size_t)width, (size_t)height, 1};
             OCL_CHECK(clEnqueueCopyBufferToImage((cl_command_queue)queue.ptr(),
                                                  buffer, *image, src_offset,
-                                                 origin, region, wait_list_size,
-                                                 wait_list, event));
+                                                 origin, region, 0, NULL, NULL));
         } else {
             ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_no_transpose_float",
                                        ocl::dnn::gemm_image_oclsrc);
@@ -190,11 +165,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
             oclk_gemm_copy.set(5, ld);
-            OCL_CHECK(clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                             (cl_kernel)oclk_gemm_copy.ptr(),
-                                             2, NULL, global_copy, NULL,
-                                             wait_list_size, wait_list,
-                                             event));
+            oclk_gemm_copy.run(2, global_copy, NULL, false);
         }
     }
 }
@@ -204,9 +175,7 @@ void ocl4dnnGEMMCopyBufferToImage<float>(cl_mem *image, cl_mem buffer, int offse
                                          bool is_matrix_a, bool transpose,
                                          bool padding, int padded_height,
                                          int padded_width, int height,
-                                         int width,  int ld, int wait_list_size,
-                                         cl_event *wait_list,
-                                         cl_event *event);
+                                         int width,  int ld);
 
 enum gemm_type_t
 {
@@ -214,7 +183,6 @@ enum gemm_type_t
     GEMM_TYPE_FAST_IMAGE_32_1,
     GEMM_TYPE_FAST_IMAGE_32_2,
     GEMM_TYPE_FAST_IMAGE_B_IMAGE,
-    GEMM_TYPE_FAST_BUFFER,
     GEMM_TYPE_MAX
 };
 
@@ -324,11 +292,6 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
         int isFirstColBlock = 1;
         for (int k = 0; k < K; k += blocksize)
         {
-            cl_event ev[5];
-            cl_uint ev_idx = 0;
-            memset(ev, 0, sizeof(cl_event) * 5);
-            struct gemm_callback_arg * arg = new gemm_callback_arg;
-
             blockA_width = std::min(widthA - A_start_x, blocksize);
             blockA_height = std::min(heightA - A_start_y, blocksize);
             blockB_width = std::min(widthB - B_start_x, blocksize);
@@ -363,10 +326,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                                                         A, blockA_offset,
                                                         true, TransA != CblasNoTrans,
                                                         padding_A, imageA_h, imageA_w,
-                                                        blockA_height, blockA_width, ldA, 0,
-                                                        NULL, &ev[ev_idx]);
-                    if (ev[ev_idx] != NULL)
-                        ev_idx++;
+                                                        blockA_height, blockA_width, ldA);
                 }
                 if (!is_image_b)
                 {
@@ -374,10 +334,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                                                         B, blockB_offset,
                                                         false, false,
                                                         padding_B, imageB_h, imageB_w,
-                                                        blockB_height, blockB_width, ldB,
-                                                        0, NULL, &ev[ev_idx]);
-                    if (ev[ev_idx] != NULL)
-                        ev_idx++;
+                                                        blockB_height, blockB_width, ldB);
                 }
             } else {
                 // We will use normal read_imagef to read image B when B has transpose.
@@ -390,10 +347,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                                                         A, blockA_offset,
                                                         true, TransA != CblasNoTrans,
                                                         padding, imageA_h, imageA_w,
-                                                        blockA_height, blockA_width, ldA,
-                                                        0, NULL, &ev[ev_idx]);
-                    if (ev[ev_idx] != NULL)
-                        ev_idx++;
+                                                        blockA_height, blockA_width, ldA);
                 }
 
                 if (!is_image_b && (K % use_buffer_indicator != 0))
@@ -401,10 +355,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                     ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImB,
                                                         B, blockB_offset,
                                                         false, true, false, imageB_h, imageB_w,
-                                                        blockB_height, blockB_width, ldB, 0,
-                                                        NULL, &ev[ev_idx]);
-                    if (ev[ev_idx] != NULL)
-                        ev_idx++;
+                                                        blockB_height, blockB_width, ldB);
                 }
             }
             if (is_image_a)
@@ -413,7 +364,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                 ImB = B;
 
             size_t global[2];
-            if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE )
+            if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE)
             {
                 global[0] = (size_t)( blockC_width + 7 ) & ~7;
             } else {
@@ -447,13 +398,9 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                 oclk_gemm_float.set(arg_idx++, block_Ksize);
             oclk_gemm_float.set(arg_idx++, isFirstColBlock);
 
-            cl_event *wait_list = NULL;
-            if (ev_idx != 0)
-                wait_list = &ev[0];
-            OCL_CHECK(clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                             (cl_kernel)oclk_gemm_float.ptr(), 2, NULL,
-                                             global, local, ev_idx,
-                                             wait_list, &ev[ev_idx]));
+            if (!oclk_gemm_float.run(2, global, local, false))
+                return false;
+
             if (TransA == CblasNoTrans)
                 A_start_x += blockA_width;
             else
@@ -465,9 +412,6 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                 B_start_x += blockB_width;
 
             isFirstColBlock = 0;
-            arg->evs.assign(ev, ev + ev_idx + 1);
-            clSetEventCallback(ev[ev_idx], CL_COMPLETE, &gemmCallback,
-                               static_cast<void*>(arg));
         }
 
         C_start_x += blockC_width;

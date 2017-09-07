@@ -62,9 +62,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
                                   bool is_matrix_a, bool transpose,
                                   bool padding, int padded_height,
                                   int padded_width, int height,
-                                  int width,  int ld, int wait_list_size,
-                                  cl_event *wait_list,
-                                  cl_event *event);
+                                  int width,  int ld);
 
 template<typename Dtype>
 bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,

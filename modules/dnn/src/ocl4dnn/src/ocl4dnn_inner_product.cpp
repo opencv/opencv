@@ -102,7 +102,6 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
             std::is_same<Dtype, float>::value &&
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
-
             ret = ocl4dnnGEMMCommon<Dtype>(transpose_ ? CblasNoTrans : CblasTrans,
                                            M_, N_, K_, (cl_mem) bottom.handle(ACCESS_READ),
                                            (cl_mem) weight.handle(ACCESS_READ),

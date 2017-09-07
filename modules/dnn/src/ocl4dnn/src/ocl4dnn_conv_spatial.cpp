@@ -965,12 +965,10 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
 
         size_t global_work_size_copy[3] = {
             (size_t) (alignSize(num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
-        cl_int err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                            (cl_kernel)oclk_copy_weight.ptr(), 3, NULL,
-                                            global_work_size_copy, NULL, 0, NULL,
-                                            NULL);
-        if (err != CL_SUCCESS) {
-            std::cout << "Swizzle kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+
+        if (!oclk_copy_weight.run(3, global_work_size_copy, NULL, false))
+        {
+            std::cout << "Swizzle kernel run failed." << std::endl;
             return false;
         }
     } else {
@@ -1050,8 +1048,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                                          UMat &weight, UMat &bias,
                                          int32_t numImages, kernelConfig* config)
 {
-    cl_int err = CL_SUCCESS;
-    ocl::Context ctx = ocl::Context::getDefault();
+    ocl::Queue queue = ocl::Queue::getDefault();
     ocl::Program program;
     phash_t::iterator it = phash.find(config->kernelName);
     if (it != phash.end())
@@ -1127,15 +1124,9 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             kernel.set(argIdx++, (uint16_t)height_);
             kernel.set(argIdx++, (uint16_t)output_w_);
             kernel.set(argIdx++, (uint16_t)output_h_);
-            ocl::Queue queue = ocl::Queue::getDefault();
-            err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                         (cl_kernel)kernel.ptr(), 3,
-                                         NULL,
-                                         config->global_work_size,
-                                         config->local_work_size, 0, NULL,
-                                         NULL);
-            if (err != CL_SUCCESS) {
-                std::cout << "IDLF kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+            if (!kernel.run(3, config->global_work_size, config->local_work_size, false))
+            {
+                std::cout << "IDLF kernel run failed." << std::endl;
                 return false;
             }
         }
@@ -1226,15 +1217,9 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             gy = alignSize(gy, blockK);
             size_t global_size[3] = { gx, gy, config->global_work_size[2] };
 
-            ocl::Queue queue = ocl::Queue::getDefault();
-            err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                         (cl_kernel)kernel.ptr(), 3,
-                                         NULL,
-                                         global_size,
-                                         config->local_work_size, 0, NULL,
-                                         NULL);
-            if (err != CL_SUCCESS) {
-                std::cout << "GEMM like kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+            if (!kernel.run(3, global_size, config->local_work_size, false))
+            {
+                std::cout << "GEMM like kernel run failed." << std::endl;
                 return false;
             }
         }
@@ -1250,6 +1235,10 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 cl_uint argIdx = 0;
                 int32_t kernel_offset = kernel_h_ * kernel_w_ * (channels_ / group_) * M_ * g;
 
+                ocl::Kernel kernel(config->kernelName.c_str(), program);
+                if (kernel.empty())
+                    return false;
+
                 kernel.set(argIdx++, bottom.handle(ACCESS_READ));
                 kernel.set(argIdx++, image_offset);
                 kernel.set(argIdx++, weight.handle(ACCESS_READ));
@@ -1264,23 +1253,11 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 kernel.set(argIdx++, (uint16_t)output_h_);
                 kernel.set(argIdx++, (uint16_t)pad_w_);
                 kernel.set(argIdx++, (uint16_t)pad_h_);
-                ocl::Queue queue = ocl::Queue::getDefault();
-                if (config->use_null_local) {
-                    err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                                 (cl_kernel)kernel.ptr(), 3,
-                                                 NULL,
-                                                 config->global_work_size, NULL, 0, NULL,
-                                                 NULL);
-                } else {
-                    err = clEnqueueNDRangeKernel((cl_command_queue)queue.ptr(),
-                                                 (cl_kernel)kernel.ptr(), 3,
-                                                 NULL,
-                                                 config->global_work_size,
-                                                 config->local_work_size, 0, NULL,
-                                                 NULL);
-                }
-                if (err != CL_SUCCESS) {
-                    std::cout << "Basic kernel run failed. Errmsg: "<< cv::ocl::getOpenCLErrorString(err) << std::endl;
+                if (!kernel.run(3, config->global_work_size,
+                                (config->use_null_local) ? NULL : config->local_work_size,
+                                false))
+                {
+                    std::cout << "Basic kernel run failed." << std::endl;
                     return false;
                 }
             }
