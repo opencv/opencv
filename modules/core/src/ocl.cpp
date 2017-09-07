@@ -2489,6 +2489,130 @@ size_t Kernel::localMemSize() const
                                     sizeof(val), &val, &retsz) == CL_SUCCESS ? (size_t)val : 0;
 }
 
+
+
+///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
+
+struct ProgramSource::Impl
+{
+    Impl(const String& src)
+    {
+        init(cv::String(), cv::String(), src, cv::String());
+    }
+    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        init(module, name, codeStr, codeHash);
+    }
+    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        refcount = 1;
+        module_ = module;
+        name_ = name;
+        codeStr_ = codeStr;
+        codeHash_ = codeHash;
+
+        isHashUpdated = false;
+        if (codeHash_.empty())
+        {
+            updateHash();
+            codeHash_ = cv::format("%08llx", hash_);
+        }
+    }
+
+    void updateHash()
+    {
+        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
+        isHashUpdated = true;
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+
+    String module_;
+    String name_;
+    String codeStr_;
+    String codeHash_;
+    // TODO std::vector<ProgramSource> includes_;
+
+    bool isHashUpdated;
+    ProgramSource::hash_t hash_;
+};
+
+
+ProgramSource::ProgramSource()
+{
+    p = 0;
+}
+
+ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
+{
+    p = new Impl(module, name, codeStr, codeHash);
+}
+
+ProgramSource::ProgramSource(const char* prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::ProgramSource(const String& prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::~ProgramSource()
+{
+    if(p)
+        p->release();
+}
+
+ProgramSource::ProgramSource(const ProgramSource& prog)
+{
+    p = prog.p;
+    if(p)
+        p->addref();
+}
+
+ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+{
+    Impl* newp = (Impl*)prog.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+const String& ProgramSource::source() const
+{
+    CV_Assert(p);
+    return p->codeStr_;
+}
+
+ProgramSource::hash_t ProgramSource::hash() const
+{
+    CV_Assert(p);
+    if (!p->isHashUpdated)
+        p->updateHash();
+    return p->hash_;
+}
+
+
+internal::ProgramEntry::operator ProgramSource&() const
+{
+    if (this->pProgramSource == NULL)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (this->pProgramSource == NULL)
+        {
+            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
+            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
+        }
+    }
+    return *this->pProgramSource;
+}
+
+
+
 /////////////////////////////////////////// Program /////////////////////////////////////////////
 
 struct Program::Impl
@@ -2717,125 +2841,6 @@ String Program::getPrefix(const String& buildflags)
                   dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
 }
 
-///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
-
-struct ProgramSource::Impl
-{
-    Impl(const String& src)
-    {
-        init(cv::String(), cv::String(), src, cv::String());
-    }
-    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
-    {
-        init(module, name, codeStr, codeHash);
-    }
-    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
-    {
-        refcount = 1;
-        module_ = module;
-        name_ = name;
-        codeStr_ = codeStr;
-        codeHash_ = codeHash;
-
-        isHashUpdated = false;
-        if (codeHash_.empty())
-        {
-            updateHash();
-            codeHash_ = cv::format("%08llx", hash_);
-        }
-    }
-
-    void updateHash()
-    {
-        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
-        isHashUpdated = true;
-    }
-
-    IMPLEMENT_REFCOUNTABLE();
-
-    String module_;
-    String name_;
-    String codeStr_;
-    String codeHash_;
-    // TODO std::vector<ProgramSource> includes_;
-
-    bool isHashUpdated;
-    ProgramSource::hash_t hash_;
-};
-
-
-ProgramSource::ProgramSource()
-{
-    p = 0;
-}
-
-ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
-{
-    p = new Impl(module, name, codeStr, codeHash);
-}
-
-ProgramSource::ProgramSource(const char* prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::ProgramSource(const String& prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::~ProgramSource()
-{
-    if(p)
-        p->release();
-}
-
-ProgramSource::ProgramSource(const ProgramSource& prog)
-{
-    p = prog.p;
-    if(p)
-        p->addref();
-}
-
-ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
-{
-    Impl* newp = (Impl*)prog.p;
-    if(newp)
-        newp->addref();
-    if(p)
-        p->release();
-    p = newp;
-    return *this;
-}
-
-const String& ProgramSource::source() const
-{
-    CV_Assert(p);
-    return p->codeStr_;
-}
-
-ProgramSource::hash_t ProgramSource::hash() const
-{
-    CV_Assert(p);
-    if (!p->isHashUpdated)
-        p->updateHash();
-    return p->hash_;
-}
-
-
-internal::ProgramEntry::operator ProgramSource&() const
-{
-    if (this->pProgramSource == NULL)
-    {
-        cv::AutoLock lock(cv::getInitializationMutex());
-        if (this->pProgramSource == NULL)
-        {
-            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
-            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
-        }
-    }
-    return *this->pProgramSource;
-}
 
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
