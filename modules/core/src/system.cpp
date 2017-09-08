@@ -1929,11 +1929,22 @@ public:
         }
         ippFeatures = cpuFeatures;
 
-        bool unsupported = false;
         const char* pIppEnv = getenv("OPENCV_IPP");
         cv::String env = pIppEnv;
         if(env.size())
         {
+#if IPP_VERSION_X100 >= 201703
+            const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
+                ippCPUID_ADCOX|ippCPUID_RDSEED|ippCPUID_PREFETCHW|ippCPUID_SHA|ippCPUID_MPX|ippCPUID_AVX512CD|ippCPUID_AVX512ER|
+                ippCPUID_AVX512PF|ippCPUID_AVX512BW|ippCPUID_AVX512DQ|ippCPUID_AVX512VL|ippCPUID_AVX512VBMI;
+#elif IPP_VERSION_X100 >= 201700
+            const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
+                ippCPUID_ADCOX|ippCPUID_RDSEED|ippCPUID_PREFETCHW|ippCPUID_SHA|ippCPUID_AVX512CD|ippCPUID_AVX512ER|
+                ippCPUID_AVX512PF|ippCPUID_AVX512BW|ippCPUID_AVX512DQ|ippCPUID_AVX512VL|ippCPUID_AVX512VBMI;
+#else
+            const Ipp64u minorFeatures = 0;
+#endif
+
             env = env.toLowerCase();
             if(env.substr(0, 2) == "ne")
             {
@@ -1947,58 +1958,20 @@ public:
                 useIPP = false;
             }
             else if(env == "sse42")
-            {
-                if(!(cpuFeatures&ippCPUID_SSE42))
-                    unsupported = true;
-                ippFeatures = ippCPUID_MMX|ippCPUID_SSE|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42;
-                ippFeatures |= (cpuFeatures&ippCPUID_AES);
-                ippFeatures |= (cpuFeatures&ippCPUID_CLMUL);
-                ippFeatures |= (cpuFeatures&ippCPUID_SHA);
-            }
+                ippFeatures = minorFeatures|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42;
             else if(env == "avx2")
-            {
-                if(!(cpuFeatures&ippCPUID_AVX2))
-                    unsupported = true;
-                ippFeatures = ippCPUID_MMX|ippCPUID_SSE|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42|ippCPUID_AVX|ippCPUID_AVX2;
-                ippFeatures |= (cpuFeatures&ippCPUID_AES);
-                ippFeatures |= (cpuFeatures&ippCPUID_CLMUL);
-                ippFeatures |= (cpuFeatures&ippCPUID_F16C);
-                ippFeatures |= (cpuFeatures&ippCPUID_ADCOX);
-                ippFeatures |= (cpuFeatures&ippCPUID_RDSEED);
-                ippFeatures |= (cpuFeatures&ippCPUID_PREFETCHW);
-                ippFeatures |= (cpuFeatures&ippCPUID_MPX);
-            }
+                ippFeatures = minorFeatures|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42|ippCPUID_AVX|ippCPUID_AVX2;
+#if IPP_VERSION_X100 >= 201700
 #if defined (_M_AMD64) || defined (__x86_64__)
             else if(env == "avx512")
-            {
-                if(!(cpuFeatures&ippCPUID_AVX512F))
-                    unsupported = true;
-
-                ippFeatures = ippCPUID_MMX|ippCPUID_SSE|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42|ippCPUID_AVX|ippCPUID_AVX2|ippCPUID_AVX512F;
-                ippFeatures |= (cpuFeatures&ippCPUID_AES);
-                ippFeatures |= (cpuFeatures&ippCPUID_CLMUL);
-                ippFeatures |= (cpuFeatures&ippCPUID_F16C);
-                ippFeatures |= (cpuFeatures&ippCPUID_ADCOX);
-                ippFeatures |= (cpuFeatures&ippCPUID_RDSEED);
-                ippFeatures |= (cpuFeatures&ippCPUID_PREFETCHW);
-                ippFeatures |= (cpuFeatures&ippCPUID_MPX);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512CD);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512VL);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512BW);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512DQ);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512ER);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512PF);
-                ippFeatures |= (cpuFeatures&ippCPUID_AVX512VBMI);
-            }
+                ippFeatures = minorFeatures|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42|ippCPUID_AVX|ippCPUID_AVX2|ippCPUID_AVX512F;
+#endif
 #endif
             else
                 std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << ". Correct values are: disabled, sse42, avx2, avx512 (Intel64 only)" << std::endl;
-        }
 
-        if(unsupported)
-        {
-            std::cerr << "WARNING: selected IPP features are not supported by CPU. IPP was initialized with default features" << std::endl;
-            ippFeatures = cpuFeatures;
+            // Trim unsupported features
+            ippFeatures &= cpuFeatures;
         }
 
         // Disable AVX1 since we don't track regressions for it. SSE42 will be used instead
@@ -2007,7 +1980,9 @@ public:
 
         // IPP integrations in OpenCV support only SSE4.2, AVX2 and AVX-512 optimizations.
         if(!(
+#if IPP_VERSION_X100 >= 201700
             cpuFeatures&ippCPUID_AVX512F ||
+#endif
             cpuFeatures&ippCPUID_AVX2 ||
             cpuFeatures&ippCPUID_SSE42
             ))
@@ -2016,10 +1991,14 @@ public:
             return;
         }
 
-        IPP_INITIALIZER(ippFeatures)
+        if(ippFeatures == cpuFeatures)
+            IPP_INITIALIZER(0)
+        else
+            IPP_INITIALIZER(ippFeatures)
         ippFeatures = ippGetEnabledCpuFeatures();
 
         // Detect top level optimizations to make comparison easier for optimizations dependent conditions
+#if IPP_VERSION_X100 >= 201700
         if(ippFeatures&ippCPUID_AVX512F)
         {
             if((ippFeatures&ippCPUID_AVX512_SKX) == ippCPUID_AVX512_SKX)
@@ -2029,7 +2008,9 @@ public:
             else
                 ippTopFeatures = ippCPUID_AVX512F; // Unknown AVX512 configuration
         }
-        else if(ippFeatures&ippCPUID_AVX2)
+        else
+#endif
+        if(ippFeatures&ippCPUID_AVX2)
             ippTopFeatures = ippCPUID_AVX2;
         else if(ippFeatures&ippCPUID_SSE42)
             ippTopFeatures = ippCPUID_SSE42;

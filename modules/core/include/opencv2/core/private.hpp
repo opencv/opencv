@@ -241,8 +241,13 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 
 #define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
 
+#if IPP_VERSION_X100 >= 201700
 #define ippCPUID_AVX512_SKX (ippCPUID_AVX512F|ippCPUID_AVX512CD|ippCPUID_AVX512VL|ippCPUID_AVX512BW|ippCPUID_AVX512DQ)
 #define ippCPUID_AVX512_KNL (ippCPUID_AVX512F|ippCPUID_AVX512CD|ippCPUID_AVX512PF|ippCPUID_AVX512ER)
+#else
+#define ippCPUID_AVX512_SKX 0xFFFFFFFF
+#define ippCPUID_AVX512_KNL 0xFFFFFFFF
+#endif
 
 namespace cv
 {
@@ -480,7 +485,7 @@ private:
 };
 
 // Extracts border interpolation type without flags
-#if IPP_VERSION_MAJOR >= 2017
+#if IPP_VERSION_X100 >= 201700
 #define IPP_BORDER_INTER(BORDER) (IppiBorderType)((BORDER)&0xF|((((BORDER)&ippBorderInMem) == ippBorderInMem)?ippBorderInMem:0));
 #else
 #define IPP_BORDER_INTER(BORDER) (IppiBorderType)((BORDER)&0xF);
