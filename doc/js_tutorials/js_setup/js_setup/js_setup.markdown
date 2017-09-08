@@ -7,9 +7,9 @@ Installing Emscripten
 
 [Emscripten](https://github.com/kripken/emscripten) is an LLVM-to-JavaScript compiler. We will use Emscripten to build OpenCV.js.
 
-To Install Emscripten, follow instructions on [Emscripten SDK](https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
+To Install Emscripten, follow instructions of [Emscripten SDK](https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
 
-For example
+For example:
 @code{.bash}
 ./emsdk update
 ./emsdk install latest
@@ -17,7 +17,7 @@ For example
 @endcode
 
 @note
-To compile to [WebAssembly](http://webassembly.org), you also need to install and activate [Binaryen](https://github.com/WebAssembly/binaryen) with the `emsdk` command. Please refer to [Developer's Guide](http://webassembly.org/getting-started/developers-guide/) for more details.
+To compile to [WebAssembly](http://webassembly.org), you need to install and activate [Binaryen](https://github.com/WebAssembly/binaryen) with the `emsdk` command. Please refer to [Developer's Guide](http://webassembly.org/getting-started/developers-guide/) for more details.
 
 After install, ensure the `EMSCRIPTEN` environment is setup correctly.
 
@@ -35,7 +35,7 @@ repository](https://github.com/opencv/opencv.git).
 
 ### Obtaining the Latest Stable OpenCV Version
 
--   Go to our [downloads page](http://opencv.org/downloads.html).
+-   Go to our [releases page](http://opencv.org/releases.html).
 -   Download the source archive and unpack it.
 
 ### Obtaining the Cutting-edge OpenCV from the Git Repository
@@ -49,66 +49,47 @@ git clone https://github.com/opencv/opencv.git
 @endcode
 
 @note
-You may need to install `git` for your development environment.
+It requires `git` installed in your development environment.
 
-Building OpenCV.js from Source Using CMake
+Building OpenCV.js from Source
 ---------------------------------------
 
--#  Create and open a temporary directory \<cmake_build_dir\> (`build_js` in this example), put the generated Makefiles, project files, and output files.
+-#  To build `opencv.js`, execute python script `<opencv_dir>/platforms/js/build_js.py <build_dir> <opencv_dir>`.
 
-    For example:
+    For example, to build in `build_js` directory:
     @code{.bash}
-    cd ~/opencv
-    mkdir build_js
-    cd build_js
-    @endcode
-
--#  To configure, run cmake [\<some optional parameters\>] \<path to the OpenCV source directory\>
-    To build OpenCV.js, you need to append `-D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake`.
-
-    For example:
-    @code{.bash}
-    cmake -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local ..
+    cd <opencv_dir>
+    python ./platforms/js/build_js.py build_js .
     @endcode
 
     @note
-    You may need to install `cmake` for your development environment.
+    It requires `python` and `cmake` installed in your development environment.
 
-    @note
-    Use `cmake -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..` , without spaces after -D if the above example doesn't work.
+-#  The build script builds asm.js version by default. To build WebAssembly version, append `--build_wasm` option.
 
-    @note
-    Pass `-DCMAKE_C_FLAGS="-s WASM=1"` and `-DCMAKE_CXX_FLAGS="-s WASM=1"` to `cmake` if you are targeting WebAssembly.
+    For example, to build wasm version in `build_wasm` directory:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_wasm . --build_wasm
+    @endcode
 
--#  To build, run make with target "opencv.js" from the build directory. It is recommended to do this in several threads.
+-#  [optional] To build documents, append `--build_doc` option.
 
     For example:
     @code{.bash}
-    make -j7 opencv.js # runs 7 jobs in parallel
+    python ./platforms/js/build_js.py build_js . --build_doc
     @endcode
-
-    The `opencv.js` found \<cmake_build_dir\>/bin folder is the final product to include into your web pages.
-
--#  [optional] To build documents, run make with target "doxygen"
-
-    For example:
-    @code{.bash}
-    make doxygen
-    @endcode
-
-    The built documents are located in the \<cmake_build_dir\>/doc/doxygen/html folder.
 
     @note
-    You may need to install `doxygen` tool for your development environment.
+    It requires `doxygen` installed in your development environment.
 
--#  [optional] To run tests, first run make with target "opencv_js_test"
+-#  [optional] To build tests, append `--build_test` option.
 
     For example:
     @code{.bash}
-    make opencv_js_test
+    python ./platforms/js/build_js.py build_js . --build_test
     @endcode
 
-    Then run a local web server in \<cmake_build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
+    To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
 
     Navigate the web browser to `http://localhost:8000/tests.html`, which runs the unit tests automatically.
 
@@ -122,4 +103,4 @@ Building OpenCV.js from Source Using CMake
     @endcode
 
     @note
-    You may need to install `node` for your development environment.
+    It requires `node` installed in your development environment.
