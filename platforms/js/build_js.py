@@ -61,8 +61,8 @@ def determine_opencv_version(version_hpp_path):
         return "%(major)s.%(minor)s.%(revision)s%(version_status)s" % locals()
 
 class Builder:
-    def __init__(self, work_dir, opencv_dir, emscripten_dir):
-        self.work_dir = check_dir(work_dir, create=True)
+    def __init__(self, build_dir, opencv_dir, emscripten_dir):
+        self.build_dir = check_dir(build_dir, create=True)
         self.opencv_dir = check_dir(opencv_dir)
         self.emscripten_dir = check_dir(emscripten_dir)
         self.opencv_version = determine_opencv_version(os.path.join(self.opencv_dir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
@@ -75,68 +75,77 @@ class Builder:
         for d in ["CMakeCache.txt", "CMakeFiles/", "bin/", "libs/", "lib/", "modules"]:
             rm_one(d)
 
+    def get_cmake_cmd(self):
+        cmd = ["cmake",
+               "-DCMAKE_BUILD_TYPE=Release",
+               "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
+               "-DCPU_BASELINE=''",
+               "-DCPU_DISPATCH=''",
+               "-DCV_TRACE=OFF",
+               "-DBUILD_SHARED_LIBS=OFF",
+               "-DWITH_1394=OFF",
+               "-DWITH_VTK=OFF",
+               "-DWITH_CUDA=OFF",
+               "-DWITH_CUFFT=OFF",
+               "-DWITH_CUBLAS=OFF",
+               "-DWITH_NVCUVID=OFF",
+               "-DWITH_EIGEN=OFF",
+               "-DWITH_FFMPEG=OFF",
+               "-DWITH_GSTREAMER=OFF",
+               "-DWITH_GTK=OFF",
+               "-DWITH_GTK_2_X=OFF",
+               "-DWITH_IPP=OFF",
+               "-DWITH_JASPER=OFF",
+               "-DWITH_JPEG=OFF",
+               "-DWITH_WEBP=OFF",
+               "-DWITH_OPENEXR=OFF",
+               "-DWITH_OPENGL=OFF",
+               "-DWITH_OPENVX=OFF",
+               "-DWITH_OPENNI=OFF",
+               "-DWITH_OPENNI2=OFF",
+               "-DWITH_PNG=OFF",
+               "-DWITH_TBB=OFF",
+               "-DWITH_PTHREADS_PF=OFF",
+               "-DWITH_TIFF=OFF",
+               "-DWITH_V4L=OFF",
+               "-DWITH_OPENCL=OFF",
+               "-DWITH_OPENCL_SVM=OFF",
+               "-DWITH_OPENCLAMDFFT=OFF",
+               "-DWITH_OPENCLAMDBLAS=OFF",
+               "-DWITH_MATLAB=OFF",
+               "-DWITH_GPHOTO2=OFF",
+               "-DWITH_LAPACK=OFF",
+               "-DWITH_ITT=OFF",
+               "-DBUILD_ZLIB=ON",
+               "-DBUILD_opencv_apps=OFF",
+               "-DBUILD_opencv_flann=OFF",
+               "-DBUILD_opencv_ml=OFF",
+               "-DBUILD_opencv_photo=OFF",
+               "-DBUILD_opencv_imgcodecs=OFF",
+               "-DBUILD_opencv_shape=OFF",
+               "-DBUILD_opencv_videoio=OFF",
+               "-DBUILD_opencv_highgui=OFF",
+               "-DBUILD_opencv_superres=OFF",
+               "-DBUILD_opencv_java=OFF",
+               "-DBUILD_opencv_js=ON",
+               "-DBUILD_opencv_python2=OFF",
+               "-DBUILD_opencv_python3=OFF",
+               "-DBUILD_EXAMPLES=OFF",
+               "-DBUILD_PACKAGE=OFF",
+               "-DBUILD_TESTS=OFF",
+               "-DBUILD_PERF_TESTS=OFF",
+               "-DBUILD_DOCS=ON"]
+        return cmd;
+
     def config_asmjs(self):
-        cmd = [
-            "cmake",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
-            "-DCPU_BASELINE=''",
-            "-DCPU_DISPATCH=''",
-            "-DCV_TRACE=OFF",
-            "-DBUILD_SHARED_LIBS=OFF",
-            "-DWITH_1394=OFF",
-            "-DWITH_VTK=OFF",
-            "-DWITH_CUDA=OFF",
-            "-DWITH_CUFFT=OFF",
-            "-DWITH_CUBLAS=OFF",
-            "-DWITH_NVCUVID=OFF",
-            "-DWITH_EIGEN=OFF",
-            "-DWITH_FFMPEG=OFF",
-            "-DWITH_GSTREAMER=OFF",
-            "-DWITH_GTK=OFF",
-            "-DWITH_GTK_2_X=OFF",
-            "-DWITH_IPP=OFF",
-            "-DWITH_JASPER=OFF",
-            "-DWITH_JPEG=OFF",
-            "-DWITH_WEBP=OFF",
-            "-DWITH_OPENEXR=OFF",
-            "-DWITH_OPENGL=OFF",
-            "-DWITH_OPENVX=OFF",
-            "-DWITH_OPENNI=OFF",
-            "-DWITH_OPENNI2=OFF",
-            "-DWITH_PNG=OFF",
-            "-DWITH_TBB=OFF",
-            "-DWITH_PTHREADS_PF=OFF",
-            "-DWITH_TIFF=OFF",
-            "-DWITH_V4L=OFF",
-            "-DWITH_OPENCL=OFF",
-            "-DWITH_OPENCL_SVM=OFF",
-            "-DWITH_OPENCLAMDFFT=OFF",
-            "-DWITH_OPENCLAMDBLAS=OFF",
-            "-DWITH_MATLAB=OFF",
-            "-DWITH_GPHOTO2=OFF",
-            "-DWITH_LAPACK=OFF",
-            "-DWITH_ITT=OFF",
-            "-DBUILD_ZLIB=ON",
-            "-DBUILD_opencv_apps=OFF",
-            "-DBUILD_opencv_flann=OFF",
-            "-DBUILD_opencv_ml=OFF",
-            "-DBUILD_opencv_photo=OFF",
-            "-DBUILD_opencv_imgcodecs=OFF",
-            "-DBUILD_opencv_shape=OFF",
-            "-DBUILD_opencv_videoio=OFF",
-            "-DBUILD_opencv_highgui=OFF",
-            "-DBUILD_opencv_superres=OFF",
-            "-DBUILD_opencv_java=OFF",
-            "-DBUILD_opencv_js=ON",
-            "-DBUILD_opencv_python2=OFF",
-            "-DBUILD_opencv_python3=OFF",
-            "-DBUILD_EXAMPLES=OFF",
-            "-DBUILD_PACKAGE=OFF",
-            "-DBUILD_TESTS=OFF",
-            "-DBUILD_PERF_TESTS=OFF",
-            "-DBUILD_DOCS=ON",
-        ]
+        cmd = self.get_cmake_cmd()
+        cmd.append(self.opencv_dir)
+        execute(cmd)
+
+    def config_wasm(self):
+        cmd = self.get_cmake_cmd()
+        cmd += ["-DCMAKE_C_FLAGS='-s WASM=1'",
+                "-DCMAKE_CXX_FLAGS='-s WASM=1'"]
         cmd.append(self.opencv_dir)
         execute(cmd)
 
@@ -154,9 +163,10 @@ class Builder:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build OpenCV.js by Emscripten')
-    parser.add_argument("work_dir", help="Working directory (and output)")
+    parser.add_argument("build_dir", help="Building directory (and output)")
     parser.add_argument("opencv_dir", help="Path to OpenCV source dir")
-    parser.add_argument('emscripten_path', help="Path to Emscripten to use for build")
+    parser.add_argument('--emscripten_dir', help="Path to Emscripten to use for build")
+    parser.add_argument('--build_wasm', action="store_true", help="Build OpenCV.js in WebAssembly format")
     parser.add_argument('--build_test', action="store_true", help="Build tests")
     parser.add_argument('--build_doc', action="store_true", help="Build tutorials")
     parser.add_argument('--clean_build_dir', action="store_true", help="Clean build dir")
@@ -167,24 +177,46 @@ if __name__ == "__main__":
     log.basicConfig(format='%(message)s', level=log.DEBUG)
     log.debug("Args: %s", args)
 
-    builder = Builder(args.work_dir, args.opencv_dir, args.emscripten_path)
+    emscripten_dir = args.emscripten_dir
+    if emscripten_dir is None:
+        if "EMSCRIPTEN" in os.environ:
+            emscripten_dir = os.environ["EMSCRIPTEN"]
+        if emscripten_dir is None:
+            log.info("Cannot get emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
+            sys.exit(-1)
+
+    log.info("Emscripten path: %s", emscripten_dir)
+
+    builder = Builder(args.build_dir, args.opencv_dir, emscripten_dir)
 
     log.info("Detected OpenCV version: %s", builder.opencv_version)
     log.info("Detected emcc version: %s", builder.emcc_version)
 
-    os.chdir(builder.work_dir)
+    os.chdir(builder.build_dir)
 
     if args.clean_build_dir:
+        log.info("=====")
+        log.info("===== Clean build dir %s", builder.build_dir)
+        log.info("=====")
         builder.clean_build_dir()
 
     if not args.skip_config:
-        builder.config_asmjs()
+        if not args.build_wasm:
+            log.info("=====")
+            log.info("===== Config OpenCV.js build for asm.js")
+            log.info("=====")
+            builder.config_asmjs()
+        else:
+            log.info("=====")
+            log.info("===== Config OpenCV.js build for wasm")
+            log.info("=====")
+            builder.config_wasm()
 
     if args.config_only:
-        quit();
+        sys.exit(0);
 
     log.info("=====")
-    log.info("===== Building OpenCV.js")
+    log.info("===== Building OpenCV.js in %s", "asm.js" if not args.build_wasm else "wasm")
     log.info("=====")
     builder.build_opencvjs()
 
@@ -204,10 +236,10 @@ if __name__ == "__main__":
     log.info("=====")
     log.info("===== Build finished")
     log.info("=====")
-    log.info("OpenCV.js location: %s", os.path.join(builder.work_dir, "bin", "opencv.js"))
+    log.info("OpenCV.js location: %s", os.path.join(builder.build_dir, "bin", "opencv.js"))
 
     if args.build_test:
-        log.info("OpenCV.js tests location: %s", os.path.join(builder.work_dir, "bin", "tests.html"))
+        log.info("OpenCV.js tests location: %s", os.path.join(builder.build_dir, "bin", "tests.html"))
 
     if args.build_doc:
-        log.info("OpenCV.js tutorials location: %s", os.path.join(builder.work_dir, "doc", "doxygen", "html"))
+        log.info("OpenCV.js tutorials location: %s", os.path.join(builder.build_dir, "doc", "doxygen", "html"))
