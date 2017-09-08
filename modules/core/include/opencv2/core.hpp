@@ -640,9 +640,13 @@ Scalar_ 's.
 CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stddev,
                              InputArray mask=noArray());
 
-/** @brief Calculates an absolute array norm.
+/** @brief Calculates the  absolute norm of an array.
 
 This version of cv::norm calculates the absolute norm of src1. The type of norm to calculate is specified using cv::NormTypes.
+
+If normType is not specified, NORM_L2 is used.
+
+--done edit--
 
 \f[norm =  \forkfour{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
 { \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
