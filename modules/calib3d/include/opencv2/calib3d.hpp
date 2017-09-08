@@ -783,6 +783,14 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
     GridType gridType;
 };
 
+struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters2 : public CirclesGridFinderParameters
+{
+    CV_WRAP CirclesGridFinderParameters2();
+
+    CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
+    CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from predicion. Used by CALIB_CB_CLUSTERING.
+};
+
 /** @brief Finds centers in the grid of circles.
 
 @param image grid view of input circles; it must be an 8-bit grayscale or color image.
@@ -819,6 +827,12 @@ CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags,
                                    const Ptr<FeatureDetector> &blobDetector,
                                    CirclesGridFinderParameters parameters);
+
+/** @overload */
+CV_EXPORTS_W bool findCirclesGrid2( InputArray image, Size patternSize,
+                                   OutputArray centers, int flags,
+                                   const Ptr<FeatureDetector> &blobDetector,
+                                   CirclesGridFinderParameters2 parameters);
 
 /** @overload */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
