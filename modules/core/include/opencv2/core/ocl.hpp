@@ -573,6 +573,12 @@ public:
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
 
+    /** @brief Similar to synchronized run() call with returning of kernel execution time
+     * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
+     * @return Execution time in nanoseconds or negative number on error
+     */
+    int64 runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q=Queue());
+
     size_t workGroupSize() const;
     size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;

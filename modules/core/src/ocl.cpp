@@ -2094,6 +2094,9 @@ struct Kernel::Impl
         release();
     }
 
+    bool run(int dims, size_t _globalsize[], size_t _localsize[],
+            bool sync, int64* timeNS, const Queue& q);
+
     ~Impl()
     {
         if(handle)
@@ -2321,19 +2324,15 @@ int Kernel::set(int i, const KernelArg& arg)
     return i+1;
 }
 
-
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
-    CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
-
-    if(!p || !p->handle || p->isInProgress)
+    if (!p)
         return false;
 
-    cl_command_queue qq = getQueue(q);
     size_t globalsize[CV_MAX_DIM] = {1,1,1};
     size_t total = 1;
-    CV_Assert(_globalsize != 0);
+    CV_Assert(_globalsize != NULL);
     for (int i = 0; i < dims; i++)
     {
         size_t val = _localsize ? _localsize[i] :
@@ -2345,12 +2344,28 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
     }
     CV_Assert(total > 0);
-    if( p->haveTempDstUMats )
+
+    return p->run(dims, globalsize, _localsize, sync, NULL, q);
+}
+
+
+bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
+        bool sync, int64* timeNS, const Queue& q)
+{
+    CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
+
+    if (!handle || isInProgress)
+        return false;
+
+    cl_command_queue qq = getQueue(q);
+    if (haveTempDstUMats)
+        sync = true;
+    if (timeNS)
         sync = true;
     cl_event asyncEvent = 0;
-    cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           NULL, globalsize, _localsize, 0, 0,
-                                           sync ? 0 : &asyncEvent);
+    cl_int retval = clEnqueueNDRangeKernel(qq, handle, (cl_uint)dims,
+                                           NULL, globalsize, localsize, 0, 0,
+                                           (sync && !timeNS) ? 0 : &asyncEvent);
 #if CV_OPENCL_SHOW_RUN_ERRORS
     if (retval != CL_SUCCESS)
     {
@@ -2358,16 +2373,31 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         fflush(stdout);
     }
 #endif
-    if( sync || retval != CL_SUCCESS )
+    if (sync || retval != CL_SUCCESS)
     {
         CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
-        p->cleanupUMats();
+        if (timeNS)
+        {
+            if (retval == CL_SUCCESS)
+            {
+                clWaitForEvents(1, &asyncEvent);
+                cl_ulong startTime, stopTime;
+                CV_Assert(CL_SUCCESS == clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_START, sizeof(startTime), &startTime, NULL));
+                CV_Assert(CL_SUCCESS == clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_END, sizeof(stopTime), &stopTime, NULL));
+                *timeNS = (int64)(stopTime - startTime);
+            }
+            else
+            {
+                *timeNS = -1;
+            }
+        }
+        cleanupUMats();
     }
     else
     {
-        p->addref();
-        p->isInProgress = true;
-        CV_OclDbgAssert(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
+        addref();
+        isInProgress = true;
+        CV_OclDbgAssert(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this) == CL_SUCCESS);
     }
     if (asyncEvent)
         clReleaseEvent(asyncEvent);
@@ -2398,6 +2428,17 @@ bool Kernel::runTask(bool sync, const Queue& q)
     return retval == CL_SUCCESS;
 }
 
+int64 Kernel::runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q_)
+{
+    CV_Assert(p && p->handle && !p->isInProgress);
+    Queue q = q_.ptr() ? q_ : Queue::getDefault();
+    CV_Assert(q.ptr());
+    q.finish(); // call clFinish() on base queue
+    Queue profilingQueue = q.getProfilingQueue();
+    int64 timeNs = -1;
+    bool res = p->run(dims, globalsize, localsize, true, &timeNs, profilingQueue);
+    return res ? timeNs : -1;
+}
 
 size_t Kernel::workGroupSize() const
 {
