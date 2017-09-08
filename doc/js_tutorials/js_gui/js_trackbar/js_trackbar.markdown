@@ -79,13 +79,17 @@ canvas {
 <body>
 <div id="CodeArea">
 <h2>Input your code</h2>
-<textarea rows="8" cols="70" id="TestCode" spellcheck="false">
+<textarea rows="11" cols="70" id="TestCode" spellcheck="false">
 let alpha = value/trackbar.max;
 let beta = ( 1.0 - alpha );
+let src1 = cv.imread("canvasInput1");
+let src2 = cv.imread("canvasInput2");
 let dst = new cv.Mat();
 cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
 cv.imshow("canvasOutput", dst);
 dst.delete();
+src1.delete();
+src2.delete();
 </textarea>
 <p class="err" id="tbErr"></p>
 </div>
@@ -113,15 +117,13 @@ function addWeighted(value) {
     } catch(err) {
         document.getElementById("tbErr").innerHTML = err;
     }
+
 }
 
 loadImageToCanvas("apple.jpg", "canvasInput1");
 loadImageToCanvas("orange.jpg", "canvasInput2");
 
-let src1, src2;
 function onReady() {
-    src1 = cv.imread("canvasInput1");
-    src2 = cv.imread("canvasInput2");
     addWeighted(trackbar.value);
     trackbar.disabled = false;
 }
