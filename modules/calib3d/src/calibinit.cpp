@@ -2094,9 +2094,19 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
                              nelems, patternWasFound );
 }
 
-bool cv::findCirclesGrid( InputArray _image, Size patternSize,
+bool cv::findCirclesGrid( InputArray image, Size patternSize,
+                                   OutputArray centers, int flags,
+                                   const Ptr<FeatureDetector> &blobDetector,
+                                   CirclesGridFinderParameters parameters)
+{
+    CirclesGridFinderParameters2 parameters2;
+    *((CirclesGridFinderParameters*)&parameters2) = parameters;
+    return cv::findCirclesGrid2(image, patternSize, centers, flags, blobDetector, parameters2);
+}
+
+bool cv::findCirclesGrid2( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
-                          CirclesGridFinderParameters parameters)
+                          CirclesGridFinderParameters2 parameters)
 {
     CV_INSTRUMENT_REGION()
 
@@ -2115,18 +2125,18 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       points.push_back (keypoints[i].pt);
     }
 
-    if(flags & CALIB_CB_CLUSTERING)
-    {
-      CirclesGridClusterFinder circlesGridClusterFinder(isAsymmetricGrid);
-      circlesGridClusterFinder.findGrid(points, patternSize, centers);
-      Mat(centers).copyTo(_centers);
-      return !centers.empty();
-    }
-
     if(flags & CALIB_CB_ASYMMETRIC_GRID)
       parameters.gridType = CirclesGridFinderParameters::ASYMMETRIC_GRID;
     if(flags & CALIB_CB_SYMMETRIC_GRID)
       parameters.gridType = CirclesGridFinderParameters::SYMMETRIC_GRID;
+
+    if(flags & CALIB_CB_CLUSTERING)
+    {
+      CirclesGridClusterFinder circlesGridClusterFinder(parameters);
+      circlesGridClusterFinder.findGrid(points, patternSize, centers);
+      Mat(centers).copyTo(_centers);
+      return !centers.empty();
+    }
 
     const int attempts = 2;
     const size_t minHomographyPoints = 4;
@@ -2191,7 +2201,7 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
 bool cv::findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector)
 {
-    return cv::findCirclesGrid(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters());
+    return cv::findCirclesGrid2(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters2());
 }
 
 /* End of file. */
