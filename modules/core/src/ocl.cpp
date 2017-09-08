@@ -1840,9 +1840,35 @@ void initializeContextFromHandle(Context& ctx, void* platform, void* _context, v
 
 struct Queue::Impl
 {
-    Impl(const Context& c, const Device& d)
+    inline void __init()
     {
         refcount = 1;
+        handle = 0;
+        isProfilingQueue_ = false;
+    }
+
+    Impl(cl_command_queue q)
+    {
+        __init();
+        handle = q;
+
+        cl_command_queue_properties props = 0;
+        cl_int result = clGetCommandQueueInfo(handle, CL_QUEUE_PROPERTIES, sizeof(cl_command_queue_properties), &props, NULL);
+        CV_Assert(result && "clGetCommandQueueInfo(CL_QUEUE_PROPERTIES)");
+        isProfilingQueue_ = !!(props & CL_QUEUE_PROFILING_ENABLE);
+    }
+
+    Impl(cl_command_queue q, bool isProfilingQueue)
+    {
+        __init();
+        handle = q;
+        isProfilingQueue_ = isProfilingQueue;
+    }
+
+    Impl(const Context& c, const Device& d, bool withProfiling = false)
+    {
+        __init();
+
         const Context* pc = &c;
         cl_context ch = (cl_context)pc->ptr();
         if( !ch )
@@ -1854,8 +1880,10 @@ struct Queue::Impl
         if( !dh )
             dh = (cl_device_id)pc->device(0).ptr();
         cl_int retval = 0;
-        handle = clCreateCommandQueue(ch, dh, 0, &retval);
+        cl_command_queue_properties props = withProfiling ? CL_QUEUE_PROFILING_ENABLE : 0;
+        handle = clCreateCommandQueue(ch, dh, props, &retval);
         CV_OclDbgAssert(retval == CL_SUCCESS);
+        isProfilingQueue_ = withProfiling;
     }
 
     ~Impl()
@@ -1873,9 +1901,37 @@ struct Queue::Impl
         }
     }
 
+    const cv::ocl::Queue& getProfilingQueue(const cv::ocl::Queue& self)
+    {
+        if (isProfilingQueue_)
+            return self;
+
+        if (profiling_queue_.ptr())
+            return profiling_queue_;
+
+        cl_context ctx = 0;
+        CV_Assert(CL_SUCCESS == clGetCommandQueueInfo(handle, CL_QUEUE_CONTEXT, sizeof(cl_context), &ctx, NULL));
+
+        cl_device_id device = 0;
+        CV_Assert(CL_SUCCESS == clGetCommandQueueInfo(handle, CL_QUEUE_DEVICE, sizeof(cl_device_id), &device, NULL));
+
+        cl_int result = CL_SUCCESS;
+        cl_command_queue_properties props = CL_QUEUE_PROFILING_ENABLE;
+        cl_command_queue q = clCreateCommandQueue(ctx, device, props, &result);
+        CV_Assert(result == CL_SUCCESS && "clCreateCommandQueue(with CL_QUEUE_PROFILING_ENABLE)");
+
+        Queue queue;
+        queue.p = new Impl(q, true);
+        profiling_queue_ = queue;
+
+        return profiling_queue_;
+    }
+
     IMPLEMENT_REFCOUNTABLE();
 
     cl_command_queue handle;
+    bool isProfilingQueue_;
+    cv::ocl::Queue profiling_queue_;
 };
 
 Queue::Queue()
@@ -1927,6 +1983,12 @@ void Queue::finish()
     {
         CV_OclDbgAssert(clFinish(p->handle) == CL_SUCCESS);
     }
+}
+
+const Queue& Queue::getProfilingQueue() const
+{
+    CV_Assert(p);
+    return p->getProfilingQueue(*this);
 }
 
 void* Queue::ptr() const
