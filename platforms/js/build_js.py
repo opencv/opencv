@@ -44,6 +44,15 @@ def check_dir(d, create=False, clean=False):
             os.makedirs(d)
     return d
 
+def check_file(d):
+    d = os.path.abspath(d)
+    if os.path.exists(d):
+        if os.path.isfile(d):
+            return True
+        else:
+            return False
+    return False
+
 def determine_emcc_version(emscripten_dir):
     ret = subprocess.check_output([os.path.join(emscripten_dir, "emcc"), "--version"])
     m = re.match(r'^emcc.*(\d+\.\d+\.\d+)', ret, flags=re.IGNORECASE)
@@ -236,10 +245,17 @@ if __name__ == "__main__":
     log.info("=====")
     log.info("===== Build finished")
     log.info("=====")
-    log.info("OpenCV.js location: %s", os.path.join(builder.build_dir, "bin", "opencv.js"))
+
+    opencvjs_path = os.path.join(builder.build_dir, "bin", "opencv.js")
+    if check_file(opencvjs_path):
+        log.info("OpenCV.js location: %s", opencvjs_path)
 
     if args.build_test:
-        log.info("OpenCV.js tests location: %s", os.path.join(builder.build_dir, "bin", "tests.html"))
+        opencvjs_test_path = os.path.join(builder.build_dir, "bin", "tests.html")
+        if check_file(opencvjs_test_path):
+            log.info("OpenCV.js tests location: %s", opencvjs_test_path)
 
     if args.build_doc:
-        log.info("OpenCV.js tutorials location: %s", os.path.join(builder.build_dir, "doc", "doxygen", "html"))
+        opencvjs_tutorial_path = os.path.join(builder.build_dir, "doc", "doxygen", "html", "tutorial_js_root.html")
+        if check_file(opencvjs_tutorial_path):
+            log.info("OpenCV.js tutorials location: %s", opencvjs_tutorial_path)
