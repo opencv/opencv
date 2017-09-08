@@ -56,7 +56,7 @@
 #include "opencv2/core/private.cuda.hpp"
 
 #ifdef HAVE_NVCUVID
-    #include <dynlink_nvcuvid.h>
+    #include <nvcuvid.h>
 
     #ifdef _WIN32
         #define NOMINMAX
