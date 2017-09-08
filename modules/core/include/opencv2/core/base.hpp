@@ -151,16 +151,58 @@ enum DecompTypes {
     DECOMP_NORMAL   = 16
 };
 
-//! norm types
-enum NormTypes { NORM_INF       = 1,
+/** norm types
+
+src1 and src2 denote input arrays.
+*/
+
+enum NormTypes { 
+                /**
+                \f[
+                norm =  \forkthree
+                {\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+                {\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+                {\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_INF}\) }
+                \f]
+                */
+                NORM_INF       = 1,
+                /**
+                \f[ 
+                norm =  \forkthree
+                {\| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\)} 
+                { \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+                { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L1}\) }
+                \f]*/
                  NORM_L1        = 2,
+                 /**
+                 \f[
+                 norm =  \forkthree
+                 { \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
+                 { \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
+                 { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }
+                 \f]
+                 */
                  NORM_L2        = 4,
+                 /**
+                 \f[
+                 norm =  \forkthree
+                 { \| \texttt{src1} \| _{L_2} ^{2} = \sum_I \texttt{src1}(I)^2} {if  \(\texttt{normType} = \texttt{NORM_L2SQR}\)}
+                 { \| \texttt{src1} - \texttt{src2} \| _{L_2} ^{2} =  \sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2 }{if  \(\texttt{normType} = \texttt{NORM_L2SQR}\) }
+                 { \left(\frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}}\right)^2 }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }
+                 \f]
+                 */
                  NORM_L2SQR     = 5,
+                 /**
+                 In the case of one input array, calculates the Hamming distance of the array from zero,
+                 In the case of two input arrays, calculates the Hamming distance between the arrays.
+                 */
                  NORM_HAMMING   = 6,
+                 /**
+                 Similar to NORM_HAMMING, but in the calculation, each two bits of the input sequence will
+                 be added and treated as a single bit to be used in the same calculation as NORM_HAMMING.
+                 */
                  NORM_HAMMING2  = 7,
-                 #ifndef CV_DOXYGEN
-                     NORM_TYPE_MASK = 7,
-                 #endif
+                 NORM_TYPE_MASK = 7, //!< bit-mask which can be used to separate norm type from norm flags
                  NORM_RELATIVE  = 8, //!< flag
                  NORM_MINMAX    = 32 //!< flag
                };
