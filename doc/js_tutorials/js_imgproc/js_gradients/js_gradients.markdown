@@ -264,7 +264,7 @@ function absSobelExecuteCode() {
     }
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "absSobelCanvasInput");
+loadImageToCanvas("shape.jpg", "absSobelCanvasInput");
 let absSobelInputElement = document.getElementById("absSobelInput");
 absSobelInputElement.addEventListener("change", absSobelHandleFiles, false);
 function absSobelHandleFiles(e) {
