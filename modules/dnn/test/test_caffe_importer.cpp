@@ -188,4 +188,46 @@ TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
     normAssert(ref, out);
 }
 
+TEST(Reproducibility_AlexNet_fp16, Accuracy)
+{
+    const float l1 = 1e-5;
+    const float lInf = 2e-4;
+
+    const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+    const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
+
+    shrinkCaffeModel(model, "bvlc_alexnet.caffemodel_fp16");
+    Net net = readNetFromCaffe(proto, "bvlc_alexnet.caffemodel_fp16");
+
+    Mat sample = imread(findDataFile("dnn/grace_hopper_227.png", false));
+
+    net.setInput(blobFromImage(sample, 1, Size(227, 227)));
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy", false));
+    normAssert(ref, out, "", l1, lInf);
+}
+
+TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
+{
+    const float l1 = 1e-5;
+    const float lInf = 3e-3;
+
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
+
+    shrinkCaffeModel(model, "bvlc_googlenet.caffemodel_fp16");
+    Net net = readNetFromCaffe(proto, "bvlc_googlenet.caffemodel_fp16");
+
+    std::vector<Mat> inpMats;
+    inpMats.push_back( imread(_tf("googlenet_0.png")) );
+    inpMats.push_back( imread(_tf("googlenet_1.png")) );
+    ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
+
+    net.setInput(blobFromImages(inpMats), "data");
+    Mat out = net.forward("prob");
+
+    Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
+    normAssert(out, ref, "", l1, lInf);
+}
+
 }
