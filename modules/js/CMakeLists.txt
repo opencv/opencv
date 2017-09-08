@@ -2,7 +2,7 @@
 #  CMake file for js support
 # ----------------------------------------------------------------------------
 
-message(STATUS "---------------- Start of JavaScript module ----------------------")
+# message(STATUS "---------------- Start of JavaScript module ----------------------")
 
 set(the_description "The js bindings")
 set(MODULE_NAME js)
@@ -15,12 +15,12 @@ ocv_add_module(${MODULE_NAME} BINDINGS)
 ocv_module_include_directories()
 
 # get list of modules to wrap
-message(STATUS "Wrapped in ${MODULE_NAME}:")
+# message(STATUS "Wrapped in ${MODULE_NAME}:")
 set(OPENCV_JS_MODULES)
 foreach(m ${OPENCV_MODULES_BUILD})
   if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";${MODULE_NAME};" AND HAVE_${m})
     list(APPEND OPENCV_JS_MODULES ${m})
-    message(STATUS "\t${m}")
+    # message(STATUS "\t${m}")
   endif()
 endforeach()
 
@@ -122,4 +122,4 @@ add_custom_target(${PROJECT_NAME}_test ALL
 
 unset(MODULE_NAME)
 
-message(STATUS "---------------- End of JavaScript module ----------------------")
+# message(STATUS "---------------- End of JavaScript module ----------------------")
