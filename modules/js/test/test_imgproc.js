@@ -753,7 +753,7 @@ QUnit.test('test_filter', function(assert) {
         let mat4 = new cv.Mat(3, 3, cv.CV_32FC1, dataPtr4, 0);
 
         QUnit.assert.deepEqualWithTolerance = function( value, expected, tolerance ) {
-            for (i = 0; i < value.length; i= i+1) {
+            for (let i = 0; i < value.length; i= i+1) {
                 this.pushResult( {
                     result: Math.abs(value[i]-expected[i]) < tolerance,
                     actual: value[i],

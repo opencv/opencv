@@ -530,7 +530,7 @@ QUnit.test('test_mat_ptr', function(assert) {
 });
 
 QUnit.test('test_mat_zeros', function(assert) {
-    zeros = new Uint8Array(10*10).fill(0);
+    let zeros = new Uint8Array(10*10).fill(0);
     // Mat::zeros(int, int, int)
     {
         let mat = cv.Mat.zeros(10, 10, cv.CV_8UC1);
