@@ -21,7 +21,7 @@ if(NOT BUILD_PROTOBUF AND NOT (DEFINED Protobuf_INCLUDE_DIRS AND DEFINED Protobu
   find_package(Protobuf QUIET)
 endif()
 
-if(Protobuf_FOUND OR EMSCRIPTEN)
+if(Protobuf_FOUND)
   # nothing
 else()
   set(Protobuf_LIBRARIES libprotobuf)
