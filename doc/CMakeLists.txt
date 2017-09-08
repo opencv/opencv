@@ -197,6 +197,19 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
                        COMMENT "Copying ${ocv_js}"
     )
     list(APPEND js_tutorials_assets_deps ${ocv_js} "${opencv_tutorial_html_dir}/${ocv_js}")
+
+    # copy haar cascade files
+    set(haar_cascade_files "")
+    list(APPEND haar_cascade_files "haarcascade_frontalface_default.xml" "haarcascade_eye.xml")
+    set(data_harrcascades_path "${PROJECT_SOURCE_DIR}/../data/haarcascades/")
+    foreach(f ${haar_cascade_files})
+      add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
+                         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}"
+                         DEPENDS "${data_harrcascades_path}/${f}"
+                         COMMENT "Copying ${f}"
+      )
+      list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}")
+    endforeach()
   endif()
 
   add_custom_target(doxygen
