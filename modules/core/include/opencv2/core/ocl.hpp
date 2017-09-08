@@ -333,8 +333,12 @@ public:
     void* ptr() const;
     static Queue& getDefault();
 
+    /// @brief Returns OpenCL command queue with enable profiling mode support
+    const Queue& getProfilingQueue() const;
+
+    struct Impl; friend struct Impl;
+    inline Impl* getImpl() const { return p; }
 protected:
-    struct Impl;
     Impl* p;
 };
 
