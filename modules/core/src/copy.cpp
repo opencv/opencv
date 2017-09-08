@@ -300,7 +300,9 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
+#if IPP_VERSION_X100 >= 201700
             CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)step, dptr, (int)dst.step, ippiSizeL((int)(cols*elemSize()), rows)) >= 0)
+#endif
 
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
