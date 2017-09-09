@@ -70,6 +70,10 @@ protected:
 
     FILE* m_f;
     void* m_state;
+
+private:
+    JpegDecoder(const JpegDecoder &); // copy disabled
+    JpegDecoder& operator=(const JpegDecoder &); // assign disabled
 };
 
 

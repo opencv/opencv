@@ -143,6 +143,10 @@ protected:
 
     // general
     static const float basicSize_;
+
+private:
+    BRISK_Impl(const BRISK_Impl &); // copy disabled
+    BRISK_Impl& operator=(const BRISK_Impl &); // assign disabled
 };
 
 

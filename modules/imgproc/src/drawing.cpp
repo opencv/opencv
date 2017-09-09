@@ -185,7 +185,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         }
     }
 
-    int bt_pix0 = (int)img.elemSize(), bt_pix = bt_pix0;
+    size_t bt_pix0 = img.elemSize(), bt_pix = bt_pix0;
     size_t istep = img.step;
 
     int dx = pt2.x - pt1.x;
@@ -230,7 +230,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         plusDelta = dx + dx;
         minusDelta = -(dy + dy);
         plusStep = (int)istep;
-        minusStep = bt_pix;
+        minusStep = (int)bt_pix;
         count = dx + 1;
     }
     else /* connectivity == 4 */
@@ -240,14 +240,14 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         err = 0;
         plusDelta = (dx + dx) + (dy + dy);
         minusDelta = -(dy + dy);
-        plusStep = (int)istep - bt_pix;
-        minusStep = bt_pix;
+        plusStep = (int)(istep - bt_pix);
+        minusStep = (int)bt_pix;
         count = dx + dy + 1;
     }
 
     this->ptr0 = img.ptr();
     this->step = (int)img.step;
-    this->elemSize = bt_pix0;
+    this->elemSize = (int)bt_pix0;
 }
 
 static void

@@ -9368,14 +9368,14 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                  opts + "-D dcn=4 -D bidx=3");
         break;
     }
-    case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
-    case CV_BGR2Luv: case CV_RGB2Luv: case CV_LBGR2Luv: case CV_LRGB2Luv:
+    case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
+    case COLOR_BGR2Luv: case COLOR_RGB2Luv: case COLOR_LBGR2Luv: case COLOR_LRGB2Luv:
     {
         CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
 
-        bidx = code == CV_BGR2Lab || code == CV_LBGR2Lab || code == CV_BGR2Luv || code == CV_LBGR2Luv ? 0 : 2;
-        bool srgb = code == CV_BGR2Lab || code == CV_RGB2Lab || code == CV_RGB2Luv || code == CV_BGR2Luv;
-        bool lab = code == CV_BGR2Lab || code == CV_RGB2Lab || code == CV_LBGR2Lab || code == CV_LRGB2Lab;
+        bidx = code == COLOR_BGR2Lab || code == COLOR_LBGR2Lab || code == COLOR_BGR2Luv || code == COLOR_LBGR2Luv ? 0 : 2;
+        bool srgb = code == COLOR_BGR2Lab || code == COLOR_RGB2Lab || code == COLOR_RGB2Luv || code == COLOR_BGR2Luv;
+        bool lab = code == COLOR_BGR2Lab || code == COLOR_RGB2Lab || code == COLOR_LBGR2Lab || code == COLOR_LRGB2Lab;
         float un, vn;
         dcn = 3;
 
@@ -9497,16 +9497,16 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         return k.run(dims, globalsize, NULL, false);
     }
-    case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
-    case CV_Luv2BGR: case CV_Luv2RGB: case CV_Luv2LBGR: case CV_Luv2LRGB:
+    case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+    case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
     {
         if( dcn <= 0 )
             dcn = 3;
         CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
 
-        bidx = code == CV_Lab2BGR || code == CV_Lab2LBGR || code == CV_Luv2BGR || code == CV_Luv2LBGR ? 0 : 2;
-        bool srgb = code == CV_Lab2BGR || code == CV_Lab2RGB || code == CV_Luv2BGR || code == CV_Luv2RGB;
-        bool lab = code == CV_Lab2BGR || code == CV_Lab2RGB || code == CV_Lab2LBGR || code == CV_Lab2LRGB;
+        bidx = code == COLOR_Lab2BGR || code == COLOR_Lab2LBGR || code == COLOR_Luv2BGR || code == COLOR_Luv2LBGR ? 0 : 2;
+        bool srgb = code == COLOR_Lab2BGR || code == COLOR_Lab2RGB || code == COLOR_Luv2BGR || code == COLOR_Luv2RGB;
+        bool lab = code == COLOR_Lab2BGR || code == COLOR_Lab2RGB || code == COLOR_Lab2LBGR || code == COLOR_Lab2LRGB;
         float un, vn;
 
         k.create(format("%s2BGR", lab ? "Lab" : "Luv").c_str(),
@@ -10515,13 +10515,15 @@ void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
 //
 // Helper functions
 //
+namespace {
+using namespace cv;
 
 inline bool isHSV(int code)
 {
     switch(code)
     {
-    case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
-    case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
+    case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+    case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
         return true;
     default:
         return false;
@@ -10532,8 +10534,8 @@ inline bool isLab(int code)
 {
     switch (code)
     {
-    case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
-    case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
+    case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+    case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
         return true;
     default:
         return false;
@@ -10544,8 +10546,8 @@ inline bool issRGB(int code)
 {
     switch (code)
     {
-    case CV_BGR2Lab: case CV_RGB2Lab: case CV_BGR2Luv: case CV_RGB2Luv:
-    case CV_Lab2BGR: case CV_Lab2RGB: case CV_Luv2BGR: case CV_Luv2RGB:
+    case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_BGR2Luv: case COLOR_RGB2Luv:
+    case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Luv2BGR: case COLOR_Luv2RGB:
         return true;
     default:
         return false;
@@ -10556,22 +10558,22 @@ inline bool swapBlue(int code)
 {
     switch (code)
     {
-    case CV_BGR2BGRA: case CV_BGRA2BGR:
-    case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_BGRA2BGR565: case CV_BGRA2BGR555:
-    case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652BGRA: case CV_BGR5552BGRA:
-    case CV_BGR2GRAY: case CV_BGRA2GRAY:
-    case CV_BGR2YCrCb: case CV_BGR2YUV:
-    case CV_YCrCb2BGR: case CV_YUV2BGR:
-    case CV_BGR2XYZ: case CV_XYZ2BGR:
-    case CV_BGR2HSV: case CV_BGR2HLS: case CV_BGR2HSV_FULL: case CV_BGR2HLS_FULL:
-    case CV_YUV2BGR_YV12: case CV_YUV2BGRA_YV12: case CV_YUV2BGR_IYUV: case CV_YUV2BGRA_IYUV:
-    case CV_YUV2BGR_NV21: case CV_YUV2BGRA_NV21: case CV_YUV2BGR_NV12: case CV_YUV2BGRA_NV12:
-    case CV_Lab2BGR: case CV_Luv2BGR: case CV_Lab2LBGR: case CV_Luv2LBGR:
-    case CV_BGR2Lab: case CV_BGR2Luv: case CV_LBGR2Lab: case CV_LBGR2Luv:
-    case CV_HSV2BGR: case CV_HLS2BGR: case CV_HSV2BGR_FULL: case CV_HLS2BGR_FULL:
-    case CV_YUV2BGR_UYVY: case CV_YUV2BGRA_UYVY: case CV_YUV2BGR_YUY2:
-    case CV_YUV2BGRA_YUY2:  case CV_YUV2BGR_YVYU: case CV_YUV2BGRA_YVYU:
-    case CV_BGR2YUV_IYUV: case CV_BGRA2YUV_IYUV: case CV_BGR2YUV_YV12: case CV_BGRA2YUV_YV12:
+    case COLOR_BGR2BGRA: case COLOR_BGRA2BGR:
+    case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555:
+    case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA:
+    case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
+    case COLOR_BGR2YCrCb: case COLOR_BGR2YUV:
+    case COLOR_YCrCb2BGR: case COLOR_YUV2BGR:
+    case COLOR_BGR2XYZ: case COLOR_XYZ2BGR:
+    case COLOR_BGR2HSV: case COLOR_BGR2HLS: case COLOR_BGR2HSV_FULL: case COLOR_BGR2HLS_FULL:
+    case COLOR_YUV2BGR_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2BGR_IYUV: case COLOR_YUV2BGRA_IYUV:
+    case COLOR_YUV2BGR_NV21: case COLOR_YUV2BGRA_NV21: case COLOR_YUV2BGR_NV12: case COLOR_YUV2BGRA_NV12:
+    case COLOR_Lab2BGR: case COLOR_Luv2BGR: case COLOR_Lab2LBGR: case COLOR_Luv2LBGR:
+    case COLOR_BGR2Lab: case COLOR_BGR2Luv: case COLOR_LBGR2Lab: case COLOR_LBGR2Luv:
+    case COLOR_HSV2BGR: case COLOR_HLS2BGR: case COLOR_HSV2BGR_FULL: case COLOR_HLS2BGR_FULL:
+    case COLOR_YUV2BGR_UYVY: case COLOR_YUV2BGRA_UYVY: case COLOR_YUV2BGR_YUY2:
+    case COLOR_YUV2BGRA_YUY2:  case COLOR_YUV2BGR_YVYU: case COLOR_YUV2BGRA_YVYU:
+    case COLOR_BGR2YUV_IYUV: case COLOR_BGRA2YUV_IYUV: case COLOR_BGR2YUV_YV12: case COLOR_BGRA2YUV_YV12:
         return false;
     default:
         return true;
@@ -10582,13 +10584,15 @@ inline bool isFullRange(int code)
 {
     switch (code)
     {
-    case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
-    case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
+    case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
+    case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
         return true;
     default:
         return false;
     }
 }
+
+} // namespace::
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                   The main function                                  //
@@ -10601,7 +10605,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     int stype = _src.type();
     int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), uidx, gbits, ycn;
 
-    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(depth == CV_8U && (code == CV_Luv2BGR || code == CV_Luv2RGB)),
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(depth == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
 
     Mat src, dst;
@@ -10614,40 +10618,40 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
     switch( code )
     {
-        case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
-        case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
+        case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
+        case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
             CV_Assert( scn == 3 || scn == 4 );
-            dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
+            dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
             _dst.create( sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
             hal::cvtBGRtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
                              depth, scn, dcn, swapBlue(code));
             break;
 
-        case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
-        case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
+        case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
+        case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
             CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-            gbits = code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
-                    code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5;
+            gbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
+                    code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
             hal::cvtBGRtoBGR5x5(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
                                 scn, swapBlue(code), gbits);
             break;
 
-        case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
-        case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-            if(dcn <= 0) dcn = (code==CV_BGR5652BGRA || code==CV_BGR5552BGRA || code==CV_BGR5652RGBA || code==CV_BGR5552RGBA) ? 4 : 3;
+        case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
+        case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
+            if(dcn <= 0) dcn = (code==COLOR_BGR5652BGRA || code==COLOR_BGR5552BGRA || code==COLOR_BGR5652RGBA || code==COLOR_BGR5552RGBA) ? 4 : 3;
             CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
-            gbits = code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
-                    code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5;
+            gbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
+                    code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
             hal::cvtBGR5x5toBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
                                 dcn, swapBlue(code), gbits);
             break;
 
-        case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
+        case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY: case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
@@ -10655,57 +10659,57 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                               depth, scn, swapBlue(code));
             break;
 
-        case CV_BGR5652GRAY: case CV_BGR5552GRAY:
+        case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
             CV_Assert( scn == 2 && depth == CV_8U );
-            gbits = code == CV_BGR5652GRAY ? 6 : 5;
+            gbits = code == COLOR_BGR5652GRAY ? 6 : 5;
             _dst.create(sz, CV_8UC1);
             dst = _dst.getMat();
             hal::cvtBGR5x5toGray(src.data, src.step, dst.data, dst.step, src.cols, src.rows, gbits);
             break;
 
-        case CV_GRAY2BGR: case CV_GRAY2BGRA:
-            if( dcn <= 0 ) dcn = (code==CV_GRAY2BGRA) ? 4 : 3;
+        case COLOR_GRAY2BGR: case COLOR_GRAY2BGRA:
+            if( dcn <= 0 ) dcn = (code==COLOR_GRAY2BGRA) ? 4 : 3;
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
             hal::cvtGraytoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn);
             break;
 
-        case CV_GRAY2BGR565: case CV_GRAY2BGR555:
+        case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
             CV_Assert( scn == 1 && depth == CV_8U );
-            gbits = code == CV_GRAY2BGR565 ? 6 : 5;
+            gbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
             hal::cvtGraytoBGR5x5(src.data, src.step, dst.data, dst.step, src.cols, src.rows, gbits);
             break;
 
-        case CV_BGR2YCrCb: case CV_RGB2YCrCb:
-        case CV_BGR2YUV: case CV_RGB2YUV:
+        case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
+        case COLOR_BGR2YUV: case COLOR_RGB2YUV:
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
             hal::cvtBGRtoYUV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, scn, swapBlue(code), code == CV_BGR2YCrCb || code == CV_RGB2YCrCb);
+                             depth, scn, swapBlue(code), code == COLOR_BGR2YCrCb || code == COLOR_RGB2YCrCb);
             break;
 
-        case CV_YCrCb2BGR: case CV_YCrCb2RGB:
-        case CV_YUV2BGR: case CV_YUV2RGB:
+        case COLOR_YCrCb2BGR: case COLOR_YCrCb2RGB:
+        case COLOR_YUV2BGR: case COLOR_YUV2RGB:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
             hal::cvtYUVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, dcn, swapBlue(code), code == CV_YCrCb2BGR || code == CV_YCrCb2RGB);
+                             depth, dcn, swapBlue(code), code == COLOR_YCrCb2BGR || code == COLOR_YCrCb2RGB);
             break;
 
-        case CV_BGR2XYZ: case CV_RGB2XYZ:
+        case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
             hal::cvtBGRtoXYZ(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, scn, swapBlue(code));
             break;
 
-        case CV_XYZ2BGR: case CV_XYZ2RGB:
+        case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
@@ -10713,8 +10717,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             hal::cvtXYZtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn, swapBlue(code));
             break;
 
-        case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
-        case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
+        case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
+        case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
@@ -10722,8 +10726,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                              depth, scn, swapBlue(code), isFullRange(code), isHSV(code));
             break;
 
-        case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
-        case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
+        case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+        case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
@@ -10732,8 +10736,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                              depth, dcn, swapBlue(code), isFullRange(code), isHSV(code));
             break;
 
-        case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
-        case CV_BGR2Luv: case CV_RGB2Luv: case CV_LBGR2Luv: case CV_LRGB2Luv:
+        case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
+        case COLOR_BGR2Luv: case COLOR_RGB2Luv: case COLOR_LBGR2Luv: case COLOR_LRGB2Luv:
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
@@ -10741,8 +10745,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                              depth, scn, swapBlue(code), isLab(code), issRGB(code));
             break;
 
-        case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
-        case CV_Luv2BGR: case CV_Luv2RGB: case CV_Luv2LBGR: case CV_Luv2LRGB:
+        case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+        case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
@@ -10751,20 +10755,20 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                              depth, dcn, swapBlue(code), isLab(code), issRGB(code));
             break;
 
-        case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
-        case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
-        case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
-        case CV_BayerBG2BGR_EA: case CV_BayerGB2BGR_EA: case CV_BayerRG2BGR_EA: case CV_BayerGR2BGR_EA:
-        case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
+        case COLOR_BayerBG2GRAY: case COLOR_BayerGB2GRAY: case COLOR_BayerRG2GRAY: case COLOR_BayerGR2GRAY:
+        case COLOR_BayerBG2BGR: case COLOR_BayerGB2BGR: case COLOR_BayerRG2BGR: case COLOR_BayerGR2BGR:
+        case COLOR_BayerBG2BGR_VNG: case COLOR_BayerGB2BGR_VNG: case COLOR_BayerRG2BGR_VNG: case COLOR_BayerGR2BGR_VNG:
+        case COLOR_BayerBG2BGR_EA: case COLOR_BayerGB2BGR_EA: case COLOR_BayerRG2BGR_EA: case COLOR_BayerGR2BGR_EA:
+        case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
             demosaicing(src, _dst, code, dcn);
             break;
 
-        case CV_YUV2BGR_NV21:  case CV_YUV2RGB_NV21:  case CV_YUV2BGR_NV12:  case CV_YUV2RGB_NV12:
-        case CV_YUV2BGRA_NV21: case CV_YUV2RGBA_NV21: case CV_YUV2BGRA_NV12: case CV_YUV2RGBA_NV12:
+        case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21:  case COLOR_YUV2BGR_NV12:  case COLOR_YUV2RGB_NV12:
+        case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
             // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-            if (dcn <= 0) dcn = (code==CV_YUV420sp2BGRA || code==CV_YUV420sp2RGBA || code==CV_YUV2BGRA_NV12 || code==CV_YUV2RGBA_NV12) ? 4 : 3;
-            uidx = (code==CV_YUV2BGR_NV21 || code==CV_YUV2BGRA_NV21 || code==CV_YUV2RGB_NV21 || code==CV_YUV2RGBA_NV21) ? 1 : 0;
+            if (dcn <= 0) dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
+            uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
             CV_Assert( dcn == 3 || dcn == 4 );
             CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
             _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
@@ -10772,12 +10776,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             hal::cvtTwoPlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows,
                                      dcn, swapBlue(code), uidx);
             break;
-        case CV_YUV2BGR_YV12: case CV_YUV2RGB_YV12: case CV_YUV2BGRA_YV12: case CV_YUV2RGBA_YV12:
-        case CV_YUV2BGR_IYUV: case CV_YUV2RGB_IYUV: case CV_YUV2BGRA_IYUV: case CV_YUV2RGBA_IYUV:
+        case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
+        case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
             //http://www.fourcc.org/yuv.php#YV12 == yuv420p -> It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes.
             //http://www.fourcc.org/yuv.php#IYUV == I420 -> It comprises an NxN Y plane followed by (N/2)x(N/2) U and V planes
-            if (dcn <= 0) dcn = (code==CV_YUV2BGRA_YV12 || code==CV_YUV2RGBA_YV12 || code==CV_YUV2RGBA_IYUV || code==CV_YUV2BGRA_IYUV) ? 4 : 3;
-            uidx  = (code==CV_YUV2BGR_YV12 || code==CV_YUV2RGB_YV12 || code==CV_YUV2BGRA_YV12 || code==CV_YUV2RGBA_YV12) ? 1 : 0;
+            if (dcn <= 0) dcn = (code==COLOR_YUV2BGRA_YV12 || code==COLOR_YUV2RGBA_YV12 || code==COLOR_YUV2RGBA_IYUV || code==COLOR_YUV2BGRA_IYUV) ? 4 : 3;
+            uidx  = (code==COLOR_YUV2BGR_YV12 || code==COLOR_YUV2RGB_YV12 || code==COLOR_YUV2BGRA_YV12 || code==COLOR_YUV2RGBA_YV12) ? 1 : 0;
             CV_Assert( dcn == 3 || dcn == 4 );
             CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
             _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
@@ -10786,7 +10790,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                                        dcn, swapBlue(code), uidx);
             break;
 
-        case CV_YUV2GRAY_420:
+        case COLOR_YUV2GRAY_420:
             {
                 if (dcn <= 0) dcn = 1;
 
@@ -10806,10 +10810,10 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
             break;
-        case CV_RGB2YUV_YV12: case CV_BGR2YUV_YV12: case CV_RGBA2YUV_YV12: case CV_BGRA2YUV_YV12:
-        case CV_RGB2YUV_IYUV: case CV_BGR2YUV_IYUV: case CV_RGBA2YUV_IYUV: case CV_BGRA2YUV_IYUV:
+        case COLOR_RGB2YUV_YV12: case COLOR_BGR2YUV_YV12: case COLOR_RGBA2YUV_YV12: case COLOR_BGRA2YUV_YV12:
+        case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
             if (dcn <= 0) dcn = 1;
-            uidx = (code == CV_BGR2YUV_IYUV || code == CV_BGRA2YUV_IYUV || code == CV_RGB2YUV_IYUV || code == CV_RGBA2YUV_IYUV) ? 1 : 2;
+            uidx = (code == COLOR_BGR2YUV_IYUV || code == COLOR_BGRA2YUV_IYUV || code == COLOR_RGB2YUV_IYUV || code == COLOR_RGBA2YUV_IYUV) ? 1 : 2;
             CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
             CV_Assert( dcn == 1 );
             CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
@@ -10818,15 +10822,15 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             hal::cvtBGRtoThreePlaneYUV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
                                        scn, swapBlue(code), uidx);
             break;
-        case CV_YUV2RGB_UYVY: case CV_YUV2BGR_UYVY: case CV_YUV2RGBA_UYVY: case CV_YUV2BGRA_UYVY:
-        case CV_YUV2RGB_YUY2: case CV_YUV2BGR_YUY2: case CV_YUV2RGB_YVYU: case CV_YUV2BGR_YVYU:
-        case CV_YUV2RGBA_YUY2: case CV_YUV2BGRA_YUY2: case CV_YUV2RGBA_YVYU: case CV_YUV2BGRA_YVYU:
+        case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
+        case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
+        case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
             //http://www.fourcc.org/yuv.php#UYVY
             //http://www.fourcc.org/yuv.php#YUY2
             //http://www.fourcc.org/yuv.php#YVYU
-            if (dcn <= 0) dcn = (code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY || code==CV_YUV2RGBA_YUY2 || code==CV_YUV2BGRA_YUY2 || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 4 : 3;
-            ycn  = (code==CV_YUV2RGB_UYVY || code==CV_YUV2BGR_UYVY || code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY) ? 1 : 0;
-            uidx = (code==CV_YUV2RGB_YVYU || code==CV_YUV2BGR_YVYU || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 1 : 0;
+            if (dcn <= 0) dcn = (code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY || code==COLOR_YUV2RGBA_YUY2 || code==COLOR_YUV2BGRA_YUY2 || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 4 : 3;
+            ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
+            uidx = (code==COLOR_YUV2RGB_YVYU || code==COLOR_YUV2BGR_YVYU || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 1 : 0;
             CV_Assert( dcn == 3 || dcn == 4 );
             CV_Assert( scn == 2 && depth == CV_8U );
             _dst.create(sz, CV_8UC(dcn));
@@ -10834,7 +10838,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             hal::cvtOnePlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
                                      dcn, swapBlue(code), uidx, ycn);
             break;
-        case CV_YUV2GRAY_UYVY: case CV_YUV2GRAY_YUY2:
+        case COLOR_YUV2GRAY_UYVY: case COLOR_YUV2GRAY_YUY2:
             {
                 if (dcn <= 0) dcn = 1;
 
@@ -10842,17 +10846,17 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 CV_Assert( scn == 2 && depth == CV_8U );
 
                 src.release(); // T-API datarace fixup
-                extractChannel(_src, _dst, code == CV_YUV2GRAY_UYVY ? 1 : 0);
+                extractChannel(_src, _dst, code == COLOR_YUV2GRAY_UYVY ? 1 : 0);
             }
             break;
-        case CV_RGBA2mRGBA:
+        case COLOR_RGBA2mRGBA:
             if (dcn <= 0) dcn = 4;
             CV_Assert( scn == 4 && dcn == 4 && depth == CV_8U );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
             hal::cvtRGBAtoMultipliedRGBA(src.data, src.step, dst.data, dst.step, src.cols, src.rows);
             break;
-        case CV_mRGBA2RGBA:
+        case COLOR_mRGBA2RGBA:
             if (dcn <= 0) dcn = 4;
             CV_Assert( scn == 4 && dcn == 4 && depth == CV_8U );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));

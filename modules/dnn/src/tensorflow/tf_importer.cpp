@@ -162,7 +162,7 @@ void printTensor(const tensorflow::TensorProto &tensor)
 
     switch (tensor.dtype())
     {
-    case 1:  // float
+    case tensorflow::DT_FLOAT:
         {
             const float *data = reinterpret_cast<const float*>(tensor.tensor_content().c_str());
             int size = tensor.tensor_content().size() / sizeof(float);
@@ -172,7 +172,7 @@ void printTensor(const tensorflow::TensorProto &tensor)
                 std::cout << " ... " << size - 10 << " more";
             break;
         }
-    case 3:  // int32
+    case tensorflow::DT_INT32:
         {
             const int *data = reinterpret_cast<const int*>(tensor.tensor_content().c_str());
             int size = tensor.tensor_content().size() / sizeof(int);
