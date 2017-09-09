@@ -644,20 +644,6 @@ CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stdde
 
 This version of cv::norm calculates the absolute norm of src1. The type of norm to calculate is specified using cv::NormTypes.
 
-If normType is not specified, NORM_L2 is used.
-
---done edit--
-
-\f[norm =  \forkfour{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
-{ \| \texttt{src1} \| _{L_2} ^{2} = \sum_I \texttt{src1}(I)^2} {if  \(\texttt{normType} = \texttt{NORM_L2SQR}\)}\f]
-
-If normType is not specified, NORM_L2 is used.
-
-or an absolute or relative difference norm if src2 is there:
-
-
 As example for one array consider the function \f$r(x)= \begin{pmatrix} x \\ 1-x \end{pmatrix}, x \in [-1;1]\f$.
 The \f$ L_{1}, L_{2} \f$ and \f$ L_{\infty} \f$ norm for the sample value \f$r(-1) = \begin{pmatrix} -1 \\ 2 \end{pmatrix}\f$
 is calculated as follows
@@ -676,13 +662,15 @@ The following graphic shows all values for the three norm functions \f$\| r(x) \
 It is notable that the \f$ L_{1} \f$ norm forms the upper and the \f$ L_{\infty} \f$ norm forms the lower border for the example function \f$ r(x) \f$.
 ![Graphs for the different norm functions from the above example](pics/NormTypes_OneArray_1-2-INF.png)
 
-The function cv::norm returns the calculated norm.
-
 When the mask parameter is specified and it is not empty, the norm is
+
+If normType is not specified, NORM_L2 is used.
 calculated only over the region specified by the mask.
 
 Multi-channel input arrays are treated as single-channel arrays, that is,
 the results for all channels are combined.
+
+Hamming norms can only be calculated with CV_8U depth arrays.
 
 @param src1 first input array.
 @param normType type of the norm (see cv::NormTypes).
@@ -695,18 +683,6 @@ CV_EXPORTS_W double norm(InputArray src1, int normType = NORM_L2, InputArray mas
 This version of cv::norm calculates the absolute difference norm 
 or the relative difference norm of arrays src1 and src2.
 The type of norm to calculate is specified using cv::NormTypes.
-
-\f[norm =  \forkfour{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} ^{2} =  \sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2 }{if  \(\texttt{normType} = \texttt{NORM_L2SQR}\) }
-\f]
-
-or
-
-\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_INF}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L1}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }\f]
 
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
