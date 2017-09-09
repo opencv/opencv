@@ -156,7 +156,7 @@ enum DecompTypes {
 src1 and src2 denote input arrays.
 */
 
-enum NormTypes { 
+enum NormTypes {
                 /**
                 \f[
                 norm =  \forkthree
@@ -167,9 +167,9 @@ enum NormTypes {
                 */
                 NORM_INF       = 1,
                 /**
-                \f[ 
+                \f[
                 norm =  \forkthree
-                {\| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\)} 
+                {\| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\)}
                 { \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
                 { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L1}\) }
                 \f]*/
