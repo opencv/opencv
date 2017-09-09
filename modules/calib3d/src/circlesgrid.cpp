@@ -467,11 +467,10 @@ void Graph::removeEdge(size_t id1, size_t id2)
 
 bool Graph::areVerticesAdjacent(size_t id1, size_t id2) const
 {
-  CV_Assert( doesVertexExist( id1 ) );
-  CV_Assert( doesVertexExist( id2 ) );
-
   Vertices::const_iterator it = vertices.find(id1);
-  return it->second.neighbors.find(id2) != it->second.neighbors.end();
+  CV_Assert(it != vertices.end());
+  const Neighbors & neighbors = it->second.neighbors;
+  return neighbors.find(id2) != neighbors.end();
 }
 
 size_t Graph::getVerticesCount() const
@@ -481,9 +480,8 @@ size_t Graph::getVerticesCount() const
 
 size_t Graph::getDegree(size_t id) const
 {
-  CV_Assert( doesVertexExist(id) );
-
   Vertices::const_iterator it = vertices.find(id);
+  CV_Assert( it != vertices.end() );
   return it->second.neighbors.size();
 }
 
@@ -528,9 +526,8 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
 
 const Graph::Neighbors& Graph::getNeighbors(size_t id) const
 {
-  CV_Assert( doesVertexExist(id) );
-
   Vertices::const_iterator it = vertices.find(id);
+  CV_Assert( it != vertices.end() );
   return it->second.neighbors;
 }
 

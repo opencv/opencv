@@ -17,8 +17,8 @@
 //! @name Morphology operations
 //! @sa cv::MorphTypes
 //! @{
-#define MORPH_ERODE 0
-#define MORPH_DILATE 1
+#define CV_HAL_MORPH_ERODE 0
+#define CV_HAL_MORPH_DILATE 1
 //! @}
 
 //! @}

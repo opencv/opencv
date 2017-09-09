@@ -702,7 +702,7 @@ int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_typ
     case CV_HAL_BORDER_CONSTANT:
         if (borderValue[0] == DBL_MAX && borderValue[1] == DBL_MAX && borderValue[2] == DBL_MAX && borderValue[3] == DBL_MAX)
         {
-            if (operation == MORPH_ERODE)
+            if (operation == CV_HAL_MORPH_ERODE)
                 setConstantBorder(border, UCHAR_MAX);
             else
                 setConstantBorder(border, 0);
@@ -779,10 +779,10 @@ int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_typ
     MorphCtx* mat;
     switch (operation)
     {
-    case MORPH_ERODE:
+    case CV_HAL_MORPH_ERODE:
         mat = new MorphCtx(ctx, kernel_mat, kernel_width, kernel_height, VX_NONLINEAR_FILTER_MIN, border);
         break;
-    case MORPH_DILATE:
+    case CV_HAL_MORPH_DILATE:
         mat = new MorphCtx(ctx, kernel_mat, kernel_width, kernel_height, VX_NONLINEAR_FILTER_MAX, border);
         break;
     default:
