@@ -680,7 +680,7 @@ CV_EXPORTS_W double norm(InputArray src1, int normType = NORM_L2, InputArray mas
 
 /** @brief Calculates an absolute difference norm or a relative difference norm.
 
-This version of cv::norm calculates the absolute difference norm 
+This version of cv::norm calculates the absolute difference norm
 or the relative difference norm of arrays src1 and src2.
 The type of norm to calculate is specified using cv::NormTypes.
 
