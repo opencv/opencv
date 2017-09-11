@@ -2883,7 +2883,9 @@ TEST(Core_KMeans, compactness)
         }
         EXPECT_NEAR(expected, compactness, expected * 1e-8);
         if (K == N)
+        {
             EXPECT_DOUBLE_EQ(compactness, 0.0);
+        }
     }
 }
 
@@ -3441,7 +3443,9 @@ TEST(Core_SoftFloat, pow32)
         softfloat x32(x.f);
         ASSERT_TRUE(pow(zero, -x32).isInf());
         if(x32 != one)
+        {
             ASSERT_EQ(pow(zero, x32), zero);
+        }
     }
 }
 
@@ -3577,7 +3581,9 @@ TEST(Core_SoftFloat, pow64)
 
         ASSERT_TRUE(pow(zero, -x64).isInf());
         if(x64 != one)
+        {
             ASSERT_EQ(pow(zero, x64), zero);
+        }
     }
 }
 
