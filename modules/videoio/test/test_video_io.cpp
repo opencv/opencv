@@ -178,7 +178,9 @@ public:
         if (ext != "mpg")
         {
             if (count_prop > 0)
+            {
                 EXPECT_EQ(count_gt, count_prop);
+            }
         }
 
         int count_actual = 0;
@@ -193,7 +195,9 @@ public:
             count_actual += 1;
         }
         if (count_prop > 0)
+        {
             EXPECT_NEAR(count_gt, count_actual, 1);
+        }
         else
             std::cout << "Frames counter is not available. Actual frames: " << count_actual << ". SKIP check." << std::endl;
     }
