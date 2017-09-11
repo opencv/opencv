@@ -45,6 +45,12 @@
 #include "../../precomp.hpp"
 #include "common.hpp"
 
+namespace cv
+{
+namespace dnn
+{
+namespace ocl4dnn
+{
 
 #ifdef HAVE_OPENCL
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
@@ -52,13 +58,12 @@ enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
 template<typename Dtype>
 bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
                        const int32_t M, const int32_t N, const int32_t K,
-                       const cl_mem A, const cl_mem B,
-                       const cl_mem B_image,
-                       cl_mem C,
+                       const UMat A, const UMat B,
+                       const UMat B_image, UMat C,
                        const size_t max_image_size);
 
 template<typename Dtype>
-void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
+void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, UMat buffer, int offset,
                                   bool is_matrix_a, bool transpose,
                                   bool padding, int padded_height,
                                   int padded_width, int height,
@@ -67,14 +72,19 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
 template<typename Dtype>
 bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
                  const int32_t M, const int32_t N, const Dtype alpha,
-                 const cl_mem A, const int32_t offA, const cl_mem x,
-                 const int32_t offx, const Dtype beta, cl_mem y,
+                 const UMat A, const int32_t offA, const UMat x,
+                 const int32_t offx, const Dtype beta, UMat y,
                  const int32_t offy);
 
 template<typename Dtype>
 bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
-                 const cl_mem x, const int32_t offx, cl_mem y,
+                 const UMat x, const int32_t offx, UMat y,
                  const int32_t offy);
 
 #endif  // HAVE_OPENCL
+
+} // namespace ocl4dnn
+} // namespace dnn
+} // namespce cv
+
 #endif

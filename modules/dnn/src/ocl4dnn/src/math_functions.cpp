@@ -42,25 +42,24 @@
 
 #include "../../precomp.hpp"
 #include "common.hpp"
-
-#ifdef HAVE_OPENCL
 #include "math_functions.hpp"
 #include <vector>
 #include "opencl_kernels_dnn.hpp"
 
-using namespace cv;
+namespace cv
+{
+namespace dnn
+{
+namespace ocl4dnn
+{
 
-struct gemm_callback_arg {
-    std::vector<cl_event> evs;
-    std::vector<cl_mem> imgs;
-};
-
+#ifdef HAVE_OPENCL
 // Create and copy buffer to image for GEMM's matrix A and B.
 // Will return image to caller if the input image is NULL. Otherwise,
 // will use the image directly. It's caller's responsibility to
 // release the created image.
 template<typename Dtype>
-void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
+void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, UMat buffer, int offset,
                                   bool is_matrix_a, bool transpose,
                                   bool padding, int padded_height,
                                   int padded_width, int height,
@@ -102,7 +101,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             size_t region[] = {(size_t)desc.image_width, (size_t)desc.image_height, 1};
 
             OCL_CHECK(clEnqueueCopyBufferToImage((cl_command_queue)queue.ptr(),
-                                                 buffer, *image, src_offset,
+                                                 (cl_mem) buffer.handle(ACCESS_READ), *image, src_offset,
                                                  origin, region, 0, NULL, NULL));
         } else {
             ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_transpose_float", ocl::dnn::gemm_image_oclsrc);
@@ -110,7 +109,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             size_t global_copy[2];
             global_copy[0] = width;
             global_copy[1] = height;
-            oclk_gemm_copy.set(0, (cl_mem) buffer);
+            oclk_gemm_copy.set(0, ocl::KernelArg::PtrReadOnly(buffer));
             oclk_gemm_copy.set(1, (cl_mem) *image);
             oclk_gemm_copy.set(2, offset);
             oclk_gemm_copy.set(3, width);
@@ -150,7 +149,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             size_t origin[] = {0, 0, 0};
             size_t region[] = {(size_t)width, (size_t)height, 1};
             OCL_CHECK(clEnqueueCopyBufferToImage((cl_command_queue)queue.ptr(),
-                                                 buffer, *image, src_offset,
+                                                 (cl_mem) buffer.handle(ACCESS_READ), *image, src_offset,
                                                  origin, region, 0, NULL, NULL));
         } else {
             ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_no_transpose_float",
@@ -159,7 +158,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
             size_t global_copy[2];
             global_copy[0] = padding ? padded_width : width;
             global_copy[1] = padding ? padded_height : height;
-            oclk_gemm_copy.set(0, (cl_mem) buffer);
+            oclk_gemm_copy.set(0, ocl::KernelArg::PtrReadOnly(buffer));
             oclk_gemm_copy.set(1, (cl_mem) *image);
             oclk_gemm_copy.set(2, offset);
             oclk_gemm_copy.set(3, width);
@@ -171,7 +170,7 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, cl_mem buffer, int offset,
 }
 
 template
-void ocl4dnnGEMMCopyBufferToImage<float>(cl_mem *image, cl_mem buffer, int offset,
+void ocl4dnnGEMMCopyBufferToImage<float>(cl_mem *image, UMat buffer, int offset,
                                          bool is_matrix_a, bool transpose,
                                          bool padding, int padded_height,
                                          int padded_width, int height,
@@ -190,8 +189,8 @@ template<typename Dtype>
 static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                                  const CBLAS_TRANSPOSE TransB, const int32_t M,
                                  const int32_t N, const int32_t K, const Dtype alpha,
-                                 const cl_mem A, const int32_t offA, const cl_mem B,
-                                 const int32_t offB, const Dtype beta, cl_mem C,
+                                 const UMat A, const int32_t offA, const UMat B,
+                                 const int32_t offB, const Dtype beta, UMat C,
                                  const int32_t offC, bool is_image_a, bool is_image_b,
                                  enum gemm_type_t gemm_type,
                                  const size_t max_image_size)
@@ -359,9 +358,9 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                 }
             }
             if (is_image_a)
-                ImA = A;
+                ImA = (cl_mem) A.handle(ACCESS_READ);
             if (is_image_b)
-                ImB = B;
+                ImB = (cl_mem) B.handle(ACCESS_READ);
 
             size_t global[2];
             if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE)
@@ -382,11 +381,11 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
             {
                 oclk_gemm_float.set(arg_idx++, (cl_mem) ImB);
             } else {
-                oclk_gemm_float.set(arg_idx++, (cl_mem) B);
+                oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(B));
                 oclk_gemm_float.set(arg_idx++, blockB_offset);
                 oclk_gemm_float.set(arg_idx++, ldB);
             }
-            oclk_gemm_float.set(arg_idx++, (cl_mem) C);
+            oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrWriteOnly(C));
             oclk_gemm_float.set(arg_idx++, blockC_offset);
             oclk_gemm_float.set(arg_idx++, blockC_height);
             oclk_gemm_float.set(arg_idx++, blockC_width);
@@ -451,8 +450,8 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
 template<typename Dtype>
 bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
                        const int32_t M, const int32_t N, const int32_t K,
-                       const cl_mem A, const cl_mem B,
-                       const cl_mem B_image, cl_mem C,
+                       const UMat A, const UMat B,
+                       const UMat B_image, UMat C,
                        const size_t max_image_size)
 {
     gemm_type_t gemm_type = GEMM_TYPE_FAST_IMAGE_32_1;
@@ -477,15 +476,15 @@ bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
 
 template bool ocl4dnnGEMMCommon<float>(const CBLAS_TRANSPOSE TransB,
                                        const int32_t M, const int32_t N, const int32_t K,
-                                       const cl_mem A, const cl_mem B,
-                                       const cl_mem B_image, cl_mem C,
+                                       const UMat A, const UMat B,
+                                       const UMat B_image, UMat C,
                                        const size_t max_image_size);
 
 template<typename Dtype>
 bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
                  const int32_t M, const int32_t N, const Dtype alpha,
-                 const cl_mem A, const int32_t offA, const cl_mem x,
-                 const int32_t offx, const Dtype beta, cl_mem y,
+                 const UMat A, const int32_t offA, const UMat x,
+                 const int32_t offx, const Dtype beta, UMat y,
                  const int32_t offy)
 {
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -503,15 +502,15 @@ bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
         size_t globalsize[] = { row_size / 4 * localsize[0] };
 
         uint argId = 0;
-        k.set(argId++, (cl_mem) A);
+        k.set(argId++, ocl::KernelArg::PtrReadOnly(A));
         k.set(argId++, offA);
         k.set(argId++, cl_uint(col_size));
         k.set(argId++, cl_uint(col_size%4));
-        k.set(argId++, (cl_mem) x);
+        k.set(argId++, ocl::KernelArg::PtrReadOnly(x));
         k.set(argId++, offx);
         k.set(argId++, alpha);
         k.set(argId++, beta);
-        k.set(argId++, (cl_mem) y);
+        k.set(argId++, ocl::KernelArg::PtrWriteOnly(y));
         k.set(argId++, offy);
         k.set(argId++, NULL, localsize[0] * sizeof(cl_float4));
 
@@ -525,16 +524,16 @@ bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
             uint row_offset = row_size - (row_size % 4);
 
             uint argId = 0;
-            k_1.set(argId++, (cl_mem) A);
+            k_1.set(argId++, ocl::KernelArg::PtrReadOnly(A));
             k_1.set(argId++, offA);
             k_1.set(argId++, cl_uint(col_size));
             k_1.set(argId++, cl_uint(row_offset));
             k_1.set(argId++, cl_uint(col_size%4));
-            k_1.set(argId++, (cl_mem) x);
+            k_1.set(argId++, ocl::KernelArg::PtrReadOnly(x));
             k_1.set(argId++, offx);
             k_1.set(argId++, alpha);
             k_1.set(argId++, beta);
-            k_1.set(argId++, (cl_mem) y);
+            k_1.set(argId++, ocl::KernelArg::PtrWriteOnly(y));
             k_1.set(argId++, offy);
             k_1.set(argId++, NULL, localsize[0] * sizeof(cl_float));
 
@@ -546,14 +545,14 @@ bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
 
 template bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
                                  const int32_t M, const int32_t N,
-                                 const float alpha, const cl_mem A,
-                                 const int32_t offA, const cl_mem x,
+                                 const float alpha, const UMat A,
+                                 const int32_t offA, const UMat x,
                                  const int32_t offx, const float beta,
-                                 cl_mem y, const int32_t offy);
+                                 UMat y, const int32_t offy);
 
 template<typename Dtype>
 bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
-                 const cl_mem X, const int32_t offX, cl_mem Y,
+                 const UMat X, const int32_t offX, UMat Y,
                  const int32_t offY)
 {
     ocl::Context ctx = ocl::Context::getDefault();
@@ -568,17 +567,20 @@ bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
     cl_uint argIdx = 0;
     oclk_axpy.set(argIdx++, N);
     oclk_axpy.set(argIdx++, alpha);
-    oclk_axpy.set(argIdx++, (cl_mem) X);
+    oclk_axpy.set(argIdx++, ocl::KernelArg::PtrReadOnly(X));
     oclk_axpy.set(argIdx++, offX);
-    oclk_axpy.set(argIdx++, (cl_mem) Y);
+    oclk_axpy.set(argIdx++, ocl::KernelArg::PtrWriteOnly(Y));
     oclk_axpy.set(argIdx++, offY);
 
     return oclk_axpy.run(1, global, local, false);
 }
 
-template bool ocl4dnnAXPY<float>(const int32_t N,
-                                 const float alpha, const cl_mem X,
-                                 const int32_t offX, cl_mem Y,
-                                 const int32_t offY);
+template bool ocl4dnnAXPY<float>(const int32_t N, const float alpha,
+                                 const UMat X, const int32_t offX,
+                                 UMat Y, const int32_t offY);
 
 #endif  // HAVE_OPENCL
+
+} // namespace ocl4dnn
+} // namespace dnn
+} // namespce cv
