@@ -171,10 +171,15 @@ class Builder:
 #===================================================================================================
 
 if __name__ == "__main__":
+    opencv_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
+    emscripten_dir = None
+    if "EMSCRIPTEN" in os.environ:
+        emscripten_dir = os.environ["EMSCRIPTEN"]
+
     parser = argparse.ArgumentParser(description='Build OpenCV.js by Emscripten')
     parser.add_argument("build_dir", help="Building directory (and output)")
-    parser.add_argument("opencv_dir", help="Path to OpenCV source dir")
-    parser.add_argument('--emscripten_dir', help="Path to Emscripten to use for build")
+    parser.add_argument('--opencv_dir', default=opencv_dir, help='Opencv source directory (default is "../.." relative to script location)')
+    parser.add_argument('--emscripten_dir', default=emscripten_dir, help="Path to Emscripten to use for build")
     parser.add_argument('--build_wasm', action="store_true", help="Build OpenCV.js in WebAssembly format")
     parser.add_argument('--build_test', action="store_true", help="Build tests")
     parser.add_argument('--build_doc', action="store_true", help="Build tutorials")
@@ -186,17 +191,11 @@ if __name__ == "__main__":
     log.basicConfig(format='%(message)s', level=log.DEBUG)
     log.debug("Args: %s", args)
 
-    emscripten_dir = args.emscripten_dir
-    if emscripten_dir is None:
-        if "EMSCRIPTEN" in os.environ:
-            emscripten_dir = os.environ["EMSCRIPTEN"]
-        if emscripten_dir is None:
-            log.info("Cannot get emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
-            sys.exit(-1)
+    if args.emscripten_dir is None:
+        log.info("Cannot get Emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
+        sys.exit(-1)
 
-    log.info("Emscripten path: %s", emscripten_dir)
-
-    builder = Builder(args.build_dir, args.opencv_dir, emscripten_dir)
+    builder = Builder(args.build_dir, args.opencv_dir, args.emscripten_dir)
 
     log.info("Detected OpenCV version: %s", builder.opencv_version)
     log.info("Detected emcc version: %s", builder.emcc_version)
