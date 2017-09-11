@@ -70,10 +70,11 @@ def determine_opencv_version(version_hpp_path):
         return "%(major)s.%(minor)s.%(revision)s%(version_status)s" % locals()
 
 class Builder:
-    def __init__(self, build_dir, opencv_dir, emscripten_dir):
-        self.build_dir = check_dir(build_dir, create=True)
-        self.opencv_dir = check_dir(opencv_dir)
-        self.emscripten_dir = check_dir(emscripten_dir)
+    def __init__(self, options):
+        self.options = options
+        self.build_dir = check_dir(options.build_dir, create=True)
+        self.opencv_dir = check_dir(options.opencv_dir)
+        self.emscripten_dir = check_dir(options.emscripten_dir)
         self.opencv_version = determine_opencv_version(os.path.join(self.opencv_dir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
         self.emcc_version = determine_emcc_version(self.emscripten_dir)
 
@@ -142,8 +143,11 @@ class Builder:
                "-DBUILD_EXAMPLES=OFF",
                "-DBUILD_PACKAGE=OFF",
                "-DBUILD_TESTS=OFF",
-               "-DBUILD_PERF_TESTS=OFF",
-               "-DBUILD_DOCS=ON"]
+               "-DBUILD_PERF_TESTS=OFF"]
+        if self.options.build_doc:
+            cmd.append("-DBUILD_DOCS=ON")
+        else:
+            cmd.append("-DBUILD_DOCS=OFF")
         return cmd;
 
     def config_asmjs(self):
@@ -195,7 +199,7 @@ if __name__ == "__main__":
         log.info("Cannot get Emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
         sys.exit(-1)
 
-    builder = Builder(args.build_dir, args.opencv_dir, args.emscripten_dir)
+    builder = Builder(args)
 
     log.info("Detected OpenCV version: %s", builder.opencv_version)
     log.info("Detected emcc version: %s", builder.emcc_version)
