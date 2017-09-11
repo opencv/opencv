@@ -90,7 +90,7 @@ Building OpenCV.js from Source
 
     To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
 
-    Navigate the web browser to `http://localhost:8000/tests.html`, which runs the unit tests automatically.
+    Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically.
 
     You can also run tests using Node.js.
 
