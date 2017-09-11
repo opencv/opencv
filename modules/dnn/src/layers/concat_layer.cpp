@@ -141,7 +141,7 @@ public:
             parallel_for_(Range(0, nstripes), cc, nstripes);
         }
 
-        ChannelConcatInvoker() {}
+        ChannelConcatInvoker()  : inputs(0), output(0), nstripes(0) {}
 
         void operator()(const Range& r) const
         {

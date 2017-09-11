@@ -2165,7 +2165,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        CV_Assert(i < sz.height);
+        CV_Assert(i > 0 && i < sz.height);
         return vv[i].isContinuous();
     }
 

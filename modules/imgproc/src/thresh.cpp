@@ -990,7 +990,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     }
 
 #ifdef HAVE_IPP
-    unsigned char thresh;
+    unsigned char thresh = 0;
     CV_IPP_RUN_FAST(ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
 #endif
 

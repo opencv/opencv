@@ -60,6 +60,8 @@ public:
 
     double compute_pose(cv::Mat& R, cv::Mat& t);
 private:
+    upnp(const upnp &); // copy disabled
+    upnp& operator=(const upnp &); // assign disabled
     template <typename T>
       void init_camera_parameters(const cv::Mat& cameraMatrix)
       {
