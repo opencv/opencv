@@ -311,6 +311,7 @@ OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_chec
 OCV_OPTION(CV_ENABLE_INTRINSICS       "Use intrinsic-based optimized code" ON )
 OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatched code/intrinsics/loop unrolling/etc)" OFF )
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
+OCV_OPTION(GLIBCXX_USE_CXX11_ABI      "Controls whether the declarations in the library headers use old or new ABI" ON IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "5.0"))
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) )
 
@@ -318,6 +319,13 @@ if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "5.0")
+  if(GLIBCXX_USE_CXX11_ABI)
+    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+  else()
+    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+  endif()
+endif()
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -965,6 +973,9 @@ status("  C/C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
 if(ENABLE_CXX11 OR HAVE_CXX11)
 status("    C++11:" HAVE_CXX11 THEN YES ELSE NO)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "5.0")
+  status("    libstdc++ uses new ABI:" GLIBCXX_USE_CXX11_ABI THEN YES ELSE NO)
 endif()
 status("    C++ Compiler:"           ${OPENCV_COMPILER_STR})
 status("    C++ flags (Release):"    ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE})
