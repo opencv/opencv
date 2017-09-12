@@ -1904,7 +1904,8 @@ or cornerMinEigenVal.
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      InputArray mask = noArray(), int blockSize = 3,
-                                     bool useHarrisDetector = false, double k = 0.04 );
+                                     int gradiantSize = 3, bool useHarrisDetector = false,
+                                     double k = 0.04 );
 
 /** @example houghlines.cpp
 An example using the Hough line detector

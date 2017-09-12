@@ -934,6 +934,7 @@ CVAPI(void)  cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image,
                                     double  min_distance,
                                     const CvArr* mask CV_DEFAULT(NULL),
                                     int block_size CV_DEFAULT(3),
+                                    int gradiant_size CV_DEFAULT(3),
                                     int use_harris CV_DEFAULT(0),
                                     double k CV_DEFAULT(0.04) );
 
