@@ -42,7 +42,7 @@ int main()
 
 void drawText(Mat & image)
 {
-    putText(image, "Hello OpenCV",
+    putText(image, "EC601-A1-Team10-Qinjin Jia, Yuchen Nie",
             Point(20, 50),
             FONT_HERSHEY_COMPLEX, 1, // font face and scale
             Scalar(255, 255, 255), // white
