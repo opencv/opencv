@@ -2635,8 +2635,9 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
             cvtColor(probe, result, codes[c]);
 
             uint32_t h = adler32(result);
+            uint32_t goodHash = hashes[c*nIterations + iter];
 
-            if(h != hashes[c*nIterations + iter])
+            if(h != goodHash)
             {
                 initLabTabs();
 
@@ -2658,16 +2659,15 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
                         {
                             next = false;
 
-                            FAIL() << "Bad accuracy" << endl;
-
-                            FAIL() << "Conversion code: " << names[c] << endl;
-                            FAIL() << "Iteration: " << iter << endl;
-                            FAIL() << "Hash vs Correct hash: " << h << ", " << goodHash << endl;
-                            FAIL() << "Error in: (" << x << ", " << y << ")" << endl;
-                            FAIL() << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl;
-                            FAIL() << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl;
-                            FAIL() << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl;
-                            FAIL() << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
+                            FAIL() << "Bad accuracy" << endl
+                                   << "Conversion code: " << names[c] << endl
+                                   << "Iteration: " << iter << endl
+                                   << "Hash vs Correct hash: " << h << ", " << goodHash << endl
+                                   << "Error in: (" << x << ", " << y << ")" << endl
+                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
+                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
+                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;
                         }
