@@ -31,6 +31,7 @@
         <pax.exam.version>4.8.0</pax.exam.version>
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
+        <download.cmake>false</download.cmake>
     </properties>
     <distributionManagement>
         <snapshotRepository>
@@ -41,6 +42,16 @@
 
     <modules>
         <module>opencv</module>
-        <module>opencv-it</module>
     </modules>
+    <profiles>
+        <profile>
+            <id>integration</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <modules>
+                <module>opencv-it</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>
