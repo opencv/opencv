@@ -61,6 +61,8 @@ namespace dnn
 
         virtual void copyToHost();
 
+        virtual void setHostDirty();
+
         Halide::Buffer<float> buffer;
 
     private:
@@ -80,7 +82,7 @@ namespace dnn
                        const Ptr<BackendNode>& node);
 
     // Compile Halide pipeline to specific target. Use outputs to set bounds of functions.
-    void compileHalide(std::vector<Mat> &outputs, Ptr<BackendNode>& node, int targetId);
+    void compileHalide(const std::vector<Mat> &outputs, Ptr<BackendNode>& node, int targetId);
 
     bool haveHalide();
 }  // namespace dnn
