@@ -63,15 +63,57 @@ void blobShapeFromTensor(const tensorflow::TensorProto &tensor, MatShape& shape)
     {
         const tensorflow::TensorShapeProto &_shape = tensor.tensor_shape();
         int i, n = _shape.dim_size();
-        shape.resize(n);
+        if (n)
+        {
+            shape.resize(n);
 
-        for (i = 0; i < n; i++)
-            shape[i] = (int)_shape.dim(i).size();
+            for (i = 0; i < n; i++)
+                shape[i] = (int)_shape.dim(i).size();
+        }
+        else
+            shape.resize(1, 1);  // Scalar.
     }
     else
     {
         CV_Error(Error::StsError, "Unknown shape of input tensor");
     }
+}
+
+static Mat getTensorContent(const tensorflow::TensorProto &tensor)
+{
+    std::string content = tensor.tensor_content();
+    switch (tensor.dtype())
+    {
+        case tensorflow::DT_FLOAT:
+            return Mat(1, content.size() / sizeof(float), CV_32FC1, (void*)content.c_str()).clone();
+        case tensorflow::DT_DOUBLE:
+            return Mat(1, content.size() / sizeof(double), CV_64FC1, (void*)content.c_str()).clone();
+        case tensorflow::DT_HALF:
+        {
+            Mat halfs;
+            if (!content.empty())
+            {
+                static const int kHalfSize = 2;
+                halfs = Mat(1, content.size() / kHalfSize, CV_16UC1, (void*)content.c_str());
+            }
+            else
+            {
+                const RepeatedField<int32_t>& field = tensor.half_val();
+                CV_Assert(!field.empty());
+                Mat ints(1, field.size(), CV_32SC1, (void*)field.data());
+                ints.convertTo(halfs, CV_16UC1);
+            }
+            // Reinterpret as a signed shorts just for a convertFp16 call.
+            Mat halfsSigned(halfs.size(), CV_16SC1, halfs.data);
+            Mat floats(halfs.size(), CV_32FC1);
+            convertFp16(halfsSigned, floats);
+            return floats;
+        }
+        default:
+            CV_Error(Error::StsError, "Tensor's data type is not supported");
+            break;
+    }
+    return Mat();
 }
 
 template <typename T>
@@ -90,11 +132,12 @@ void parseTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
 
     dstBlob.create(shape, CV_32F);
 
-    int size = tensor.tensor_content().size() / sizeof(T);
+    Mat tensorContent = getTensorContent(tensor);
+    int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
 
     float *dstData = dstBlob.ptr<float>();
-    const T *data = reinterpret_cast<const T*>(tensor.tensor_content().c_str());
+    const T *data = reinterpret_cast<const T*>(tensorContent.data);
 
     if (dims == 4)
     {
@@ -125,6 +168,7 @@ void blobFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
 {
     switch (tensor.dtype()) {
         case tensorflow::DT_FLOAT:
+        case tensorflow::DT_HALF:
             parseTensor<float>(tensor, dstBlob);
             break;
         case tensorflow::DT_DOUBLE:
@@ -406,7 +450,8 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     int dims = (int)shape.size();
 
     // TODO: other blob types
-    CV_Assert(tensor.dtype() == tensorflow::DT_FLOAT);
+    CV_Assert(tensor.dtype() == tensorflow::DT_FLOAT ||
+              tensor.dtype() == tensorflow::DT_HALF);
     CV_Assert(dims == 4);
 
     // REORDER kernel HWIO to OIHW
@@ -416,11 +461,12 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
 
     dstBlob.create(shape, CV_32F);
 
-    int size = tensor.tensor_content().size() / sizeof(float);
+    Mat tensorContent = getTensorContent(tensor);
+    int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
 
     float *dstData = dstBlob.ptr<float>();
-    const float *data = reinterpret_cast<const float*>(tensor.tensor_content().c_str());
+    const float *data = reinterpret_cast<const float*>(tensorContent.data);
 
     int out_c = shape[0], input_c = shape[1], height = shape[2], width = shape[3];
     int total = out_c*input_c*height*width;
@@ -753,7 +799,16 @@ void TFImporter::populateNet(Net dstNet)
                 // Multiplication by constant.
                 CV_Assert(layer.input_size() == 2);
 
-                float scale = getConstBlob(layer, value_id).float_val()[0];
+                float scale;
+                if (!getConstBlob(layer, value_id).float_val().empty())
+                    scale = getConstBlob(layer, value_id).float_val()[0];
+                else
+                {
+                    Mat scaleMat;
+                    blobFromTensor(getConstBlob(layer, value_id), scaleMat);
+                    CV_Assert(scaleMat.total() == 1 && scaleMat.type() == CV_32FC1);
+                    scale = scaleMat.at<float>(0, 0);
+                }
                 layerParams.set("scale", scale);
 
                 int id = dstNet.addLayer(name, "Power", layerParams);
