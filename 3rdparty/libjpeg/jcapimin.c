@@ -37,8 +37,8 @@ jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
   if (version != JPEG_LIB_VERSION)
     ERREXIT2(cinfo, JERR_BAD_LIB_VERSION, JPEG_LIB_VERSION, version);
   if (structsize != SIZEOF(struct jpeg_compress_struct))
-    ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE,
-             (int) SIZEOF(struct jpeg_compress_struct), (int) structsize);
+    ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE, 
+	     (int) SIZEOF(struct jpeg_compress_struct), (int) structsize);
 
   /* For debugging purposes, we zero the whole master structure.
    * But the application has already set the err pointer, and may have set
@@ -169,15 +169,15 @@ jpeg_finish_compress (j_compress_ptr cinfo)
     (*cinfo->master->prepare_for_pass) (cinfo);
     for (iMCU_row = 0; iMCU_row < cinfo->total_iMCU_rows; iMCU_row++) {
       if (cinfo->progress != NULL) {
-        cinfo->progress->pass_counter = (long) iMCU_row;
-        cinfo->progress->pass_limit = (long) cinfo->total_iMCU_rows;
-        (*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
+	cinfo->progress->pass_counter = (long) iMCU_row;
+	cinfo->progress->pass_limit = (long) cinfo->total_iMCU_rows;
+	(*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
       }
       /* We bypass the main controller and invoke coef controller directly;
        * all work is being done from the coefficient buffer.
        */
       if (! (*cinfo->coef->compress_data) (cinfo, (JSAMPIMAGE) NULL))
-        ERREXIT(cinfo, JERR_CANT_SUSPEND);
+	ERREXIT(cinfo, JERR_CANT_SUSPEND);
     }
     (*cinfo->master->finish_pass) (cinfo);
   }
@@ -198,7 +198,7 @@ jpeg_finish_compress (j_compress_ptr cinfo)
 
 GLOBAL(void)
 jpeg_write_marker (j_compress_ptr cinfo, int marker,
-                   const JOCTET *dataptr, unsigned int datalen)
+		   const JOCTET *dataptr, unsigned int datalen)
 {
   JMETHOD(void, write_marker_byte, (j_compress_ptr info, int val));
 
