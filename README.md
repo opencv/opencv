@@ -1,5 +1,7 @@
 ## OpenCV: Open Source Computer Vision Library
 
+### This is Anish Gupta's branch :)
+
 ### Introduction
 
 This is the homework assignment 1 in the EC601 class from Team 6
