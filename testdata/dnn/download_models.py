@@ -121,7 +121,17 @@ models = [
         name='SqueezeNet_v1.1',
         url='https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel',
         sha='3397f026368a45ae236403ccc81cfcbe8ebe1bd0',
-        filename='squeezenet_v1.1.caffemodel')
+        filename='squeezenet_v1.1.caffemodel'),
+    Model(
+        name='MobileNet-SSD',  # https://github.com/chuanqi305/MobileNet-SSD
+        url='https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc',
+        sha='994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a',
+        filename='MobileNetSSD_deploy.caffemodel'),
+    Model(
+        name='MobileNet-SSD',
+        url='https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/daef68a6c2f5fbb8c88404266aa28180646d17e0/MobileNetSSD_deploy.prototxt',
+        sha='d77c9cf09619470d49b82a9dd18704813a2043cd',
+        filename='MobileNetSSD_deploy.prototxt'),
 ]
 
 # Note: models will be downloaded to current working directory
