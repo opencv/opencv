@@ -62,6 +62,7 @@ static void test(const std::string& weights, const std::string& proto,
     netHalide.setInput(blobFromImage(input.clone(), 1.0, Size(), Scalar(), false));
 
     normAssert(outputDefault, outputHalide, "Second run", l1, lInf);
+    std::cout << "." << std::endl;
 
     // Swap backends.
     netHalide.setPreferableBackend(DNN_BACKEND_DEFAULT);
@@ -79,6 +80,20 @@ static void test(const std::string& weights, const std::string& proto,
 ////////////////////////////////////////////////////////////////////////////////
 // CPU target
 ////////////////////////////////////////////////////////////////////////////////
+TEST(Reproducibility_MobileNetSSD_Halide, Accuracy)
+{
+    test(findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false),
+         findDataFile("dnn/MobileNetSSD_deploy.prototxt", false),
+         "", 300, 300, "detection_out", "caffe", DNN_TARGET_CPU);
+};
+
+TEST(Reproducibility_SSD_Halide, Accuracy)
+{
+    test(findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false),
+         findDataFile("dnn/ssd_vgg16.prototxt", false),
+         "", 300, 300, "detection_out", "caffe", DNN_TARGET_CPU);
+};
+
 TEST(Reproducibility_GoogLeNet_Halide, Accuracy)
 {
     test(findDataFile("dnn/bvlc_googlenet.caffemodel", false),
@@ -126,6 +141,20 @@ TEST(Reproducibility_ENet_Halide, Accuracy)
 ////////////////////////////////////////////////////////////////////////////////
 // OpenCL target
 ////////////////////////////////////////////////////////////////////////////////
+TEST(Reproducibility_MobileNetSSD_Halide_opencl, Accuracy)
+{
+    test(findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false),
+         findDataFile("dnn/MobileNetSSD_deploy.prototxt", false),
+         "", 300, 300, "detection_out", "caffe", DNN_TARGET_OPENCL);
+};
+
+TEST(Reproducibility_SSD_Halide_opencl, Accuracy)
+{
+    test(findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false),
+         findDataFile("dnn/ssd_vgg16.prototxt", false),
+         "", 300, 300, "detection_out", "caffe", DNN_TARGET_OPENCL);
+};
+
 TEST(Reproducibility_GoogLeNet_Halide_opencl, Accuracy)
 {
     test(findDataFile("dnn/bvlc_googlenet.caffemodel", false),
