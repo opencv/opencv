@@ -65,7 +65,7 @@ public class DeployOpenCVTest {
             mavenBundle()
             .groupId("org.opencv")
             .artifactId("opencv")
-            .version("3.3.0"),
+            .versionAsInProject(),
             logLevel(LogLevelOption.LogLevel.INFO)
         };
     }
