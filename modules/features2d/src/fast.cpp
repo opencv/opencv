@@ -512,5 +512,9 @@ Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmax
     return makePtr<FastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }
 
+String FastFeatureDetector::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".FastFeatureDetector");
+}
 
 }
