@@ -2,13 +2,9 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
+import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 
 class MatMaskOperationsRun {
 
@@ -31,8 +27,10 @@ class MatMaskOperationsRun {
             System.exit(-1);
         }
 
-        Image img = toBufferedImage(src);
-        displayImage("Input", img, 0, 200);
+        HighGui.namedWindow("Input", HighGui.WINDOW_AUTOSIZE);
+        HighGui.namedWindow("Output", HighGui.WINDOW_AUTOSIZE);
+
+        HighGui.imshow( "Input", src );
         double t = System.currentTimeMillis();
 
         Mat dst0 = sharpen(src, new Mat());
@@ -40,8 +38,9 @@ class MatMaskOperationsRun {
         t = ((double) System.currentTimeMillis() - t) / 1000;
         System.out.println("Hand written function time passed in seconds: " + t);
 
-        Image img2 = toBufferedImage(dst0);
-        displayImage("Output", img2, 400, 400);
+        HighGui.imshow( "Output", dst0 );
+        HighGui.moveWindow("Output", 400, 400);
+        HighGui.waitKey();
 
         //![kern]
         Mat kern = new Mat(3, 3, CvType.CV_8S);
@@ -58,8 +57,10 @@ class MatMaskOperationsRun {
         t = ((double) System.currentTimeMillis() - t) / 1000;
         System.out.println("Built-in filter2D time passed in seconds:     " + t);
 
-        Image img3 = toBufferedImage(dst1);
-        displayImage("Output", img3, 800, 400);
+        HighGui.imshow( "Output", dst1 );
+
+        HighGui.waitKey();
+        System.exit(0);
     }
 
     //! [basic_method]
@@ -108,38 +109,12 @@ class MatMaskOperationsRun {
         return Result;
     }
     //! [basic_method]
-
-    public Image toBufferedImage(Mat m) {
-        int type = BufferedImage.TYPE_BYTE_GRAY;
-        if (m.channels() > 1) {
-            type = BufferedImage.TYPE_3BYTE_BGR;
-        }
-        int bufferSize = m.channels() * m.cols() * m.rows();
-        byte[] b = new byte[bufferSize];
-        m.get(0, 0, b); // get all the pixels
-        BufferedImage image = new BufferedImage(m.cols(), m.rows(), type);
-        final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-        System.arraycopy(b, 0, targetPixels, 0, b.length);
-        return image;
-    }
-
-    public void displayImage(String title, Image img, int x, int y) {
-        ImageIcon icon = new ImageIcon(img);
-        JFrame frame = new JFrame(title);
-        JLabel lbl = new JLabel(icon);
-        frame.add(lbl);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setLocation(x, y);
-        frame.setVisible(true);
-    }
 }
 
 public class MatMaskOperations {
     public static void main(String[] args) {
         // Load the native library.
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-
-        new MatMaskOperationsRun().run(args); // run code
+        new MatMaskOperationsRun().run(args);
     }
 }

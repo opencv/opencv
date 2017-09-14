@@ -91,6 +91,7 @@ public:
 
     String name() const;
     String extensions() const;
+    bool isExtensionSupported(const String& extensionName) const;
     String version() const;
     String vendorName() const;
     String OpenCL_C_Version() const;
@@ -160,6 +161,7 @@ public:
     uint imagePitchAlignment() const;
     uint imageBaseAddressAlignment() const;
 
+    /// deprecated, use isExtensionSupported() method (probably with "cl_khr_subgroups" value)
     bool intelSubgroupsSupport() const;
 
     size_t image2DMaxWidth() const;
