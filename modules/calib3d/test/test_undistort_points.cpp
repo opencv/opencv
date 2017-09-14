@@ -107,7 +107,7 @@ TEST(Calib3d_Undistort, stop_criteria)
     const double maxError = 1e-6;
     TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 100, maxError);
     std::vector<Point2d> pt_undist_vec;
-    undistortPoints(pt_distorted_vec, pt_undist_vec, cameraMatrix, distCoeffs, criteria);
+    undistortPoints(pt_distorted_vec, pt_undist_vec, cameraMatrix, distCoeffs, noArray(), noArray(), criteria);
 
     std::vector<Point2d> pt_redistorted_vec;
     std::vector<Point3d> pt_undist_vec_homogeneous;
