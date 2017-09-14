@@ -1256,7 +1256,10 @@ void CV_ColorLuvTest::get_test_array_types_and_sizes( int test_case_idx, vector<
 double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = test_mat[i][j].depth();
-    return depth == CV_8U ? 48 : depth == CV_16U ? 32 : 5e-2;
+    // j == 0 is for forward code, j == 1 is for inverse code
+    return (depth ==  CV_8U) ? (srgb ? 36 : 8) :
+           //(depth == CV_16U) ? 32 : // 16u is disabled
+           5e-2;
 }
 
 
@@ -2140,9 +2143,18 @@ static ushort LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
 
 enum
 {
+    lab_lut_shift = 5,
+    LAB_LUT_DIM = (1 << lab_lut_shift)+1,
     lab_base_shift = 14,
     LAB_BASE = (1 << lab_base_shift),
+    trilinear_shift = 8 - lab_lut_shift + 1,
+    TRILINEAR_BASE = (1 << trilinear_shift)
 };
+
+static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
+static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
+static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
+static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -2228,6 +2240,110 @@ static void initLabTabs()
                 v = i*i/BASE*i/BASE;
             }
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
+        }
+
+        softdouble D65[] = { Xn, softdouble::one(), Zn };
+        softfloat coeffs[9];
+
+        for(int i = 0; i < 3; i++ )
+        {
+            coeffs[i*3+2] = RGB2XYZ[i*3  ];
+            coeffs[i*3+1] = RGB2XYZ[i*3+1];
+            coeffs[i*3  ] = RGB2XYZ[i*3+2];
+        }
+
+        softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+                  C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+                  C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        softfloat dd = (D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3));
+        dd = softfloat::one()/max(dd, softfloat::eps());
+        softfloat un = dd*softfloat(13*4)*D65[0];
+        softfloat vn = dd*softfloat(13*9)*D65[1];
+
+        //u, v: [-134.0, 220.0], [-140.0, 122.0]
+        static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16);
+        static const softfloat f100(100), lbase((int)LAB_BASE);
+        static const softfloat f9of4 = softfloat(9)/softfloat(4);
+        static const softfloat f15(15), f3(3);
+        AutoBuffer<int16_t> RGB2Luvprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
+        for(int p = 0; p < LAB_LUT_DIM; p++)
+        {
+            for(int q = 0; q < LAB_LUT_DIM; q++)
+            {
+                for(int r = 0; r < LAB_LUT_DIM; r++)
+                {
+                    int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
+                    softfloat R = softfloat(p)/lld;
+                    softfloat G = softfloat(q)/lld;
+                    softfloat B = softfloat(r)/lld;
+
+                    R = applyGamma(R);
+                    G = applyGamma(G);
+                    B = applyGamma(B);
+
+                    //RGB 2 Luv LUT building
+                    {
+                        softfloat X = R*C0 + G*C1 + B*C2;
+                        softfloat Y = R*C3 + G*C4 + B*C5;
+                        softfloat Z = R*C6 + G*C7 + B*C8;
+
+                        softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
+                        L = L*f116 - f16;
+
+                        softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
+                        softfloat u = L*(X*d - un);
+                        softfloat v = L*(f9of4*Y*d - vn);
+
+                        RGB2Luvprev[idx  ] = (int16_t)cvRound(lbase*L/f100);
+                        RGB2Luvprev[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
+                        RGB2Luvprev[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
+                    }
+                }
+            }
+        }
+        for(int p = 0; p < LAB_LUT_DIM; p++)
+        {
+            for(int q = 0; q < LAB_LUT_DIM; q++)
+            {
+                for(int r = 0; r < LAB_LUT_DIM; r++)
+                {
+                    #define FILL(_p, _q, _r) \
+                        do {\
+                        int idxold = 0;\
+                        idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;\
+                        idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;\
+                        idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;\
+                        int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);\
+                        RGB2LuvLUT_s16[idxnew]    = RGB2Luvprev[idxold];\
+                        RGB2LuvLUT_s16[idxnew+8]  = RGB2Luvprev[idxold+1];\
+                        RGB2LuvLUT_s16[idxnew+16] = RGB2Luvprev[idxold+2];\
+                        } while(0)
+
+                    FILL(0, 0, 0); FILL(0, 0, 1);
+                    FILL(0, 1, 0); FILL(0, 1, 1);
+                    FILL(1, 0, 0); FILL(1, 0, 1);
+                    FILL(1, 1, 0); FILL(1, 1, 1);
+
+                    #undef FILL
+                }
+            }
+        }
+
+        for(int16_t p = 0; p < TRILINEAR_BASE; p++)
+        {
+            int16_t pp = TRILINEAR_BASE - p;
+            for(int16_t q = 0; q < TRILINEAR_BASE; q++)
+            {
+                int16_t qq = TRILINEAR_BASE - q;
+                for(int16_t r = 0; r < TRILINEAR_BASE; r++)
+                {
+                    int16_t rr = TRILINEAR_BASE - r;
+                    int16_t* w = &trilinearLUT[8*p + 8*TRILINEAR_BASE*q + 8*TRILINEAR_BASE*TRILINEAR_BASE*r];
+                    w[0]  = pp * qq * rr; w[1]  = pp * qq * r ; w[2]  = pp * q  * rr; w[3]  = pp * q  * r ;
+                    w[4]  = p  * qq * rr; w[5]  = p  * qq * r ; w[6]  = p  * q  * rr; w[7]  = p  * q  * r ;
+                }
+            }
         }
 
         initialized = true;
@@ -2338,6 +2454,62 @@ int row8uLab2RGB(const uchar* src_row, uchar *dst_row, int n, int cn, int blue_i
     return n;
 }
 
+
+int row8uRGB2Luv(const uchar* src_row, uchar *dst_row, int n, int cn, int blue_idx)
+{
+    for (int x = 0; x < n; x++)
+    {
+        int R = src_row[x*cn + (blue_idx)],
+            G = src_row[x*cn + 1],
+            B = src_row[x*cn + (blue_idx^2)];
+
+        // (LAB_BASE/255) gives more accuracy but not very much
+        static const int baseDiv = LAB_BASE/256;
+        // cx, cy, cz are in [0; LAB_BASE]
+        int cx = R*baseDiv, cy = G*baseDiv, cz = B*baseDiv;
+        int L, u, v;
+
+        //LUT idx of origin pt of cube
+        int tx = cx >> (lab_base_shift - lab_lut_shift);
+        int ty = cy >> (lab_base_shift - lab_lut_shift);
+        int tz = cz >> (lab_base_shift - lab_lut_shift);
+
+        int16_t* baseLUT = &RGB2LuvLUT_s16[3*8*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
+        int aa[8], bb[8], cc[8];
+        for(int i = 0; i < 8; i++)
+        {
+            aa[i] = baseLUT[i]; bb[i] = baseLUT[i+8]; cc[i] = baseLUT[i+16];
+        }
+
+        //x, y, z are [0; TRILINEAR_BASE)
+        static const int bitMask = (1 << trilinear_shift) - 1;
+        int xx = (cx >> (lab_base_shift - 8 - 1)) & bitMask;
+        int yy = (cy >> (lab_base_shift - 8 - 1)) & bitMask;
+        int zz = (cz >> (lab_base_shift - 8 - 1)) & bitMask;
+
+        int w[8];
+        for(int i = 0; i < 8; i++)
+        {
+            w[i] = trilinearLUT[8*xx + 8*TRILINEAR_BASE*yy + 8*TRILINEAR_BASE*TRILINEAR_BASE*zz + i];
+        }
+
+        L = aa[0]*w[0]+aa[1]*w[1]+aa[2]*w[2]+aa[3]*w[3]+aa[4]*w[4]+aa[5]*w[5]+aa[6]*w[6]+aa[7]*w[7];
+        u = bb[0]*w[0]+bb[1]*w[1]+bb[2]*w[2]+bb[3]*w[3]+bb[4]*w[4]+bb[5]*w[5]+bb[6]*w[6]+bb[7]*w[7];
+        v = cc[0]*w[0]+cc[1]*w[1]+cc[2]*w[2]+cc[3]*w[3]+cc[4]*w[4]+cc[5]*w[5]+cc[6]*w[6]+cc[7]*w[7];
+
+        L = CV_DESCALE(L, trilinear_shift*3);
+        u = CV_DESCALE(u, trilinear_shift*3);
+        v = CV_DESCALE(v, trilinear_shift*3);
+
+        dst_row[x*3    ] = saturate_cast<uchar>(L/baseDiv);
+        dst_row[x*3 + 1] = saturate_cast<uchar>(u/baseDiv);
+        dst_row[x*3 + 2] = saturate_cast<uchar>(v/baseDiv);
+    }
+
+    return n;
+}
+
+
 int row8uLabChoose(const uchar* src_row, uchar *dst_row, int n, bool forward, int blue_idx, bool srgb)
 {
     if(forward)
@@ -2398,6 +2570,85 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
                     uchar* probeRow = probe.ptr(y);
                     uchar* resultRow = result.ptr(y);
                     row8uLabChoose(probeRow, goldRow, probe.cols, forward, blueIdx, srgb);
+
+                    for(int x = 0; next && x < probe.cols; x++)
+                    {
+                        uchar* px = probeRow  + x*3;
+                        uchar* gx = goldRow   + x*3;
+                        uchar* rx = resultRow + x*3;
+                        if(gx[0] != rx[0] || gx[1] != rx[1] || gx[2] != rx[2])
+                        {
+                            next = false;
+
+                            FAIL() << "Bad accuracy" << endl
+                                   << "Conversion code: " << names[c] << endl
+                                   << "Iteration: " << iter << endl
+                                   << "Hash vs Correct hash: " << h << ", " << goodHash << endl
+                                   << "Error in: (" << x << ", " << y << ")" << endl
+                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
+                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
+                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
+
+                            break;
+                        }
+                    }
+                }
+                if(next)
+                    // this place should never be reached
+                    throw std::runtime_error("Test system error: hash function mismatch when results are the same");
+            }
+        }
+    }
+}
+
+
+TEST(Imgproc_ColorLuv_Full, bitExactness)
+{
+    /* to be expanded by more codes when bit-exactness is done for them */
+    int codes[] = { CV_BGR2Luv, CV_RGB2Luv };
+    string names[] = { "CV_BGR2Luv", "CV_RGB2Luv" };
+    size_t nCodes = sizeof(codes)/sizeof(codes[0]);
+
+    // need to be recalculated each time we change Luv algorithms, RNG or test system
+    const int nIterations = 8;
+    uint32_t hashes[] = {
+        0x9d4d983a, 0xd3d7b220, 0xd503b661, 0x73581d9b, 0x3beec8a6, 0xea6dfc16, 0xc867f4cd, 0x2c97f43a,
+        0x8152fbc9, 0xd7e764a6, 0x5e01f9a3, 0x53e8961e, 0x6a64f1f7, 0x4fa89a44, 0x67096871, 0x4f3bce87,
+    };
+
+    RNG rng(0);
+    // blueIdx x srgb x direction
+    bool next = true;
+    for(size_t c = 0; next && c < nCodes; c++)
+    {
+        size_t v = c;
+        int  blueIdx = (v % 2 != 0) ? 2 : 0; v /=2;
+        /* bool    srgb = (v % 2 == 0); v /= 2; */
+        /* bool forward = (v % 2 == 0); */
+
+        for(int iter = 0; next && iter < nIterations; iter++)
+        {
+            Mat probe(256, 256, CV_8UC3), result;
+            rng.fill(probe, RNG::UNIFORM, 0, 255, true);
+
+            cvtColor(probe, result, codes[c]);
+
+            uint32_t h = adler32(result);
+            uint32_t goodHash = hashes[c*nIterations + iter];
+
+            if(h != goodHash)
+            {
+                initLabTabs();
+
+                vector<uchar> goldBuf(probe.cols*4);
+                uchar* goldRow = &goldBuf[0];
+                for(int y = 0; next && y < probe.rows; y++)
+                {
+                    uchar* probeRow = probe.ptr(y);
+                    uchar* resultRow = result.ptr(y);
+
+                    row8uRGB2Luv(probeRow, goldRow, probe.cols, 3, blueIdx);
 
                     for(int x = 0; next && x < probe.cols; x++)
                     {
