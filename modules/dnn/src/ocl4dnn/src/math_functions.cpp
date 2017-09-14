@@ -59,58 +59,35 @@ namespace ocl4dnn
 // will use the image directly. It's caller's responsibility to
 // release the created image.
 template<typename Dtype>
-void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, UMat buffer, int offset,
-                                  bool is_matrix_a, bool transpose,
-                                  bool padding, int padded_height,
-                                  int padded_width, int height,
-                                  int width, int ld)
+ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
+                                          bool is_matrix_a, bool transpose,
+                                          bool padding, int padded_height,
+                                          int padded_width, int height,
+                                          int width, int ld)
 {
     ocl::Context ctx = ocl::Context::getDefault();
     ocl::Queue queue = ocl::Queue::getDefault();
-    cl_image_desc desc;
-    cl_image_format format;
+    ocl::Image2D image;
 
-    memset(&desc, 0, sizeof(desc));
-    int src_offset = sizeof(Dtype) * offset;
     if (!is_matrix_a && transpose)
     {
-        // For matrix B with transpose, we need to handle them differently.
-        // As we can't use the sub group block read to get a row easily,
-        // we have to use CL_FLOAT type with read_imagef to get the row.
-        cl_int err;
-        format.image_channel_data_type = CL_FLOAT;
-        format.image_channel_order = CL_R;
-        desc.image_type = CL_MEM_OBJECT_IMAGE2D;
-        desc.image_width = width;
-        desc.image_height = height;
-
-        if (*image == NULL)
-        {
-            *image = clCreateImage((cl_context)ctx.ptr(),
-                                   CL_MEM_READ_WRITE,
-                                   &format,
-                                   &desc,
-                                   NULL,
-                                   &err);
-            OCL_CHECK(err);
-        }
-
         if (ld == width)
         {
-            size_t origin[] = {0, 0, 0};
-            size_t region[] = {(size_t)desc.image_width, (size_t)desc.image_height, 1};
-
-            OCL_CHECK(clEnqueueCopyBufferToImage((cl_command_queue)queue.ptr(),
-                                                 (cl_mem) buffer.handle(ACCESS_READ), *image, src_offset,
-                                                 origin, region, 0, NULL, NULL));
+            image = ocl::Image2D(buffer);
         } else {
+            // For matrix B with transpose, we need to handle them differently.
+            // As we can't use the sub group block read to get a row easily,
+            // we have to use CL_FLOAT type with read_imagef to get the row.
+            UMat mat(height, width, CV_32FC1);
+            image = ocl::Image2D(mat);
+
             ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_transpose_float", ocl::dnn::gemm_image_oclsrc);
 
             size_t global_copy[2];
             global_copy[0] = width;
             global_copy[1] = height;
             oclk_gemm_copy.set(0, ocl::KernelArg::PtrReadOnly(buffer));
-            oclk_gemm_copy.set(1, (cl_mem) *image);
+            oclk_gemm_copy.set(1, (cl_mem) image.ptr());
             oclk_gemm_copy.set(2, offset);
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
@@ -118,63 +95,41 @@ void ocl4dnnGEMMCopyBufferToImage(cl_mem *image, UMat buffer, int offset,
             oclk_gemm_copy.run(2, global_copy, NULL, false);
         }
     } else {
-        if (*image == NULL)
-        {
-            desc.image_type = CL_MEM_OBJECT_IMAGE2D;
-            format.image_channel_data_type = CL_UNSIGNED_INT8;
-            format.image_channel_order = CL_RGBA;
-
-            if (!padding)
-            {
-                desc.image_width = width;
-                desc.image_height = height;
-            } else {
-                desc.image_width = padded_width;
-                desc.image_height = padded_height;
-            }
-            cl_int err;
-            *image = clCreateImage((cl_context)ctx.ptr(),
-                                   desc.buffer ? CL_MEM_READ_ONLY : CL_MEM_READ_WRITE,
-                                   &format,
-                                   &desc,
-                                   NULL,
-                                   &err);
-            OCL_CHECK(err);
-        }
-        if (!padding && desc.buffer != NULL)
-            return;
-        if (!padding && desc.buffer == NULL)
+        if (!padding)
         {
             // copy without padding.
-            size_t origin[] = {0, 0, 0};
-            size_t region[] = {(size_t)width, (size_t)height, 1};
-            OCL_CHECK(clEnqueueCopyBufferToImage((cl_command_queue)queue.ptr(),
-                                                 (cl_mem) buffer.handle(ACCESS_READ), *image, src_offset,
-                                                 origin, region, 0, NULL, NULL));
+            image = ocl::Image2D(buffer);
         } else {
+            UMat mat(padded_height, padded_width, CV_8UC4);
+            image = ocl::Image2D(mat);
+
             ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_no_transpose_float",
                                        ocl::dnn::gemm_image_oclsrc);
 
             size_t global_copy[2];
-            global_copy[0] = padding ? padded_width : width;
-            global_copy[1] = padding ? padded_height : height;
+            global_copy[0] = padded_width;
+            global_copy[1] = padded_height;
+
             oclk_gemm_copy.set(0, ocl::KernelArg::PtrReadOnly(buffer));
-            oclk_gemm_copy.set(1, (cl_mem) *image);
+            oclk_gemm_copy.set(1, (cl_mem) image.ptr());
             oclk_gemm_copy.set(2, offset);
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
             oclk_gemm_copy.set(5, ld);
+
             oclk_gemm_copy.run(2, global_copy, NULL, false);
         }
     }
+
+    return image;
 }
 
 template
-void ocl4dnnGEMMCopyBufferToImage<float>(cl_mem *image, UMat buffer, int offset,
-                                         bool is_matrix_a, bool transpose,
-                                         bool padding, int padded_height,
-                                         int padded_width, int height,
-                                         int width,  int ld);
+ocl::Image2D ocl4dnnGEMMCopyBufferToImage<float>(UMat buffer, int offset,
+                                                 bool is_matrix_a, bool transpose,
+                                                 bool padding, int padded_height,
+                                                 int padded_width, int height,
+                                                 int width,  int ld);
 
 enum gemm_type_t
 {
@@ -240,8 +195,8 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
     ocl::Context ctx = ocl::Context::getDefault();
     ocl::Queue queue = ocl::Queue::getDefault();
 
-    cl_mem ImA = NULL;
-    cl_mem ImB = NULL;
+    ocl::Image2D ImA;
+    ocl::Image2D ImB;
 
     std::string kernel_name("gemm_");
     if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE)
@@ -321,19 +276,17 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
 
                 if (!is_image_a)
                 {
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImA,
-                                                        A, blockA_offset,
-                                                        true, TransA != CblasNoTrans,
-                                                        padding_A, imageA_h, imageA_w,
-                                                        blockA_height, blockA_width, ldA);
+                    ImA = ocl4dnnGEMMCopyBufferToImage<Dtype>(A, blockA_offset,
+                                                              true, TransA != CblasNoTrans,
+                                                              padding_A, imageA_h, imageA_w,
+                                                              blockA_height, blockA_width, ldA);
                 }
                 if (!is_image_b)
                 {
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImB,
-                                                        B, blockB_offset,
-                                                        false, false,
-                                                        padding_B, imageB_h, imageB_w,
-                                                        blockB_height, blockB_width, ldB);
+                    ImB = ocl4dnnGEMMCopyBufferToImage<Dtype>(B, blockB_offset,
+                                                              false, false,
+                                                              padding_B, imageB_h, imageB_w,
+                                                              blockB_height, blockB_width, ldB);
                 }
             } else {
                 // We will use normal read_imagef to read image B when B has transpose.
@@ -342,25 +295,19 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                 {
                     bool padding;
                     padding = !is_image_b;
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImA,
-                                                        A, blockA_offset,
-                                                        true, TransA != CblasNoTrans,
-                                                        padding, imageA_h, imageA_w,
-                                                        blockA_height, blockA_width, ldA);
+                    ImA = ocl4dnnGEMMCopyBufferToImage<Dtype>(A, blockA_offset,
+                                                              true, TransA != CblasNoTrans,
+                                                              padding, imageA_h, imageA_w,
+                                                              blockA_height, blockA_width, ldA);
                 }
 
                 if (!is_image_b && (K % use_buffer_indicator != 0))
                 {
-                    ocl4dnnGEMMCopyBufferToImage<Dtype>(&ImB,
-                                                        B, blockB_offset,
-                                                        false, true, false, imageB_h, imageB_w,
-                                                        blockB_height, blockB_width, ldB);
+                    ImB = ocl4dnnGEMMCopyBufferToImage<Dtype>(B, blockB_offset,
+                                                              false, true, false, imageB_h, imageB_w,
+                                                              blockB_height, blockB_width, ldB);
                 }
             }
-            if (is_image_a)
-                ImA = (cl_mem) A.handle(ACCESS_READ);
-            if (is_image_b)
-                ImB = (cl_mem) B.handle(ACCESS_READ);
 
             size_t global[2];
             if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE)
@@ -376,10 +323,17 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
             local[1] = 1;
 
             cl_uint arg_idx = 0;
-            oclk_gemm_float.set(arg_idx++, (cl_mem) ImA);
+            if (is_image_a)
+                oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(A));
+            else
+                oclk_gemm_float.set(arg_idx++, (cl_mem) ImA.ptr());
+
             if (TransB == CblasNoTrans || is_image_b || (K % use_buffer_indicator != 0))
             {
-                oclk_gemm_float.set(arg_idx++, (cl_mem) ImB);
+                if (is_image_b)
+                    oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(B));
+                else
+                    oclk_gemm_float.set(arg_idx++, (cl_mem) ImB.ptr());
             } else {
                 oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(B));
                 oclk_gemm_float.set(arg_idx++, blockB_offset);
@@ -438,11 +392,6 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                 A_start_x += blockA_width;
         }
     }
-
-    if (ImA && !is_image_a)
-        clReleaseMemObject(ImA);
-    if (ImB && !is_image_b)
-        clReleaseMemObject(ImB);
 
     return true;
 }
