@@ -475,15 +475,15 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
                           InputArray _Rmat,
                           InputArray _Pmat )
 {
-    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01), _Rmat, _Pmat);
+    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 }
 
 void cv::undistortPoints( InputArray _src, OutputArray _dst,
                           InputArray _cameraMatrix,
                           InputArray _distCoeffs,
-                          TermCriteria criteria,
                           InputArray _Rmat,
-                          InputArray _Pmat )
+                          InputArray _Pmat,
+                          TermCriteria criteria)
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();

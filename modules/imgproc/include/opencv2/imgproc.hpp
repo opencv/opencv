@@ -3040,10 +3040,9 @@ CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
     @note Default version of cv::undistortPoints does 5 iterations to compute undistorted points.
 
  */
-CV_EXPORTS_AS(undistortPointsExt) void undistortPoints( InputArray src, OutputArray dst,
+CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
-                                   TermCriteria criteria,
-                                   InputArray R = noArray(), InputArray P = noArray());
+                                   InputArray R, InputArray P, TermCriteria criteria);
 
 //! @} imgproc_transform
 
