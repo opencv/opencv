@@ -146,6 +146,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         virtual void copyToHost() = 0;
 
+        /**
+         * @brief Indicate that an actual data is on CPU.
+         */
+        virtual void setHostDirty() = 0;
+
         int backendId;  //!< Backend identifier.
         int targetId;   //!< Target identifier.
     };
