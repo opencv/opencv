@@ -44,8 +44,10 @@
 #ifndef __CUVID_VIDEO_SOURCE_HPP__
 #define __CUVID_VIDEO_SOURCE_HPP__
 
-#include <nvcuvid.h>
-
+#if CUDA_VERSION_STRING == "9.0"
+    #include <dynlink_nvcuvid.h>
+#else
+    #include <nvcuvid.h>
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/cudacodec.hpp"
 #include "video_source.hpp"
