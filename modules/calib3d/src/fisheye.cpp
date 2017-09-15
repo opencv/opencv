@@ -475,17 +475,26 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
 
         for( int j = 0; j < size.width; ++j)
         {
-            double x = _x/_w, y = _y/_w;
+            double u, v;
+            if( _w <= 0)
+            {
+                u = (_x > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+                v = (_y > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+            }
+            else
+            {
+                double x = _x/_w, y = _y/_w;
 
-            double r = sqrt(x*x + y*y);
-            double theta = atan(r);
+                double r = sqrt(x*x + y*y);
+                double theta = atan(r);
 
-            double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;
-            double theta_d = theta * (1 + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8);
+                double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;
+                double theta_d = theta * (1 + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8);
 
-            double scale = (r == 0) ? 1.0 : theta_d / r;
-            double u = f[0]*x*scale + c[0];
-            double v = f[1]*y*scale + c[1];
+                double scale = (r == 0) ? 1.0 : theta_d / r;
+                u = f[0]*x*scale + c[0];
+                v = f[1]*y*scale + c[1];
+            }
 
             if( m1type == CV_16SC2 )
             {
