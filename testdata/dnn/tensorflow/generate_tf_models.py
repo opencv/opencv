@@ -134,6 +134,18 @@ bn = tf.contrib.layers.batch_norm(inputs=inp, fused=True, is_training=False,
                                   })
 save(inp, bn, 'fused_batch_norm')
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 5, 6, 3], 'input')
+weights = tf.Variable(tf.random_normal([3, 3, 3, 4]), name='weights')
+conv = tf.nn.atrous_conv2d(inp, weights, rate=2, padding='VALID')
+relu = tf.nn.relu(conv)
+save(inp, relu, 'atrous_conv2d_valid')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 5, 10, 3], 'input')
+weights = tf.Variable(tf.random_normal([3, 5, 3, 4]), name='weights')
+conv = tf.nn.atrous_conv2d(inp, weights, rate=2, padding='SAME')
+relu = tf.nn.relu(conv)
+save(inp, relu, 'atrous_conv2d_same')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
