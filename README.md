@@ -35,3 +35,8 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 
 * To build  openCV run build.sh: `./build.sh`
 
+### Install
+
+* To install run first build the project using build.sh
+* Open the build directory `cd build`
+* Install `sudo make install`
