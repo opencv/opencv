@@ -245,6 +245,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;
+        bool ceilMode;
 
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
@@ -255,6 +256,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool logSoftMax;
 
         static Ptr<SoftmaxLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LPNormalizeLayer : public Layer
+    {
+    public:
+        float pnorm, epsilon;
+
+        static Ptr<LPNormalizeLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS InnerProductLayer : public Layer
@@ -294,6 +303,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         int axis;
+        /**
+         * @brief Add zero padding in case of concatenation of blobs with different
+         * spatial sizes.
+         *
+         * Details: https://github.com/torch/nn/blob/master/doc/containers.md#depthconcat
+         */
+        bool padding;
 
         static Ptr<ConcatLayer> create(const LayerParams &params);
     };
