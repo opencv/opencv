@@ -81,7 +81,7 @@ public:
 
         Size outSize = Size(outputs[0].size[3], outputs[0].size[2]);
         getConvPoolPaddings(Size(input.size[3], input.size[2]), outSize,
-                kernel, stride, padMode, pad);
+                kernel, stride, padMode, dilation, pad);
     }
 
     bool hasBias() const
@@ -183,11 +183,11 @@ public:
         }
         else
         {
-            getConvPoolOutParams(Size(inpW, inpH), kernel, stride, padMode, out);
+            getConvPoolOutParams(Size(inpW, inpH), kernel, stride, padMode, dilation, out);
         }
 
         int ngroups = inpCn / blobs[0].size[1];
-        CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
+        CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
         int dims[] = {inputs[0][0], outCn, out.height, out.width};
         outputs.resize(inputs.size(), shape(dims));

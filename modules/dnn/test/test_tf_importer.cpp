@@ -96,6 +96,8 @@ static void runTensorFlowNet(const std::string& prefix,
 TEST(Test_TensorFlow, single_conv)
 {
     runTensorFlowNet("single_conv");
+    runTensorFlowNet("atrous_conv2d_valid");
+    runTensorFlowNet("atrous_conv2d_same");
 }
 
 TEST(Test_TensorFlow, padding)

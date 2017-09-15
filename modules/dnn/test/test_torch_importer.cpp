@@ -56,11 +56,11 @@ using namespace cv::dnn;
 template<typename TStr>
 static std::string _tf(TStr filename, bool inTorchDir = true)
 {
-    String path = getOpenCVExtraDir() + "/dnn/";
+    String path = "dnn/";
     if (inTorchDir)
         path += "torch/";
     path += filename;
-    return path;
+    return findDataFile(path, false);
 }
 
 TEST(Torch_Importer, simple_read)
@@ -123,6 +123,7 @@ TEST(Torch_Importer, run_reshape)
     runTorchNet("net_reshape");
     runTorchNet("net_reshape_batch");
     runTorchNet("net_reshape_single_sample");
+    runTorchNet("net_reshape_channels", "", false, true);
 }
 
 TEST(Torch_Importer, run_linear)
@@ -138,6 +139,7 @@ TEST(Torch_Importer, run_paralel)
 TEST(Torch_Importer, run_concat)
 {
     runTorchNet("net_concat", "l5_torchMerge");
+    runTorchNet("net_depth_concat", "", false, true);
 }
 
 TEST(Torch_Importer, run_deconv)
@@ -172,6 +174,27 @@ TEST(Torch_Importer, net_logsoftmax)
     runTorchNet("net_logsoftmax_spatial");
 }
 
+TEST(Torch_Importer, net_lp_pooling)
+{
+    runTorchNet("net_lp_pooling_square", "", false, true);
+    runTorchNet("net_lp_pooling_power", "", false, true);
+}
+
+TEST(Torch_Importer, net_conv_gemm_lrn)
+{
+    runTorchNet("net_conv_gemm_lrn", "", false, true);
+}
+
+TEST(Torch_Importer, net_inception_block)
+{
+    runTorchNet("net_inception_block", "", false, true);
+}
+
+TEST(Torch_Importer, net_normalize)
+{
+    runTorchNet("net_normalize", "", false, true);
+}
+
 TEST(Torch_Importer, ENet_accuracy)
 {
     Net net;
@@ -200,6 +223,26 @@ TEST(Torch_Importer, ENet_accuracy)
         Mat out = net.forward();
         normAssert(ref, out, "", 0.00044, 0.44);
     }
+}
+
+TEST(Torch_Importer, OpenFace_accuracy)
+{
+    const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
+    Net net = readNetFromTorch(model);
+
+    Mat sample = imread(findDataFile("cv/shared/lena.png", false));
+    Mat sampleF32(sample.size(), CV_32FC3);
+    sample.convertTo(sampleF32, sampleF32.type());
+    sampleF32 /= 255;
+    resize(sampleF32, sampleF32, Size(96, 96), 0, 0, INTER_NEAREST);
+
+    Mat inputBlob = blobFromImage(sampleF32);
+
+    net.setInput(inputBlob);
+    Mat out = net.forward();
+
+    Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
+    normAssert(out, outRef);
 }
 
 }

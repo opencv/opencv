@@ -1192,6 +1192,7 @@ protected:
 
 /** @example lsd_lines.cpp
 An example using the LineSegmentDetector
+\image html building_lsd.png "Sample output image" width=434 height=300
 */
 
 /** @brief Line segment detector class
@@ -1347,6 +1348,11 @@ operation is shifted.
  */
 CV_EXPORTS_W Mat getStructuringElement(int shape, Size ksize, Point anchor = Point(-1,-1));
 
+/** @example Smoothing.cpp
+Sample code for simple filters
+![Sample screenshot](Smoothing_Tutorial_Result_Median_Filter.jpg)
+Check @ref tutorial_gausian_median_blur_bilateral_filter "the corresponding tutorial" for more details
+ */
 /** @brief Blurs an image using the median filter.
 
 The function smoothes an image using the median filter with the \f$\texttt{ksize} \times
@@ -1549,6 +1555,11 @@ CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
 
+/** @example Sobel_Demo.cpp
+Sample code using Sobel and/or Scharr OpenCV functions to make a simple Edge Detector
+![Sample screenshot](Sobel_Derivatives_Tutorial_Result.jpg)
+Check @ref tutorial_sobel_derivatives "the corresponding tutorial" for more details
+ */
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
 In all cases except one, the \f$\texttt{ksize} \times \texttt{ksize}\f$ separable kernel is used to
@@ -1681,7 +1692,9 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @{
 
 /** @example edge.cpp
-  An example on using the canny edge detector
+  This program demonstrates usage of the Canny edge detector
+
+  Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
 */
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
@@ -1908,6 +1921,7 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
 
 /** @example houghlines.cpp
 An example using the Hough line detector
+![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
 
 /** @brief Finds lines in a binary image using the standard Hough transform.
@@ -2105,7 +2119,9 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
 //! @{
 
 /** @example morphology2.cpp
-  An example using the morphological operations
+Advanced morphology Transformations sample code
+![Sample screenshot](Morphology_2_Tutorial_Result.jpg)
+Check @ref tutorial_opening_closing_hats "the corresponding tutorial" for more details
 */
 
 /** @brief Erodes an image by using a specific structuring element.
@@ -2135,6 +2151,11 @@ CV_EXPORTS_W void erode( InputArray src, OutputArray dst, InputArray kernel,
                          int borderType = BORDER_CONSTANT,
                          const Scalar& borderValue = morphologyDefaultBorderValue() );
 
+/** @example Morphology_1.cpp
+Erosion and Dilation sample code
+![Sample Screenshot-Erosion](Morphology_1_Tutorial_Erosion_Result.jpg)![Sample Screenshot-Dilation](Morphology_1_Tutorial_Dilation_Result.jpg)
+Check @ref tutorial_erosion_dilatation "the corresponding tutorial" for more details
+ */
 /** @brief Dilates an image by using a specific structuring element.
 
 The function dilates the source image using the specified structuring element that determines the
@@ -3036,6 +3057,13 @@ cv::stereoRectify can be passed here. If the matrix is empty, the identity new c
 CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
                                    InputArray R = noArray(), InputArray P = noArray());
+/** @overload
+    @note Default version of cv::undistortPoints does 5 iterations to compute undistorted points.
+
+ */
+CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
+                                   InputArray cameraMatrix, InputArray distCoeffs,
+                                   InputArray R, InputArray P, TermCriteria criteria);
 
 //! @} imgproc_transform
 
@@ -3377,6 +3405,7 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( InputArray src, OutputArray dst,
 
 /** @example grabcut.cpp
 An example using the GrabCut algorithm
+![Sample Screenshot](grabcut_output1.jpg)
  */
 
 /** @brief Runs the GrabCut algorithm.
@@ -4399,7 +4428,8 @@ CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 /** @example contours2.cpp
-  An example using the drawContour functionality
+  An example program illustrates the use of cv::findContours and cv::drawContours
+  \image html WindowsQtContoursOutput.png "Screenshot of the program"
 */
 
 /** @example segment_objects.cpp
