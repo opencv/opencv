@@ -91,6 +91,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MVN,            MVNLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(LPNormalize,    LPNormalizeLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(ReLU,           ReLULayer);
     CV_DNN_REGISTER_LAYER_CLASS(ChannelsPReLU,  ChannelsPReLULayer);
