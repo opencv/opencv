@@ -478,8 +478,8 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
             double u, v;
             if( _w <= 0)
             {
-                _x > 0 ? u = -std::numeric_limits<double>::infinity() : u = std::numeric_limits<double>::infinity();
-                _y > 0 ? v = -std::numeric_limits<double>::infinity() : v = std::numeric_limits<double>::infinity();
+                u = (_x > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+                v = (_y > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
             }
             else
             {
