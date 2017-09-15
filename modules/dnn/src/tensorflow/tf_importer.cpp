@@ -88,6 +88,8 @@ static Mat getTensorContent(const tensorflow::TensorProto &tensor)
             return Mat(1, content.size() / sizeof(float), CV_32FC1, (void*)content.c_str()).clone();
         case tensorflow::DT_DOUBLE:
             return Mat(1, content.size() / sizeof(double), CV_64FC1, (void*)content.c_str()).clone();
+        case tensorflow::DT_INT32:
+            return Mat(1, content.size() / sizeof(int32_t), CV_32SC1, (void*)content.c_str()).clone();
         case tensorflow::DT_HALF:
         {
             Mat halfs;
@@ -563,7 +565,7 @@ void TFImporter::populateNet(Net dstNet)
 
     for (int li = 0; li < layersSize; li++)
     {
-        const tensorflow::NodeDef &layer = net.node(li);
+        tensorflow::NodeDef layer = net.node(li);
         String name = layer.name();
         String type = layer.op();
         LayerParams layerParams;
@@ -571,8 +573,38 @@ void TFImporter::populateNet(Net dstNet)
         if(layers_to_ignore.find(li) != layers_to_ignore.end())
             continue;
 
-        if (type == "Conv2D")
+        if (type == "Conv2D" || type == "SpaceToBatchND")
         {
+            // The first node of dilated convolution subgraph.
+            // Extract input node, dilation rate and paddings.
+            std::string input = layer.input(0);
+            if (type == "SpaceToBatchND")
+            {
+                // op: "SpaceToBatchND"
+                // input: "input"
+                // input: "SpaceToBatchND/block_shape"
+                // input: "SpaceToBatchND/paddings"
+                CV_Assert(layer.input_size() == 3);
+
+                DictValue dilation = parseDims(getConstBlob(layer, value_id, 1));
+                CV_Assert(dilation.size() == 2 && dilation.get<int>(0) == dilation.get<int>(1));
+                layerParams.set("dilation", dilation.get<int>(0));
+
+                Mat paddings;
+                parseTensor<int>(getConstBlob(layer, value_id, 2), paddings);
+
+                // paddings is a 2x2 matrix: [[top, bot], [left, right]]
+                layerParams.set("pad_h", paddings.at<float>(0));
+                layerParams.set("pad_w", paddings.at<float>(2));
+
+                StrIntVector next_layers = getNextLayers(net, name, "Conv2D");
+                CV_Assert(next_layers.size() == 1);
+                layer = net.node(next_layers[0].second);
+                layers_to_ignore[next_layers[0].second] = next_layers[0].first;
+                name = layer.name();
+                type = layer.op();
+            }
+
             layerParams.set("bias_term", false);
             layerParams.blobs.resize(1);
 
@@ -597,11 +629,21 @@ void TFImporter::populateNet(Net dstNet)
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
 
+            // The final node of dilated convolution subgraph.
+            next_layers = getNextLayers(net, name, "BatchToSpaceND");
+            if (!next_layers.empty())
+            {
+                layerParams.set("pad_mode", "");  // We use padding values.
+                CV_Assert(next_layers.size() == 1);
+                ExcludeLayer(net, next_layers[0].second, 0, false);
+                layers_to_ignore[next_layers[0].second] = next_layers[0].first;
+            }
+
             int id = dstNet.addLayer(name, "Convolution", layerParams);
             layer_id[name] = id;
 
             // one input only
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            connect(layer_id, dstNet, parsePin(input), id, 0);
         }
         else if (type == "BiasAdd" || type == "Add")
         {
