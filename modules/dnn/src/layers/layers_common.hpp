@@ -64,11 +64,11 @@ void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernel
 
 void getConvPoolOutParams(const Size& inp, const Size &kernel,
                           const Size &stride, const String &padMode,
-                          Size& out);
+                          const Size &dilation, Size& out);
 
 void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
-                         const String &padMode, Size &pad);
+                         const String &padMode, const Size &dilation, Size &pad);
 
 }
 }

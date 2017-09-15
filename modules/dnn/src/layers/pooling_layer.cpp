@@ -93,7 +93,7 @@ public:
             kernel = inp;
         }
 
-        getConvPoolPaddings(inp, out, kernel, stride, padMode, pad);
+        getConvPoolPaddings(inp, out, kernel, stride, padMode, Size(1, 1), pad);
     }
 
     virtual bool supportBackend(int backendId)
@@ -592,8 +592,7 @@ public:
         }
         else
         {
-            getConvPoolOutParams(in, kernel, stride,
-                                 padMode, out);
+            getConvPoolOutParams(in, kernel, stride, padMode, Size(1, 1), out);
         }
 
         outputs.resize(type == MAX ? 2 * inputs.size() : inputs.size());
