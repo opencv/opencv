@@ -8,9 +8,9 @@ This is the homework assignment 1 in the EC601 class from Team 6
 
 ### Team Members
 
-* Yu Zhoa
-* Hongtao Zhao
-* Anish Gupta
+* Yu Zhoa (umsjtu601a)
+* Hongtao Zhao (bruttoz)
+* Anish Gupta (nkanish2002)
 
 ### Resources
 
