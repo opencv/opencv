@@ -1,4 +1,5 @@
 import 'nn'
+import 'dpnn'
 
 function fill_net(net)
 	if net.modules then
@@ -39,7 +40,7 @@ net_simple:add(nn.Sigmoid())
 save(net_simple, torch.Tensor(2, 3, 25, 35), 'net_simple')
 
 local net_pool_max = nn.Sequential()
-net_pool_max:add(nn.SpatialMaxPooling(4,5, 3,2, 1,2):ceil()) --TODO: add ceil and floor modes
+net_pool_max:add(nn.SpatialMaxPooling(4,5, 3,2, 1,2):ceil())
 local net = save(net_pool_max, torch.rand(2, 3, 50, 30), 'net_pool_max')
 torch.save('net_pool_max_output_2.txt', net.modules[1].indices - 1, 'ascii')
 
@@ -65,6 +66,10 @@ net_reshape_single_sample:add(nn.Linear(3 * 4 * 5, 10))
 save(net_reshape_single_sample, torch.rand(1, 3, 4, 5), 'net_reshape_single_sample')
 
 save(nn.Linear(7, 3), torch.rand(13, 7), 'net_linear_2d')
+
+local net_reshape_channels = nn.Sequential()
+net_reshape_channels:add(nn.Reshape(20))
+save(net_reshape_channels, torch.rand(2, 1, 10, 2), 'net_reshape_channels')
 
 local net_parallel = nn.Parallel(4, 2)
 net_parallel:add(nn.Sigmoid())
@@ -104,3 +109,52 @@ local net_logsoftmax = nn.Sequential()
 net_logsoftmax:add(nn.LogSoftMax())
 save(net_logsoftmax, torch.rand(3, 4, 1, 1), 'net_logsoftmax')
 save(net_logsoftmax, torch.rand(1, 6, 4, 3), 'net_logsoftmax_spatial')
+
+local net_lp_pooling_square = nn.Sequential()
+net_lp_pooling_square:add(nn.SpatialLPPooling(-1, 2, 2,2, 2,2))  -- The first argument isn't used
+net_lp_pooling_square:add(nn.Tanh())
+save(net_lp_pooling_square, torch.rand(3, 7, 8, 10), 'net_lp_pooling_square')
+
+local net_lp_pooling_power = nn.Sequential()
+net_lp_pooling_power:add(nn.SpatialLPPooling(-1, 3, 3,3, 2,2))  -- The first argument isn't used
+net_lp_pooling_power:add(nn.Sigmoid())
+save(net_lp_pooling_power, torch.rand(3, 7, 6, 7), 'net_lp_pooling_power')
+
+local net_conv_gemm_lrn = nn.Sequential()
+net_conv_gemm_lrn:add(nn.SpatialConvolutionMM(4,7, 3,3, 1,1, 1,1))
+net_conv_gemm_lrn:add(nn.SpatialCrossMapLRN(3))
+save(net_conv_gemm_lrn, torch.rand(2, 4, 5, 6), 'net_conv_gemm_lrn')
+
+local net_depth_concat = nn.DepthConcat(1);
+net_depth_concat:add(nn.SpatialConvolutionMM(3, 4, 1, 1))
+net_depth_concat:add(nn.SpatialConvolutionMM(3, 5, 3, 3))
+net_depth_concat:add(nn.SpatialConvolutionMM(3, 2, 4, 4))
+save(net_depth_concat, torch.rand(2, 3, 7, 7), 'net_depth_concat')
+
+local net_inception_block = nn.Sequential()
+net_inception_block:add(nn.Inception{
+	inputSize = 3,  -- Number of input channels
+	kernelSize = {3},
+	kernelStride = {1},
+	outputSize = {4},
+	reduceSize = {4},
+	pool = nn.SpatialMaxPooling(3, 3, 1, 1, 1, 1),
+	transfer = nn.Tanh(),
+})
+save(net_inception_block, torch.rand(2, 3, 16, 16), 'net_inception_block')
+
+local net_normalize = nn.Sequential()
+net_normalize:add(nn.Normalize(2))
+net_normalize:add(nn.Normalize(1, 1e-3))
+net_normalize:add(nn.Normalize(2.7))
+save(net_normalize, torch.rand(1, 24) * 3 - 0.5, 'net_normalize')
+
+-- OpenFace network.
+-- require 'image'
+-- torch.setdefaulttensortype('torch.FloatTensor')
+-- net = torch.load('../openface_nn4.small2.v1.t7')
+-- net:evaluate()
+-- input = image.load('../../cv/shared/lena.png')
+-- input = image.scale(input, 96, 96, 'simple'):reshape(1, 3, 96, 96)
+-- output = net:forward(input):reshape(1, 128)
+-- torch.save('net_openface_output.dat', output)
