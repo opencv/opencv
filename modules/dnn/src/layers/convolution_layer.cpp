@@ -187,7 +187,7 @@ public:
         }
 
         int ngroups = inpCn / blobs[0].size[1];
-        CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
+        CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
         int dims[] = {inputs[0][0], outCn, out.height, out.width};
         outputs.resize(inputs.size(), shape(dims));
