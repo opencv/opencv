@@ -697,10 +697,21 @@ CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
 */
 CV_EXPORTS double norm( const SparseMat& src, int normType );
 
-/** @brief computes PSNR image/video quality metric
+/** @brief Computes the Peak Signal-to-Noise Ratio (PSNR) image quality metric.
 
-see http://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio for details
-@todo document
+This function calculates the Peak Signal-to-Noise Ratio (PSNR) image quality metric in decibels (dB), between two input arrays src1 and src2. Arrays must have depth CV_8U.
+
+The PSNR is calculated as follows:
+
+\f[
+\texttt{PSNR} = 10 \cdot \log_{10}{\left( \frac{R^2}{MSE} \right) }
+\f]
+
+where R is the maximum integer value of depth CV_8U (255) and MSE is the mean squared error between the two arrays.
+
+@param src1 first input array.
+@param src2 second input array of the same size as src1.
+
   */
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
