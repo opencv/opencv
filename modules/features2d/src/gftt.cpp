@@ -48,10 +48,10 @@ class GFTTDetector_Impl : public GFTTDetector
 {
 public:
     GFTTDetector_Impl( int _nfeatures, double _qualityLevel,
-                      double _minDistance, int _blockSize, int _gradiantSize,
+                      double _minDistance, int _blockSize, int _gradientSize,
                       bool _useHarrisDetector, double _k )
         : nfeatures(_nfeatures), qualityLevel(_qualityLevel), minDistance(_minDistance),
-        blockSize(_blockSize), gradiantSize(_gradiantSize), useHarrisDetector(_useHarrisDetector), k(_k)
+        blockSize(_blockSize), gradSize(_gradientSize), useHarrisDetector(_useHarrisDetector), k(_k)
     {
     }
 
@@ -67,8 +67,8 @@ public:
     void setBlockSize(int blockSize_) { blockSize = blockSize_; }
     int getBlockSize() const { return blockSize; }
 
-    void setGradiantSize(int gradiantSize_) { gradiantSize = gradiantSize_; }
-    int getGradiantSize() const { return gradiantSize; }
+    void setGradientSize(int gradientSize_) { gradSize = gradientSize_; }
+    int getGradientSize() { return gradSize; }
 
     void setHarrisDetector(bool val) { useHarrisDetector = val; }
     bool getHarrisDetector() const { return useHarrisDetector; }
@@ -91,7 +91,7 @@ public:
                 ugrayImage = _image.getUMat();
 
             goodFeaturesToTrack( ugrayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
-                                 blockSize, gradiantSize, useHarrisDetector, k );
+                                 blockSize, gradSize, useHarrisDetector, k );
         }
         else
         {
@@ -100,7 +100,7 @@ public:
                 cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
             goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
-                                blockSize, gradiantSize, useHarrisDetector, k );
+                                blockSize, gradSize, useHarrisDetector, k );
         }
 
         keypoints.resize(corners.size());
@@ -115,18 +115,26 @@ public:
     double qualityLevel;
     double minDistance;
     int blockSize;
-    int gradiantSize;
+    int gradSize;
     bool useHarrisDetector;
     double k;
 };
 
 
 Ptr<GFTTDetector> GFTTDetector::create( int _nfeatures, double _qualityLevel,
-                         double _minDistance, int _blockSize, int _gradiantSize,
+                         double _minDistance, int _blockSize, int _gradientSize,
                          bool _useHarrisDetector, double _k )
 {
     return makePtr<GFTTDetector_Impl>(_nfeatures, _qualityLevel,
-                                      _minDistance, _blockSize, _gradiantSize, _useHarrisDetector, _k);
+                                      _minDistance, _blockSize, _gradientSize, _useHarrisDetector, _k);
+}
+
+Ptr<GFTTDetector> GFTTDetector::create( int _nfeatures, double _qualityLevel,
+                         double _minDistance, int _blockSize,
+                         bool _useHarrisDetector, double _k )
+{
+    return makePtr<GFTTDetector_Impl>(_nfeatures, _qualityLevel,
+                                      _minDistance, _blockSize, 3, _useHarrisDetector, _k);
 }
 
 }

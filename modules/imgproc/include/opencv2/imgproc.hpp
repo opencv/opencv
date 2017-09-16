@@ -1901,12 +1901,17 @@ or cornerMinEigenVal.
 
 @sa  cornerMinEigenVal, cornerHarris, calcOpticalFlowPyrLK, estimateRigidTransform,
  */
+
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      InputArray mask = noArray(), int blockSize = 3,
-                                     int gradiantSize = 3, bool useHarrisDetector = false,
-                                     double k = 0.04 );
+                                     bool useHarrisDetector = false, double k = 0.04 );
 
+CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
+                                     int maxCorners, double qualityLevel, double minDistance,
+                                     InputArray mask, int blockSize,
+                                     int gradientSize, bool useHarrisDetector = false,
+                                     double k = 0.04 );
 /** @example houghlines.cpp
 An example using the Hough line detector
 */

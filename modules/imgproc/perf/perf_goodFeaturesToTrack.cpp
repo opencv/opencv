@@ -6,10 +6,10 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<string, int, double, int, int, bool> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradiantSize_UseHarris_t;
-typedef perf::TestBaseWithParam<Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradiantSize_UseHarris_t> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradiantSize_UseHarris;
+typedef std::tr1::tuple<string, int, double, int, int, bool> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris_t;
+typedef perf::TestBaseWithParam<Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris_t> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris;
 
-PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradiantSize_UseHarris, goodFeaturesToTrack,
+PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris, goodFeaturesToTrack,
             testing::Combine(
                 testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
                 testing::Values( 100, 500 ),
@@ -24,7 +24,7 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradiantSize_Use
     int maxCorners = get<1>(GetParam());
     double qualityLevel = get<2>(GetParam());
     int blockSize = get<3>(GetParam());
-    int gradiantSize = get<4>(GetParam());
+    int gradientSize = get<4>(GetParam());
     bool useHarrisDetector = get<5>(GetParam());
 
     Mat image = imread(filename, IMREAD_GRAYSCALE);
@@ -34,7 +34,7 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradiantSize_Use
     std::vector<Point2f> corners;
 
     double minDistance = 1;
-    TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(), blockSize, gradiantSize, useHarrisDetector);
+    TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(), blockSize, gradientSize, useHarrisDetector);
 
     if (corners.size() > 50)
         corners.erase(corners.begin() + 50, corners.end());
