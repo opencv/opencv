@@ -433,21 +433,21 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * specific target. For layers that not represented in scheduling file
          * or if no manual scheduling used at all, automatic scheduling will be applied.
          */
-        void setHalideScheduler(const String& scheduler);
+        CV_WRAP void setHalideScheduler(const String& scheduler);
 
         /**
          * @brief Ask network to use specific computation backend where it supported.
          * @param[in] backendId backend identifier.
          * @see Backend
          */
-        void setPreferableBackend(int backendId);
+        CV_WRAP void setPreferableBackend(int backendId);
 
         /**
          * @brief Ask network to make computations on specific target device.
          * @param[in] targetId target identifier.
          * @see Target
          */
-        void setPreferableTarget(int targetId);
+        CV_WRAP void setPreferableTarget(int targetId);
 
         /** @brief Sets the new value for the layer output blob
          *  @param name descriptor of the updating layer output blob.
