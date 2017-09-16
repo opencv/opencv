@@ -1,6 +1,6 @@
 name: "GoogleNet"
 input: "data"
-input_dim: 10
+input_dim: 1
 input_dim: 3
 input_dim: 224
 input_dim: 224
