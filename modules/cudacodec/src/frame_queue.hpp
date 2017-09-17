@@ -47,7 +47,11 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
-#include <nvcuvid.h>
+#if CUDA_VERSION >= 9000
+    #include <dynlink_nvcuvid.h>
+#else
+    #include <nvcuvid.h>
+#endif
 
 namespace cv { namespace cudacodec { namespace detail
 {
