@@ -323,11 +323,8 @@ struct Sum_SIMD<short, int>
 #endif
 
 template<typename T, typename ST>
-static void sum_(const T* src0, const uchar* mask, ST* dst, int* nzm, int len, int cn, int mcn )
+static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
-    for( int k = 0; k < mcn; k++ )
-        nzm[k] = 0;
-
     const T* src = src0;
     if( !mask )
     {
@@ -386,14 +383,10 @@ static void sum_(const T* src0, const uchar* mask, ST* dst, int* nzm, int len, i
             dst[k+2] = s2;
             dst[k+3] = s3;
         }
-
-        if (nzm)
-            nzm[0] = len;
-        return;
+        return len;
     }
 
-    CV_Assert(mcn >= 1 && nzm);
-    int i;
+    int i, nzm = 0;
     if( cn == 1 )
     {
         ST s = dst[0];
@@ -401,112 +394,74 @@ static void sum_(const T* src0, const uchar* mask, ST* dst, int* nzm, int len, i
             if( mask[i] )
             {
                 s += src[i];
-                nzm[0]++;
+                nzm++;
             }
         dst[0] = s;
     }
     else if( cn == 3 )
     {
         ST s0 = dst[0], s1 = dst[1], s2 = dst[2];
-        if( mcn == 1 )
-        {
-            for( i = 0; i < len; i++, src += 3 )
-                if( mask[i] )
-                {
-                    s0 += src[0];
-                    s1 += src[1];
-                    s2 += src[2];
-                    nzm[0]++;
-                }
-        }
-        else
-        {
-            CV_Assert(mcn == cn);
-            for( i = 0; i < len; i++, src += 3, mask += 3 )
+        for( i = 0; i < len; i++, src += 3 )
+            if( mask[i] )
             {
-                if( mask[0] )
-                {
-                    s0 += src[0];
-                    nzm[0]++;
-                }
-                if( mask[1] )
-                {
-                    s1 += src[1];
-                    nzm[1]++;
-                }
-                if( mask[2] )
-                {
-                    s2 += src[2];
-                    nzm[2]++;
-                }
+                s0 += src[0];
+                s1 += src[1];
+                s2 += src[2];
+                nzm++;
             }
-        }
         dst[0] = s0;
         dst[1] = s1;
         dst[2] = s2;
     }
     else
     {
-        if( mcn == 1 )
-        {
-            for( i = 0; i < len; i++, src += cn )
-                if( mask[i] )
+        for( i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
+                int k = 0;
+                #if CV_ENABLE_UNROLLED
+                for( ; k <= cn - 4; k += 4 )
                 {
-                    int k = 0;
-                    #if CV_ENABLE_UNROLLED
-                    for( ; k <= cn - 4; k += 4 )
-                    {
-                        ST s0, s1;
-                        s0 = dst[k] + src[k];
-                        s1 = dst[k+1] + src[k+1];
-                        dst[k] = s0; dst[k+1] = s1;
-                        s0 = dst[k+2] + src[k+2];
-                        s1 = dst[k+3] + src[k+3];
-                        dst[k+2] = s0; dst[k+3] = s1;
-                    }
-                    #endif
-                    for( ; k < cn; k++ )
-                        dst[k] += src[k];
-                    nzm[0]++;
+                    ST s0, s1;
+                    s0 = dst[k] + src[k];
+                    s1 = dst[k+1] + src[k+1];
+                    dst[k] = s0; dst[k+1] = s1;
+                    s0 = dst[k+2] + src[k+2];
+                    s1 = dst[k+3] + src[k+3];
+                    dst[k+2] = s0; dst[k+3] = s1;
                 }
-        }
-        else
-        {
-            CV_Assert(mcn == cn);
-            for( i = 0; i < len; i++, src += cn, mask += cn )
-                for( int k = 0; k < cn; k++ )
-                    if( mask[k] )
-                    {
-                        dst[k] += src[k];
-                        nzm[k]++;
-                    }
-        }
+                #endif
+                for( ; k < cn; k++ )
+                    dst[k] += src[k];
+                nzm++;
+            }
     }
+    return nzm;
 }
 
 
-static void sum8u( const uchar* src, const uchar* mask, int* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum8u( const uchar* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-static void sum8s( const schar* src, const uchar* mask, int* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum8s( const schar* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-static void sum16u( const ushort* src, const uchar* mask, int* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum16u( const ushort* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-static void sum16s( const short* src, const uchar* mask, int* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum16s( const short* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-static void sum32s( const int* src, const uchar* mask, double* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-static void sum32f( const float* src, const uchar* mask, double* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-static void sum64f( const double* src, const uchar* mask, double* dst, int* nzm, int len, int cn, int mcn )
-{ sum_(src, mask, dst, nzm, len, cn, mcn); }
+static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
 
-typedef void (*SumFunc)(const uchar*, const uchar* mask, uchar*, int*, int, int, int);
+typedef int (*SumFunc)(const uchar*, const uchar* mask, uchar*, int, int);
 
 static SumFunc getSumFunc(int depth)
 {
@@ -895,12 +850,10 @@ struct SumSqr_SIMD<schar, int, int>
 #endif
 
 template<typename T, typename ST, typename SQT>
-static void sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int* nzm, int len, int cn, int mcn )
+static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int len, int cn )
 {
-    for( int k = 0; k < mcn; k++ )
-        nzm[k] = 0;
-
     const T* src = src0;
+
     if( !mask )
     {
         SumSqr_SIMD<T, ST, SQT> vop;
@@ -967,14 +920,11 @@ static void sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int* 
             sqsum[k] = sq0; sqsum[k+1] = sq1;
             sqsum[k+2] = sq2; sqsum[k+3] = sq3;
         }
-
-        if (nzm)
-            nzm[0] = len;
-        return;
+        return len;
     }
 
-    CV_Assert(mcn >= 1 && nzm);
-    int i;
+    int i, nzm = 0;
+
     if( cn == 1 )
     {
         ST s0 = sum[0];
@@ -984,7 +934,7 @@ static void sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int* 
             {
                 T v = src[i];
                 s0 += v; sq0 += (SQT)v*v;
-                nzm[0]++;
+                nzm++;
             }
         sum[0] = s0;
         sqsum[0] = sq0;
@@ -993,113 +943,66 @@ static void sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int* 
     {
         ST s0 = sum[0], s1 = sum[1], s2 = sum[2];
         SQT sq0 = sqsum[0], sq1 = sqsum[1], sq2 = sqsum[2];
-        if( mcn == 1 )
-        {
-            for( i = 0; i < len; i++, src += 3 )
-                if( mask[i] )
-                {
-                    T v0 = src[0], v1 = src[1], v2 = src[2];
-                    s0 += v0; sq0 += (SQT)v0*v0;
-                    s1 += v1; sq1 += (SQT)v1*v1;
-                    s2 += v2; sq2 += (SQT)v2*v2;
-                    nzm[0]++;
-                }
-        }
-        else
-        {
-            CV_Assert(mcn == cn);
-            for( i = 0; i < len; i++, src += 3, mask += 3 )
+        for( i = 0; i < len; i++, src += 3 )
+            if( mask[i] )
             {
-                if( mask[0] )
-                {
-                    T v0 = src[0];
-                    s0 += v0; sq0 += (SQT)v0*v0;
-                    nzm[0]++;
-                }
-                if( mask[1] )
-                {
-                    T v1 = src[1];
-                    s1 += v1; sq1 += (SQT)v1*v1;
-                    nzm[1]++;
-                }
-                if( mask[2] )
-                {
-                    T v2 = src[2];
-                    s2 += v2; sq2 += (SQT)v2*v2;
-                    nzm[2]++;
-                }
+                T v0 = src[0], v1 = src[1], v2 = src[2];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+                s2 += v2; sq2 += (SQT)v2*v2;
+                nzm++;
             }
-        }
         sum[0] = s0; sum[1] = s1; sum[2] = s2;
         sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2;
     }
     else
     {
-        if( mcn == 1 )
-        {
-            for( i = 0; i < len; i++, src += cn )
-                if( mask[i] )
-                {
-                    for( int k = 0; k < cn; k++ )
-                    {
-                        T v = src[k];
-                        ST s = sum[k] + v;
-                        SQT sq = sqsum[k] + (SQT)v*v;
-                        sum[k] = s; sqsum[k] = sq;
-                    }
-                    nzm[0]++;
-                }
-        }
-        else
-        {
-            CV_Assert(mcn == cn);
-            for( i = 0; i < len; i++, src += cn, mask += cn )
+        for( i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
                 for( int k = 0; k < cn; k++ )
-                    if( mask[k] )
-                    {
-                        T v = src[k];
-                        ST s = sum[k] + v;
-                        SQT sq = sqsum[k] + (SQT)v*v;
-                        sum[k] = s; sqsum[k] = sq;
-                        nzm[k]++;
-                    }
-        }
+                {
+                    T v = src[k];
+                    ST s = sum[k] + v;
+                    SQT sq = sqsum[k] + (SQT)v*v;
+                    sum[k] = s; sqsum[k] = sq;
+                }
+                nzm++;
+            }
     }
+    return nzm;
 }
 
 
-static void sqsum8u( const uchar* src, const uchar* mask, int* sum, int* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum8u( const uchar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static void sqsum8s( const schar* src, const uchar* mask, int* sum, int* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum8s( const schar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static void sqsum16u( const ushort* src, const uchar* mask, int* sum, double* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum16u( const ushort* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static void sqsum16s( const short* src, const uchar* mask, int* sum, double* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum16s( const short* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static void sqsum32s( const int* src, const uchar* mask, double* sum, double* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum32s( const int* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static void sqsum32f( const float* src, const uchar* mask, double* sum, double* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum32f( const float* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static void sqsum64f( const double* src, const uchar* mask, double* sum, double* sqsum, int* nzm, int len, int cn, int mcn )
-{ sumsqr_(src, mask, sum, sqsum, nzm, len, cn, mcn); }
+static int sqsum64f( const double* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int*, int, int, int);
+typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, int);
 
 static SumSqrFunc getSumSqrTab(int depth)
 {
     static SumSqrFunc sumSqrTab[] =
     {
-        (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s,
-        (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
-        (SumSqrFunc)sqsum32s,
-        (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f,
-        0
+        (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
+        (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0
     };
 
     return sumSqrTab[depth];
@@ -1323,7 +1226,7 @@ cv::Scalar cv::sum( InputArray _src )
         for( j = 0; j < total; j += blockSize )
         {
             int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], 0, (uchar*)buf, 0, bsz, cn, 0 );
+            func( ptrs[0], 0, (uchar*)buf, bsz, cn );
             count += bsz;
             if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
@@ -1487,8 +1390,6 @@ namespace cv
 static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 {
     CV_INSTRUMENT_REGION_IPP()
-    if( mask.channels() > 1 )
-        return false;
 
 #if IPP_VERSION_X100 >= 700
     size_t total_size = src.total();
@@ -1584,10 +1485,11 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_INSTRUMENT_REGION()
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    int k, cn = src.channels(), depth = src.depth(), mcn = mask.channels();
-    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn)) );
+    CV_Assert( mask.empty() || mask.type() == CV_8U );
 
+    int k, cn = src.channels(), depth = src.depth();
     Scalar s;
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
 
     SumFunc func = getSumFunc(depth);
@@ -1598,22 +1500,11 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
-    int j;
-    AutoBuffer<int, 4> _count(mcn), _nz(mcn);
-    int* count = _count;
-    int* nz = _nz;
-    AutoBuffer<int, 4> _buf;
+    int j, count = 0;
+    AutoBuffer<int> _buf;
     int* buf = (int*)&s[0];
     bool blockSum = depth <= CV_16S;
-    size_t esz = 0, mesz = 0;
-    AutoBuffer<size_t, 4> _nz0(mcn);
-    size_t* nz0 = _nz0;
-
-    for( k = 0; k < mcn; k++ )
-    {
-        count[k] = 0;
-        nz0[k] = 0;
-    }
+    size_t esz = 0, nz0 = 0;
 
     if( blockSum )
     {
@@ -1625,7 +1516,6 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         for( k = 0; k < cn; k++ )
             buf[k] = 0;
         esz = src.elemSize();
-        mesz = mask.elemSize();
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -1633,38 +1523,24 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         for( j = 0; j < total; j += blockSize )
         {
             int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], (uchar*)buf, nz, bsz, cn, mcn );
-
-            bool doCommit = false;
-            for( k = 0; k < mcn; k++ )
-            {
-                nz0[k] += nz[k];
-                count[k] += nz[k];
-                if( count[k] + blockSize >= intSumBlockSize )
-                    doCommit = true;
-            }
-            if( blockSum && (doCommit || (i+1 >= it.nplanes && j+bsz >= total)) )
+            int nz = func( ptrs[0], ptrs[1], (uchar*)buf, bsz, cn );
+            count += nz;
+            nz0 += nz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
                 for( k = 0; k < cn; k++ )
                 {
                     s[k] += buf[k];
                     buf[k] = 0;
                 }
-                for( k = 0; k < mcn; k++ )
-                    count[k] = 0;
+                count = 0;
             }
             ptrs[0] += bsz*esz;
             if( ptrs[1] )
-                ptrs[1] += bsz*mesz;
+                ptrs[1] += bsz;
         }
     }
-
-    if( mcn == cn )
-        for( k = 0; k < cn; k++ )
-            s[k] *= nz0[k] ? 1./nz0[k] : 0;
-    else
-        s *= nz0[0] ? 1./nz0[0] : 0;
-    return s;
+    return s*(nz0 ? 1./nz0 : 0);
 }
 
 #ifdef HAVE_OPENCL
@@ -1680,8 +1556,6 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
     Scalar mean(0), stddev(0);
     const int cn = _src.channels();
     if (cn > 4)
-        return false;
-    if (_mask.channels() > 1)
         return false;
 
     {
@@ -1869,9 +1743,6 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 {
     CV_INSTRUMENT_REGION_IPP()
 
-    if( mask.channels() > 1 )
-        return false;
-
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
 
@@ -1995,14 +1866,14 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    int k, cn = src.channels(), depth = src.depth(), mcn = mask.channels();
-    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn)) );
+    CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MEAN_STDDEV>(src.cols, src.rows),
                openvx_meanStdDev(src, _mean, _sdv, mask))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
+    int k, cn = src.channels(), depth = src.depth();
 
     SumSqrFunc func = getSumSqrTab(depth);
 
@@ -2012,23 +1883,12 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
-    int j;
-    AutoBuffer<int> _count(mcn), _nz(mcn);
-    int* count = _count;
-    int* nz = _nz;
+    int j, count = 0, nz0 = 0;
     AutoBuffer<double> _buf(cn*4);
     double *s = (double*)_buf, *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
     bool blockSum = depth <= CV_16S, blockSqSum = depth <= CV_8S;
-    size_t esz = 0, mesz = 0;
-    AutoBuffer<size_t> _nz0(mcn);
-    size_t* nz0 = _nz0;
-
-    for( k = 0; k < mcn; k++ )
-    {
-        count[k] = 0;
-        nz0[k] = 0;
-    }
+    size_t esz = 0;
 
     for( k = 0; k < cn; k++ )
         s[k] = sq[k] = 0;
@@ -2043,7 +1903,6 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
         for( k = 0; k < cn; k++ )
             sbuf[k] = sqbuf[k] = 0;
         esz = src.elemSize();
-        mesz = mask.elemSize();
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -2051,17 +1910,10 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
         for( j = 0; j < total; j += blockSize )
         {
             int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], (uchar*)sbuf, (uchar*)sqbuf, nz, bsz, cn, mcn );
-
-            bool doCommit = false;
-            for( k = 0; k < mcn; k++ )
-            {
-                nz0[k] += nz[k];
-                count[k] += nz[k];
-                if( count[k] + blockSize >= intSumBlockSize )
-                    doCommit = true;
-            }
-            if( blockSum && (doCommit || (i+1 >= it.nplanes && j+bsz >= total)) )
+            int nz = func( ptrs[0], ptrs[1], (uchar*)sbuf, (uchar*)sqbuf, bsz, cn );
+            count += nz;
+            nz0 += nz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
                 for( k = 0; k < cn; k++ )
                 {
@@ -2076,29 +1928,19 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                         sqbuf[k] = 0;
                     }
                 }
-                for( k = 0; k < mcn; k++ )
-                    count[k] = 0;
+                count = 0;
             }
             ptrs[0] += bsz*esz;
             if( ptrs[1] )
-                ptrs[1] += bsz*mesz;
+                ptrs[1] += bsz;
         }
     }
 
-    if( mcn == cn )
-        for( k = 0; k < cn; k++ ) {
-            double scale = nz0[k] ? 1./nz0[k] : 0;
-            s[k] *= scale;
-            sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
-        }
-    else
+    double scale = nz0 ? 1./nz0 : 0.;
+    for( k = 0; k < cn; k++ )
     {
-        double scale = nz0[0] ? 1./nz0[0] : 0.;
-        for( k = 0; k < cn; k++ )
-        {
-            s[k] *= scale;
-            sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
-        }
+        s[k] *= scale;
+        sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
     }
 
     for( j = 0; j < 2; j++ )

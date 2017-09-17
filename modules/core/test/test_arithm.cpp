@@ -1162,7 +1162,7 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
 
 struct MeanOp : public BaseElemWiseOp
 {
-    MeanOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    MeanOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = 3;
     };
@@ -1244,7 +1244,7 @@ struct MeanStdDevOp : public BaseElemWiseOp
     Scalar sqmeanRef;
     int cn;
 
-    MeanStdDevOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    MeanStdDevOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         cn = 0;
         context = 7;

@@ -2598,11 +2598,11 @@ void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 
 
 template<typename _Tp> static void
-mean_(const _Tp* src, const uchar* mask, size_t total, int cn, int mcn, Scalar& sum, Scalar_<int>& nz)
+mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int& nz)
 {
     if( !mask )
     {
-        nz += Scalar_<int>::all((int)total);
+        nz += (int)total;
         total *= cn;
         for( size_t i = 0; i < total; i += cn )
         {
@@ -2610,41 +2610,23 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, int mcn, Scalar& 
                 sum[c] += src[i + c];
         }
     }
-    else if( mcn == 1 )
+    else
     {
         for( size_t i = 0; i < total; i++ )
             if( mask[i] )
             {
+                nz++;
                 for( int c = 0; c < cn; c++ )
-                {
-                    nz[c]++;
                     sum[c] += src[i*cn + c];
-                }
             }
-    }
-    else
-    {
-        total *= cn;
-        for( size_t i = 0; i < total; i += cn )
-        {
-            for( int c = 0; c < cn; c++ )
-            {
-                if( mask[i + c] )
-                {
-                    nz[c]++;
-                    sum[c] += src[i + c];
-                }
-            }
-        }
     }
 }
 
 Scalar mean(const Mat& src, const Mat& mask)
 {
-    CV_Assert(mask.empty() || (mask.depth() == CV_8U && mask.size == src.size &&
-                               (mask.channels() == 1 || mask.channels() == src.channels())));
+    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size == src.size));
     Scalar sum;
-    Scalar_<int> nz = Scalar_<int>::all(0);
+    int nz = 0;
 
     const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
@@ -2652,7 +2634,7 @@ Scalar mean(const Mat& src, const Mat& mask)
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-    int c, depth = src.depth(), cn = src.channels(), mcn = mask.channels();
+    int depth = src.depth(), cn = src.channels();
 
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -2662,34 +2644,32 @@ Scalar mean(const Mat& src, const Mat& mask)
         switch( depth )
         {
         case CV_8U:
-            mean_((const uchar*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const uchar*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_8S:
-            mean_((const schar*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const schar*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_16U:
-            mean_((const ushort*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const ushort*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_16S:
-            mean_((const short*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const short*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_32S:
-            mean_((const int*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const int*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_32F:
-            mean_((const float*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const float*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_64F:
-            mean_((const double*)sptr, mptr, total, cn, mcn, sum, nz);
+            mean_((const double*)sptr, mptr, total, cn, sum, nz);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 
-    for( c = 0; c < cn; c++ )
-        sum[c] *= (1./std::max(nz[c], 1));
-    return sum;
+    return sum * (1./std::max(nz, 1));
 }
 
 

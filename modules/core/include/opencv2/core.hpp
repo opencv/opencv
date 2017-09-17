@@ -608,7 +608,7 @@ CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
 
 The function cv::mean calculates the mean value M of array elements,
 independently for each channel, and return it:
-\f[\begin{array}{l} N_c =  \sum _{I: \; {\texttt{mask} (I)_c} \ne 0} 1 \\ M_c =  \left ( \sum _{I: \; {\texttt{mask} (I)_c} \ne 0}{ \texttt{src} (I)_c} \right )/N_c \end{array}\f]
+\f[\begin{array}{l} N =  \sum _{I: \; \texttt{mask} (I) \ne 0} 1 \\ M_c =  \left ( \sum _{I: \; \texttt{mask} (I) \ne 0}{ \texttt{mtx} (I)_c} \right )/N \end{array}\f]
 When all the mask elements are 0's, the function returns Scalar::all(0)
 @param src input array that should have from 1 to 4 channels so that the result can be stored in
 Scalar_ .
@@ -622,7 +622,7 @@ CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask = noArray());
 The function cv::meanStdDev calculates the mean and the standard deviation M
 of array elements independently for each channel and returns it via the
 output parameters:
-\f[\begin{array}{l} N_c =  \sum _{I, {\texttt{mask} (I)_c}  \ne 0} 1 \\ \texttt{mean} _c =  \frac{\sum_{ I: \; {\texttt{mask} (I)_c} \ne 0} \texttt{src} (I)_c}{N_c} \\ \texttt{stddev} _c =  \sqrt{\frac{\sum_{ I: \; {\texttt{mask} (I)_c} \ne 0} \left ( \texttt{src} (I)_c -  \texttt{mean} _c \right )^2}{N_c}} \end{array}\f]
+\f[\begin{array}{l} N =  \sum _{I, \texttt{mask} (I)  \ne 0} 1 \\ \texttt{mean} _c =  \frac{\sum_{ I: \; \texttt{mask}(I) \ne 0} \texttt{src} (I)_c}{N} \\ \texttt{stddev} _c =  \sqrt{\frac{\sum_{ I: \; \texttt{mask}(I) \ne 0} \left ( \texttt{src} (I)_c -  \texttt{mean} _c \right )^2}{N}} \end{array}\f]
 When all the mask elements are 0's, the function returns
 mean=stddev=Scalar::all(0).
 @note The calculated standard deviation is only the diagonal of the
