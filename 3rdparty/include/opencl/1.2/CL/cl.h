@@ -345,7 +345,7 @@ typedef struct _cl_buffer_region {
 #define CL_MEM_USE_HOST_PTR                         (1 << 3)
 #define CL_MEM_ALLOC_HOST_PTR                       (1 << 4)
 #define CL_MEM_COPY_HOST_PTR                        (1 << 5)
-// reserved                                         (1 << 6)    
+/* reserved                                         (1 << 6)    */
 #define CL_MEM_HOST_WRITE_ONLY                      (1 << 7)
 #define CL_MEM_HOST_READ_ONLY                       (1 << 8)
 #define CL_MEM_HOST_NO_ACCESS                       (1 << 9)
@@ -655,6 +655,27 @@ clGetCommandQueueInfo(cl_command_queue      /* command_queue */,
                       size_t                /* param_value_size */,
                       void *                /* param_value */,
                       size_t *              /* param_value_size_ret */) CL_API_SUFFIX__VERSION_1_0;
+
+#ifdef CL_USE_DEPRECATED_OPENCL_1_0_APIS
+#ifndef NVCL_SUPPRESS_USE_DEPRECATED_OPENCL_1_0_APIS_WARNING
+#warning CL_USE_DEPRECATED_OPENCL_1_0_APIS is defined. These APIs are unsupported and untested in OpenCL 1.1!
+#endif
+/* 
+ *  WARNING:
+ *     This API introduces mutable state into the OpenCL implementation. It has been REMOVED
+ *  to better facilitate thread safety.  The 1.0 API is not thread safe. It is not tested by the
+ *  OpenCL 1.1 conformance test, and consequently may not work or may not work dependably.
+ *  It is likely to be non-performant. Use of this API is not advised. Use at your own risk.
+ *
+ *  Software developers previously relying on this API are instructed to set the command queue 
+ *  properties when creating the queue, instead. 
+ */
+extern CL_API_ENTRY cl_int CL_API_CALL
+clSetCommandQueueProperty(cl_command_queue              /* command_queue */,
+                          cl_command_queue_properties   /* properties */, 
+                          cl_bool                        /* enable */,
+                          cl_command_queue_properties * /* old_properties */) CL_EXT_SUFFIX__VERSION_1_0_DEPRECATED;
+#endif /* CL_USE_DEPRECATED_OPENCL_1_0_APIS */
 
 /* Memory Object APIs */
 extern CL_API_ENTRY cl_mem CL_API_CALL
@@ -1165,7 +1186,7 @@ clGetExtensionFunctionAddressForPlatform(cl_platform_id /* platform */,
                                          const char *   /* func_name */) CL_API_SUFFIX__VERSION_1_2;
     
 
-// Deprecated OpenCL 1.1 APIs
+/* Deprecated OpenCL 1.1 APIs */
 extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_mem CL_API_CALL
 clCreateImage2D(cl_context              /* context */,
                 cl_mem_flags            /* flags */,

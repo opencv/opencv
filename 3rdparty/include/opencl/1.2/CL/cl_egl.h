@@ -52,6 +52,9 @@ typedef void* CLeglImageKHR;
 /* CLeglDisplayKHR is an opaque handle to an EGLDisplay */
 typedef void* CLeglDisplayKHR;
 
+/* CLeglSyncKHR is an opaque handle to an EGLSync object */
+typedef void* CLeglSyncKHR;
+
 /* properties passed to clCreateFromEGLImageKHR */
 typedef intptr_t cl_egl_image_properties_khr;
 
@@ -112,17 +115,16 @@ typedef CL_API_ENTRY cl_int (CL_API_CALL *clEnqueueReleaseEGLObjectsKHR_fn)(
 #define cl_khr_egl_event 1
 
 extern CL_API_ENTRY cl_event CL_API_CALL
-clCreateEventFromEGLSyncKHR(cl_context /* context */,
-                            EGLSyncKHR /* sync */,
-                            EGLDisplay /* display */,
-                            cl_int *   /* errcode_ret */) CL_API_SUFFIX__VERSION_1_0;
+clCreateEventFromEGLSyncKHR(cl_context      /* context */,
+                            CLeglSyncKHR    /* sync */,
+                            CLeglDisplayKHR /* display */,
+                            cl_int *        /* errcode_ret */) CL_API_SUFFIX__VERSION_1_0;
 
 typedef CL_API_ENTRY cl_event (CL_API_CALL *clCreateEventFromEGLSyncKHR_fn)(
-	cl_context context,
-	EGLSyncKHR sync,
-	EGLDisplay display,
-	cl_int *   errcode_ret);
-
+	cl_context      context,
+	CLeglSyncKHR    sync,
+	CLeglDisplayKHR display,
+	cl_int *        errcode_ret);
 
 #ifdef __cplusplus
 }
