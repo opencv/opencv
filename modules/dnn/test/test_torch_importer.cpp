@@ -66,11 +66,8 @@ static std::string _tf(TStr filename, bool inTorchDir = true)
 TEST(Torch_Importer, simple_read)
 {
     Net net;
-    Ptr<Importer> importer;
-
-    ASSERT_NO_THROW( importer = createTorchImporter(_tf("net_simple_net.txt"), false) );
-    ASSERT_TRUE( importer != NULL );
-    importer->populateNet(net);
+    ASSERT_NO_THROW(net = readNetFromTorch(_tf("net_simple_net.txt"), false));
+    ASSERT_FALSE(net.empty());
 }
 
 static void runTorchNet(String prefix, String outLayerName = "",
@@ -78,10 +75,8 @@ static void runTorchNet(String prefix, String outLayerName = "",
 {
     String suffix = (isBinary) ? ".dat" : ".txt";
 
-    Net net;
-    Ptr<Importer> importer = createTorchImporter(_tf(prefix + "_net" + suffix), isBinary);
-    ASSERT_TRUE(importer != NULL);
-    importer->populateNet(net);
+    Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
+    ASSERT_FALSE(net.empty());
 
     Mat inp, outRef;
     ASSERT_NO_THROW( inp = readTorchBlob(_tf(prefix + "_input" + suffix), isBinary) );
@@ -200,9 +195,8 @@ TEST(Torch_Importer, ENet_accuracy)
     Net net;
     {
         const string model = findDataFile("dnn/Enet-model-best.net", false);
-        Ptr<Importer> importer = createTorchImporter(model, true);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromTorch(model, true);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("street.png", false));
