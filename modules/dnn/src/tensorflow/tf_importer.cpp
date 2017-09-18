@@ -771,7 +771,6 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Reshape")
         {
             layerParams.set("dim", parseDims(getConstBlob(layer, value_id, 1)));
-            layerParams.set("reorder_dims", true);
 
             int id = dstNet.addLayer(name, "Reshape", layerParams);
             layer_id[name] = id;
