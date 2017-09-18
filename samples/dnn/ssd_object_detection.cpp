@@ -65,21 +65,11 @@ int main(int argc, char** argv)
     String modelConfiguration = parser.get<string>("proto");
     String modelBinary = parser.get<string>("model");
 
-    //! [Create the importer of Caffe model]
-    Ptr<dnn::Importer> importer;
+    //! [Initialize network]
+    dnn::Net net = readNetFromCaffe(modelConfiguration, modelBinary);
+    //! [Initialize network]
 
-    // Import Caffe SSD model
-    try
-    {
-        importer = dnn::createCaffeImporter(modelConfiguration, modelBinary);
-    }
-    catch (const cv::Exception &err) //Importer can throw errors, we will catch them
-    {
-        cerr << err.msg << endl;
-    }
-    //! [Create the importer of Caffe model]
-
-    if (!importer)
+    if (net.empty())
     {
         cerr << "Can't load network by using the following files: " << endl;
         cerr << "prototxt:   " << modelConfiguration << endl;
@@ -88,12 +78,6 @@ int main(int argc, char** argv)
         cerr << "https://github.com/weiliu89/caffe/tree/ssd#models" << endl;
         exit(-1);
     }
-
-    //! [Initialize network]
-    dnn::Net net;
-    importer->populateNet(net);
-    importer.release();          //We don't need importer anymore
-    //! [Initialize network]
 
     cv::Mat frame = cv::imread(parser.get<string>("image"), -1);
 
