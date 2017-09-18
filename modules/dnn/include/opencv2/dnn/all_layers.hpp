@@ -359,6 +359,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<ReLULayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS ReLU6Layer : public ActivationLayer
+    {
+    public:
+        static Ptr<ReLU6Layer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ChannelsPReLULayer : public ActivationLayer
     {
     public:

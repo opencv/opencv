@@ -93,11 +93,12 @@ static void runTensorFlowNet(const std::string& prefix,
     normAssert(target, output, "", l1, lInf);
 }
 
-TEST(Test_TensorFlow, single_conv)
+TEST(Test_TensorFlow, conv)
 {
     runTensorFlowNet("single_conv");
     runTensorFlowNet("atrous_conv2d_valid");
     runTensorFlowNet("atrous_conv2d_same");
+    runTensorFlowNet("depthwise_conv2d");
 }
 
 TEST(Test_TensorFlow, padding)
@@ -116,8 +117,9 @@ TEST(Test_TensorFlow, pad_and_concat)
     runTensorFlowNet("pad_and_concat");
 }
 
-TEST(Test_TensorFlow, fused_batch_norm)
+TEST(Test_TensorFlow, batch_norm)
 {
+    runTensorFlowNet("batch_norm");
     runTensorFlowNet("fused_batch_norm");
 }
 
@@ -131,6 +133,11 @@ TEST(Test_TensorFlow, pooling)
 TEST(Test_TensorFlow, deconvolution)
 {
     runTensorFlowNet("deconvolution");
+}
+
+TEST(Test_TensorFlow, matmul)
+{
+    runTensorFlowNet("matmul");
 }
 
 TEST(Test_TensorFlow, fp16)
