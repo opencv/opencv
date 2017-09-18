@@ -701,6 +701,19 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS_W Mat blobFromImages(const std::vector<Mat>& images, double scalefactor=1.0,
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true);
 
+    /** @brief Convert all weights of Caffe network to half precision floating point.
+     * @param src Path to origin model from Caffe framework contains single
+     *            precision floating point weights (usually has `.caffemodel` extension).
+     * @param dst Path to destination model with updated weights.
+     *
+     * @note Shrinked model has no origin float32 weights so it can't be used
+     *       in origin Caffe framework anymore. However the structure of data
+     *       is taken from NVidia's Caffe fork: https://github.com/NVIDIA/caffe.
+     *       So the resulting model may be used there.
+     */
+    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst);
+
+
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
 }
