@@ -1,226 +1,17 @@
-/********************************************************************************
- *
- *
- *  This program is demonstration for ellipse fitting. Program finds
- *  contours and approximate it by ellipses.
- *
- *  Trackbar specify threshold parametr.
- *
- *  White lines is contours. Red lines is fitting ellipses.
- *
- *
- *  Autor:  Denis Burenkov.
- *
- *
- *
- ********************************************************************************/
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include <iostream>
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2016, Itseez, Inc, all rights reserved.
+
+#include "test_precomp.hpp"
+#include <vector>
+#include <cmath>
 
 using namespace cv;
 using namespace std;
 
-static void help()
-{
-    cout <<
-    "\nThis program is demonstration for ellipse fitting. The program finds\n"
-    "contours and approximate it by ellipses. Three methods are used to find the \n"
-    "elliptical fits: fitEllipse, fitEllipseAMS and fitEllipseDirect.\n"
-    "Call:\n"
-    "./fitellipse [image_name -- Default ../data/stuff.jpg]\n" << endl;
-}
-
-int sliderPos = 70;
-
-Mat image;
-
-bool fitEllipseQ, fitEllipseAMSQ, fitEllipseDirectQ;
-cv::Scalar fitEllipseColor       = Scalar(255,  0,  0);
-cv::Scalar fitEllipseAMSColor    = Scalar(  0,255,  0);
-cv::Scalar fitEllipseDirectColor = Scalar(  0,  0,255);
-cv::Scalar fitEllipseTrueColor   = Scalar(255,255,255);
-
-void drawEllipseWithBox(cv::Mat cimage, cv::RotatedRect box, cv::Scalar color);
-
-void processImage(int, void*);
-
-bool TEST1();
-bool TEST2();
-bool TEST3();
-bool TEST4();
-bool TEST5();
-bool TEST6();
-bool TEST7();
-
-int main( int argc, char** argv )
-{
-    bool test1Q = TEST1();
-    bool test2Q = TEST2();
-    bool test3Q = TEST3();
-    bool test4Q = TEST4();
-    bool test5Q = TEST5();
-    bool test6Q = TEST6();
-    bool test7Q = TEST7();
-    
-    fitEllipseQ       = true;
-    fitEllipseAMSQ    = true;
-    fitEllipseDirectQ = true;
-    
-    cv::CommandLineParser parser(argc, argv,
-                                 "{help h||}{@image|../data/stuff.jpg|}"
-                                 );
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
-    string filename = parser.get<string>("@image");
-    image = imread(filename, 0);
-    if( image.empty() )
-    {
-        cout << "Couldn't open image " << filename << "\n";
-        return 0;
-    }
-    
-    imshow("source", image);
-    namedWindow("result", CV_WINDOW_NORMAL );
-    
-    // Create toolbars. HighGUI use.
-    createTrackbar( "threshold", "result", &sliderPos, 255, processImage );
-    
-    processImage(0, 0);
-    
-    // Wait for a key stroke; the same function arranges events processing
-    waitKey();
-    return 0;
-}
-
-void drawEllipseWithBox(cv::Mat cimage, cv::RotatedRect box, cv::Scalar color, int lineThickness)
-{
-    ellipse(cimage, box, color, lineThickness, LINE_AA);
-    //       ellipse(cimage, box.center, box.size*0.5f, box.angle, 0, 360, color, 1, LINE_AA);
-    
-    Point2f vtx[4];
-    box.points(vtx);
-    for( int j = 0; j < 4; j++ ){
-        line(cimage, vtx[j], vtx[(j+1)%4], color, lineThickness, LINE_AA);
-    }
-}
-
-// Define trackbar callback functon. This function find contours,
-// draw it and approximate it by ellipses.
-void processImage(int /*h*/, void*)
-{
-    
-    RotatedRect box, boxAMS, boxDirect;
-    vector<vector<Point> > contours;
-    Mat bimage = image >= sliderPos;
-    
-    findContours(bimage, contours, RETR_LIST, CHAIN_APPROX_NONE);
-    
-    Mat cimage = Mat::zeros(bimage.size(), CV_8UC3);
-    
-    Size textsize1 = getTextSize("openCV", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Size textsize2 = getTextSize("AMS", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Size textsize3 = getTextSize("Direct", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Point org1((cimage.cols - textsize1.width), (int)(1.3 * textsize1.height));
-    Point org2((cimage.cols - textsize2.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height));
-    Point org3((cimage.cols - textsize3.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height + 1.3 * textsize3.height));
-    
-    putText(cimage, "openCV", org1, FONT_HERSHEY_COMPLEX, 1, fitEllipseColor, 1, LINE_8);
-    putText(cimage, "AMS",    org2, FONT_HERSHEY_COMPLEX, 1, fitEllipseAMSColor, 1, LINE_8);
-    putText(cimage, "Direct", org3, FONT_HERSHEY_COMPLEX, 1, fitEllipseDirectColor, 1, LINE_8);
-    
-    for(size_t i = 0; i < contours.size(); i++)
-    {
-        size_t count = contours[i].size();
-        if( count < 6 )
-            continue;
-        
-        Mat pointsf;
-        Mat(contours[i]).convertTo(pointsf, CV_32F);
-        if (fitEllipseQ) {
-            box = fitEllipse(pointsf);
-            if( MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height)*30 ){continue;};
-        }
-        if (fitEllipseAMSQ) {
-            boxAMS = fitEllipseAMS(pointsf);
-            if( MAX(boxAMS.size.width, boxAMS.size.height) > MIN(boxAMS.size.width, boxAMS.size.height)*30 ){continue;};
-        }
-        if (fitEllipseDirectQ) {
-            boxDirect = fitEllipseDirect(pointsf);
-            if( MAX(boxDirect.size.width, boxDirect.size.height) > MIN(boxDirect.size.width, boxDirect.size.height)*30 ){continue;};
-        }
-        
-        drawContours(cimage, contours, (int)i, Scalar::all(255), 1, 8);
-        
-        if (fitEllipseQ) {
-            drawEllipseWithBox(cimage, box, fitEllipseColor, 1);
-        }
-        if (fitEllipseAMSQ) {
-            drawEllipseWithBox(cimage, boxAMS, fitEllipseAMSColor, 1);
-        }
-        if (fitEllipseDirectQ) {
-            drawEllipseWithBox(cimage, boxDirect, fitEllipseDirectColor, 1);
-        }
-        
-    }
-    
-    imshow("result", cimage);
-}
-
-cv::Mat canvasFromPoints(vector<Point2f> pts){
-    int rows=0,cols=0;
-    for(size_t i=0; i < pts.size(); i++){
-        Point2f pnt = pts[i];
-        if(cols<pnt.x){cols = int(pnt.x);};
-        if(rows<pnt.y){rows = int(pnt.y);};
-    };
-    cols = int(1.3 * cols);
-    rows = int(1.3 * rows);
-    
-    cv::Mat canvas = cv::Mat::zeros(rows,cols,CV_8UC3);
-    return canvas;
-}
-
-void drawPoints(cv::Mat canvas, vector<Point2f> pts, cv::Scalar color){
-    
-    for(size_t i=0; i < pts.size(); i++){
-        Point2f pnt = pts[i];
-        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[0] = color[0];
-        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[1] = color[1];
-        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[2] = color[2];
-    };
-}
-
-cv::Mat drawPoints(vector<Point2f> pts, cv::Scalar color){
-    
-    cv::Mat canvas = canvasFromPoints(pts);
-    drawPoints(canvas, pts, color);
-    return canvas;
-}
-
-cv::Mat drawLabels(cv::Mat canvas){
-    
-    Size textsize1 = getTextSize("Old openCV", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Size textsize2 = getTextSize("AMS", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Size textsize3 = getTextSize("Direct", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Size textsize4 = getTextSize("True", FONT_HERSHEY_COMPLEX, 1, 1, 0);
-    Point org1((canvas.cols - textsize1.width), (int)(1.3 * textsize1.height));
-    Point org2((canvas.cols - textsize2.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height));
-    Point org3((canvas.cols - textsize3.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height + 1.3 * textsize3.height));
-    Point org4((canvas.cols - textsize4.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height + 1.3 * textsize3.height + 1.3 * textsize4.height));
-    
-    putText(canvas, "Old openCV", org1, FONT_HERSHEY_COMPLEX, 1, fitEllipseColor, 1, LINE_8);
-    putText(canvas, "AMS",    org2, FONT_HERSHEY_COMPLEX, 1, fitEllipseAMSColor, 1, LINE_8);
-    putText(canvas, "Direct", org3, FONT_HERSHEY_COMPLEX, 1, fitEllipseDirectColor, 1, LINE_8);
-    putText(canvas, "True",   org4, FONT_HERSHEY_COMPLEX, 1, fitEllipseTrueColor, 1, LINE_8);
-    return canvas;
-}
-
-bool TEST1() {
+TEST(Imgproc_FitEllipseAMS_Issue_1, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(173.41854895999165, 125.84473135880411));
     pts.push_back(Point2f(180.63769498640912, 130.960006577589));
@@ -262,28 +53,10 @@ bool TEST1() {
     pts.push_back(Point2f(6.99914645302843, 58.436451064804245));
     pts.push_back(Point2f(6.719616410428614, 50.15263031354927));
     pts.push_back(Point2f(5.122267598477748, 46.03603214691343));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(95.242, 82.1639), Size2f(196.189, 157.473), 23.6645);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(91.3256, 90.4668),Size2f(187.211, 140.031), 21.5808);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(94.4037, 84.743), Size2f(190.614, 153.543), 19.832);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -302,19 +75,11 @@ bool TEST1() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test1",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
 
-bool TEST2() {
+TEST(Imgproc_FitEllipseAMS_Issue_2, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(436.59985753246326, 99.52113368023126));
     pts.push_back(Point2f(454.40214161915856, 160.47565296546912));
@@ -326,28 +91,10 @@ bool TEST2() {
     pts.push_back(Point2f(138.934393338296, 310.50203123324223));
     pts.push_back(Point2f(91.66999301197541, 300.57303988670515));
     pts.push_back(Point2f(28.286233855826133, 268.0670159317756));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(225.756, 156.664), Size2f(460.469, 300.007), -14.9957);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(228.232, 174.879),Size2f(450.68, 265.556), 166.181);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(223.917, 169.701), Size2f(456.628, 277.809), -12.6378);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -366,20 +113,12 @@ bool TEST2() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test2",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
 
 
-bool TEST3() {
+TEST(Imgproc_FitEllipseAMS_Issue_3, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(459.59217920219083, 480.1054989283611));
     pts.push_back(Point2f(427.2759071813645, 501.82653857689616));
@@ -401,28 +140,10 @@ bool TEST3() {
     pts.push_back(Point2f(3.90259455356599, 155.68155247210575));
     pts.push_back(Point2f(39.683930802331844, 110.26290871953987));
     pts.push_back(Point2f(47.85826684019932, 70.82454140948524));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(277.183, 262.297), Size2f(580.724, 476.204), 41.4611);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(255.326, 272.626),Size2f(570.999, 434.23), 49.0265);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(266.796, 260.167), Size2f(580.374, 469.465), 50.3961);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -441,19 +162,11 @@ bool TEST3() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test3",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
 
-bool TEST4() {
+TEST(Imgproc_FitEllipseAMS_Issue_4, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(461.1761758124861, 79.55196261616746));
     pts.push_back(Point2f(470.5034888757249, 100.56760245239015));
@@ -495,28 +208,10 @@ bool TEST4() {
     pts.push_back(Point2f(41.572400996463394, 153.95185568689314));
     pts.push_back(Point2f(54.55733659450332, 136.54322891729444));
     pts.push_back(Point2f(78.60990563833005, 112.76538180538182));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(236.034, 209.86), Size2f(515.97, 353.283), -37.0581);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(236.836, 208.089),Size2f(515.893, 357.166), -35.9996);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(237.108, 207.32), Size2f(517.287, 357.591), -36.3653);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -535,21 +230,13 @@ bool TEST4() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test4",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
 
 
 
-bool TEST5() {
+TEST(Imgproc_FitEllipseAMS_Issue_5, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(509.60609444351917, 484.8233016998119));
     pts.push_back(Point2f(508.55357451809846, 498.61004779125176));
@@ -591,28 +278,10 @@ bool TEST5() {
     pts.push_back(Point2f(19.96819458379347, 463.98285210241943));
     pts.push_back(Point2f(27.855803175234342, 450.2298664426336));
     pts.push_back(Point2f(12.832198085636549, 435.6317753810441));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(268.357, 454.105), Size2f(500.135, 169.082), 5.32011);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(264.354, 457.336),Size2f(493.728, 162.9), 5.36186);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(265.252, 451.597), Size2f(503.386, 174.674), 5.31814);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -631,19 +300,11 @@ bool TEST5() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test5",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
 
-bool TEST6() {
+TEST(Imgproc_FitEllipseAMS_Issue_6, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(414.90156479295905, 29.063453659930833));
     pts.push_back(Point2f(393.79576036337977, 58.59512774879134));
@@ -685,28 +346,10 @@ bool TEST6() {
     pts.push_back(Point2f(51.22820988075294, 396.98646504159547));
     pts.push_back(Point2f(30.71132492338431, 402.85098740402844));
     pts.push_back(Point2f(10.994737323179852, 394.6764602972333));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(203.566, 200.563), Size2f(550.809, 152.538), -44.5035);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(207.145, 223.308),Size2f(499.583, 117.473), -42.6851);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(192.467, 204.404), Size2f(551.397, 165.068), 136.913);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -725,19 +368,11 @@ bool TEST6() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test6",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
 
-bool TEST7() {
+TEST(Imgproc_FitEllipseAMS_Issue_7, accuracy) {
     vector<Point2f>pts;
     pts.push_back(Point2f(386.7497806918209, 119.55623710363142));
     pts.push_back(Point2f(399.0712613744503, 132.61095972401034));
@@ -779,28 +414,10 @@ bool TEST7() {
     pts.push_back(Point2f(22.10122953275156, 212.75509683149195));
     pts.push_back(Point2f(9.929991244497518, 203.20662088477752));
     pts.push_back(Point2f(0., 190.04891498441148));
-    bool AMSRectQ, AMSGoodQ, directGoodQ;
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(197.181, 147.648), Size2f(395.369, 289.903), -12.0625);
-    RotatedRect ellipseTest = fitEllipse(pts);
+    
+    bool AMSGoodQ;
     float tol = 0.01;
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(199.463, 150.997),Size2f(390.341, 286.01), -12.9696);
-    RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
-    Point2f         ellipseDirectTrueVertices[4];
-    Point2f         ellipseDirectTestVertices[4];
-    ellipseDirectTest.points(ellipseDirectTestVertices);
-    ellipseDirectTrue.points(ellipseDirectTrueVertices);
-    float directDiff = 0.0;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        directDiff += std::sqrt(d);
-    }
-    directGoodQ = directDiff < tol;
+    
     RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(197.292, 134.64), Size2f(401.092, 320.051), 165.429);
     RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
     Point2f         ellipseAMSTrueVertices[4];
@@ -819,17 +436,8 @@ bool TEST7() {
         AMSDiff += std::sqrt(d);
     }
     AMSGoodQ = AMSDiff < tol;
-    // Display the results.
-    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
-    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
-    drawLabels(canvas);
-    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    1);
-    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
-    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
-    drawPoints(canvas, pts, cv::Scalar(255,255,255));
-    imshow("test7",canvas);
-    return AMSGoodQ && directGoodQ;
+    
+    EXPECT_TRUE(AMSGoodQ);
 }
-
 
 
