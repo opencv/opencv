@@ -1,4 +1,4 @@
-#include "test_precomp.hpp"
+﻿#include "test_precomp.hpp"
 #include <cmath>
 
 using namespace cv;
@@ -15,7 +15,7 @@ const int ARITHM_MAX_SIZE_LOG = 10;
 
 struct BaseElemWiseOp
 {
-    enum { FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8, SUPPORT_MASK=16, SCALAR_OUTPUT=32 };
+    enum { FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8, SUPPORT_MASK=16, SCALAR_OUTPUT=32, SUPPORT_MULTICHANNELMASK=64 };
     BaseElemWiseOp(int _ninputs, int _flags, double _alpha, double _beta,
                    Scalar _gamma=Scalar::all(0), int _context=1)
     : ninputs(_ninputs), flags(_flags), alpha(_alpha), beta(_beta), gamma(_gamma), context(_context) {}
@@ -467,7 +467,7 @@ struct CmpSOp : public BaseElemWiseOp
 
 struct CopyOp : public BaseElemWiseOp
 {
-    CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {  }
+    CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK, 1, 1, Scalar::all(0)) {  }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
         src[0].copyTo(dst, mask);
@@ -489,7 +489,7 @@ struct CopyOp : public BaseElemWiseOp
 
 struct SetOp : public BaseElemWiseOp
 {
-    SetOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {}
+    SetOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>&, Mat& dst, const Mat& mask)
     {
         dst.setTo(gamma, mask);
@@ -1394,7 +1394,8 @@ TEST_P(ElemWiseTest, accuracy)
         op->getRandomSize(rng, size);
         int type = op->getRandomType(rng);
         int depth = CV_MAT_DEPTH(type);
-        bool haveMask = (op->flags & cvtest::BaseElemWiseOp::SUPPORT_MASK) != 0 && rng.uniform(0, 4) == 0;
+        bool haveMask = ((op->flags & cvtest::BaseElemWiseOp::SUPPORT_MASK) != 0
+                || (op->flags & cvtest::BaseElemWiseOp::SUPPORT_MULTICHANNELMASK) != 0) && rng.uniform(0, 4) == 0;
 
         double minval=0, maxval=0;
         op->getValueRange(depth, minval, maxval);
@@ -1403,8 +1404,12 @@ TEST_P(ElemWiseTest, accuracy)
         for( i = 0; i < ninputs; i++ )
             src[i] = cvtest::randomMat(rng, size, type, minval, maxval, true);
         Mat dst0, dst, mask;
-        if( haveMask )
-            mask = cvtest::randomMat(rng, size, CV_8U, 0, 2, true);
+        if( haveMask ) {
+            bool multiChannelMask = (op->flags & cvtest::BaseElemWiseOp::SUPPORT_MULTICHANNELMASK) != 0
+                    && rng.uniform(0, 2) == 0;
+            int masktype = CV_8UC(multiChannelMask ? CV_MAT_CN(type) : 1);
+            mask = cvtest::randomMat(rng, size, masktype, 0, 2, true);
+        }
 
         if( (haveMask || ninputs == 0) && !(op->flags & cvtest::BaseElemWiseOp::SCALAR_OUTPUT))
         {
