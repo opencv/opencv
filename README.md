@@ -1,5 +1,15 @@
 ## OpenCV: Open Source Computer Vision Library
 
+### Introduction
+
+This is the homework assignment 1 in the EC601 class from Team 6
+
+### Team Members
+
+* Yu Zhao (umsjtu601a)
+* Hongtao Zhao (bruttoz)
+* Anish Gupta (nkanish2002)
+
 ### Resources
 
 * Homepage: <http://opencv.org>
@@ -18,3 +28,13 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * Include tests and documentation;
 * Clean up "oops" commits before submitting;
 * Follow the [coding style guide](https://github.com/opencv/opencv/wiki/Coding_Style_Guide).
+
+### Build
+
+* To build  openCV run build.sh: `./build.sh`
+
+### Install
+
+* To install run first build the project using build.sh
+* Open the build directory `cd build`
+* Install `sudo make install`
