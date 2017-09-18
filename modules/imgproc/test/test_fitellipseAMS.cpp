@@ -439,5 +439,3 @@ TEST(Imgproc_FitEllipseAMS_Issue_7, accuracy) {
 
     EXPECT_TRUE(AMSGoodQ);
 }
-
-
