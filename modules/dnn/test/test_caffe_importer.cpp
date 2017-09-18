@@ -57,22 +57,14 @@ static std::string _tf(TString filename)
 
 TEST(Test_Caffe, read_gtsrb)
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(_tf("gtsrb.prototxt"), "");
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(_tf("gtsrb.prototxt"));
+    ASSERT_FALSE(net.empty());
 }
 
 TEST(Test_Caffe, read_googlenet)
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(_tf("bvlc_googlenet.prototxt"), "");
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(_tf("bvlc_googlenet.prototxt"));
+    ASSERT_FALSE(net.empty());
 }
 
 TEST(Reproducibility_AlexNet, Accuracy)
@@ -81,9 +73,8 @@ TEST(Reproducibility_AlexNet, Accuracy)
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
-        Ptr<Importer> importer = createCaffeImporter(proto, model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
@@ -107,9 +98,8 @@ TEST(Reproducibility_FCN, Accuracy)
     {
         const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
         const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel", false);
-        Ptr<Importer> importer = createCaffeImporter(proto, model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("street.png"));
@@ -136,9 +126,8 @@ TEST(Reproducibility_SSD, Accuracy)
     {
         const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
         const string model = findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false);
-        Ptr<Importer> importer = createCaffeImporter(proto, model);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
     }
 
     Mat sample = imread(_tf("street.png"));
@@ -186,6 +175,48 @@ TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
 
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
+}
+
+TEST(Reproducibility_AlexNet_fp16, Accuracy)
+{
+    const float l1 = 1e-5;
+    const float lInf = 2e-4;
+
+    const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+    const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
+
+    shrinkCaffeModel(model, "bvlc_alexnet.caffemodel_fp16");
+    Net net = readNetFromCaffe(proto, "bvlc_alexnet.caffemodel_fp16");
+
+    Mat sample = imread(findDataFile("dnn/grace_hopper_227.png", false));
+
+    net.setInput(blobFromImage(sample, 1, Size(227, 227)));
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy", false));
+    normAssert(ref, out, "", l1, lInf);
+}
+
+TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
+{
+    const float l1 = 1e-5;
+    const float lInf = 3e-3;
+
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
+
+    shrinkCaffeModel(model, "bvlc_googlenet.caffemodel_fp16");
+    Net net = readNetFromCaffe(proto, "bvlc_googlenet.caffemodel_fp16");
+
+    std::vector<Mat> inpMats;
+    inpMats.push_back( imread(_tf("googlenet_0.png")) );
+    inpMats.push_back( imread(_tf("googlenet_1.png")) );
+    ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
+
+    net.setInput(blobFromImages(inpMats), "data");
+    Mat out = net.forward("prob");
+
+    Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
+    normAssert(out, ref, "", l1, lInf);
 }
 
 }

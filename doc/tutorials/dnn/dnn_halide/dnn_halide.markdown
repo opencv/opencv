@@ -8,20 +8,7 @@ according to specific device and evaluate it with a quite good efficiency.
 
 An official website of the Halide project: http://halide-lang.org/.
 
-## Efficiency comparison
-Measured on Intel&reg; Core&trade; i7-6700K CPU @ 4.00GHz x 8.
-
-Single image forward pass (in milliseconds):
-
-|     Architecture | MKL backend | Halide backend | Speed Up ratio |
-|-----------------:|------------:|---------------:|---------------:|
-|          AlexNet |       16.55 |          22.38 |          x0.73 |
-|        ResNet-50 |       63.69 |          73.91 |          x0.86 |
-|  SqueezeNet v1.1 |       10.11 |           8.21 |          x1.23 |
-|     Inception-5h |       35.38 |          37.06 |          x0.95 |
-| ENet @ 3x512x256 |       82.26 |          41.21 |          x1.99 |
-
-Scheduling directives might be found @ [opencv_extra/testdata/dnn](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn).
+An up to date efficiency comparison: https://github.com/opencv/opencv/wiki/DNN-Efficiency
 
 ## Requirements
 ### LLVM compiler
@@ -80,6 +67,8 @@ MSBuild.exe /m:4 /t:Build /p:Configuration=Release .\\ALL_BUILD.vcxproj
 
 ## Build OpenCV with Halide backend
 When you build OpenCV add the following configuration flags:
+
+- `ENABLE_CXX11` - enable C++11 standard
 
 - `WITH_HALIDE` - enable Halide linkage
 
