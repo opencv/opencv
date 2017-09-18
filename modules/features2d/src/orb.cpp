@@ -1198,4 +1198,9 @@ Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThre
                              firstLevel, wta_k, scoreType, patchSize, fastThreshold);
 }
 
+String ORB::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".ORB");
+}
+
 }
