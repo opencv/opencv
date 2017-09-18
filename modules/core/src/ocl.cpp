@@ -2269,7 +2269,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         return false;
 
     cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1};
+    size_t globalsize[CV_MAX_DIM] = {1,1,1};
     size_t total = 1;
     CV_Assert(_globalsize != 0);
     for (int i = 0; i < dims; i++)
@@ -2278,15 +2278,16 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
             dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
-        globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
+        if (_globalsize[i] == 1)
+            val = 1;
+        globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
     }
-    if( total == 0 )
-        return true;
+    CV_Assert(total > 0);
     if( p->haveTempDstUMats )
         sync = true;
     cl_event asyncEvent = 0;
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, _localsize, 0, 0,
+                                           NULL, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &asyncEvent);
 #if CV_OPENCL_SHOW_RUN_ERRORS
     if (retval != CL_SUCCESS)
