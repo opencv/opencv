@@ -98,7 +98,8 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
 }
 
 
-void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool useCommonInputBlob = true)
+void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
+                               bool useCaffeModel = false, bool useCommonInputBlob = true)
 {
     String prototxt = _tf(basename + ".prototxt");
     String caffemodel = _tf(basename + ".caffemodel");
@@ -111,6 +112,9 @@ void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool
     Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
     ASSERT_FALSE(net.empty());
 
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
+
     Mat inp = blobFromNPY(inpfile);
     Mat ref = blobFromNPY(outfile);
 
@@ -122,47 +126,82 @@ void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool
 
 TEST(Layer_Test_Softmax, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_softmax");
+    testLayerUsingCaffeModels("layer_softmax");
+}
+
+OCL_TEST(Layer_Test_Softmax, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_softmax", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_LRN_spatial, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_lrn_spatial");
+    testLayerUsingCaffeModels("layer_lrn_spatial");
+}
+
+OCL_TEST(Layer_Test_LRN_spatial, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_lrn_spatial", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_LRN_channels, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_lrn_channels");
+    testLayerUsingCaffeModels("layer_lrn_channels");
+}
+
+OCL_TEST(Layer_Test_LRN_channels, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_lrn_channels", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_Convolution, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_convolution", true);
+    testLayerUsingCaffeModels("layer_convolution", DNN_TARGET_CPU, true);
+}
+
+OCL_TEST(Layer_Test_Convolution, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_convolution", DNN_TARGET_OPENCL, true);
 }
 
 TEST(Layer_Test_DeConvolution, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_deconvolution", true, false);
+    testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_CPU, true, false);
 }
 
 TEST(Layer_Test_InnerProduct, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_inner_product", true);
+    testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_CPU, true);
+}
+
+OCL_TEST(Layer_Test_InnerProduct, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_OPENCL, true);
 }
 
 TEST(Layer_Test_Pooling_max, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_pooling_max");
+    testLayerUsingCaffeModels("layer_pooling_max");
+}
+
+OCL_TEST(Layer_Test_Pooling_max, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_pooling_max", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_Pooling_ave, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_pooling_ave");
+    testLayerUsingCaffeModels("layer_pooling_ave");
+}
+
+OCL_TEST(Layer_Test_Pooling_ave, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_pooling_ave", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_MVN, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_mvn");
+    testLayerUsingCaffeModels("layer_mvn");
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
@@ -207,22 +246,32 @@ TEST(Layer_Test_Reshape, Accuracy)
 
 TEST(Layer_Test_BatchNorm, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_batch_norm", true);
+    testLayerUsingCaffeModels("layer_batch_norm", DNN_TARGET_CPU, true);
 }
 
 TEST(Layer_Test_ReLU, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_relu");
+    testLayerUsingCaffeModels("layer_relu");
+}
+
+OCL_TEST(Layer_Test_ReLU, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_relu", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_Dropout, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_dropout");
+    testLayerUsingCaffeModels("layer_dropout");
 }
 
 TEST(Layer_Test_Concat, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_concat");
+    testLayerUsingCaffeModels("layer_concat");
+}
+
+OCL_TEST(Layer_Test_Concat, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_concat", DNN_TARGET_OPENCL);
 }
 
 //template<typename XMat>
