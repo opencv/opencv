@@ -225,13 +225,28 @@ public:
         blobShapeFromProto(pbBlob, shape);
 
         dstBlob.create((int)shape.size(), &shape[0], CV_32F);
-        CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
-
-        CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
         float *dstData = dstBlob.ptr<float>();
+        if (pbBlob.data_size())
+        {
+            // Single precision floats.
+            CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
-        for (int i = 0; i < pbBlob.data_size(); i++)
-            dstData[i] = pbBlob.data(i);
+            CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+
+            for (int i = 0; i < pbBlob.data_size(); i++)
+                dstData[i] = pbBlob.data(i);
+        }
+        else
+        {
+            // Half precision floats.
+            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
+            std::string raw_data = pbBlob.raw_data();
+
+            CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
+
+            Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+            convertFp16(halfs, dstBlob);
+        }
     }
 
     void extractBinaryLayerParms(const caffe::LayerParameter& layer, LayerParams& layerParams)
