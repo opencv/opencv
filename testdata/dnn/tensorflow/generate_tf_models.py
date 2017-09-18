@@ -3,6 +3,7 @@ import tensorflow as tf
 import os
 import argparse
 import struct
+from prepare_for_dnn import prepare_for_dnn
 
 parser = argparse.ArgumentParser(description='Script for OpenCV\'s DNN module '
                                              'test data generation')
@@ -10,12 +11,14 @@ parser.add_argument('-f', dest='freeze_graph_tool', required=True,
                     help='Path to freeze_graph.py tool')
 parser.add_argument('-o', dest='optimizer_tool', required=True,
                     help='Path to optimize_for_inference.py tool')
+parser.add_argument('-t', dest='transform_graph_tool', required=True,
+                    help='Path to transform_graph tool')
 args = parser.parse_args()
 
 np.random.seed(2701)
 
 def gen_data(placeholder):
-    return np.random.standard_normal(placeholder.shape).astype(np.float32)
+    return np.random.standard_normal(placeholder.shape).astype(placeholder.dtype.as_numpy_dtype())
 
 tf.reset_default_graph()
 tf.Graph().as_default()
@@ -23,8 +26,12 @@ tf.set_random_seed(324)
 sess = tf.Session()
 
 def writeBlob(data, name):
-    # NHWC->NCHW
-    np.save(name + '.npy', data.transpose(0, 3, 1, 2).astype(np.float32))
+    if data.ndim == 4:
+        # NHWC->NCHW
+        np.save(name + '.npy', data.transpose(0, 3, 1, 2).astype(np.float32))
+    else:
+        # Save raw data.
+        np.save(name + '.npy', data.astype(np.float32))
 
 def save(inp, out, name):
     sess.run(tf.global_variables_initializer())
@@ -37,17 +44,10 @@ def save(inp, out, name):
     saver = tf.train.Saver()
     saver.save(sess, 'tmp.ckpt')
     tf.train.write_graph(sess.graph.as_graph_def(), "", "graph.pb")
-    os.system('python ' + args.freeze_graph_tool +
-              ' --input_graph graph.pb '
-              '--input_checkpoint tmp.ckpt '
-              '--output_graph frozen_graph.pb '
-              '--output_node_names ' + out.name[:out.name.rfind(':')])
-    os.system('python ' + args.optimizer_tool +
-              ' --input frozen_graph.pb '
-              '--output ' + name + '_net.pb '
-              '--frozen_graph True '
-              '--input_names ' + inp.name[:inp.name.rfind(':')] +
-              ' --output_names ' + out.name[:out.name.rfind(':')])
+    prepare_for_dnn('graph.pb', 'tmp.ckpt', args.freeze_graph_tool,
+                    args.optimizer_tool, args.transform_graph_tool,
+                    inp.name[:inp.name.rfind(':')], out.name[:out.name.rfind(':')],
+                    name + '_net.pb', inp.dtype)
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
@@ -112,7 +112,8 @@ for dtype, prefix in zip([tf.float32, tf.float16], ['', 'fp16_']):
 ################################################################################
     inp = tf.placeholder(dtype, [1, 7, 7, 2], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[3, 3], padding='SAME')
-    pool = tf.layers.max_pooling2d(inputs=conv, pool_size=2, strides=2, padding='SAME')
+    relu = tf.nn.relu6(conv * 10)
+    pool = tf.layers.max_pooling2d(inputs=relu, pool_size=2, strides=2, padding='SAME')
     save(inp, pool, prefix + 'max_pool_odd_same')
 ################################################################################
     inp = tf.placeholder(dtype, [1, 5, 6, 2], 'input')
@@ -145,6 +146,28 @@ weights = tf.Variable(tf.random_normal([3, 5, 3, 4]), name='weights')
 conv = tf.nn.atrous_conv2d(inp, weights, rate=2, padding='SAME')
 relu = tf.nn.relu(conv)
 save(inp, relu, 'atrous_conv2d_same')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 5, 4, 3], 'input')
+bn = tf.contrib.layers.batch_norm(inputs=inp, is_training=False,
+                                  scale=True, param_initializers={
+                                    'beta': tf.random_normal_initializer(),
+                                    'gamma': tf.random_normal_initializer(),
+                                    'moving_mean': tf.random_uniform_initializer(-2, -1),
+                                    'moving_variance': tf.random_uniform_initializer(1, 2)
+                                  })
+save(inp, bn, 'batch_norm')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 10, 9, 6], 'input')
+weights = tf.Variable(tf.random_normal([5, 3, 6, 4]), name='weights')
+conv = tf.nn.depthwise_conv2d(input=inp, filter=weights, strides=[1, 1, 1, 1],
+                              padding='SAME')
+save(inp, conv, 'depthwise_conv2d')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3], 'input')
+biases = tf.Variable(tf.random_normal([4]), name='matmul_biases')
+weights = tf.Variable(tf.random_normal([3, 4]), name='matmul_weights')
+mm = tf.matmul(inp, weights) + biases
+save(inp, mm, 'matmul')
 ################################################################################
 
 # Uncomment to print the final graph.
