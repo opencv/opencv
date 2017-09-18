@@ -641,6 +641,28 @@ inline bool V0LayerParameter_PoolMethod_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<V0LayerParameter_PoolMethod>(
     V0LayerParameter_PoolMethod_descriptor(), name, value);
 }
+enum Type {
+  DOUBLE = 0,
+  FLOAT = 1,
+  FLOAT16 = 2,
+  INT = 3,
+  UINT = 4
+};
+bool Type_IsValid(int value);
+const Type Type_MIN = DOUBLE;
+const Type Type_MAX = UINT;
+const int Type_ARRAYSIZE = Type_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* Type_descriptor();
+inline const ::std::string& Type_Name(Type value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    Type_descriptor(), value);
+}
+inline bool Type_Parse(
+    const ::std::string& name, Type* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<Type>(
+    Type_descriptor(), name, value);
+}
 enum Phase {
   TRAIN = 0,
   TEST = 1
@@ -892,6 +914,25 @@ class BlobProto : public ::google::protobuf::Message /* @@protoc_insertion_point
   ::google::protobuf::RepeatedField< double >*
       mutable_double_diff();
 
+  // optional .caffe.Type raw_data_type = 10;
+  bool has_raw_data_type() const;
+  void clear_raw_data_type();
+  static const int kRawDataTypeFieldNumber = 10;
+  ::caffe::Type raw_data_type() const;
+  void set_raw_data_type(::caffe::Type value);
+
+  // optional bytes raw_data = 12 [packed = false];
+  bool has_raw_data() const;
+  void clear_raw_data();
+  static const int kRawDataFieldNumber = 12;
+  const ::std::string& raw_data() const;
+  void set_raw_data(const ::std::string& value);
+  void set_raw_data(const char* value);
+  void set_raw_data(const void* value, size_t size);
+  ::std::string* mutable_raw_data();
+  ::std::string* release_raw_data();
+  void set_allocated_raw_data(::std::string* raw_data);
+
   // optional int32 num = 1 [default = 0];
   bool has_num() const;
   void clear_num();
@@ -924,6 +965,10 @@ class BlobProto : public ::google::protobuf::Message /* @@protoc_insertion_point
  private:
   inline void set_has_shape();
   inline void clear_has_shape();
+  inline void set_has_raw_data_type();
+  inline void clear_has_raw_data_type();
+  inline void set_has_raw_data();
+  inline void clear_has_raw_data();
   inline void set_has_num();
   inline void clear_has_num();
   inline void set_has_channels();
@@ -944,7 +989,9 @@ class BlobProto : public ::google::protobuf::Message /* @@protoc_insertion_point
   mutable int _double_data_cached_byte_size_;
   ::google::protobuf::RepeatedField< double > double_diff_;
   mutable int _double_diff_cached_byte_size_;
+  ::google::protobuf::internal::ArenaStringPtr raw_data_;
   ::caffe::BlobShape* shape_;
+  int raw_data_type_;
   ::google::protobuf::int32 num_;
   ::google::protobuf::int32 channels_;
   ::google::protobuf::int32 height_;
@@ -12884,15 +12931,94 @@ BlobProto::mutable_double_diff() {
   return &double_diff_;
 }
 
-// optional int32 num = 1 [default = 0];
-inline bool BlobProto::has_num() const {
+// optional .caffe.Type raw_data_type = 10;
+inline bool BlobProto::has_raw_data_type() const {
   return (_has_bits_[0] & 0x00000020u) != 0;
 }
-inline void BlobProto::set_has_num() {
+inline void BlobProto::set_has_raw_data_type() {
   _has_bits_[0] |= 0x00000020u;
 }
-inline void BlobProto::clear_has_num() {
+inline void BlobProto::clear_has_raw_data_type() {
   _has_bits_[0] &= ~0x00000020u;
+}
+inline void BlobProto::clear_raw_data_type() {
+  raw_data_type_ = 0;
+  clear_has_raw_data_type();
+}
+inline ::caffe::Type BlobProto::raw_data_type() const {
+  // @@protoc_insertion_point(field_get:caffe.BlobProto.raw_data_type)
+  return static_cast< ::caffe::Type >(raw_data_type_);
+}
+inline void BlobProto::set_raw_data_type(::caffe::Type value) {
+  assert(::caffe::Type_IsValid(value));
+  set_has_raw_data_type();
+  raw_data_type_ = value;
+  // @@protoc_insertion_point(field_set:caffe.BlobProto.raw_data_type)
+}
+
+// optional bytes raw_data = 12 [packed = false];
+inline bool BlobProto::has_raw_data() const {
+  return (_has_bits_[0] & 0x00000040u) != 0;
+}
+inline void BlobProto::set_has_raw_data() {
+  _has_bits_[0] |= 0x00000040u;
+}
+inline void BlobProto::clear_has_raw_data() {
+  _has_bits_[0] &= ~0x00000040u;
+}
+inline void BlobProto::clear_raw_data() {
+  raw_data_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  clear_has_raw_data();
+}
+inline const ::std::string& BlobProto::raw_data() const {
+  // @@protoc_insertion_point(field_get:caffe.BlobProto.raw_data)
+  return raw_data_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void BlobProto::set_raw_data(const ::std::string& value) {
+  set_has_raw_data();
+  raw_data_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:caffe.BlobProto.raw_data)
+}
+inline void BlobProto::set_raw_data(const char* value) {
+  set_has_raw_data();
+  raw_data_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:caffe.BlobProto.raw_data)
+}
+inline void BlobProto::set_raw_data(const void* value, size_t size) {
+  set_has_raw_data();
+  raw_data_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:caffe.BlobProto.raw_data)
+}
+inline ::std::string* BlobProto::mutable_raw_data() {
+  set_has_raw_data();
+  // @@protoc_insertion_point(field_mutable:caffe.BlobProto.raw_data)
+  return raw_data_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* BlobProto::release_raw_data() {
+  // @@protoc_insertion_point(field_release:caffe.BlobProto.raw_data)
+  clear_has_raw_data();
+  return raw_data_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void BlobProto::set_allocated_raw_data(::std::string* raw_data) {
+  if (raw_data != NULL) {
+    set_has_raw_data();
+  } else {
+    clear_has_raw_data();
+  }
+  raw_data_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), raw_data);
+  // @@protoc_insertion_point(field_set_allocated:caffe.BlobProto.raw_data)
+}
+
+// optional int32 num = 1 [default = 0];
+inline bool BlobProto::has_num() const {
+  return (_has_bits_[0] & 0x00000080u) != 0;
+}
+inline void BlobProto::set_has_num() {
+  _has_bits_[0] |= 0x00000080u;
+}
+inline void BlobProto::clear_has_num() {
+  _has_bits_[0] &= ~0x00000080u;
 }
 inline void BlobProto::clear_num() {
   num_ = 0;
@@ -12910,13 +13036,13 @@ inline void BlobProto::set_num(::google::protobuf::int32 value) {
 
 // optional int32 channels = 2 [default = 0];
 inline bool BlobProto::has_channels() const {
-  return (_has_bits_[0] & 0x00000040u) != 0;
+  return (_has_bits_[0] & 0x00000100u) != 0;
 }
 inline void BlobProto::set_has_channels() {
-  _has_bits_[0] |= 0x00000040u;
+  _has_bits_[0] |= 0x00000100u;
 }
 inline void BlobProto::clear_has_channels() {
-  _has_bits_[0] &= ~0x00000040u;
+  _has_bits_[0] &= ~0x00000100u;
 }
 inline void BlobProto::clear_channels() {
   channels_ = 0;
@@ -12934,13 +13060,13 @@ inline void BlobProto::set_channels(::google::protobuf::int32 value) {
 
 // optional int32 height = 3 [default = 0];
 inline bool BlobProto::has_height() const {
-  return (_has_bits_[0] & 0x00000080u) != 0;
+  return (_has_bits_[0] & 0x00000200u) != 0;
 }
 inline void BlobProto::set_has_height() {
-  _has_bits_[0] |= 0x00000080u;
+  _has_bits_[0] |= 0x00000200u;
 }
 inline void BlobProto::clear_has_height() {
-  _has_bits_[0] &= ~0x00000080u;
+  _has_bits_[0] &= ~0x00000200u;
 }
 inline void BlobProto::clear_height() {
   height_ = 0;
@@ -12958,13 +13084,13 @@ inline void BlobProto::set_height(::google::protobuf::int32 value) {
 
 // optional int32 width = 4 [default = 0];
 inline bool BlobProto::has_width() const {
-  return (_has_bits_[0] & 0x00000100u) != 0;
+  return (_has_bits_[0] & 0x00000400u) != 0;
 }
 inline void BlobProto::set_has_width() {
-  _has_bits_[0] |= 0x00000100u;
+  _has_bits_[0] |= 0x00000400u;
 }
 inline void BlobProto::clear_has_width() {
-  _has_bits_[0] &= ~0x00000100u;
+  _has_bits_[0] &= ~0x00000400u;
 }
 inline void BlobProto::clear_width() {
   width_ = 0;
@@ -28596,6 +28722,11 @@ template <> struct is_proto_enum< ::caffe::V0LayerParameter_PoolMethod> : ::goog
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::caffe::V0LayerParameter_PoolMethod>() {
   return ::caffe::V0LayerParameter_PoolMethod_descriptor();
+}
+template <> struct is_proto_enum< ::caffe::Type> : ::google::protobuf::internal::true_type {};
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::caffe::Type>() {
+  return ::caffe::Type_descriptor();
 }
 template <> struct is_proto_enum< ::caffe::Phase> : ::google::protobuf::internal::true_type {};
 template <>

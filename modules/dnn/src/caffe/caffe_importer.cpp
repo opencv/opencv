@@ -225,13 +225,28 @@ public:
         blobShapeFromProto(pbBlob, shape);
 
         dstBlob.create((int)shape.size(), &shape[0], CV_32F);
-        CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
-
-        CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
         float *dstData = dstBlob.ptr<float>();
+        if (pbBlob.data_size())
+        {
+            // Single precision floats.
+            CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
-        for (int i = 0; i < pbBlob.data_size(); i++)
-            dstData[i] = pbBlob.data(i);
+            CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+
+            for (int i = 0; i < pbBlob.data_size(); i++)
+                dstData[i] = pbBlob.data(i);
+        }
+        else
+        {
+            // Half precision floats.
+            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
+            std::string raw_data = pbBlob.raw_data();
+
+            CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
+
+            Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+            convertFp16(halfs, dstBlob);
+        }
     }
 
     void extractBinaryLayerParms(const caffe::LayerParameter& layer, LayerParams& layerParams)
@@ -370,24 +385,15 @@ Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeMod
     return Ptr<Importer>(new CaffeImporter(prototxt.c_str(), caffeModel.c_str()));
 }
 
-#else //HAVE_PROTOBUF
-
-Ptr<Importer> createCaffeImporter(const String&, const String&)
+Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
 {
-    CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from Caffe models");
-    return Ptr<Importer>();
+    CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
 }
 
 #endif //HAVE_PROTOBUF
-
-Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
-{
-    Ptr<Importer> caffeImporter = createCaffeImporter(prototxt, caffeModel);
-    Net net;
-    if (caffeImporter)
-        caffeImporter->populateNet(net);
-    return net;
-}
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace

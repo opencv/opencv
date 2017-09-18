@@ -1150,10 +1150,9 @@ Net readNetFromTorch(const String &model, bool isBinary)
 {
     CV_TRACE_FUNCTION();
 
-    Ptr<Importer> importer = createTorchImporter(model, isBinary);
+    TorchImporter importer(model, isBinary);
     Net net;
-    if (importer)
-        importer->populateNet(net);
+    importer.populateNet(net);
     return net;
 }
 

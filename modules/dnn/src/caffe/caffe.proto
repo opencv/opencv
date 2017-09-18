@@ -50,6 +50,16 @@ syntax = "proto2";
 
 package caffe;
 
+// NVidia's Caffe feature is used to store fp16 weights, https://github.com/NVIDIA/caffe:
+// Math and storage types
+enum Type {
+  DOUBLE = 0;
+  FLOAT = 1;
+  FLOAT16 = 2;
+  INT = 3;  // math not supported
+  UINT = 4;  // math not supported
+}
+
 // Specifies the shape (dimensions) of a Blob.
 message BlobShape {
   repeated int64 dim = 1 [packed = true];
@@ -61,6 +71,11 @@ message BlobProto {
   repeated float diff = 6 [packed = true];
   repeated double double_data = 8 [packed = true];
   repeated double double_diff = 9 [packed = true];
+
+  // NVidia's Caffe fields begin.
+  optional Type raw_data_type = 10;
+  optional bytes raw_data = 12 [packed = false];
+  // NVidia's Caffe fields end.
 
   // 4D dimensions -- deprecated.  Use "shape" instead.
   optional int32 num = 1 [default = 0];
