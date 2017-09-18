@@ -587,6 +587,3 @@ void test7() {
     drawPoints(canvas, pts, cv::Scalar(255,255,255));
     imshow("test7",canvas);
 }
-
-
-
