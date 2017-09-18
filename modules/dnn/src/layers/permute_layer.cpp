@@ -132,6 +132,7 @@ public:
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
+            CV_Assert(inputs[i].size() == 4);
             CV_Assert(inputs[i][2] == shapeBefore[2] && inputs[i][3] == shapeBefore[3]);
             CV_Assert(total(inputs[i]) == total(shapeAfter));
             outputs.push_back(shapeAfter);
