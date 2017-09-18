@@ -2345,4 +2345,9 @@ Ptr<BRISK> BRISK::create(int thresh, int octaves, const std::vector<float> &radi
     return makePtr<BRISK_Impl>(thresh, octaves, radiusList, numberList, dMax, dMin, indexChange);
 }
 
+String BRISK::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".BRISK");
+}
+
 }

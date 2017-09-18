@@ -1109,4 +1109,9 @@ Ptr<MSER> MSER::create( int _delta, int _min_area, int _max_area,
                           _min_margin, _edge_blur_size));
 }
 
+String MSER::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".MSER");
+}
+
 }

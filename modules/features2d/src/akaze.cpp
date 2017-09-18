@@ -244,4 +244,10 @@ namespace cv
         return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
                                    threshold, octaves, sublevels, diffusivity);
     }
+
+    String AKAZE::getDefaultName() const
+    {
+        return (Feature2D::getDefaultName() + ".AKAZE");
+    }
+
 }
