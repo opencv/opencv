@@ -7,11 +7,13 @@ struct Stats
     int inliers;
     double ratio;
     int keypoints;
+    double fps;
 
     Stats() : matches(0),
         inliers(0),
         ratio(0),
-        keypoints(0)
+        keypoints(0),
+        fps(0.)
     {}
 
     Stats& operator+=(const Stats& op) {
@@ -19,6 +21,7 @@ struct Stats
         inliers += op.inliers;
         ratio += op.ratio;
         keypoints += op.keypoints;
+        fps += op.fps;
         return *this;
     }
     Stats& operator/=(int num)
@@ -27,6 +30,7 @@ struct Stats
         inliers /= num;
         ratio /= num;
         keypoints /= num;
+        fps /= num;
         return *this;
     }
 };
