@@ -58,7 +58,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_1, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(91.3256, 90.4668),Size2f(187.211, 140.031), 21.5808);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(91.3256f, 90.4668f),Size2f(187.211f, 140.031f), 21.5808f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
@@ -96,7 +96,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_2, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(228.232, 174.879),Size2f(450.68, 265.556), 166.181);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(228.232f, 174.879f),Size2f(450.68f, 265.556f), 166.181f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
@@ -145,7 +145,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_3, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(255.326, 272.626),Size2f(570.999, 434.23), 49.0265);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(255.326f, 272.626f),Size2f(570.999f, 434.23f), 49.0265f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
@@ -213,7 +213,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_4, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(236.836, 208.089),Size2f(515.893, 357.166), -35.9996);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(236.836f, 208.089f),Size2f(515.893f, 357.166f), -35.9996f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
@@ -283,7 +283,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_5, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(264.354, 457.336),Size2f(493.728, 162.9), 5.36186);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(264.354f, 457.336f),Size2f(493.728f, 162.9f), 5.36186f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
@@ -351,7 +351,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_6, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(207.145, 223.308),Size2f(499.583, 117.473), -42.6851);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(207.145f, 223.308f),Size2f(499.583f, 117.473f), -42.6851f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
@@ -419,7 +419,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_7, accuracy) {
     bool directGoodQ;
     float tol = 0.01f;
 
-    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(199.463, 150.997),Size2f(390.341, 286.01), -12.9696);
+    RotatedRect     ellipseDirectTrue = cv::RotatedRect(Point2f(199.463f, 150.997f),Size2f(390.341f, 286.01f), -12.9696f);
     RotatedRect     ellipseDirectTest = fitEllipseDirect(pts);
     Point2f         ellipseDirectTrueVertices[4];
     Point2f         ellipseDirectTestVertices[4];
