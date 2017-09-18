@@ -200,9 +200,9 @@ void drawPoints(cv::Mat canvas, vector<Point2f> pts, cv::Scalar color){
 
     for(size_t i=0; i < pts.size(); i++){
         Point2f pnt = pts[i];
-        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[0] = color[0];
-        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[1] = color[1];
-        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[2] = color[2];
+        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[0] = (uchar)color[0];
+        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[1] = (uchar)color[1];
+        canvas.at<cv::Vec3b>(int(pnt.y), int(pnt.x))[2] = (uchar)color[2];
     };
 }
 
@@ -274,7 +274,7 @@ void test1() {
     pts.push_back(Point2f(6.719616410428614f, 50.15263031354927f));
     pts.push_back(Point2f(5.122267598477748f, 46.03603214691343f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(95.242, 82.1639), Size2f(196.189, 157.473), 23.6645);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(95.242f, 82.1639f), Size2f(196.189f, 157.473f), 23.6645f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
@@ -302,7 +302,7 @@ void test2() {
     pts.push_back(Point2f(91.66999301197541f, 300.57303988670515f));
     pts.push_back(Point2f(28.286233855826133f, 268.0670159317756f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(225.756, 156.664), Size2f(460.469, 300.007), -14.9957);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(225.756f, 156.664f), Size2f(460.469f, 300.007f), -14.9957f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
@@ -341,7 +341,7 @@ void test3() {
     pts.push_back(Point2f(39.683930802331844f, 110.26290871953987f));
     pts.push_back(Point2f(47.85826684019932f, 70.82454140948524f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(277.183, 262.297), Size2f(580.724, 476.204), 41.4611);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(277.183f, 262.297f), Size2f(580.724f, 476.204f), 41.4611f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
@@ -399,7 +399,7 @@ void test4() {
     pts.push_back(Point2f(54.55733659450332f, 136.54322891729444f));
     pts.push_back(Point2f(78.60990563833005f, 112.76538180538182f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(236.034, 209.86), Size2f(515.97, 353.283), -37.0581);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(236.034f, 209.86f), Size2f(515.97f, 353.283f), -37.0581f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
@@ -457,7 +457,7 @@ void test5() {
     pts.push_back(Point2f(27.855803175234342f, 450.2298664426336f));
     pts.push_back(Point2f(12.832198085636549f, 435.6317753810441f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(268.357, 454.105), Size2f(500.135, 169.082), 5.32011);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(268.357f, 454.105f), Size2f(500.135f, 169.082f), 5.32011f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
@@ -515,7 +515,7 @@ void test6() {
     pts.push_back(Point2f(30.71132492338431f, 402.85098740402844f));
     pts.push_back(Point2f(10.994737323179852f, 394.6764602972333f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(203.566, 200.563), Size2f(550.809, 152.538), -44.5035);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(203.566f, 200.563f), Size2f(550.809f, 152.538f), -44.5035f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
@@ -573,7 +573,7 @@ void test7() {
     pts.push_back(Point2f(9.929991244497518f, 203.20662088477752f));
     pts.push_back(Point2f(0.0f, 190.04891498441148f));
     // Input Ellipses
-    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(197.181, 147.648), Size2f(395.369, 289.903), -12.0625);
+    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(197.181f, 147.648f), Size2f(395.369f, 289.903f), -12.0625f);
     cv::RotatedRect ellipseTest = fitEllipse(pts);
     cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
     cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
