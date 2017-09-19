@@ -214,6 +214,11 @@ def handle_ptr(tp):
         tp = 'Ptr<' + "::".join(tp.split('_')[1:]) + '>'
     return tp
 
+def handle_vector(tp):
+    if tp.startswith('vector_'):
+        tp = 'std::vector<' + "::".join(tp.split('_')[1:]) + '>'
+    return tp
+
 
 class ArgInfo(object):
     def __init__(self, arg_tuple):
@@ -226,6 +231,8 @@ class ArgInfo(object):
         self.inputarg = True
         self.outputarg = False
         self.returnarg = False
+        self.const = False
+        self.reference = False
         for m in arg_tuple[3]:
             if m == "/O":
                 self.inputarg = False
@@ -241,16 +248,27 @@ class ArgInfo(object):
             elif m.startswith("/CA"):
                 self.isarray = True
                 self.arraycvt = m[2:].strip()
+            elif m == "/C":
+                self.const = True
+            elif m == "/Ref":
+                self.reference = True
+        if self.tp == "Mat":
+            if self.outputarg:
+                self.tp = "cv::Mat&"
+            elif self.inputarg:
+                self.tp = "const cv::Mat&"
+        if self.tp == "vector_Mat":
+            if self.outputarg:
+                self.tp = "std::vector<cv::Mat>&"
+            elif self.inputarg:
+                self.tp = "const std::vector<cv::Mat>&"
+        self.tp = handle_vector(self.tp).strip()
+        if self.const:
+            self.tp = "const " + self.tp
+        if self.reference:
+            self.tp = self.tp + "&"
         self.py_inputarg = False
         self.py_outputarg = False
-
-    def isbig(self):
-        return self.tp == "Mat" or self.tp == "vector_Mat"  # or self.tp.startswith("vector")
-
-    def crepr(self):
-        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
-
-
 
 class FuncVariant(object):
     def __init__(self, class_name, name, decl, is_constructor, is_class_method, is_const, is_virtual, is_pure_virtual, ref_return, const_return):
@@ -263,7 +281,7 @@ class FuncVariant(object):
         self.is_pure_virtual = is_pure_virtual
         self.refret = ref_return
         self.constret = const_return
-        self.rettype = handle_ptr(decl[1]).strip()
+        self.rettype = handle_vector(handle_ptr(decl[1]).strip()).strip()
         if self.rettype == "void":
             self.rettype = ""
         self.args = []
@@ -311,7 +329,7 @@ class JSWrapperGenerator(object):
         self.namespaces = {}
         self.enums = {}
 
-        self.parser = hdr_parser.CppHeaderParser(js=True)
+        self.parser = hdr_parser.CppHeaderParser()
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):

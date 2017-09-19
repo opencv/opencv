@@ -141,7 +141,7 @@ smart_ptr_reg_template = Template("""
 """)
 
 overload_function_template = Template("""
-    function("$js_name", select_overload<$ret($args)>(&$cpp_name)$optional);
+    function("$js_name", select_overload<$ret($args)$const>(&$cpp_name)$optional);
 """)
 
 overload_class_function_template = Template("""
