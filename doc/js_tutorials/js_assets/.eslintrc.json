@@ -1,0 +1,17 @@
+{
+  "extends": "google",
+  "parserOptions": {
+    "ecmaVersion": 6
+  },
+  "rules": {
+    "max-len": ["error", 100, {"ignoreUrls": true}],
+    "quotes": ["error", "single"],
+    "indent": ["error", 2, {"ArrayExpression": "first",
+                            "CallExpression": {"arguments": "first"}}],
+    "require-jsdoc": "off"
+  },
+  "plugins": ["html"],
+  "settings": {
+    "html/javascript-mime-types": ["text/javascript", "text/code-snippet"]
+  }
+}

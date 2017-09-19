@@ -203,65 +203,10 @@ We use the function: **roi (rect)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named roiCanvasInput and roiCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="roiCodeArea">
-<h2>Input your code</h2>
-<button id="roiTryIt" disabled="true" onclick="roiExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="roiTestCode" spellcheck="false">
-let src = cv.imread("roiCanvasInput");
-let dst = new cv.Mat();
-// You can try more different parameters
-let rect = new cv.Rect(100, 100, 200, 200);
-dst = src.roi(rect);
-cv.imshow("roiCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="roiErr"></p>
-</div>
-<div id="roiShowcase">
-    <div>
-        <canvas id="roiCanvasInput"></canvas>
-        <canvas id="roiCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="roiInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function roiExecuteCode() {
-    let roiText = document.getElementById("roiTestCode").value;
-    try {
-        eval(roiText);
-        document.getElementById("roiErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("roiErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "roiCanvasInput");
-let roiInputElement = document.getElementById("roiInput");
-roiInputElement.addEventListener("change", roiHandleFiles, false);
-function roiHandleFiles(e) {
-    let roiUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(roiUrl, "roiCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_basic_ops_roi.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 
@@ -314,67 +259,8 @@ padding etc. This function takes following arguments:
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named copyMakeBorderCanvasInput and copyMakeBorderCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
-</head>
-<body>
-<div id="copyMakeBorderCodeArea">
-<h2>Input your code</h2>
-<button id="copyMakeBorderTryIt" disabled="true" onclick="copyMakeBorderExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="copyMakeBorderTestCode" spellcheck="false">
-let src = cv.imread("copyMakeBorderCanvasInput");
-let dst = new cv.Mat();
-// You can try more different parameters
-let s = new cv.Scalar(255, 0, 0, 255);
-cv.copyMakeBorder(src, dst, 10, 10, 10, 10, cv.BORDER_CONSTANT, s);
-cv.imshow("copyMakeBorderCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="copyMakeBorderErr"></p>
-</div>
-<div id="copyMakeBorderShowcase">
-    <div>
-        <canvas id="copyMakeBorderCanvasInput"></canvas>
-        <canvas id="copyMakeBorderCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="copyMakeBorderInput" name="file" />
-</div>
-<script>
-function copyMakeBorderExecuteCode() {
-    let copyMakeBorderText = document.getElementById("copyMakeBorderTestCode").value;
-    try {
-        eval(copyMakeBorderText);
-        document.getElementById("copyMakeBorderErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("copyMakeBorderErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "copyMakeBorderCanvasInput");
-let copyMakeBorderInputElement = document.getElementById("copyMakeBorderInput");
-copyMakeBorderInputElement.addEventListener("change", copyMakeBorderHandleFiles, false);
-function copyMakeBorderHandleFiles(e) {
-    let copyMakeBorderUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(copyMakeBorderUrl, "copyMakeBorderCanvasInput");
-}
-function onReady() {
-    document.getElementById("copyMakeBorderTryIt").disabled = false;
-    document.getElementById("roiTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_basic_ops_copymakeborder.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
