@@ -2283,6 +2283,8 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     {
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
+        if(src.data == dst.data)
+            return false;
         ::ipp::IwiImage       iwSrc      = ippiGetImage(src);
         ::ipp::IwiImage       iwDst      = ippiGetImage(dst);
         ::ipp::IwiBorderSize  borderSize = ::ipp::iwiSizeToBorderSize(ippiGetSize(ksize));
