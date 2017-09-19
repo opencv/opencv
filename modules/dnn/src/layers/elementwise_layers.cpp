@@ -656,6 +656,14 @@ struct ChannelsPReLUFunctor
         }
     }
 
+#ifdef HAVE_OPENCL
+    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        // TODO: implement OCL version
+        return false;
+    }
+#endif
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
