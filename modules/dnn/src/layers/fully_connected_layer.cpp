@@ -98,7 +98,7 @@ public:
 #ifdef HAVE_OPENCL
         size_t n = blobs.size();
         umat_blobs.resize(n);
-        for (int i = 0; i < n; i++) blobs[i].copyTo(umat_blobs[i]);
+        for (int i = 0; i < n; i++) umat_blobs[i] = blobs[i].getUMat(ACCESS_READ);
 #endif
     }
 

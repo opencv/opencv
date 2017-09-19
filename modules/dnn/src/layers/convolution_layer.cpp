@@ -1262,7 +1262,8 @@ Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
     size_t n = params.blobs.size();
     conv_ptr->umat_blobs.resize(n);
-    for (int i = 0; i < n; i++) params.blobs[i].copyTo(conv_ptr->umat_blobs[i]);
+    for (int i = 0; i < n; i++)
+        conv_ptr->umat_blobs[i] = params.blobs[i].getUMat(ACCESS_READ);
 #endif
 
     return l;
