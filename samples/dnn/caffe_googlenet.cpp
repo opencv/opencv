@@ -91,21 +91,26 @@ int main(int argc, char **argv)
     String modelBin = "bvlc_googlenet.caffemodel";
     String imageFile = (argc > 1) ? argv[1] : "space_shuttle.jpg";
 
-    //! [Read and initialize network]
-    Net net = dnn::readNetFromCaffe(modelTxt, modelBin);
-    //! [Read and initialize network]
-
-    //! [Check that network was read successfully]
-    if (net.empty())
-    {
-        std::cerr << "Can't load network by using the following files: " << std::endl;
-        std::cerr << "prototxt:   " << modelTxt << std::endl;
-        std::cerr << "caffemodel: " << modelBin << std::endl;
-        std::cerr << "bvlc_googlenet.caffemodel can be downloaded here:" << std::endl;
-        std::cerr << "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
-        exit(-1);
+    Net net;
+    try {
+        //! [Read and initialize network]
+        net = dnn::readNetFromCaffe(modelTxt, modelBin);
+        //! [Read and initialize network]
     }
-    //! [Check that network was read successfully]
+    catch (cv::Exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        //! [Check that network was read successfully]
+        if (net.empty())
+        {
+            std::cerr << "Can't load network by using the following files: " << std::endl;
+            std::cerr << "prototxt:   " << modelTxt << std::endl;
+            std::cerr << "caffemodel: " << modelBin << std::endl;
+            std::cerr << "bvlc_googlenet.caffemodel can be downloaded here:" << std::endl;
+            std::cerr << "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
+            exit(-1);
+        }
+        //! [Check that network was read successfully]
+    }
 
     //! [Prepare blob]
     Mat img = imread(imageFile);
@@ -115,9 +120,9 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    //GoogLeNet accepts only 224x224 RGB-images
-    Mat inputBlob = blobFromImage(img, 1, Size(224, 224),
-                                  Scalar(104, 117, 123));   //Convert Mat to batch of images
+    //GoogLeNet accepts only 224x224 BGR-images
+    Mat inputBlob = blobFromImage(img, 1.0f, Size(224, 224),
+                                  Scalar(104, 117, 123), false);   //Convert Mat to batch of images
     //! [Prepare blob]
 
     Mat prob;
