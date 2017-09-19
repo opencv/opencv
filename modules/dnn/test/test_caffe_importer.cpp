@@ -80,12 +80,7 @@ TEST(Reproducibility_AlexNet, Accuracy)
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
 
-    Size inputSize(227, 227);
-
-    if (sample.size() != inputSize)
-        resize(sample, sample, inputSize);
-
-    net.setInput(blobFromImage(sample), "data");
+    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false), "data");
     Mat out = net.forward("prob");
     Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
     normAssert(ref, out);
@@ -105,17 +100,17 @@ TEST(Reproducibility_FCN, Accuracy)
     Mat sample = imread(_tf("street.png"));
     ASSERT_TRUE(!sample.empty());
 
-    Size inputSize(500, 500);
-    if (sample.size() != inputSize)
-        resize(sample, sample, inputSize);
-
     std::vector<int> layerIds;
     std::vector<size_t> weights, blobs;
     net.getMemoryConsumption(shape(1,3,227,227), layerIds, weights, blobs);
 
-    net.setInput(blobFromImage(sample), "data");
+    net.setInput(blobFromImage(sample, 1.0f, Size(500, 500), Scalar(), false), "data");
     Mat out = net.forward("score");
-    Mat ref = blobFromNPY(_tf("caffe_fcn8s_prob.npy"));
+
+    Mat refData = imread(_tf("caffe_fcn8s_prob.png"), IMREAD_ANYDEPTH);
+    int shape[] = {1, 21, 500, 500};
+    Mat ref(4, shape, CV_32FC1, refData.data);
+
     normAssert(ref, out);
 }
 #endif
@@ -136,10 +131,7 @@ TEST(Reproducibility_SSD, Accuracy)
     if (sample.channels() == 4)
         cvtColor(sample, sample, COLOR_BGRA2BGR);
 
-    sample.convertTo(sample, CV_32F);
-    resize(sample, sample, Size(300, 300));
-
-    Mat in_blob = blobFromImage(sample);
+    Mat in_blob = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     net.setInput(in_blob, "data");
     Mat out = net.forward("detection_out");
 
@@ -152,7 +144,7 @@ TEST(Reproducibility_ResNet50, Accuracy)
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
-    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1, Size(224,224));
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(224,224), Scalar(), false);
     ASSERT_TRUE(!input.empty());
 
     net.setInput(input);
@@ -167,7 +159,7 @@ TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
 
-    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1, Size(227,227));
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
     ASSERT_TRUE(!input.empty());
 
     net.setInput(input);
@@ -180,7 +172,7 @@ TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {
     const float l1 = 1e-5;
-    const float lInf = 2e-4;
+    const float lInf = 3e-3;
 
     const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
     const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
@@ -190,7 +182,7 @@ TEST(Reproducibility_AlexNet_fp16, Accuracy)
 
     Mat sample = imread(findDataFile("dnn/grace_hopper_227.png", false));
 
-    net.setInput(blobFromImage(sample, 1, Size(227, 227)));
+    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false));
     Mat out = net.forward();
     Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy", false));
     normAssert(ref, out, "", l1, lInf);
@@ -212,7 +204,7 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
     inpMats.push_back( imread(_tf("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
-    net.setInput(blobFromImages(inpMats), "data");
+    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
     Mat out = net.forward("prob");
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));

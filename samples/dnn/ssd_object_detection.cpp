@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     //! [Prepare blob]
     Mat preprocessedFrame = preprocess(frame);
 
-    Mat inputBlob = blobFromImage(preprocessedFrame); //Convert Mat to batch of images
+    Mat inputBlob = blobFromImage(preprocessedFrame, 1.0f, Size(), Scalar(), false); //Convert Mat to batch of images
     //! [Prepare blob]
 
     //! [Set input blob]

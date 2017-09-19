@@ -66,7 +66,7 @@ TEST(Reproducibility_GoogLeNet, Accuracy)
     inpMats.push_back( imread(_tf("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
-    net.setInput(blobFromImages(inpMats), "data");
+    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
     Mat out = net.forward("prob");
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
@@ -84,7 +84,7 @@ TEST(IntermediateBlobs_GoogLeNet, Accuracy)
     blobsNames.push_back("inception_4c/1x1");
     blobsNames.push_back("inception_4c/relu_1x1");
     std::vector<Mat> outs;
-    Mat in = blobFromImage(imread(_tf("googlenet_0.png")));
+    Mat in = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(), Scalar(), false);
     net.setInput(in, "data");
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
@@ -109,7 +109,7 @@ TEST(SeveralCalls_GoogLeNet, Accuracy)
     inpMats.push_back( imread(_tf("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
-    net.setInput(blobFromImages(inpMats), "data");
+    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
@@ -118,7 +118,7 @@ TEST(SeveralCalls_GoogLeNet, Accuracy)
     std::vector<String> blobsNames;
     blobsNames.push_back("conv1/7x7_s2");
     std::vector<Mat> outs;
-    Mat in = blobFromImage(inpMats[0]);
+    Mat in = blobFromImage(inpMats[0], 1.0f, Size(), Scalar(), false);
     net.setInput(in, "data");
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
