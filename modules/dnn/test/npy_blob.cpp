@@ -72,7 +72,7 @@ Mat blobFromNPY(const std::string& path)
     ifs.ignore(1);  // Skip major version byte.
     ifs.ignore(1);  // Skip minor version byte.
 
-    uint16_t headerSize;
+    unsigned short headerSize;
     ifs.read((char*)&headerSize, sizeof(headerSize));
 
     std::string header(headerSize, '*');
