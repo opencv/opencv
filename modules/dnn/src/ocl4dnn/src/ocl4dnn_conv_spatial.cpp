@@ -195,10 +195,10 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
                                         output_block_width : output_width % output_block_width;
         const int32_t last_block_height = (output_height % output_block_height == 0) ?
                                          output_block_height : output_height % output_block_height;
-        int tile_x = (((output_block_width - 1) * stride_w_ + kernel_w_ * dilation_w_) + 3) & ~3;
+        int tile_x = alignSize((output_block_width - 1) * stride_w_ + kernel_w_ * dilation_w_, 4);
         int tile_y = (output_block_height -1) * stride_h_ + kernel_h_ * dilation_h_;
         int tile_y_stride = (4 * simd_size) / tile_x;
-        int invec_size = (tile_y + tile_y_stride - 1) / tile_y_stride;
+        int invec_size = divUp(tile_y, tile_y_stride);
 
         addDef("SIMD_SIZE", simd_size);
         addDef("filter_qualifier", "__global");
@@ -463,8 +463,8 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         return true;
 
     if (swizzled_weights_umat.empty())
-        swizzled_weights_umat.create(1, ((num_output_ + 15) & ~15) * channels_ *
-                                     kernel_h_ * ((kernel_w_ + 1) & ~1), CV_32FC1);
+        swizzled_weights_umat.create(1, (int)alignSize(num_output_, 16) * channels_ *
+                                     kernel_h_ * (int)alignSize(kernel_w_, 2), CV_32FC1);
 
     ocl::Queue queue = ocl::Queue::getDefault();
     if (!interleave) {
@@ -785,10 +785,8 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
             int globalWorkSizeDY = blockM;
             size_t sgemm_m = alignedExpandHeight;
             size_t sgemm_n = alignedFilterWidth;
-            size_t gx = (size_t) ceil( (float) sgemm_n /
-                    (float) globalWorkSizeDX );
-            size_t gy = (size_t) ceil( (float) sgemm_m /
-                    (float) globalWorkSizeDY );
+            size_t gx = divUp(sgemm_n, globalWorkSizeDX);
+            size_t gy = divUp(sgemm_m, globalWorkSizeDY);
             gy = alignSize(gy, blockK);
             size_t global_size[3] = { gx, gy, config->global_work_size[2] };
 
@@ -1154,10 +1152,7 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
                 continue;
             if (simd_size == 16 && !(group_ == 1 || M_ % 16 == 0))
                 continue;
-            int width_max, height_max, block_size_max;
-            width_max = 14;
-            height_max = 8;
-            block_size_max = 32;
+            const int width_max = 14, height_max = 8, block_size_max = 32;
             for (uint32_t width = width_max; width > 0; width--) {
                 int candidate = 0;
                 if (width > output_w_)
@@ -1174,7 +1169,7 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
                         max_compute_units * 7 * 16))
                         continue;
                     int actual_tile_x = kernel_w_ * dilation_w_ + (width - 1) * stride_w_;
-                    int tile_x = (actual_tile_x + 3) & ~3;
+                    int tile_x = alignSize(actual_tile_x, 4);
                     int tile_y = kernel_h_ * dilation_h_ + (height - 1) * stride_h_;
                     if (tile_x > (4 * simd_size))
                         continue;
@@ -1183,12 +1178,11 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
                     // impact for the final tuning result, less than 2% for most cases.
                     if (actual_tile_x % 4 != 0)
                         continue;
-                    if ((width * height +
-                       (tile_x * tile_y + simd_size - 1)/ simd_size) > block_size_max)
+                    if ((width * height + divUp(tile_x * tile_y, simd_size)) > block_size_max)
                         continue;
                     int tile_y_stride = (4 * simd_size) / tile_x;
 
-                    if ((tile_y + tile_y_stride - 1) / tile_y_stride < 4) {
+                    if (divUp(tile_y, tile_y_stride) < 4) {
                         tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_INTEL_IDLF, width, height, simd_size));
                         candidate++;
                     }
