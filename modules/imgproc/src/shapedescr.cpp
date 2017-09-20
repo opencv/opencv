@@ -635,7 +635,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 
 
     } else {
-        box = cv::fitEllipse( points );
+        box = cv::fitEllipseDirect( points );
 
     }    } else {
         box = cv::fitEllipse( points );

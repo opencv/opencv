@@ -64,6 +64,7 @@ void test4();
 void test5();
 void test6();
 void test7();
+void test_Issue_6544();
 
 int main( int argc, char** argv )
 {
@@ -74,6 +75,7 @@ int main( int argc, char** argv )
     test5();
     test6();
     test7();
+    test_Issue_6544();
 
     fitEllipseQ       = true;
     fitEllipseAMSQ    = true;
@@ -587,3 +589,32 @@ void test7() {
     drawPoints(canvas, pts, cv::Scalar(255,255,255));
     imshow("test7",canvas);
 }
+
+void test_Issue_6544() {vector<Point2f> pts;
+    pts.push_back(Point2f(924.784f, 764.160f));
+    pts.push_back(Point2f(928.388f, 615.903f));
+    pts.push_back(Point2f(847.4f,   888.014f));
+    pts.push_back(Point2f(929.406f, 741.675f));
+    pts.push_back(Point2f(904.564f, 825.605f));
+    pts.push_back(Point2f(926.742f, 760.746f));
+    pts.push_back(Point2f(863.479f, 873.406f));
+    pts.push_back(Point2f(910.987f, 808.863f));
+    pts.push_back(Point2f(929.145f, 744.976f));
+    pts.push_back(Point2f(917.474f, 791.823f));
+    // Input Ellipses
+//    cv::RotatedRect inputRect = cv::RotatedRect(Point2f(197.181f, 147.648f), Size2f(395.369f, 289.903f), -12.0625f);
+    cv::RotatedRect ellipseTest = fitEllipse(pts);
+    cv::RotatedRect ellipseAMSTest = fitEllipseAMS(pts);
+    cv::RotatedRect ellipseDirectTest = fitEllipseDirect(pts);
+    // Display the results.
+    cv::Mat canvas = drawPoints(pts, cv::Scalar(255,255,255));
+//    drawEllipseWithBox(canvas,inputRect,fitEllipseTrueColor,1);
+    drawLabels(canvas);
+    drawEllipseWithBox(canvas, ellipseAMSTest,    fitEllipseAMSColor,    2);
+    drawEllipseWithBox(canvas, ellipseDirectTest, fitEllipseDirectColor, 1);
+    drawEllipseWithBox(canvas, ellipseTest,       fitEllipseColor,       1);
+    drawPoints(canvas, pts, cv::Scalar(255,255,255));
+    imshow("test_Issue_6544",canvas);
+}
+
+
