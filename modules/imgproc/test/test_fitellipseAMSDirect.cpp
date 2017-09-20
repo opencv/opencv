@@ -1,18 +1,51 @@
 // This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level directory
+// It is subject to the license terms in the LICENSE file found in the top-level
+// directory
 // of this distribution and at http://opencv.org/license.html.
 //
 // Copyright (C) 2016, Itseez, Inc, all rights reserved.
 
 #include "test_precomp.hpp"
-#include <vector>
 #include <cmath>
+#include <vector>
 
 using namespace cv;
 using namespace std;
+class CV_fitEllipseDirectAMSTest {
+public:
+  enum fitMethod { AMS, Direct };
 
-TEST(Imgproc_FitEllipseAMS_Issue_1, accuracy) {
-    vector<Point2f>pts;
+  static bool testFitEllipse(vector<Point2f> pts, cv::RotatedRect ellipseTrue,
+                             fitMethod method) {
+    float tol = 0.01f;
+    cv::RotatedRect ellipseTest;
+    if (method == AMS) {
+      ellipseTest = fitEllipseAMS(pts);
+    } else {
+      ellipseTest = fitEllipseDirect(pts);
+    }
+    Point2f ellipseTrueVertices[4];
+    Point2f ellipseTestVertices[4];
+    ellipseTest.points(ellipseTestVertices);
+    ellipseTrue.points(ellipseTrueVertices);
+    float diffTotal = 0.0f;
+    for (size_t i = 0; i <= 3; i++) {
+      Point2f diff = ellipseTrueVertices[i] - ellipseTestVertices[0];
+      float d = diff.x * diff.x + diff.y * diff.y;
+      for (size_t j = 1; i <= 3; i++) {
+        diff = ellipseTrueVertices[i] - ellipseTestVertices[j];
+        float dd = diff.x * diff.x + diff.y * diff.y;
+        if (dd < d) {
+          d = dd;
+        }
+      }
+      diffTotal += std::sqrt(d);
+    }
+    return diffTotal < tol;
+  }
+
+  static bool test1(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(173.41854895999165f, 125.84473135880411f));
     pts.push_back(Point2f(180.63769498640912f, 130.960006577589f));
     pts.push_back(Point2f(174.99173759130173f, 137.34265632926764f));
@@ -54,33 +87,22 @@ TEST(Imgproc_FitEllipseAMS_Issue_1, accuracy) {
     pts.push_back(Point2f(6.719616410428614f, 50.15263031354927f));
     pts.push_back(Point2f(5.122267598477748f, 46.03603214691343f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(91.3256f, 90.4668f), Size2f(187.211f, 140.031f), 21.5808f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(94.4037f, 84.743f), Size2f(190.614f, 153.543f), 19.832f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(94.4037f, 84.743f), Size2f(190.614f, 153.543f), 19.832f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
 
-    EXPECT_TRUE(AMSGoodQ);
-}
-
-TEST(Imgproc_FitEllipseAMS_Issue_2, accuracy) {
-    vector<Point2f>pts;
+  static bool test2(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(436.59985753246326f, 99.52113368023126f));
     pts.push_back(Point2f(454.40214161915856f, 160.47565296546912f));
     pts.push_back(Point2f(406.01996690372687f, 215.41999534561575f));
@@ -92,34 +114,22 @@ TEST(Imgproc_FitEllipseAMS_Issue_2, accuracy) {
     pts.push_back(Point2f(91.66999301197541f, 300.57303988670515f));
     pts.push_back(Point2f(28.286233855826133f, 268.0670159317756f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(228.232f, 174.879f), Size2f(450.68f, 265.556f), 166.181f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(223.917f, 169.701f), Size2f(456.628f, 277.809f), -12.6378f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(223.917f, 169.701f), Size2f(456.628f, 277.809f), -12.6378f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
 
-    EXPECT_TRUE(AMSGoodQ);
-}
-
-
-TEST(Imgproc_FitEllipseAMS_Issue_3, accuracy) {
-    vector<Point2f>pts;
+  static bool test3(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(459.59217920219083f, 480.1054989283611f));
     pts.push_back(Point2f(427.2759071813645f, 501.82653857689616f));
     pts.push_back(Point2f(388.35145730295574f, 520.9488690267101f));
@@ -141,33 +151,22 @@ TEST(Imgproc_FitEllipseAMS_Issue_3, accuracy) {
     pts.push_back(Point2f(39.683930802331844f, 110.26290871953987f));
     pts.push_back(Point2f(47.85826684019932f, 70.82454140948524f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(255.326f, 272.626f), Size2f(570.999f, 434.23f), 49.0265f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(266.796f, 260.167f), Size2f(580.374f, 469.465f), 50.3961f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(266.796f, 260.167f), Size2f(580.374f, 469.465f), 50.3961f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
 
-    EXPECT_TRUE(AMSGoodQ);
-}
-
-TEST(Imgproc_FitEllipseAMS_Issue_4, accuracy) {
-    vector<Point2f>pts;
+  static bool test4(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(461.1761758124861f, 79.55196261616746f));
     pts.push_back(Point2f(470.5034888757249f, 100.56760245239015f));
     pts.push_back(Point2f(470.7814479849749f, 127.45783922150272f));
@@ -209,35 +208,22 @@ TEST(Imgproc_FitEllipseAMS_Issue_4, accuracy) {
     pts.push_back(Point2f(54.55733659450332f, 136.54322891729444f));
     pts.push_back(Point2f(78.60990563833005f, 112.76538180538182f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(236.836f, 208.089f), Size2f(515.893f, 357.166f), -35.9996f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(237.108f, 207.32f), Size2f(517.287f, 357.591f), -36.3653f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(237.108f, 207.32f), Size2f(517.287f, 357.591f), -36.3653f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
 
-    EXPECT_TRUE(AMSGoodQ);
-}
-
-
-
-TEST(Imgproc_FitEllipseAMS_Issue_5, accuracy) {
-    vector<Point2f>pts;
+  static bool test5(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(509.60609444351917f, 484.8233016998119f));
     pts.push_back(Point2f(508.55357451809846f, 498.61004779125176f));
     pts.push_back(Point2f(495.59325478416525f, 507.9238702677585f));
@@ -279,33 +265,22 @@ TEST(Imgproc_FitEllipseAMS_Issue_5, accuracy) {
     pts.push_back(Point2f(27.855803175234342f, 450.2298664426336f));
     pts.push_back(Point2f(12.832198085636549f, 435.6317753810441f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(264.354f, 457.336f), Size2f(493.728f, 162.9f), 5.36186f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(265.252f, 451.597f), Size2f(503.386f, 174.674f), 5.31814f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(265.252f, 451.597f), Size2f(503.386f, 174.674f), 5.31814f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
 
-    EXPECT_TRUE(AMSGoodQ);
-}
-
-TEST(Imgproc_FitEllipseAMS_Issue_6, accuracy) {
-    vector<Point2f>pts;
+  static bool test6(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(414.90156479295905f, 29.063453659930833f));
     pts.push_back(Point2f(393.79576036337977f, 58.59512774879134f));
     pts.push_back(Point2f(387.9100725249931f, 94.65067695657254f));
@@ -347,33 +322,22 @@ TEST(Imgproc_FitEllipseAMS_Issue_6, accuracy) {
     pts.push_back(Point2f(30.71132492338431f, 402.85098740402844f));
     pts.push_back(Point2f(10.994737323179852f, 394.6764602972333f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(207.145f, 223.308f), Size2f(499.583f, 117.473f), -42.6851f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(192.467f, 204.404f), Size2f(551.397f, 165.068f), 136.913f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(192.467f, 204.404f), Size2f(551.397f, 165.068f), 136.913f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
 
-    EXPECT_TRUE(AMSGoodQ);
-}
-
-TEST(Imgproc_FitEllipseAMS_Issue_7, accuracy) {
-    vector<Point2f>pts;
+  static bool test7(fitMethod method) {
+    vector<Point2f> pts;
     pts.push_back(Point2f(386.7497806918209f, 119.55623710363142f));
     pts.push_back(Point2f(399.0712613744503f, 132.61095972401034f));
     pts.push_back(Point2f(400.3582576852657f, 146.71942033652573f));
@@ -415,27 +379,101 @@ TEST(Imgproc_FitEllipseAMS_Issue_7, accuracy) {
     pts.push_back(Point2f(9.929991244497518f, 203.20662088477752f));
     pts.push_back(Point2f(0.0f, 190.04891498441148f));
 
-    bool AMSGoodQ;
-    float tol = 0.01f;
+    cv::RotatedRect ellipseDirectTrue = cv::RotatedRect(
+        Point2f(199.463f, 150.997f), Size2f(390.341f, 286.01f), -12.9696f);
+    cv::RotatedRect ellipseAMSTrue = cv::RotatedRect(
+        Point2f(197.292f, 134.64f), Size2f(401.092f, 320.051f), 165.429f);
 
-    RotatedRect     ellipseAMSTrue = cv::RotatedRect(Point2f(197.292f, 134.64f), Size2f(401.092f, 320.051f), 165.429f);
-    RotatedRect     ellipseAMSTest = fitEllipseAMS(pts);
-    Point2f         ellipseAMSTrueVertices[4];
-    Point2f         ellipseAMSTestVertices[4];
-    ellipseAMSTest.points(ellipseAMSTestVertices);
-    ellipseAMSTrue.points(ellipseAMSTrueVertices);
-    float AMSDiff = 0.0f;
-    for (size_t i=0; i <=3; i++) {
-        Point2f diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[0];
-        float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
-            diff = ellipseAMSTrueVertices[i] - ellipseAMSTestVertices[j];
-            float dd = diff.x * diff.x + diff.y * diff.y;
-            if(dd<d){d=dd;}
-        }
-        AMSDiff += std::sqrt(d);
+    bool goodQ;
+    if (method == AMS) {
+      goodQ = testFitEllipse(pts, ellipseAMSTrue, AMS);
+    } else {
+      goodQ = testFitEllipse(pts, ellipseDirectTrue, Direct);
     }
-    AMSGoodQ = AMSDiff < tol;
+    return goodQ;
+  }
+};
 
-    EXPECT_TRUE(AMSGoodQ);
+TEST(Imgproc_FitEllipseAMS_Issue_1, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test1(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseAMS_Issue_2, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test2(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseAMS_Issue_3, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test3(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseAMS_Issue_4, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test4(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseAMS_Issue_5, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test5(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseAMS_Issue_6, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test6(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseAMS_Issue_7, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test7(CV_fitEllipseDirectAMSTest::AMS);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_1, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test1(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_2, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test2(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_3, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test3(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_4, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test4(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_5, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test5(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_6, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test6(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
+}
+
+TEST(Imgproc_FitEllipseDirect_Issue_7, accuracy) {
+  bool goodQ =
+      CV_fitEllipseDirectAMSTest::test7(CV_fitEllipseDirectAMSTest::Direct);
+  EXPECT_TRUE(goodQ);
 }

@@ -473,25 +473,11 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    AutoBuffer<double> _Ad(n*6);
-    double *Ad = _Ad;
-    Mat A( n, 6, CV_64F, Ad );
-
-    AutoBuffer<double> _DMd(6*6);
-    double *DMd = _DMd;
-    Matx<double, 6, 6> DM = Matx<double, 6, 6>(DMd);
-
-    AutoBuffer<double> _Md(5*5);
-    double  *Md = _Md;
-    Matx<double, 5, 5> M = Matx<double, 5, 5>( Md );
-
-    AutoBuffer<double> _pVecD(5*1);
-    double *pVecD = _pVecD;
-    Matx<double, 5, 1> pVec = Matx<double, 5, 1>( pVecD );
-
-    AutoBuffer<double> _coeffsD(6*1);
-    double *coeffsD = _coeffsD;
-    Matx<double, 6, 1> coeffs = Matx<double, 6, 1>( coeffsD );
+    Mat A( n, 6, CV_64F);
+    Matx<double, 6, 6> DM;
+    Matx<double, 5, 5> M;
+    Matx<double, 5, 1> pVec;
+    Matx<double, 6, 1> coeffs;
 
     double x0, y0, a, b, theta;
 
@@ -554,90 +540,91 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     M(4,4)=DM(4,4);
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
-        Mat eVal, eVec;
-        EigenvalueDecomposition::eigensystem(M, eVal, eVec);
+            Mat eVal, eVec;
+            EigenvalueDecomposition::eigensystem(M, eVal, eVec);
 
-    // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
-        int minpos = 0;
-        double normi, normEVali, normMinpos, normEValMinpos;
-        normMinpos = sqrt(eVec.at<double>(0,minpos)*eVec.at<double>(0,minpos) + eVec.at<double>(1,minpos)*eVec.at<double>(1,minpos) + \
-                          eVec.at<double>(2,minpos)*eVec.at<double>(2,minpos) + eVec.at<double>(3,minpos)*eVec.at<double>(3,minpos) + \
-                          eVec.at<double>(4,minpos)*eVec.at<double>(4,minpos) );
-        normEValMinpos = eVal.at<double>(0,minpos) * normMinpos;
-        for (i=1; i<5; i++) {
-            normi = sqrt(eVec.at<double>(0,i)*eVec.at<double>(0,i) + eVec.at<double>(1,i)*eVec.at<double>(1,i) + \
-                         eVec.at<double>(2,i)*eVec.at<double>(2,i) + eVec.at<double>(3,i)*eVec.at<double>(3,i) + \
-                         eVec.at<double>(4,i)*eVec.at<double>(4,i) );
-            normEVali = eVal.at<double>(0,i) * normi;
-            if (normEVali < normEValMinpos) {
-                minpos = i;
-                normMinpos=normi;
-                normEValMinpos=normEVali;
-            }
-        };
+        // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
+            int minpos = 0;
+            double normi, normEVali, normMinpos, normEValMinpos;
+            normMinpos = sqrt(eVec.at<double>(0,minpos)*eVec.at<double>(0,minpos) + eVec.at<double>(1,minpos)*eVec.at<double>(1,minpos) + \
+                              eVec.at<double>(2,minpos)*eVec.at<double>(2,minpos) + eVec.at<double>(3,minpos)*eVec.at<double>(3,minpos) + \
+                              eVec.at<double>(4,minpos)*eVec.at<double>(4,minpos) );
+            normEValMinpos = eVal.at<double>(0,minpos) * normMinpos;
+            for (i=1; i<5; i++) {
+                normi = sqrt(eVec.at<double>(0,i)*eVec.at<double>(0,i) + eVec.at<double>(1,i)*eVec.at<double>(1,i) + \
+                             eVec.at<double>(2,i)*eVec.at<double>(2,i) + eVec.at<double>(3,i)*eVec.at<double>(3,i) + \
+                             eVec.at<double>(4,i)*eVec.at<double>(4,i) );
+                normEVali = eVal.at<double>(0,i) * normi;
+                if (normEVali < normEValMinpos) {
+                    minpos = i;
+                    normMinpos=normi;
+                    normEValMinpos=normEVali;
+                }
+            };
 
-        pVec(0) =eVec.at<double>(0,minpos) / normMinpos;
-        pVec(1) =eVec.at<double>(1,minpos) / normMinpos;
-        pVec(2) =eVec.at<double>(2,minpos) / normMinpos;
-        pVec(3) =eVec.at<double>(3,minpos) / normMinpos;
-        pVec(4) =eVec.at<double>(4,minpos) / normMinpos;
+            pVec(0) =eVec.at<double>(0,minpos) / normMinpos;
+            pVec(1) =eVec.at<double>(1,minpos) / normMinpos;
+            pVec(2) =eVec.at<double>(2,minpos) / normMinpos;
+            pVec(3) =eVec.at<double>(3,minpos) / normMinpos;
+            pVec(4) =eVec.at<double>(4,minpos) / normMinpos;
 
-        coeffs(0) =pVec(0) ;
-        coeffs(1) =pVec(1) ;
-        coeffs(2) =pVec(2) ;
-        coeffs(3) =pVec(3) ;
-        coeffs(4) =pVec(4) ;
-        coeffs(5) =-pVec(0) *DM(0,5)-pVec(1) *DM(1,5)-coeffs(2) *DM(2,5);
+            coeffs(0) =pVec(0) ;
+            coeffs(1) =pVec(1) ;
+            coeffs(2) =pVec(2) ;
+            coeffs(3) =pVec(3) ;
+            coeffs(4) =pVec(4) ;
+            coeffs(5) =-pVec(0) *DM(0,5)-pVec(1) *DM(1,5)-coeffs(2) *DM(2,5);
 
-    // Check that an elliptical solution has been found. AMS sometimes produces Parabolic solutions.
-    bool is_ellipse=(coeffs(0)  < 0 && coeffs(2)  < (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) &&
-     coeffs(5)  > (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) ))/
-     ((coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) )) ||
-    (coeffs(0)  > 0 && coeffs(2)  > (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) &&
-     coeffs(5)  < (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) ))/
-     ((coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) ));
-    if (is_ellipse) {
+        // Check that an elliptical solution has been found. AMS sometimes produces Parabolic solutions.
+        bool is_ellipse = (coeffs(0)  < 0 && \
+                           coeffs(2)  < (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) && \
+                           coeffs(5)  > (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) )) / \
+                                        ((coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) )) || \
+                          (coeffs(0)  > 0 && \
+                           coeffs(2)  > (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) && \
+                           coeffs(5)  < (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) )) / \
+                                        ( (coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) ));
+        if (is_ellipse) {
+            double u1 = pVec(2) *pVec(3) *pVec(3)  - pVec(1) *pVec(3) *pVec(4)  + pVec(0) *pVec(4) *pVec(4)  + pVec(1) *pVec(1) *coeffs(5) ;
+            double u2 = pVec(0) *pVec(2) *coeffs(5) ;
+            double l1 = sqrt(pVec(1) *pVec(1)  + (pVec(0)  - pVec(2) )*(pVec(0)  - pVec(2) ));
+            double l2 = pVec(0)  + pVec(2) ;
+            double l3 = pVec(1) *pVec(1)  - 4.0*pVec(0) *pVec(2) ;
+            double p1 = 2.0*pVec(2) *pVec(3)  - pVec(1) *pVec(4) ;
+            double p2 = 2.0*pVec(0) *pVec(4) -(pVec(1) *pVec(3) );
 
-        double u1 = pVec(2) *pVec(3) *pVec(3)  - pVec(1) *pVec(3) *pVec(4)  + pVec(0) *pVec(4) *pVec(4)  + pVec(1) *pVec(1) *coeffs(5) ;
-        double u2 = pVec(0) *pVec(2) *coeffs(5) ;
-        double l1 = sqrt(pVec(1) *pVec(1)  + (pVec(0)  - pVec(2) )*(pVec(0)  - pVec(2) ));
-        double l2 = pVec(0)  + pVec(2) ;
-        double l3 = pVec(1) *pVec(1)  - 4.0*pVec(0) *pVec(2) ;
-        double p1 = 2.0*pVec(2) *pVec(3)  - pVec(1) *pVec(4) ;
-        double p2 = 2.0*pVec(0) *pVec(4) -(pVec(1) *pVec(3) );
-
-        x0 = p1/l3 + c.x;
-        y0 = p2/l3 + c.y;
-        a = sqrt(2)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
-        b = sqrt(2)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
-        if (pVec(1)  == 0) {
-            if (pVec(0)  < pVec(2) ) {
-                theta = 0;
+            x0 = p1/l3 + c.x;
+            y0 = p2/l3 + c.y;
+            a = sqrt(2)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+            b = sqrt(2)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+            if (pVec(1)  == 0) {
+                if (pVec(0)  < pVec(2) ) {
+                    theta = 0;
+                } else {
+                    theta = CV_PI/2.;
+                }
             } else {
-                theta = CV_PI/2.;
+                theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
             }
+
+            box.center.x = (float)x0; // +c.x;
+            box.center.y = (float)y0; // +c.y;
+            box.size.width = (float)(2.0*a);
+            box.size.height = (float)(2.0*b);
+            if( box.size.width > box.size.height )
+            {
+                float tmp;
+                CV_SWAP( box.size.width, box.size.height, tmp );
+                box.angle = (float)(90 + theta*180/CV_PI);
+            } else {
+                box.angle = (float)(fmod(theta*180/CV_PI,180.0));
+            };
+
+
         } else {
-            theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
+            box = cv::fitEllipseDirect( points );
         }
-
-        box.center.x = (float)x0; // +c.x;
-        box.center.y = (float)y0; // +c.y;
-        box.size.width = (float)(2.0*a);
-        box.size.height = (float)(2.0*b);
-        if( box.size.width > box.size.height )
-        {
-            float tmp;
-            CV_SWAP( box.size.width, box.size.height, tmp );
-            box.angle = (float)(90 + theta*180/CV_PI);
-        } else {
-            box.angle = (float)(fmod(theta*180/CV_PI,180.0));
-        };
-
-
     } else {
-        box = cv::fitEllipseDirect( points );
-
-    }    } else {
         box = cv::fitEllipse( points );
     }
 
@@ -658,33 +645,14 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
     Point2f c(0,0);
 
-    bool is_float = depth == CV_32F;
-    const Point* ptsi = points.ptr<Point>();
+    bool is_float = (depth == CV_32F);
+    const Point*   ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    AutoBuffer<double> _Ad(n*6);
-    double *Ad = _Ad;
-    Mat A( n, 6, CV_64F, Ad );
-
-    AutoBuffer<double> _DMd(6*6);
-    double *DMd = _DMd;
-    Matx<double, 6, 6> DM = Matx<double, 6, 6>(DMd);
-
-    AutoBuffer<double> _Md(3*3);
-    double  *Md = _Md;
-    Matx33d M = Matx33d( Md );
-
-    AutoBuffer<double> _TMd(3*3);
-    double *TMd = _TMd;
-    Matx33d TM = Matx33d( TMd );
-
-    AutoBuffer<double> _Qd(3*3);
-    double *Qd = _Qd;
-    Matx33d Q = Matx33d( Qd );
-
-    AutoBuffer<double> _pVecD(3*1);
-    double *pVecD = _pVecD;
-    Matx<double, 3, 1> pVec = Matx<double, 3, 1>( pVecD );
+    Mat A( n, 6, CV_64F);
+    Matx<double, 6, 6> DM;
+    Matx33d M, TM, Q;
+    Matx<double, 3, 1> pVec;
 
     double x0, y0, a, b, theta, Ts;
 
@@ -712,23 +680,23 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     DM *= (1.0/n);
 
     TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
-                 DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
+              DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
     TM(0,1) = DM(1,5)*DM(3,5)*DM(4,4) - DM(1,5)*DM(3,4)*DM(4,5) - DM(1,4)*DM(3,5)*DM(5,4) + \
-                 DM(1,3)*DM(4,5)*DM(5,4) + DM(1,4)*DM(3,4)*DM(5,5) - DM(1,3)*DM(4,4)*DM(5,5);
+              DM(1,3)*DM(4,5)*DM(5,4) + DM(1,4)*DM(3,4)*DM(5,5) - DM(1,3)*DM(4,4)*DM(5,5);
     TM(0,2) = DM(2,5)*DM(3,5)*DM(4,4) - DM(2,5)*DM(3,4)*DM(4,5) - DM(2,4)*DM(3,5)*DM(5,4) + \
-                 DM(2,3)*DM(4,5)*DM(5,4) + DM(2,4)*DM(3,4)*DM(5,5) - DM(2,3)*DM(4,4)*DM(5,5);
+              DM(2,3)*DM(4,5)*DM(5,4) + DM(2,4)*DM(3,4)*DM(5,5) - DM(2,3)*DM(4,4)*DM(5,5);
     TM(1,0) = DM(0,5)*DM(3,3)*DM(4,5) - DM(0,5)*DM(3,5)*DM(4,3) + DM(0,4)*DM(3,5)*DM(5,3) - \
-                 DM(0,3)*DM(4,5)*DM(5,3) - DM(0,4)*DM(3,3)*DM(5,5) + DM(0,3)*DM(4,3)*DM(5,5);
+              DM(0,3)*DM(4,5)*DM(5,3) - DM(0,4)*DM(3,3)*DM(5,5) + DM(0,3)*DM(4,3)*DM(5,5);
     TM(1,1) = DM(1,5)*DM(3,3)*DM(4,5) - DM(1,5)*DM(3,5)*DM(4,3) + DM(1,4)*DM(3,5)*DM(5,3) - \
-                 DM(1,3)*DM(4,5)*DM(5,3) - DM(1,4)*DM(3,3)*DM(5,5) + DM(1,3)*DM(4,3)*DM(5,5);
+              DM(1,3)*DM(4,5)*DM(5,3) - DM(1,4)*DM(3,3)*DM(5,5) + DM(1,3)*DM(4,3)*DM(5,5);
     TM(1,2) = DM(2,5)*DM(3,3)*DM(4,5) - DM(2,5)*DM(3,5)*DM(4,3) + DM(2,4)*DM(3,5)*DM(5,3) - \
-                 DM(2,3)*DM(4,5)*DM(5,3) - DM(2,4)*DM(3,3)*DM(5,5) + DM(2,3)*DM(4,3)*DM(5,5);
+              DM(2,3)*DM(4,5)*DM(5,3) - DM(2,4)*DM(3,3)*DM(5,5) + DM(2,3)*DM(4,3)*DM(5,5);
     TM(2,0) = DM(0,5)*DM(3,4)*DM(4,3) - DM(0,5)*DM(3,3)*DM(4,4) - DM(0,4)*DM(3,4)*DM(5,3) + \
-                 DM(0,3)*DM(4,4)*DM(5,3) + DM(0,4)*DM(3,3)*DM(5,4) - DM(0,3)*DM(4,3)*DM(5,4);
+              DM(0,3)*DM(4,4)*DM(5,3) + DM(0,4)*DM(3,3)*DM(5,4) - DM(0,3)*DM(4,3)*DM(5,4);
     TM(2,1) = DM(1,5)*DM(3,4)*DM(4,3) - DM(1,5)*DM(3,3)*DM(4,4) - DM(1,4)*DM(3,4)*DM(5,3) + \
-                 DM(1,3)*DM(4,4)*DM(5,3) + DM(1,4)*DM(3,3)*DM(5,4) - DM(1,3)*DM(4,3)*DM(5,4);
+              DM(1,3)*DM(4,4)*DM(5,3) + DM(1,4)*DM(3,3)*DM(5,4) - DM(1,3)*DM(4,3)*DM(5,4);
     TM(2,2) = DM(2,5)*DM(3,4)*DM(4,3) - DM(2,5)*DM(3,3)*DM(4,4) - DM(2,4)*DM(3,4)*DM(5,3) + \
-                 DM(2,3)*DM(4,4)*DM(5,3) + DM(2,4)*DM(3,3)*DM(5,4) - DM(2,3)*DM(4,3)*DM(5,4);
+              DM(2,3)*DM(4,4)*DM(5,3) + DM(2,4)*DM(3,3)*DM(5,4) - DM(2,3)*DM(4,3)*DM(5,4);
 
     Ts=(-(DM(3,5)*DM(4,4)*DM(5,3)) + DM(3,4)*DM(4,5)*DM(5,3) + DM(3,5)*DM(4,3)*DM(5,4) - \
           DM(3,3)*DM(4,5)*DM(5,4)  - DM(3,4)*DM(4,3)*DM(5,5) + DM(3,3)*DM(4,4)*DM(5,5));
@@ -1435,6 +1403,5 @@ cvBoundingRect( CvArr* array, int update )
         ((CvContour*)ptseq)->rect = rect;
     return rect;
 }
-
 
 /* End of file. */
