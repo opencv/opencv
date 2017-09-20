@@ -303,6 +303,19 @@ namespace binding_utils
         result.call<void>("push", arg2);
         return result;
     }
+
+    std::string getExceptionMsg(const cv::Exception& e) {
+        return e.msg;
+    }
+
+    void setExceptionMsg(cv::Exception& e, std::string msg) {
+        e.msg = msg;
+        return;
+    }
+
+    cv::Exception exceptionFromPtr(intptr_t ptr) {
+        return *reinterpret_cast<cv::Exception*>(ptr);
+    }
 }
 
 EMSCRIPTEN_BINDINGS(binding_utils)
@@ -499,6 +512,12 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("nu21", &cv::Moments::nu21)
         .field("nu12", &cv::Moments::nu12)
         .field("nu03", &cv::Moments::nu03);
+
+    emscripten::value_object<cv::Exception>("Exception")
+        .field("code", &cv::Exception::code)
+        .field("msg", &binding_utils::getExceptionMsg, &binding_utils::setExceptionMsg);
+
+    function("exceptionFromPtr", &binding_utils::exceptionFromPtr, allow_raw_pointers());
 
     function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat&)>(&binding_utils::minEnclosingCircle));
 

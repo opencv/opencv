@@ -30,14 +30,7 @@
   </div>
 </div>
 <script src="utils.js" type="text/javascript"></script>
-<script type="text/javascript">
-let Module = { // eslint-disable-line no-unused-vars
-  _main: function() {
-    opencvIsReady();
-  },
-};
-</script>
-<script async src="opencv.js" type="text/javascript"></script>
+<script async src="opencv.js" type="text/javascript" onerror="onOpenCvLoadError('errorMessage');"></script>
 <script id="codeSnippet" type="text/code-snippet">
 let src = cv.imread('canvasInput');
 let dst = new cv.Mat();
@@ -51,13 +44,8 @@ dst.delete();
 <script type="text/javascript">
 loadCode('codeSnippet', 'codeEditor');
 loadImageToCanvas('lena.jpg', 'canvasInput');
-let inputElement = document.getElementById('fileInput');
-inputElement.addEventListener('change', handleFiles, false);
-function handleFiles(e) {
-  let imgUrl = URL.createObjectURL(e.target.files[0]);
-  loadImageToCanvas(imgUrl, 'canvasInput');
-}
-function opencvIsReady() { // eslint-disable-line no-unused-vars
+addFileInputHandler('fileInput', 'canvasInput');
+function onOpenCvReady() { // eslint-disable-line no-unused-vars
   document.getElementById('tryIt').removeAttribute('disabled');
 }
 </script>
