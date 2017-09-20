@@ -136,7 +136,8 @@ if(BUILD_IPP_IW)
   ippiw_setup("${OpenCV_SOURCE_DIR}/3rdparty/ippiw" 1)
 
   # Package sources
-  ippiw_setup("${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" 1)
+  get_filename_component(__PATH "${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" ABSOLUTE)
+  ippiw_setup("${_PATH}" 1)
 endif()
 
 
