@@ -101,20 +101,21 @@ class OCL4DNNConvSpatial
             kernelConfig()
             {}
 
-            kernelConfig(const std::string& name, size_t* global_size, size_t* local_size,
-                         int32_t* workItem,
-                         bool swizzle, bool null_local,
+            kernelConfig(const std::string& name, const size_t* global_size, const size_t* local_size,
+                         const int32_t* workItem,
+                         bool swizzle,
                          int32_t type = 0)
+                : executionTime(0)
             {
                 kernelName = name;
                 for (int32_t x = 0; x < 3; x++)
                 {
-                    local_work_size[x] = local_size[x];
+                    local_work_size[x] = local_size ? local_size[x] : 1;
                     global_work_size[x] = global_size[x];
                     workItem_output[x] = workItem[x];
                 }
                 swizzle_weights = swizzle;
-                use_null_local = null_local;
+                use_null_local = local_size == NULL;
                 verified = false;
                 tested = false;
                 kernelType = type;

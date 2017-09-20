@@ -561,10 +561,9 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
     if (program.ptr())
     {
         int32_t workItemOutput[3] = { 1, 1, 1 };
-        size_t localSize[3] = { 1, 1, 1 }; // TODO not used
         size_t globalSize[3] = { (size_t)output_w_, (size_t)output_h_, (size_t)M_ };
-        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], &localSize[0], &workItemOutput[0],
-                                                    false, true, KERNEL_TYPE_BASIC));
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], (const size_t*)NULL, &workItemOutput[0],
+                                                    false, KERNEL_TYPE_BASIC));
         return true;
     }
     else
@@ -1073,7 +1072,7 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
         else
         {
             kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        true, false, KERNEL_TYPE_GEMM_LIKE));
+                                                        true, KERNEL_TYPE_GEMM_LIKE));
             return true;
         }
     }
@@ -1127,7 +1126,7 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
         else
         {
             kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        true, false, KERNEL_TYPE_INTEL_IDLF));
+                                                        true, KERNEL_TYPE_INTEL_IDLF));
             return true;
         }
     }
