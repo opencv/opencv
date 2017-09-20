@@ -25,6 +25,9 @@ tf.Graph().as_default()
 tf.set_random_seed(324)
 sess = tf.Session()
 
+# Use this variable to switch behavior of layers.
+isTraining = tf.placeholder(tf.bool, name='isTraining')
+
 def writeBlob(data, name):
     if data.ndim == 4:
         # NHWC->NCHW
@@ -37,7 +40,7 @@ def save(inp, out, name):
     sess.run(tf.global_variables_initializer())
 
     inputData = gen_data(inp)
-    outputData = sess.run(out, feed_dict={inp: inputData})
+    outputData = sess.run(out, feed_dict={inp: inputData, isTraining: False})
     writeBlob(inputData, name + '_in')
     writeBlob(outputData, name + '_out')
 
@@ -168,6 +171,19 @@ biases = tf.Variable(tf.random_normal([4]), name='matmul_biases')
 weights = tf.Variable(tf.random_normal([3, 4]), name='matmul_weights')
 mm = tf.matmul(inp, weights) + biases
 save(inp, mm, 'matmul')
+################################################################################
+from tensorflow.python.framework import function
+
+@function.Defun(tf.float32, func_name='Dropout')
+def my_dropout(x):
+    return tf.layers.dropout(x, rate=0.1, training=isTraining)
+
+inp = tf.placeholder(tf.float32, [1, 10, 10, 3], 'input')
+conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
+dropout = my_dropout(conv)
+relu = tf.nn.relu(dropout)
+
+save(inp, relu, 'defun_dropout')
 ################################################################################
 
 # Uncomment to print the final graph.
