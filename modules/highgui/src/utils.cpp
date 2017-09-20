@@ -42,6 +42,13 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 
+int validateToInt(size_t sz)
+{
+    int valueInt = (int)sz;
+    CV_Assert((size_t)valueInt == sz);
+    return valueInt;
+}
+
 #define  SCALE  14
 #define  cR  (int)(0.299*(1 << SCALE) + 0.5)
 #define  cG  (int)(0.587*(1 << SCALE) + 0.5)
@@ -537,23 +544,25 @@ uchar* FillColorRow1( uchar* data, uchar* indices, int len, PaletteEntry* palett
 {
     uchar* end = data + len*3;
 
+    const PaletteEntry p0 = palette[0], p1 = palette[1];
+
     while( (data += 24) < end )
     {
         int idx = *indices++;
-        *((PaletteEntry*)(data - 24)) = palette[(idx & 128) != 0];
-        *((PaletteEntry*)(data - 21)) = palette[(idx & 64) != 0];
-        *((PaletteEntry*)(data - 18)) = palette[(idx & 32) != 0];
-        *((PaletteEntry*)(data - 15)) = palette[(idx & 16) != 0];
-        *((PaletteEntry*)(data - 12)) = palette[(idx & 8) != 0];
-        *((PaletteEntry*)(data - 9)) = palette[(idx & 4) != 0];
-        *((PaletteEntry*)(data - 6)) = palette[(idx & 2) != 0];
-        *((PaletteEntry*)(data - 3)) = palette[(idx & 1) != 0];
+        *((PaletteEntry*)(data - 24)) = (idx & 128) ? p1 : p0;
+        *((PaletteEntry*)(data - 21)) = (idx & 64) ? p1 : p0;
+        *((PaletteEntry*)(data - 18)) = (idx & 32) ? p1 : p0;
+        *((PaletteEntry*)(data - 15)) = (idx & 16) ? p1 : p0;
+        *((PaletteEntry*)(data - 12)) = (idx & 8) ? p1 : p0;
+        *((PaletteEntry*)(data - 9)) = (idx & 4) ? p1 : p0;
+        *((PaletteEntry*)(data - 6)) = (idx & 2) ? p1 : p0;
+        *((PaletteEntry*)(data - 3)) = (idx & 1) ? p1 : p0;
     }
 
-    int idx = indices[0] << 24;
+    int idx = indices[0];
     for( data -= 24; data < end; data += 3, idx += idx )
     {
-        PaletteEntry clr = palette[idx < 0];
+        const PaletteEntry clr = (idx & 128) ? p1 : p0;
         WRITE_PIX( data, clr );
     }
 
@@ -565,23 +574,25 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
 {
     uchar* end = data + len;
 
+    const uchar p0 = palette[0], p1 = palette[1];
+
     while( (data += 8) < end )
     {
         int idx = *indices++;
-        *((uchar*)(data - 8)) = palette[(idx & 128) != 0];
-        *((uchar*)(data - 7)) = palette[(idx & 64) != 0];
-        *((uchar*)(data - 6)) = palette[(idx & 32) != 0];
-        *((uchar*)(data - 5)) = palette[(idx & 16) != 0];
-        *((uchar*)(data - 4)) = palette[(idx & 8) != 0];
-        *((uchar*)(data - 3)) = palette[(idx & 4) != 0];
-        *((uchar*)(data - 2)) = palette[(idx & 2) != 0];
-        *((uchar*)(data - 1)) = palette[(idx & 1) != 0];
+        *((uchar*)(data - 8)) = (idx & 128) ? p1 : p0;
+        *((uchar*)(data - 7)) = (idx & 64) ? p1 : p0;
+        *((uchar*)(data - 6)) = (idx & 32) ? p1 : p0;
+        *((uchar*)(data - 5)) = (idx & 16) ? p1 : p0;
+        *((uchar*)(data - 4)) = (idx & 8) ? p1 : p0;
+        *((uchar*)(data - 3)) = (idx & 4) ? p1 : p0;
+        *((uchar*)(data - 2)) = (idx & 2) ? p1 : p0;
+        *((uchar*)(data - 1)) = (idx & 1) ? p1 : p0;
     }
 
-    int idx = indices[0] << 24;
+    int idx = indices[0];
     for( data -= 8; data < end; data++, idx += idx )
     {
-        data[0] = palette[idx < 0];
+        data[0] = (idx & 128) ? p1 : p0;
     }
 
     return data;
