@@ -281,7 +281,6 @@ class OCL4DNNConvSpatial
         int32_t top_dim_;
         int32_t num_;
         int32_t channels_;
-        int32_t out_spatial_dim_;
         int32_t num_output_;
 
         int32_t kernelType_;

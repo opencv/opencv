@@ -78,48 +78,25 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     num_output_ = config.out_shape[dims - spatial_dims - 1];
     group_ = config.group;
 
-    std::vector<int32_t> pad_;
-    std::vector<int32_t> stride_;
-    std::vector<int32_t> dilation_;
-    std::vector<int32_t> kernel_shape_;
-    std::vector<int32_t> im_in_shape_;
-    std::vector<int32_t> im_out_shape_;
-
-    for (int i = 0; i < spatial_dims; ++i) {
-        kernel_shape_.push_back(i == 0 ? config.kernel.height : config.kernel.width);
-        pad_.push_back(i == 0 ? config.pad.height : config.pad.width);
-        stride_.push_back(i == 0 ? config.stride.height : config.stride.width);
-        dilation_.push_back(i == 0 ? config.dilation.height : config.dilation.width);
-        im_in_shape_.push_back(config.in_shape[dims - spatial_dims + i]);
-        im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
-    }
-
     prev_kernel_type_ = -1;
     tuned_ = false;
-    out_spatial_dim_ = 1;
-
-    int in_spatial_dim_ = 1;
-    for (int i = 0; i < spatial_dims; ++i) {
-        in_spatial_dim_ *= config.in_shape[dims - spatial_dims + i];
-        out_spatial_dim_ *= config.out_shape[dims - spatial_dims + i];
-    }
 
     // assumption: spatial dimension is 2.
-    kernel_h_ = kernel_shape_[0];
-    kernel_w_ = kernel_shape_[1];
-    pad_h_ = pad_[0];
-    pad_w_ = pad_[1];
-    stride_h_ = stride_[0];
-    stride_w_ = stride_[1];
-    dilation_h_ = dilation_[0];
-    dilation_w_ = dilation_[1];
+    kernel_h_ = config.kernel.height;
+    kernel_w_ = config.kernel.width;
+    pad_h_ = config.pad.height;
+    pad_w_ = config.pad.width;
+    stride_h_ = config.stride.height;
+    stride_w_ = config.stride.width;
+    dilation_h_ = config.dilation.height;
+    dilation_w_ = config.dilation.width;
     M_ = num_output_ / group_;
-    height_ = im_in_shape_[0];
-    width_ = im_in_shape_[1];
-    output_h_ = im_out_shape_[0];
-    output_w_ = im_out_shape_[1];
-    bottom_dim_ = channels_ * in_spatial_dim_;
-    top_dim_ = num_output_ * out_spatial_dim_;
+    height_ = config.in_shape[dims - spatial_dims + 0];
+    width_ = config.in_shape[dims - spatial_dims + 1];
+    output_h_ = config.out_shape[dims - spatial_dims + 0];
+    output_w_ = config.out_shape[dims - spatial_dims + 1];
+    bottom_dim_ = channels_ * width_ * height_;
+    top_dim_ = num_output_ * output_w_ * output_h_;
 
     cache_path_ = utils::getConfigurationParameterString("OPENCV_OCL4DNN_CONFIG_PATH", "");
 
