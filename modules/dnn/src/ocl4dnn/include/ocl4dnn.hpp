@@ -235,10 +235,6 @@ class OCL4DNNConvSpatial
         std::string generateSpecificKey(int32_t type, int32_t blockWidth,
                                           int32_t blockHeight,
                                           int32_t blockDepth);
-        void computeGlobalSize(int32_t batch,
-                               int32_t* workItemOutput,
-                               size_t* localSizes,
-                               size_t* globalSizes);
         void cacheTunedConfig();
         bool loadTunedConfig();
 

@@ -576,22 +576,9 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::computeGlobalSize(int32_t batch,
-                                                  int32_t* wio,    // work item output size
-                                                  size_t* lSize,  // local size
-                                                  size_t* gSize)  // global size
-{
-    gSize[0] = ceil((fmax(static_cast<float>(output_w_) / wio[0], 1.0)) / lSize[0]) * lSize[0];
-    gSize[1] = ceil((fmax(static_cast<float>(output_h_) / wio[1], 1.0)) / lSize[1]) * lSize[1];
-    gSize[2] = ceil(static_cast<float>((ceil(static_cast<float>(M_) * batch / wio[2]))) / lSize[2]) * lSize[2];
-}
-
-template<>
 bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
                                                   int32_t blockHeight, int32_t blockDepth)
 {
-    int32_t workItemOutput[3] = {1, 1, 1};
-
     kernelType_ = KERNEL_TYPE_BASIC;
     blockM_ = blockWidth;
     blockK_ = blockHeight;
@@ -601,9 +588,9 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
-        size_t localSize[3] = { 1, 1, 1 };
-        size_t globalSize[3];
-        computeGlobalSize(1, workItemOutput, localSize, globalSize);
+        int32_t workItemOutput[3] = { 1, 1, 1 };
+        size_t localSize[3] = { 1, 1, 1 }; // TODO not used
+        size_t globalSize[3] = { (size_t)output_w_, (size_t)output_h_, (size_t)M_ };
         kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], &localSize[0], &workItemOutput[0],
                                                     false, true, KERNEL_TYPE_BASIC));
         return true;
