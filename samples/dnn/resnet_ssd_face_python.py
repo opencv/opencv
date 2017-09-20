@@ -27,8 +27,7 @@ if __name__ == '__main__':
         cols = frame.shape[1]
         rows = frame.shape[0]
 
-        net.setInput(dnn.blobFromImage(cv.resize(frame, (inWidth, inHeight)),
-                                       1.0, (inWidth, inHeight), (104., 177., 123.)))
+        net.setInput(dnn.blobFromImage(frame, 1.0, (inWidth, inHeight), (104.0, 177.0, 123.0), false))
         detections = net.forward()
 
         perf_stats = net.getPerfProfile()
