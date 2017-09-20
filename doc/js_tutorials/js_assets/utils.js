@@ -27,6 +27,11 @@ function executeCode(codeEditorId, errorOutputId) { // eslint-disable-line no-un
       if (!isNaN(err)) {
         err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
       }
+    } else if (typeof err === 'string') {
+      let ptr = Number(err.split(' ')[0]);
+      if (!isNaN(ptr)) {
+        err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
+      }
     } else if (err instanceof Error) {
       err = err.stack.replace(/\n/g, '<br>');
     }
