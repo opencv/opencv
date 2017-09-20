@@ -153,17 +153,23 @@ class Builder:
             cmd.append("-DBUILD_DOCS=ON")
         else:
             cmd.append("-DBUILD_DOCS=OFF")
+
+        flags = self.get_build_flags()
+        if flags:
+            cmd += ["-DCMAKE_C_FLAGS='%s'" % flags,
+                    "-DCMAKE_CXX_FLAGS='%s'" % flags]
         return cmd;
 
-    def config_asmjs(self):
-        cmd = self.get_cmake_cmd()
-        cmd.append(self.opencv_dir)
-        execute(cmd)
+    def get_build_flags(self):
+        flags = ""
+        if self.options.build_wasm:
+            flags += "-s WASM=1 "
+        if self.options.enable_exception:
+            flags += "-s DISABLE_EXCEPTION_CATCHING=0 "
+        return flags
 
-    def config_wasm(self):
+    def config(self):
         cmd = self.get_cmake_cmd()
-        cmd += ["-DCMAKE_C_FLAGS='-s WASM=1'",
-                "-DCMAKE_CXX_FLAGS='-s WASM=1'"]
         cmd.append(self.opencv_dir)
         execute(cmd)
 
@@ -195,6 +201,7 @@ if __name__ == "__main__":
     parser.add_argument('--clean_build_dir', action="store_true", help="Clean build dir")
     parser.add_argument('--skip_config', action="store_true", help="Skip cmake config")
     parser.add_argument('--config_only', action="store_true", help="Only do cmake config")
+    parser.add_argument('--enable_exception', action="store_true", help="Enable exception handling")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -218,16 +225,13 @@ if __name__ == "__main__":
         builder.clean_build_dir()
 
     if not args.skip_config:
-        if not args.build_wasm:
-            log.info("=====")
-            log.info("===== Config OpenCV.js build for asm.js")
-            log.info("=====")
-            builder.config_asmjs()
-        else:
-            log.info("=====")
-            log.info("===== Config OpenCV.js build for wasm")
-            log.info("=====")
-            builder.config_wasm()
+        target = "asm.js"
+        if args.build_wasm:
+            target = "wasm"
+        log.info("=====")
+        log.info("===== Config OpenCV.js build for %s" % target)
+        log.info("=====")
+        builder.config()
 
     if args.config_only:
         sys.exit(0);
