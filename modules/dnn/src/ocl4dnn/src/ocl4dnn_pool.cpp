@@ -102,9 +102,6 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
     size_t local[] = { 128 };
     cl_uint argIdx = 0;
 
-    if (!ocl::Device::getDefault().intelSubgroupsSupport())
-        return false;
-
     // support 2D case
     switch (pool_method_)
     {

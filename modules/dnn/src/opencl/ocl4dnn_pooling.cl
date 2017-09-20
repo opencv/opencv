@@ -44,10 +44,6 @@
 #define TEMPLATE(name,type) CONCAT(name,type)
 #define Dtype float
 
-#if defined(cl_intel_subgroups)
-#pragma OPENCL EXTENSION  cl_intel_subgroups : enable
-#endif
-
 void TEMPLATE(max_pool_forward_impl, Dtype)(
     const int nthreads, __global const Dtype* bottom_data, const int num,
     const int channels, const int height, const int width,
