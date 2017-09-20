@@ -67,13 +67,13 @@ void test7();
 
 int main( int argc, char** argv )
 {
-    void test1();
-    void test2();
-    void test3();
-    void test4();
-    void test5();
-    void test6();
-    void test7();
+    test1();
+    test2();
+    test3();
+    test4();
+    test5();
+    test6();
+    test7();
 
     fitEllipseQ       = true;
     fitEllipseAMSQ    = true;
@@ -133,14 +133,14 @@ void processImage(int /*h*/, void*)
 
     Mat cimage = Mat::zeros(bimage.size(), CV_8UC3);
 
-    Size textsize1 = getTextSize("openCV", FONT_HERSHEY_COMPLEX, 1, 1, 0);
+    Size textsize1 = getTextSize("OpenCV", FONT_HERSHEY_COMPLEX, 1, 1, 0);
     Size textsize2 = getTextSize("AMS", FONT_HERSHEY_COMPLEX, 1, 1, 0);
     Size textsize3 = getTextSize("Direct", FONT_HERSHEY_COMPLEX, 1, 1, 0);
     Point org1((cimage.cols - textsize1.width), (int)(1.3 * textsize1.height));
     Point org2((cimage.cols - textsize2.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height));
     Point org3((cimage.cols - textsize3.width), (int)(1.3 * textsize1.height + 1.3 * textsize2.height + 1.3 * textsize3.height));
 
-    putText(cimage, "openCV", org1, FONT_HERSHEY_COMPLEX, 1, fitEllipseColor, 1, LINE_8);
+    putText(cimage, "OpenCV", org1, FONT_HERSHEY_COMPLEX, 1, fitEllipseColor, 1, LINE_8);
     putText(cimage, "AMS",    org2, FONT_HERSHEY_COMPLEX, 1, fitEllipseAMSColor, 1, LINE_8);
     putText(cimage, "Direct", org3, FONT_HERSHEY_COMPLEX, 1, fitEllipseDirectColor, 1, LINE_8);
 
