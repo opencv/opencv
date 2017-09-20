@@ -1,7 +1,7 @@
 body, div, p {
     font: 400 14px/22px Roboto,sans-serif;
 }
-canvas {
+canvas, img {
     border: 1px solid black;
 }
 .err {
