@@ -50,6 +50,7 @@
 #include "ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include "math_functions.hpp"
+#include "default_kernel_config.hpp"
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
@@ -58,6 +59,11 @@
 
 #ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
+static cv::Mutex kernelConfigMutex;
+typedef std::map<std::string, std::string> kernel_hash_t;
+static kernel_hash_t kernelConfigMap;
+static bool defaultConfigLoaded = false;
+
 template<typename Dtype>
 OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 {
@@ -115,7 +121,6 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     output_w_ = im_out_shape_[1];
     bottom_dim_ = channels_ * in_spatial_dim_;
     top_dim_ = num_output_ * out_spatial_dim_;
-    auto_tuning_ = false;
 
     if (std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH")) {
         cache_path_ << std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH");
@@ -153,7 +158,7 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
                   << cache_path_.str()
                   << ", disable auto-tuning." << std::endl;
     }
-    auto_tuning_ = hasCacheDir;
+    auto_tuning_ = hasCacheDir && getenv("OPENCV_OCL4DNN_ENABLE_AUTO_TUNING");
 }
 
 template<typename Dtype>
@@ -351,23 +356,6 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::tune(UMat &bottom,
-                                     UMat &top,
-                                     UMat &weight,
-                                     UMat &bias,
-                                     int32_t numImages)
-{
-    UMat verify_top_umat;
-
-    verify_top_umat.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
-    calculateBenchmark(bottom, verify_top_umat, weight, bias, numImages);
-    setupConvolution(bottom, top, weight, bias, numImages, verify_top_umat);
-    verify_top_umat.release();
-
-    CHECK_EQ(tuned_, true) << "Spatial convolution auto-tuning failed.";
-}
-
-template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(UMat &bottom, UMat &verifyTop,
                                                    UMat &weight, UMat &bias,
                                                    int32_t numImages)
@@ -445,8 +433,8 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
 
     std::string prefix = ocl::Device::getDefault().name() +
                          ocl::Device::getDefault().vendorName() +
-                         ocl::Device::getDefault().driverVersion() +
                          cv::format("%d", ocl::Device::getDefault().maxComputeUnits());
+
     prefix = prefix + keyBuilder.str();
     key_ = cv::format("%08llx", crc64((uchar*)prefix.c_str(), prefix.size()));
     short_key_ = keyBuilder.str();
@@ -1028,7 +1016,10 @@ bool OCL4DNNConvSpatial<float>::verifyResult(UMat &bottom,
 
     int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
     top.zeros(4, sz, CV_32FC1);
-    config->executionTime = timedConvolve(bottom, top, weight, bias, numImages, config);
+    bool saved_tuned = tuned_;
+    tuned_ = false;
+    convolve(bottom, top, weight, bias, numImages, config);
+    tuned_ = saved_tuned;
 
     float *data = (float *)top.getMat(ACCESS_READ).ptr<float>();
     float *verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
@@ -1284,7 +1275,7 @@ bool OCL4DNNConvSpatial<float>::tuneLocalSize(UMat &bottom, UMat &top,
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
+bool OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
                                                         int32_t blockWidth,
                                                         int32_t blockHeight,
                                                         int32_t blockDepth)
@@ -1294,34 +1285,31 @@ void OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
     src_ = ocl::ProgramSource();
 
     if (kernelType == KERNEL_TYPE_INTEL_IDLF)
-        setupIDLF(blockWidth, blockHeight, blockDepth);
+        return setupIDLF(blockWidth, blockHeight, blockDepth);
     else if (kernelType == KERNEL_TYPE_BASIC)
-        createBasicKernel(blockWidth, blockHeight, blockDepth);
+        return createBasicKernel(blockWidth, blockHeight, blockDepth);
     else if (kernelType == KERNEL_TYPE_GEMM_LIKE)
-        createGEMMLikeConvKernel(blockWidth, blockHeight, blockDepth);
+        return createGEMMLikeConvKernel(blockWidth, blockHeight, blockDepth);
     else
         CV_Assert(0 && "Internal error");
+    return false;
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
-                                                 UMat &top,
-                                                 UMat &weight,
-                                                 UMat &bias,
-                                                 int32_t numImages,
-                                                 UMat &verifyTop)
+void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerParam> > &tunerItems)
 {
-    if (auto_tuning_ && ocl::Device::getDefault().intelSubgroupsSupport()) {
+    if (ocl::Device::getDefault().intelSubgroupsSupport()) {
         /* IDLF kernels are using Intel specific extension which make
            them intel only. */
         // Generates static key_
         int max_compute_units = ocl::Device::getDefault().maxComputeUnits();
         int kernelCnt = 0;
         if (group_ == 1 && ((M_ % 8 == 0) && (M_ % 32 != 24))) {
-            createConvolutionKernel(KERNEL_TYPE_GEMM_LIKE, 1, 8, 32);
-            createConvolutionKernel(KERNEL_TYPE_GEMM_LIKE, 2, 8, 32);
+            tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, 1, 8, 32));
+            tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, 2, 8, 32));
+
             if (kernel_w_ < 4 && M_ % 32 == 0)
-                createConvolutionKernel(KERNEL_TYPE_GEMM_LIKE, 1, 16, 32);
+                tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, 1, 16, 32));
         }
 
         for (int simd_size = 8; simd_size <= 16; simd_size += 8) {
@@ -1364,7 +1352,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
                     int tile_y_stride = (4 * simd_size) / tile_x;
 
                     if ((tile_y + tile_y_stride - 1) / tile_y_stride < 4) {
-                        createConvolutionKernel(KERNEL_TYPE_INTEL_IDLF, width, height, simd_size);
+                        tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_INTEL_IDLF, width, height, simd_size));
                         candidate++;
                     }
                     if (candidate >= 4 && height == 2)
@@ -1376,6 +1364,80 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
             }
         }
     }
+}
+
+template<>
+void OCL4DNNConvSpatial<float>::useFirstAvailable(UMat &bottom,
+                                                  UMat &top,
+                                                  UMat &weight,
+                                                  UMat &bias,
+                                                  int32_t numImages,
+                                                  UMat &verifyTop)
+{
+    std::vector< cv::Ptr<tunerParam> > tunerItems;
+    generateTunerItems(tunerItems);
+    tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_BASIC, 1, 1, 1));
+
+    for (int i = 0; i < tunerItems.size(); i++) {
+        if (createConvolutionKernel(tunerItems[i]->kernelType,
+                                    tunerItems[i]->blockWidth,
+                                    tunerItems[i]->blockHeight,
+                                    tunerItems[i]->blockDepth)) {
+            int kernelIdx = kernelQueue.size() - 1;
+            if (tuneLocalSize(bottom, top, weight, bias, kernelQueue[kernelIdx]) &&
+                verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernelIdx], verifyTop)) {
+                bestKernelConfig = kernelQueue[kernelIdx];
+                if (bestKernelConfig->kernelType != KERNEL_TYPE_INTEL_IDLF &&
+                    bestKernelConfig->kernelType != KERNEL_TYPE_GEMM_LIKE)
+                    if (!swizzled_weights_umat.empty())
+                        swizzled_weights_umat.release();
+
+                for (int32_t j = 0; j < kernelIdx; j++) {
+                    CV_Assert(phash.find(kernelQueue[j]->kernelName) != phash.end());
+                    unloadProgram(kernelQueue[j]->kernelName);
+                }
+                kernelQueue.clear();
+                tuned_ = true;
+                break;
+            }
+        }
+    }
+
+    if (tuned_) {
+        cv::AutoLock lock(kernelConfigMutex);
+        std::stringstream outputKernel;
+        outputKernel << bestKernelConfig->workItem_output[0] << " "
+                     << bestKernelConfig->workItem_output[1] << " "
+                     << bestKernelConfig->workItem_output[2] << " "
+                     << bestKernelConfig->kernelType << " "
+                     << bestKernelConfig->local_work_size[0] << " "
+                     << bestKernelConfig->local_work_size[1] << " "
+                     << bestKernelConfig->local_work_size[2] << " "
+                     << bestKernelConfig->swizzle_weights << " "
+                     << bestKernelConfig->use_null_local << " ";
+        kernelConfigMap.insert(std::pair<std::string, std::string>(key_, outputKernel.str()));
+    }
+
+    return;
+}
+
+template<>
+void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
+                                                 UMat &top,
+                                                 UMat &weight,
+                                                 UMat &bias,
+                                                 int32_t numImages,
+                                                 UMat &verifyTop)
+{
+    std::vector< cv::Ptr<tunerParam> > tunerItems;
+
+    generateTunerItems(tunerItems);
+    for (int i = 0; i < tunerItems.size(); i++)
+        createConvolutionKernel(tunerItems[i]->kernelType,
+                                tunerItems[i]->blockWidth,
+                                tunerItems[i]->blockHeight,
+                                tunerItems[i]->blockDepth);
+
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
         if (tuneLocalSize(bottom, top, weight, bias, kernelQueue[x])) {
             kernelQueue[x]->executionTime = timedConvolve(bottom, top, weight, bias, numImages,
@@ -1456,21 +1518,15 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
     if (verification) {
         dbgPrint(std::cout << "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
                  "> passed verification" << std::endl);
+        dbgPrint(std::cout << "Convolution Time:" << kernelQueue[kernel_index_]->executionTime << std::endl);
     } else {
-        if (auto_tuning_)
-            dbgPrint(std::cout << "Verification was not successful, " <<
-                     "fallback to basic kernel" << std::endl);
-        else
-            dbgPrint(std::cout << "Auto-tuning disabled, fallback to basic kernel" << std::endl);
+        dbgPrint(std::cout << "fallback to basic kernel" << std::endl);
         options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
-        verification = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernel_index_], verifyTop);
-        CHECK_EQ(verification, true) << "Basic kernel failed verification." << std::endl;
     }
     this->bestKernelConfig = kernelQueue[kernel_index_];
 
-    dbgPrint(std::cout << "Convolution Time:" << kernelQueue[kernel_index_]->executionTime << std::endl);
 
     if (bestKernelConfig->kernelType != 2 && bestKernelConfig->kernelType != 5)
         if (!swizzled_weights_umat.empty())
@@ -1483,25 +1539,22 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
         }
     }
     kernelQueue.clear();
-
     tuned_ = true;
-    if (auto_tuning_) {
-        std::string outputFile;
-        outputFile = cache_path_.str() + key_;
-        std::ifstream cachedKernel(outputFile.c_str());
-        std::ofstream outputKernel;
-        outputKernel.open(outputFile.c_str());
-        outputKernel << bestKernelConfig->workItem_output[0] << " "
-                     << bestKernelConfig->workItem_output[1] << " "
-                     << bestKernelConfig->workItem_output[2] << " "
-                     << bestKernelConfig->kernelType << " "
-                     << bestKernelConfig->local_work_size[0] << " "
-                     << bestKernelConfig->local_work_size[1] << " "
-                     << bestKernelConfig->local_work_size[2] << " "
-                     << bestKernelConfig->swizzle_weights << " "
-                     << bestKernelConfig->use_null_local << " ";
-        outputKernel.close();
-    }
+    std::string outputFile;
+    outputFile = cache_path_.str() + key_;
+    std::ifstream cachedKernel(outputFile.c_str());
+    std::ofstream outputKernel;
+    outputKernel.open(outputFile.c_str());
+    outputKernel << bestKernelConfig->workItem_output[0] << " "
+                 << bestKernelConfig->workItem_output[1] << " "
+                 << bestKernelConfig->workItem_output[2] << " "
+                 << bestKernelConfig->kernelType << " "
+                 << bestKernelConfig->local_work_size[0] << " "
+                 << bestKernelConfig->local_work_size[1] << " "
+                 << bestKernelConfig->local_work_size[2] << " "
+                 << bestKernelConfig->swizzle_weights << " "
+                 << bestKernelConfig->use_null_local << " ";
+    outputKernel.close();
 }
 
 template<typename Dtype>
@@ -1523,64 +1576,134 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(UMat &bottom, UMat &top,
         bestKernelConfig.release();
     }
 
-    if (loadCachedConfig())
-        return;
-
-    tune(bottom, top, weight, bias, numImages);
+    UMat benchData;
+    if (auto_tuning_) {
+        if (loadTunedConfig())
+            return;
+        else {
+            benchData.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
+            calculateBenchmark(bottom, benchData, weight, bias, numImages);
+            return setupConvolution(bottom, top, weight, bias, numImages, benchData);
+        }
+    } else {
+        if (loadCachedConfig())
+            return;
+        else {
+            benchData.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
+            calculateBenchmark(bottom, benchData, weight, bias, numImages);
+            useFirstAvailable(bottom, top, weight, bias, numImages, benchData);
+        }
+    }
 }
 
 template<typename Dtype>
 bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
 {
-    // Find cached kernel configuration
-    std::string outputFile;
-    outputFile = cache_path_.str() + key_;
-    std::ifstream cachedKernel(outputFile.c_str());
+    cv::AutoLock lock(kernelConfigMutex);
+    if (!defaultConfigLoaded)
+    {
+        for (int i = 0; i < CONFIG_NUM; i++)
+        {
+            kernelConfigMap.insert(std::pair<std::string, std::string>(default_kernel_config[2 * i], default_kernel_config[2 * i + 1]));
+        }
+        defaultConfigLoaded = true;
+    }
+
+    kernel_hash_t::iterator it = kernelConfigMap.find(key_);
+    if (it != kernelConfigMap.end())
+    {
+        int32_t x, y, z, type, lx, ly, lz;
+        bool swizzle, nullLocal;
+        std::stringstream cachedKernel(it->second);
+        if (cachedKernel)
+        {
+            cachedKernel >> x;
+            cachedKernel >> y;
+            cachedKernel >> z;
+            cachedKernel >> type;
+            cachedKernel >> lx;
+            cachedKernel >> ly;
+            cachedKernel >> lz;
+            cachedKernel >> swizzle;
+            cachedKernel >> nullLocal;
+            if (setupKernelByConfig(x, y, z, type, lx, ly, lz, swizzle, nullLocal)) {
+                tuned_ = true;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+template<typename Dtype>
+bool OCL4DNNConvSpatial<Dtype>::setupKernelByConfig(int x, int y, int z, int type,
+                                                    int lx, int ly, int lz,
+                                                    bool swizzle, bool nullLocal)
+{
+    if (type == KERNEL_TYPE_INTEL_IDLF)
+    {
+        if (z == 1)
+            z = 16;
+        CHECK_EQ(z == 16 || z == 8, true) << "invalid SIMD size" << std::endl;
+    }
+    kernelQueue.clear();
+    createConvolutionKernel(type, x, y, z);
+    if (kernelQueue.size() != 1) {
+        std::cerr << "Failed setup kernel by config:"
+            << " x = " << x
+            << " y = " << y
+            << " z = " << z
+            << " type = " << type
+            << std::endl;
+        return false;
+    }
+    bestKernelConfig = kernelQueue[0];
+    kernelQueue.clear();
+    bestKernelConfig->local_work_size[0] = lx;
+    bestKernelConfig->local_work_size[1] = ly;
+    bestKernelConfig->local_work_size[2] = lz;
+    bestKernelConfig->swizzle_weights = swizzle;
+    bestKernelConfig->use_null_local = nullLocal;
+    // If kernel type changed to type 2 or 4, we need to reset the swizzled
+    // weights pointer to invalidate the previous swizzled weights data.
+    if (prev_kernel_type_ != bestKernelConfig->kernelType &&
+        (bestKernelConfig->kernelType == KERNEL_TYPE_INTEL_IDLF ||
+        bestKernelConfig->kernelType == KERNEL_TYPE_GEMM_LIKE))
+    {
+        if (!swizzled_weights_umat.empty())
+            swizzled_weights_umat.release();
+    }
+    return true;
+}
+
+template<typename Dtype>
+bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
+{
+    int32_t x, y, z, type, lx, ly, lz;
+    bool swizzle, nullLocal;
+
+    // Find cached kernel configuration from file
+    std::string cacheFile;
+    cacheFile = cache_path_.str() + key_;
+    std::ifstream cachedKernel(cacheFile.c_str());
     if (cachedKernel)
     {
-        int32_t x, y, z, type;
         cachedKernel >> x;
         cachedKernel >> y;
         cachedKernel >> z;
         cachedKernel >> type;
-        if (type == KERNEL_TYPE_INTEL_IDLF)
-        {
-            if (z == 1)
-                z = 16;
-            CHECK_EQ(z == 16 || z == 8, true) << "invalid SIMD size" << std::endl;
+        cachedKernel >> lx;
+        cachedKernel >> ly;
+        cachedKernel >> lz;
+        cachedKernel >> swizzle;
+        cachedKernel >> nullLocal;
+        if (setupKernelByConfig(x, y, z, type, lx, ly, lz, swizzle, nullLocal)) {
+            tuned_ = true;
+            return true;
         }
-        createConvolutionKernel(type, x, y, z);
-        kernel_index_ = kernelQueue.size() - 1;
-        if (kernel_index_ == -1) {
-            std::cerr << "Failed to get kernel from cached configurations."
-                      << std::endl;
-            std::cerr << "Deleting broken cache file and try tuning again..."
-                      << std::endl;
-            std::string bakFile = outputFile + ".bak";
-            std::rename(outputFile.c_str(), bakFile.c_str());
-            return false;
-        }
-        bestKernelConfig = kernelQueue[kernel_index_];
-        kernelQueue.clear();
-        cachedKernel >> bestKernelConfig->local_work_size[0];
-        cachedKernel >> bestKernelConfig->local_work_size[1];
-        cachedKernel >> bestKernelConfig->local_work_size[2];
-        cachedKernel >> bestKernelConfig->swizzle_weights;
-        cachedKernel >> bestKernelConfig->use_null_local;
-        // If kernel type changed to type 2 or 4, we need to reset the swizzled
-        // weights pointer to invalidate the previous swizzled weights data.
-        if (prev_kernel_type_ != bestKernelConfig->kernelType &&
-            (bestKernelConfig->kernelType == KERNEL_TYPE_INTEL_IDLF ||
-             bestKernelConfig->kernelType == KERNEL_TYPE_GEMM_LIKE))
-        {
-            if (!swizzled_weights_umat.empty())
-                swizzled_weights_umat.release();
-        }
-        tuned_ = true;
-        return true;
     }
-    else
-        return false;
+    return false;
 }
 
 template class OCL4DNNConvSpatial<float>;

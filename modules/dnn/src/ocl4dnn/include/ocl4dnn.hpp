@@ -52,6 +52,7 @@
 
 namespace cv { namespace dnn { namespace ocl4dnn {
 #ifdef HAVE_OPENCL
+
 struct OCL4DNNConvConfig
 {
     OCL4DNNConvConfig() :
@@ -77,6 +78,7 @@ struct OCL4DNNConvConfig
     bool bias_backward; // = true;
     bool phase_test; // = true;
 };
+
 
 template<typename Dtype>
 class OCL4DNNConvSpatial
@@ -127,6 +129,22 @@ class OCL4DNNConvSpatial
             }
         };
 
+        struct tunerParam
+        {
+           int kernelType;
+           int blockWidth;
+           int blockHeight;
+           int blockDepth;
+
+           tunerParam(int type, int w, int h, int d)
+           {
+               kernelType = type;
+               blockWidth = w;
+               blockHeight= h;
+               blockDepth = d;
+           }
+        };
+
         inline void addDef(const char* name)
         {
             options_ << " -D " << name;
@@ -152,12 +170,12 @@ class OCL4DNNConvSpatial
             options_ << " -D " << name << "=" << value;
         }
 
-        void tune(UMat &bottom,
-                  UMat &top,
-                  UMat &weight,
-                  UMat &bias,
-                  int32_t numImages);
-
+        void useFirstAvailable(UMat &bottom,
+                               UMat &top,
+                               UMat &weight,
+                               UMat &bias,
+                               int32_t numImages,
+                               UMat &verifyTop);
         void setupKernel();
         void collectCommonInformation();
         void setupKernelDetails(int32_t kernelType,
@@ -179,8 +197,7 @@ class OCL4DNNConvSpatial
                               UMat &bias,
                               int32_t numImags,
                               UMat &verifyTop);
-
-        void createConvolutionKernel(int32_t kernelType,
+        bool createConvolutionKernel(int32_t kernelType,
                                      int32_t blockWidth,
                                      int32_t blockHeight,
                                      int32_t blockDepth);
@@ -224,12 +241,18 @@ class OCL4DNNConvSpatial
                                int32_t* workItemOutput,
                                size_t* localSizes,
                                size_t* globalSizes);
+        bool loadTunedConfig();
         bool loadCachedConfig();
 
         void unloadProgram(const std::string& kernelName);
         void prepareKernel(UMat &bottom, UMat &top,
                            UMat &weight, UMat &bias,
                            int32_t numImages);
+        bool setupKernelByConfig(int x, int y, int z, int type,
+                                 int lx, int ly, int lz,
+                                 bool swizzle, bool nullLocal);
+        void generateTunerItems(std::vector< cv::Ptr<tunerParam> > &tunerItems);
+
         int32_t group_;
         bool bias_term_;
         const Dtype* bottom_data_;
