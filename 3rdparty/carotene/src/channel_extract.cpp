@@ -231,7 +231,7 @@ void extract4(const Size2D &size,
                  srcStride == dst2Stride && \
                  srcStride == dst3Stride &&
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 
 #define SPLIT_ASM2(sgn, bits) __asm__ ( \
                                           "vld2." #bits " {d0, d2}, [%[in0]]            \n\t" \
@@ -351,7 +351,7 @@ void extract4(const Size2D &size,
     }                                                                                                   \
 }
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 
 #define ALPHA_QUAD(sgn, bits) { \
                                   internal::prefetch(src + sj); \
