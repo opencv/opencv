@@ -661,8 +661,6 @@ public:
             config.dilation = dilation;
             config.group = group;
             config.bias_term = (hasBias()) ? true : false;
-            config.weights_backward = false;
-            config.bias_backward = false;
 
             convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
         }

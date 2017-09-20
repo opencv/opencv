@@ -61,10 +61,7 @@ struct OCL4DNNConvConfig
         stride(1, 1),
         dilation(1, 1),
         group(1),
-        bias_term(false),
-        weights_backward(true),
-        bias_backward(true),
-        phase_test(true)
+        bias_term(false)
     {}
     MatShape in_shape;
     MatShape out_shape;
@@ -74,9 +71,6 @@ struct OCL4DNNConvConfig
     Size dilation;
     int group; // = 1;
     bool bias_term; // = false;
-    bool weights_backward; // = true;
-    bool bias_backward; // = true;
-    bool phase_test; // = true;
 };
 
 
@@ -252,11 +246,7 @@ class OCL4DNNConvSpatial
 
         int32_t group_;
         bool bias_term_;
-        const Dtype* bottom_data_;
-        Dtype* top_data_;
-        const Dtype* weight_;
         UMat swizzled_weights_umat;
-        const Dtype* bias_;
 
         int32_t bottom_index_;
         int32_t output_h_;
@@ -275,12 +265,6 @@ class OCL4DNNConvSpatial
         /// M_ is the channel dimension of the output for a single group, which is the
         /// leading dimension of the filter matrix.
         int32_t M_;
-        /// K_ is the dimension of an unrolled input for a single group, which is the
-        /// leading dimension of the data matrix.
-        int32_t K_;
-        /// N_ is the spatial dimension of the output, the H x W, which are the last
-        /// dimensions of the data and filter matrices.
-        int32_t N_;
 
         bool tuned_;
         std::string key_, key_sanitized_;
@@ -299,7 +283,6 @@ class OCL4DNNConvSpatial
         int32_t channels_;
         int32_t out_spatial_dim_;
         int32_t num_output_;
-        int32_t kernel_dim_;
 
         int32_t kernelType_;
         int32_t blockM_;

@@ -95,14 +95,11 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     }
 
     prev_kernel_type_ = -1;
-    bias_ = NULL;
     tuned_ = false;
-    kernel_dim_ = channels_ / group_;
     out_spatial_dim_ = 1;
 
     int in_spatial_dim_ = 1;
     for (int i = 0; i < spatial_dims; ++i) {
-        kernel_dim_ *= i == 0 ? config.kernel.height : config.kernel.width;
         in_spatial_dim_ *= config.in_shape[dims - spatial_dims + i];
         out_spatial_dim_ *= config.out_shape[dims - spatial_dims + i];
     }
@@ -117,7 +114,6 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     dilation_h_ = dilation_[0];
     dilation_w_ = dilation_[1];
     M_ = num_output_ / group_;
-    K_ = channels_ * kernel_h_ * kernel_w_ / group_;
     height_ = im_in_shape_[0];
     width_ = im_in_shape_[1];
     output_h_ = im_out_shape_[0];
@@ -512,7 +508,6 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
     if (tuned_ && !swizzled_weights_umat.empty())
         return true;
 
-    ocl::Context ocl_ctx = ocl::Context::getDefault();
     if (swizzled_weights_umat.empty())
         swizzled_weights_umat.create(1, ((num_output_ + 15) & ~15) * channels_ *
                                      kernel_h_ * ((kernel_w_ + 1) & ~1), CV_32FC1);
