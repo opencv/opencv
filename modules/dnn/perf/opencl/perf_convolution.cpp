@@ -101,7 +101,10 @@ OCL_PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     Mat outBlob2D = outBlobs[0].reshape(1, outBlobs[0].size[0]);
     declare.in(inpBlob2D, wgtBlob2D, WARMUP_RNG).out(outBlob2D).tbb_threads(cv::getNumThreads());
 
-    TEST_CYCLE_N(10)
+    // warmup
+    layer->forward(inpBlobs, outBlobs, internalBlobs);
+
+    TEST_CYCLE()
     {
         layer->forward(inpBlobs, outBlobs, internalBlobs);
     }
