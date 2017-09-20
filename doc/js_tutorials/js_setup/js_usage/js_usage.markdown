@@ -13,23 +13,25 @@ First, let's create a simple web page that is able to upload an image.
 @code{.js}
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="utf-8">
+<title>Hello OpenCV.js</title>
+</head>
 <body>
-
-<h1>Hello OpenCV.js</h1>
-
-<input type="file" id="fileInput" accept="image/gif, image/jpeg, image/png"/>
+<h2>Hello OpenCV.js</h2>
 <div>
-    <img id="srcImage"></img>
+  <div class="inputoutput">
+    <img id="imageSrc" alt="No Image" />
+    <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+  </div>
 </div>
-
-<script>
-let imgElement = document.getElementById("srcImage")
+<script type="text/javascript">
+let imgElement = document.getElementById("imageSrc")
 let inputElement = document.getElementById("fileInput");
 inputElement.addEventListener("change", (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 </script>
-
 </body>
 </html>
 @endcode
@@ -46,15 +48,23 @@ Set the URL of `opencv.js` to `src` attribute of \<script\> tag.
 
 Example for synchronous loading:
 @code{.js}
-<script src="opencv.js"></script>
+<script src="opencv.js" type="text/javascript"></script>
 @endcode
 
 You may want to load `opencv.js` asynchronously by `async` attribute in \<script\> tag. To be notified when `opencv.js` is ready, you can
-register a callback to `onload` attribute.
+use a `Module` object and register a callback to `_main` attribute.
+Please refer to [Emscripten FAQ](https://kripken.github.io/emscripten-site/docs/getting_started/FAQ.html#how-can-i-tell-when-the-page-is-fully-loaded-and-it-is-safe-to-call-compiled-functions) for details.
 
 Example for asynchronous loading
 @code{.js}
-<script async src="opencv.js" onload="opencvIsReady();"></script>
+<script type="text/javascript">
+let Module = {
+  _main: function() {
+    onOpenCvReady();
+  },
+};
+</script>
+<script async src="opencv.js" type="text/javascript"></script>
 @endcode
 
 ### Use OpenCV.js
@@ -84,90 +94,60 @@ You can use cv.imshow to show cv.Mat on the canvas.
 cv.imshow(mat, "outputCanvas");
 @endcode
 
-Putting all of the steps  together, the final index.html is shown below.
+Putting all of the steps together, the final index.html is shown below.
 
 @code{.js}
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="utf-8">
+<title>Hello OpenCV.js</title>
+</head>
 <body>
-
-<h1>Hello OpenCV.js</h1>
-
+<h2>Hello OpenCV.js</h2>
 <p id="status">OpenCV.js is loading...</p>
-
-<input type="file" id="fileInput" accept="image/gif, image/jpeg, image/png"/>
 <div>
-    <img id="srcImage"></img>
-    <canvas id="outputCanvas"></canvas>
+  <div class="inputoutput">
+    <img id="imageSrc" alt="No Image" />
+    <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+  </div>
+  <div class="inputoutput">
+    <canvas id="canvasOutput" ></canvas>
+    <div class="caption">canvasOutput</div>
+  </div>
 </div>
-
-<script>
-let imgElement = document.getElementById("srcImage")
-let inputElement = document.getElementById("fileInput");
-
-inputElement.addEventListener("change", (e) => {
+<script type="text/javascript">
+let imgElement = document.getElementById('imageSrc');
+let inputElement = document.getElementById('fileInput');
+inputElement.addEventListener('change', (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 
 imgElement.onload = function() {
   let mat = cv.imread(imgElement);
-  cv.imshow("outputCanvas", mat);
+  cv.imshow('canvasOutput', mat);
   mat.delete();
+};
+
+function onOpenCvReady() {
+  document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
 }
 
-function opencvIsReady() {
-  document.getElementById("status").innerHTML = "OpenCV.js is ready.";
-}
+let Module = {
+  _main: function() {onOpenCvReady();},
+};
 </script>
-
-<script async src="opencv.js" onload="opencvIsReady();"></script>
-
+<script async src="opencv.js" type="text/javascript"></script>
 </body>
 </html>
 @endcode
 
 @note You have to call delete method of cv.Mat to free memory allocated in Emscripten's heap. Please refer to [Memeory management of Emscripten](https://kripken.github.io/emscripten-site/docs/porting/connecting_cpp_and_javascript/embind.html#memory-management) for details.
 
-An embedded version is shown below. You can try it. After you upload an image, the web page will show two images. The first one is an \<img\> as cv.Mat input. The second one is a \<canvas\> as cv.Mat output.
-- - -
-
+Try it
+------
 \htmlonly
-<!DOCTYPE html>
-<html>
-<body>
-
-<h1>Hello OpenCV.js</h1>
-
-<p id="status">OpenCV.js is loading.</p>
-
-<input type="file" id="fileInput" accept="image/gif, image/jpeg, image/png"/>
-<div>
-    <img id="srcImage"></img>
-    <canvas id="outputCanvas"></canvas>
-<div>
-
-<script>
-
-let imgElement = document.getElementById("srcImage")
-let inputElement = document.getElementById("fileInput");
-inputElement.addEventListener("change", (e) => {
-  imgElement.src = URL.createObjectURL(e.target.files[0]);
-}, false);
-
-imgElement.onload = function() {
-  let mat = cv.imread(imgElement);
-  cv.imshow("outputCanvas", mat);
-  mat.delete();
-}
-
-function opencvIsReady() {
-  document.getElementById("status").innerHTML = "OpenCV.js is ready.";
-}
-</script>
-
-<script async src="opencv.js" onload="opencvIsReady();"></script>
-
-</body>
-</html>
+<iframe src="../../js_setup_usage.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
-- - -
