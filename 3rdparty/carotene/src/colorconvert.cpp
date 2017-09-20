@@ -97,7 +97,7 @@ void rgb2gray(const Size2D &size, COLOR_SPACE color_space,
     const u32 G2Y = color_space == COLOR_SPACE_BT601 ? G2Y_BT601 : G2Y_BT709;
     const u32 B2Y = color_space == COLOR_SPACE_BT601 ? B2Y_BT601 : B2Y_BT709;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register int16x4_t v_r2y asm ("d31") = vmov_n_s16(R2Y);
     register int16x4_t v_g2y asm ("d30") = vmov_n_s16(G2Y);
     register int16x4_t v_b2y asm ("d29") = vmov_n_s16(B2Y);
@@ -116,7 +116,7 @@ void rgb2gray(const Size2D &size, COLOR_SPACE color_space,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
         for (; dj < roiw8; sj += 24, dj += 8)
         {
             internal::prefetch(src + sj);
@@ -198,7 +198,7 @@ void rgbx2gray(const Size2D &size, COLOR_SPACE color_space,
     const u32 G2Y = color_space == COLOR_SPACE_BT601 ? G2Y_BT601 : G2Y_BT709;
     const u32 B2Y = color_space == COLOR_SPACE_BT601 ? B2Y_BT601 : B2Y_BT709;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register int16x4_t v_r2y asm ("d31") = vmov_n_s16(R2Y);
     register int16x4_t v_g2y asm ("d30") = vmov_n_s16(G2Y);
     register int16x4_t v_b2y asm ("d29") = vmov_n_s16(B2Y);
@@ -217,7 +217,7 @@ void rgbx2gray(const Size2D &size, COLOR_SPACE color_space,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
         for (; dj < roiw8; sj += 32, dj += 8)
         {
             internal::prefetch(src + sj);
@@ -300,7 +300,7 @@ void bgr2gray(const Size2D &size, COLOR_SPACE color_space,
     const u32 G2Y = color_space == COLOR_SPACE_BT601 ? G2Y_BT601 : G2Y_BT709;
     const u32 B2Y = color_space == COLOR_SPACE_BT601 ? B2Y_BT601 : B2Y_BT709;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register int16x4_t v_r2y asm ("d31") = vmov_n_s16(R2Y);
     register int16x4_t v_g2y asm ("d30") = vmov_n_s16(G2Y);
     register int16x4_t v_b2y asm ("d29") = vmov_n_s16(B2Y);
@@ -319,7 +319,7 @@ void bgr2gray(const Size2D &size, COLOR_SPACE color_space,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
         for (; dj < roiw8; sj += 24, dj += 8)
         {
             internal::prefetch(src + sj);
@@ -402,7 +402,7 @@ void bgrx2gray(const Size2D &size, COLOR_SPACE color_space,
     const u32 G2Y = color_space == COLOR_SPACE_BT601 ? G2Y_BT601 : G2Y_BT709;
     const u32 B2Y = color_space == COLOR_SPACE_BT601 ? B2Y_BT601 : B2Y_BT709;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register int16x4_t v_r2y asm ("d31") = vmov_n_s16(R2Y);
     register int16x4_t v_g2y asm ("d30") = vmov_n_s16(G2Y);
     register int16x4_t v_b2y asm ("d29") = vmov_n_s16(B2Y);
@@ -421,7 +421,7 @@ void bgrx2gray(const Size2D &size, COLOR_SPACE color_space,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
         for (; dj < roiw8; sj += 32, dj += 8)
         {
             internal::prefetch(src + sj);
@@ -512,7 +512,7 @@ void gray2rgb(const Size2D &size,
         for (; sj < roiw16; sj += 16, dj += 48)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
             "vld1.8 {d0-d1}, [%[in0]]            \n\t"
             "vmov.8 q1, q0                       \n\t"
@@ -538,7 +538,7 @@ void gray2rgb(const Size2D &size,
 
         if (sj < roiw8)
         {
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
             "vld1.8 {d0}, [%[in]]                \n\t"
             "vmov.8 d1, d0                       \n\t"
@@ -584,7 +584,7 @@ void gray2rgbx(const Size2D &size,
     size_t roiw16 = size.width >= 15 ? size.width - 15 : 0;
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register uint8x16_t vc255   asm ("q4") = vmovq_n_u8(255);
 #else
     uint8x16x4_t vRgba;
@@ -602,7 +602,7 @@ void gray2rgbx(const Size2D &size,
         for (; sj < roiw16; sj += 16, dj += 64)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
             "vld1.8 {d0-d1}, [%[in0]]            \n\t"
             "vmov.8 q1, q0                       \n\t"
@@ -628,7 +628,7 @@ void gray2rgbx(const Size2D &size,
 
         if (sj < roiw8)
         {
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
             "vld1.8 {d5}, [%[in]]                \n\t"
             "vmov.8 d6, d5                       \n\t"
@@ -1409,7 +1409,7 @@ inline void convertToHSV(const s32 r, const s32 g, const s32 b,
               "d24","d25","d26","d27","d28","d29","d30","d31"         \
             );
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 
 #define YCRCB_CONSTS                                                        \
     register int16x4_t vcYR  asm ("d31") = vmov_n_s16(4899);                \
@@ -1555,7 +1555,7 @@ inline uint8x8x3_t convertToYCrCb( const int16x8_t& vR, const int16x8_t& vG, con
 #define COEFF_G   (  8663)
 #define COEFF_B   (-17705)
 
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 #define YUV420ALPHA3_CONST
 #define YUV420ALPHA4_CONST register uint8x16_t c255  asm ("q13") = vmovq_n_u8(255);
 #define YUV420ALPHA3_CONVERT
@@ -1852,7 +1852,7 @@ void rgb2hsv(const Size2D &size,
 #ifdef CAROTENE_NEON
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
     const s32 hsv_shift = 12;
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register const f32 vsdiv_table = f32(255 << hsv_shift);
     register f32 vhdiv_table = f32(hrange << hsv_shift);
     register const s32 vhrange = hrange;
@@ -1871,7 +1871,7 @@ void rgb2hsv(const Size2D &size,
         for (; j < roiw8; sj += 24, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERT_TO_HSV_ASM(vld3.8 {d0-d2}, d0, d2)
 #else
             uint8x8x3_t vRgb = vld3_u8(src + sj);
@@ -1904,7 +1904,7 @@ void rgbx2hsv(const Size2D &size,
 #ifdef CAROTENE_NEON
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
     const s32 hsv_shift = 12;
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register const f32 vsdiv_table = f32(255 << hsv_shift);
     register f32 vhdiv_table = f32(hrange << hsv_shift);
     register const s32 vhrange = hrange;
@@ -1923,7 +1923,7 @@ void rgbx2hsv(const Size2D &size,
         for (; j < roiw8; sj += 32, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERT_TO_HSV_ASM(vld4.8 {d0-d3}, d0, d2)
 #else
             uint8x8x4_t vRgb = vld4_u8(src + sj);
@@ -1956,7 +1956,7 @@ void bgr2hsv(const Size2D &size,
 #ifdef CAROTENE_NEON
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
     const s32 hsv_shift = 12;
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register const f32 vsdiv_table = f32(255 << hsv_shift);
     register f32 vhdiv_table = f32(hrange << hsv_shift);
     register const s32 vhrange = hrange;
@@ -1975,7 +1975,7 @@ void bgr2hsv(const Size2D &size,
         for (; j < roiw8; sj += 24, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERT_TO_HSV_ASM(vld3.8 {d0-d2}, d2, d0)
 #else
             uint8x8x3_t vRgb = vld3_u8(src + sj);
@@ -2008,7 +2008,7 @@ void bgrx2hsv(const Size2D &size,
 #ifdef CAROTENE_NEON
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
     const s32 hsv_shift = 12;
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register const f32 vsdiv_table = f32(255 << hsv_shift);
     register f32 vhdiv_table = f32(hrange << hsv_shift);
     register const s32 vhrange = hrange;
@@ -2027,7 +2027,7 @@ void bgrx2hsv(const Size2D &size,
         for (; j < roiw8; sj += 32, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERT_TO_HSV_ASM(vld4.8 {d0-d3}, d2, d0)
 #else
             uint8x8x4_t vRgb = vld4_u8(src + sj);
@@ -2068,7 +2068,7 @@ void rgbx2bgr565(const Size2D &size,
         for (; j < roiw16; sj += 64, dj += 32, j += 16)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
                 "vld4.8 {d2, d4, d6, d8}, [%[in0]]        @  q0       q1       q2       q3       q4       \n\t"
                 "vld4.8 {d3, d5, d7, d9}, [%[in1]]        @  xxxxxxxx rrrrRRRR ggggGGGG bbbbBBBB xxxxxxxx \n\t"
@@ -2122,7 +2122,7 @@ void rgb2bgr565(const Size2D &size,
         for (; j < roiw16; sj += 48, dj += 32, j += 16)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
                 "vld3.8 {d2, d4, d6}, [%[in0]]       @  q0       q1       q2       q3       q4       \n\t"
                 "vld3.8 {d3, d5, d7}, [%[in1]]       @  xxxxxxxx rrrrRRRR ggggGGGG bbbbBBBB xxxxxxxx \n\t"
@@ -2176,7 +2176,7 @@ void rgbx2rgb565(const Size2D &size,
         for (; j < roiw16; sj += 64, dj += 32, j += 16)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
                 "vld4.8 {d0, d2, d4, d6}, [%[in0]]    @  q0       q1       q2       q3         \n\t"
                 "vld4.8 {d1, d3, d5, d7}, [%[in1]]    @  rrrrRRRR ggggGGGG bbbbBBBB aaaaAAAA   \n\t"
@@ -2230,7 +2230,7 @@ void rgb2rgb565(const Size2D &size,
         for (; j < roiw16; sj += 48, dj += 32, j += 16)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             __asm__ (
                 "vld3.8 {d0, d2, d4}, [%[in0]]        @  q0       q1       q2       q3         \n\t"
                 "vld3.8 {d1, d3, d5}, [%[in1]]        @  rrrrRRRR ggggGGGG bbbbBBBB xxxxxxxx   \n\t"
@@ -2285,7 +2285,7 @@ void rgb2ycrcb(const Size2D &size,
         for (; j < roiw8; sj += 24, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTTOYCRCB(vld3.8 {d0-d2}, d0, d1, d2)
 #else
             uint8x8x3_t vRgb = vld3_u8(src + sj);
@@ -2329,7 +2329,7 @@ void rgbx2ycrcb(const Size2D &size,
         for (; j < roiw8; sj += 32, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTTOYCRCB(vld4.8 {d0-d3}, d0, d1, d2)
 #else
             uint8x8x4_t vRgba = vld4_u8(src + sj);
@@ -2373,7 +2373,7 @@ void bgr2ycrcb(const Size2D &size,
         for (; j < roiw8; sj += 24, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTTOYCRCB(vld3.8 {d0-d2}, d2, d1, d0)
 #else
             uint8x8x3_t vBgr = vld3_u8(src + sj);
@@ -2417,7 +2417,7 @@ void bgrx2ycrcb(const Size2D &size,
         for (; j < roiw8; sj += 32, dj += 24, j += 8)
         {
             internal::prefetch(src + sj);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTTOYCRCB(vld4.8 {d0-d3}, d2, d1, d0)
 #else
             uint8x8x4_t vBgra = vld4_u8(src + sj);
@@ -2499,7 +2499,7 @@ void yuv420sp2rgb(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(3, d1, d0, q5, q6)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2545,7 +2545,7 @@ void yuv420sp2rgbx(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(4, d1, d0, q5, q6)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2591,7 +2591,7 @@ void yuv420i2rgb(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(3, d0, d1, q5, q6)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2637,7 +2637,7 @@ void yuv420i2rgbx(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(4, d0, d1, q5, q6)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2683,7 +2683,7 @@ void yuv420sp2bgr(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(3, d1, d0, q6, q5)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2729,7 +2729,7 @@ void yuv420sp2bgrx(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(4, d1, d0, q6, q5)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2775,7 +2775,7 @@ void yuv420i2bgr(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(3, d0, d1, q6, q5)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
@@ -2821,7 +2821,7 @@ void yuv420i2bgrx(const Size2D &size,
             internal::prefetch(uv + j);
             internal::prefetch(y1 + j);
             internal::prefetch(y2 + j);
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
             CONVERTYUV420TORGB(4, d0, d1, q6, q5)
 #else
             convertYUV420.ToRGB(y1 + j, y2 + j, uv + j, dst1 + dj, dst2 + dj);
