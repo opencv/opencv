@@ -107,9 +107,9 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
             oclk_softmax_forward_kernel.set(argIdx++, outer_num_);
             oclk_softmax_forward_kernel.set(argIdx++, channels_);
             oclk_softmax_forward_kernel.set(argIdx++, inner_num_);
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) scale_data_.handle(ACCESS_WRITE));
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
+            oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(scale_data_));
+            oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
+            oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
             oclk_softmax_forward_kernel.set(argIdx++, NULL, channels_ * inner_num_* sizeof(Dtype));
             oclk_softmax_forward_kernel.set(argIdx++, NULL, inner_num_* sizeof(Dtype));
             oclk_softmax_forward_kernel.set(argIdx++, NULL, 16 * inner_num_* sizeof(Dtype));
@@ -119,9 +119,9 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
             oclk_softmax_forward_kernel.set(argIdx++, outer_num_);
             oclk_softmax_forward_kernel.set(argIdx++, channels_);
             oclk_softmax_forward_kernel.set(argIdx++, inner_num_);
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) scale_data_.handle(ACCESS_WRITE));
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
-            oclk_softmax_forward_kernel.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
+            oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(scale_data_));
+            oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
+            oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
         }
         ret = oclk_softmax_forward_kernel.run(3, global_size, local_size, false);
     }

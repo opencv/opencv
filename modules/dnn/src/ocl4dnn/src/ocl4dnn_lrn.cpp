@@ -104,7 +104,7 @@ bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
         return false;
 
     oclk_lrn_fill.set(argIdx++, n_threads);
-    oclk_lrn_fill.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
+    oclk_lrn_fill.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
     oclk_lrn_fill.set(argIdx++, num_);
     oclk_lrn_fill.set(argIdx++, channels_);
     oclk_lrn_fill.set(argIdx++, height_);
@@ -113,7 +113,7 @@ bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
     int size_norm_factor = norm_by_size_ ? size_ : 1;
     oclk_lrn_fill.set(argIdx++, alpha_ / size_norm_factor);
     oclk_lrn_fill.set(argIdx++, k_);
-    oclk_lrn_fill.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
+    oclk_lrn_fill.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
     oclk_lrn_fill.set(argIdx++, -beta_);
 
     return oclk_lrn_fill.run(1, global_work_size_, NULL, false);

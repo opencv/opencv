@@ -122,7 +122,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
 
             argIdx = 0;
             oclk_max_pool_forward.set(argIdx++, count_);
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
+            oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             oclk_max_pool_forward.set(argIdx++, batch_size_);
             oclk_max_pool_forward.set(argIdx++, channels_);
             oclk_max_pool_forward.set(argIdx++, height_);
@@ -135,11 +135,13 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_max_pool_forward.set(argIdx++, stride_w_);
             oclk_max_pool_forward.set(argIdx++, pad_h_);
             oclk_max_pool_forward.set(argIdx++, pad_w_);
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
+            oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
             oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? 0 : 1);
-            oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? NULL :
-                                      (cl_mem) mask_idx_.handle(ACCESS_WRITE));
-            oclk_max_pool_forward.set(argIdx++, (cl_mem) top_mask.handle(ACCESS_WRITE));
+            if (mask_idx_.empty())
+                oclk_max_pool_forward.set(argIdx++, NULL);
+            else
+                oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(mask_idx_));
+            oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top_mask));
 
             ret = oclk_max_pool_forward.run(1, global, local, false);
         }
@@ -154,7 +156,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
 
             argIdx = 0;
             oclk_ave_pool_forward.set(argIdx++, count_);
-            oclk_ave_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
+            oclk_ave_pool_forward.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             oclk_ave_pool_forward.set(argIdx++, batch_size_);
             oclk_ave_pool_forward.set(argIdx++, channels_);
             oclk_ave_pool_forward.set(argIdx++, height_);
@@ -167,7 +169,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_ave_pool_forward.set(argIdx++, stride_w_);
             oclk_ave_pool_forward.set(argIdx++, pad_h_);
             oclk_ave_pool_forward.set(argIdx++, pad_w_);
-            oclk_ave_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
+            oclk_ave_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
 
             ret = oclk_ave_pool_forward.run(1, global, local, false);
         }
@@ -182,7 +184,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
 
             argIdx = 0;
             oclk_sto_pool_forward.set(argIdx++, count_);
-            oclk_sto_pool_forward.set(argIdx++, (cl_mem) bottom.handle(ACCESS_READ));
+            oclk_sto_pool_forward.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             oclk_sto_pool_forward.set(argIdx++, batch_size_);
             oclk_sto_pool_forward.set(argIdx++, channels_);
             oclk_sto_pool_forward.set(argIdx++, height_);
@@ -193,7 +195,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_sto_pool_forward.set(argIdx++, kernel_w_);
             oclk_sto_pool_forward.set(argIdx++, stride_h_);
             oclk_sto_pool_forward.set(argIdx++, stride_w_);
-            oclk_sto_pool_forward.set(argIdx++, (cl_mem) top.handle(ACCESS_WRITE));
+            oclk_sto_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
 
             ret = oclk_sto_pool_forward.run(1, global, local, false);
         }
