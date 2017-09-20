@@ -363,7 +363,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net) {
         const tensorflow::NodeDef &layer = net.node(li);
         String type = layer.op();
 
-        if (type == "Identity") {
+        if (type == "Identity" || type == "Dropout") {
             identity_ops_idx.push_back(li);
             identity_ops[layer.name()] = layer.input(0);
         }
