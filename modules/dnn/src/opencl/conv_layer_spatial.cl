@@ -70,16 +70,7 @@
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
 #if defined(convolve_simd) || defined(Conv_Interleaved)
-#if TYPE == TYPE_HALF
-#define INT_TYPE ushort
-#define INT_TYPE2 ushort2
-#define INT_TYPE4 ushort4
-#define INT_TYPE8 ushort8
-#define SUB_GROUP_BLOCK_READ2 intel_sub_group_block_read_us2
-#define SUB_GROUP_BLOCK_READ4 intel_sub_group_block_read_us4
-#define SUB_GROUP_BLOCK_READ8 intel_sub_group_block_read_us8
-#define SUB_GROUP_BLOCK_READ intel_sub_group_block_read_us
-#else
+#if Dtype_SIZE == 4
 #define INT_TYPE uint
 #define INT_TYPE2 uint2
 #define INT_TYPE4 uint4
@@ -88,6 +79,8 @@
 #define SUB_GROUP_BLOCK_READ4 intel_sub_group_block_read4
 #define SUB_GROUP_BLOCK_READ8 intel_sub_group_block_read8
 #define SUB_GROUP_BLOCK_READ intel_sub_group_block_read
+#else
+#error "Unsupported type"
 #endif
 #endif
 

@@ -141,40 +141,17 @@ OCL4DNNConvSpatial<Dtype>::~OCL4DNNConvSpatial()
 template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
 {
-    if (cv::traits::Depth<Dtype>::value == CV_64F)
-    {
-        addDef("DOUBLE_SUPPORT");
-        addDef("Dtype", "double");
-        addDef("Dtype2", "double2");
-        addDef("Dtype4", "double4");
-        addDef("Dtype8", "double8");
-        addDef("Dtype16", "double16");
-        addDef("as_Dtype",  "as_double");
-        addDef("as_Dtype2", "as_double2");
-        addDef("as_Dtype4", "as_double4");
-        addDef("as_Dtype8", "as_double8");
-        addDef("TYPE", "TYPE_DOUBLE");
-        addDef("Dtype_ID", CV_64F);
-    }
-    else
-    {
-        addDef("Dtype", "float");
-        addDef("Dtype2", "float2");
-        addDef("Dtype4", "float4");
-        addDef("Dtype8", "float8");
-        addDef("Dtype16", "float16");
-        addDef("as_Dtype", "as_float");
-        addDef("as_Dtype2", "as_float2");
-        addDef("as_Dtype4", "as_float4");
-        addDef("as_Dtype8", "as_float8");
-        addDef("TYPE", "TYPE_FLOAT");
-        addDef("Dtype_ID", CV_32F);
-    }
-
-    addDef(sizeof(int32_t) == 8 ? "SYSTEM_INT_64BIT" : "SYSTEM_INT_32BIT");
-    addDef("TYPE_FLOAT", 1);
-    addDef("TYPE_DOUBLE", 2);
-    addDef("TYPE_HALF", 3);
+    addDef("Dtype", "float");
+    addDef("Dtype2", "float2");
+    addDef("Dtype4", "float4");
+    addDef("Dtype8", "float8");
+    addDef("Dtype16", "float16");
+    addDef("as_Dtype", "as_float");
+    addDef("as_Dtype2", "as_float2");
+    addDef("as_Dtype4", "as_float4");
+    addDef("as_Dtype8", "as_float8");
+    addDef("Dtype_ID", (int)CV_32F);
+    addDef("Dtype_SIZE", (int)sizeof(Dtype));
 }
 
 typedef enum {
