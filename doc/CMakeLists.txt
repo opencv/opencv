@@ -182,6 +182,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   if(BUILD_opencv_js)
     # gather and copy specific files for js tutorials
     file(GLOB_RECURSE js_assets RELATIVE "${js_tutorials_assets_dir}" "${js_tutorials_assets_dir}/*")
+    ocv_list_filterout(js_assets ".eslintrc.json")
     foreach(f ${js_assets})
       add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
                          COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
