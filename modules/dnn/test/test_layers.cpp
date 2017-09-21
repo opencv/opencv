@@ -166,13 +166,12 @@ TEST(Layer_Test_MVN, Accuracy)
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
-                 int axis = 0, int num_axes = -1, bool reorder_dims = false,
+                 int axis = 0, int num_axes = -1,
                  MatShape mask = MatShape())
 {
     LayerParams params;
     params.set("axis", axis);
     params.set("num_axes", num_axes);
-    params.set("reorder_dims", reorder_dims);
     if (!mask.empty())
     {
         params.set("dim", DictValue::arrayInt<int*>(&mask[0], mask.size()));
@@ -201,7 +200,7 @@ TEST(Layer_Test_Reshape, Accuracy)
         int inp[] = {1, 128, 4, 4};
         int out[] = {1, 2048};
         int mask[] = {-1, 2048};
-        testReshape(MatShape(inp, inp + 4), MatShape(out, out + 2), 0, -1, true,
+        testReshape(MatShape(inp, inp + 4), MatShape(out, out + 2), 0, -1,
                     MatShape(mask, mask + 2));
     }
 }
