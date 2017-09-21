@@ -176,15 +176,36 @@ void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
     {
         addDef("DOUBLE_SUPPORT");
         addDef("Dtype", "double");
+        addDef("Dtype2", "double2");
+        addDef("Dtype4", "double4");
+        addDef("Dtype8", "double8");
+        addDef("Dtype16", "double16");
+        addDef("as_Dtype",  "as_double");
+        addDef("as_Dtype2", "as_double2");
+        addDef("as_Dtype4", "as_double4");
+        addDef("as_Dtype8", "as_double8");
+        addDef("TYPE", "TYPE_DOUBLE");
         addDef("Dtype_ID", CV_64F);
     }
     else
     {
         addDef("Dtype", "float");
+        addDef("Dtype2", "float2");
+        addDef("Dtype4", "float4");
+        addDef("Dtype8", "float8");
+        addDef("Dtype16", "float16");
+        addDef("as_Dtype", "as_float");
+        addDef("as_Dtype2", "as_float2");
+        addDef("as_Dtype4", "as_float4");
+        addDef("as_Dtype8", "as_float8");
+        addDef("TYPE", "TYPE_FLOAT");
         addDef("Dtype_ID", CV_32F);
     }
 
     addDef(sizeof(int32_t) == 8 ? "SYSTEM_INT_64BIT" : "SYSTEM_INT_32BIT");
+    addDef("TYPE_FLOAT", 1);
+    addDef("TYPE_DOUBLE", 2);
+    addDef("TYPE_HALF", 3);
 }
 
 typedef enum {
@@ -253,6 +274,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("INVEC_SIZE", invec_size);
         addDef("ALIGNED_NUM_FILTERS", (int)alignSize(M_, simd_size));
         addDef("OUT_BLOCK_SIZE", (output_block_width*output_block_height));
+        addDef("APPLY_BIAS", bias_term_);
 
         src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
     }
@@ -307,6 +329,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("KERNEL_SLICE_DIV2", (kernel_w_ * kernel_h_) / 2);
         addDef("TILE_N_LAST", M_ % 32);
         addDef("TILE_N_LAST_DIV8", (M_ % 32) / 8);
+        addDef("APPLY_BIAS", bias_term_);
         src_ = ocl::dnn::conv_layer_spatial_oclsrc;
     }
 }
@@ -705,25 +728,25 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
 
             cl_mem bias_buffer = NULL;
-            if (bias_offset)
+            if (bias_term_)
             {
-                region.origin = bias_offset * sizeof(float);
-                region.size = (total_bias_size - bias_offset) * sizeof(float);
-                bias_buffer = clCreateSubBuffer((cl_mem)bias.handle(ACCESS_READ), CL_MEM_READ_ONLY,
-                                                CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
+                if (bias_offset)
                 {
-                    std::cout << "Failed to create sub buffer." << std::endl;
-                    return false;
+                    region.origin = bias_offset * sizeof(float);
+                    region.size = (total_bias_size - bias_offset) * sizeof(float);
+                    bias_buffer = clCreateSubBuffer((cl_mem)bias.handle(ACCESS_READ), CL_MEM_READ_ONLY,
+                            CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
+                    if (error)
+                    {
+                        std::cout << "Failed to create sub buffer." << std::endl;
+                        return false;
+                    }
+                    kernel.set(argIdx++, bias_buffer);
                 }
-                kernel.set(argIdx++, bias_buffer);
-            }
-            else
-            {
-                if (bias_term_)
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
                 else
-                    kernel.set(argIdx++, (void *)NULL);
+                {
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                }
             }
 
             cl_mem out_buffer = NULL;
@@ -731,7 +754,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             {
                 region.origin = output_image_offset * sizeof(float);
                 region.size = (total_top_size - output_image_offset) * sizeof(float);
-                out_buffer = clCreateSubBuffer((cl_mem)top.handle(ACCESS_READ), CL_MEM_WRITE_ONLY,
+                out_buffer = clCreateSubBuffer((cl_mem)top.handle(ACCESS_WRITE), CL_MEM_WRITE_ONLY,
                                                CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
                 if (error)
                 {
@@ -820,25 +843,25 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
 
             cl_mem bias_buffer = NULL;
-            if (bias_offset)
+            if (bias_term_)
             {
-                region.origin = bias_offset * sizeof(float);
-                region.size = (total_bias_size - bias_offset) * sizeof(float);
-                bias_buffer = clCreateSubBuffer((cl_mem)bias.handle(ACCESS_READ), CL_MEM_READ_ONLY,
-                                                CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
+                if (bias_offset)
                 {
-                    std::cout << "Failed to create sub buffer." << std::endl;
-                    return false;
+                    region.origin = bias_offset * sizeof(float);
+                    region.size = (total_bias_size - bias_offset) * sizeof(float);
+                    bias_buffer = clCreateSubBuffer((cl_mem)bias.handle(ACCESS_READ), CL_MEM_READ_ONLY,
+                            CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
+                    if (error)
+                    {
+                        std::cout << "Failed to create sub buffer." << std::endl;
+                        return false;
+                    }
+                    kernel.set(argIdx++, bias_buffer);
                 }
-                kernel.set(argIdx++, bias_buffer);
-            }
-            else
-            {
-                if (bias_term_)
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
                 else
-                    kernel.set(argIdx++, (void *)NULL);
+                {
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                }
             }
 
             cl_mem out_buffer = NULL;
@@ -846,7 +869,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             {
                 region.origin = output_image_offset * sizeof(float);
                 region.size = (total_top_size - output_image_offset) * sizeof(float);
-                out_buffer = clCreateSubBuffer((cl_mem)top.handle(ACCESS_READ), CL_MEM_WRITE_ONLY,
+                out_buffer = clCreateSubBuffer((cl_mem)top.handle(ACCESS_WRITE), CL_MEM_WRITE_ONLY,
                                                CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
                 if (error)
                 {
