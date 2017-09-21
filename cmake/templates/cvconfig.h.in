@@ -103,7 +103,7 @@
 
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
-#cmakedefine HAVE_IPP_ICV_ONLY
+#cmakedefine HAVE_IPP_ICV
 #cmakedefine HAVE_IPP_IW
 
 /* Intel IPP Async */
@@ -154,7 +154,7 @@
 #cmakedefine HAVE_PNG
 
 /* Posix threads (pthreads) */
-#cmakedefine HAVE_PTHREADS
+#cmakedefine HAVE_PTHREAD
 
 /* parallel_for with pthreads */
 #cmakedefine HAVE_PTHREADS_PF

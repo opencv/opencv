@@ -27,6 +27,7 @@ macro(ippiw_debugmsg MESSAGE)
     message(STATUS "${MESSAGE}")
   endif()
 endmacro()
+file(TO_CMAKE_PATH "${IPPROOT}" IPPROOT)
 
 # This function detects Intel IPP IW version by analyzing .h file
 macro(ippiw_setup PATH BUILD)
@@ -135,7 +136,8 @@ if(BUILD_IPP_IW)
   ippiw_setup("${OpenCV_SOURCE_DIR}/3rdparty/ippiw" 1)
 
   # Package sources
-  ippiw_setup("${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" 1)
+  get_filename_component(__PATH "${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" ABSOLUTE)
+  ippiw_setup("${_PATH}" 1)
 endif()
 
 
@@ -153,7 +155,7 @@ ippiw_setup("${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" 0)
 
 
 # take Intel IPP IW from ICV package
-if(NOT HAVE_IPP_ICV_ONLY AND BUILD_IPP_IW)
+if(NOT HAVE_IPP_ICV AND BUILD_IPP_IW)
   message(STATUS "Cannot find Intel IPP IW. Checking \"Intel IPP for OpenCV\" package")
   set(TEMP_ROOT 0)
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/ippicv.cmake")

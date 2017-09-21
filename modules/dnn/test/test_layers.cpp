@@ -108,12 +108,8 @@ void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool
 
     cv::setNumThreads(cv::getNumberOfCPUs());
 
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(prototxt, (useCaffeModel) ? caffemodel : String());
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+    ASSERT_FALSE(net.empty());
 
     Mat inp = blobFromNPY(inpfile);
     Mat ref = blobFromNPY(outfile);
@@ -252,12 +248,8 @@ TEST(Layer_Test_Concat, Accuracy)
 
 static void test_Reshape_Split_Slice_layers()
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(_tf("reshape_and_slice_routines.prototxt"));
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
+    ASSERT_FALSE(net.empty());
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -268,9 +260,24 @@ static void test_Reshape_Split_Slice_layers()
 
     normAssert(input, output);
 }
+
 TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
 {
     test_Reshape_Split_Slice_layers();
+}
+
+TEST(Layer_Conv_Elu, Accuracy)
+{
+    Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
+    ASSERT_FALSE(net.empty());
+
+    Mat inp = blobFromNPY(_tf("layer_elu_in.npy"));
+    Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
+
+    net.setInput(inp, "input");
+    Mat out = net.forward();
+
+    normAssert(ref, out);
 }
 
 class Layer_LSTM_Test : public ::testing::Test

@@ -962,19 +962,18 @@ static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size 
 {
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 810
-    int ippStatus = -1;
+// Performance degradations
+#if IPP_VERSION_X100 >= 201800
     IppiSize srcSize = { size.width, size.height };
-    CV_SUPPRESS_DEPRECATED_START
-    ippStatus = CV_INSTRUMENT_FUN_IPP(ippiComputeThreshold_Otsu_8u_C1R, _src, step, srcSize, &thresh);
-    CV_SUPPRESS_DEPRECATED_END
 
-    if(ippStatus >= 0)
-        return true;
+    if(CV_INSTRUMENT_FUN_IPP(ippiComputeThreshold_Otsu_8u_C1R, _src, step, srcSize, &thresh) < 0)
+        return false;
+
+    return true;
 #else
     CV_UNUSED(_src); CV_UNUSED(step); CV_UNUSED(size); CV_UNUSED(thresh);
-#endif
     return false;
+#endif
 }
 #endif
 
@@ -991,8 +990,8 @@ getThreshVal_Otsu_8u( const Mat& _src )
     }
 
 #ifdef HAVE_IPP
-    unsigned char thresh;
-    CV_IPP_RUN(IPP_VERSION_X100 >= 810, ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
+    unsigned char thresh = 0;
+    CV_IPP_RUN_FAST(ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
 #endif
 
     const int N = 256;

@@ -245,6 +245,7 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_FIX_S1_S2_S3_S4  65536
 #define CV_CALIB_TILTED_MODEL  262144
 #define CV_CALIB_FIX_TAUX_TAUY  524288
+#define CV_CALIB_FIX_TANGENT_DIST 2097152
 
 #define CV_CALIB_NINTRINSIC 18
 

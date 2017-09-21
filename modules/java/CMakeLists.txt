@@ -18,6 +18,12 @@ if(EXISTS ${CMAKE_BINARY_DIR}/gen)
   execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/gen")
 endif()
 
+if(ANDROID)
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}")
+else()
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+endif()
+
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp")
 ocv_module_include_directories("${OpenCV_SOURCE_DIR}/include")
 
@@ -69,7 +75,7 @@ macro(glob_more_specific_sources _type _root _output)
   elseif(${_type} STREQUAL "CPP")
     set(_masks "${_root}/src/cpp/*.cpp")
   elseif(${_type} STREQUAL "JAVA")
-    set(_masks "${_root}/src/java/*.java")
+    set(_masks "${_root}/src/java/*.java" "${_root}/src/java/*.java.in")
   elseif(${_type} STREQUAL "AIDL")
     set(_masks "${_root}/src/java/*.aidl")
   endif()
@@ -257,22 +263,49 @@ endforeach()
 # step 3: copy files to destination
 set(step3_input_files ${generated_java_sources} ${handwritten_java_sources} ${handwritten_aidl_sources})
 set(copied_files "")
+set(java_src_dir "${OpenCV_BINARY_DIR}/src")
 foreach(java_file ${step3_input_files})
   get_filename_component(java_file_name "${java_file}" NAME)
+  set(__configure 0)
+  if (java_file_name MATCHES "\\.in$")
+    string(REGEX REPLACE "\\.in$" "" java_file_name "${java_file_name}")
+    set(__configure 1)
+  endif()
   string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
-  string(REPLACE "+" "/" java_file_name "${java_file_name}")
-  set(output_name "${OpenCV_BINARY_DIR}/src/org/opencv/${java_file_name}")
-  add_custom_command(OUTPUT "${output_name}"
-                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_file}" "${output_name}"
-                     MAIN_DEPENDENCY "${java_file}"
-                     DEPENDS ${step1_depends} ${generated_java_sources} ${handwritten_java_sources}
-                     COMMENT "Generating src/org/opencv/${java_file_name}"
-                    )
-  list(APPEND copied_files "${output_name}")
+  if(EXISTS "${java_file}")
+    file(STRINGS "${java_file}" PACKAGE_STR LIMIT_COUNT 1 REGEX "package.*;$")
+  else()
+    set(PACKAGE_STR "")
+  endif()
+  if(PACKAGE_STR)
+    list(GET PACKAGE_STR 0 package_name)
+    string(REGEX REPLACE "^package[ ]+" "" package_name "${package_name}")
+    string(REGEX REPLACE ";$" "" package_name "${package_name}")
+
+    string(REGEX REPLACE ".*\\+" "" java_file_name "${java_file_name}")
+    string(REPLACE "." "/" package_path "${package_name}")
+    set(output_name "${package_path}/${java_file_name}")
+  else()
+    string(REPLACE "+" "/" java_file_name "${java_file_name}")
+    set(output_name "org/opencv/${java_file_name}")
+  endif()
+  if(__configure)
+    configure_file("${java_file}" "${java_src_dir}/${output_name}" @ONLY)
+  elseif(NOT "${java_file}" MATCHES "${OpenCV_BINARY_DIR}/")
+    configure_file("${java_file}" "${java_src_dir}/${output_name}" COPYONLY)
+  else()
+    add_custom_command(OUTPUT "${java_src_dir}/${output_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_file}" "${java_src_dir}/${output_name}"
+                       MAIN_DEPENDENCY "${java_file}"
+                       DEPENDS "${java_file}"
+                       COMMENT "Generating src/${output_name}"
+    )
+  endif()
+  list(APPEND copied_files "${java_src_dir}/${output_name}")
 
   if(ANDROID)
-    get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/org/opencv/${install_subdir}" COMPONENT java)
+    get_filename_component(install_subdir "${output_name}" PATH)
+    install(FILES "${java_src_dir}/${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/${install_subdir}" COMPONENT java)
   endif()
 endforeach()
 
@@ -334,12 +367,6 @@ endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
 
-if(ANDROID)
-  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}")
-else()
-  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
-endif()
-
 file(MAKE_DIRECTORY "${OpenCV_BINARY_DIR}/bin")
 
 # step 4: build jar
@@ -386,7 +413,12 @@ endif(ANDROID)
 
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Wundef)
+if(MSVC)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+else()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Wundef -Wdeprecated-declarations)
+endif()
+
 
 ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
@@ -408,14 +440,14 @@ if(BUILD_FAT_JAVA_LIB)
   endif()
   if(APPLE)
     foreach(_dep ${__deps})
-      ocv_target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
+      ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-force_load "${_dep}")
     endforeach()
   else()
-    ocv_target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
   endif()
-  ocv_target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
-  ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
 
 # Additional target properties
@@ -424,19 +456,18 @@ set_target_properties(${the_module} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    LINK_INTERFACE_LIBRARIES ""
     )
 
 if(ANDROID)
-  ocv_target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
-  ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_LINKER_LIBS} jnigraphics)
+  ocv_target_link_libraries(${the_module} LINK_PUBLIC jnigraphics) # for Mat <=> Bitmap converters
+  ocv_target_link_libraries(${the_module} LINK_PUBLIC log dl z)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_LINKER_LIBS})
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
-  get_target_property(__opencv_java_location ${the_module} LOCATION)
   # Turn off stripping in debug build
   if ( NOT (CMAKE_BUILD_TYPE MATCHES "Debug"))
-    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
+    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${the_module}>")
   endif()
 endif()
 

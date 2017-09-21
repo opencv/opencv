@@ -1140,20 +1140,41 @@ static bool ippMorph(int op, int src_type, int dst_type,
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-    // Problem with SSE42 optimizations
-#if IPP_DISABLE_PERF_MORPH_SSE42
-    if(!(ipp::getIppFeatures()&ippCPUID_AVX))
+#if IPP_VERSION_X100 < 201800
+    // Problem with SSE42 optimizations performance
+    if(cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
+        return false;
+
+    // Different mask flipping
+    if(op == MORPH_GRADIENT)
         return false;
 #endif
 
-    ::ipp::IwAutoBuffer<Ipp8u>  kernelTempBuffer;
+#if IPP_VERSION_X100 < 201801
+    // Problem with AVX512 optimizations performance
+    if(cv::ipp::getIppTopFeatures()&ippCPUID_AVX512F)
+        return false;
+
+    // Multiple iterations on small mask is not effective in current integration
+    // Implace imitation for 3x3 kernel is not efficient
+    // Advanced morphology for small mask introduces degradations
+    if((iterations > 1 || src_data == dst_data || (op != MORPH_ERODE && op != MORPH_DILATE)) && kernel_width*kernel_height < 25)
+        return false;
+
+    // Skip even mask sizes for advanced morphology since they can produce out of spec writes
+    if((op != MORPH_ERODE && op != MORPH_DILATE) && (!(kernel_width&1) || !(kernel_height&1)))
+        return false;
+#endif
+
+    IppAutoBuffer<Ipp8u>        kernelTempBuffer;
     ::ipp::IwiBorderSize        iwBorderSize;
+    ::ipp::IwiBorderSize        iwBorderSize2;
     ::ipp::IwiBorderType        iwBorderType;
+    ::ipp::IwiBorderType        iwBorderType2;
     ::ipp::IwiImage             iwMask;
     ::ipp::IwiImage             iwInter;
     ::ipp::IwiSize              initSize(width, height);
     ::ipp::IwiSize              kernelSize(kernel_width, kernel_height);
-    ::ipp::IwiPoint             anchor(anchor_x, anchor_y);
     IppDataType                 type        = ippiGetDataType(CV_MAT_DEPTH(src_type));
     int                         channels    = CV_MAT_CN(src_type);
     IwiMorphologyType           morphType   = ippiGetMorphologyType(op);
@@ -1169,68 +1190,99 @@ static bool ippMorph(int op, int src_type, int dst_type,
     if(src_type != dst_type)
         return false;
 
+    if(!ippiCheckAnchor(anchor_x, anchor_y, kernel_width, kernel_height))
+        return false;
+
     try
     {
         ::ipp::IwiImage iwSrc(initSize, type, channels, ::ipp::IwiBorderSize(roi_x, roi_y, roi_width-roi_x-width, roi_height-roi_y-height), (void*)src_data, src_step);
         ::ipp::IwiImage iwDst(initSize, type, channels, ::ipp::IwiBorderSize(roi_x2, roi_y2, roi_width2-roi_x2-width, roi_height2-roi_y2-height), (void*)dst_data, dst_step);
 
-        ::ipp::iwiFilterMorphology_GetBorderSize(morphType, kernelSize, iwBorderSize);
-        if(morphType != iwiMorphErode && morphType != iwiMorphDilate)
+        iwBorderSize = ::ipp::iwiSizeToBorderSize(kernelSize);
+        iwBorderType = ippiGetBorder(iwSrc, borderType, iwBorderSize);
+        if(!iwBorderType)
+            return false;
+        if(iterations > 1)
         {
-            iwBorderSize.borderLeft   /= 2;
-            iwBorderSize.borderTop    /= 2;
-            iwBorderSize.borderRight  /= 2;
-            iwBorderSize.borderBottom /= 2;
+            // Check dst border for second and later iterations
+            iwBorderSize2 = ::ipp::iwiSizeToBorderSize(kernelSize);
+            iwBorderType2 = ippiGetBorder(iwDst, borderType, iwBorderSize2);
+            if(!iwBorderType2)
+                return false;
         }
 
-        iwBorderType = ippiGetBorder(iwSrc, borderType, iwBorderSize);
-        if(!iwBorderType.m_borderType || ((iwBorderType.m_borderFlags&ippBorderInMem) && (iwBorderType.m_borderFlags&ippBorderInMem) != ippBorderInMem))
-            return false;
+        if(morphType != iwiMorphErode && morphType != iwiMorphDilate && morphType != iwiMorphGradient)
+        {
+            // For now complex morphology support only InMem around all sides. This will be improved later.
+            if((iwBorderType&ippBorderInMem) && (iwBorderType&ippBorderInMem) != ippBorderInMem)
+                return false;
 
-        if(iwBorderType.m_borderType == ippBorderConst)
+            if((iwBorderType&ippBorderInMem) == ippBorderInMem)
+            {
+                iwBorderType &= ~ippBorderInMem;
+                iwBorderType &=  ippBorderFirstStageInMem;
+            }
+        }
+
+        if(iwBorderType.StripFlags() == ippBorderConst)
         {
             if(Vec<double, 4>(borderValue) == morphologyDefaultBorderValue())
-                iwBorderType.m_borderType = ippBorderDefault;
+                iwBorderType.SetType(ippBorderDefault);
             else
-                iwBorderType.SetValue(borderValue[0], borderValue[1], borderValue[2], borderValue[3]);
-        }
-        if(morphType != iwiMorphErode && morphType != iwiMorphDilate)
-        {
-            if((iwBorderType.m_borderFlags&ippBorderInMem) == ippBorderInMem)
-                iwBorderType.m_borderFlags = ippBorderFirstStageInMem;
-        }
-
-        // Test input parameters on dummy structures
-        {
-            ::ipp::IwiImage testSrc(initSize, type, channels);
-            ::ipp::IwiImage testDst(initSize, type, channels);
-            ::ipp::IwiImage testMask(ippiSize(kernel_width, kernel_height), ipp8u, CV_MAT_CN(kernel_type));
-
-            ::ipp::iwiFilterMorphology(&testSrc, &testDst, morphType, &testMask, &anchor, iwBorderType);
+                iwBorderType.m_value = ::ipp::IwValueFloat(borderValue[0], borderValue[1], borderValue[2], borderValue[3]);
         }
 
         iwMask.Init(ippiSize(kernel_width, kernel_height), ippiGetDataType(CV_MAT_DEPTH(kernel_type)), CV_MAT_CN(kernel_type), 0, kernel_data, kernel_step);
-        if((int)kernel_step != kernel_width || CV_MAT_DEPTH(kernel_type) != CV_8U)
+
+        ::ipp::IwiImage iwMaskLoc = iwMask;
+        if(morphType == iwiMorphDilate)
         {
-            kernelTempBuffer.Alloc(kernel_width*kernel_height);
-            ::ipp::IwiImage iwMaskTmp(ippiSize(kernel_width, kernel_height), ipp8u, 1, 0, kernelTempBuffer, kernel_width);
-            ::ipp::iwiScale(&iwMask, &iwMaskTmp, 1, 0);
-            iwMask = iwMaskTmp;
+            iwMaskLoc.Alloc(iwMask.m_size, iwMask.m_dataType, iwMask.m_channels);
+            ::ipp::iwiMirror(iwMask, iwMaskLoc, ippAxsBoth);
+            iwMask = iwMaskLoc;
         }
 
         if(iterations > 1)
         {
-            iwInter.Alloc(initSize, type, channels);
+            // OpenCV uses in mem border from dst for two and more iterations, so we need to keep this border in intermediate image
+            iwInter.Alloc(initSize, type, channels, iwBorderSize2);
 
             ::ipp::IwiImage *pSwap[2] = {&iwInter, &iwDst};
-            ::ipp::IwiBorderType iterBorder = iwBorderType;
-            iterBorder.m_borderFlags = 0;
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, &iwSrc, &iwInter, morphType, &iwMask, NULL, iwBorderType);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, iwSrc, iwInter, morphType, iwMask, ::ipp::IwDefault(), iwBorderType);
 
+            // Copy border only
+            {
+                if(iwBorderSize2.top)
+                {
+                    ::ipp::IwiRoi   borderRoi(-iwBorderSize2.left, -iwBorderSize2.top, iwDst.m_size.width+iwBorderSize2.left+iwBorderSize2.right, iwBorderSize2.top);
+                    ::ipp::IwiImage iwInterRoi = iwInter.GetRoiImage(borderRoi);
+                    ::ipp::iwiCopy(iwDst.GetRoiImage(borderRoi), iwInterRoi);
+                }
+                if(iwBorderSize2.bottom)
+                {
+                    ::ipp::IwiRoi   borderRoi(-iwBorderSize2.left, iwDst.m_size.height, iwDst.m_size.width+iwBorderSize2.left+iwBorderSize2.right, iwBorderSize2.bottom);
+                    ::ipp::IwiImage iwInterRoi = iwInter.GetRoiImage(borderRoi);
+                    ::ipp::iwiCopy(iwDst.GetRoiImage(borderRoi), iwInterRoi);
+                }
+                if(iwBorderSize2.left)
+                {
+                    ::ipp::IwiRoi   borderRoi(-iwBorderSize2.left, 0, iwBorderSize2.left, iwDst.m_size.height);
+                    ::ipp::IwiImage iwInterRoi = iwInter.GetRoiImage(borderRoi);
+                    ::ipp::iwiCopy(iwDst.GetRoiImage(borderRoi), iwInterRoi);
+                }
+                if(iwBorderSize2.right)
+                {
+                    ::ipp::IwiRoi   borderRoi(iwDst.m_size.width, 0, iwBorderSize2.left, iwDst.m_size.height);
+                    ::ipp::IwiImage iwInterRoi = iwInter.GetRoiImage(borderRoi);
+                    ::ipp::iwiCopy(iwDst.GetRoiImage(borderRoi), iwInterRoi);
+                }
+            }
+
+            iwBorderType2.SetType(iwBorderType);
             for(int i = 0; i < iterations-1; i++)
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, pSwap[i&0x1], pSwap[(i+1)&0x1], morphType, &iwMask, NULL, iterBorder);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, *pSwap[i&0x1], *pSwap[(i+1)&0x1], morphType, iwMask, ::ipp::IwDefault(), iwBorderType2);
             if(iterations&0x1)
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiCopyMask, &iwInter, &iwDst);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiCopy, iwInter, iwDst);
         }
         else
         {
@@ -1238,11 +1290,11 @@ static bool ippMorph(int op, int src_type, int dst_type,
             {
                 iwInter.Alloc(initSize, type, channels);
 
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, &iwSrc, &iwInter, morphType, &iwMask, NULL, iwBorderType);
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiCopyMask, &iwInter, &iwDst);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, iwSrc, iwInter, morphType, iwMask, ::ipp::IwDefault(), iwBorderType);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiCopy, iwInter, iwDst);
             }
             else
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, &iwSrc, &iwDst, morphType, &iwMask, NULL, iwBorderType);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, iwSrc, iwDst, morphType, iwMask, ::ipp::IwDefault(), iwBorderType);
         }
     }
     catch(::ipp::IwException ex)
@@ -1912,6 +1964,7 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
 }
 #endif
 
+#define IPP_DISABLE_MORPH_ADV 1
 #ifdef HAVE_IPP
 #if !IPP_DISABLE_MORPH_ADV
 namespace cv {
@@ -2024,23 +2077,23 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
         dilate( dst, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
         erode( dst, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
         dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
         dst -= temp;
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         if( src.data != dst.data )
             temp = dst;
         erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
         dilate( temp, temp, kernel, anchor, iterations, borderType, borderValue );
         dst = src - temp;
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         if( src.data != dst.data )
             temp = dst;
         dilate( src, temp, kernel, anchor, iterations, borderType, borderValue );

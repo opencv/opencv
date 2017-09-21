@@ -671,6 +671,13 @@ struct InitializerFunctor5D{
     }
 };
 
+template<typename Pixel>
+struct EmptyFunctor
+{
+    void operator()(const Pixel &, const int *) const {}
+};
+
+
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
@@ -797,6 +804,17 @@ void Core_ArrayOpTest::run( int /* start_from */)
             ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
             errcount++;
         }
+    }
+
+    // test const cv::Mat::forEach
+    {
+        const Mat a(10, 10, CV_32SC3);
+        Mat b(10, 10, CV_32SC3);
+        const Mat & c = b;
+        a.forEach<Point3i>(EmptyFunctor<Point3i>());
+        b.forEach<Point3i>(EmptyFunctor<const Point3i>());
+        c.forEach<Point3i>(EmptyFunctor<Point3i>());
+        // tests compilation, no runtime check is needed
     }
 
     RNG rng;
@@ -1399,13 +1417,22 @@ TEST(Core_Matx, fromMat_)
 }
 
 #ifdef CV_CXX11
+
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b = {10, 11, 12, 13};
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
-#endif
+
+TEST(Core_Mat, regression_9507)
+{
+    cv::Mat m = Mat::zeros(5, 5, CV_8UC3);
+    cv::Mat m2{m};
+    EXPECT_EQ(25u, m2.total());
+}
+
+#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {

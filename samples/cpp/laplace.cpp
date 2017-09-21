@@ -26,12 +26,9 @@ int smoothType = GAUSSIAN;
 int main( int argc, char** argv )
 {
     VideoCapture cap;
-    cv::CommandLineParser parser(argc, argv, "{help h | | }{ c | 0 | }{ p | | }");
-    if ( parser.has("help") )
-    {
-        help();
-        return 0;
-    }
+    cv::CommandLineParser parser(argc, argv, "{ c | 0 | }{ p | | }");
+    help();
+
     if( parser.get<string>("c").size() == 1 && isdigit(parser.get<string>("c")[0]) )
         cap.open(parser.get<int>("c"));
     else

@@ -215,6 +215,10 @@ public:
     virtual Ptr<MaskGenerator> getMaskGenerator() = 0;
 };
 
+/** @example facedetect.cpp
+This program demonstrates usage of the Cascade classifier class
+\image html Cascade_Classifier_Tutorial_Result_Haar.jpg "Sample screenshot" width=321 height=254
+*/
 /** @brief Cascade classifier class for object detection.
  */
 class CV_EXPORTS_W CascadeClassifier
@@ -348,6 +352,8 @@ struct DetectionROI
    std::vector<double> confidences;
 };
 
+/**@example peopledetect.cpp
+ */
 struct CV_EXPORTS_W HOGDescriptor
 {
 public:

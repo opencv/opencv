@@ -42,6 +42,8 @@
 #include "precomp.hpp"
 #include <opencv2/dnn/layer.details.hpp>
 
+#include <google/protobuf/stubs/common.h>
+
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
@@ -56,10 +58,25 @@ Mutex& getInitializationMutex()
 // force initialization (single-threaded environment)
 Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
+namespace {
+using namespace google::protobuf;
+class ProtobufShutdown {
+public:
+    bool initialized;
+    ProtobufShutdown() : initialized(true) {}
+    ~ProtobufShutdown()
+    {
+        initialized = false;
+        google::protobuf::ShutdownProtobufLibrary();
+    }
+};
+} // namespace
 
 void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
+
+    static ProtobufShutdown protobufShutdown; (void)protobufShutdown;
 
     CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Split,          SplitLayer);
@@ -74,11 +91,14 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MVN,            MVNLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(LPNormalize,    LPNormalizeLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(ReLU,           ReLULayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ReLU6,          ReLU6Layer);
     CV_DNN_REGISTER_LAYER_CLASS(ChannelsPReLU,  ChannelsPReLULayer);
     CV_DNN_REGISTER_LAYER_CLASS(Sigmoid,        SigmoidLayer);
     CV_DNN_REGISTER_LAYER_CLASS(TanH,           TanHLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ELU,            ELULayer);
     CV_DNN_REGISTER_LAYER_CLASS(BNLL,           BNLLLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AbsVal,         AbsLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Power,          PowerLayer);

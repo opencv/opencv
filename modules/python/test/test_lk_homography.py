@@ -27,8 +27,8 @@ feature_params = dict( maxCorners = 1000,
                        blockSize = 19 )
 
 def checkedTrace(img0, img1, p0, back_threshold = 1.0):
-    p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-    p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+    p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+    p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
     d = abs(p0-p0r).reshape(-1, 2).max(-1)
     status = d < back_threshold
     return p1, status
@@ -77,11 +77,11 @@ class lk_homography_test(NewOpenCVTests):
                 if len(self.p0) < 4:
                     self.p0 = None
                     continue
-                H, status = cv2.findHomography(self.p0, self.p1, cv2.RANSAC, 5.0)
+                _H, status = cv2.findHomography(self.p0, self.p1, cv2.RANSAC, 5.0)
 
                 goodPointsInRect = 0
                 goodPointsOutsideRect = 0
-                for (x0, y0), (x1, y1), good in zip(self.p0[:,0], self.p1[:,0], status[:,0]):
+                for (_x0, _y0), (x1, y1), good in zip(self.p0[:,0], self.p1[:,0], status[:,0]):
                     if good:
                         if isPointInRect((x1,y1), self.render.getCurrentRect()):
                             goodPointsInRect += 1
@@ -91,6 +91,10 @@ class lk_homography_test(NewOpenCVTests):
                     isForegroundHomographyFound = True
                     self.assertGreater(float(goodPointsInRect) / (self.numFeaturesInRectOnStart + 1), 0.6)
             else:
-                p = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
+                self.p0 = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
 
         self.assertEqual(isForegroundHomographyFound, True)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

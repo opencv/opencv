@@ -248,6 +248,62 @@ struct ReLUFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
+struct ReLU6Functor
+{
+    typedef ReLU6Layer Layer;
+    float minValue, maxValue;
+
+    ReLU6Functor(float minValue_ = 0.0f, float maxValue_ = 6.0f)
+        : minValue(minValue_), maxValue(maxValue_)
+    {
+        CV_Assert(minValue <= maxValue);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            int i = 0;
+#if CV_SIMD128
+            v_float32x4 minV = v_setall_f32(minValue), maxV = v_setall_f32(maxValue);
+            for( ; i <= len - 16; i += 16 )
+            {
+                v_float32x4 x0 = v_load(srcptr + i);
+                v_float32x4 x1 = v_load(srcptr + i + 4);
+                v_float32x4 x2 = v_load(srcptr + i + 8);
+                v_float32x4 x3 = v_load(srcptr + i + 12);
+                x0 = v_min(v_max(minV, x0), maxV);
+                x1 = v_min(v_max(minV, x1), maxV);
+                x2 = v_min(v_max(minV, x2), maxV);
+                x3 = v_min(v_max(minV, x3), maxV);
+                v_store(dstptr + i, x0);
+                v_store(dstptr + i + 4, x1);
+                v_store(dstptr + i + 8, x2);
+                v_store(dstptr + i + 12, x3);
+            }
+#endif
+            for( ; i < len; i++ )
+            {
+                float x = srcptr[i];
+                if (x >= minValue)
+                    dstptr[i] = x <= maxValue ? x : maxValue;
+                else
+                    dstptr[i] = minValue;
+            }
+        }
+    }
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = clamp(input, minValue, maxValue);
+    }
+#endif  // HAVE_HALIDE
+
+    int64 getFLOPSPerElement() const { return 2; }
+};
+
 struct TanHFunctor
 {
     typedef TanHLayer Layer;
@@ -300,6 +356,35 @@ struct SigmoidFunctor
 #endif  // HAVE_HALIDE
 
     int64 getFLOPSPerElement() const { return 3; }
+};
+
+struct ELUFunctor
+{
+    typedef ELULayer Layer;
+
+    explicit ELUFunctor() {}
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for(int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = x >= 0.f ? x : exp(x) - 1;
+            }
+        }
+    }
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = select(input >= 0.0f, input, exp(input) - 1);
+    }
+#endif  // HAVE_HALIDE
+
+    int64 getFLOPSPerElement() const { return 2; }
 };
 
 struct AbsValFunctor
@@ -488,6 +573,15 @@ Ptr<ReLULayer> ReLULayer::create(const LayerParams& params)
     return l;
 }
 
+Ptr<ReLU6Layer> ReLU6Layer::create(const LayerParams& params)
+{
+    float minValue = params.get<float>("min_value", 0.0f);
+    float maxValue = params.get<float>("max_value", 6.0f);
+    Ptr<ReLU6Layer> l(new ElementWiseLayer<ReLU6Functor>(ReLU6Functor(minValue, maxValue)));
+    l->setParamsFrom(params);
+    return l;
+}
+
 Ptr<TanHLayer> TanHLayer::create(const LayerParams& params)
 {
     Ptr<TanHLayer> l(new ElementWiseLayer<TanHFunctor>());
@@ -499,6 +593,14 @@ Ptr<TanHLayer> TanHLayer::create(const LayerParams& params)
 Ptr<SigmoidLayer> SigmoidLayer::create(const LayerParams& params)
 {
     Ptr<SigmoidLayer> l(new ElementWiseLayer<SigmoidFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<ELULayer> ELULayer::create(const LayerParams& params)
+{
+    Ptr<ELULayer> l(new ElementWiseLayer<ELUFunctor>(ELUFunctor()));
     l->setParamsFrom(params);
 
     return l;

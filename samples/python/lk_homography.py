@@ -39,8 +39,8 @@ feature_params = dict( maxCorners = 1000,
                        blockSize = 19 )
 
 def checkedTrace(img0, img1, p0, back_threshold = 1.0):
-    p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-    p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+    p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+    p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
     d = abs(p0-p0r).reshape(-1, 2).max(-1)
     status = d < back_threshold
     return p1, status
@@ -56,7 +56,7 @@ class App:
 
     def run(self):
         while True:
-            ret, frame = self.cam.read()
+            _ret, frame = self.cam.read()
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             vis = frame.copy()
             if self.p0 is not None:

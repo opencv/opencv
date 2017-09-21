@@ -354,7 +354,11 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         TRY_OPEN(result, cvCreateFileCapture_OpenNI2 (filename))
         if (apiPreference) break;
 #endif
-
+#ifdef HAVE_XIMEA
+    case CAP_XIAPI:
+        TRY_OPEN(result, cvCreateCameraCapture_XIMEA(filename))
+        if (apiPreference) break;
+#endif
     case CAP_IMAGES:
         TRY_OPEN(result, cvCreateFileCapture_Images (filename))
     }
@@ -381,6 +385,8 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
 
     if(!fourcc || !fps)
         TRY_OPEN(result, cvCreateVideoWriter_Images(filename))
+
+    CV_Assert(result || fps != 0);
 
     switch(apiPreference)
     {

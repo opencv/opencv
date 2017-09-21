@@ -3,19 +3,19 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.opencv</groupId>
     <artifactId>opencv-parent</artifactId>
-    <version>3.2.0</version>
+    <version>3.3.0</version>
     <packaging>pom</packaging>
     <name>OpenCV Parent POM</name>
     <licenses>
         <license>
             <name>License Agreement For Open Source Computer Vision Library (3-clause BSD License)</name>
-            <url></url>
+            <url>http://opencv.org/license.html</url>
         </license>
     </licenses>
     <url>http://opencv.org/</url>
     <scm>
-        <connection>scm:git:https://github.com/Itseez/opencv.git</connection>
-        <url>https://github.com/Itseez/opencv</url>
+        <connection>scm:git:https://github.com/opencv/opencv.git</connection>
+        <url>https://github.com/opencv/opencv</url>
     </scm>
     <contributors>
         <contributor>
@@ -29,8 +29,9 @@
     <properties>
         <nativelibrary.name>libopencv_java${lib.version.string}.so</nativelibrary.name>
         <pax.exam.version>4.8.0</pax.exam.version>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <download.cmake>false</download.cmake>
     </properties>
     <distributionManagement>
         <snapshotRepository>
@@ -41,6 +42,16 @@
 
     <modules>
         <module>opencv</module>
-        <module>opencv-it</module>
     </modules>
+    <profiles>
+        <profile>
+            <id>integration</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <modules>
+                <module>opencv-it</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>

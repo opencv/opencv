@@ -96,6 +96,10 @@ protected:
     bool            m_native_depth;
     bool            m_iscolor;
     bool            m_isfloat;
+
+private:
+    ExrDecoder(const ExrDecoder &); // copy disabled
+    ExrDecoder& operator=(const ExrDecoder &); // assign disabled
 };
 
 

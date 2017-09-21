@@ -38,7 +38,7 @@ class PatternMaker:
     r = spacing / self.radius_rate
     for x in range(1,self.cols+1):
       for y in range(1,self.rows+1):
-        dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black")
+        dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black", stroke="none")
         self.g.append(dot)
 
   def makeACirclesPattern(self):
@@ -46,7 +46,7 @@ class PatternMaker:
     r = spacing / self.radius_rate
     for i in range(0,self.rows):
       for j in range(0,self.cols):
-        dot = SVG("circle", cx= ((j*2 + i%2)*spacing) + spacing, cy=self.height - (i * spacing + spacing), r=r, fill="black")
+        dot = SVG("circle", cx= ((j*2 + i%2)*spacing) + spacing, cy=self.height - (i * spacing + spacing), r=r, fill="black", stroke="none")
         self.g.append(dot)
 
   def makeCheckerboardPattern(self):
@@ -56,7 +56,7 @@ class PatternMaker:
     for x in range(0,self.cols):
       for y in range(0,self.rows):
         if x%2 == y%2:
-          square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing, height=spacing, fill="black")
+          square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing, height=spacing, fill="black", stroke="none")
           self.g.append(square)
 
   def save(self):

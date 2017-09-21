@@ -19,16 +19,12 @@ static void help()
 
 int main( int argc, const char** argv )
 {
+    help();
     cv::CommandLineParser parser(argc, argv,
-        "{help h||}"
         "{ i | ../data/lena_tmpl.jpg | }"
         "{ t | ../data/tmpl.png | }"
         "{ m | ../data/mask.png | }");
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
+
     string filename = parser.get<string>("i");
     string tmplname = parser.get<string>("t");
     string maskname = parser.get<string>("m");

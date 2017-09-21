@@ -13,9 +13,8 @@
 # called during the Maven build process.
 #
 # Command-line parameters:
-#   $1 - Absolute path to the file containing Open CV version
-#   $2 - The build directory and where the output file will be written
-#   $3 - The name of the output file to write to.
+#   $1 - The build directory and where the output file will be written
+#   $2 - The name of the output file to write to.
 #
 # Returns:
 #   0 - Successfully written the properties file.
@@ -28,21 +27,18 @@
 #
 #####################################################################
 
-majorHashDefine="#define CV_VERSION_MAJOR"
-minorHashDefine="#define CV_VERSION_MINOR"
-revisionHashDefine="#define CV_VERSION_REVISION"
-statusHashDefine="#define CV_VERSION_STATUS"
+# Include some external functions and variables
+. ./functions
 
 #Test build directory exists
-if [  ! -n "$2" ] || [ ! -d $2 ];then
+if [  ! -n "$1" ] || [ ! -d $1 ];then
     echo "Build directory not specified or does not exist!"
     exit 1
 fi
 
-if [ -n "$1" ] && [ -e $1 ];then
-    minorVersion=$(grep "${minorHashDefine}" $1 | grep -o ".$")
-    majorVersion=$(grep "${majorHashDefine}" $1 | grep -o ".$")
-    revision=$(grep "${revisionHashDefine}" $1 | grep -o ".$")
+if [ -n "${versionHeader}" ] && [ -e ${versionHeader} ];then
+
+    extract_version
 
     bits=$(getconf LONG_BIT)
     architecture=$(arch)
@@ -78,13 +74,13 @@ if [ -n "$1" ] && [ -e $1 ];then
         esac
 
     echo "The version number will be ${majorVersion}.${minorVersion}.${revision}"
-    echo "opencv.version=${majorVersion}.${minorVersion}.${revision}" > ${2}/${3}
-    echo "lib.version.string=${majorVersion}${minorVersion}${revision}" >> ${2}/${3}
-    echo "bits=${bits}" >> ${2}/${3}
-    echo "architecture=$(arch)" >> ${2}/${3}
-    echo "osgi.processor=${osgiProcessor}" >> ${2}/${3}
+    echo "opencv.version=${majorVersion}.${minorVersion}.${revision}" > ${1}/${2}
+    echo "lib.version.string=${majorVersion}${minorVersion}${revision}" >> ${1}/${2}
+    echo "bits=${bits}" >> ${1}/${2}
+    echo "architecture=$(arch)" >> ${1}/${2}
+    echo "osgi.processor=${osgiProcessor}" >> ${1}/${2}
     exit 0
 else
-    echo "Could not locate file $1 to determine versioning."
+    echo "Could not locate file ${versionHeader} to determine versioning."
     exit 1
 fi

@@ -59,12 +59,12 @@ class RTrees(LetterStatModel):
         self.model = cv2.ml.RTrees_create()
 
     def train(self, samples, responses):
-        sample_n, var_n = samples.shape
+        #sample_n, var_n = samples.shape
         self.model.setMaxDepth(20)
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses.astype(int))
 
     def predict(self, samples):
-        ret, resp = self.model.predict(samples)
+        _ret, resp = self.model.predict(samples)
         return resp.ravel()
 
 
@@ -76,7 +76,7 @@ class KNearest(LetterStatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        retval, results, neigh_resp, dists = self.model.findNearest(samples, k = 10)
+        _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, k = 10)
         return results.ravel()
 
 
@@ -85,7 +85,7 @@ class Boost(LetterStatModel):
         self.model = cv2.ml.Boost_create()
 
     def train(self, samples, responses):
-        sample_n, var_n = samples.shape
+        _sample_n, var_n = samples.shape
         new_samples = self.unroll_samples(samples)
         new_responses = self.unroll_responses(responses)
         var_types = np.array([cv2.ml.VAR_NUMERICAL] * var_n + [cv2.ml.VAR_CATEGORICAL, cv2.ml.VAR_CATEGORICAL], np.uint8)
@@ -96,7 +96,7 @@ class Boost(LetterStatModel):
 
     def predict(self, samples):
         new_samples = self.unroll_samples(samples)
-        ret, resp = self.model.predict(new_samples)
+        _ret, resp = self.model.predict(new_samples)
 
         return resp.ravel().reshape(-1, self.class_n).argmax(1)
 
@@ -113,7 +113,7 @@ class SVM(LetterStatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses.astype(int))
 
     def predict(self, samples):
-        ret, resp = self.model.predict(samples)
+        _ret, resp = self.model.predict(samples)
         return resp.ravel()
 
 
@@ -122,7 +122,7 @@ class MLP(LetterStatModel):
         self.model = cv2.ml.ANN_MLP_create()
 
     def train(self, samples, responses):
-        sample_n, var_n = samples.shape
+        _sample_n, var_n = samples.shape
         new_responses = self.unroll_responses(responses).reshape(-1, self.class_n)
         layer_sizes = np.int32([var_n, 100, 100, self.class_n])
 
@@ -136,7 +136,7 @@ class MLP(LetterStatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, np.float32(new_responses))
 
     def predict(self, samples):
-        ret, resp = self.model.predict(samples)
+        _ret, resp = self.model.predict(samples)
         return resp.argmax(-1)
 
 from tests_common import NewOpenCVTests
@@ -165,3 +165,7 @@ class letter_recog_test(NewOpenCVTests):
 
             self.assertLess(train_rate - testErrors[Model][0], eps)
             self.assertLess(test_rate - testErrors[Model][1], eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

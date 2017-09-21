@@ -56,6 +56,7 @@ public:
     {
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
+        padding = params.get<bool>("padding", false);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -64,8 +65,7 @@ public:
                                  std::vector<MatShape> &internals) const
     {
         CV_Assert(inputs.size() > 0);
-        outputs.clear();
-        outputs.push_back(inputs[0]);
+        outputs.resize(1, inputs[0]);
         int cAxis = clamp(axis, inputs[0]);
 
         int axisSum = 0;
@@ -73,25 +73,33 @@ public:
         {
             MatShape curShape = inputs[i];
 
-            CV_Assert(curShape.size() == outputs.back().size());
-            for (int curAxis = 0; curAxis < outputs.back().size(); curAxis++)
+            if (padding)
             {
-                if (curAxis != cAxis && outputs.back()[curAxis] != curShape[curAxis])
-                    CV_Error(Error::StsBadSize, "Inconsitent shape for ConcatLayer");
+                for (int curAxis = 0; curAxis < outputs[0].size(); curAxis++)
+                {
+                    outputs[0][curAxis] = std::max(outputs[0][curAxis], curShape[curAxis]);
+                }
+            }
+            else
+            {
+                CV_Assert(curShape.size() == outputs[0].size());
+                for (int curAxis = 0; curAxis < outputs[0].size(); curAxis++)
+                {
+                    if (curAxis != cAxis && outputs[0][curAxis] != curShape[curAxis])
+                        CV_Error(Error::StsBadSize, "Inconsitent shape for ConcatLayer");
+                }
             }
 
             axisSum += curShape[cAxis];
         }
-
-        outputs.back()[cAxis] = axisSum;
-
+        outputs[0][cAxis] = axisSum;
         return false;
     }
 
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1;  // By channels
+               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding;  // By channels
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
@@ -141,7 +149,7 @@ public:
             parallel_for_(Range(0, nstripes), cc, nstripes);
         }
 
-        ChannelConcatInvoker() {}
+        ChannelConcatInvoker()  : inputs(0), output(0), nstripes(0) {}
 
         void operator()(const Range& r) const
         {
@@ -174,7 +182,10 @@ public:
         int cAxis = clamp(axis, inputs[0]->dims);
         Mat& outMat = outputs[0];
 
-        if( cAxis == 1 && outMat.dims == 4 )
+        if (padding)
+            outMat.setTo(0);
+
+        if( cAxis == 1 && outMat.dims == 4 && !padding)
         {
             int nstripes = getNumThreads();
             ChannelConcatInvoker::run(inputs, outMat, nstripes);
@@ -187,6 +198,12 @@ public:
             for (size_t i = 0; i < inputs.size(); i++)
             {
                 ranges[cAxis].end = ranges[cAxis].start + inputs[i]->size[cAxis];
+                for (int j = 0; j < outMat.dims; ++j)
+                {
+                    if (j == cAxis) continue;
+                    ranges[j].start = (outMat.size[j] - inputs[i]->size[j]) / 2;
+                    ranges[j].end = ranges[j].start + inputs[i]->size[j];
+                }
                 inputs[i]->copyTo(outMat(&ranges[0]));
                 ranges[cAxis].start = ranges[cAxis].end;
             }

@@ -1911,9 +1911,9 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
     }
 
     Mat npoints( 1, nimages, CV_32S ),
-        objPt( 1, total, DataType<Point3f>::type ),
-        imgPt( 1, total, DataType<Point2f>::type ),
-        imgPt2( 1, total, DataType<Point2f>::type );
+        objPt( 1, total, traits::Type<Point3f>::value ),
+        imgPt( 1, total, traits::Type<Point2f>::value ),
+        imgPt2( 1, total, traits::Type<Point2f>::value );
 
     Point2f* imgPtData2 = imgPt2.ptr<Point2f>();
     Point3f* objPtData = objPt.ptr<Point3f>();

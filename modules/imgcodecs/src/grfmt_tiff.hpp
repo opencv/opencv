@@ -91,6 +91,8 @@ enum TiffFieldType
 
 // libtiff based TIFF codec
 
+class TiffDecoderBufHelper;
+
 class TiffDecoder : public BaseImageDecoder
 {
 public:
@@ -107,10 +109,18 @@ public:
     ImageDecoder newDecoder() const;
 
 protected:
+
+    friend class TiffDecoderBufHelper;
+
     void* m_tif;
     int normalizeChannelsNumber(int channels) const;
     bool readHdrData(Mat& img);
     bool m_hdr;
+    size_t m_buf_pos;
+
+private:
+    TiffDecoder(const TiffDecoder &); // copy disabled
+    TiffDecoder& operator=(const TiffDecoder &); // assign disabled
 };
 
 #endif

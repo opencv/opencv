@@ -78,6 +78,9 @@ endif()
 if (WIN32 AND HAVE_DSHOW)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.cpp)
   list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.hpp)
+  if (MINGW64)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTRSAFE_NO_DEPRECATE")
+  endif()
 endif()
 
 if (WIN32 AND HAVE_MSMF)
@@ -259,11 +262,6 @@ if(MSVC)
   if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
     set_target_properties(${the_module} PROPERTIES VS_DESKTOP_EXTENSIONS_VERSION "${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
   endif()
-endif()
-
-#stop automatic dependencies propagation for this module
-if(NOT BUILD_opencv_world)
-  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)

@@ -1,3 +1,7 @@
+if(APPLE)
+    return()
+endif()
+
 if(UNIX)
   find_package(X11 QUIET)
   if(NOT X11_FOUND)
@@ -7,6 +11,8 @@ if(UNIX)
   include_directories(${X11_INCLUDE_DIR})
   set(SAMPLE_LINKER_DEPS "${X11_LIBRARIES}")
 endif()
+
+
 
 SET(OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui)
 

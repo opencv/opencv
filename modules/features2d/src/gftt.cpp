@@ -103,7 +103,7 @@ public:
         keypoints.resize(corners.size());
         std::vector<Point2f>::const_iterator corner_it = corners.begin();
         std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
-        for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
+        for( ; corner_it != corners.end() && keypoint_it != keypoints.end(); ++corner_it, ++keypoint_it )
             *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
 
     }
@@ -123,6 +123,11 @@ Ptr<GFTTDetector> GFTTDetector::create( int _nfeatures, double _qualityLevel,
 {
     return makePtr<GFTTDetector_Impl>(_nfeatures, _qualityLevel,
                                       _minDistance, _blockSize, _useHarrisDetector, _k);
+}
+
+String GFTTDetector::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".GFTTDetector");
 }
 
 }

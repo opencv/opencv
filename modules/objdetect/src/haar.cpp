@@ -87,9 +87,7 @@ typedef struct CvHidHaarStageClassifier
 typedef struct CvHidHaarClassifierCascade
 {
     int  count;
-    int  isStumpBased;
     int  has_tilted_features;
-    int  is_tree;
     double inv_window_area;
     CvMat sum, sqsum, tilted;
     CvHidHaarStageClassifier* stage_classifier;
@@ -97,6 +95,8 @@ typedef struct CvHidHaarClassifierCascade
     sumtype *p0, *p1, *p2, *p3;
 
     void** ipp_stages;
+    bool  is_tree;
+    bool  isStumpBased;
 } CvHidHaarClassifierCascade;
 
 
@@ -136,7 +136,7 @@ icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
             for( i = 0; i < cascade->count; i++ )
             {
                 if( cascade->ipp_stages[i] )
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 < 900 && !IPP_DISABLE_HAAR
                     ippiHaarClassifierFree_32f( (IppiHaarClassifier_32f*)cascade->ipp_stages[i] );
 #else
                     cvFree(&cascade->ipp_stages[i]);
@@ -167,7 +167,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     CvHidHaarClassifier* haar_classifier_ptr;
     CvHidHaarTreeNode* haar_node_ptr;
     CvSize orig_window_size;
-    int has_tilted_features = 0;
+    bool has_tilted_features = false;
     int max_count = 0;
 
     if( !CV_IS_HAAR_CLASSIFIER(cascade) )
@@ -214,7 +214,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
                     {
                         CvRect r = classifier->haar_feature[l].rect[k].r;
                         int tilted = classifier->haar_feature[l].tilted;
-                        has_tilted_features |= tilted != 0;
+                        has_tilted_features = has_tilted_features | (tilted != 0);
                         if( r.width < 0 || r.height < 0 || r.y < 0 ||
                             r.x + r.width > orig_window_size.width
                             ||
@@ -251,9 +251,9 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     haar_classifier_ptr = (CvHidHaarClassifier*)(out->stage_classifier + cascade->count);
     haar_node_ptr = (CvHidHaarTreeNode*)(haar_classifier_ptr + total_classifiers);
 
-    out->isStumpBased = 1;
+    out->isStumpBased = true;
     out->has_tilted_features = has_tilted_features;
-    out->is_tree = 0;
+    out->is_tree = false;
 
     /* initialize internal representation */
     for( i = 0; i < cascade->count; i++ )
@@ -274,7 +274,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
         hid_stage_classifier->child = (stage_classifier->child == -1)
             ? NULL : out->stage_classifier + stage_classifier->child;
 
-        out->is_tree |= hid_stage_classifier->next != NULL;
+        out->is_tree = out->is_tree || (hid_stage_classifier->next != NULL);
 
         for( j = 0; j < stage_classifier->count; j++ )
         {
@@ -308,7 +308,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
             haar_node_ptr =
                 (CvHidHaarTreeNode*)cvAlignPtr(alpha_ptr+node_count+1, sizeof(void*));
 
-            out->isStumpBased &= node_count == 1;
+            out->isStumpBased = out->isStumpBased && (node_count == 1);
         }
     }
 

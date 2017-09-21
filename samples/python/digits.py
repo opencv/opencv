@@ -84,7 +84,7 @@ class KNearest(StatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        retval, results, neigh_resp, dists = self.model.findNearest(samples, self.k)
+        _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, self.k)
         return results.ravel()
 
 class SVM(StatModel):

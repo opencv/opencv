@@ -49,18 +49,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 
-#ifdef HAVE_IPP_IW
-extern "C" {
-IW_DECL(IppStatus) llwiCopyMask(const void *pSrc, int srcStep, void *pDst, int dstStep,
-    IppiSize size, int typeSize, int channels, const Ipp8u *pMask, int maskStep);
-IW_DECL(IppStatus) llwiSet(const double *pValue, void *pDst, int dstStep,
-    IppiSize size, IppDataType dataType, int channels);
-IW_DECL(IppStatus) llwiSetMask(const double *pValue, void *pDst, int dstStep,
-    IppiSize size, IppDataType dataType, int channels, const Ipp8u *pMask, int maskStep);
-IW_DECL(IppStatus) llwiCopyMakeBorder(const void *pSrc, IppSizeL srcStep, void *pDst, IppSizeL dstStep,
-    IppiSizeL size, IppDataType dataType, int channels, IppiBorderSize *pBorderSize, IppiBorderType border, const Ipp64f *pBorderVal);
-}
-#endif
 
 namespace cv
 {
@@ -312,7 +300,9 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
+#if IPP_VERSION_X100 >= 201700
             CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)step, dptr, (int)dst.step, ippiSizeL((int)(cols*elemSize()), rows)) >= 0)
+#endif
 
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
@@ -346,7 +336,7 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-    if(mask.channels() > 1 && mask.depth() != CV_8U)
+    if(mask.channels() > 1 || mask.depth() != CV_8U)
         return false;
 
     if (src.dims <= 2)
@@ -480,9 +470,9 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 
     if(dst.dims <= 2)
     {
-        IppiSize       size     = ippiSize(dst.size());
-        IppDataType    dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValue s;
+        IppiSize            size     = ippiSize(dst.size());
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
         convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
 
         return CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, dst.ptr(), (int)dst.step, size, dataType, dst.channels(), mask.ptr(), (int)mask.step) >= 0;
@@ -493,9 +483,9 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
         uchar          *ptrs[2]  = {NULL};
         NAryMatIterator it(arrays, ptrs);
 
-        IppiSize       size     = {(int)it.size, 1};
-        IppDataType    dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValue s;
+        IppiSize            size     = {(int)it.size, 1};
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
         convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
 
         for( size_t i = 0; i < it.nplanes; i++, ++it)
@@ -522,20 +512,23 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     Mat value = _value.getMat(), mask = _mask.getMat();
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
-    CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
+    int cn = channels(), mcn = mask.channels();
+    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
-    size_t esz = elemSize();
+    size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
     const Mat* arrays[] = { this, !mask.empty() ? &mask : 0, 0 };
     uchar* ptrs[2]={0,0};
     NAryMatIterator it(arrays, ptrs);
-    int totalsz = (int)it.size, blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    int totalsz = (int)it.size*mcn;
+    int blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    blockSize0 -= blockSize0 % mcn;    // must be divisible without remainder for unrolling and advancing
     AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
     uchar* scbuf = alignPtr((uchar*)_scbuf, (int)sizeof(double));
-    convertAndUnrollScalar( value, type(), scbuf, blockSize0 );
+    convertAndUnrollScalar( value, type(), scbuf, blockSize0/mcn );
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
@@ -717,7 +710,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
         ::ipp::IwiImage iwSrc = ippiGetImage(src);
         ::ipp::IwiImage iwDst = ippiGetImage(dst);
 
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, &iwSrc, &iwDst, ippMode);
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
     }
     catch(::ipp::IwException)
     {
@@ -1155,13 +1148,13 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
     if(_src.dims > 2)
         return false;
 
-    Rect dstRect(borderSize.borderLeft, borderSize.borderTop,
-        _dst.cols - borderSize.borderRight - borderSize.borderLeft,
-        _dst.rows - borderSize.borderBottom - borderSize.borderTop);
+    Rect dstRect(borderSize.left, borderSize.top,
+        _dst.cols - borderSize.right - borderSize.left,
+        _dst.rows - borderSize.bottom - borderSize.top);
     Mat  subDst = Mat(_dst, dstRect);
     Mat *pSrc   = &_src;
 
-    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), &borderSize, borderType, &value[0]) >= 0;
+    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), borderSize, borderType, &value[0]) >= 0;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(top); CV_UNUSED(bottom); CV_UNUSED(left); CV_UNUSED(right);
     CV_UNUSED(_borderType); CV_UNUSED(value);

@@ -156,16 +156,6 @@ inline std::ostream & operator<<(std::ostream &out, const mfxFrameData &data) {
 
 //==================================================================================================
 
-static const int CC_MPG2 = FourCC('M', 'P', 'G', '2').vali32;
-static const int CC_H264 = FourCC('H', '2', '6', '4').vali32;
-static const int CC_X264 = FourCC('X', '2', '6', '4').vali32;
-static const int CC_AVC  = FourCC('A', 'V', 'C', ' ').vali32;
-static const int CC_H265 = FourCC('H', '2', '6', '5').vali32;
-static const int CC_HEVC = FourCC('H', 'E', 'V', 'C').vali32;
-static const int CC_VC1  = FourCC('V', 'C', '1', ' ').vali32;
-
-//==================================================================================================
-
 template <typename T>
 inline void cleanup(T * &ptr)
 {

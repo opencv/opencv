@@ -379,4 +379,9 @@ Ptr<SimpleBlobDetector> SimpleBlobDetector::create(const SimpleBlobDetector::Par
     return makePtr<SimpleBlobDetectorImpl>(params);
 }
 
+String SimpleBlobDetector::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".SimpleBlobDetector");
+}
+
 }

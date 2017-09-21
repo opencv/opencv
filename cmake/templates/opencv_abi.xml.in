@@ -29,8 +29,6 @@
     opencv2/flann/hdf5.h
     opencv2/imgcodecs/ios.h
     opencv2/videoio/cap_ios.h
-    opencv2/ts.hpp
-    opencv2/ts/*
     opencv2/xobjdetect/private.hpp
     @OPENCV_ABI_SKIP_HEADERS@
 </skip_headers>

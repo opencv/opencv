@@ -60,7 +60,6 @@ void MatAllocator::unmap(UMatData* u) const
     if(u->urefcount == 0 && u->refcount == 0)
     {
         deallocate(u);
-        u = NULL;
     }
 }
 
@@ -461,8 +460,11 @@ void Mat::copySize(const Mat& m)
 void Mat::deallocate()
 {
     if(u)
-        (u->currAllocator ? u->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u);
-    u = NULL;
+    {
+        UMatData* u_ = u;
+        u = NULL;
+        (u_->currAllocator ? u_->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u_);
+    }
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
@@ -2163,7 +2165,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        CV_Assert(i < sz.height);
+        CV_Assert(i > 0 && i < sz.height);
         return vv[i].isContinuous();
     }
 
@@ -3404,11 +3406,6 @@ static TransposeInplaceFunc transposeInplaceTab[] =
 
 #ifdef HAVE_OPENCL
 
-static inline int divUp(int a, int b)
-{
-    return (a + b - 1) / b;
-}
-
 static bool ocl_transpose( InputArray _src, OutputArray _dst )
 {
     const ocl::Device & dev = ocl::Device::getDefault();
@@ -4024,6 +4021,11 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
 
+    // Fake reference to source. Resolves issue 8693 in case of src == dst.
+    UMat srcUMat;
+    if (_src.isUMat())
+        srcUMat = _src.getUMat();
+
     Mat src = _src.getMat();
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
@@ -4359,7 +4361,6 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 }
 
 #ifdef HAVE_IPP
-#if !IPP_DISABLE_SORT_IDX
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
 static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
@@ -4438,7 +4439,6 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
     return true;
 }
 #endif
-#endif
 
 typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
 }
@@ -4475,9 +4475,8 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
         _dst.release();
     _dst.create( src.size(), CV_32S );
     dst = _dst.getMat();
-#if !IPP_DISABLE_SORT_IDX
+
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
-#endif
 
     static SortFunc tab[] =
     {
