@@ -88,75 +88,8 @@ img.delete();
 Try it
 ------
 
-Try this demo using the code above. Canvas "canvasInput" and canvas "canvasOutput" have been prepared.
-Choose an image and click `Try it` to see the result. You can change the code in the textbox to
-investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="CodeArea">
-<h2>Input your code</h2>
-<button id="tryIt" disabled="true" onclick="executeCode()">Try it</button><br>
-<textarea rows="11" cols="80" id="TestCode" spellcheck="false">
-let src = cv.imread("canvasInput");
-let dst = new cv.Mat();
-// To distinguish the input and output, we graying the image.
-// You can try more different conversion
-cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
-cv.imshow("canvasOutput", dst);
-src.delete();
-dst.delete();
-</textarea>
-<p class="err" id="imErr"></p>
-</div>
-<div id="showcase">
-    <div>
-        <canvas id="canvasInput"></canvas>
-        <canvas id="canvasOutput"></canvas>
-    </div>
-    <input type="file" id="input" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function executeCode() {
-    let text = document.getElementById("TestCode").value;
-    try {
-        eval(text);
-        document.getElementById("imErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("imErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "canvasInput");
-
-let inputElement = document.getElementById("input");
-inputElement.addEventListener("change", handleFiles, false);
-function handleFiles(e) {
-    let url = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(url, "canvasInput");
-}
-
-function onReady() {
-    document.getElementById("tryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_image_display.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

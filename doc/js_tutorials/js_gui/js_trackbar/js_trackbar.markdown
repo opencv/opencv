@@ -62,76 +62,8 @@ function addWeighted(value) {
 Try it
 ------
 
-Try this demo using the code above. Trackbar and input images are ready. Slide the trackbar to see the result.
-You can change the callback function and investigate more.
-
 \htmlonly
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="CodeArea">
-<h2>Input your code</h2>
-<textarea rows="11" cols="70" id="TestCode" spellcheck="false">
-let alpha = value/trackbar.max;
-let beta = ( 1.0 - alpha );
-let src1 = cv.imread("canvasInput1");
-let src2 = cv.imread("canvasInput2");
-let dst = new cv.Mat();
-cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
-cv.imshow("canvasOutput", dst);
-dst.delete();
-src1.delete();
-src2.delete();
-</textarea>
-<p class="err" id="tbErr"></p>
-</div>
-<div id="showcase">
-    <div>
-        <canvas id="canvasInput1"></canvas>
-        <canvas id="canvasInput2"></canvas>
-    </div>
-    Weight: <input type="range" id="trackbar" disabled="true" value="50" min="0" max="100" step="1"
-    oninput="addWeighted(this.value)"><input type="text" id="weightValue" size="3" value="50"><br>
-    <canvas id="canvasOutput"></canvas>
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-let weightValue = document.getElementById('weightValue');
-let trackbar = document.getElementById('trackbar');
-
-function addWeighted(value) {
-    weightValue.value = value;
-    let text = document.getElementById("TestCode").value;
-    try {
-        eval(text);
-        document.getElementById("tbErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("tbErr").innerHTML = err;
-    }
-
-}
-
-loadImageToCanvas("apple.jpg", "canvasInput1");
-loadImageToCanvas("orange.jpg", "canvasInput2");
-
-function onReady() {
-    addWeighted(trackbar.value);
-    trackbar.disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_trackbar.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
