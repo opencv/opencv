@@ -138,6 +138,11 @@ TEST(Test_TensorFlow, matmul)
     runTensorFlowNet("matmul");
 }
 
+TEST(Test_TensorFlow, defun)
+{
+    runTensorFlowNet("defun_dropout");
+}
+
 TEST(Test_TensorFlow, fp16)
 {
     const float l1 = 1e-3;
