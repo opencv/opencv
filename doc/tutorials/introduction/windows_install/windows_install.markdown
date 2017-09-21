@@ -50,6 +50,7 @@ if [  ! -d "$myRepo/opencv"  ]; then
     git clone https://github.com/opencv/opencv.git
     mkdir Build
     mkdir Build/opencv
+    mkdir Install
     mkdir Install/opencv
 else
     cd opencv
