@@ -336,7 +336,7 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-    if(mask.channels() > 1 && mask.depth() != CV_8U)
+    if(mask.channels() > 1 || mask.depth() != CV_8U)
         return false;
 
     if (src.dims <= 2)
@@ -512,20 +512,23 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     Mat value = _value.getMat(), mask = _mask.getMat();
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
-    CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
+    int cn = channels(), mcn = mask.channels();
+    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
-    size_t esz = elemSize();
+    size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
     const Mat* arrays[] = { this, !mask.empty() ? &mask : 0, 0 };
     uchar* ptrs[2]={0,0};
     NAryMatIterator it(arrays, ptrs);
-    int totalsz = (int)it.size, blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    int totalsz = (int)it.size*mcn;
+    int blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    blockSize0 -= blockSize0 % mcn;    // must be divisible without remainder for unrolling and advancing
     AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
     uchar* scbuf = alignPtr((uchar*)_scbuf, (int)sizeof(double));
-    convertAndUnrollScalar( value, type(), scbuf, blockSize0 );
+    convertAndUnrollScalar( value, type(), scbuf, blockSize0/mcn );
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {

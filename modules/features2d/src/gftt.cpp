@@ -137,4 +137,9 @@ Ptr<GFTTDetector> GFTTDetector::create( int _nfeatures, double _qualityLevel,
                                       _minDistance, _blockSize, 3, _useHarrisDetector, _k);
 }
 
+String GFTTDetector::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".GFTTDetector");
+}
+
 }

@@ -55,7 +55,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
   Classes listed here, in fact, provides C++ API for creating intances of bult-in layers.
   In addition to this way of layers instantiation, there is a more common factory API (see @ref dnnLayerFactory), it allows to create layers dynamically (by name) and register new ones.
-  You can use both API, but factory API is less convinient for native C++ programming and basically designed for use inside importers (see @ref Importer, @ref createCaffeImporter(), @ref createTorchImporter()).
+  You can use both API, but factory API is less convinient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTorch(), @ref readNetFromTensorflow()).
 
   Bult-in layers partially reproduce functionality of corresponding Caffe and Torch7 layers.
   In partuclar, the following layers and Caffe @ref Importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
@@ -245,6 +245,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;
+        bool ceilMode;
 
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
@@ -255,6 +256,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool logSoftMax;
 
         static Ptr<SoftmaxLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LPNormalizeLayer : public Layer
+    {
+    public:
+        float pnorm, epsilon;
+
+        static Ptr<LPNormalizeLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS InnerProductLayer : public Layer
@@ -294,6 +303,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         int axis;
+        /**
+         * @brief Add zero padding in case of concatenation of blobs with different
+         * spatial sizes.
+         *
+         * Details: https://github.com/torch/nn/blob/master/doc/containers.md#depthconcat
+         */
+        bool padding;
 
         static Ptr<ConcatLayer> create(const LayerParams &params);
     };
@@ -341,6 +357,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         float negativeSlope;
 
         static Ptr<ReLULayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ReLU6Layer : public ActivationLayer
+    {
+    public:
+        static Ptr<ReLU6Layer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS ChannelsPReLULayer : public ActivationLayer

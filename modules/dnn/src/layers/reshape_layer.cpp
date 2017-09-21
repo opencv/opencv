@@ -75,12 +75,21 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
     if (explicitMask)
     {
         int maskTotal = total(maskShape);
-        for (int i = srcRange.start + 1; i < srcRange.end; ++i)
+        // Go from the end of mask until we collect required total.
+        bool matched = false;
+        for (int i = srcRange.end - 1; i >= srcRange.start; --i)
         {
-            if (total(srcShape, i, srcRange.end) != maskTotal)
+            if (matched)
             {
-                srcRange.start = i - 1;
-                break;
+                if (i == 0 || total(srcShape, i, srcRange.end) != maskTotal)
+                {
+                    srcRange.start = i + 1;
+                    break;
+                }
+            }
+            else
+            {
+                matched = total(srcShape, i, srcRange.end) == maskTotal;
             }
         }
         CV_Assert(total(srcShape, srcRange.start, srcRange.end) == maskTotal);

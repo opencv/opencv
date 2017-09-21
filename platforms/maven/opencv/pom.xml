@@ -50,7 +50,6 @@
                             <workingDirectory>${project.basedir}/scripts</workingDirectory>
                             <arguments>
                                 <argument>properties</argument>
-                                <argument>../../../../modules/core/include/opencv2/core/version.hpp</argument>
                                 <argument>${build.directory}</argument>
                                 <argument>build.properties</argument>
                             </arguments>
@@ -66,6 +65,8 @@
                             <executable>bash</executable>
                             <workingDirectory>${project.basedir}/scripts</workingDirectory>
                             <arguments>
+                              <!-- Optional packages should be placed BEFORE required ones
+                              in the following argument list. -->
                                 <argument>deb_package_check</argument>
                                 <argument>-olibpng-dev|libpng12-dev</argument>
                                 <argument>-olibopenjp2-7-dev|libjasper-dev</argument>
@@ -175,14 +176,14 @@
                         <configuration>
                             <rules>
                                 <requireEnvironmentVariable>
-                                    <level>WARN</level>
+                                    <level>ERROR</level>
                                     <variableName>ANT_HOME</variableName>
                                     <message>$ANT_HOME is not set. Build may fail.</message>
                                 </requireEnvironmentVariable>
                                 <requireEnvironmentVariable>
-                                    <level>WARN</level>
+                                    <level>ERROR</level>
                                     <variableName>JAVA_HOME</variableName>
-                                    <message>$JAVA_HOME is not set. Build may fail.</message>
+                                    <message>$JAVA_HOME is not set. Build will fail.</message>
                                 </requireEnvironmentVariable>
                                 <requireEnvironmentVariable>
                                     <level>WARN</level>
@@ -204,7 +205,9 @@ To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the num
                                 <requireProperty>
                                     <property>project.version</property>
                                     <regex>${opencv.version}</regex>
-                                    <regexMessage>The Maven POM version ${project.version} does not match the extracted OpenCV version ${opencv.version}.</regexMessage>
+                                    <regexMessage>The Maven POM version ${project.version} does not match the extracted OpenCV version ${opencv.version}.
+To correct this please execute the following Maven command from the Maven root directory:
+    mvn versions:set -DnewVersion=$(. ./opencv/scripts/functions &amp;&amp; cd ./opencv/scripts &amp;&amp; extract_version &amp;&amp; echo $REPLY)</regexMessage>
                                 </requireProperty>
                             </rules>
                         </configuration>

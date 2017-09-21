@@ -1,20 +1,20 @@
-### OpenCV: Open Source Computer Vision Library
+## OpenCV: Open Source Computer Vision Library
 
-#### Resources
+### Resources
 
 * Homepage: <http://opencv.org>
 * Docs: <http://docs.opencv.org/master/>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
 
-#### Contributing
+### Contributing
 
-Please read before starting work on a pull request: <https://github.com/opencv/opencv/wiki/How_to_contribute>
+Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/How_to_contribute) before starting work on a pull request.
 
-Summary of guidelines:
+#### Summary of the guidelines:
 
 * One pull request per issue;
 * Choose the right base branch;
 * Include tests and documentation;
 * Clean up "oops" commits before submitting;
-* Follow the coding style guide.
+* Follow the [coding style guide](https://github.com/opencv/opencv/wiki/Coding_Style_Guide).

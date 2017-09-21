@@ -47,13 +47,13 @@ By default the following build directories are created.
 
 `<OpenCV_root_dir>/build/maven/opencv-it/target`
 
-Under `build` are the standard OpenCV artifacts. Under `build/maven/opencv/target` can be found the OSGi compatible Java bundle. When deploying the bundle into an OSGi framework e.g. [Apache Karaf](http://karaf.apache.org/), loading of the native library is automatically taken care of. An integration testing module is created under the `open-cv` directory and is only of use during the build. The standard Java library as created by the CMake process is also available as specified in the existing OpenCV documentation.
+Under `build` are the standard OpenCV artifacts. Under `build/maven/opencv/target` can be found the OSGi compatible Java bundle. When deploying the bundle into an OSGi framework e.g. [Apache Karaf](http://karaf.apache.org/), loading of the native library is automatically taken care of. An integration testing module is created under the `opencv-it` directory and is only of use during the build but is disabled by fault. The standard Java library as created by the CMake process is also available as specified in the existing OpenCV documentation.
 
 The Maven build is initiated from the directory contain the `pom.xml` file.
 #### 3.3 - x86 or x86_64 Architecture:
 Generally all that is required is the standard Maven command:
 
-`mvn clean install -Ddownload.cmake=false`
+`mvn clean install`
 
 One of the first things the build will do is check the required native dependencies. The Maven build indicates the status of the required dependencies and will fail at this point if any are missing. Install using the package manager e.g. aptitude or apt-get, and restart the build with the above command.
 
@@ -64,8 +64,32 @@ Similar to the x86 architecture the native dependencies are first checked so ins
 
 **PLEASE NOTE THESE ARE NOT OFFICIAL RASPBIAN PACKAGES. INSTALL AT YOUR OWN RISK.**
 
-OpenCV is built using CMake and the Maven build process uses the the [cmake-maven plugin](https://github.com/cmake-maven-project/cmake-maven-project). The cmake-maven plugin by default downloads CMake at build time but unfortunately there is no binary for ARM architecture currently available. As a work around it is possible to use the native CMake (which is checked for availability in the above dependency checks). Assuming all native dependencies are available the build can be started with the following command:
+The build can be started with the following command:
 
-`mvn clean install -Ddownload.cmake=false`
+`mvn clean install`
 
 Upon a successful build the libraries will be available as described above in 'Build Directory'.
+
+#### 3.5 CMake
+**Applicability:** x86 processors
+
+The CMake Maven plugin is configured to use the native CMake package (recommended) i.e. it will NOT download the latest CMake binary. Should you require CMake download then include the following Maven commandline switch when building:
+
+ `-Ddownload.cmake=true`
+
+ #### 3.6 Integration Tests
+ **Applicability:** All processors
+
+ OSGi integration tests can be run as part of the build by including the following commandline switch to Maven:
+
+ `-Pintegration`
+
+### 4.0 Maintainer Notes
+This section is relevant to those maintaining the Maven platform build. If you just want to build the library then you do not need to refer to this section.
+
+#### 4.1 Updating POM Version to Match Core Version
+Maven requires the version to be hard-coded in the POM or in otherwords it cannot be changed at runtime. When the core C/C++ code version changes it is easy to forget to update the Maven version. The POM utilises the enforcer plugin to ensure the POM and Core versions match causing the build to fail if they do not.
+
+Should the POM version require updating then this can be done utilising the Maven 'versions' plugin and this will apply the correct version to all POMs within the project. Execute the following Maven command from the root directory of the Maven project:
+
+`mvn versions:set -DnewVersion=$(. ./opencv/scripts/functions && cd ./opencv/scripts && extract_version && echo $REPLY)`

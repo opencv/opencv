@@ -117,6 +117,10 @@ public:
      * Remove duplicated keypoints.
      */
     static void removeDuplicated( std::vector<KeyPoint>& keypoints );
+    /*
+     * Remove duplicated keypoints and sort the remaining keypoints
+     */
+    static void removeDuplicatedSorted( std::vector<KeyPoint>& keypoints );
 
     /*
      * Retain the specified number of the best keypoints (according to the response)
@@ -206,6 +210,7 @@ public:
 
     //! Return true if detector object is empty
     CV_WRAP virtual bool empty() const;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
@@ -267,6 +272,7 @@ public:
     CV_WRAP static Ptr<BRISK> create(int thresh, int octaves, const std::vector<float> &radiusList,
         const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
         const std::vector<int>& indexChange=std::vector<int>());
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
@@ -340,6 +346,7 @@ public:
 
     CV_WRAP virtual void setFastThreshold(int fastThreshold) = 0;
     CV_WRAP virtual int getFastThreshold() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Maximally stable extremal region extractor
@@ -399,6 +406,7 @@ public:
 
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @overload */
@@ -454,6 +462,7 @@ public:
 
     CV_WRAP virtual void setType(int type) = 0;
     CV_WRAP virtual int getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @overload */
@@ -508,6 +517,7 @@ public:
 
     CV_WRAP virtual void setType(int type) = 0;
     CV_WRAP virtual int getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Wrapping class for feature detection using the goodFeaturesToTrack function. :
@@ -536,6 +546,7 @@ public:
 
     CV_WRAP virtual void setK(double k) = 0;
     CV_WRAP virtual double getK() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Class for extracting blobs from an image. :
@@ -602,6 +613,7 @@ public:
 
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+  CV_WRAP virtual String getDefaultName() const;
 };
 
 //! @} features2d_main
@@ -658,6 +670,7 @@ public:
 
     CV_WRAP virtual void setDiffusivity(int diff) = 0;
     CV_WRAP virtual int getDiffusivity() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13.
@@ -725,6 +738,7 @@ public:
 
     CV_WRAP virtual void setDiffusivity(int diff) = 0;
     CV_WRAP virtual int getDiffusivity() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 //! @} features2d_main

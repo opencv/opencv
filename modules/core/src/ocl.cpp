@@ -43,6 +43,7 @@
 #include <list>
 #include <map>
 #include <deque>
+#include <set>
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
@@ -518,6 +519,7 @@ struct Device::Impl
 
         name_ = getStrProp(CL_DEVICE_NAME);
         version_ = getStrProp(CL_DEVICE_VERSION);
+        extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
@@ -527,6 +529,20 @@ struct Device::Impl
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+
+        size_t pos = 0;
+        while (pos < extensions_.size())
+        {
+            size_t pos2 = extensions_.find(' ', pos);
+            if (pos2 == String::npos)
+                pos2 = extensions_.size();
+            if (pos2 > pos)
+            {
+                std::string extensionName = extensions_.substr(pos, pos2 - pos);
+                extensions_set_.insert(extensionName);
+            }
+            pos = pos2 + 1;
+        }
 
         intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
 
@@ -569,23 +585,19 @@ struct Device::Impl
             sz < sizeof(buf) ? String(buf) : String();
     }
 
-    bool isExtensionSupported(const String& extensionName) const
+    bool isExtensionSupported(const std::string& extensionName) const
     {
-        bool ret = false;
-        size_t pos = getStrProp(CL_DEVICE_EXTENSIONS).find(extensionName);
-        if (pos != String::npos)
-        {
-            ret = true;
-        }
-        return ret;
+        return extensions_set_.count(extensionName) > 0;
     }
 
 
     IMPLEMENT_REFCOUNTABLE();
+
     cl_device_id handle;
 
     String name_;
     String version_;
+    std::string extensions_;
     int doubleFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
@@ -597,6 +609,8 @@ struct Device::Impl
     String vendorName_;
     int vendorID_;
     bool intelSubgroupsSupport_;
+
+    std::set<std::string> extensions_set_;
 };
 
 
@@ -651,7 +665,10 @@ String Device::name() const
 { return p ? p->name_ : String(); }
 
 String Device::extensions() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? String(p->extensions_) : String(); }
+
+bool Device::isExtensionSupported(const String& extensionName) const
+{ return p ? p->isExtensionSupported(extensionName) : false; }
 
 String Device::version() const
 { return p ? p->version_ : String(); }
@@ -744,16 +761,7 @@ bool Device::imageSupport() const
 
 bool Device::imageFromBufferSupport() const
 {
-    bool ret = false;
-    if (p)
-    {
-        size_t pos = p->getStrProp(CL_DEVICE_EXTENSIONS).find("cl_khr_image2d_from_buffer");
-        if (pos != String::npos)
-        {
-            ret = true;
-        }
-    }
-    return ret;
+    return p ? p->isExtensionSupported("cl_khr_image2d_from_buffer") : false;
 }
 
 uint Device::imagePitchAlignment() const
@@ -2261,7 +2269,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         return false;
 
     cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1};
+    size_t globalsize[CV_MAX_DIM] = {1,1,1};
     size_t total = 1;
     CV_Assert(_globalsize != 0);
     for (int i = 0; i < dims; i++)
@@ -2270,15 +2278,16 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
             dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
-        globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
+        if (_globalsize[i] == 1)
+            val = 1;
+        globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
     }
-    if( total == 0 )
-        return true;
+    CV_Assert(total > 0);
     if( p->haveTempDstUMats )
         sync = true;
     cl_event asyncEvent = 0;
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, _localsize, 0, 0,
+                                           NULL, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &asyncEvent);
 #if CV_OPENCL_SHOW_RUN_ERRORS
     if (retval != CL_SUCCESS)

@@ -8169,4 +8169,9 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     }
 }
 
+String AgastFeatureDetector::getDefaultName() const
+{
+    return(Feature2D::getDefaultName() + ".AgastFeatureDetector");
+}
+
 } // END NAMESPACE CV

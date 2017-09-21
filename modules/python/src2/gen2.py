@@ -310,7 +310,8 @@ class ClassInfo(object):
         if not customname and self.wname.startswith("Cv"):
             self.wname = self.wname[2:]
 
-    def gen_map_code(self, all_classes):
+    def gen_map_code(self, codegen):
+        all_classes = codegen.classes
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.base:
@@ -319,9 +320,10 @@ class ClassInfo(object):
             code += "\n    return true;\n}\n"
         return code
 
-    def gen_code(self, all_classes):
+    def gen_code(self, codegen):
+        all_classes = codegen.classes
         if self.ismap:
-            return self.gen_map_code(all_classes)
+            return self.gen_map_code(codegen)
 
         getset_code = StringIO()
         getset_inits = StringIO()
@@ -354,10 +356,10 @@ class ClassInfo(object):
         sorted_methods.sort()
 
         if self.constructor is not None:
-            methods_code.write(self.constructor.gen_code(all_classes))
+            methods_code.write(self.constructor.gen_code(codegen))
 
         for mname, m in sorted_methods:
-            methods_code.write(m.gen_code(all_classes))
+            methods_code.write(m.gen_code(codegen))
             methods_inits.write(m.get_tab_entry())
 
         baseptr = "NULL"
@@ -516,6 +518,8 @@ class FuncVariant(object):
         else:
             outstr = "None"
 
+        self.py_arg_str = argstr
+        self.py_return_str = outstr
         self.py_prototype = "%s(%s) -> %s" % (self.wname, argstr, outstr)
         self.py_noptargs = noptargs
         self.py_arglist = arglist
@@ -554,11 +558,11 @@ class FuncInfo(object):
 
         return "pyopencv_" + self.namespace.replace('.','_') + '_' + classname + name
 
-    def get_wrapper_prototype(self, all_classes):
+    def get_wrapper_prototype(self, codegen):
         full_fname = self.get_wrapper_name()
         if self.isconstructor:
             return "static int {fn_name}(pyopencv_{type_name}_t* self, PyObject* args, PyObject* kw)".format(
-                    fn_name=full_fname, type_name=all_classes[self.classname].name)
+                    fn_name=full_fname, type_name=codegen.classes[self.classname].name)
 
         if self.classname:
             self_arg = "self"
@@ -615,8 +619,9 @@ class FuncInfo(object):
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
                                      flags = " | ".join(flags), py_docstring = full_docstring)
 
-    def gen_code(self, all_classes):
-        proto = self.get_wrapper_prototype(all_classes)
+    def gen_code(self, codegen):
+        all_classes = codegen.classes
+        proto = self.get_wrapper_prototype(codegen)
         code = "%s\n{\n" % (proto,)
         code += "    using namespace %s;\n\n" % self.namespace.replace('.', '::')
 
@@ -799,6 +804,20 @@ class FuncInfo(object):
         if self.isconstructor:
             def_ret = "-1"
         code += "\n    return %s;\n}\n\n" % def_ret
+
+        cname = self.cname
+        if self.classname:
+            classinfo = all_classes[self.classname]
+            cname = classinfo.cname + '::' + cname
+        py_signatures = codegen.py_signatures.setdefault(cname, [])
+        for v in self.variants:
+            s = dict(name=v.name, arg=v.py_arg_str, ret=v.py_return_str)
+            for old in py_signatures:
+                if s == old:
+                    break
+            else:
+                py_signatures.append(s)
+
         return code
 
 
@@ -822,6 +841,7 @@ class PythonWrapperGenerator(object):
         self.code_type_reg = StringIO()
         self.code_ns_reg = StringIO()
         self.code_type_publish = StringIO()
+        self.py_signatures = dict()
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
@@ -931,9 +951,13 @@ class PythonWrapperGenerator(object):
 
 
     def save(self, path, name, buf):
-        f = open(path + "/" + name, "wt")
-        f.write(buf.getvalue())
-        f.close()
+        with open(path + "/" + name, "wt") as f:
+            f.write(buf.getvalue())
+
+    def save_json(self, path, name, value):
+        import json
+        with open(path + "/" + name, "wt") as f:
+            json.dump(value, f)
 
     def gen(self, srcfiles, output_path):
         self.clear()
@@ -996,7 +1020,7 @@ class PythonWrapperGenerator(object):
         classlist1.sort()
 
         for decl_idx, name, classinfo in classlist1:
-            code = classinfo.gen_code(self.classes)
+            code = classinfo.gen_code(self)
             self.code_types.write(code)
             if not classinfo.ismap:
                 self.code_type_reg.write("MKTYPE2(%s);\n" % (classinfo.name,) )
@@ -1009,7 +1033,7 @@ class PythonWrapperGenerator(object):
             for name, func in sorted(ns.funcs.items()):
                 if func.isconstructor:
                     continue
-                code = func.gen_code(self.classes)
+                code = func.gen_code(self)
                 self.code_funcs.write(code)
             self.gen_namespace(ns_name)
         self.gen_namespaces_reg()
@@ -1027,6 +1051,7 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
         self.save(output_path, "pyopencv_generated_type_publish.h", self.code_type_publish)
+        self.save_json(output_path, "pyopencv_signatures.json", self.py_signatures)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list

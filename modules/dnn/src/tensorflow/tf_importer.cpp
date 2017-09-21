@@ -63,15 +63,86 @@ void blobShapeFromTensor(const tensorflow::TensorProto &tensor, MatShape& shape)
     {
         const tensorflow::TensorShapeProto &_shape = tensor.tensor_shape();
         int i, n = _shape.dim_size();
-        shape.resize(n);
+        if (n)
+        {
+            shape.resize(n);
 
-        for (i = 0; i < n; i++)
-            shape[i] = (int)_shape.dim(i).size();
+            for (i = 0; i < n; i++)
+                shape[i] = (int)_shape.dim(i).size();
+        }
+        else
+            shape.resize(1, 1);  // Scalar.
     }
     else
     {
         CV_Error(Error::StsError, "Unknown shape of input tensor");
     }
+}
+
+static Mat getTensorContent(const tensorflow::TensorProto &tensor)
+{
+    std::string content = tensor.tensor_content();
+    switch (tensor.dtype())
+    {
+        case tensorflow::DT_FLOAT:
+        {
+            if (!content.empty())
+                return Mat(1, content.size() / sizeof(float), CV_32FC1, (void*)content.c_str()).clone();
+            else
+            {
+                const RepeatedField<float>& field = tensor.float_val();
+                CV_Assert(!field.empty());
+                return Mat(1, field.size(), CV_32FC1, (void*)field.data()).clone();
+            }
+        }
+        case tensorflow::DT_DOUBLE:
+        {
+            if (!content.empty())
+                return Mat(1, content.size() / sizeof(double), CV_64FC1, (void*)content.c_str()).clone();
+            else
+            {
+                const RepeatedField<double>& field = tensor.double_val();
+                CV_Assert(!field.empty());
+                return Mat(1, field.size(), CV_64FC1, (void*)field.data()).clone();
+            }
+        }
+        case tensorflow::DT_INT32:
+        {
+            if (!content.empty())
+                return Mat(1, content.size() / sizeof(int32_t), CV_32SC1, (void*)content.c_str()).clone();
+            else
+            {
+                const RepeatedField<int32_t>& field = tensor.int_val();
+                CV_Assert(!field.empty());
+                return Mat(1, field.size(), CV_32SC1, (void*)field.data()).clone();
+            }
+        }
+        case tensorflow::DT_HALF:
+        {
+            Mat halfs;
+            if (!content.empty())
+            {
+                static const int kHalfSize = 2;
+                halfs = Mat(1, content.size() / kHalfSize, CV_16UC1, (void*)content.c_str());
+            }
+            else
+            {
+                const RepeatedField<int32_t>& field = tensor.half_val();
+                CV_Assert(!field.empty());
+                Mat ints(1, field.size(), CV_32SC1, (void*)field.data());
+                ints.convertTo(halfs, CV_16UC1);
+            }
+            // Reinterpret as a signed shorts just for a convertFp16 call.
+            Mat halfsSigned(halfs.size(), CV_16SC1, halfs.data);
+            Mat floats(halfs.size(), CV_32FC1);
+            convertFp16(halfsSigned, floats);
+            return floats;
+        }
+        default:
+            CV_Error(Error::StsError, "Tensor's data type is not supported");
+            break;
+    }
+    return Mat();
 }
 
 template <typename T>
@@ -90,11 +161,12 @@ void parseTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
 
     dstBlob.create(shape, CV_32F);
 
-    int size = tensor.tensor_content().size() / sizeof(T);
+    Mat tensorContent = getTensorContent(tensor);
+    int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
 
     float *dstData = dstBlob.ptr<float>();
-    const T *data = reinterpret_cast<const T*>(tensor.tensor_content().c_str());
+    const T *data = reinterpret_cast<const T*>(tensorContent.data);
 
     if (dims == 4)
     {
@@ -125,6 +197,7 @@ void blobFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
 {
     switch (tensor.dtype()) {
         case tensorflow::DT_FLOAT:
+        case tensorflow::DT_HALF:
             parseTensor<float>(tensor, dstBlob);
             break;
         case tensorflow::DT_DOUBLE:
@@ -406,7 +479,8 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     int dims = (int)shape.size();
 
     // TODO: other blob types
-    CV_Assert(tensor.dtype() == tensorflow::DT_FLOAT);
+    CV_Assert(tensor.dtype() == tensorflow::DT_FLOAT ||
+              tensor.dtype() == tensorflow::DT_HALF);
     CV_Assert(dims == 4);
 
     // REORDER kernel HWIO to OIHW
@@ -416,11 +490,12 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
 
     dstBlob.create(shape, CV_32F);
 
-    int size = tensor.tensor_content().size() / sizeof(float);
+    Mat tensorContent = getTensorContent(tensor);
+    int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
 
     float *dstData = dstBlob.ptr<float>();
-    const float *data = reinterpret_cast<const float*>(tensor.tensor_content().c_str());
+    const float *data = reinterpret_cast<const float*>(tensorContent.data);
 
     int out_c = shape[0], input_c = shape[1], height = shape[2], width = shape[3];
     int total = out_c*input_c*height*width;
@@ -517,7 +592,7 @@ void TFImporter::populateNet(Net dstNet)
 
     for (int li = 0; li < layersSize; li++)
     {
-        const tensorflow::NodeDef &layer = net.node(li);
+        tensorflow::NodeDef layer = net.node(li);
         String name = layer.name();
         String type = layer.op();
         LayerParams layerParams;
@@ -525,8 +600,38 @@ void TFImporter::populateNet(Net dstNet)
         if(layers_to_ignore.find(li) != layers_to_ignore.end())
             continue;
 
-        if (type == "Conv2D")
+        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative")
         {
+            // The first node of dilated convolution subgraph.
+            // Extract input node, dilation rate and paddings.
+            std::string input = layer.input(0);
+            if (type == "SpaceToBatchND")
+            {
+                // op: "SpaceToBatchND"
+                // input: "input"
+                // input: "SpaceToBatchND/block_shape"
+                // input: "SpaceToBatchND/paddings"
+                CV_Assert(layer.input_size() == 3);
+
+                DictValue dilation = parseDims(getConstBlob(layer, value_id, 1));
+                CV_Assert(dilation.size() == 2 && dilation.get<int>(0) == dilation.get<int>(1));
+                layerParams.set("dilation", dilation.get<int>(0));
+
+                Mat paddings;
+                parseTensor<int>(getConstBlob(layer, value_id, 2), paddings);
+
+                // paddings is a 2x2 matrix: [[top, bot], [left, right]]
+                layerParams.set("pad_h", paddings.at<float>(0));
+                layerParams.set("pad_w", paddings.at<float>(2));
+
+                StrIntVector next_layers = getNextLayers(net, name, "Conv2D");
+                CV_Assert(next_layers.size() == 1);
+                layer = net.node(next_layers[0].second);
+                layers_to_ignore[next_layers[0].second] = next_layers[0].first;
+                name = layer.name();
+                type = layer.op();
+            }
+
             layerParams.set("bias_term", false);
             layerParams.blobs.resize(1);
 
@@ -543,7 +648,28 @@ void TFImporter::populateNet(Net dstNet)
             }
 
             kernelFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
-            const int* kshape = layerParams.blobs[0].size.p;
+            int* kshape = layerParams.blobs[0].size.p;
+            if (type == "DepthwiseConv2dNative")
+            {
+                const int chMultiplier = kshape[0];
+                const int inCh = kshape[1];
+                const int height = kshape[2];
+                const int width = kshape[3];
+
+                Mat copy = layerParams.blobs[0].clone();
+                float* src = (float*)copy.data;
+                float* dst = (float*)layerParams.blobs[0].data;
+                for (int i = 0; i < chMultiplier; ++i)
+                    for (int j = 0; j < inCh; ++j)
+                        for (int s = 0; s < height * width; ++s)
+                            {
+                                int src_i = (i * inCh + j) * height * width + s;
+                                int dst_i = (j * chMultiplier + i) * height* width + s;
+                                dst[dst_i] = src[src_i];
+                            }
+                kshape[0] = inCh * chMultiplier;
+                kshape[1] = 1;
+            }
             layerParams.set("kernel_h", kshape[2]);
             layerParams.set("kernel_w", kshape[3]);
             layerParams.set("num_output", kshape[0]);
@@ -551,11 +677,21 @@ void TFImporter::populateNet(Net dstNet)
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
 
+            // The final node of dilated convolution subgraph.
+            next_layers = getNextLayers(net, name, "BatchToSpaceND");
+            if (!next_layers.empty())
+            {
+                layerParams.set("pad_mode", "");  // We use padding values.
+                CV_Assert(next_layers.size() == 1);
+                ExcludeLayer(net, next_layers[0].second, 0, false);
+                layers_to_ignore[next_layers[0].second] = next_layers[0].first;
+            }
+
             int id = dstNet.addLayer(name, "Convolution", layerParams);
             layer_id[name] = id;
 
             // one input only
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            connect(layer_id, dstNet, parsePin(input), id, 0);
         }
         else if (type == "BiasAdd" || type == "Add")
         {
@@ -601,6 +737,10 @@ void TFImporter::populateNet(Net dstNet)
             layerParams.blobs.resize(1);
 
             StrIntVector next_layers = getNextLayers(net, name, "BiasAdd");
+            if (next_layers.empty())
+            {
+                next_layers = getNextLayers(net, name, "Add");
+            }
             if (next_layers.size() == 1) {
                 layerParams.set("bias_term", true);
                 layerParams.blobs.resize(2);
@@ -752,11 +892,20 @@ void TFImporter::populateNet(Net dstNet)
             {
                 // Multiplication by constant.
                 CV_Assert(layer.input_size() == 2);
+                Mat scaleMat = getTensorContent(getConstBlob(layer, value_id));
+                CV_Assert(scaleMat.type() == CV_32FC1);
 
-                float scale = getConstBlob(layer, value_id).float_val()[0];
-                layerParams.set("scale", scale);
-
-                int id = dstNet.addLayer(name, "Power", layerParams);
+                int id;
+                if (scaleMat.total() == 1)  // is a scalar.
+                {
+                    layerParams.set("scale", scaleMat.at<float>(0));
+                    id = dstNet.addLayer(name, "Power", layerParams);
+                }
+                else  // is a vector
+                {
+                    layerParams.blobs.resize(1, scaleMat);
+                    id = dstNet.addLayer(name, "Scale", layerParams);
+                }
                 layer_id[name] = id;
 
                 Pin inp0 = parsePin(layer.input(0));
@@ -909,12 +1058,13 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
                  type == "Relu" || type == "Elu" || type == "Softmax" ||
-                 type == "Identity")
+                 type == "Identity" || type == "Relu6")
         {
             std::string dnnType = type;
             if (type == "Abs") dnnType = "AbsVal";
             else if (type == "Tanh") dnnType = "TanH";
             else if (type == "Relu") dnnType = "ReLU";
+            else if (type == "Relu6") dnnType = "ReLU6";
             else if (type == "Elu") dnnType = "ELU";
 
             int id = dstNet.addLayer(name, dnnType, layerParams);
@@ -948,10 +1098,9 @@ Ptr<Importer> createTensorflowImporter(const String&)
 
 Net readNetFromTensorflow(const String &model)
 {
-    Ptr<Importer> importer = createTensorflowImporter(model);
+    TFImporter importer(model.c_str());
     Net net;
-    if (importer)
-        importer->populateNet(net);
+    importer.populateNet(net);
     return net;
 }
 

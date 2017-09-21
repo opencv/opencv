@@ -216,6 +216,8 @@ public:
 };
 
 /** @example facedetect.cpp
+This program demonstrates usage of the Cascade classifier class
+\image html Cascade_Classifier_Tutorial_Result_Haar.jpg "Sample screenshot" width=321 height=254
 */
 /** @brief Cascade classifier class for object detection.
  */

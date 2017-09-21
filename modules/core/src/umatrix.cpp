@@ -961,6 +961,8 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
         }
     }
 #endif
+    UMat src = *this;  // Fake reference to itself.
+                       // Resolves issue 8693 in case of src == dst.
     Mat m = getMat(ACCESS_READ);
     m.convertTo(_dst, _type, alpha, beta);
 }
