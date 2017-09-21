@@ -126,7 +126,7 @@ Module['VideoCapture'] = function(videoSource) {
     canvas.width = video.width;
     canvas.height = video.height;
     var ctx = canvas.getContext('2d');
-
+    this.video = video;
     this.read = function(frame) {
         if (!(frame instanceof cv.Mat)) {
             throw new Error('Please input the valid cv.Mat instance.');

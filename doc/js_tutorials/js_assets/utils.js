@@ -17,20 +17,24 @@ function executeCode(codeEditorId, errorOutputId) { // eslint-disable-line no-un
         eval(code);
         document.getElementById(errorOutputId).innerHTML = ' ';
     } catch (err) {
-        if (typeof err === 'number') {
-            if (!isNaN(err)) {
-                err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
-            }
-        } else if (typeof err === 'string') {
-            let ptr = Number(err.split(' ')[0]);
-            if (!isNaN(ptr)) {
-                err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
-            }
-        } else if (err instanceof Error) {
-            err = err.stack.replace(/\n/g, '<br>');
-        }
-        document.getElementById(errorOutputId).innerHTML = err;
+        handleError(err, errorOutputId);
     }
+}
+
+function handleError(err, errorOutputId) {
+    if (typeof err === 'number') {
+        if (!isNaN(err)) {
+            err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
+        }
+    } else if (typeof err === 'string') {
+        let ptr = Number(err.split(' ')[0]);
+        if (!isNaN(ptr)) {
+            err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
+        }
+    } else if (err instanceof Error) {
+        err = err.stack.replace(/\n/g, '<br>');
+    }
+    document.getElementById(errorOutputId).innerHTML = err;
 }
 
 function loadCode(scriptId, codeEditorId) { // eslint-disable-line no-unused-vars
@@ -52,4 +56,51 @@ function addFileInputHandler(fileInputId, canvasId) { // eslint-disable-line no-
 
 function onOpenCvLoadError(errorOutputId) { // eslint-disable-line no-unused-vars
     document.getElementById(errorOutputId).innerHTML = 'Failed to load opencv.js';
+}
+
+function startCamera( // eslint-disable-line no-unused-vars
+    resolution, videoId, errorOutputId, callback) {
+    const constraints = {
+        'qvga': {width: {exact: 320}, height: {exact: 240}},
+        'vga': {width: {exact: 640}, height: {exact: 480}}};
+    let video = document.getElementById(videoId);
+    if (!video) {
+        video = document.createElement('video');
+    }
+
+    let videoConstraint = constraints[resolution];
+    if (!videoConstraint) {
+        videoConstraint = true;
+    }
+
+    let errorOutput = document.getElementById(errorOutputId);
+    navigator.mediaDevices.getUserMedia({video: videoConstraint, audio: false})
+        .then(function(stream) {
+            video.srcObject = stream;
+            video.play();
+            video.addEventListener('canplay', () => {
+                if (callback) {
+                    callback(stream, video);
+                }
+            }, false);
+            if (errorOutput) {
+                errorOutput.innerHTML = ' ';
+            }
+        })
+        .catch(function(err) {
+            if (errorOutput) {
+                errorOutput.innerHTML =
+                    'Camera Error: ' + err.name + ' ' + err.message;
+            }
+        });
+}
+
+function stopCamera(stream, video) { // eslint-disable-line no-unused-vars
+    if (video) {
+        video.pause();
+        video.srcObject = null;
+    }
+    if (stream) {
+        stream.getVideoTracks()[0].stop();
+    }
 }
