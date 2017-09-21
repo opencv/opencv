@@ -216,7 +216,7 @@ ${OPENCV_DOWNLOAD_LOG}
     ocv_download_log("#mkdir \"${DL_DESTINATION_DIR}\"")
     file(MAKE_DIRECTORY "${DL_DESTINATION_DIR}")
     ocv_download_log("#unpack \"${DL_DESTINATION_DIR}\" \"${CACHE_CANDIDATE}\"")
-    execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xz "${CACHE_CANDIDATE}"
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xzf "${CACHE_CANDIDATE}"
                     WORKING_DIRECTORY "${DL_DESTINATION_DIR}"
                     RESULT_VARIABLE res)
     if(NOT res EQUAL 0)
