@@ -18,7 +18,7 @@ canvas element.
 First, create an ImageData obj from canvas:
 @code{.js}
 let canvas = document.getElementById(canvasInputId);
-let ctx = canvas.getContext("2d");
+let ctx = canvas.getContext('2d');
 let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 @endcode
 
@@ -51,7 +51,7 @@ let imgData = new ImageData(new Uint8ClampedArray(dst.data, dst.cols, dst.rows);
 Finally, display it:
 @code{.js}
 let canvas = document.getElementById(canvasOutputId);
-let ctx = canvas.getContext("2d");
+let ctx = canvas.getContext('2d');
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 canvas.width = imgData.width;
 canvas.height = imgData.height;

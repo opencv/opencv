@@ -8,9 +8,9 @@
 <body>
 <h2>Trackbar Example</h2>
 <p>
-  Trackbar and input images are ready.
-  Slide the trackbar to see the result.
-  You can change the code in the textbox to investigate more.
+    Trackbar and input images are ready.
+    Slide the trackbar to see the result.
+    You can change the code in the textbox to investigate more.
 </p>
 <div>
 <textarea class="code" rows="8" cols="80" id="codeEditor" spellcheck="false">
@@ -18,22 +18,30 @@
 <p class="err" id="errorMessage"></p>
 </div>
 <div>
-  <div class="inputoutput">
-    <div>
-      <canvas id="canvasInput1"></canvas>
-      <canvas id="canvasInput2"></canvas>
+    <div class="inputoutput">
+        <div>
+            <div style="float:left; margin-right:10px;">
+                <canvas id="canvasInput1"></canvas>
+                <p class="caption">canvasInput1</p>
+            </div>
+            <div>
+                <canvas id="canvasInput2"></canvas>
+                <p class="caption">canvasInput2</p>
+            </div>
+        </div>
+        Weight: <input type="range" id="trackbar" disabled value="50" min="0" max="100" step="1"
+        oninput="executeCode('codeEditor', 'errorMessage');"><input type="text" id="weightValue" size="3" value="50"><br>
     </div>
-    Weight: <input type="range" id="trackbar" disabled value="50" min="0" max="100" step="1"
-    oninput="addWeighted()"><input type="text" id="weightValue" size="3" value="50"><br>
-  </div>
-  <div class="inputoutput">
-    <canvas id="canvasOutput"></canvas>
-    <div class="caption">canvasOutput</div>
-  </div>
+    <div class="inputoutput">
+        <canvas id="canvasOutput"></canvas>
+        <div class="caption">canvasOutput</div>
+    </div>
 </div>
 <script src="utils.js" type="text/javascript"></script>
-<script async src="opencv.js" type="text/javascript" onerror="onOpenCvLoadError('errorMessage');"></script>
 <script id="codeSnippet" type="text/code-snippet">
+let weightValue = document.getElementById('weightValue');
+let trackbar = document.getElementById('trackbar');
+weightValue.setAttribute('value', trackbar.value);
 let alpha = trackbar.value/trackbar.max;
 let beta = ( 1.0 - alpha );
 let src1 = cv.imread('canvasInput1');
@@ -47,19 +55,13 @@ src2.delete();
 </script>
 <script type="text/javascript">
 loadCode('codeSnippet', 'codeEditor');
-let weightValue = document.getElementById('weightValue');
-let trackbar = document.getElementById('trackbar');
-
-function addWeighted() {
-  weightValue.setAttribute('value', trackbar.value);
-  executeCode('codeEditor', 'errorMessage');
-}
 loadImageToCanvas('apple.jpg', 'canvasInput1');
 loadImageToCanvas('orange.jpg', 'canvasInput2');
 function onOpenCvReady() { // eslint-disable-line no-unused-vars
-  document.getElementById('trackbar').removeAttribute('disabled');
-  addWeighted();
+    document.getElementById('trackbar').removeAttribute('disabled');
+    executeCode('codeEditor', 'errorMessage');
 }
 </script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvLoadError('errorMessage');"></script>
 </body>
 </html>

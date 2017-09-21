@@ -8,9 +8,9 @@
 <body>
 <h2>Image Read and Show</h2>
 <p>
-  Canvas elements named <b>canvasInput</b> and <b>canvasOutput</b> have been prepared.
-  Choose an image and click <b>Try it</b> button to see the result.
-  You can change the code in the textbox to investigate more.
+    Canvas elements named <b>canvasInput</b> and <b>canvasOutput</b> have been prepared.
+    Choose an image and click <b>Try it</b> button to see the result.
+    You can change the code in the textbox to investigate more.
 </p>
 <div>
 <button id="tryIt" disabled onclick="executeCode('codeEditor', 'errorMessage')">Try it</button>
@@ -20,17 +20,16 @@
 <p class="err" id="errorMessage"></p>
 </div>
 <div>
-  <div class="inputoutput">
-    <canvas id="canvasInput"></canvas>
-    <div class="caption">canvasInput <input type="file" id="fileInput" name="file" /></div>
-  </div>
-  <div class="inputoutput">
-    <canvas id="canvasOutput"></canvas>
-    <div class="caption">canvasOutput</div>
-  </div>
+    <div class="inputoutput">
+        <canvas id="canvasInput"></canvas>
+        <div class="caption">canvasInput <input type="file" id="fileInput" name="file" /></div>
+    </div>
+    <div class="inputoutput">
+        <canvas id="canvasOutput"></canvas>
+        <div class="caption">canvasOutput</div>
+    </div>
 </div>
 <script src="utils.js" type="text/javascript"></script>
-<script async src="opencv.js" type="text/javascript" onerror="onOpenCvLoadError('errorMessage');"></script>
 <script id="codeSnippet" type="text/code-snippet">
 let src = cv.imread('canvasInput');
 let dst = new cv.Mat();
@@ -46,8 +45,9 @@ loadCode('codeSnippet', 'codeEditor');
 loadImageToCanvas('lena.jpg', 'canvasInput');
 addFileInputHandler('fileInput', 'canvasInput');
 function onOpenCvReady() { // eslint-disable-line no-unused-vars
-  document.getElementById('tryIt').removeAttribute('disabled');
+    document.getElementById('tryIt').removeAttribute('disabled');
 }
 </script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvLoadError('errorMessage');"></script>
 </body>
 </html>
