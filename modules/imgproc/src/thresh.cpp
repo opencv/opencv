@@ -49,6 +49,78 @@
 namespace cv
 {
 
+template <typename T>
+static inline T threshBinary(const T& src, const T& thresh, const T& maxval)
+{
+    return src > thresh ? maxval : 0;
+}
+
+template <typename T>
+static inline T threshBinaryInv(const T& src, const T& thresh, const T& maxval)
+{
+    return src <= thresh ? maxval : 0;
+}
+
+template <typename T>
+static inline T threshTrunc(const T& src, const T& thresh)
+{
+    return std::min(src, thresh);
+}
+
+template <typename T>
+static inline T threshToZero(const T& src, const T& thresh)
+{
+    return src > thresh ? src : 0;
+}
+
+template <typename T>
+static inline T threshToZeroInv(const T& src, const T& thresh)
+{
+    return src <= thresh ? src : 0;
+}
+
+template <typename T>
+static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
+                          size_t dst_step, T thresh, T maxval, int type)
+{
+    int i = 0, j;
+    switch (type)
+    {
+    case THRESH_BINARY:
+        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+            for (j = 0; j < roi.width; j++)
+                dst[j] = threshBinary<T>(src[j], thresh, maxval);
+        return;
+
+    case THRESH_BINARY_INV:
+        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+            for (j = 0; j < roi.width; j++)
+                dst[j] = threshBinaryInv<T>(src[j], thresh, maxval);
+        return;
+
+    case THRESH_TRUNC:
+        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+            for (j = 0; j < roi.width; j++)
+                  dst[j] = threshTrunc<T>(src[j], thresh);
+        return;
+
+    case THRESH_TOZERO:
+        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+            for (j = 0; j < roi.width; j++)
+                dst[j] = threshToZero<T>(src[j], thresh);
+        return;
+
+    case THRESH_TOZERO_INV:
+        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+            for (j = 0; j < roi.width; j++)
+                dst[j] = threshToZeroInv<T>(src[j], thresh);
+        return;
+
+    default:
+        CV_Error( CV_StsBadArg, "" ); return;
+    }
+}
+
 static void
 thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 {
@@ -269,11 +341,151 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     }
 }
 
+static void
+thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
+{
+    Size roi = _src.size();
+    roi.width *= _src.channels();
+    size_t src_step = _src.step / _src.elemSize1();
+    size_t dst_step = _dst.step / _dst.elemSize1();
+
+    if (_src.isContinuous() && _dst.isContinuous())
+    {
+        roi.width *= roi.height;
+        roi.height = 1;
+        src_step = dst_step = roi.width;
+    }
+
+    // HAVE_TEGRA_OPTIMIZATION not supported
+
+    // HAVE_IPP not supported
+
+    const ushort* src = _src.ptr<ushort>();
+    ushort* dst = _dst.ptr<ushort>();
+#if CV_SIMD128
+    bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+    if (useSIMD)
+    {
+        int i, j;
+        v_uint16x8 thresh_u = v_setall_u16(thresh);
+        v_uint16x8 maxval16 = v_setall_u16(maxval);
+
+        switch (type)
+        {
+        case THRESH_BINARY:
+            for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+            {
+                for (j = 0; j <= roi.width - 16; j += 16)
+                {
+                    v_uint16x8 v0, v1;
+                    v0 = v_load(src + j);
+                    v1 = v_load(src + j + 8);
+                    v0 = thresh_u < v0;
+                    v1 = thresh_u < v1;
+                    v0 = v0 & maxval16;
+                    v1 = v1 & maxval16;
+                    v_store(dst + j, v0);
+                    v_store(dst + j + 8, v1);
+                }
+
+                for (; j < roi.width; j++)
+                    dst[j] = threshBinary<ushort>(src[j], thresh, maxval);
+            }
+            break;
+
+        case THRESH_BINARY_INV:
+            for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+            {
+                j = 0;
+                for (; j <= roi.width - 16; j += 16)
+                {
+                    v_uint16x8 v0, v1;
+                    v0 = v_load(src + j);
+                    v1 = v_load(src + j + 8);
+                    v0 = v0 <= thresh_u;
+                    v1 = v1 <= thresh_u;
+                    v0 = v0 & maxval16;
+                    v1 = v1 & maxval16;
+                    v_store(dst + j, v0);
+                    v_store(dst + j + 8, v1);
+                }
+
+                for (; j < roi.width; j++)
+                    dst[j] = threshBinaryInv<ushort>(src[j], thresh, maxval);
+            }
+            break;
+
+        case THRESH_TRUNC:
+            for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+            {
+                j = 0;
+                for (; j <= roi.width - 16; j += 16)
+                {
+                    v_uint16x8 v0, v1;
+                    v0 = v_load(src + j);
+                    v1 = v_load(src + j + 8);
+                    v0 = v_min(v0, thresh_u);
+                    v1 = v_min(v1, thresh_u);
+                    v_store(dst + j, v0);
+                    v_store(dst + j + 8, v1);
+                }
+
+                for (; j < roi.width; j++)
+                    dst[j] = threshTrunc<ushort>(src[j], thresh);
+            }
+            break;
+
+        case THRESH_TOZERO:
+            for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+            {
+                j = 0;
+                for (; j <= roi.width - 16; j += 16)
+                {
+                    v_uint16x8 v0, v1;
+                    v0 = v_load(src + j);
+                    v1 = v_load(src + j + 8);
+                    v0 = (thresh_u < v0) & v0;
+                    v1 = (thresh_u < v1) & v1;
+                    v_store(dst + j, v0);
+                    v_store(dst + j + 8, v1);
+                }
+
+                for (; j < roi.width; j++)
+                    dst[j] = threshToZero<ushort>(src[j], thresh);
+            }
+            break;
+
+        case THRESH_TOZERO_INV:
+            for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+            {
+                j = 0;
+                for (; j <= roi.width - 16; j += 16)
+                {
+                    v_uint16x8 v0, v1;
+                    v0 = v_load(src + j);
+                    v1 = v_load(src + j + 8);
+                    v0 = (v0 <= thresh_u) & v0;
+                    v1 = (v1 <= thresh_u) & v1;
+                    v_store(dst + j, v0);
+                    v_store(dst + j + 8, v1);
+                }
+
+                for (; j < roi.width; j++)
+                    dst[j] = threshToZeroInv<ushort>(src[j], thresh);
+            }
+            break;
+        }
+    }
+    else
+#endif
+    {
+        threshGeneric<ushort>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
+    }
+}
 
 static void
 thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
 {
-    int i, j;
     Size roi = _src.size();
     roi.width *= _src.channels();
     const short* src = _src.ptr<short>();
@@ -348,6 +560,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     bool useSIMD = checkHardwareSupport( CV_CPU_SSE2 ) || checkHardwareSupport( CV_CPU_NEON );
     if( useSIMD )
     {
+        int i, j;
         v_int16x8 thresh8 = v_setall_s16( thresh );
         v_int16x8 maxval8 = v_setall_s16( maxval );
 
@@ -371,7 +584,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0;
+                    dst[j] = threshBinary<short>(src[j], thresh, maxval);
             }
             break;
 
@@ -393,7 +606,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = src[j] <= thresh ? maxval : 0;
+                    dst[j] = threshBinaryInv<short>(src[j], thresh, maxval);
             }
             break;
 
@@ -413,7 +626,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = std::min( src[j], thresh );
+                    dst[j] = threshTrunc<short>( src[j], thresh );
             }
             break;
 
@@ -433,10 +646,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                {
-                    short v = src[j];
-                    dst[j] = v > thresh ? v : 0;
-                }
+                    dst[j] = threshToZero<short>(src[j], thresh);
             }
             break;
 
@@ -456,10 +666,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                {
-                    short v = src[j];
-                    dst[j] = v <= thresh ? v : 0;
-                }
+                    dst[j] = threshToZeroInv<short>(src[j], thresh);
             }
             break;
         default:
@@ -469,56 +676,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     else
 #endif
     {
-        switch( type )
-        {
-        case THRESH_BINARY:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                for( j = 0; j < roi.width; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0;
-            }
-            break;
-
-        case THRESH_BINARY_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                for( j = 0; j < roi.width; j++ )
-                    dst[j] = src[j] <= thresh ? maxval : 0;
-            }
-            break;
-
-        case THRESH_TRUNC:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                for( j = 0; j < roi.width; j++ )
-                    dst[j] = std::min( src[j], thresh );
-            }
-            break;
-
-        case THRESH_TOZERO:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                for( j = 0; j < roi.width; j++ )
-                {
-                    short v = src[j];
-                    dst[j] = v > thresh ? v : 0;
-                }
-            }
-            break;
-
-        case THRESH_TOZERO_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                for( j = 0; j < roi.width; j++ )
-                {
-                    short v = src[j];
-                    dst[j] = v <= thresh ? v : 0;
-                }
-            }
-            break;
-        default:
-            CV_Error( CV_StsBadArg, "" ); return;
-        }
+        threshGeneric<short>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
     }
 }
 
@@ -526,7 +684,6 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
 static void
 thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
 {
-    int i, j;
     Size roi = _src.size();
     roi.width *= _src.channels();
     const float* src = _src.ptr<float>();
@@ -583,6 +740,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     bool useSIMD = checkHardwareSupport( CV_CPU_SSE2 ) || checkHardwareSupport( CV_CPU_NEON );
     if( useSIMD )
     {
+        int i, j;
         v_float32x4 thresh4 = v_setall_f32( thresh );
         v_float32x4 maxval4 = v_setall_f32( maxval );
 
@@ -606,7 +764,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
 
                     for( ; j < roi.width; j++ )
-                        dst[j] = src[j] > thresh ? maxval : 0;
+                        dst[j] = threshBinary<float>(src[j], thresh, maxval);
                 }
                 break;
 
@@ -628,7 +786,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
 
                     for( ; j < roi.width; j++ )
-                        dst[j] = src[j] <= thresh ? maxval : 0;
+                        dst[j] = threshBinaryInv<float>(src[j], thresh, maxval);
                 }
                 break;
 
@@ -648,7 +806,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
 
                     for( ; j < roi.width; j++ )
-                        dst[j] = std::min( src[j], thresh );
+                        dst[j] = threshTrunc<float>(src[j], thresh);
                 }
                 break;
 
@@ -668,10 +826,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
 
                     for( ; j < roi.width; j++ )
-                    {
-                        float v = src[j];
-                        dst[j] = v > thresh ? v : 0;
-                    }
+                        dst[j] = threshToZero<float>(src[j], thresh);
                 }
                 break;
 
@@ -691,10 +846,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
 
                     for( ; j < roi.width; j++ )
-                    {
-                        float v = src[j];
-                        dst[j] = v <= thresh ? v : 0;
-                    }
+                        dst[j] = threshToZeroInv<float>(src[j], thresh);
                 }
                 break;
             default:
@@ -704,63 +856,13 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     else
 #endif
     {
-        switch( type )
-        {
-            case THRESH_BINARY:
-                for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-                {
-                    for( j = 0; j < roi.width; j++ )
-                        dst[j] = src[j] > thresh ? maxval : 0;
-                }
-                break;
-
-            case THRESH_BINARY_INV:
-                for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-                {
-                    for( j = 0; j < roi.width; j++ )
-                        dst[j] = src[j] <= thresh ? maxval : 0;
-                }
-                break;
-
-            case THRESH_TRUNC:
-                for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-                {
-                    for( j = 0; j < roi.width; j++ )
-                        dst[j] = std::min( src[j], thresh );
-                }
-                break;
-
-            case THRESH_TOZERO:
-                for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-                {
-                    for( j = 0; j < roi.width; j++ )
-                    {
-                        float v = src[j];
-                        dst[j] = v > thresh ? v : 0;
-                    }
-                }
-                break;
-
-            case THRESH_TOZERO_INV:
-                for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-                {
-                    for( j = 0; j < roi.width; j++ )
-                    {
-                        float v = src[j];
-                        dst[j] = v <= thresh ? v : 0;
-                    }
-                }
-                break;
-            default:
-                CV_Error( CV_StsBadArg, "" ); return;
-        }
+        threshGeneric<float>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
     }
 }
 
 static void
 thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
 {
-    int i, j;
     Size roi = _src.size();
     roi.width *= _src.channels();
     const double* src = _src.ptr<double>();
@@ -778,6 +880,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
     bool useSIMD = checkHardwareSupport( CV_CPU_SSE2 ) || checkHardwareSupport( CV_CPU_NEON );
     if( useSIMD )
     {
+        int i, j;
         v_float64x2 thresh2 = v_setall_f64( thresh );
         v_float64x2 maxval2 = v_setall_f64( maxval );
 
@@ -801,7 +904,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0;
+                    dst[j] = threshBinary<double>(src[j], thresh, maxval);
             }
             break;
 
@@ -823,7 +926,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = src[j] <= thresh ? maxval : 0;
+                    dst[j] = threshBinaryInv<double>(src[j], thresh, maxval);
             }
             break;
 
@@ -843,7 +946,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = std::min( src[j], thresh );
+                    dst[j] = threshTrunc<double>(src[j], thresh);
             }
             break;
 
@@ -863,10 +966,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 }
 
                 for( ; j < roi.width; j++ )
-                {
-                    double v = src[j];
-                    dst[j] = v > thresh ? v : 0;
-                }
+                    dst[j] = threshToZero<double>(src[j], thresh);
             }
             break;
 
@@ -886,10 +986,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 }
 
                 for( ; j < roi.width; j++ )
-                {
-                    double v = src[j];
-                    dst[j] = v <= thresh ? v : 0;
-                }
+                    dst[j] = threshToZeroInv<double>(src[j], thresh);
             }
             break;
         default:
@@ -899,61 +996,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
     else
 #endif
     {
-        switch( type )
-        {
-        case THRESH_BINARY:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-                for( ; j < roi.width; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0;
-            }
-            break;
-
-        case THRESH_BINARY_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-                for( ; j < roi.width; j++ )
-                    dst[j] = src[j] <= thresh ? maxval : 0;
-            }
-            break;
-
-        case THRESH_TRUNC:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-                for( ; j < roi.width; j++ )
-                    dst[j] = std::min( src[j], thresh );
-            }
-            break;
-
-        case THRESH_TOZERO:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-                for( ; j < roi.width; j++ )
-                {
-                    double v = src[j];
-                    dst[j] = v > thresh ? v : 0;
-                }
-            }
-            break;
-
-        case THRESH_TOZERO_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-                for( ; j < roi.width; j++ )
-                {
-                    double v = src[j];
-                    dst[j] = v <= thresh ? v : 0;
-                }
-            }
-            break;
-        default:
-            CV_Error(CV_StsBadArg, ""); return;
-        }
+        threshGeneric<double>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
     }
 }
 
@@ -1178,6 +1221,10 @@ public:
         else if( srcStripe.depth() == CV_16S )
         {
             thresh_16s( srcStripe, dstStripe, (short)thresh, (short)maxval, thresholdType );
+        }
+        else if( srcStripe.depth() == CV_16U )
+        {
+            thresh_16u( srcStripe, dstStripe, (ushort)thresh, (ushort)maxval, thresholdType );
         }
         else if( srcStripe.depth() == CV_32F )
         {
@@ -1413,6 +1460,34 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 int v = type == THRESH_BINARY ? (ithresh >= SHRT_MAX ? 0 : imaxval) :
                 type == THRESH_BINARY_INV ? (ithresh >= SHRT_MAX ? imaxval : 0) :
                 /*type == THRESH_TRUNC ? imaxval :*/ 0;
+                dst.setTo(v);
+            }
+            else
+                src.copyTo(dst);
+            return thresh;
+        }
+        thresh = ithresh;
+        maxval = imaxval;
+    }
+    else if (src.depth() == CV_16U )
+    {
+        int ithresh = cvFloor(thresh);
+        thresh = ithresh;
+        int imaxval = cvRound(maxval);
+        if (type == THRESH_TRUNC)
+            imaxval = ithresh;
+        imaxval = saturate_cast<ushort>(imaxval);
+
+        int ushrt_min = 0;
+        if (ithresh < ushrt_min || ithresh >= USHRT_MAX)
+        {
+            if (type == THRESH_BINARY || type == THRESH_BINARY_INV ||
+               ((type == THRESH_TRUNC || type == THRESH_TOZERO_INV) && ithresh < ushrt_min) ||
+               (type == THRESH_TOZERO && ithresh >= USHRT_MAX))
+            {
+                int v = type == THRESH_BINARY ? (ithresh >= USHRT_MAX ? 0 : imaxval) :
+                        type == THRESH_BINARY_INV ? (ithresh >= USHRT_MAX ? imaxval : 0) :
+                  /*type == THRESH_TRUNC ? imaxval :*/ 0;
                 dst.setTo(v);
             }
             else
