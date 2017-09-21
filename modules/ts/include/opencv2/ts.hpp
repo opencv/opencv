@@ -58,8 +58,8 @@
 #  define GTEST_USES_POSIX_RE 0
 #endif
 
-#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-#define GET_PARAM(k) std::tr1::get< k >(GetParam())
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< testing::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) testing::get< k >(GetParam())
 
 namespace cvtest
 {
@@ -69,6 +69,13 @@ using std::string;
 using namespace cv;
 using testing::Values;
 using testing::Combine;
+
+// Tuple stuff from Google Tests
+using testing::get;
+using testing::make_tuple;
+using testing::tuple;
+using testing::tuple_size;
+using testing::tuple_element;
 
 
 class SkipTestException: public cv::Exception
