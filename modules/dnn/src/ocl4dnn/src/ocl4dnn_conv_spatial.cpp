@@ -1355,7 +1355,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
     this->bestKernelConfig = kernelQueue[kernel_index_];
 
 
-    if (bestKernelConfig->kernelType != 2 && bestKernelConfig->kernelType != 5)
+    if (bestKernelConfig->kernelType != KERNEL_TYPE_INTEL_IDLF && bestKernelConfig->kernelType != KERNEL_TYPE_GEMM_LIKE)
         if (!swizzled_weights_umat.empty())
             swizzled_weights_umat.release();
 
