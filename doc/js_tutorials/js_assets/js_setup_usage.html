@@ -19,7 +19,6 @@
   </div>
 </div>
 <script src="utils.js" type="text/javascript"></script>
-<script async src="opencv.js" type="text/javascript" onerror="onOpenCvLoadError('status');"></script>
 <script type="text/javascript">
 let imgElement = document.getElementById('imageSrc');
 let inputElement = document.getElementById('fileInput');
@@ -38,6 +37,13 @@ function onOpenCvReady() { // eslint-disable-line no-unused-vars
       'The web page will show two images. The first one is <b>imageSrc</b> as cv.Mat input. ' +
       'The second one is <b>canvasOutput</b> as cv.Mat output.';
 }
+
+function onOpenCvError() { // eslint-disable-line no-unused-vars
+  let element = document.getElementById('status');
+  element.setAttribute('class', 'err');
+  element.innerHTML = 'Failed to load opencv.js';
+}
 </script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvError('status');"></script>
 </body>
 </html>

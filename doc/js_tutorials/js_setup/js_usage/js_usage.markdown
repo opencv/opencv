@@ -51,20 +51,11 @@ Example for synchronous loading:
 <script src="opencv.js" type="text/javascript"></script>
 @endcode
 
-You may want to load `opencv.js` asynchronously by `async` attribute in \<script\> tag. To be notified when `opencv.js` is ready, you can
-use a `Module` object and register a callback to `_main` attribute.
-Please refer to [Emscripten FAQ](https://kripken.github.io/emscripten-site/docs/getting_started/FAQ.html#how-can-i-tell-when-the-page-is-fully-loaded-and-it-is-safe-to-call-compiled-functions) for details.
+You may want to load `opencv.js` asynchronously by `async` attribute in \<script\> tag. To be notified when `opencv.js` is ready, you can register a callback to `onload` attribute.
 
 Example for asynchronous loading
 @code{.js}
-<script type="text/javascript">
-let Module = {
-  _main: function() {
-    onOpenCvReady();
-  },
-};
-</script>
-<script async src="opencv.js" type="text/javascript"></script>
+<script async src="opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
 @endcode
 
 ### Use OpenCV.js
@@ -132,12 +123,8 @@ imgElement.onload = function() {
 function onOpenCvReady() {
   document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
 }
-
-let Module = {
-  _main: function() {onOpenCvReady();},
-};
 </script>
-<script async src="opencv.js" type="text/javascript"></script>
+<script async src="opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
 </body>
 </html>
 @endcode

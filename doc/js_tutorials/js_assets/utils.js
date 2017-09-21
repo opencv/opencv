@@ -1,9 +1,3 @@
-let Module = { // eslint-disable-line no-unused-vars
-  _main: function() {
-    onOpenCvReady();
-  },
-};
-
 function loadImageToCanvas(url, cavansId) { // eslint-disable-line no-unused-vars
   let canvas = document.getElementById(cavansId);
   let ctx = canvas.getContext('2d');

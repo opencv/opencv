@@ -30,7 +30,6 @@
   </div>
 </div>
 <script src="utils.js" type="text/javascript"></script>
-<script async src="opencv.js" type="text/javascript" onerror="onOpenCvLoadError('errorMessage');"></script>
 <script id="codeSnippet" type="text/code-snippet">
 let src = cv.imread('canvasInput');
 let dst = new cv.Mat();
@@ -49,5 +48,6 @@ function onOpenCvReady() { // eslint-disable-line no-unused-vars
   document.getElementById('tryIt').removeAttribute('disabled');
 }
 </script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvLoadError('errorMessage');"></script>
 </body>
 </html>
