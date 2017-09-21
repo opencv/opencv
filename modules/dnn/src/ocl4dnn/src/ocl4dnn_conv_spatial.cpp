@@ -556,8 +556,8 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
         if (oclk_copy_weight.empty())
             return false;
 
-        oclk_copy_weight.set(argIdx++, weight.handle(ACCESS_READ));
-        oclk_copy_weight.set(argIdx++, swizzled_weights_umat.handle(ACCESS_WRITE));
+        oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+        oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat));
         oclk_copy_weight.set(argIdx++, kernel_w_);
         oclk_copy_weight.set(argIdx++, kernel_h_);
         oclk_copy_weight.set(argIdx++, channels);
@@ -693,7 +693,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, bottom.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             }
 
             cl_mem kernel_buffer = NULL;
@@ -713,7 +713,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, swizzled_weights_umat.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
             }
 
             cl_mem bias_buffer = NULL;
@@ -732,7 +732,10 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, bias.handle(ACCESS_READ));
+                if (bias_term_)
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                else
+                    kernel.set(argIdx++, (void *)NULL);
             }
 
             cl_mem out_buffer = NULL;
@@ -751,7 +754,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, top.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
             }
 
             kernel.set(argIdx++, (uint16_t)width_);
@@ -805,7 +808,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, bottom.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             }
 
             cl_mem kernel_buffer = NULL;
@@ -825,7 +828,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, swizzled_weights_umat.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
             }
 
             cl_mem bias_buffer = NULL;
@@ -844,7 +847,10 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, bias.handle(ACCESS_READ));
+                if (bias_term_)
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                else
+                    kernel.set(argIdx++, (void *)NULL);
             }
 
             cl_mem out_buffer = NULL;
@@ -863,7 +869,7 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
             }
             else
             {
-                kernel.set(argIdx++, top.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
             }
 
             kernel.set(argIdx++, (uint16_t)width_);
@@ -922,13 +928,16 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 if (kernel.empty())
                     return false;
 
-                kernel.set(argIdx++, bottom.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
                 kernel.set(argIdx++, image_offset);
-                kernel.set(argIdx++, weight.handle(ACCESS_READ));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
                 kernel.set(argIdx++, kernel_offset);
-                kernel.set(argIdx++, bias.handle(ACCESS_READ));
+                if (bias_term_)
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                else
+                    kernel.set(argIdx++, (void *)NULL);
                 kernel.set(argIdx++, bias_offset);
-                kernel.set(argIdx++, top.handle(ACCESS_WRITE));
+                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
                 kernel.set(argIdx++, output_image_offset);
                 kernel.set(argIdx++, (uint16_t)width_);
                 kernel.set(argIdx++, (uint16_t)height_);

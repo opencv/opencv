@@ -87,7 +87,7 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
             global_copy[0] = width;
             global_copy[1] = height;
             oclk_gemm_copy.set(0, ocl::KernelArg::PtrReadOnly(buffer));
-            oclk_gemm_copy.set(1, (cl_mem) image.ptr());
+            oclk_gemm_copy.set(1, image);
             oclk_gemm_copy.set(2, offset);
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
@@ -111,7 +111,7 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
             global_copy[1] = padded_height;
 
             oclk_gemm_copy.set(0, ocl::KernelArg::PtrReadOnly(buffer));
-            oclk_gemm_copy.set(1, (cl_mem) image.ptr());
+            oclk_gemm_copy.set(1, image);
             oclk_gemm_copy.set(2, offset);
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
@@ -326,14 +326,14 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
             if (is_image_a)
                 oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(A));
             else
-                oclk_gemm_float.set(arg_idx++, (cl_mem) ImA.ptr());
+                oclk_gemm_float.set(arg_idx++, ImA);
 
             if (TransB == CblasNoTrans || is_image_b || (K % use_buffer_indicator != 0))
             {
                 if (is_image_b)
                     oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(B));
                 else
-                    oclk_gemm_float.set(arg_idx++, (cl_mem) ImB.ptr());
+                    oclk_gemm_float.set(arg_idx++, ImB);
             } else {
                 oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(B));
                 oclk_gemm_float.set(arg_idx++, blockB_offset);

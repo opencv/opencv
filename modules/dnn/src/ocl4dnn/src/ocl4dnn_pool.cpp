@@ -135,7 +135,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
             oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? 0 : 1);
             if (mask_idx_.empty())
-                oclk_max_pool_forward.set(argIdx++, NULL);
+                oclk_max_pool_forward.set(argIdx++, (void *)NULL);
             else
                 oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(mask_idx_));
             oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top_mask));
