@@ -143,6 +143,11 @@ TEST(Test_TensorFlow, defun)
     runTensorFlowNet("defun_dropout");
 }
 
+TEST(Test_TensorFlow, reshape)
+{
+    runTensorFlowNet("shift_reshape_no_reorder");
+}
+
 TEST(Test_TensorFlow, fp16)
 {
     const float l1 = 1e-3;

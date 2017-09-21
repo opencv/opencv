@@ -146,13 +146,11 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 class ReshapeLayerImpl : public ReshapeLayer
 {
 public:
-    ReshapeLayerImpl(const LayerParams& params):
-        performReordering(false)
+    ReshapeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
         int axis = params.get<int>("axis", 0);
         int numAxes = params.get<int>("num_axes", -1);
-        enableReordering = params.get<bool>("reorder_dims", false);
         CV_Assert(numAxes >= -1);
         newShapeRange = (numAxes == -1) ? Range(axis, INT_MAX) : Range(axis, axis + numAxes);
 
@@ -184,25 +182,6 @@ public:
         return true;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
-    {
-        CV_Assert(inputs.size());
-        CV_Assert(outputs.size());
-        Mat srcBlob = *inputs[0];
-        int dims = srcBlob.dims;
-        MatShape inputShape = shape(srcBlob), outShape = shape(outputs[0]);
-
-        // input.total() == output.total(). So if reordering is require,
-        // one of the sizes will be are not equal.
-        // Example where reordering is require: from 1x128x4x4 to 1x2048
-        // Example where reordering is NOT require: from 1x1024x1x1 to 1x1024.
-        bool reorderingRequire = false;
-        const int minDims = min(dims, (int)outShape.size());
-        for (int i = 0; !reorderingRequire && i < minDims; ++i)
-            reorderingRequire = inputShape[i] != outShape[i];
-        performReordering = enableReordering && reorderingRequire;
-    }
-
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -211,43 +190,10 @@ public:
         for (size_t i = 0; i < inputs.size(); i++)
         {
             Mat srcBlob = *inputs[i];
-            MatShape inputShape = shape(srcBlob), outShape = shape(outputs[i]);
-
-            if (performReordering)
-            {
-                float *dstData = internals[i].ptr<float>();
-                const float *srcData = srcBlob.ptr<float>();
-
-                int num = inputShape[0], channels = inputShape[1], height = inputShape[2], width = inputShape[3];
-                int total = num*channels*height*width;
-                for(int i_n = 0; i_n < num; i_n++) {
-                    for(int i_c = 0; i_c < channels; i_c++) {
-                        for(int i_h = 0; i_h < height; i_h++) {
-                            for(int i_w = 0; i_w < width; i_w++) {
-                                int src_i = channels*height*width*i_n + height*width*i_c + width*i_h + i_w;
-                                int dst_i = channels*height*width*i_n + i_c + channels*width*i_h + channels*i_w;
-
-                                CV_Assert(dst_i < total);
-                                CV_Assert(src_i < total);
-
-                                dstData[dst_i] = srcData[src_i];
-                            }
-                        }
-                    }
-                }
-                internals[i].copyTo(outputs[i]);
-            }
-            else
-            {
-                if (outputs[i].data != srcBlob.data)
-                    srcBlob.reshape(1, outShape).copyTo(outputs[i]);
-            }
+            if (outputs[i].data != srcBlob.data)
+                srcBlob.reshape(1, shape(outputs[i])).copyTo(outputs[i]);
         }
     }
-
-private:
-    std::vector<std::vector<int> > outShapes;
-    bool enableReordering, performReordering;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)
