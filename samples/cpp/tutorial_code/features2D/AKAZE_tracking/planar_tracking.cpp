@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 
     Mat frame;
     namedWindow(video_name, WINDOW_NORMAL);
-    cout << "\nPress any key to stop video and select a bounding box" << endl;
+    cout << "\nPress any key to stop the video and select a bounding box" << endl;
 
     while ( waitKey(1) < 1 )
     {
