@@ -136,6 +136,8 @@ The values are then converted to the destination data type:
 -   16-bit images:   (currently not supported)
 -   32-bit images:   L, u, and v are left as is
 
+Note that when converting integer Luv images to RGB the intermediate X, Y and Z values are truncated to \f$ [0, 2] \f$ range to fit white point limitations. It may lead to incorrect representation of colors with odd XYZ values.
+
 The above formulae for converting RGB to/from various color spaces have been taken from multiple
 sources on the web, primarily from the Charles Poynton site <http://www.poynton.com/ColorFAQ.html>
 
