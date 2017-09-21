@@ -6,7 +6,7 @@
   "rules": {
     "max-len": ["error", 100, {"ignoreUrls": true}],
     "quotes": ["error", "single"],
-    "indent": ["error", 2, {"ArrayExpression": "first",
+    "indent": ["error", 4, {"ArrayExpression": "first",
                             "CallExpression": {"arguments": "first"}}],
     "require-jsdoc": "off"
   },

@@ -9,39 +9,39 @@
 <h2>Hello OpenCV.js</h2>
 <p id="status">OpenCV.js is loading...</p>
 <div>
-  <div class="inputoutput">
-    <img id="imageSrc" alt="No Image" />
-    <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
-  </div>
-  <div class="inputoutput">
-    <canvas id="canvasOutput" ></canvas>
-    <div class="caption">canvasOutput</div>
-  </div>
+    <div class="inputoutput">
+        <img id="imageSrc" alt="No Image" />
+        <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+    </div>
+    <div class="inputoutput">
+        <canvas id="canvasOutput" ></canvas>
+        <div class="caption">canvasOutput</div>
+    </div>
 </div>
 <script src="utils.js" type="text/javascript"></script>
 <script type="text/javascript">
 let imgElement = document.getElementById('imageSrc');
 let inputElement = document.getElementById('fileInput');
 inputElement.addEventListener('change', (e) => {
-  imgElement.src = URL.createObjectURL(e.target.files[0]);
+    imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 
 imgElement.onload = function() {
-  let mat = cv.imread(imgElement);
-  cv.imshow('canvasOutput', mat);
-  mat.delete();
+    let mat = cv.imread(imgElement);
+    cv.imshow('canvasOutput', mat);
+    mat.delete();
 };
 
 function onOpenCvReady() { // eslint-disable-line no-unused-vars
-  document.getElementById('status').innerHTML = 'OpenCV.js is ready. You can upload an image. ' +
-      'The web page will show two images. The first one is <b>imageSrc</b> as cv.Mat input. ' +
-      'The second one is <b>canvasOutput</b> as cv.Mat output.';
+    document.getElementById('status').innerHTML = 'OpenCV.js is ready. You can upload an image. ' +
+        'The web page will show two images. The first one is <b>imageSrc</b> as cv.Mat input. ' +
+        'The second one is <b>canvasOutput</b> as cv.Mat output.';
 }
 
 function onOpenCvError() { // eslint-disable-line no-unused-vars
-  let element = document.getElementById('status');
-  element.setAttribute('class', 'err');
-  element.innerHTML = 'Failed to load opencv.js';
+    let element = document.getElementById('status');
+    element.setAttribute('class', 'err');
+    element.innerHTML = 'Failed to load opencv.js';
 }
 </script>
 <script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvError('status');"></script>
