@@ -5881,9 +5881,13 @@ static int abToXZ_b[LAB_BASE*9/4];
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
+static const bool enablePackedLuv2RGB = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
+static int LuToUp_b[256*256];
+static int LvToVp_b[256*256];
+static long long int LvToVpl_b[256*256];
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -6013,6 +6017,43 @@ static void initLabTabs()
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
         }
 
+        softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
+        dd = softfloat::one()/max(dd, softfloat::eps());
+        softfloat un = dd*softfloat(13*4)*D65[0];
+        softfloat vn = dd*softfloat(13*9)*D65[1];
+        softfloat oneof4 = softfloat::one()/softfloat(4);
+
+        //when XYZ are limited to [0, 2]
+        /*
+            up: [-402, 1431.57]
+            min abs diff up: 0.010407
+            vp: [-0.25, 0.25]
+            min abs(vp): 0.00034207
+        */
+
+        //Luv LUT
+        for(int LL = 0; LL < 256; LL++)
+        {
+            softfloat L = softfloat(LL*100)/f255;
+            for(int uu = 0; uu < 256; uu++)
+            {
+                softfloat u = softfloat(uu)*uRange/f255 + uLow;
+                softfloat up = softfloat(9)*(u + L*un);
+                LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
+            }
+            for(int vv = 0; vv < 256; vv++)
+            {
+                softfloat v = softfloat(vv)*vRange/f255 + vLow;
+                softfloat vp = oneof4/(v + L*vn);
+                if(vp >  oneof4) vp =  oneof4;
+                if(vp < -oneof4) vp = -oneof4;
+                int ivp = cvRound(vp*softfloat(BASE*1024));
+                LvToVp_b[LL*256+vv] = ivp;
+                int vpl = ivp*LL;
+                LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
+            }
+        }
+
         //try to suppress warning
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
         if(calcLUT)
@@ -6040,11 +6081,6 @@ static void initLabTabs()
             softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
                       C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
                       C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-
-            softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
-            dd = softfloat::one()/max(dd, softfloat(FLT_EPSILON));
-            softfloat un = dd*softfloat(13*4)*D65[0];
-            softfloat vn = dd*softfloat(13*9)*D65[1];
 
             //u, v: [-134.0, 220.0], [-140.0, 122.0]
             static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
@@ -7472,7 +7508,7 @@ struct RGB2Luvfloat
         softfloat d = whitePt[0] +
                       whitePt[1]*softdouble(15) +
                       whitePt[2]*softdouble(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        d = softfloat::one()/max(d, softfloat::eps());
         un = d*softfloat(13*4)*whitePt[0];
         vn = d*softfloat(13*9)*whitePt[1];
 
@@ -7764,13 +7800,13 @@ struct RGB2Luv_f
     int srccn;
 };
 
-struct Luv2RGB_f
+struct Luv2RGBfloat
 {
     typedef float channel_type;
 
-    Luv2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
-              const float* whitept, bool _srgb )
-    : dstcn(_dstcn), srgb(_srgb)
+    Luv2RGBfloat( int _dstcn, int blueIdx, const float* _coeffs,
+                  const float* whitept, bool _srgb )
+    : dstcn(_dstcn),  srgb(_srgb)
     {
         initLabTabs();
 
@@ -7798,7 +7834,7 @@ struct Luv2RGB_f
         softfloat d = whitePt[0] +
                       whitePt[1]*softdouble(15) +
                       whitePt[2]*softdouble(3);
-        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        d = softfloat::one()/max(d, softfloat::eps());
         un = softfloat(4*13)*d*whitePt[0];
         vn = softfloat(9*13)*d*whitePt[1];
         #if CV_SSE2
@@ -8008,6 +8044,25 @@ struct Luv2RGB_f
     #if CV_SSE2
     bool haveSIMD;
     #endif
+};
+
+
+struct Luv2RGB_f
+{
+    typedef float channel_type;
+
+    Luv2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
+              const float* whitept, bool _srgb )
+    : fcvt(_dstcn, blueIdx, _coeffs, whitept, _srgb), dstcn(_dstcn)
+    { }
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        fcvt(src, dst, n);
+    }
+
+    Luv2RGBfloat fcvt;
+    int dstcn;
 };
 
 struct RGB2Luvinterpolate
@@ -8329,217 +8384,308 @@ struct RGB2Luv_b
 };
 
 
+struct Luv2RGBinteger
+{
+    typedef uchar channel_type;
+
+    static const int base_shift = 14;
+    static const int BASE = (1 << base_shift);
+    static const int shift = lab_shift+(base_shift-inv_gamma_shift);
+
+    // whitept is fixed for int calculations
+    Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
+                    const float* /*_whitept*/, bool _srgb )
+    : dstcn(_dstcn)
+    {
+        initLabTabs();
+
+        static const softdouble lshift(1 << lab_shift);
+        for(int i = 0; i < 3; i++)
+        {
+            softdouble c[3];
+            for(int j = 0; j < 3; j++)
+                if(_coeffs)
+                    c[j] = softdouble(_coeffs[i + j*3]);
+                else
+                    c[j] = XYZ2sRGB_D65[i + j*3];
+
+            coeffs[i+blueIdx*3]     = cvRound(lshift*c[0]);
+            coeffs[i+3]             = cvRound(lshift*c[1]);
+            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*c[2]);
+        }
+
+        tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
+    }
+
+    // L, u, v should be in their natural range
+    inline void process(const uchar LL, const uchar uu, const uchar vv, int& ro, int& go, int& bo) const
+    {
+        ushort y = LabToYF_b[LL*2];
+
+        // y : [0, BASE]
+        // up: [-402, 1431.57]*(BASE/1024)
+        // vp: +/- 0.25*BASE*1024
+        int up = LuToUp_b[LL*256+uu];
+        int vp = LvToVp_b[LL*256+vv];
+        //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
+        //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
+
+        long long int xv = ((int)up)*(long long)vp;
+        int x = (int)(xv/BASE);
+        x = y*x/BASE;
+
+        long long int vpl = LvToVpl_b[LL*256+vv];
+        long long int zp = vpl - xv*(255/3);
+        zp /= BASE;
+        long long int zq = zp - (long long)(5*255*BASE);
+        int zm = (int)(y*zq/BASE);
+        int z = zm/256 + zm/65536;
+
+        //limit X, Y, Z to [0, 2] to fit white point
+        x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
+        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
+        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+
+        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
+        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
+        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+
+        ro = tab[ro];
+        go = tab[go];
+        bo = tab[bo];
+    }
+
+    inline void processLuvToXYZ(const v_uint8x16& lv, const v_uint8x16& uv, const v_uint8x16& vv,
+                                int32_t* xyz) const
+    {
+        uint8_t CV_DECL_ALIGNED(16) lvstore[16], uvstore[16], vvstore[16];
+        v_store_aligned(lvstore, lv); v_store_aligned(uvstore, uv); v_store_aligned(vvstore, vv);
+
+        for(int i = 0; i < 16; i++)
+        {
+            int LL = lvstore[i];
+            int u = uvstore[i];
+            int v = vvstore[i];
+            int y = LabToYF_b[LL*2];
+
+            int up = LuToUp_b[LL*256+u];
+            int vp = LvToVp_b[LL*256+v];
+
+            long long int xv = up*(long long int)vp;
+            long long int vpl = LvToVpl_b[LL*256+v];
+            long long int zp = vpl - xv*(255/3);
+            zp = zp >> base_shift;
+            long long int zq = zp - (5*255*BASE);
+            int zm = (int)((y*zq) >> base_shift);
+
+            int x = (int)(xv >> base_shift);
+            x = (y*x) >> base_shift;
+
+            int z = zm/256 + zm/65536;
+            x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+
+            xyz[i] = x; xyz[i + 16] = y; xyz[i + 32] = z;
+        }
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int i, dcn = dstcn;
+        uchar alpha = ColorChannel<uchar>::max();
+
+        i = 0;
+        if(enablePackedLuv2RGB)
+        {
+            static const int nPixels = 16;
+            for (; i < n*3-3*nPixels; i += 3*nPixels, dst += dcn*nPixels)
+            {
+                v_uint8x16 u8l, u8u, u8v;
+                v_load_deinterleave(src + i, u8l, u8u, u8v);
+
+                int32_t CV_DECL_ALIGNED(16) xyz[48];
+                processLuvToXYZ(u8l, u8u, u8v, xyz);
+
+                v_int32x4 xiv[4], yiv[4], ziv[4];
+                for(int k = 0; k < 4; k++)
+                {
+                    xiv[k] = v_load_aligned(xyz + 4*k);
+                    yiv[k] = v_load_aligned(xyz + 4*k + 16);
+                    ziv[k] = v_load_aligned(xyz + 4*k + 32);
+                }
+
+                /*
+                        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+                        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+                        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+                */
+                v_int32x4 C0 = v_setall_s32(coeffs[0]), C1 = v_setall_s32(coeffs[1]), C2 = v_setall_s32(coeffs[2]);
+                v_int32x4 C3 = v_setall_s32(coeffs[3]), C4 = v_setall_s32(coeffs[4]), C5 = v_setall_s32(coeffs[5]);
+                v_int32x4 C6 = v_setall_s32(coeffs[6]), C7 = v_setall_s32(coeffs[7]), C8 = v_setall_s32(coeffs[8]);
+                v_int32x4 descaleShift = v_setall_s32(1 << (shift-1));
+                v_int32x4 tabsz = v_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
+                v_uint32x4 r_vecs[4], g_vecs[4], b_vecs[4];
+                for(int k = 0; k < 4; k++)
+                {
+                    v_int32x4 i_r, i_g, i_b;
+                    i_r = (xiv[k]*C0 + yiv[k]*C1 + ziv[k]*C2 + descaleShift) >> shift;
+                    i_g = (xiv[k]*C3 + yiv[k]*C4 + ziv[k]*C5 + descaleShift) >> shift;
+                    i_b = (xiv[k]*C6 + yiv[k]*C7 + ziv[k]*C8 + descaleShift) >> shift;
+
+                    //limit indices in table and then substitute
+                    //ro = tab[ro]; go = tab[go]; bo = tab[bo];
+                    int32_t CV_DECL_ALIGNED(16) rshifts[4], gshifts[4], bshifts[4];
+                    v_int32x4 rs = v_max(v_setzero_s32(), v_min(tabsz, i_r));
+                    v_int32x4 gs = v_max(v_setzero_s32(), v_min(tabsz, i_g));
+                    v_int32x4 bs = v_max(v_setzero_s32(), v_min(tabsz, i_b));
+
+                    v_store_aligned(rshifts, rs);
+                    v_store_aligned(gshifts, gs);
+                    v_store_aligned(bshifts, bs);
+
+                    r_vecs[k] = v_uint32x4(tab[rshifts[0]], tab[rshifts[1]], tab[rshifts[2]], tab[rshifts[3]]);
+                    g_vecs[k] = v_uint32x4(tab[gshifts[0]], tab[gshifts[1]], tab[gshifts[2]], tab[gshifts[3]]);
+                    b_vecs[k] = v_uint32x4(tab[bshifts[0]], tab[bshifts[1]], tab[bshifts[2]], tab[bshifts[3]]);
+                }
+
+                v_uint16x8 u_rvec0 = v_pack(r_vecs[0], r_vecs[1]), u_rvec1 = v_pack(r_vecs[2], r_vecs[3]);
+                v_uint16x8 u_gvec0 = v_pack(g_vecs[0], g_vecs[1]), u_gvec1 = v_pack(g_vecs[2], g_vecs[3]);
+                v_uint16x8 u_bvec0 = v_pack(b_vecs[0], b_vecs[1]), u_bvec1 = v_pack(b_vecs[2], b_vecs[3]);
+
+                v_uint8x16 u8_b, u8_g, u8_r;
+                u8_b = v_pack(u_bvec0, u_bvec1);
+                u8_g = v_pack(u_gvec0, u_gvec1);
+                u8_r = v_pack(u_rvec0, u_rvec1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(dst, u8_b, u8_g, u8_r, v_setall_u8(alpha));
+                }
+                else
+                {
+                    v_store_interleave(dst, u8_b, u8_g, u8_r);
+                }
+            }
+        }
+
+        for (; i < n*3; i += 3, dst += dcn)
+        {
+            int ro, go, bo;
+            process(src[i + 0], src[i + 1], src[i + 2], ro, go, bo);
+
+            dst[0] = saturate_cast<uchar>(bo);
+            dst[1] = saturate_cast<uchar>(go);
+            dst[2] = saturate_cast<uchar>(ro);
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
+
+    }
+
+    int dstcn;
+    int coeffs[9];
+    ushort* tab;
+};
+
+
 struct Luv2RGB_b
 {
     typedef uchar channel_type;
 
     Luv2RGB_b( int _dstcn, int blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb )
+    : dstcn(_dstcn),
+      fcvt(_dstcn, blueIdx, _coeffs, _whitept, _srgb),
+      icvt(_dstcn, blueIdx, _coeffs, _whitept, _srgb)
     {
-        // 1.388235294117647 = (220+134)/255
-        // 1.027450980392157 = (140+122)/255
-        #if CV_NEON
-        v_scale_inv = vdupq_n_f32(100.f/255.f);
-        v_coeff1 = vdupq_n_f32(1.388235294117647f);
-        v_coeff2 = vdupq_n_f32(1.027450980392157f);
-        v_134 = vdupq_n_f32(134.f);
-        v_140 = vdupq_n_f32(140.f);
-        v_scale = vdupq_n_f32(255.f);
-        v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
-        #elif CV_SSE2
-        v_scale = _mm_set1_ps(255.f);
-        v_zero = _mm_setzero_si128();
-        v_alpha = _mm_set1_ps(ColorChannel<uchar>::max());
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        #endif
+        // whitept is fixed for int calculations
+        useBitExactness = (!_whitept && enableBitExactness);
     }
-
-    #if CV_SSE2
-    // 16s x 8
-    void process(__m128i v_l, __m128i v_u, __m128i v_v,
-                 const __m128& v_coeffs_, const __m128& v_res_,
-                 float * buf) const
-    {
-        __m128 v_l0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_l, v_zero));
-        __m128 v_u0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_u, v_zero));
-        __m128 v_v0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_v, v_zero));
-
-        __m128 v_l1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_l, v_zero));
-        __m128 v_u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_u, v_zero));
-        __m128 v_v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_v, v_zero));
-
-        __m128 v_coeffs = v_coeffs_;
-        __m128 v_res = v_res_;
-
-        v_l0 = _mm_mul_ps(v_l0, v_coeffs);
-        v_u1 = _mm_mul_ps(v_u1, v_coeffs);
-        v_l0 = _mm_sub_ps(v_l0, v_res);
-        v_u1 = _mm_sub_ps(v_u1, v_res);
-
-        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
-        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
-
-        v_l1 = _mm_mul_ps(v_l1, v_coeffs);
-        v_v0 = _mm_mul_ps(v_v0, v_coeffs);
-        v_l1 = _mm_sub_ps(v_l1, v_res);
-        v_v0 = _mm_sub_ps(v_v0, v_res);
-
-        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
-        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
-
-        v_u0 = _mm_mul_ps(v_u0, v_coeffs);
-        v_v1 = _mm_mul_ps(v_v1, v_coeffs);
-        v_u0 = _mm_sub_ps(v_u0, v_res);
-        v_v1 = _mm_sub_ps(v_v1, v_res);
-
-        _mm_store_ps(buf, v_l0);
-        _mm_store_ps(buf + 4, v_l1);
-        _mm_store_ps(buf + 8, v_u0);
-        _mm_store_ps(buf + 12, v_u1);
-        _mm_store_ps(buf + 16, v_v0);
-        _mm_store_ps(buf + 20, v_v1);
-    }
-    #endif
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        if(useBitExactness)
+        {
+            icvt(src, dst, n);
+            return;
+        }
+
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 
-        #if CV_SSE2
-        __m128 v_coeffs = _mm_set_ps(100.f/255.f, 1.027450980392157f, 1.388235294117647f, 100.f/255.f);
-        __m128 v_res = _mm_set_ps(0.f, 140.f, 134.f, 0.f);
-        #endif
+        static const softfloat f255(255);
+        static const softfloat fl = softfloat(100)/f255;
+        static const softfloat fu = uRange/f255;
+        static const softfloat fv = vRange/f255;
 
         for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
         {
             int dn = std::min(n - i, (int)BLOCK_SIZE);
             j = 0;
 
-            #if CV_NEON
-            for ( ; j <= (dn - 8) * 3; j += 24)
+            v_float32x4 luvlm(fl, fu, fv, fl), uvlum(fu, fv, fl, fu), vluvm(fv, fl, fu, fv);
+            v_float32x4 luvla(0, uLow, vLow, 0), uvlua(uLow, vLow, 0, uLow), vluva(vLow, 0, uLow, vLow);
+
+            static const int nPixBlock = 16;
+            for( ; j < (dn-nPixBlock)*3; j += nPixBlock*3)
             {
-                uint8x8x3_t v_src = vld3_u8(src + j);
-                uint16x8_t v_t0 = vmovl_u8(v_src.val[0]),
-                           v_t1 = vmovl_u8(v_src.val[1]),
-                           v_t2 = vmovl_u8(v_src.val[2]);
+                v_uint8x16 src8;
+                v_uint16x8 src16_0, src16_1;
+                v_int32x4 src32_00, src32_01, src32_10, src32_11;
+                v_float32x4 m00, m01, m10, m11, a00, a01, a10, a11;
 
-                float32x4x3_t v_dst;
-                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t0))), v_scale_inv);
-                v_dst.val[1] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t1))), v_coeff1), v_134);
-                v_dst.val[2] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t2))), v_coeff2), v_140);
-                vst3q_f32(buf + j, v_dst);
+                int bufp = 0, srcp = 0;
 
-                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t0))), v_scale_inv);
-                v_dst.val[1] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t1))), v_coeff1), v_134);
-                v_dst.val[2] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t2))), v_coeff2), v_140);
-                vst3q_f32(buf + j + 12, v_dst);
+                #define CVTSTORE(n) v_store_aligned(buf + j + (bufp++)*4, v_muladd(v_cvt_f32(src32_##n), m##n, a##n))
+                #define LOADSTORE(seq1, seq2, seq3, seq4) \
+                do{\
+                    m00 = seq1##m, m01 = seq2##m, m10 = seq3##m, m11 = seq4##m;\
+                    a00 = seq1##a, a01 = seq2##a, a10 = seq3##a, a11 = seq4##a;\
+                    src8 = v_load(src + j + (srcp++)*16);\
+                    v_expand(src8, src16_0, src16_1);\
+                    v_expand(v_reinterpret_as_s16(src16_0), src32_00, src32_01);\
+                    v_expand(v_reinterpret_as_s16(src16_1), src32_10, src32_11);\
+                    CVTSTORE(00); CVTSTORE(01); CVTSTORE(10); CVTSTORE(11);\
+                }while(0)
+
+                LOADSTORE(luvl, uvlu, vluv, luvl);
+                LOADSTORE(uvlu, vluv, luvl, uvlu);
+                LOADSTORE(vluv, luvl, uvlu, vluv);
+
+                #undef CVTSTORE
+                #undef LOADSTORE
             }
-            #elif CV_SSE2
-            if (haveSIMD)
-            {
-                for ( ; j <= (dn - 8) * 3; j += 24)
-                {
-                    __m128i v_src0 = _mm_loadu_si128((__m128i const *)(src + j));
-                    __m128i v_src1 = _mm_loadl_epi64((__m128i const *)(src + j + 16));
-
-                    process(_mm_unpacklo_epi8(v_src0, v_zero),
-                            _mm_unpackhi_epi8(v_src0, v_zero),
-                            _mm_unpacklo_epi8(v_src1, v_zero),
-                            v_coeffs, v_res,
-                            buf + j);
-                }
-            }
-            #endif
             for( ; j < dn*3; j += 3 )
             {
-                buf[j] = src[j]*(100.f/255.f);
-                buf[j+1] = (float)(src[j+1]*1.388235294117647f - 134.f);
-                buf[j+2] = (float)(src[j+2]*1.027450980392157f - 140.f);
+                buf[j] = src[j]*((float)fl);
+                buf[j+1] = (float)(src[j+1]*(float)fu + (float)uLow);
+                buf[j+2] = (float)(src[j+2]*(float)fv + (float)vLow);
             }
-            cvt(buf, buf, dn);
+
+            fcvt(buf, buf, dn);
 
             j = 0;
-            #if CV_NEON
-            for ( ; j <= (dn - 8) * 3; j += 24, dst += dcn * 8)
+
+            //assume that fcvt returns 1.f as alpha value in case of 4 channels
+            static const int nBlock = 16;
+            v_float32x4 m255(255.f, 255.f, 255.f, 255.f);
+            v_float32x4 f00, f01, f10, f11;
+            v_int32x4 i00, i01, i10, i11;
+            for(; j < dn*3 - nBlock; j += nBlock, dst += nBlock)
             {
-                float32x4x3_t v_src0 = vld3q_f32(buf + j), v_src1 = vld3q_f32(buf + j + 12);
-                uint8x8_t v_dst0 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[0], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[0], v_scale)))));
-                uint8x8_t v_dst1 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[1], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[1], v_scale)))));
-                uint8x8_t v_dst2 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[2], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[2], v_scale)))));
-
-                if (dcn == 4)
-                {
-                    uint8x8x4_t v_dst;
-                    v_dst.val[0] = v_dst0;
-                    v_dst.val[1] = v_dst1;
-                    v_dst.val[2] = v_dst2;
-                    v_dst.val[3] = v_alpha;
-                    vst4_u8(dst, v_dst);
-                }
-                else
-                {
-                    uint8x8x3_t v_dst;
-                    v_dst.val[0] = v_dst0;
-                    v_dst.val[1] = v_dst1;
-                    v_dst.val[2] = v_dst2;
-                    vst3_u8(dst, v_dst);
-                }
+                f00 = v_load_aligned(buf + j + 0); f01 = v_load_aligned(buf + j +  4);
+                f10 = v_load_aligned(buf + j + 8); f11 = v_load_aligned(buf + j + 12);
+                i00 = v_round(f00*m255); i01 = v_round(f01*m255);
+                i10 = v_round(f10*m255); i11 = v_round(f11*m255);
+                v_store(dst, v_pack(v_reinterpret_as_u16(v_pack(i00, i01)),
+                                    v_reinterpret_as_u16(v_pack(i10, i11))));
             }
-            #elif CV_SSE2
-            if (dcn == 3 && haveSIMD)
-            {
-                for ( ; j <= (dn * 3 - 16); j += 16, dst += 16)
-                {
-                    __m128 v_src0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
-                    __m128 v_src1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
-                    __m128 v_src2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
-                    __m128 v_src3 = _mm_mul_ps(_mm_load_ps(buf + j + 12), v_scale);
-
-                    __m128i v_dst0 = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
-                                                     _mm_cvtps_epi32(v_src1));
-                    __m128i v_dst1 = _mm_packs_epi32(_mm_cvtps_epi32(v_src2),
-                                                     _mm_cvtps_epi32(v_src3));
-
-                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
-                }
-
-                int jr = j % 3;
-                if (jr)
-                    dst -= jr, j -= jr;
-            }
-            else if (dcn == 4 && haveSIMD)
-            {
-                for ( ; j <= (dn * 3 - 12); j += 12, dst += 16)
-                {
-                    __m128 v_buf0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
-                    __m128 v_buf1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
-                    __m128 v_buf2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
-
-                    __m128 v_ba0 = _mm_unpackhi_ps(v_buf0, v_alpha);
-                    __m128 v_ba1 = _mm_unpacklo_ps(v_buf2, v_alpha);
-
-                    __m128i v_src0 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf0, v_ba0, 0x44));
-                    __m128i v_src1 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba0, v_buf1, 0x4e)), 0x78);
-                    __m128i v_src2 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf1, v_ba1, 0x4e));
-                    __m128i v_src3 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba1, v_buf2, 0xee)), 0x78);
-
-                    __m128i v_dst0 = _mm_packs_epi32(v_src0, v_src1);
-                    __m128i v_dst1 = _mm_packs_epi32(v_src2, v_src3);
-
-                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
-                }
-
-                int jr = j % 3;
-                if (jr)
-                    dst -= jr, j -= jr;
-            }
-            #endif
 
             for( ; j < dn*3; j += 3, dst += dcn )
             {
@@ -8553,17 +8699,10 @@ struct Luv2RGB_b
     }
 
     int dstcn;
-    Luv2RGB_f cvt;
+    Luv2RGBfloat   fcvt;
+    Luv2RGBinteger icvt;
 
-    #if CV_NEON
-    float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_134, v_140;
-    uint8x8_t v_alpha;
-    #elif CV_SSE2
-    __m128 v_scale;
-    __m128 v_alpha;
-    __m128i v_zero;
-    bool haveSIMD;
-    #endif
+    bool useBitExactness;
 };
 
 #undef clip
