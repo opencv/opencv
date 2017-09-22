@@ -1,106 +1,124 @@
-function loadImageToCanvas(url, cavansId) { // eslint-disable-line no-unused-vars
-    let canvas = document.getElementById(cavansId);
-    let ctx = canvas.getContext('2d');
-    let img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function() {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-    };
-    img.src = url;
-}
+function Utils(errorOutputId) {
+    let self = this;
+    this.errorOutput = document.getElementById(errorOutputId);
 
-function executeCode(codeEditorId, errorOutputId) { // eslint-disable-line no-unused-vars
-    let code = document.getElementById(codeEditorId).value;
-    try {
-        eval(code);
-        document.getElementById(errorOutputId).innerHTML = ' ';
-    } catch (err) {
-        handleError(err, errorOutputId);
-    }
-}
-
-function handleError(err, errorOutputId) {
-    if (typeof err === 'number') {
-        if (!isNaN(err)) {
-            err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
-        }
-    } else if (typeof err === 'string') {
-        let ptr = Number(err.split(' ')[0]);
-        if (!isNaN(ptr)) {
-            err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
-        }
-    } else if (err instanceof Error) {
-        err = err.stack.replace(/\n/g, '<br>');
-    }
-    document.getElementById(errorOutputId).innerHTML = err;
-}
-
-function loadCode(scriptId, codeEditorId) { // eslint-disable-line no-unused-vars
-    let scriptNode = document.getElementById(scriptId);
-    let codeEditor = document.getElementById(codeEditorId);
-    if (scriptNode.type !== 'text/code-snippet') {
-        throw Error('Unknown code snippet type');
-    }
-    codeEditor.value = scriptNode.text.replace(/^\n/, '');
-}
-
-function addFileInputHandler(fileInputId, canvasId) { // eslint-disable-line no-unused-vars
-    let inputElement = document.getElementById(fileInputId);
-    inputElement.addEventListener('change', (e) => {
-        let imgUrl = URL.createObjectURL(e.target.files[0]);
-        loadImageToCanvas(imgUrl, canvasId);
-    }, false);
-}
-
-function onOpenCvLoadError(errorOutputId) { // eslint-disable-line no-unused-vars
-    document.getElementById(errorOutputId).innerHTML = 'Failed to load opencv.js';
-}
-
-function startCamera( // eslint-disable-line no-unused-vars
-    resolution, videoId, errorOutputId, callback) {
-    const constraints = {
-        'qvga': {width: {exact: 320}, height: {exact: 240}},
-        'vga': {width: {exact: 640}, height: {exact: 480}}};
-    let video = document.getElementById(videoId);
-    if (!video) {
-        video = document.createElement('video');
-    }
-
-    let videoConstraint = constraints[resolution];
-    if (!videoConstraint) {
-        videoConstraint = true;
-    }
-
-    let errorOutput = document.getElementById(errorOutputId);
-    navigator.mediaDevices.getUserMedia({video: videoConstraint, audio: false})
-        .then(function(stream) {
-            video.srcObject = stream;
-            video.play();
-            video.addEventListener('canplay', () => {
-                if (callback) {
-                    callback(stream, video);
-                }
-            }, false);
-            if (errorOutput) {
-                errorOutput.innerHTML = ' ';
-            }
-        })
-        .catch(function(err) {
-            if (errorOutput) {
-                errorOutput.innerHTML =
-                    'Camera Error: ' + err.name + ' ' + err.message;
-            }
+    const OPENCV_URL = 'opencv.js';
+    this.loadOpenCv = function(onloadCallback) {
+        let script = document.createElement('script');
+        script.setAttribute('async', '');
+        script.setAttribute('type', 'text/javascript');
+        script.addEventListener('load', onloadCallback);
+        script.addEventListener('error', () => {
+            printError(' Failed to load ' + OPENCV_URL);
         });
-}
+        script.src = OPENCV_URL;
+        let node = document.getElementsByTagName('script')[0];
+        node.parentNode.insertBefore(script, node);
+    }
 
-function stopCamera(stream, video) { // eslint-disable-line no-unused-vars
-    if (video) {
-        video.pause();
-        video.srcObject = null;
+    this.loadImageToCanvas = function(url, cavansId) {
+        let canvas = document.getElementById(cavansId);
+        let ctx = canvas.getContext('2d');
+        let img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+        };
+        img.src = url;
     }
-    if (stream) {
-        stream.getVideoTracks()[0].stop();
+
+    this.executeCode = function(textAreaId) {
+        try {
+            let code = document.getElementById(textAreaId).value;
+            eval(code);
+        } catch (err) {
+            this.printError(err);
+        }
     }
-}
+
+    this.clearError = function() {
+        this.errorOutput.innerHTML = '';
+    }
+
+    this.printError = function(err) {
+        if (typeof err === 'undefined') {
+            err = '';
+        } else if (typeof err === 'number') {
+            if (!isNaN(err)) {
+                err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
+            }
+        } else if (typeof err === 'string') {
+            let ptr = Number(err.split(' ')[0]);
+            if (!isNaN(ptr)) {
+                err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
+            }
+        } else if (err instanceof Error) {
+            err = err.name + ' ' + err.message;
+        }
+        this.errorOutput.innerHTML = err;
+    }
+
+    this.loadCode = function(scriptId, textAreaId) {
+        let scriptNode = document.getElementById(scriptId);
+        let textArea = document.getElementById(textAreaId);
+        if (scriptNode.type !== 'text/code-snippet') {
+            throw Error('Unknown code snippet type');
+        }
+        textArea.value = scriptNode.text.replace(/^\n/, '');
+    }
+
+    this.addFileInputHandler = function(fileInputId, canvasId) {
+        let inputElement = document.getElementById(fileInputId);
+        inputElement.addEventListener('change', (e) => {
+            let imgUrl = URL.createObjectURL(e.target.files[0]);
+            loadImageToCanvas(imgUrl, canvasId);
+        }, false);
+    }
+
+    function onVideoCanPlay() {
+        if (self.onCameraStartedCallback) {
+            self.onCameraStartedCallback(self.stream, self.video);
+        }
+    }
+
+    this.startCamera = function(resolution, callback, videoId) {
+        const constraints = {
+            'qvga': {width: {exact: 320}, height: {exact: 240}},
+            'vga': {width: {exact: 640}, height: {exact: 480}}};
+        let video = document.getElementById(videoId);
+        if (!video) {
+            video = document.createElement('video');
+        }
+
+        let videoConstraint = constraints[resolution];
+        if (!videoConstraint) {
+            videoConstraint = true;
+        }
+
+        navigator.mediaDevices.getUserMedia({video: videoConstraint, audio: false})
+            .then(function(stream) {
+                video.srcObject = stream;
+                video.play();
+                self.video = video;
+                self.stream = stream;
+                self.onCameraStartedCallback = callback;
+                video.addEventListener('canplay', onVideoCanPlay, false);
+            })
+            .catch(function(err) {
+                self.printError('Camera Error: ' + err.name + ' ' + err.message)
+            });
+    }
+
+    this.stopCamera = function() {
+        if (this.video) {
+            this.video.pause();
+            this.video.srcObject = null;
+            this.video.removeEventListener('canplay', onVideoCanPlay);
+        }
+        if (this.stream) {
+            this.stream.getVideoTracks()[0].stop();
+        }
+    }
+};

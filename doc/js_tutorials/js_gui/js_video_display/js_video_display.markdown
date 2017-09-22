@@ -39,20 +39,28 @@ Playing video
 Now, the browser gets the camera stream. Then, we use CanvasRenderingContext2D.drawImage() method
 of the Canvas 2D API to draw video onto the canvas. Finally, we can use the method in @ref tutorial_js_image_display
  to read and display image in canvas. For playing video, cv.imshow() should be executed every delay
-milliseconds. We recommend setInterval() method. And if the video is 30fps, the delay milliseconds
-should be 33.
+milliseconds. We recommend setTimeout() method. And if the video is 30fps, the delay milliseconds
+should be (1000/30 - processing_time).
 @code{.js}
 let canvasFrame = document.getElementById("canvasFrame"); // canvasFrame is the id of <canvas>
 let context = canvasFrame.getContext("2d");
 let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC1);
-let intervalId = setInterval(
-    function() {
-        context.drawImage(video, 0, 0, width, height);
-        src.data.set(context.getImageData(0, 0, width, height).data);
-        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
-        cv.imshow("canvasOutput", dst); // canvasOutput is the id of another <canvas>;
-    }, 33);
+
+const FPS = 30;
+function processVideo() {
+    let begin = Date.now();
+    context.drawImage(video, 0, 0, width, height);
+    src.data.set(context.getImageData(0, 0, width, height).data);
+    cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+    cv.imshow("canvasOutput", dst); // canvasOutput is the id of another <canvas>;
+    // schedule next one.
+    let delay = 1000/FPS - (Date.now() - begin);
+    setTimeout(processVideo, delay);
+}
+
+// schedule first one.
+setTimeout(processVideo, 0);
 @endcode
 
 OpenCV.js implements **cv.VideoCapture (videoSource)** using the above method. You need not to
@@ -69,15 +77,23 @@ The above code of playing video could be simplified as below.
 let src = new cv.Mat(height, width, cv.CV_8UC4);
 let dst = new cv.Mat(height, width, cv.CV_8UC1);
 let cap = new cv.VideoCapture(videoSource);
-let intervalId = setInterval(
-    function() {
-        cap.read(src);
-        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
-        cv.imshow("canvasOutput", dst);
-    }, 33);
+
+const FPS = 30;
+function processVideo() {
+    let begin = Date.now();
+    cap.read(src);
+    cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+    cv.imshow("canvasOutput", dst);
+    // schedule next one.
+    let delay = 1000/FPS - (Date.now() - begin);
+    setTimeout(processVideo, delay);
+}
+
+// schedule first one.
+setTimeout(processVideo, 0);
 @endcode
 
-@note Remember to delete src and dst after clearInterval(intervalId).
+@note Remember to delete src and dst after when stop.
 
 Try it
 ------

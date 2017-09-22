@@ -33,9 +33,10 @@ imgElement.onload = function() {
 };
 
 function onOpenCvReady() { // eslint-disable-line no-unused-vars
-    document.getElementById('status').innerHTML = 'OpenCV.js is ready. You can upload an image. ' +
-        'The web page will show two images. The first one is <b>imageSrc</b> as cv.Mat input. ' +
-        'The second one is <b>canvasOutput</b> as cv.Mat output.';
+    document.getElementById('status').innerHTML = '<b>OpenCV.js is ready</b>.' +
+        'You can upload an image.<br>' +
+        'The <b>imageSrc</b> is a &lt;img&gt; element used as cv.Mat input. ' +
+        'The <b>canvasOutput</b> is a &lt;canvas&gt; element used as cv.Mat output.';
 }
 
 function onOpenCvError() { // eslint-disable-line no-unused-vars
@@ -44,6 +45,6 @@ function onOpenCvError() { // eslint-disable-line no-unused-vars
     element.innerHTML = 'Failed to load opencv.js';
 }
 </script>
-<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvError('status');"></script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvError();"></script>
 </body>
 </html>

@@ -4,6 +4,10 @@ body, div, p {
 canvas, img, video {
   border: 1px solid black;
 }
+td {
+  padding: 10px 0px 0px 10px;
+  text-align: center;
+}
 .err {
   color: red;
   font-weight: bold;
