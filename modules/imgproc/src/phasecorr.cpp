@@ -372,37 +372,57 @@ static void fftShift(InputOutputArray _out)
 
     if(is_1d)
     {
+        int is_odd = (xMid > 0 && out.cols % 2 == 1) || (yMid > 0 && out.rows % 2 == 1);
         xMid = xMid + yMid;
 
         for(size_t i = 0; i < planes.size(); i++)
         {
             Mat tmp;
-            Mat half0(planes[i], Rect(0, 0, xMid, 1));
-            Mat half1(planes[i], Rect(xMid, 0, xMid, 1));
+            Mat half0(planes[i], Rect(0, 0, xMid + is_odd, 1));
+            Mat half1(planes[i], Rect(xMid + is_odd, 0, xMid, 1));
 
             half0.copyTo(tmp);
-            half1.copyTo(half0);
-            tmp.copyTo(half1);
+            half1.copyTo(planes[i](Rect(0, 0, xMid, 1)));
+            tmp.copyTo(planes[i](Rect(xMid, 0, xMid + is_odd, 1)));
         }
     }
     else
     {
+        int isXodd = out.cols % 2 == 1;
+        int isYodd = out.rows % 2 == 1;
         for(size_t i = 0; i < planes.size(); i++)
         {
             // perform quadrant swaps...
-            Mat tmp;
-            Mat q0(planes[i], Rect(0,    0,    xMid, yMid));
-            Mat q1(planes[i], Rect(xMid, 0,    xMid, yMid));
-            Mat q2(planes[i], Rect(0,    yMid, xMid, yMid));
-            Mat q3(planes[i], Rect(xMid, yMid, xMid, yMid));
+            Mat q0(planes[i], Rect(0,    0,    xMid + isXodd, yMid + isYodd));
+            Mat q1(planes[i], Rect(xMid + isXodd, 0,    xMid, yMid + isYodd));
+            Mat q2(planes[i], Rect(0,    yMid + isYodd, xMid + isXodd, yMid));
+            Mat q3(planes[i], Rect(xMid + isXodd, yMid + isYodd, xMid, yMid));
 
-            q0.copyTo(tmp);
-            q3.copyTo(q0);
-            tmp.copyTo(q3);
+            if(!(isXodd || isYodd))
+            {
+                Mat tmp;
+                q0.copyTo(tmp);
+                q3.copyTo(q0);
+                tmp.copyTo(q3);
 
-            q1.copyTo(tmp);
-            q2.copyTo(q1);
-            tmp.copyTo(q2);
+                q1.copyTo(tmp);
+                q2.copyTo(q1);
+                tmp.copyTo(q2);
+            }
+            else
+            {
+                Mat tmp0, tmp1, tmp2 ,tmp3;
+                q0.copyTo(tmp0);
+                q1.copyTo(tmp1);
+                q2.copyTo(tmp2);
+                q3.copyTo(tmp3);
+
+                tmp0.copyTo(planes[i](Rect(xMid, yMid, xMid + isXodd, yMid + isYodd)));
+                tmp3.copyTo(planes[i](Rect(0, 0, xMid, yMid)));
+
+                tmp1.copyTo(planes[i](Rect(0, yMid, xMid, yMid + isYodd)));
+                tmp2.copyTo(planes[i](Rect(xMid, 0, xMid + isXodd, yMid)));
+            }
         }
     }
 
