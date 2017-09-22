@@ -931,51 +931,28 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Pad")
         {
-            tensorflow::TensorProto paddings = getConstBlob(layer, value_id, 1);
-            MatShape shape;
-            blobShapeFromTensor(paddings, shape);
-            if (shape[0] != 4)
-                CV_Error(Error::StsError, "Expected NHWC data format");
-
-            // Copy tensor with paddings.
-            std::vector<int32_t> values(shape[0] * 2);
-            CV_Assert(sizeof(int32_t) * values.size() ==
-                      paddings.tensor_content().size());
-            memcpy(&values[0], &paddings.tensor_content()[0],
-                   paddings.tensor_content().size());
-
-            // Allow only one padding operation per layer.
-            bool padded = false;
-            for (int i = 0; i < values.size(); ++i)
+            Mat paddings = getTensorContent(getConstBlob(layer, value_id, 1));
+            CV_Assert(paddings.type() == CV_32SC1);
+            if (paddings.total() == 8)
             {
-                if (values[i])
-                {
-                    if (padded)
-                        CV_Error(Error::StsError,
-                                 "Only single padding operation per layer is supported");
-                    padded = true;
-
-                    int axis = i / 2;
-                    // Remap NHWC to NCHW.
-                    // 0 -> 0
-                    // 1 -> 2
-                    // 2 -> 3
-                    // 3 -> 1
-                    if (axis != 0)
-                        axis = axis % 3 + 1;
-
-                    layerParams.set("padding_dim", axis);
-                    if (i % 2)  // Pad after
-                        layerParams.set("padding", values[i]);
-                    else  // Pad before
-                        layerParams.set("padding", -1 * values[i]);
-
-                    int id = dstNet.addLayer(name, "Padding", layerParams);
-                    layer_id[name] = id;
-
-                    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
-                }
+                // Perhabs, we have NHWC padding dimensions order.
+                //  N    H    W    C
+                // 0 1  2 3  4 5  6 7
+                std::swap(*paddings.ptr<int32_t>(0, 2), *paddings.ptr<int32_t>(0, 6));
+                std::swap(*paddings.ptr<int32_t>(0, 3), *paddings.ptr<int32_t>(0, 7));
+                //  N    C    W    H
+                // 0 1  2 3  4 5  6 7
+                std::swap(*paddings.ptr<int32_t>(0, 4), *paddings.ptr<int32_t>(0, 6));
+                std::swap(*paddings.ptr<int32_t>(0, 5), *paddings.ptr<int32_t>(0, 7));
+                //  N    C    H    W
+                // 0 1  2 3  4 5  6 7
             }
+            layerParams.set("paddings", DictValue::arrayInt<int*>((int*)paddings.data, paddings.total()));
+
+            int id = dstNet.addLayer(name, "Padding", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
         }
         else if (type == "FusedBatchNorm")
         {

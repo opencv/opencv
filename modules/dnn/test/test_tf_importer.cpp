@@ -103,6 +103,7 @@ TEST(Test_TensorFlow, padding)
 {
     runTensorFlowNet("padding_same");
     runTensorFlowNet("padding_valid");
+    runTensorFlowNet("spatial_padding");
 }
 
 TEST(Test_TensorFlow, eltwise_add_mul)
