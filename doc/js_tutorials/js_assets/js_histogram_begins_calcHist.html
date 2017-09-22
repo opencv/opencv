@@ -47,7 +47,7 @@ let scale = 2;
 cv.calcHist(srcVec, channels, mask, hist, histSize, ranges, accumulate);
 let result = cv.minMaxLoc(hist, mask);
 let max = result.maxVal;
-let dst = new cv.Mat.zeros(src.rows, histSize[0] * scale, // eslint-disable-line new-cap
+let dst = new cv.Mat.zeros(src.rows, histSize[0] * scale,
                            cv.CV_8UC3);
 // draw histogram
 for (let i = 0; i < histSize[0]; i++) {

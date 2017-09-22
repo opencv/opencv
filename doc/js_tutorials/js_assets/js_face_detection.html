@@ -82,11 +82,11 @@ utils.loadOpenCv(() => {
 });
 let Module = {
     preRun: [function() {
-        Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml', // eslint-disable-line new-cap
+        Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml',
                                       'haarcascade_eye.xml', true, false);
         let frontalfaceXML = 'haarcascade_frontalface_default.xml';
         let frontalfaceDefaultXML = 'haarcascade_frontalface_default.xml';
-        Module.FS_createPreloadedFile('/', frontalfaceXML, // eslint-disable-line new-cap
+        Module.FS_createPreloadedFile('/', frontalfaceXML,
                                       frontalfaceDefaultXML, true, false);
     }],
 };

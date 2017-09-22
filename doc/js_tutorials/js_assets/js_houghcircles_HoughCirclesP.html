@@ -37,7 +37,7 @@ let circles = new cv.Mat();
 let color = new cv.Scalar(255, 0, 0);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 // You can try more different parameters
-cv.HoughCircles(src, circles, cv.HOUGH_GRADIENT, // eslint-disable-line new-cap
+cv.HoughCircles(src, circles, cv.HOUGH_GRADIENT,
                 1, 45, 75, 40, 0, 0);
 // draw circles
 for (let i = 0; i < circles.cols; ++i) {

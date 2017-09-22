@@ -85,7 +85,7 @@ function processVideo() {
             cv.rectangle(dst, point1, point2, [255, 0, 0, 255]);
         }
         cv.imshow('canvasOutput', dst);
-        // schedule next one.
+        // schedule the next one.
         let delay = 1000/FPS - (Date.now() - begin);
         setTimeout(processVideo, delay);
     } catch (err) {
@@ -93,7 +93,7 @@ function processVideo() {
     }
 };
 
-// schedule first one.
+// schedule the first one.
 setTimeout(processVideo, 0);
 </script>
 <script type="text/javascript">
@@ -133,7 +133,7 @@ function onVideoStopped() {
 
 let Module = {
     preRun: [function() {
-        Module.FS_createPreloadedFile( // eslint-disable-line new-cap
+        Module.FS_createPreloadedFile(
             '/', 'haarcascade_frontalface_default.xml',
             'haarcascade_frontalface_default.xml', true, false);
     }],

@@ -35,9 +35,9 @@ let src = cv.imread('canvasInput');
 let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
 let lines = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.Canny(src, src, 50, 200, 3); // eslint-disable-line new-cap
+cv.Canny(src, src, 50, 200, 3);
 // You can try more different parameters
-cv.HoughLines(src, lines, 1, Math.PI / 180, // eslint-disable-line new-cap
+cv.HoughLines(src, lines, 1, Math.PI / 180,
               30, 0, 0, 0, Math.PI);
 // draw lines
 for (let i = 0; i < lines.rows; ++i) {

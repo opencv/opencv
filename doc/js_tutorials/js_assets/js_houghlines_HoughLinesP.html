@@ -36,9 +36,9 @@ let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
 let lines = new cv.Mat();
 let color = new cv.Scalar(255, 0, 0);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.Canny(src, src, 50, 200, 3); // eslint-disable-line new-cap
+cv.Canny(src, src, 50, 200, 3);
 // You can try more different parameters
-cv.HoughLinesP(src, lines, 1, Math.PI / 180, 2, 0, 0); // eslint-disable-line new-cap
+cv.HoughLinesP(src, lines, 1, Math.PI / 180, 2, 0, 0);
 // draw lines
 for (let i = 0; i < lines.rows; ++i) {
     let startPoint = new cv.Point(lines.data32S[i * 4], lines.data32S[i * 4 + 1]);

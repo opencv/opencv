@@ -56,7 +56,7 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
                 err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
             }
         } else if (err instanceof Error) {
-            err = err.name + ' ' + err.message;
+            err = err.stack.replace(/\n/g, '<br>');
         }
         this.errorOutput.innerHTML = err;
     };
