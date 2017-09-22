@@ -31,6 +31,7 @@ function Utils(errorOutputId) {
 
     this.executeCode = function(textAreaId) {
         try {
+            this.clearError();
             let code = document.getElementById(textAreaId).value;
             eval(code);
         } catch (err) {
