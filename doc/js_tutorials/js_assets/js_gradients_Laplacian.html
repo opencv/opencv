@@ -35,7 +35,7 @@ let src = cv.imread('canvasInput');
 let dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different parameters
-cv.Laplacian(src, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT); // eslint-disable-line new-cap
+cv.Laplacian(src, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow('canvasOutput', dst);
 src.delete(); dst.delete();
 </script>

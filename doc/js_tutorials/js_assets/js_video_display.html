@@ -66,7 +66,7 @@ function processVideo() {
         cap.read(src);
         cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
         cv.imshow('canvasOutput', dst);
-        // schedule next one.
+        // schedule the next one.
         let delay = 1000/FPS - (Date.now() - begin);
         setTimeout(processVideo, delay);
     } catch (err) {
@@ -74,7 +74,7 @@ function processVideo() {
     }
 };
 
-// schedule first one.
+// schedule the first one.
 setTimeout(processVideo, 0);
 </script>
 <script type="text/javascript">

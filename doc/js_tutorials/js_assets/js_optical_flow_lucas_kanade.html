@@ -130,7 +130,7 @@ function processVideo() {
             p0.data32F[i*2+1] = goodNew[i].y;
         }
 
-        // schedule next one.
+        // schedule the next one.
         let delay = 1000/FPS - (Date.now() - begin);
         setTimeout(processVideo, delay);
     } catch (err) {
@@ -138,7 +138,7 @@ function processVideo() {
     }
 };
 
-// schedule first one.
+// schedule the first one.
 setTimeout(processVideo, 0);
 </script>
 <script type="text/javascript">

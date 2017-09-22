@@ -47,7 +47,7 @@ let plane0 = new cv.Mat();
 padded.convertTo(plane0, cv.CV_32F);
 let planes = new cv.MatVector();
 let complexI = new cv.Mat();
-let plane1 = new cv.Mat.zeros(padded.cols, padded.rows, cv.CV_32F); // eslint-disable-line new-cap
+let plane1 = new cv.Mat.zeros(padded.cols, padded.rows, cv.CV_32F);
 planes.push_back(plane0);
 planes.push_back(plane1);
 cv.merge(planes, complexI);
@@ -59,7 +59,7 @@ cv.dft(complexI, complexI);
 cv.split(complexI, planes);
 cv.magnitude(planes.get(0), planes.get(1), planes.get(0));
 let mag = planes.get(0);
-let m1 = new cv.Mat.ones(mag.rows, mag.cols, mag.type()); // eslint-disable-line new-cap
+let m1 = new cv.Mat.ones(mag.rows, mag.cols, mag.type());
 cv.add(mag, m1, mag);
 cv.log(mag, mag);
 

@@ -40,8 +40,8 @@ let dstx = new cv.Mat();
 let absDstx = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different parameters
-cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT); // eslint-disable-line new-cap
-cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT); // eslint-disable-line new-cap
+cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
+cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.convertScaleAbs(absDstx, absDstx, 1, 0);
 cv.imshow('canvasOutput8U', dstx);
 cv.imshow('canvasOutput64F', absDstx);

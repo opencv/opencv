@@ -113,7 +113,7 @@ function processVideo() {
         cv.line(frame, pts[3], pts[0], [255, 0, 0, 255], 3);
         cv.imshow('canvasOutput', frame);
 
-        // schedule next one.
+        // schedule the next one.
         let delay = 1000/FPS - (Date.now() - begin);
         setTimeout(processVideo, delay);
     } catch (err) {
@@ -121,7 +121,7 @@ function processVideo() {
     }
 };
 
-// schedule first one.
+// schedule the first one.
 setTimeout(processVideo, 0);
 </script>
 <script type="text/javascript">

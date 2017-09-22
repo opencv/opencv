@@ -35,7 +35,7 @@ let src = cv.imread('canvasInput');
 let dst = new cv.Mat();
 let ksize = new cv.Size(3, 3);
 // You can try more different parameters
-cv.GaussianBlur(src, dst, ksize, 0, 0, cv.BORDER_DEFAULT); // eslint-disable-line new-cap
+cv.GaussianBlur(src, dst, ksize, 0, 0, cv.BORDER_DEFAULT);
 cv.imshow('canvasOutput', dst);
 src.delete(); dst.delete();
 </script>
