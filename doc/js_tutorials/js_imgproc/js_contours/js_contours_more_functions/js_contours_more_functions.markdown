@@ -28,79 +28,10 @@ We use the function: **cv.convexityDefects (contour, convexhull, convexityDefect
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named convexityDefectsCanvasInput and convexityDefectsCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="convexityDefectsCodeArea">
-<h2>Input your code</h2>
-<button id="convexityDefectsTryIt" disabled="true" onclick="convexityDefectsExecuteCode()">Try it</button><br>
-<textarea rows="22" cols="100" id="convexityDefectsTestCode" spellcheck="false">
-let src = cv.imread("convexityDefectsCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 100, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let hull = new cv.Mat();
-let defect = new cv.Mat();
-let cnt = contours.get(0);
-let lineColor = new cv.Scalar(255, 0, 0), circleColor = new cv.Scalar(255, 255, 255);
-cv.convexHull(cnt, hull, false, false);
-cv.convexityDefects (cnt, hull, defect);
-for (let i = 0 ; i < defect.rows; ++i) {
-    let start = new cv.Point(cnt.data32S[defect.data32S[i * 4] * 2], cnt.data32S[defect.data32S[i * 4] * 2 + 1]);
-    let end = new cv.Point(cnt.data32S[defect.data32S[i * 4 + 1] * 2], cnt.data32S[defect.data32S[i * 4 + 1] * 2 + 1]);
-    let far = new cv.Point(cnt.data32S[defect.data32S[i * 4 + 2] * 2], cnt.data32S[defect.data32S[i * 4 + 2] * 2 + 1]);
-    cv.line(dst, start, end, lineColor, 2, cv.LINE_AA, 0);
-    cv.circle(dst, far, 3, circleColor, -1);
-}
-cv.imshow("convexityDefectsCanvasOutput", dst);
-src.delete(); dst.delete(); hierarchy.delete(); contours.delete(); hull.delete(); defect.delete();
-</textarea>
-<p class="err" id="convexityDefectsErr"></p>
-</div>
-<div id="convexityDefectsShowcase">
-    <div>
-        <canvas id="convexityDefectsCanvasInput"></canvas>
-        <canvas id="convexityDefectsCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="convexityDefectsInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function convexityDefectsExecuteCode() {
-    let convexityDefectsText = document.getElementById("convexityDefectsTestCode").value;
-    try {
-        eval(convexityDefectsText);
-        document.getElementById("convexityDefectsErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("convexityDefectsErr").innerHTML = err;
-    }
-}
-loadImageToCanvas("shape.jpg", "convexityDefectsCanvasInput");
-let convexityDefectsInputElement = document.getElementById("convexityDefectsInput");
-convexityDefectsInputElement.addEventListener("change", convexityDefectsHandleFiles, false);
-function convexityDefectsHandleFiles(e) {
-    let convexityDefectsUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(convexityDefectsUrl, "convexityDefectsCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contours_more_functions_convexityDefects.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 ### 2. Point Polygon Test
@@ -134,73 +65,8 @@ We use the function: **cv.matchShapes (contour1, contour2, method, parameter)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named matchShapesCanvasInput and matchShapesCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="matchShapesCodematchShapes">
-<h2>Input your code</h2>
-<button id="matchShapesTryIt" disabled="true" onclick="matchShapesExecuteCode()">Try it</button><br>
-<textarea rows="16" cols="90" id="matchShapesTestCode" spellcheck="false">
-let src = cv.imread("matchShapesCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let contourID0 = 10, contourID1 = 5;
-let color0 = new cv.Scalar(255, 0, 0), color1 = new cv.Scalar(0, 0, 255);
-// You can try more different parameters
-let result = cv.matchShapes(contours.get(contourID0), contours.get(contourID1), 1, 0);
-matchShapesOutput.innerHTML = result;
-cv.drawContours(dst, contours, contourID0, color0, 1, cv.LINE_8, hierarchy, 100);
-cv.drawContours(dst, contours, contourID1, color1, 1, cv.LINE_8, hierarchy, 100);
-cv.imshow("matchShapesCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
-</textarea>
-<p class="err" id="matchShapesErr"></p>
-</div>
-<div id="matchShapesShowcase">
-    <div>
-        <canvas id="matchShapesCanvasInput"></canvas>
-        <canvas id="matchShapesCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="matchShapesInput" name="file" />
-    <p><strong>The result is: </strong><span id="matchShapesOutput"></span></p>
-</div>
-<script>
-let matchShapesOutput = document.getElementById("matchShapesOutput");
-function matchShapesExecuteCode() {
-    let matchShapesText = document.getElementById("matchShapesTestCode").value;
-    try {
-        eval(matchShapesText);
-        document.getElementById("matchShapesErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("matchShapesErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("coins.jpg", "matchShapesCanvasInput");
-let matchShapesInputElement = document.getElementById("matchShapesInput");
-matchShapesInputElement.addEventListener("change", matchShapesHandleFiles, false);
-function matchShapesHandleFiles(e) {
-    let matchShapesUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(matchShapesUrl, "matchShapesCanvasInput");
-}
-function onReady() {
-    document.getElementById("convexityDefectsTryIt").disabled = false;
-    document.getElementById("matchShapesTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_contours_more_functions_shape.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

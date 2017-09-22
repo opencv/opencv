@@ -81,71 +81,8 @@ magnitude. If it is True, it uses the equation mentioned above which is more acc
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named CannyCanvasInput and CannyCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="CannyCodeArea">
-<h2>Input your code</h2>
-<button id="CannyTryIt" disabled="true" onclick="CannyExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="CannyTestCode" spellcheck="false">
-let src = cv.imread("CannyCanvasInput");
-let dst = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
-// You can try more different parameters
-cv.Canny(src, dst, 50, 100, 3, false);
-cv.imshow("CannyCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="CannyErr"></p>
-</div>
-<div id="CannyShowcase">
-    <div>
-        <canvas id="CannyCanvasInput"></canvas>
-        <canvas id="CannyCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="CannyInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function CannyExecuteCode() {
-    let CannyText = document.getElementById("CannyTestCode").value;
-    try {
-        eval(CannyText);
-        document.getElementById("CannyErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("CannyErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "CannyCanvasInput");
-let CannyInputElement = document.getElementById("CannyInput");
-CannyInputElement.addEventListener("change", CannyHandleFiles, false);
-function CannyHandleFiles(e) {
-    let CannyUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(CannyUrl, "CannyCanvasInput");
-}
-function onReady() {
-    document.getElementById("CannyTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_canny.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

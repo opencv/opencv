@@ -33,65 +33,10 @@ We use the function: **cv.resize (src, dst, dsize, fx = 0, fy = 0, interpolation
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named resizeCanvasInput and resizeCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err{
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="resizeCodeArea">
-<h2>Input your code</h2>
-<button id="resizeTryIt" disabled="true" onclick="resizeExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="resizeTestCode" spellcheck="false">
-let src = cv.imread("resizeCanvasInput");
-let dst = new cv.Mat();
-let dsize = new cv.Size(300, 300);
-// You can try more different parameters
-cv.resize(src, dst, dsize, 0, 0, cv.INTER_AREA);
-cv.imshow("resizeCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="resizeErr"></p>
-</div>
-<div id="resizeShowcase">
-    <div>
-        <canvas id="resizeCanvasInput"></canvas>
-        <canvas id="resizeCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="resizeInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function resizeExecuteCode() {
-    let resizeText = document.getElementById("resizeTestCode").value;
-    try {
-        eval(resizeText);
-        document.getElementById("resizeErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("resizeErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "resizeCanvasInput");
-let resizeInputElement = document.getElementById("resizeInput");
-resizeInputElement.addEventListener("change", resizeHandleFiles, false);
-function resizeHandleFiles(e) {
-    let resizeUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(resizeUrl, "resizeCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_geometric_transformations_resize.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 ### Translation
@@ -115,56 +60,10 @@ rows.
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named warpAffineCanvasInput and warpAffineCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="warpAffineCodeArea">
-<h2>Input your code</h2>
-<button id="warpAffineTryIt" disabled="true" onclick="warpAffineExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="90" id="warpAffineTestCode" spellcheck="false">
-let src = cv.imread("warpAffineCanvasInput");
-let dst = new cv.Mat();
-let M = cv.matFromArray(2, 3, cv.CV_64FC1, [1, 0, 50, 0, 1, 100]);
-let dsize = new cv.Size(src.rows, src.cols);
-// You can try more different parameters
-cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("warpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete();
-</textarea>
-<p class="err" id="warpAffineErr"></p>
-</div>
-<div id="warpAffineShowcase">
-    <div>
-        <canvas id="warpAffineCanvasInput"></canvas>
-        <canvas id="warpAffineCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="warpAffineInput" name="file" />
-</div>
-<script>
-function warpAffineExecuteCode() {
-    let warpAffineText = document.getElementById("warpAffineTestCode").value;
-    try {
-        eval(warpAffineText);
-        document.getElementById("warpAffineErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("warpAffineErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "warpAffineCanvasInput");
-let warpAffineInputElement = document.getElementById("warpAffineInput");
-warpAffineInputElement.addEventListener("change", warpAffineHandleFiles, false);
-function warpAffineHandleFiles(e) {
-    let warpAffineUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(warpAffineUrl, "warpAffineCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_geometric_transformations_warpAffine.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 ### Rotation
@@ -190,58 +89,10 @@ We use the function: **cv.getRotationMatrix2D (center, angle, scale)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named rotateWarpAffineCanvasInput and rotateWarpAffineCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="rotateWarpAffineCodeArea">
-<h2>Input your code</h2>
-<button id="rotateWarpAffineTryIt" disabled="true" onclick="rotateWarpAffineExecuteCode()">Try it</button><br>
-<textarea rows="9" cols="90" id="rotateWarpAffineTestCode" spellcheck="false">
-let src = cv.imread("rotateWarpAffineCanvasInput");
-let dst = new cv.Mat();
-let dsize = new cv.Size(src.rows, src.cols);
-let center = new cv.Point(src.cols / 2, src.rows / 2);
-// You can try more different parameters
-let M = cv.getRotationMatrix2D(center, 45, 1);
-cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("rotateWarpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete();
-</textarea>
-<p class="err" id="rotateWarpAffineErr"></p>
-</div>
-<div id="rotateWarpAffineShowcase">
-    <div>
-        <canvas id="rotateWarpAffineCanvasInput"></canvas>
-        <canvas id="rotateWarpAffineCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="rotateWarpAffineInput" name="file" />
-</div>
-<script>
-function rotateWarpAffineExecuteCode() {
-    let rotateWarpAffineText = document.getElementById("rotateWarpAffineTestCode").value;
-    try {
-        eval(rotateWarpAffineText);
-        document.getElementById("rotateWarpAffineErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("rotateWarpAffineErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "rotateWarpAffineCanvasInput");
-let rotateWarpAffineInputElement = document.getElementById("rotateWarpAffineInput");
-rotateWarpAffineInputElement.addEventListener("change", rotateWarpAffineHandleFiles, false);
-function rotateWarpAffineHandleFiles(e) {
-    let rotateWarpAffineUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(rotateWarpAffineUrl, "rotateWarpAffineCanvasInput");
-}
-
-</script>
-</body>
+<iframe src="../../js_geometric_transformations_rotateWarpAffine.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 ### Affine Transformation
@@ -259,61 +110,10 @@ We use the function: **cv.getAffineTransform (src, dst)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named getAffineTransformCanvasInput and getAffineTransformCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="getAffineTransformCodeArea">
-<h2>Input your code</h2>
-<button id="getAffineTransformTryIt" disabled="true" onclick="getAffineTransformExecuteCode()">Try it</button><br>
-<textarea rows="13" cols="90" id="getAffineTransformTestCode" spellcheck="false">
-let src = cv.imread("getAffineTransformCanvasInput");
-let dst = new cv.Mat();
-// (data32F[0], data32F[1]) is the first point
-// (data32F[2], data32F[3]) is the sescond point
-// (data32F[4], data32F[5]) is the third point
-let srcTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0, 0, 0, 1, 1, 0]);
-let dstTri = cv.matFromArray(3, 1, cv.CV_32FC2, [0.6, 0.2, 0.1, 1.3, 1.5, 0.3]);
-let dsize = new cv.Size(src.rows, src.cols);
-let M = cv.getAffineTransform(srcTri, dstTri);
-// You can try more different parameters
-cv.warpAffine(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("getAffineTransformCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
-</textarea>
-<p class="err" id="getAffineTransformErr"></p>
-</div>
-<div id="getAffineTransformShowcase">
-    <div>
-        <canvas id="getAffineTransformCanvasInput"></canvas>
-        <canvas id="getAffineTransformCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="getAffineTransformInput" name="file" />
-</div>
-<script>
-function getAffineTransformExecuteCode() {
-    let getAffineTransformText = document.getElementById("getAffineTransformTestCode").value;
-    try {
-        eval(getAffineTransformText);
-        document.getElementById("getAffineTransformErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("getAffineTransformErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "getAffineTransformCanvasInput");
-let getAffineTransformInputElement = document.getElementById("getAffineTransformInput");
-getAffineTransformInputElement.addEventListener("change", getAffineTransformHandleFiles, false);
-function getAffineTransformHandleFiles(e) {
-    let getAffineTransformUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(getAffineTransformUrl, "getAffineTransformCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_geometric_transformations_getAffineTransform.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 ### Perspective Transformation
@@ -338,73 +138,8 @@ We use the functions: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named warpPerspectiveCanvasInput and warpPerspectiveCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="warpPerspectiveCodeArea">
-<h2>Input your code</h2>
-<button id="warpPerspectiveTryIt" disabled="true" onclick="warpPerspectiveExecuteCode()">Try it</button><br>
-<textarea rows="15" cols="90" id="warpPerspectiveTestCode" spellcheck="false">
-let src = cv.imread("warpPerspectiveCanvasInput");
-let dst = new cv.Mat();
-let dsize = new cv.Size(src.rows, src.cols);
-// (data32F[0], data32F[1]) is the first point
-// (data32F[2], data32F[3]) is the sescond point
-// (data32F[4], data32F[5]) is the third point
-// (data32F[6], data32F[7]) is the fourth point
-let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [56, 65, 368, 52, 28, 387, 389, 390]);
-let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 300, 0, 0, 300, 300, 300]);
-let M = cv.getPerspectiveTransform(srcTri, dstTri);
-// You can try more different parameters
-cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("warpPerspectiveCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
-</textarea>
-<p class="err" id="warpPerspectiveErr"></p>
-</div>
-<div id="warpPerspectiveShowcase">
-    <div>
-        <canvas id="warpPerspectiveCanvasInput"></canvas>
-        <canvas id="warpPerspectiveCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="warpPerspectiveInput" name="file" />
-</div>
-<script>
-function warpPerspectiveExecuteCode() {
-    let warpPerspectiveText = document.getElementById("warpPerspectiveTestCode").value;
-    try {
-        eval(warpPerspectiveText);
-        document.getElementById("warpPerspectiveErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("warpPerspectiveErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "warpPerspectiveCanvasInput");
-let warpPerspectiveInputElement = document.getElementById("warpPerspectiveInput");
-warpPerspectiveInputElement.addEventListener("change", warpPerspectiveHandleFiles, false);
-function warpPerspectiveHandleFiles(e) {
-    let warpPerspectiveUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(warpPerspectiveUrl, "warpPerspectiveCanvasInput");
-
-}
-function onReady() {
-    document.getElementById("resizeTryIt").disabled = false;
-    document.getElementById("warpAffineTryIt").disabled = false;
-    document.getElementById("rotateWarpAffineTryIt").disabled = false;
-    document.getElementById("getAffineTransformTryIt").disabled = false;
-    document.getElementById("warpPerspectiveTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_geometric_transformations_warpPerspective.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

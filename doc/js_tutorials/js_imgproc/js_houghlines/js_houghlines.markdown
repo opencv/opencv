@@ -78,76 +78,10 @@ We use the function: **cv.HoughLines (image, lines, rho, theta, threshold, srn =
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named HoughLinesCanvasInput and HoughLinesCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="HoughLinesCodeArea">
-<h2>Input your code</h2>
-<button id="HoughLinesTryIt" disabled="true" onclick="HoughLinesExecuteCode()">Try it</button><br>
-<textarea rows="17" cols="80" id="HoughLinesTestCode" spellcheck="false">
-let src = cv.imread("HoughLinesCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
-let lines = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.Canny(src, src, 50, 200, 3);
-// You can try more different parameters
-cv.HoughLines(src, lines, 1, Math.PI / 180, 30, 0, 0, 0, Math.PI);
-// draw lines
-for (let i = 0; i < lines.rows; ++i) {
-    let rho = lines.data32F[i * 2], theta = lines.data32F[i * 2 + 1];
-    let a = Math.cos(theta), b = Math.sin(theta);
-    let x0 = a * rho, y0 = b * rho;
-    let startPoint = {x : x0 - 1000 * b, y : y0 + 1000 * a};
-    let endPoint = {x : x0 + 1000 * b, y : y0 - 1000 * a};
-    cv.line(dst, startPoint, endPoint, [255, 0, 0, 255]);
-}
-cv.imshow("HoughLinesCanvasOutput", dst);
-src.delete(); dst.delete(); lines.delete();
-</textarea>
-<p class="err" id="HoughLinesErr"></p>
-</div>
-<div id="HoughLinesShowcase">
-    <div>
-        <canvas id="HoughLinesCanvasInput"></canvas>
-        <canvas id="HoughLinesCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="HoughLinesInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function HoughLinesExecuteCode() {
-    let HoughLinesText = document.getElementById("HoughLinesTestCode").value;
-    try {
-        eval(HoughLinesText);
-        document.getElementById("HoughLinesErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("HoughLinesErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "HoughLinesCanvasInput");
-let HoughLinesInputElement = document.getElementById("HoughLinesInput");
-HoughLinesInputElement.addEventListener("change", HoughLinesHandleFiles, false);
-function HoughLinesHandleFiles(e) {
-    let HoughLinesUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(HoughLinesUrl, "HoughLinesCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_houghlines_HoughLines.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 Probabilistic Hough Transform
@@ -178,72 +112,8 @@ We use the function: **cv.HoughLinesP (image, lines, rho, theta, threshold, minL
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named HoughLinesPCanvasInput and HoughLinesPCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="HoughLinesPCodeArea">
-<h2>Input your code</h2>
-<button id="HoughLinesPTryIt" disabled="true" onclick="HoughLinesPExecuteCode()">Try it</button><br>
-<textarea rows="17" cols="80" id="HoughLinesPTestCode" spellcheck="false">
-let src = cv.imread("HoughLinesPCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
-let lines = new cv.Mat();
-let color = new cv.Scalar(255, 0, 0);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.Canny(src, src, 50, 200, 3);
-// You can try more different parameters
-cv.HoughLinesP(src, lines, 1, Math.PI / 180, 2, 0, 0);
-// draw lines
-for (let i = 0; i < lines.rows; ++i) {
-    let startPoint = new cv.Point(lines.data32S[i * 4], lines.data32S[i * 4 + 1]);
-    let endPoint = new cv.Point(lines.data32S[i * 4 + 2], lines.data32S[i * 4 + 3]);
-    cv.line(dst, startPoint, endPoint, color);
-}
-cv.imshow("HoughLinesPCanvasOutput", dst);
-src.delete(); dst.delete(); lines.delete();
-</textarea>
-<p class="err" id="HoughLinesPErr"></p>
-</div>
-<div id="HoughLinesPShowcase">
-    <div>
-        <canvas id="HoughLinesPCanvasInput"></canvas>
-        <canvas id="HoughLinesPCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="HoughLinesPInput" name="file" />
-</div>
-<script>
-function HoughLinesPExecuteCode() {
-    let HoughLinesPText = document.getElementById("HoughLinesPTestCode").value;
-    try {
-        eval(HoughLinesPText);
-        document.getElementById("HoughLinesPErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("HoughLinesPErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "HoughLinesPCanvasInput");
-let HoughLinesPInputElement = document.getElementById("HoughLinesPInput");
-HoughLinesPInputElement.addEventListener("change", HoughLinesPHandleFiles, false);
-function HoughLinesPHandleFiles(e) {
-    let HoughLinesPUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(HoughLinesPUrl, "HoughLinesPCanvasInput");
-}
-
-function onReady() {
-    document.getElementById("HoughLinesPTryIt").disabled = false;
-    document.getElementById("HoughLinesTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_houghlines_HoughLinesP.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

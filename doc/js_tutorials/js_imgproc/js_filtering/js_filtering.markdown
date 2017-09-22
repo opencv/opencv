@@ -31,66 +31,10 @@ We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = new cv.P
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named filterCanvasInput and filterCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err{
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="filterCodeArea">
-<h2>Input your code</h2>
-<button id="filterTryIt" disabled="true" onclick="filterExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="filterTestCode" spellcheck="false">
-let src = cv.imread("filterCanvasInput");
-let dst = new cv.Mat();
-let M = cv.Mat.eye(3, 3, cv.CV_32FC1);
-let anchor = new cv.Point(-1, -1);
-// You can try more different parameters
-cv.filter2D(src, dst, cv.CV_8U, M, anchor, 0, cv.BORDER_DEFAULT);
-cv.imshow("filterCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete();
-</textarea>
-<p class="err" id="filterErr"></p>
-</div>
-<div id="filterShowcase">
-    <div>
-        <canvas id="filterCanvasInput"></canvas>
-        <canvas id="filterCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="filterInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function filterExecuteCode() {
-    let filterText = document.getElementById("filterTestCode").value;
-    try {
-        eval(filterText);
-        document.getElementById("filterErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("filterErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "filterCanvasInput");
-let filterInputElement = document.getElementById("filterInput");
-filterInputElement.addEventListener("change", filterHandleFiles, false);
-function filterHandleFiles(e) {
-    let filterUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(filterUrl, "filterCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_filtering_filter.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 Image Blurring (Image Smoothing)
@@ -132,59 +76,11 @@ normalize = false to the function.
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named blurCanvasInput and blurCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="blurCodeArea">
-<h2>Input your code</h2>
-<button id="blurTryIt" disabled="true" onclick="blurExecuteCode()">Try it</button><br>
-<textarea rows="9" cols="80" id="blurTestCode" spellcheck="false">
-let src = cv.imread("blurCanvasInput");
-let dst = new cv.Mat();
-let ksize = new cv.Size(3, 3);
-let anchor = new cv.Point(-1, -1);
-// You can try more different parameters
-cv.blur(src, dst, ksize, anchor, cv.BORDER_DEFAULT);
-// cv.boxFilter(src, dst, -1, ksize, anchor, true, cv.BORDER_DEFAULT)
-cv.imshow("blurCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="blurErr"></p>
-</div>
-<div id="blurShowcase">
-    <div>
-        <canvas id="blurCanvasInput"></canvas>
-        <canvas id="blurCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="blurInput" name="file" />
-</div>
-<script>
-function blurExecuteCode() {
-    let blurText = document.getElementById("blurTestCode").value;
-    try {
-        eval(blurText);
-        document.getElementById("blurErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("blurErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "blurCanvasInput");
-let blurInputElement = document.getElementById("blurInput");
-blurInputElement.addEventListener("change", blurHandleFiles, false);
-function blurHandleFiles(e) {
-    let blurUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(blurUrl, "blurCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_filtering_blur.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
-
 
 ### 2. Gaussian Blurring
 
@@ -201,57 +97,11 @@ We use the function: **cv.GaussianBlur (src, dst, ksize, sigmaX, sigmaY = 0, bor
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named GaussianBlurCanvasInput and GaussianBlurCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="GaussianBlurCodeArea">
-<h2>Input your code</h2>
-<button id="GaussianBlurTryIt" disabled="true" onclick="GaussianBlurExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="GaussianBlurTestCode" spellcheck="false">
-let src = cv.imread("GaussianBlurCanvasInput");
-let dst = new cv.Mat();
-let ksize = new cv.Size(3, 3);
-// You can try more different parameters
-cv.GaussianBlur(src, dst, ksize, 0, 0, cv.BORDER_DEFAULT);
-cv.imshow("GaussianBlurCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="GaussianBlurErr"></p>
-</div>
-<div id="GaussianBlurShowcase">
-    <div>
-        <canvas id="GaussianBlurCanvasInput"></canvas>
-        <canvas id="GaussianBlurCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="GaussianBlurInput" name="file" />
-</div>
-<script>
-function GaussianBlurExecuteCode() {
-    let GaussianBlurText = document.getElementById("GaussianBlurTestCode").value;
-    try {
-        eval(GaussianBlurText);
-        document.getElementById("GaussianBlurErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("GaussianBlurErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "GaussianBlurCanvasInput");
-let GaussianBlurInputElement = document.getElementById("GaussianBlurInput");
-GaussianBlurInputElement.addEventListener("change", GaussianBlurHandleFiles, false);
-function GaussianBlurHandleFiles(e) {
-    let GaussianBlurUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(GaussianBlurUrl, "GaussianBlurCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_filtering_GaussianBlur.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
-
 
 ### 3. Median Blurring
 
@@ -272,56 +122,11 @@ We use the function: **cv.medianBlur (src, dst, ksize)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named medianBlurCanvasInput and medianBlurCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="medianBlurCodeArea">
-<h2>Input your code</h2>
-<button id="medianBlurTryIt" disabled="true" onclick="medianBlurExecuteCode()">Try it</button><br>
-<textarea rows="6" cols="80" id="medianBlurTestCode" spellcheck="false">
-let src = cv.imread("medianBlurCanvasInput");
-let dst = new cv.Mat();
-// You can try more different parameters
-cv.medianBlur(src, dst, 5);
-cv.imshow("medianBlurCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="medianBlurErr"></p>
-</div>
-<div id="medianBlurShowcase">
-    <div>
-        <canvas id="medianBlurCanvasInput"></canvas>
-        <canvas id="medianBlurCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="medianBlurInput" name="file" />
-</div>
-<script>
-function medianBlurExecuteCode() {
-    let medianBlurText = document.getElementById("medianBlurTestCode").value;
-    try {
-        eval(medianBlurText);
-        document.getElementById("medianBlurErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("medianBlurErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "medianBlurCanvasInput");
-let medianBlurInputElement = document.getElementById("medianBlurInput");
-medianBlurInputElement.addEventListener("change", medianBlurHandleFiles, false);
-function medianBlurHandleFiles(e) {
-    let medianBlurUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(medianBlurUrl, "medianBlurCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_filtering_medianBlur.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
-
 
 ### 4. Bilateral Filtering
 
@@ -351,66 +156,8 @@ We use the function: **cv.bilateralFilter (src, dst, d, sigmaColor, sigmaSpace, 
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named bilateralFilterCanvasInput and bilateralFilterCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="bilateralFilterCodeArea">
-<h2>Input your code</h2>
-<button id="bilateralFilterTryIt" disabled="true" onclick="bilateralFilterExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="bilateralFilterTestCode" spellcheck="false">
-let src = cv.imread("bilateralFilterCanvasInput");
-let dst = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-// You can try more different parameters
-cv.bilateralFilter(src, dst, 9, 75, 75, cv.BORDER_DEFAULT);
-cv.imshow("bilateralFilterCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="bilateralFilterErr"></p>
-</div>
-<div id="bilateralFilterShowcase">
-    <div>
-        <canvas id="bilateralFilterCanvasInput"></canvas>
-        <canvas id="bilateralFilterCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="bilateralFilterInput" name="file" />
-</div>
-<script>
-function bilateralFilterExecuteCode() {
-    let bilateralFilterText = document.getElementById("bilateralFilterTestCode").value;
-    try {
-        eval(bilateralFilterText);
-        document.getElementById("bilateralFilterErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("bilateralFilterErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "bilateralFilterCanvasInput");
-let bilateralFilterInputElement = document.getElementById("bilateralFilterInput");
-bilateralFilterInputElement.addEventListener("change", bilateralFilterHandleFiles, false);
-function bilateralFilterHandleFiles(e) {
-    let bilateralFilterUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(bilateralFilterUrl, "bilateralFilterCanvasInput");
-}
-
-function onReady() {
-    document.getElementById("blurTryIt").disabled = false;
-    document.getElementById("GaussianBlurTryIt").disabled = false;
-    document.getElementById("medianBlurTryIt").disabled = false;
-    document.getElementById("bilateralFilterTryIt").disabled = false;
-    document.getElementById("filterTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_filtering_bilateralFilter.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

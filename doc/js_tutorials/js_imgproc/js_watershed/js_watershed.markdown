@@ -38,88 +38,16 @@ mutually touching objects.
 Consider the coins image below, the coins are touching each other. Even if you threshold it, it will
 be touching each other.
 
-\htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="imgCodeArea">
-<h2>Image</h2>
-</div>
-<div id="imgShowcase">
-    <div>
-        <canvas id="imgCanvasInput"></canvas>
-    </div>
-    <input type="file" id="imgInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-loadImageToCanvas("coins.jpg", "imgCanvasInput");
-let imgInputElement = document.getElementById("imgInput");
-imgInputElement.addEventListener("change", imgHandleFiles, false);
-function imgHandleFiles(e) {
-    let imgUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(imgUrl, "imgCanvasInput");
-}
-</script>
-</body>
-\endhtmlonly
-
 We start with finding an approximate estimate of the coins. For that, we can use the Otsu's
 binarization.
 
+Try it
+------
+
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
-</head>
-<body>
-<div id="thresholdCodeArea">
-<p><strong>Threshold Image</strong></p>
-<button id="thresholdTryIt" disabled="true" onclick="thresholdExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="thresholdTestCode" spellcheck="false">
-let src = cv.imread("imgCanvasInput");
-let dst = new cv.Mat(), gray = new cv.Mat();
-
-// gray and threshold image
-cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-
-cv.imshow("thresholdCanvasOutput", gray);
-src.delete(); dst.delete(); gray.delete();
-</textarea>
-<p class="err" id="thresholdErr"></p>
-</div>
-<div id="thresholdShowcase">
-    <div>
-        <canvas id="thresholdCanvasOutput"></canvas>
-    </div>
-</div>
-<script>
-function thresholdExecuteCode() {
-    let thresholdText = document.getElementById("thresholdTestCode").value;
-    try {
-        eval(thresholdText);
-        document.getElementById("thresholdErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("thresholdErr").innerHTML = err;
-    }
-}
-</script>
-</body>
+<iframe src="../../js_watershed_threshold.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 Now we need to remove any small white noises in the image. For that we can use morphological
@@ -135,48 +63,13 @@ they are not coins. For that, we dilate the result. Dilation increases object bo
 background. This way, we can make sure whatever region in background in result is really a
 background, since boundary region is removed. See the image below.
 
+Try it
+------
+
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="backgroundCodeArea">
-<p><strong>Background</strong></p>
-<button id="backgroundTryIt" disabled="true" onclick="backgroundExecuteCode()">Try it</button><br>
-<textarea rows="13" cols="90" id="backgroundTestCode" spellcheck="false">
-let src = cv.imread("imgCanvasInput");
-let dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat();
-cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-
-// get background
-let M = cv.Mat.ones(3, 3, cv.CV_8U);
-cv.erode(gray, gray, M);
-cv.dilate(gray, opening, M);
-cv.dilate(opening, coinsBg, M, new cv.Point(-1, -1), 3);
-
-cv.imshow("backgroundCanvasOutput", coinsBg);
-src.delete(); dst.delete(); gray.delete(); opening.delete(); coinsBg.delete(); M.delete();
-</textarea>
-<p class="err" id="backgroundErr"></p>
-</div>
-<div id="backgroundShowcase">
-    <div>
-        <canvas id="backgroundCanvasOutput"></canvas>
-    </div>
-</div>
-<script>
-function backgroundExecuteCode() {
-    let backgroundText = document.getElementById("backgroundTestCode").value;
-    try {
-        eval(backgroundText);
-        document.getElementById("backgroundErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("backgroundErr").innerHTML = err;
-    }
-}
-</script>
-</body>
+<iframe src="../../js_watershed_background.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 The remaining regions are those which we don't have any idea, whether it is coins or background.
@@ -192,50 +85,13 @@ We use the function: **cv.distanceTransform (src, dst, distanceType, maskSize, l
 @param maskSize      size of the distance transform mask, see (cv.DistanceTransformMasks).
 @param labelType     type of output image. It can be cv.CV_8U or cv.CV_32F. Type cv.CV_8U can be used only for the first variant of the function and distanceType == DIST_L1.
 
+Try it
+------
+
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="distanceTransformCodeArea">
-<p><strong>Distance Transform</strong></p>
-<button id="distanceTransformTryIt" disabled="true" onclick="distanceTransformExecuteCode()">Try it</button><br>
-<textarea rows="14" cols="90" id="distanceTransformTestCode" spellcheck="false">
-let src = cv.imread("imgCanvasInput");
-let dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat(), coinsFg = new cv.Mat(), distTrans = new cv.Mat();
-cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-let M = cv.Mat.ones(3, 3, cv.CV_8U);
-cv.erode(gray, gray, M);
-cv.dilate(gray, opening, M);
-cv.dilate(opening, coinsBg, M, new cv.Point(-1, -1), 3);
-
-// distance transform
-cv.distanceTransform(opening, distTrans, cv.DIST_L2, 5);
-cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
-
-cv.imshow("distanceTransformCanvasOutput", distTrans);
-src.delete(); dst.delete(); gray.delete(); opening.delete(); coinsBg.delete(); coinsFg.delete(); distTrans.delete(); M.delete();
-</textarea>
-<p class="err" id="distanceTransformErr"></p>
-</div>
-<div id="distanceTransformShowcase">
-    <div>
-        <canvas id="distanceTransformCanvasOutput"></canvas>
-    </div>
-</div>
-<script>
-function distanceTransformExecuteCode() {
-    let distanceTransformText = document.getElementById("distanceTransformTestCode").value;
-    try {
-        eval(distanceTransformText);
-        document.getElementById("distanceTransformErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("distanceTransformErr").innerHTML = err;
-    }
-}
-</script>
-</body>
+<iframe src="../../js_watershed_distanceTransform.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 In the thresholded image, we get some regions of coins which we are sure of coins
@@ -244,51 +100,13 @@ not in separating the mutually touching objects. In that case, you need not use 
 just erosion is sufficient. Erosion is just another method to extract sure foreground area, that's
 all.)
 
+Try it
+------
+
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="foregroundCodeArea">
-<p><strong>Foreground</strong></p>
-<button id="foregroundTryIt" disabled="true" onclick="foregroundExecuteCode()">Try it</button><br>
-<textarea rows="15" cols="90" id="foregroundTestCode" spellcheck="false">
-let src = cv.imread("imgCanvasInput");
-let dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat(), coinsFg = new cv.Mat(), distTrans = new cv.Mat();
-cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-let M = cv.Mat.ones(3, 3, cv.CV_8U);
-cv.erode(gray, gray, M);
-cv.dilate(gray, opening, M);
-cv.dilate(opening, coinsBg, M, new cv.Point(-1, -1), 3);
-cv.distanceTransform(opening, distTrans, cv.DIST_L2, 5);
-cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
-
-// get foreground
-cv.threshold(distTrans, coinsFg, 0.7 * 1, 255, cv.THRESH_BINARY);
-
-cv.imshow("foregroundCanvasOutput", coinsFg);
-src.delete(); dst.delete(); gray.delete(); opening.delete(); coinsBg.delete(); coinsFg.delete(); distTrans.delete(); M.delete();
-</textarea>
-<p class="err" id="foregroundErr"></p>
-</div>
-<div id="foregroundShowcase">
-    <div>
-        <canvas id="foregroundCanvasOutput"></canvas>
-    </div>
-</div>
-<script>
-function foregroundExecuteCode() {
-    let foregroundText = document.getElementById("foregroundTestCode").value;
-    try {
-        eval(foregroundText);
-        document.getElementById("foregroundErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("foregroundErr").innerHTML = err;
-    }
-}
-</script>
-</body>
+<iframe src="../../js_watershed_foreground.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 Now we know for sure which are region of coins, which are background and all. So we create marker
@@ -319,98 +137,8 @@ We use the function: **cv.watershed (image, markers)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named watershedCanvasInput and watershedCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="watershedCodeArea">
-<h2>Input your code</h2>
-<button id="watershedTryIt" disabled="true" onclick="watershedExecuteCode()">Try it</button><br>
-<textarea rows="25" cols="90" id="watershedTestCode" spellcheck="false">
-let src = cv.imread("watershedCanvasInput");
-let dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat(), coinsFg = new cv.Mat(), distTrans = new cv.Mat(), unknown = new cv.Mat(), markers = new cv.Mat();
-// gray and threshold image
-cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-// get background
-let M = cv.Mat.ones(3, 3, cv.CV_8U);
-cv.erode(gray, gray, M);
-cv.dilate(gray, opening, M);
-cv.dilate(opening, coinsBg, M, new cv.Point(-1, -1), 3);
-// distance transform
-cv.distanceTransform(opening, distTrans, cv.DIST_L2, 5);
-cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
-// get foreground
-cv.threshold(distTrans, coinsFg, 0.7 * 1, 255, cv.THRESH_BINARY);
-coinsFg.convertTo(coinsFg, cv.CV_8U, 1, 0);
-cv.subtract(coinsBg, coinsFg, unknown);
-// get connected components markers
-cv.connectedComponents(coinsFg, markers);
-for (let i = 0; i < markers.rows; i++)
-    for (let j = 0; j < markers.cols; j++) {
-        markers.intPtr(i, j)[0] = markers.ucharPtr(i, j)[0] + 1;
-        if (unknown.ucharPtr(i, j)[0] == 255) {
-            markers.intPtr(i, j)[0] = 0;
-        }
-    }
-cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-cv.watershed(src, markers);
-// draw barriers
-for (let i = 0; i < markers.rows; i++)
-    for (let j = 0; j < markers.cols; j++) {
-        if (markers.intPtr(i, j)[0] == -1) {
-            src.ucharPtr(i, j)[0] = 255;  //R
-            src.ucharPtr(i, j)[1] = 0;    //G
-            src.ucharPtr(i, j)[2] = 0;    //B
-        }
-    }
-cv.imshow("watershedCanvasOutput", src);
-src.delete(); dst.delete(); gray.delete(); opening.delete(); coinsBg.delete(); coinsFg.delete(); distTrans.delete(); unknown.delete(); markers.delete(); M.delete();
-</textarea>
-<p class="err" id="watershedErr"></p>
-</div>
-<div id="watershedShowcase">
-    <div>
-        <canvas id="watershedCanvasInput"></canvas>
-        <canvas id="watershedCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="watershedInput" name="file" />
-</div>
-<script>
-function watershedExecuteCode() {
-    let watershedText = document.getElementById("watershedTestCode").value;
-    try {
-        eval(watershedText);
-        document.getElementById("watershedErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("watershedErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("coins.jpg", "watershedCanvasInput");
-let watershedInputElement = document.getElementById("watershedInput");
-watershedInputElement.addEventListener("change", watershedHandleFiles, false);
-function watershedHandleFiles(e) {
-    let watershedUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(watershedUrl, "watershedCanvasInput");
-}
-
-function onReady() {
-    document.getElementById("thresholdTryIt").disabled = false;
-    document.getElementById("backgroundTryIt").disabled = false;
-    document.getElementById("distanceTransformTryIt").disabled = false;
-    document.getElementById("foregroundTryIt").disabled = false;
-    document.getElementById("watershedTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_watershed_watershed.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
