@@ -2761,7 +2761,14 @@ void cv::reprojectImageTo3D( InputArray _disparity,
     const float bigZ = 10000.f;
     Matx44d _Q;
     Q.convertTo(_Q, CV_64F);
-
+    
+    // get all necessary coefficients of matrix Q
+    const double q03 = _Q(0,3);
+    const double q13 = _Q(1,3);
+    const double q23 = _Q(2,3);
+    const double q32 = _Q(3,2);
+    const double q33 = _Q(3,3);
+        
     int x, cols = disparity.cols;
     CV_Assert( cols >= 0 );
 
@@ -2808,10 +2815,15 @@ void cv::reprojectImageTo3D( InputArray _disparity,
         for( x = 0; x < cols; x++)
         {
             double d = sptr[x];
-            Vec4d homg_pt = _Q*Vec4d(x, y, d, 1.0);
-            dptr[x] = Vec3d(homg_pt.val);
-            dptr[x] /= homg_pt[3];
-
+            
+            //multiplication of _Q*Vec4d(x, y, d, 1.0) divided by scale W
+            const double WX = (x + q03);
+            const double WY = (y + q13);
+            const double WZ = q23;
+            const double W  = d*q32 + q33;
+            
+            dptr[x] = Vec3d(WX/W, WY/W, WZ/W);
+            
             if( fabs(d-minDisparity) <= FLT_EPSILON )
                 dptr[x][2] = bigZ;
         }
