@@ -34,74 +34,10 @@ We use the function: **cv.equalizeHist (src, dst)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named equalizeHistCanvasInput, imageGrayCanvasOutput and equalizeHistCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="equalizeHistCodeArea">
-<h2>Input your code</h2>
-<button id="equalizeHistTryIt" disabled="true" onclick="equalizeHistExecuteCode()">Try it</button><br>
-<textarea rows="7" cols="80" id="equalizeHistTestCode" spellcheck="false">
-let src = cv.imread("equalizeHistCanvasInput");
-let dst = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.equalizeHist(src, dst);
-cv.imshow("imageGrayCanvasOutput", src);
-cv.imshow("equalizeHistCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="equalizeHistErr"></p>
-</div>
-<div id="equalizeHistShowcase">
-    <div>
-        <p>Original</p>
-        <canvas id="equalizeHistCanvasInput"></canvas>
-        <input type="file" id="equalizeHistInput" name="file" />
-    </div>
-    <div>
-        <p>Gray Image</p>
-        <canvas id="imageGrayCanvasOutput"></canvas>
-    </div>
-    <div>
-        <p>EqualizeHist Image</p>
-        <canvas id="equalizeHistCanvasOutput"></canvas>
-    </div>
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function equalizeHistExecuteCode() {
-    let equalizeHistText = document.getElementById("equalizeHistTestCode").value;
-    try {
-        eval(equalizeHistText);
-        document.getElementById("equalizeHistErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("equalizeHistErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "equalizeHistCanvasInput");
-let equalizeHistInputElement = document.getElementById("equalizeHistInput");
-equalizeHistInputElement.addEventListener("change", equalizeHistHandleFiles, false);
-function equalizeHistHandleFiles(e) {
-    let equalizeHistUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(equalizeHistUrl, "equalizeHistCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_histogram_equalization_equalizeHist.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 CLAHE (Contrast Limited Adaptive Histogram Equalization)
@@ -120,75 +56,8 @@ We use the class: **cv.CLAHE (clipLimit = 40, tileGridSize = new cv.Size(8, 8))*
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named createCLAHECanvasInput, equalCanvasOutput and createCLAHECanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="createCLAHECodeArea">
-<h2>Input your code</h2>
-<button id="createCLAHETryIt" disabled="true" onclick="createCLAHEExecuteCode()">Try it</button><br>
-<textarea rows="9" cols="80" id="createCLAHETestCode" spellcheck="false">
-let src = cv.imread("createCLAHECanvasInput");
-let equalDst = new cv.Mat(), claheDst = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.equalizeHist(src, equalDst);
-let tileGridSize = new cv.Size(8, 8);
-// You can try more different parameters
-let clahe = new cv.CLAHE(40, tileGridSize);
-clahe.apply(src, claheDst);
-cv.imshow("equalCanvasOutput", equalDst);
-cv.imshow("createCLAHECanvasOutput", claheDst);
-src.delete(); equalDst.delete(); claheDst.delete(); clahe.delete();
-</textarea>
-<p class="err" id="createCLAHEErr"></p>
-</div>
-<div id="createCLAHEShowcase">
-    <div>
-        <p>Original</p>
-        <canvas id="createCLAHECanvasInput"></canvas>
-        <input type="file" id="createCLAHEInput" name="file" />
-    </div>
-    <div>
-        <p>EqualizeHist Image</p>
-        <canvas id="equalCanvasOutput"></canvas>
-    </div>
-    <div>
-        <p>CreateCLAHE Image</p>
-        <canvas id="createCLAHECanvasOutput"></canvas>
-    </div>
-</div>
-<script>
-function createCLAHEExecuteCode() {
-    let createCLAHEText = document.getElementById("createCLAHETestCode").value;
-    try {
-        eval(createCLAHEText);
-        document.getElementById("createCLAHEErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("createCLAHEErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "createCLAHECanvasInput");
-let createCLAHEInputElement = document.getElementById("createCLAHEInput");
-createCLAHEInputElement.addEventListener("change", createCLAHEHandleFiles, false);
-function createCLAHEHandleFiles(e) {
-    let createCLAHEUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(createCLAHEUrl, "createCLAHECanvasInput");
-}
-
-function onReady() {
-    document.getElementById("createCLAHETryIt").disabled = false;
-    document.getElementById("equalizeHistTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_histogram_equalization_createCLAHE.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

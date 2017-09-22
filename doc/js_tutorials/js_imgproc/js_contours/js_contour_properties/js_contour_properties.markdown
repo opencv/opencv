@@ -75,70 +75,9 @@ We use the function: **cv.transpose (src, dst)**
 @param dst   output array of the same type as src.
 
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="transposeCodeArea">
-<h2>Input your code</h2>
-<button id="transposeTryIt" disabled="true" onclick="transposeExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="transposeTestCode" spellcheck="false">
-let src = cv.imread("transposeCanvasInput");
-let dst = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
-cv.transpose(src, dst);
-cv.imshow("transposeCanvasOutput", dst);
-src.delete(); dst.delete();
-</textarea>
-<p class="err" id="transposeErr"></p>
-</div>
-<div id="transposeShowcase">
-    <div>
-        <canvas id="transposeCanvasInput"></canvas>
-        <canvas id="transposeCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="transposeInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function transposeExecuteCode() {
-    let transposeText = document.getElementById("transposeTestCode").value;
-    try {
-        eval(transposeText);
-        document.getElementById("transposeErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("transposeErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "transposeCanvasInput");
-let transposeInputElement = document.getElementById("transposeInput");
-transposeInputElement.addEventListener("change", transposeHandleFiles, false);
-function transposeHandleFiles(e) {
-    let transposeUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(transposeUrl, "transposeCanvasInput");
-}
-
-function onReady() {
-    document.getElementById("transposeTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_contour_properties_transpose.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 7. Maximum Value, Minimum Value and their locations

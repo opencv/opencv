@@ -36,65 +36,10 @@ by the fourth parameter of the function. Different types are:
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named thresholdCanvasInput and thresholdCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err{
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="thresholdCodeArea">
-<h2>Input your code</h2>
-<button id="thresholdTryIt" disabled="true" onclick="thresholdExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="thresholdTestCode" spellcheck="false">
-let src = cv.imread("thresholdCanvasInput");
-let dst = new cv.Mat();
-// You can try more different parameters
-cv.threshold(src, dst, 177, 200, cv.THRESH_BINARY)
-cv.imshow("thresholdCanvasOutput", dst);
-src.delete();
-dst.delete();
-</textarea>
-<p class="err" id="thresholdErr"></p>
-</div>
-<div id="thresholdShowcase">
-    <div>
-        <canvas id="thresholdCanvasInput"></canvas>
-        <canvas id="thresholdCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="thresholdInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function thresholdExecuteCode() {
-    let thresholdText = document.getElementById("thresholdTestCode").value;
-    try {
-        eval(thresholdText);
-        document.getElementById("thresholdErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("thresholdErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "thresholdCanvasInput");
-let thresholdInputElement = document.getElementById("thresholdInput");
-thresholdInputElement.addEventListener("change", thresholdHandleFiles, false);
-function thresholdHandleFiles(e) {
-    let thresholdUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(thresholdUrl, "thresholdCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_thresholding_threshold.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 Adaptive Thresholding
@@ -122,63 +67,8 @@ We use the function: **cv.adaptiveThreshold (src, dst, maxValue, adaptiveMethod,
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named adaptiveThresholdCanvasInput and adaptiveThresholdCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="adaptiveThresholdCodeArea">
-<h2>Input your code</h2>
-<button id="adaptiveThresholdTryIt" disabled="true" onclick="adaptiveThresholdExecuteCode()">Try it</button><br>
-<textarea rows="9" cols="80" id="adaptiveThresholdTestCode" spellcheck="false">
-let src = cv.imread("adaptiveThresholdCanvasInput");
-let dst = new cv.Mat();
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-// You can try more different parameters
-cv.adaptiveThreshold(src, dst, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 3, 2)
-cv.imshow("adaptiveThresholdCanvasOutput", dst);
-src.delete();
-dst.delete();
-</textarea>
-<p class="err" id="adaptiveThresholdErr"></p>
-</div>
-<div id="adaptiveThresholdShowcase">
-    <div>
-        <canvas id="adaptiveThresholdCanvasInput"></canvas>
-        <canvas id="adaptiveThresholdCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="adaptiveThresholdInput" name="file" />
-</div>
-<script>
-function adaptiveThresholdExecuteCode() {
-    let adaptiveThresholdText = document.getElementById("adaptiveThresholdTestCode").value;
-    try {
-        eval(adaptiveThresholdText);
-        document.getElementById("adaptiveThresholdErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("adaptiveThresholdErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "adaptiveThresholdCanvasInput");
-let adaptiveThresholdInputElement = document.getElementById("adaptiveThresholdInput");
-adaptiveThresholdInputElement.addEventListener("change", adaptiveThresholdHandleFiles, false);
-function adaptiveThresholdHandleFiles(e) {
-    let adaptiveThresholdUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(adaptiveThresholdUrl, "adaptiveThresholdCanvasInput");
-}
-function onReady() {
-    document.getElementById("thresholdTryIt").disabled = false;
-    document.getElementById("adaptiveThresholdTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_thresholding_adaptiveThreshold.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

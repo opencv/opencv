@@ -50,82 +50,10 @@ We use the functions: **cv.findContours (image, contours, hierarchy, mode, metho
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named contoursCanvasInput and contoursCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="contoursCodeArea">
-<h2>Input your code</h2>
-<button id="contoursTryIt" disabled="true" onclick="contoursExecuteCode()">Try it</button><br>
-<textarea rows="17" cols="90" id="contoursTestCode" spellcheck="false">
-let src = cv.imread("contoursCanvasInput");
-let dst = cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-// You can try more different parameters
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-// draw contours with random Scalar
-for (let i = 0; i < contours.size(); ++i) {
-    let color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
-    cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
-}
-cv.imshow("contoursCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
-</textarea>
-<p class="err" id="contoursErr"></p>
-</div>
-<div id="contoursShowcase">
-    <div>
-        <canvas id="contoursCanvasInput"></canvas>
-        <canvas id="contoursCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="contoursInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function contoursExecuteCode() {
-    let contoursText = document.getElementById("contoursTestCode").value;
-    try {
-        eval(contoursText);
-        document.getElementById("contoursErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("contoursErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "contoursCanvasInput");
-let contoursInputElement = document.getElementById("contoursInput");
-contoursInputElement.addEventListener("change", contoursHandleFiles, false);
-function contoursHandleFiles(e) {
-    let contoursUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(contoursUrl, "contoursCanvasInput");
-}
-
-function onReady() {
-    document.getElementById("contoursTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_contours_begin_contours.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 Contour Approximation Method

@@ -21,71 +21,10 @@ We use the function: **cv.moments (array, binaryImage = false)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named momentsCanvasInput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-.err {
-    color: red;
-}
-</style>
-</head>
-<body>
-<div id="momentsCodeArea">
-<h2>Input your code</h2>
-<button id="momentsTryIt" disabled="true" onclick="momentsExecuteCode()">Try it</button><br>
-<textarea rows="12" cols="90" id="momentsTestCode" spellcheck="false">
-let src = cv.imread("momentsCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(0);
-// You can try more different parameters
-let Moments = cv.moments(cnt, false);
-momentsOutput.innerHTML = Moments.m00;
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
-</textarea>
-<p class="err" id="momentsErr"></p>
-</div>
-<div id="momentsShowcase">
-    <div>
-        <canvas id="momentsCanvasInput"></canvas>
-    </div>
-    <input type="file" id="momentsInput" name="file" />
-    <p><strong>The m00 is: </strong><span id="momentsOutput"></span></p>
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-let momentsOutput = document.getElementById("momentsOutput");
-function momentsExecuteCode() {
-    let momentsText = document.getElementById("momentsTestCode").value;
-    try {
-        eval(momentsText);
-        document.getElementById("momentsErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("momentsErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "momentsCanvasInput");
-let momentsInputElement = document.getElementById("momentsInput");
-momentsInputElement.addEventListener("change", momentsHandleFiles, false);
-function momentsHandleFiles(e) {
-    let momentsUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(momentsUrl, "momentsCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_moments.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 From this moments, you can extract useful data like area, centroid etc. Centroid is given by the
@@ -108,61 +47,10 @@ We use the function: **cv.contourArea (contour, oriented = false)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named areaCanvasInput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="areaCodeArea">
-<h2>Input your code</h2>
-<button id="areaTryIt" disabled="true" onclick="areaExecuteCode()">Try it</button><br>
-<textarea rows="12" cols="90" id="areaTestCode" spellcheck="false">
-let src = cv.imread("areaCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(20);
-// You can try more different parameters
-let area = cv.contourArea(cnt, false);
-areaOutput.innerHTML = area;
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
-</textarea>
-<p class="err" id="areaErr"></p>
-</div>
-<div id="areaShowcase">
-    <div>
-        <canvas id="areaCanvasInput"></canvas>
-    </div>
-    <input type="file" id="areaInput" name="file" />
-    <p><strong>The area is: </strong><span id="areaOutput"></span></p>
-</div>
-<script>
-let areaOutput = document.getElementById("areaOutput");
-function areaExecuteCode() {
-    let areaText = document.getElementById("areaTestCode").value;
-    try {
-        eval(areaText);
-        document.getElementById("areaErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("areaErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "areaCanvasInput");
-let areaInputElement = document.getElementById("areaInput");
-areaInputElement.addEventListener("change", areaHandleFiles, false);
-function areaHandleFiles(e) {
-    let areaUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(areaUrl, "areaCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_area.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 3. Contour Perimeter
@@ -177,61 +65,10 @@ We use the function: **cv.arcLength (curve, closed)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named perimeterCanvasInput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="perimeterCodeArea">
-<h2>Input your code</h2>
-<button id="perimeterTryIt" disabled="true" onclick="perimeterExecuteCode()">Try it</button><br>
-<textarea rows="12" cols="90" id="perimeterTestCode" spellcheck="false">
-let src = cv.imread("perimeterCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(20);
-// You can try more different parameters
-let perimeter = cv.arcLength(cnt, true);
-perimeterOutput.innerHTML = perimeter;
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
-</textarea>
-<p class="err" id="perimeterErr"></p>
-</div>
-<div id="perimeterShowcase">
-    <div>
-        <canvas id="perimeterCanvasInput"></canvas>
-    </div>
-    <input type="file" id="perimeterInput" name="file" />
-    <p><strong>The perimeter is: </strong><span id="perimeterOutput"></span></p>
-</div>
-<script>
-let perimeterOutput = document.getElementById("perimeterOutput");
-function perimeterExecuteCode() {
-    let perimeterText = document.getElementById("perimeterTestCode").value;
-    try {
-        eval(perimeterText);
-        document.getElementById("perimeterErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("perimeterErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "perimeterCanvasInput");
-let perimeterInputElement = document.getElementById("perimeterInput");
-perimeterInputElement.addEventListener("change", perimeterHandleFiles, false);
-function perimeterHandleFiles(e) {
-    let perimeterUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(perimeterUrl, "perimeterCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_perimeter.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 4. Contour Approximation
@@ -251,73 +88,10 @@ We use the function: **cv.approxPolyDP (curve, approxCurve, epsilon, closed)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named approxPolyDPCanvasInput and approxPolyDPCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="approxPolyDPCodeArea">
-<h2>Input your code</h2>
-<button id="approxPolyDPTryIt" disabled="true" onclick="approxPolyDPExecuteCode()">Try it</button><br>
-<textarea rows="20" cols="90" id="approxPolyDPTestCode" spellcheck="false">
-let src = cv.imread("approxPolyDPCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 100, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-let poly = new cv.MatVector();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-// approximates each contour to polygon
-for (let i = 0 ; i < contours.size(); ++i) {
-    let tmp = new cv.Mat();
-    let cnt = contours.get(i);
-    // You can try more different parameters
-    cv.approxPolyDP(cnt, tmp, 3, true);
-    poly.push_back(tmp);
-    cnt.delete(); tmp.delete();
-}
-// draw contours with random Scalar
-for (let i = 0 ; i < contours.size(); ++i) {
-    let color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
-    cv.drawContours(dst, poly, i, color, 1, 8, hierarchy, 0);
-}
-cv.imshow("approxPolyDPCanvasOutput", dst);
-
-src.delete(); dst.delete(); hierarchy.delete(); contours.delete(); poly.delete();
-</textarea>
-<p class="err" id="approxPolyDPErr"></p>
-</div>
-<div id="approxPolyDPShowcase">
-    <div>
-        <canvas id="approxPolyDPCanvasInput"></canvas>
-        <canvas id="approxPolyDPCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="approxPolyDPInput" name="file" />
-</div>
-<script>
-function approxPolyDPExecuteCode() {
-    let approxPolyDPText = document.getElementById("approxPolyDPTestCode").value;
-    try {
-        eval(approxPolyDPText);
-        document.getElementById("approxPolyDPErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("approxPolyDPErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "approxPolyDPCanvasInput");
-let approxPolyDPInputElement = document.getElementById("approxPolyDPInput");
-approxPolyDPInputElement.addEventListener("change", approxPolyDPHandleFiles, false);
-function approxPolyDPHandleFiles(e) {
-    let approxPolyDPUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(approxPolyDPUrl, "approxPolyDPCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_approxPolyDP.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 5. Convex Hull
@@ -341,73 +115,10 @@ We use the function: **cv.convexHull (points, hull, clockwise = false, returnPoi
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named convexHullCanvasInput and convexHullCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="convexHullCodeArea">
-<h2>Input your code</h2>
-<button id="convexHullTryIt" disabled="true" onclick="convexHullExecuteCode()">Try it</button><br>
-<textarea rows="24" cols="90" id="convexHullTestCode" spellcheck="false">
-let src = cv.imread("convexHullCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 100, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-let hull = new cv.MatVector();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-// approximates each contour to convex hull
-for (let i = 0 ; i < contours.size(); ++i) {
-    let tmp = new cv.Mat();
-    let cnt = contours.get(i);
-    // You can try more different parameters
-    cv.convexHull(cnt, tmp, false, true);
-    hull.push_back(tmp);
-    cnt.delete(); tmp.delete();
-}
-// draw contours with random Scalar
-for(let i = 0 ; i < contours.size(); ++i) {
-    let colorHull = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
-    cv.drawContours(dst, hull, i, colorHull, 1, 8, hierarchy, 0);
-    let colorContours = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
-}
-cv.imshow("convexHullCanvasOutput", dst);
-src.delete(); dst.delete(); hierarchy.delete(); contours.delete(); hull.delete();
-</textarea>
-<p class="err" id="convexHullErr"></p>
-</div>
-<div id="convexHullShowcase">
-    <div>
-        <canvas id="convexHullCanvasInput"></canvas>
-        <canvas id="convexHullCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="convexHullInput" name="file" />
-</div>
-<script>
-function convexHullExecuteCode() {
-    let convexHullText = document.getElementById("convexHullTestCode").value;
-    try {
-        eval(convexHullText);
-        document.getElementById("convexHullErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("convexHullErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("lena.jpg", "convexHullCanvasInput");
-let convexHullInputElement = document.getElementById("convexHullInput");
-convexHullInputElement.addEventListener("change", convexHullHandleFiles, false);
-function convexHullHandleFiles(e) {
-    let convexHullUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(convexHullUrl, "convexHullCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_convexHull.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 6. Checking Convexity
@@ -436,66 +147,10 @@ We use the function: **cv.boundingRect (points)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named boundingRectCanvasInput and boundingRectCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="boundingRectCodeArea">
-<h2>Input your code</h2>
-<button id="boundingRectTryIt" disabled="true" onclick="boundingRectExecuteCode()">Try it</button><br>
-<textarea rows="15" cols="90" id="boundingRectTestCode" spellcheck="false">
-let src = cv.imread("boundingRectCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(0);
-// You can try more different parameters
-let rect = cv.boundingRect(cnt);
-let contoursColor = new cv.Scalar(255, 255, 255);
-let rectangleColor = new cv.Scalar(255, 0, 0);
-cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100);
-let point1 = new cv.Point(rect.x, rect.y);
-let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-cv.rectangle(dst, point1, point2, rectangleColor, 2, cv.LINE_AA, 0);
-cv.imshow("boundingRectCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
-</textarea>
-<p class="err" id="boundingRectErr"></p>
-</div>
-<div id="boundingRectShowcase">
-    <div>
-        <canvas id="boundingRectCanvasInput"></canvas>
-        <canvas id="boundingRectCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="boundingRectInput" name="file" />
-</div>
-<script>
-function boundingRectExecuteCode() {
-    let boundingRectText = document.getElementById("boundingRectTestCode").value;
-    try {
-        eval(boundingRectText);
-        document.getElementById("boundingRectErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("boundingRectErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "boundingRectCanvasInput");
-let boundingRectInputElement = document.getElementById("boundingRectInput");
-boundingRectInputElement.addEventListener("change", boundingRectHandleFiles, false);
-function boundingRectHandleFiles(e) {
-    let boundingRectUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(boundingRectUrl, "boundingRectCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_boundingRect.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 ### 7.b. Rotated Rectangle
@@ -508,67 +163,10 @@ We use the function: **cv.minAreaRect (points)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named minAreaRectCanvasInput and minAreaRectCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="minAreaRectCodeArea">
-<h2>Input your code</h2>
-<button id="minAreaRectTryIt" disabled="true" onclick="minAreaRectExecuteCode()">Try it</button><br>
-<textarea rows="18" cols="90" id="minAreaRectTestCode" spellcheck="false">
-let src = cv.imread("minAreaRectCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(0);
-// You can try more different parameters
-let rotatedRect = cv.minAreaRect(cnt);
-let vertices = cv.RotatedRect.points(rotatedRect);
-let contoursColor = new cv.Scalar(255, 255, 255);
-let rectangleColor = new cv.Scalar(255, 0, 0);
-cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100);
-// draw rotatedRect
-for (let i = 0; i < 4; i++)
-    cv.line(dst, vertices[i], vertices[(i + 1) % 4], rectangleColor, 2, cv.LINE_AA, 0);
-cv.imshow("minAreaRectCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
-</textarea>
-<p class="err" id="minAreaRectErr"></p>
-</div>
-<div id="minAreaRectShowcase">
-    <div>
-        <canvas id="minAreaRectCanvasInput"></canvas>
-        <canvas id="minAreaRectCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="minAreaRectInput" name="file" />
-</div>
-<script>
-function minAreaRectExecuteCode() {
-    let minAreaRectText = document.getElementById("minAreaRectTestCode").value;
-    try {
-        eval(minAreaRectText);
-        document.getElementById("minAreaRectErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("minAreaRectErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "minAreaRectCanvasInput");
-let minAreaRectInputElement = document.getElementById("minAreaRectInput");
-minAreaRectInputElement.addEventListener("change", minAreaRectHandleFiles, false);
-function minAreaRectHandleFiles(e) {
-    let minAreaRectUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(minAreaRectUrl, "minAreaRectCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_minAreaRect.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 8. Minimum Enclosing Circle
@@ -592,64 +190,10 @@ We use the functions: **cv.minEnclosingCircle (points)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named minEnclosingCircleCanvasInput and minEnclosingCircleCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="minEnclosingCircleCodeArea">
-<h2>Input your code</h2>
-<button id="minEnclosingCircleTryIt" disabled="true" onclick="minEnclosingCircleExecuteCode()">Try it</button><br>
-<textarea rows="15" cols="90" id="minEnclosingCircleTestCode" spellcheck="false">
-let src = cv.imread("minEnclosingCircleCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(0);
-// You can try more different parameters
-let circle = cv.minEnclosingCircle (cnt);
-let contoursColor = new cv.Scalar(255, 255, 255);
-let circleColor = new cv.Scalar(255, 0, 0);
-cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100);
-cv.circle(dst, circle.center, circle.radius, circleColor)
-cv.imshow("minEnclosingCircleCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
-</textarea>
-<p class="err" id="minEnclosingCircleErr"></p>
-</div>
-<div id="minEnclosingCircleShowcase">
-    <div>
-        <canvas id="minEnclosingCircleCanvasInput"></canvas>
-        <canvas id="minEnclosingCircleCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="minEnclosingCircleInput" name="file" />
-</div>
-<script>
-function minEnclosingCircleExecuteCode() {
-    let minEnclosingCircleText = document.getElementById("minEnclosingCircleTestCode").value;
-    try {
-        eval(minEnclosingCircleText);
-        document.getElementById("minEnclosingCircleErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("minEnclosingCircleErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "minEnclosingCircleCanvasInput");
-let minEnclosingCircleInputElement = document.getElementById("minEnclosingCircleInput");
-minEnclosingCircleInputElement.addEventListener("change", minEnclosingCircleHandleFiles, false);
-function minEnclosingCircleHandleFiles(e) {
-    let minEnclosingCircleUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(minEnclosingCircleUrl, "minEnclosingCircleCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_minEnclosingCircle.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 9. Fitting an Ellipse
@@ -670,64 +214,10 @@ We use the functions: **cv.fitEllipse (points)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named fitEllipseCanvasInput and fitEllipseCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="fitEllipseCodeArea">
-<h2>Input your code</h2>
-<button id="fitEllipseTryIt" disabled="true" onclick="fitEllipseExecuteCode()">Try it</button><br>
-<textarea rows="15" cols="90" id="fitEllipseTestCode" spellcheck="false">
-let src = cv.imread("fitEllipseCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(0);
-// You can try more different parameters
-let rotatedRect = cv.fitEllipse(cnt);
-let contoursColor = new cv.Scalar(255, 255, 255);
-let ellipseColor = new cv.Scalar(255, 0, 0);
-cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100);
-cv.ellipse1(dst, rotatedRect, ellipseColor, 1, cv.LINE_8);
-cv.imshow("fitEllipseCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
-</textarea>
-<p class="err" id="fitEllipseErr"></p>
-</div>
-<div id="fitEllipseShowcase">
-    <div>
-        <canvas id="fitEllipseCanvasInput"></canvas>
-        <canvas id="fitEllipseCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="fitEllipseInput" name="file" />
-</div>
-<script>
-function fitEllipseExecuteCode() {
-    let fitEllipseText = document.getElementById("fitEllipseTestCode").value;
-    try {
-        eval(fitEllipseText);
-        document.getElementById("fitEllipseErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("fitEllipseErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "fitEllipseCanvasInput");
-let fitEllipseInputElement = document.getElementById("fitEllipseInput");
-fitEllipseInputElement.addEventListener("change", fitEllipseHandleFiles, false);
-function fitEllipseHandleFiles(e) {
-    let fitEllipseUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(fitEllipseUrl, "fitEllipseCanvasInput");
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_fitEllipse.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly
 
 10. Fitting a Line
@@ -755,85 +245,8 @@ We use the functions: **cv.fitLine (points, line, distType, param, reps, aeps)**
 Try it
 ------
 
-Try this demo using the code above. Canvas elements named fitLineCanvasInput and fitLineCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. You can change the code in the textbox to investigate more.
-
 \htmlonly
-<!DOCTYPE html>
-<head>
-</head>
-<body>
-<div id="fitLineCodeArea">
-<h2>Input your code</h2>
-<button id="fitLineTryIt" disabled="true" onclick="fitLineExecuteCode()">Try it</button><br>
-<textarea rows="19" cols="90" id="fitLineTestCode" spellcheck="false">
-let src = cv.imread("fitLineCanvasInput");
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
-let contours  = new cv.MatVector();
-let hierarchy = new cv.Mat();
-let line = new cv.Mat();
-cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-let cnt = contours.get(0);
-// You can try more different parameters
-cv.fitLine(cnt, line, cv.DIST_L2, 0, 0.01, 0.01);
-let contoursColor = new cv.Scalar(255, 255, 255);
-let lineColor = new cv.Scalar(255, 0, 0);
-cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100);
-let vx= line.data32F[0], vy = line.data32F[1]; x = line.data32F[2], y = line.data32F[3];
-let lefty = Math.round((-x * vy / vx) + y);
-let righty = Math.round(((src.cols - x) * vy / vx) + y);
-var point1 = new cv.Point(src.cols - 1, righty);
-var point2 = new cv.Point(0, lefty)
-cv.line(dst, point1, point2, lineColor, 2, cv.LINE_AA, 0);
-cv.imshow("fitLineCanvasOutput", dst);
-src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); line.delete(); cnt.delete();
-</textarea>
-<p class="err" id="fitLineErr"></p>
-</div>
-<div id="fitLineShowcase">
-    <div>
-        <canvas id="fitLineCanvasInput"></canvas>
-        <canvas id="fitLineCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="fitLineInput" name="file" />
-</div>
-<script>
-function fitLineExecuteCode() {
-    let fitLineText = document.getElementById("fitLineTestCode").value;
-    try {
-        eval(fitLineText);
-        document.getElementById("fitLineErr").innerHTML = " ";
-    } catch(err) {
-        document.getElementById("fitLineErr").innerHTML = err;
-    }
-}
-
-loadImageToCanvas("shape.jpg", "fitLineCanvasInput");
-let fitLineInputElement = document.getElementById("fitLineInput");
-fitLineInputElement.addEventListener("change", fitLineHandleFiles, false);
-function fitLineHandleFiles(e) {
-    let fitLineUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(fitLineUrl, "fitLineCanvasInput");
-}
-function onReady() {
-    document.getElementById("momentsTryIt").disabled = false;
-    document.getElementById("areaTryIt").disabled = false;
-    document.getElementById("perimeterTryIt").disabled = false;
-    document.getElementById("approxPolyDPTryIt").disabled = false;
-    document.getElementById("convexHullTryIt").disabled = false;
-    document.getElementById("boundingRectTryIt").disabled = false;
-    document.getElementById("fitEllipseTryIt").disabled = false;
-    document.getElementById("minAreaRectTryIt").disabled = false;
-    document.getElementById("fitLineTryIt").disabled = false;
-    document.getElementById("minEnclosingCircleTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
+<iframe src="../../js_contour_features_fitLine.html" width="100%"
+        onload="this.style.height=this.contentDocument.body.scrollHeight +'px';">
+</iframe>
 \endhtmlonly

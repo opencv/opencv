@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Image CLAHE Example</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Image CLAHE Example</h2>
+<p>
+    Canvas elements named <b>canvasInput</b> and <b>canvasOutput</b> have been prepared.
+    Choose an image and click <b>Try it</b> button to see the result.
+    You can change the code in the textbox to investigate more.
+</p>
+<div>
+<button id="tryIt" disabled onclick="executeCode('codeEditor', 'errorMessage')">Try it</button>
+<br>
+<textarea class="code" rows="8" cols="80" id="codeEditor" spellcheck="false">
+</textarea>
+<p class="err" id="errorMessage"></p>
+</div>
+<div>
+    <div class="inputoutput">
+        <canvas id="canvasInput"></canvas>
+        <div class="caption">canvasInput <input type="file" id="fileInput" name="file" /></div>
+    </div>
+    <div class="inputoutput">
+        <canvas id="canvasOutput"></canvas>
+        <div class="caption">canvasOutput</div>
+    </div>
+</div>
+<script src="utils.js" type="text/javascript"></script>
+<script id="codeSnippet" type="text/code-snippet">
+let src = cv.imread('canvasInput');
+let equalDst = new cv.Mat();
+let claheDst = new cv.Mat();
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.equalizeHist(src, equalDst);
+let tileGridSize = new cv.Size(8, 8);
+// You can try more different parameters
+let clahe = new cv.CLAHE(40, tileGridSize);
+clahe.apply(src, claheDst);
+cv.imshow('canvasOutput', equalDst);
+cv.imshow('canvasOutput', claheDst);
+src.delete(); equalDst.delete(); claheDst.delete(); clahe.delete();
+</script>
+<script type="text/javascript">
+loadCode('codeSnippet', 'codeEditor');
+loadImageToCanvas('lena.jpg', 'canvasInput');
+addFileInputHandler('fileInput', 'canvasInput');
+function onOpenCvReady() { // eslint-disable-line no-unused-vars
+    document.getElementById('tryIt').removeAttribute('disabled');
+}
+</script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvLoadError('errorMessage');"></script>
+</body>
+</html>
