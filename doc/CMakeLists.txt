@@ -135,10 +135,8 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(faqfile "${CMAKE_CURRENT_SOURCE_DIR}/faq.markdown")
   set(tutorial_path "${CMAKE_CURRENT_SOURCE_DIR}/tutorials")
   set(tutorial_py_path "${CMAKE_CURRENT_SOURCE_DIR}/py_tutorials")
-  if(BUILD_opencv_js)
-    set(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT "- @ref tutorial_js_root")
-    set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
-  endif()
+  set(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT "- @ref tutorial_js_root")
+  set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
   # set export variables
@@ -171,47 +169,35 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   # js tutorial assets
   set(opencv_tutorial_html_dir "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html")
   set(js_tutorials_assets_dir "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials/js_assets")
-  set(ocv_js_dir "${CMAKE_BINARY_DIR}/bin")
-  set(ocv_js "opencv.js")
-
   set(js_tutorials_assets_deps "")
 
   # make sure the build directory exists
   file(MAKE_DIRECTORY "${opencv_tutorial_html_dir}")
 
-  if(BUILD_opencv_js)
-    # gather and copy specific files for js tutorials
-    file(GLOB_RECURSE js_assets RELATIVE "${js_tutorials_assets_dir}" "${js_tutorials_assets_dir}/*")
-    ocv_list_filterout(js_assets ".eslintrc.json")
-    foreach(f ${js_assets})
-      add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
-                         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
-                         DEPENDS "${js_tutorials_assets_dir}/${f}"
-                         COMMENT "Copying ${f}"
-      )
-      list(APPEND js_tutorials_assets_deps "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
-    endforeach()
-    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${ocv_js}"
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
-                       DEPENDS ${ocv_js}
-                       DEPENDS "${ocv_js_dir}/${ocv_js}"
-                       COMMENT "Copying ${ocv_js}"
+  # gather and copy specific files for js tutorials
+  file(GLOB_RECURSE js_assets RELATIVE "${js_tutorials_assets_dir}" "${js_tutorials_assets_dir}/*")
+  ocv_list_filterout(js_assets ".eslintrc.json")
+  foreach(f ${js_assets})
+    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
+                       DEPENDS "${js_tutorials_assets_dir}/${f}"
+                       COMMENT "Copying ${f}"
     )
-    list(APPEND js_tutorials_assets_deps ${ocv_js} "${opencv_tutorial_html_dir}/${ocv_js}")
+    list(APPEND js_tutorials_assets_deps "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
+  endforeach()
 
-    # copy haar cascade files
-    set(haar_cascade_files "")
-    list(APPEND haar_cascade_files "haarcascade_frontalface_default.xml" "haarcascade_eye.xml")
-    set(data_harrcascades_path "${PROJECT_SOURCE_DIR}/../data/haarcascades/")
-    foreach(f ${haar_cascade_files})
-      add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
-                         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}"
-                         DEPENDS "${data_harrcascades_path}/${f}"
-                         COMMENT "Copying ${f}"
-      )
-      list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}")
-    endforeach()
-  endif()
+  # copy haar cascade files
+  set(haar_cascade_files "")
+  list(APPEND haar_cascade_files "haarcascade_frontalface_default.xml" "haarcascade_eye.xml")
+  set(data_harrcascades_path "${PROJECT_SOURCE_DIR}/../data/haarcascades/")
+  foreach(f ${haar_cascade_files})
+    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}"
+                       DEPENDS "${data_harrcascades_path}/${f}"
+                       COMMENT "Copying ${f}"
+    )
+    list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}")
+  endforeach()
 
   add_custom_target(doxygen
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
