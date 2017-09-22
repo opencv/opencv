@@ -9,7 +9,8 @@
     "indent": ["error", 4, {"ArrayExpression": "first",
                             "CallExpression": {"arguments": "first"},
                             "SwitchCase": 1}],
-    "require-jsdoc": "off"
+    "require-jsdoc": "off",
+    "new-cap": "off"
   },
   "plugins": ["html"],
   "settings": {
