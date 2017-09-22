@@ -1,26 +1,14 @@
 #include "perf_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-namespace cvtest
+namespace
 {
-
-using std::tr1::tuple;
-using std::tr1::get;
-using std::tr1::make_tuple;
-using std::make_pair;
-using namespace perf;
-using namespace testing;
-using namespace cv;
-using namespace cv::dnn;
 
 enum {STRIDE_OFF = 1, STRIDE_ON = 2};
 CV_ENUM(StrideSize, STRIDE_OFF, STRIDE_ON);
 
 enum {GROUP_OFF = 1, GROUP_2 = 2};
 CV_ENUM(GroupSize, GROUP_OFF, GROUP_2);
-
-//Squared Size
-#define SSZ(n) cv::Size(n, n)
 
 typedef std::pair<MatShape, int> InpShapeNumOut;
 typedef tuple<Size, InpShapeNumOut, GroupSize, StrideSize> ConvParam; //kernel_size, inp shape, groups, stride
@@ -77,11 +65,11 @@ PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     Ptr<Layer> layer = cv::dnn::LayerFactory::createLayerInstance("Convolution", lp);
     std::vector<MatShape> inputShapes(1, shape(inpBlob)), outShapes, internals;
     layer->getMemoryShapes(inputShapes, 0, outShapes, internals);
-    for (int i = 0; i < outShapes.size(); i++)
+    for (size_t i = 0; i < outShapes.size(); i++)
     {
         outBlobs.push_back(Mat(outShapes[i], CV_32F));
     }
-    for (int i = 0; i < internals.size(); i++)
+    for (size_t i = 0; i < internals.size(); i++)
     {
         internalBlobs.push_back(Mat());
         if (total(internals[i]))
@@ -95,12 +83,13 @@ PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     Mat outBlob2D = outBlobs[0].reshape(1, outBlobs[0].size[0]);
     declare.in(inpBlob2D, wgtBlob2D, WARMUP_RNG).out(outBlob2D).tbb_threads(cv::getNumThreads());
 
-    TEST_CYCLE_N(10)
-    {
+    layer->forward(inpBlobs, outBlobs, internalBlobs); /// warmup
+
+    PERF_SAMPLE_BEGIN()
         layer->forward(inpBlobs, outBlobs, internalBlobs);
-    }
+    PERF_SAMPLE_END()
 
     SANITY_CHECK_NOTHING();
 }
 
-}
+} // namespace
