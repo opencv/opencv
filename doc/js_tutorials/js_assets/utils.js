@@ -9,7 +9,7 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         script.setAttribute('type', 'text/javascript');
         script.addEventListener('load', onloadCallback);
         script.addEventListener('error', () => {
-            printError(' Failed to load ' + OPENCV_URL);
+            this.printError('Failed to load ' + OPENCV_URL);
         });
         script.src = OPENCV_URL;
         let node = document.getElementsByTagName('script')[0];
@@ -48,12 +48,16 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             err = '';
         } else if (typeof err === 'number') {
             if (!isNaN(err)) {
-                err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
+                if (typeof cv !== 'undefined') {
+                    err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
+                }
             }
         } else if (typeof err === 'string') {
             let ptr = Number(err.split(' ')[0]);
             if (!isNaN(ptr)) {
-                err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
+                if (typeof cv !== 'undefined') {
+                    err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
+                }
             }
         } else if (err instanceof Error) {
             err = err.stack.replace(/\n/g, '<br>');
