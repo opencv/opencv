@@ -1033,7 +1033,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
         MatOfPoint lp = new MatOfPoint();
 
-        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true, 0);
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, 3, true, 0);
 
         assertEquals(4, lp.total());
     }
