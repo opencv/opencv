@@ -8,14 +8,14 @@
 <body>
 <h2>Image Filter Example</h2>
 <p>
-    Canvas elements named <b>canvasInput</b> and <b>canvasOutput</b> have been prepared.
-    Choose an image and click <b>Try it</b> button to see the result.
-    You can change the code in the textbox to investigate more.
+    &lt;canvas&gt; elements named <b>canvasInput</b> and <b>canvasOutput</b> have been prepared.<br>
+    Click <b>Try it</b> button to see the result. You can choose another image.<br>
+    You can change the code in the &lt;textarea&gt; to investigate more.
 </p>
 <div>
-<button id="tryIt" disabled onclick="executeCode('codeEditor', 'errorMessage')">Try it</button>
+<button id="tryIt" disabled>Try it</button>
 <br>
-<textarea class="code" rows="8" cols="80" id="codeEditor" spellcheck="false">
+<textarea class="code" rows="9" cols="80" id="codeEditor" spellcheck="false">
 </textarea>
 <p class="err" id="errorMessage"></p>
 </div>
@@ -41,13 +41,20 @@ cv.imshow('canvasOutput', dst);
 src.delete(); dst.delete(); M.delete();
 </script>
 <script type="text/javascript">
-loadCode('codeSnippet', 'codeEditor');
-loadImageToCanvas('lena.jpg', 'canvasInput');
-addFileInputHandler('fileInput', 'canvasInput');
-function onOpenCvReady() { // eslint-disable-line no-unused-vars
-    document.getElementById('tryIt').removeAttribute('disabled');
-}
+let utils = new Utils('errorMessage');
+
+utils.loadCode('codeSnippet', 'codeEditor');
+utils.loadImageToCanvas('lena.jpg', 'canvasInput');
+utils.addFileInputHandler('fileInput', 'canvasInput');
+
+let tryIt = document.getElementById('tryIt');
+tryIt.addEventListener('click', () => {
+    utils.executeCode('codeEditor');
+});
+
+utils.loadOpenCv(() => {
+    tryIt.removeAttribute('disabled');
+});
 </script>
-<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvLoadError('errorMessage');"></script>
 </body>
 </html>
