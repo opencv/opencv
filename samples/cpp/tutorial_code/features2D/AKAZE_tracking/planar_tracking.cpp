@@ -125,11 +125,8 @@ Mat Tracker::process(const Mat frame, Stats& stats)
 
 int main(int argc, char **argv)
 {
-    cerr << "Usage: " << endl
-         << "akaze_track input_path" << endl
-         << "  (input_path can be a camera id, like 0,1,2 or a video filename)" << endl;
-
     CommandLineParser parser(argc, argv, "{@input_path |0|input path can be a camera id, like 0,1,2 or a video filename}");
+    parser.printMessage();
     string input_path = parser.get<string>(0);
     string video_name = input_path;
 
@@ -158,11 +155,16 @@ int main(int argc, char **argv)
     example::Tracker orb_tracker(orb, matcher);
 
     Mat frame;
-    video_in >> frame;
     namedWindow(video_name, WINDOW_NORMAL);
-    cv::resizeWindow(video_name, frame.size());
+    cout << "\nPress any key to stop the video and select a bounding box" << endl;
 
-    cout << "Please select a bounding box, and press any key to continue." << endl;
+    while ( waitKey(1) < 1 )
+    {
+        video_in >> frame;
+        cv::resizeWindow(video_name, frame.size());
+        imshow(video_name, frame);
+    }
+
     vector<Point2f> bb;
     cv::Rect uBox = cv::selectROI(video_name, frame);
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
