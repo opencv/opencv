@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Trackbar Example</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Trackbar Example</h2>
+<p>
+    Trackbar and input images are ready.
+    Slide the trackbar to see the result.
+    You can change the code in the textbox to investigate more.
+</p>
+<div>
+<textarea class="code" rows="8" cols="80" id="codeEditor" spellcheck="false">
+</textarea>
+<p class="err" id="errorMessage"></p>
+</div>
+<div>
+    <div class="inputoutput">
+        <div>
+            <div style="float:left; margin-right:10px;">
+                <canvas id="canvasInput1"></canvas>
+                <p class="caption">canvasInput1</p>
+            </div>
+            <div>
+                <canvas id="canvasInput2"></canvas>
+                <p class="caption">canvasInput2</p>
+            </div>
+        </div>
+        Weight: <input type="range" id="trackbar" disabled value="50" min="0" max="100" step="1"
+        oninput="executeCode('codeEditor', 'errorMessage');"><input type="text" id="weightValue" size="3" value="50"><br>
+    </div>
+    <div class="inputoutput">
+        <canvas id="canvasOutput"></canvas>
+        <div class="caption">canvasOutput</div>
+    </div>
+</div>
+<script src="utils.js" type="text/javascript"></script>
+<script id="codeSnippet" type="text/code-snippet">
+let weightValue = document.getElementById('weightValue');
+let trackbar = document.getElementById('trackbar');
+weightValue.setAttribute('value', trackbar.value);
+let alpha = trackbar.value/trackbar.max;
+let beta = ( 1.0 - alpha );
+let src1 = cv.imread('canvasInput1');
+let src2 = cv.imread('canvasInput2');
+let dst = new cv.Mat();
+cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
+cv.imshow('canvasOutput', dst);
+dst.delete();
+src1.delete();
+src2.delete();
+</script>
+<script type="text/javascript">
+loadCode('codeSnippet', 'codeEditor');
+loadImageToCanvas('apple.jpg', 'canvasInput1');
+loadImageToCanvas('orange.jpg', 'canvasInput2');
+function onOpenCvReady() { // eslint-disable-line no-unused-vars
+    document.getElementById('trackbar').removeAttribute('disabled');
+    executeCode('codeEditor', 'errorMessage');
+}
+</script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvLoadError('errorMessage');"></script>
+</body>
+</html>
