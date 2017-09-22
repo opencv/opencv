@@ -210,6 +210,8 @@ class OCL4DNNConvSpatial
         bool createGEMMLikeConvKernel(int32_t blockWidth,
                                       int32_t blockHeight,
                                       int32_t blockDepth);
+        void CreateSubBuffer(UMat& buffer, UMat& sub_buffer,
+                             int32_t offset, int32_t size, bool write_only);
         bool convolve(UMat &bottom, UMat &top,
                       UMat &weight, UMat &bias,
                       int32_t numImages,

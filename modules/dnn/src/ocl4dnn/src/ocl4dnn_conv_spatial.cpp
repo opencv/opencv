@@ -653,6 +653,32 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
 }
 
 template<>
+void OCL4DNNConvSpatial<float>::CreateSubBuffer(UMat& buffer, UMat& sub_buffer,
+                                                int32_t offset, int32_t size, bool write_only)
+{
+    cl_mem sub_mem;
+    cl_buffer_region region;
+    cl_int err;
+
+    region.origin = offset * sizeof(float);
+    region.size = size * sizeof(float);
+    sub_mem = clCreateSubBuffer((cl_mem)buffer.handle(ACCESS_READ),
+                                write_only ? CL_MEM_WRITE_ONLY : CL_MEM_READ_ONLY,
+                                CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
+    if (err)
+    {
+        std::cout << "Failed to create sub buffer." << std::endl;
+        return;
+    }
+
+    int step = sizeof(float), rows = size, cols = 1;
+    ocl::convertFromBuffer(sub_mem, step, rows, cols, CV_32FC1, sub_buffer);
+
+    //decrease ocl mem refcount
+    clReleaseMemObject(sub_mem);
+}
+
+template<>
 bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                                          UMat &weight, UMat &bias,
                                          int32_t numImages, kernelConfig* config)
@@ -685,63 +711,48 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            cl_buffer_region region;
-            cl_int error;
 
-            cl_mem img_buffer = NULL;
+            UMat img_buffer;
             if (image_offset)
             {
-                region.origin = image_offset * sizeof(float);
-                region.size = (total_bottom_size - image_offset) * sizeof(float);
-                img_buffer = clCreateSubBuffer((cl_mem)bottom.handle(ACCESS_READ), CL_MEM_READ_ONLY,
-                                               CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
-                {
-                    std::cout << "Failed to create sub buffer." << std::endl;
+                CreateSubBuffer(bottom, img_buffer, image_offset,
+                                total_bottom_size - image_offset, false);
+                if (img_buffer.empty())
                     return false;
-                }
-                kernel.set(argIdx++, img_buffer);
+
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(img_buffer));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             }
 
-            cl_mem kernel_buffer = NULL;
+            UMat kernel_buffer;
             if (kernel_offset)
             {
-                region.origin = kernel_offset * sizeof(float);
-                region.size = (total_kernel_size - kernel_offset) * sizeof(float);
-                kernel_buffer = clCreateSubBuffer((cl_mem)swizzled_weights_umat.handle(ACCESS_READ),
-                                                  CL_MEM_READ_ONLY,
-                                                  CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
-                {
-                    std::cout << "Failed to create sub buffer." << std::endl;
+                CreateSubBuffer(swizzled_weights_umat, kernel_buffer, kernel_offset,
+                                total_kernel_size - kernel_offset, false);
+                if (kernel_buffer.empty())
                     return false;
-                }
-                kernel.set(argIdx++, kernel_buffer);
+
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(kernel_buffer));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
             }
 
-            cl_mem bias_buffer = NULL;
+            UMat bias_buffer;
             if (bias_term_)
             {
                 if (bias_offset)
                 {
-                    region.origin = bias_offset * sizeof(float);
-                    region.size = (total_bias_size - bias_offset) * sizeof(float);
-                    bias_buffer = clCreateSubBuffer((cl_mem)bias.handle(ACCESS_READ), CL_MEM_READ_ONLY,
-                            CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                    if (error)
-                    {
-                        std::cout << "Failed to create sub buffer." << std::endl;
+                    CreateSubBuffer(bias, bias_buffer, bias_offset,
+                                    total_bias_size - bias_offset, false);
+                    if (bias_buffer.empty())
                         return false;
-                    }
-                    kernel.set(argIdx++, bias_buffer);
+
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias_buffer));
                 }
                 else
                 {
@@ -749,19 +760,15 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 }
             }
 
-            cl_mem out_buffer = NULL;
+            UMat out_buffer;
             if (output_image_offset)
             {
-                region.origin = output_image_offset * sizeof(float);
-                region.size = (total_top_size - output_image_offset) * sizeof(float);
-                out_buffer = clCreateSubBuffer((cl_mem)top.handle(ACCESS_WRITE), CL_MEM_WRITE_ONLY,
-                                               CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
-                {
-                    std::cout << "Failed to create sub buffer." << std::endl;
+                CreateSubBuffer(top, out_buffer, output_image_offset,
+                                total_top_size - output_image_offset, true);
+                if (out_buffer.empty())
                     return false;
-                }
-                kernel.set(argIdx++, out_buffer);
+
+                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
             }
             else
             {
@@ -777,10 +784,6 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 std::cout << "IDLF kernel run failed." << std::endl;
                 return false;
             }
-            clReleaseMemObject(img_buffer);
-            clReleaseMemObject(kernel_buffer);
-            clReleaseMemObject(bias_buffer);
-            clReleaseMemObject(out_buffer);
         }
     } else if (config->kernelType == KERNEL_TYPE_GEMM_LIKE) {
         if (!swizzleWeight(weight, config->workItem_output[1], true))
@@ -800,63 +803,48 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            cl_buffer_region region;
-            cl_int error;
 
-            cl_mem img_buffer = NULL;
+            UMat img_buffer;
             if (image_offset)
             {
-                region.origin = image_offset * sizeof(float);
-                region.size = (total_bottom_size - image_offset) * sizeof(float);
-                img_buffer = clCreateSubBuffer((cl_mem)bottom.handle(ACCESS_READ), CL_MEM_READ_ONLY,
-                                               CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
-                {
-                    std::cout << "Failed to create sub buffer." << std::endl;
+                CreateSubBuffer(bottom, img_buffer, image_offset,
+                                total_bottom_size - image_offset, false);
+                if (img_buffer.empty())
                     return false;
-                }
-                kernel.set(argIdx++, img_buffer);
+
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(img_buffer));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             }
 
-            cl_mem kernel_buffer = NULL;
+            UMat kernel_buffer;
             if (kernel_offset)
             {
-                region.origin = kernel_offset * sizeof(float);
-                region.size = (total_kernel_size - kernel_offset) * sizeof(float);
-                kernel_buffer = clCreateSubBuffer((cl_mem)swizzled_weights_umat.handle(ACCESS_READ),
-                                                  CL_MEM_READ_ONLY,
-                                                  CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
-                {
-                    std::cout << "Failed to create sub buffer." << std::endl;
+                CreateSubBuffer(swizzled_weights_umat, kernel_buffer, kernel_offset,
+                                total_kernel_size - kernel_offset, false);
+                if (kernel_buffer.empty())
                     return false;
-                }
-                kernel.set(argIdx++, kernel_buffer);
+
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(kernel_buffer));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
             }
 
-            cl_mem bias_buffer = NULL;
+            UMat bias_buffer;
             if (bias_term_)
             {
                 if (bias_offset)
                 {
-                    region.origin = bias_offset * sizeof(float);
-                    region.size = (total_bias_size - bias_offset) * sizeof(float);
-                    bias_buffer = clCreateSubBuffer((cl_mem)bias.handle(ACCESS_READ), CL_MEM_READ_ONLY,
-                            CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                    if (error)
-                    {
-                        std::cout << "Failed to create sub buffer." << std::endl;
+                    CreateSubBuffer(bias, bias_buffer, bias_offset,
+                                    total_bias_size - bias_offset, false);
+                    if (bias_buffer.empty())
                         return false;
-                    }
-                    kernel.set(argIdx++, bias_buffer);
+
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias_buffer));
                 }
                 else
                 {
@@ -864,19 +852,15 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 }
             }
 
-            cl_mem out_buffer = NULL;
+            UMat out_buffer;
             if (output_image_offset)
             {
-                region.origin = output_image_offset * sizeof(float);
-                region.size = (total_top_size - output_image_offset) * sizeof(float);
-                out_buffer = clCreateSubBuffer((cl_mem)top.handle(ACCESS_WRITE), CL_MEM_WRITE_ONLY,
-                                               CL_BUFFER_CREATE_TYPE_REGION, &region, &error);
-                if (error)
-                {
-                    std::cout << "Failed to create sub buffer." << std::endl;
+                CreateSubBuffer(top, out_buffer, output_image_offset,
+                                total_top_size - output_image_offset, true);
+                if (out_buffer.empty())
                     return false;
-                }
-                kernel.set(argIdx++, out_buffer);
+
+                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
             }
             else
             {
@@ -918,10 +902,6 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
                 std::cout << "GEMM like kernel run failed." << std::endl;
                 return false;
             }
-            clReleaseMemObject(img_buffer);
-            clReleaseMemObject(kernel_buffer);
-            clReleaseMemObject(bias_buffer);
-            clReleaseMemObject(out_buffer);
         }
     } else {
         for (int32_t n = 0; n < numImages; ++n) {
