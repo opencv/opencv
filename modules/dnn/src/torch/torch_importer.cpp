@@ -714,23 +714,25 @@ struct TorchImporter : public ::cv::dnn::Importer
                 readTorchTable(scalarParams, tensorParams);
                 newModule->apiType = "Padding";
 
-                CV_Assert(scalarParams.has("pad") &&
-                          scalarParams.has("dim"));
-
-                layerParams.set("padding_dim",
-                                static_cast<int>(scalarParams.get<double>("dim") - 1));
-                layerParams.set("padding", static_cast<int>(scalarParams.get<double>("pad")));
-
-                if (scalarParams.has("nInputDim"))
-                    layerParams.set("input_dims",
-                                    static_cast<int>(scalarParams.get<double>("nInputDim")));
+                CV_Assert(scalarParams.has("pad") && scalarParams.has("dim"));
+                if (scalarParams.has("index") && scalarParams.get<int>("index") != 1)
+                    CV_Error(Error::StsNotImplemented, "Padding with offset is not implemented");
 
                 if (scalarParams.has("value"))
-                    layerParams.set("value", scalarParams.get<double>("value"));
+                    layerParams.set("value", scalarParams.get<float>("value"));
 
-                if (scalarParams.has("index"))
-                    layerParams.set("index",
-                                    static_cast<int>(scalarParams.get<double>("index") - 1));
+                if (scalarParams.has("nInputDim"))
+                    layerParams.set("input_dims", scalarParams.get<int>("nInputDim"));
+
+                int dim = scalarParams.get<int>("dim") - 1;  // In Lua we start from 1.
+                int pad = scalarParams.get<int>("pad");
+
+                std::vector<int> paddings((dim + 1) * 2, 0);
+                if (pad > 0)
+                    paddings[dim * 2 + 1] = pad;  // Pad after (right).
+                else
+                    paddings[dim * 2] = -pad;  // Pad before (left).
+                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
 
                 curModule->modules.push_back(newModule);
             }
@@ -865,6 +867,31 @@ struct TorchImporter : public ::cv::dnn::Importer
                 CV_Assert(scalarParams.has("constant_scalar"));
                 newModule->apiType = "Power";
                 layerParams.set("scale", scalarParams.get<float>("constant_scalar"));
+                curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "SpatialZeroPadding")
+            {
+                readTorchTable(scalarParams, tensorParams);
+                CV_Assert(scalarParams.has("pad_l"), scalarParams.has("pad_r"),
+                          scalarParams.has("pad_t"), scalarParams.has("pad_b"));
+                int padTop = scalarParams.get<int>("pad_t");
+                int padLeft = scalarParams.get<int>("pad_l");
+                int padRight = scalarParams.get<int>("pad_r");
+                int padBottom = scalarParams.get<int>("pad_b");
+                if (padTop < 0 || padLeft < 0 || padRight < 0 || padBottom < 0)
+                    CV_Error(Error::StsNotImplemented, "SpatialZeroPadding in cropping mode is not implemented");
+
+                newModule->apiType = "Padding";
+
+                // Torch's SpatialZeroPadding works with 3- or 4-dimensional input.
+                // So we add parameter input_dims=3 to ignore batch dimension if it will be.
+                std::vector<int> paddings(6, 0);  // CHW
+                paddings[2] = padTop;
+                paddings[3] = padBottom;
+                paddings[4] = padLeft;
+                paddings[5] = padRight;
+                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+                layerParams.set("input_dims", 3);
                 curModule->modules.push_back(newModule);
             }
             else
