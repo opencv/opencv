@@ -299,11 +299,9 @@ struct ColumnSum<int, uchar> :
         bool haveScale = scale != 1;
         double _scale = scale;
 
-        #if CV_SSE2
-            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-        #elif CV_NEON
-            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
-        #endif
+#if CV_SIMD128
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         if( width != (int)sum.size() )
         {
@@ -319,23 +317,15 @@ struct ColumnSum<int, uchar> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    for( ; i <= width-4; i+=4 )
+                    for (; i <= width - 4; i += 4)
                     {
-                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
+                        v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    for( ; i <= width - 4; i+=4 )
-                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
-                }
-                #endif
+#endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
             }
@@ -354,51 +344,27 @@ struct ColumnSum<int, uchar> :
             if( haveScale )
             {
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    const __m128 scale4 = _mm_set1_ps((float)_scale);
+
+                    v_float32x4 v_scale = v_setall_f32((float)_scale);
                     for( ; i <= width-8; i+=8 )
                     {
-                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
-                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+                        v_uint32x4 v_s0d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s0) * v_scale));
+                        v_uint32x4 v_s01d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s01) * v_scale));
 
-                        __m128i _s0T = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-                        __m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
+                        v_uint16x8 v_dst = v_pack(v_s0d, v_s01d);
+                        v_pack_store(D + i, v_dst);
 
-                        _s0T = _mm_packs_epi32(_s0T, _s0T1);
-
-                        _mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T));
-
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-                        _mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                    for( ; i <= width-8; i+=8 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
-
-                        uint32x4_t v_s0d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                        uint32x4_t v_s01d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
-
-                        uint16x8_t v_dst = vcombine_u16(vqmovn_u32(v_s0d), vqmovn_u32(v_s01d));
-                        vst1_u8(D + i, vqmovn_u16(v_dst));
-
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
-                    }
-                }
-                #endif
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -409,43 +375,22 @@ struct ColumnSum<int, uchar> :
             else
             {
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width-8; i+=8 )
                     {
-                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
-                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+                        v_uint16x8 v_dst = v_pack(v_reinterpret_as_u32(v_s0), v_reinterpret_as_u32(v_s01));
+                        v_pack_store(D + i, v_dst);
 
-                        __m128i _s0T = _mm_packs_epi32(_s0, _s01);
-
-                        _mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T));
-
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-                        _mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    for( ; i <= width-8; i+=8 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
-
-                        uint16x8_t v_dst = vcombine_u16(vqmovun_s32(v_s0), vqmovun_s32(v_s01));
-                        vst1_u8(D + i, vqmovn_u16(v_dst));
-
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
-                    }
-                }
-                #endif
+#endif
 
                 for( ; i < width; i++ )
                 {
@@ -502,10 +447,8 @@ public BaseColumnFilter
         ushort* SUM;
         const bool haveScale = scale != 1;
 
-#if CV_SSE2
-        bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-#elif CV_NEON
-        bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
+#if CV_SIMD128
+        bool haveSIMD128 = hasSIMD128();
 #endif
 
         if( width != (int)sum.size() )
@@ -522,21 +465,13 @@ public BaseColumnFilter
             {
                 const ushort* Sp = (const ushort*)src[0];
                 int i = 0;
-#if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    for( ; i <= width-8; i+=8 )
+                    for( ; i <= width - 8; i += 8 )
                     {
-                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi16(_sum, _sp));
+                        v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
                     }
-                }
-#elif CV_NEON
-                if(haveNEON)
-                {
-                    for( ; i <= width - 8; i+=8 )
-                        vst1q_u16(SUM + i, vaddq_u16(vld1q_u16(SUM + i), vld1q_u16(Sp + i)));
                 }
 #endif
                 for( ; i < width; i++ )
@@ -641,11 +576,9 @@ struct ColumnSum<int, short> :
         bool haveScale = scale != 1;
         double _scale = scale;
 
-        #if CV_SSE2
-            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-        #elif CV_NEON
-            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
-        #endif
+#if CV_SIMD128
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         if( width != (int)sum.size() )
         {
@@ -661,21 +594,13 @@ struct ColumnSum<int, short> :
             {
                 const int* Sp = (const int*)src[0];
                 i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
-                {
-                    for( ; i <= width-4; i+=4 )
-                    {
-                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
-                    }
-                }
-                #elif CV_NEON
-                if(haveNEON)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width - 4; i+=4 )
-                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                    {
+                        v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    }
                 }
                 #endif
                 for( ; i < width; i++ )
@@ -696,47 +621,24 @@ struct ColumnSum<int, short> :
             if( haveScale )
             {
                 i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    const __m128 scale4 = _mm_set1_ps((float)_scale);
+                    v_float32x4 v_scale = v_setall_f32((float)_scale);
                     for( ; i <= width-8; i+=8 )
                     {
-                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
-                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+                        v_int32x4 v_s0d =  v_round(v_cvt_f32(v_s0) * v_scale);
+                        v_int32x4 v_s01d = v_round(v_cvt_f32(v_s01) * v_scale);
+                        v_store(D + i, v_pack(v_s0d, v_s01d));
 
-                        __m128i _s0T  = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-                        __m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
-
-                        _mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0T, _s0T1));
-
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_sub_epi32(_s0,_sm));
-                        _mm_storeu_si128((__m128i*)(SUM+i+4), _mm_sub_epi32(_s01,_sm1));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                    for( ; i <= width-8; i+=8 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
-
-                        int32x4_t v_s0d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                        int32x4_t v_s01d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
-                        vst1q_s16(D + i, vcombine_s16(vqmovn_s32(v_s0d), vqmovn_s32(v_s01d)));
-
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
-                    }
-                }
-                #endif
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -747,41 +649,21 @@ struct ColumnSum<int, short> :
             else
             {
                 i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width-8; i+=8 )
                     {
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                        v_store(D + i, v_pack(v_s0, v_s01));
 
-                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
-                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
-
-                        _mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0, _s01));
-
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-                        _mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    for( ; i <= width-8; i+=8 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
-
-                        vst1q_s16(D + i, vcombine_s16(vqmovn_s32(v_s0), vqmovn_s32(v_s01)));
-
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
-                    }
-                }
-                #endif
+#endif
 
                 for( ; i < width; i++ )
                 {
@@ -821,11 +703,9 @@ struct ColumnSum<int, ushort> :
         bool haveScale = scale != 1;
         double _scale = scale;
 
-        #if CV_SSE2
-            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-        #elif CV_NEON
-            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
-        #endif
+#if CV_SIMD128
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         if( width != (int)sum.size() )
         {
@@ -841,23 +721,15 @@ struct ColumnSum<int, ushort> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    for( ; i <= width-4; i+=4 )
+                    for (; i <= width - 4; i += 4)
                     {
-                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
+                        v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    for( ; i <= width - 4; i+=4 )
-                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
-                }
-                #endif
+#endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
             }
@@ -876,46 +748,24 @@ struct ColumnSum<int, ushort> :
             if( haveScale )
             {
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    const __m128 scale4 = _mm_set1_ps((float)_scale);
-                    const __m128i delta0 = _mm_set1_epi32(0x8000);
-                    const __m128i delta1 = _mm_set1_epi32(0x80008000);
-
-                    for( ; i < width-4; i+=4)
-                    {
-                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-
-                        __m128i _res = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-
-                        _res = _mm_sub_epi32(_res, delta0);
-                        _res = _mm_add_epi16(_mm_packs_epi32(_res, _res), delta1);
-
-                        _mm_storel_epi64((__m128i*)(D+i), _res);
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-                    }
-                }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
+                    v_float32x4 v_scale = v_setall_f32((float)_scale);
                     for( ; i <= width-8; i+=8 )
                     {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        uint32x4_t v_s0d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                        uint32x4_t v_s01d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
-                        vst1q_u16(D + i, vcombine_u16(vqmovn_u32(v_s0d), vqmovn_u32(v_s01d)));
+                        v_uint32x4 v_s0d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s0) * v_scale));
+                        v_uint32x4 v_s01d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s01) * v_scale));
+                        v_store(D + i, v_pack(v_s0d, v_s01d));
 
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #endif
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -926,41 +776,21 @@ struct ColumnSum<int, ushort> :
             else
             {
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
-                {
-                    const __m128i delta0 = _mm_set1_epi32(0x8000);
-                    const __m128i delta1 = _mm_set1_epi32(0x80008000);
-
-                    for( ; i < width-4; i+=4 )
-                    {
-                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-
-                        __m128i _res = _mm_sub_epi32(_s0, delta0);
-                        _res = _mm_add_epi16(_mm_packs_epi32(_res, _res), delta1);
-
-                        _mm_storel_epi64((__m128i*)(D+i), _res);
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-                    }
-                }
-                #elif CV_NEON
-                if(haveNEON)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width-8; i+=8 )
                     {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        vst1q_u16(D + i, vcombine_u16(vqmovun_s32(v_s0), vqmovun_s32(v_s01)));
+                        v_store(D + i, v_pack(v_reinterpret_as_u32(v_s0), v_reinterpret_as_u32(v_s01)));
 
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #endif
-
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -998,11 +828,9 @@ struct ColumnSum<int, int> :
         bool haveScale = scale != 1;
         double _scale = scale;
 
-        #if CV_SSE2
-            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-        #elif CV_NEON
-            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
-        #endif
+#if CV_SIMD128
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         if( width != (int)sum.size() )
         {
@@ -1018,23 +846,15 @@ struct ColumnSum<int, int> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
-                {
-                    for( ; i <= width-4; i+=4 )
-                    {
-                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
-                    }
-                }
-                #elif CV_NEON
-                if(haveNEON)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width - 4; i+=4 )
-                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                    {
+                        v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    }
                 }
-                #endif
+#endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
             }
@@ -1053,38 +873,20 @@ struct ColumnSum<int, int> :
             if( haveScale )
             {
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    const __m128 scale4 = _mm_set1_ps((float)_scale);
+                    v_float32x4 v_scale = v_setall_f32((float)_scale);
                     for( ; i <= width-4; i+=4 )
                     {
-                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s0d = v_round(v_cvt_f32(v_s0) * v_scale);
 
-                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
-
-                        __m128i _s0T  = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-
-                        _mm_storeu_si128((__m128i*)(D+i), _s0T);
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_sub_epi32(_s0,_sm));
+                        v_store(D + i, v_s0d);
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                    for( ; i <= width-4; i+=4 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-
-                        int32x4_t v_s0d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                        vst1q_s32(D + i, v_s0d);
-
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    }
-                }
-                #endif
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -1095,32 +897,18 @@ struct ColumnSum<int, int> :
             else
             {
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width-4; i+=4 )
                     {
-                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
 
-                        _mm_storeu_si128((__m128i*)(D+i), _s0);
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                        v_store(D + i, v_s0);
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    for( ; i <= width-4; i+=4 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-
-                        vst1q_s32(D + i, v_s0);
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    }
-                }
-                #endif
-
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -1159,11 +947,9 @@ struct ColumnSum<int, float> :
         bool haveScale = scale != 1;
         double _scale = scale;
 
-        #if CV_SSE2
-            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-        #elif CV_NEON
-            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
-        #endif
+#if CV_SIMD128
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         if( width != (int)sum.size() )
         {
@@ -1179,23 +965,15 @@ struct ColumnSum<int, float> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-                #if CV_SSE2
-                if(haveSSE2)
-                {
-                    for( ; i <= width-4; i+=4 )
-                    {
-                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
-                    }
-                }
-                #elif CV_NEON
-                if(haveNEON)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width - 4; i+=4 )
-                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                    {
+                        v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    }
                 }
-                #endif
+#endif
 
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
@@ -1216,39 +994,23 @@ struct ColumnSum<int, float> :
             {
                 int i = 0;
 
-                #if CV_SSE2
-                if(haveSSE2)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
-                    const __m128 scale4 = _mm_set1_ps((float)_scale);
-
-                    for( ; i < width-4; i+=4)
+                    v_float32x4 v_scale = v_setall_f32((float)_scale);
+                    for (; i <= width - 8; i += 8)
                     {
-                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        _mm_storeu_ps(D+i, _mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                        v_store(D + i, v_cvt_f32(v_s0) * v_scale);
+                        v_store(D + i + 4, v_cvt_f32(v_s01) * v_scale);
+
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #elif CV_NEON
-                if(haveNEON)
-                {
-                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                    for( ; i <= width-8; i+=8 )
-                    {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
-
-                        vst1q_f32(D + i, vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                        vst1q_f32(D + i + 4, vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
-
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
-                    }
-                }
-                #endif
-
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -1260,36 +1022,22 @@ struct ColumnSum<int, float> :
             {
                 int i = 0;
 
-                #if CV_SSE2
-                if(haveSSE2)
-                {
-                    for( ; i < width-4; i+=4)
-                    {
-                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-
-                        _mm_storeu_ps(D+i, _mm_cvtepi32_ps(_s0));
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-                    }
-                }
-                #elif CV_NEON
-                if(haveNEON)
+#if CV_SIMD128
+                if( haveSIMD128 )
                 {
                     for( ; i <= width-8; i+=8 )
                     {
-                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                        v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                        v_int32x4 v_s01 = v_load(SUM + i + 4) + v_load(Sp + i + 4);
 
-                        vst1q_f32(D + i, vcvtq_f32_s32(v_s0));
-                        vst1q_f32(D + i + 4, vcvtq_f32_s32(v_s01));
+                        v_store(D + i, v_cvt_f32(v_s0));
+                        v_store(D + i + 4, v_cvt_f32(v_s01));
 
-                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        v_store(SUM + i, v_s0 - v_load(Sm + i));
+                        v_store(SUM + i + 4, v_s01 - v_load(Sm + i + 4));
                     }
                 }
-                #endif
-
+#endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -2395,46 +2143,20 @@ typedef struct
 } Histogram;
 
 
-#if CV_SSE2
-#define MEDIAN_HAVE_SIMD 1
+#if CV_SIMD128
 
 static inline void histogram_add_simd( const HT x[16], HT y[16] )
 {
-    const __m128i* rx = (const __m128i*)x;
-    __m128i* ry = (__m128i*)y;
-    __m128i r0 = _mm_add_epi16(_mm_load_si128(ry+0),_mm_load_si128(rx+0));
-    __m128i r1 = _mm_add_epi16(_mm_load_si128(ry+1),_mm_load_si128(rx+1));
-    _mm_store_si128(ry+0, r0);
-    _mm_store_si128(ry+1, r1);
+    v_store(y, v_load(x) + v_load(y));
+    v_store(y + 8, v_load(x + 8) + v_load(y + 8));
 }
 
 static inline void histogram_sub_simd( const HT x[16], HT y[16] )
 {
-    const __m128i* rx = (const __m128i*)x;
-    __m128i* ry = (__m128i*)y;
-    __m128i r0 = _mm_sub_epi16(_mm_load_si128(ry+0),_mm_load_si128(rx+0));
-    __m128i r1 = _mm_sub_epi16(_mm_load_si128(ry+1),_mm_load_si128(rx+1));
-    _mm_store_si128(ry+0, r0);
-    _mm_store_si128(ry+1, r1);
+    v_store(y, v_load(y) - v_load(x));
+    v_store(y + 8, v_load(y + 8) - v_load(x + 8));
 }
 
-#elif CV_NEON
-#define MEDIAN_HAVE_SIMD 1
-
-static inline void histogram_add_simd( const HT x[16], HT y[16] )
-{
-    vst1q_u16(y, vaddq_u16(vld1q_u16(x), vld1q_u16(y)));
-    vst1q_u16(y + 8, vaddq_u16(vld1q_u16(x + 8), vld1q_u16(y + 8)));
-}
-
-static inline void histogram_sub_simd( const HT x[16], HT y[16] )
-{
-    vst1q_u16(y, vsubq_u16(vld1q_u16(y), vld1q_u16(x)));
-    vst1q_u16(y + 8, vsubq_u16(vld1q_u16(y + 8), vld1q_u16(x + 8)));
-}
-
-#else
-#define MEDIAN_HAVE_SIMD 0
 #endif
 
 
@@ -2486,8 +2208,8 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
     HT* h_coarse = alignPtr(&_h_coarse[0], 16);
     HT* h_fine = alignPtr(&_h_fine[0], 16);
-#if MEDIAN_HAVE_SIMD
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+#if CV_SIMD128
+    volatile bool useSIMD = hasSIMD128();
 #endif
 
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
@@ -2533,7 +2255,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                 for( k = 0; k < 16; ++k )
                     histogram_muladd( 2*r+1, &h_fine[16*n*(16*c+k)], &H[c].fine[k][0] );
 
-            #if MEDIAN_HAVE_SIMD
+#if CV_SIMD128
                 if( useSIMD )
                 {
                     for( j = 0; j < 2*r; ++j )
@@ -2597,7 +2319,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     }
                 }
                 else
-            #endif
+#endif
                 {
                     for( j = 0; j < 2*r; ++j )
                         histogram_add( &h_coarse[16*(n*c+j)], H[c].coarse );
@@ -2871,20 +2593,20 @@ struct MinMax32f
     }
 };
 
-#if CV_SSE2
+#if CV_SIMD128
 
 struct MinMaxVec8u
 {
     typedef uchar value_type;
-    typedef __m128i arg_type;
+    typedef v_uint8x16 arg_type;
     enum { SIZE = 16 };
-    arg_type load(const uchar* ptr) { return _mm_loadu_si128((const __m128i*)ptr); }
-    void store(uchar* ptr, arg_type val) { _mm_storeu_si128((__m128i*)ptr, val); }
+    arg_type load(const uchar* ptr) { return v_load(ptr); }
+    void store(uchar* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
     {
         arg_type t = a;
-        a = _mm_min_epu8(a, b);
-        b = _mm_max_epu8(b, t);
+        a = v_min(a, b);
+        b = v_max(b, t);
     }
 };
 
@@ -2892,15 +2614,15 @@ struct MinMaxVec8u
 struct MinMaxVec16u
 {
     typedef ushort value_type;
-    typedef __m128i arg_type;
+    typedef v_uint16x8 arg_type;
     enum { SIZE = 8 };
-    arg_type load(const ushort* ptr) { return _mm_loadu_si128((const __m128i*)ptr); }
-    void store(ushort* ptr, arg_type val) { _mm_storeu_si128((__m128i*)ptr, val); }
+    arg_type load(const ushort* ptr) { return v_load(ptr); }
+    void store(ushort* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
     {
-        arg_type t = _mm_subs_epu16(a, b);
-        a = _mm_subs_epu16(a, t);
-        b = _mm_adds_epu16(b, t);
+        arg_type t = a;
+        a = v_min(a, b);
+        b = v_max(b, t);
     }
 };
 
@@ -2908,15 +2630,15 @@ struct MinMaxVec16u
 struct MinMaxVec16s
 {
     typedef short value_type;
-    typedef __m128i arg_type;
+    typedef v_int16x8 arg_type;
     enum { SIZE = 8 };
-    arg_type load(const short* ptr) { return _mm_loadu_si128((const __m128i*)ptr); }
-    void store(short* ptr, arg_type val) { _mm_storeu_si128((__m128i*)ptr, val); }
+    arg_type load(const short* ptr) { return v_load(ptr); }
+    void store(short* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
     {
         arg_type t = a;
-        a = _mm_min_epi16(a, b);
-        b = _mm_max_epi16(b, t);
+        a = v_min(a, b);
+        b = v_max(b, t);
     }
 };
 
@@ -2924,83 +2646,17 @@ struct MinMaxVec16s
 struct MinMaxVec32f
 {
     typedef float value_type;
-    typedef __m128 arg_type;
+    typedef v_float32x4 arg_type;
     enum { SIZE = 4 };
-    arg_type load(const float* ptr) { return _mm_loadu_ps(ptr); }
-    void store(float* ptr, arg_type val) { _mm_storeu_ps(ptr, val); }
+    arg_type load(const float* ptr) { return v_load(ptr); }
+    void store(float* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
     {
         arg_type t = a;
-        a = _mm_min_ps(a, b);
-        b = _mm_max_ps(b, t);
+        a = v_min(a, b);
+        b = v_max(b, t);
     }
 };
-
-#elif CV_NEON
-
-struct MinMaxVec8u
-{
-    typedef uchar value_type;
-    typedef uint8x16_t arg_type;
-    enum { SIZE = 16 };
-    arg_type load(const uchar* ptr) { return vld1q_u8(ptr); }
-    void store(uchar* ptr, arg_type val) { vst1q_u8(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = vminq_u8(a, b);
-        b = vmaxq_u8(b, t);
-    }
-};
-
-
-struct MinMaxVec16u
-{
-    typedef ushort value_type;
-    typedef uint16x8_t arg_type;
-    enum { SIZE = 8 };
-    arg_type load(const ushort* ptr) { return vld1q_u16(ptr); }
-    void store(ushort* ptr, arg_type val) { vst1q_u16(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = vminq_u16(a, b);
-        b = vmaxq_u16(b, t);
-    }
-};
-
-
-struct MinMaxVec16s
-{
-    typedef short value_type;
-    typedef int16x8_t arg_type;
-    enum { SIZE = 8 };
-    arg_type load(const short* ptr) { return vld1q_s16(ptr); }
-    void store(short* ptr, arg_type val) { vst1q_s16(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = vminq_s16(a, b);
-        b = vmaxq_s16(b, t);
-    }
-};
-
-
-struct MinMaxVec32f
-{
-    typedef float value_type;
-    typedef float32x4_t arg_type;
-    enum { SIZE = 4 };
-    arg_type load(const float* ptr) { return vld1q_f32(ptr); }
-    void store(float* ptr, arg_type val) { vst1q_f32(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = vminq_f32(a, b);
-        b = vmaxq_f32(b, t);
-    }
-};
-
 
 #else
 
@@ -3027,7 +2683,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     int i, j, k, cn = _src.channels();
     Op op;
     VecOp vop;
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+    volatile bool useSIMD = hasSIMD128();
 
     if( m == 3 )
     {
@@ -3478,7 +3134,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 #endif
 
     bool useSortNet = ksize == 3 || (ksize == 5
-#if !(CV_SSE2 || CV_NEON)
+#if !(CV_SIMD128)
             && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )
 #endif
         );
@@ -3513,7 +3169,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
         if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
-            (MEDIAN_HAVE_SIMD && (checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON)) ? 1 : 3))
+            (CV_SIMD128 && hasSIMD128() ? 1 : 3))
             medianBlur_8u_Om( src, dst, ksize );
         else
             medianBlur_8u_O1( src, dst, ksize );
