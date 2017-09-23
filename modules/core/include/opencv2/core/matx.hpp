@@ -210,7 +210,170 @@ public:
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
 
     _Tp val[m*n]; //< matrix elements
+
+    /**
+     * Iterator
+     */
+    class Iterator {
+        friend class Matx;
+    public:
+        Iterator(const Iterator& ite);
+        Iterator& operator=(const Iterator& ite);
+        Iterator& operator++();
+        Iterator operator++(int junk);
+        Iterator& operator--();
+        Iterator operator--(int junk);
+        const _Tp* operator->() const;
+        const _Tp& operator*() const;
+        bool operator==(const Iterator& ite) const;
+        bool operator!=(const Iterator& ite) const;
+        int operator-(const Iterator& ite) const;
+    protected:
+        _Tp* v;
+        int iteratorPos;
+        Iterator(int pos, _Tp* vv);
+    };
+
+    /**
+     * Reverse iterator
+     */
+    class RIterator : public Iterator {
+        friend class Matx;
+    public:
+        RIterator& operator++();
+        RIterator operator++(int junk);
+        RIterator& operator--();
+        RIterator operator--(int junk);
+        int operator-(const RIterator& ite) const;
+    protected:
+        RIterator(int pos, _Tp* vv);
+    };
+
+    /**
+     * Get iterator for first element
+     * @return Iterator
+     */
+    Iterator begin() {
+        return Iterator(0, val);
+    }
+    /**
+     * Get iterator after last element
+     * @return Iterator
+     */
+    Iterator end() {
+        return Iterator(n * m, val);
+    }
+    /**
+     * Get reverse iterator for last element
+     * @return RIterator
+     */
+    RIterator rbegin() {
+        return RIterator(n * m - 1, val);
+    }
+    /**
+     * Get reverse iterator before first element
+     * @return RIterator
+     */
+    RIterator rend() {
+        return RIterator(-1, val);
+    }
 };
+
+template<typename _Tp, int m, int n>
+Matx<_Tp,m,n>::Iterator::Iterator(const Iterator& ite) : iteratorPos(ite.iteratorPos), v(ite.v) { };
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::Iterator& Matx<_Tp,m,n>::Iterator::operator=(const Iterator& ite) {
+    iteratorPos = ite.iteratorPos;
+    v = ite.v;
+    return *this;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::Iterator& Matx<_Tp,m,n>::Iterator::operator++() {
+    Iterator tmpIterator = *this;
+    iteratorPos++;
+    return tmpIterator;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::Iterator Matx<_Tp,m,n>::Iterator::operator++(int junk) {
+    iteratorPos++;
+    return *this;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::Iterator& Matx<_Tp,m,n>::Iterator::operator--() {
+    Iterator tmpIterator = *this;
+    iteratorPos--;
+    return tmpIterator;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::Iterator Matx<_Tp,m,n>::Iterator::operator--(int junk) {
+    iteratorPos--;
+    return *this;
+}
+
+template<typename _Tp, int m, int n>
+const _Tp* Matx<_Tp,m,n>::Iterator::operator->() const {
+    CV_DbgAssert(iteratorPos < n * m);
+    return &v[iteratorPos];
+}
+
+template<typename _Tp, int m, int n>
+const _Tp& Matx<_Tp,m,n>::Iterator::operator*() const {
+    CV_DbgAssert(iteratorPos < n * m);
+    return v[iteratorPos];
+}
+
+template<typename _Tp, int m, int n>
+bool Matx<_Tp,m,n>::Iterator::operator==(const Iterator& ite) const {
+    return iteratorPos == ite.iteratorPos;
+}
+
+template<typename _Tp, int m, int n>
+bool Matx<_Tp,m,n>::Iterator::operator!=(const Iterator& ite) const {
+    return iteratorPos != ite.iteratorPos;
+}
+
+template<typename _Tp, int m, int n>
+int Matx<_Tp,m,n>::Iterator::operator-(const Iterator& ite) const {
+    return iteratorPos - ite.ireratorPos;
+}
+
+template<typename _Tp, int m, int n>
+int Matx<_Tp,m,n>::RIterator::operator-(const RIterator& ite) const {
+    return -Iterator::operator-(ite);
+}
+
+template<typename _Tp, int m, int n>
+Matx<_Tp,m,n>::Iterator::Iterator(int pos, _Tp* vv) : iteratorPos(pos), v(vv) {}
+
+template<typename _Tp, int m, int n>
+Matx<_Tp,m,n>::RIterator::RIterator(int pos, _Tp* vv) : Iterator(pos, vv) {}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::RIterator& Matx<_Tp,m,n>::RIterator::operator++() {
+    return Iterator::operator--;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::RIterator Matx<_Tp,m,n>::RIterator::operator++(int junk) {
+    this->iteratorPos--;
+    return *this;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::RIterator& Matx<_Tp,m,n>::RIterator::operator--() {
+    return Iterator::operator++;
+}
+
+template<typename _Tp, int m, int n> typename
+Matx<_Tp,m,n>::RIterator Matx<_Tp,m,n>::RIterator::operator--(int junk) {
+    this->iteratorPos++;
+    return *this;
+}
 
 typedef Matx<float, 1, 2> Matx12f;
 typedef Matx<double, 1, 2> Matx12d;
