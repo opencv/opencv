@@ -146,7 +146,7 @@ opencv_videoio300d.lib
 opencv_videostab300d.lib
 @endcode
 
-Alternatively, your OpenCV download may have been built into one large .lib file. Check by looking in OpenCV\build\architecture\vc14\lib. In this case all you would add is, for the latest version: 
+Alternatively, your OpenCV download may have been built into one large .lib file. Check by looking in OpenCV\build\architecture\vc14\lib. In this case all you would add is, for the latest version:
 @code{.bash}
 opencv_world330.lib
 @endcode
