@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -418,6 +418,38 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(outputs.size(), 2u);
     EXPECT_EQ(shape(outputs[0]), shape(nT, nS, nO));
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
+}
+
+void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, bool useCommonInputBlob = true)
+{
+    String cfg = _tf(basename + ".cfg");
+    String weights = _tf(basename + ".weights");
+
+    String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
+    String outfile = _tf(basename + ".npy");
+
+    cv::setNumThreads(cv::getNumberOfCPUs());
+
+    Net net = readNetFromDarknet(cfg, (useDarknetModel) ? weights : String());
+    ASSERT_FALSE(net.empty());
+
+    Mat inp = blobFromNPY(inpfile);
+    Mat ref = blobFromNPY(outfile);
+
+    net.setInput(inp, "data");
+    Mat out = net.forward();
+
+    normAssert(ref, out);
+}
+
+TEST(Layer_Test_Region, Accuracy)
+{
+    testLayerUsingDarknetModels("region", false, false);
+}
+
+TEST(Layer_Test_Reorg, Accuracy)
+{
+    testLayerUsingDarknetModels("reorg", false, false);
 }
 
 }

@@ -473,6 +473,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PriorBoxLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ReorgLayer : public Layer
+    {
+    public:
+        static Ptr<ReorgLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS RegionLayer : public Layer
+    {
+    public:
+        static Ptr<RegionLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
     public:
