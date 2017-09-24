@@ -611,6 +611,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual ~Importer();
     };
 
+    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
+    *  @param cfgFile      path to the .cfg file with text description of the network architecture.
+    *  @param darknetModel path to the .weights file with learned network.
+    *  @returns Network object that ready to do forward, throw an exception in failure cases.
+    * @details This is shortcut consisting from DarknetImporter and Net::populateNet calls.
+    */
+    CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
+
     /**
      *  @deprecated Use @ref readNetFromCaffe instead.
      *  @brief Creates the importer of <a href="http://caffe.berkeleyvision.org">Caffe</a> framework network.
