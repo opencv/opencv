@@ -7,7 +7,10 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         let script = document.createElement('script');
         script.setAttribute('async', '');
         script.setAttribute('type', 'text/javascript');
-        script.addEventListener('load', onloadCallback);
+        script.addEventListener('load', () => {
+            console.log(cv.getBuildInformation());
+            onloadCallback();
+        });
         script.addEventListener('error', () => {
             this.printError('Failed to load ' + OPENCV_URL);
         });
