@@ -177,6 +177,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   # gather and copy specific files for js tutorials
   file(GLOB_RECURSE js_assets "${js_tutorials_assets_dir}/*")
   ocv_list_filterout(js_assets "\\\\.eslintrc.json")
+  list(APPEND js_assets "${OpenCV_SOURCE_DIR}/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.mp4")
 
   if(BUILD_opencv_js)
     set(ocv_js_dir "${CMAKE_BINARY_DIR}/bin")
