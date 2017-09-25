@@ -31,6 +31,13 @@ button {
     border: 1px solid transparent;
     border-radius: 4px;
 }
+button[disabled] {
+    cursor: not-allowed;
+    filter: alpha(opacity=65);
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    opacity: .65;
+}
 .control {
   margin-bottom: 3px;
 }
