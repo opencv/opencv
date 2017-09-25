@@ -137,6 +137,16 @@ models = [
         url='https://storage.cmusatyalab.org/openface-models/nn4.small2.v1.t7',
         sha='ac8161a4376fb5a79ceec55d85bbb57ef81da9fe',
         filename='openface_nn4.small2.v1.t7'),
+    Model(
+        name='YoloV2voc',  # https://pjreddie.com/darknet/yolo/
+        url='https://pjreddie.com/media/files/yolo-voc.weights',
+        sha='1cc1a7f8ad12d563d85b76e9de025dc28ac397bb',
+        filename='yolo-voc.weights'),
+    Model(
+        name='TinyYoloV2voc',  # https://pjreddie.com/darknet/yolo/
+        url='https://pjreddie.com/media/files/tiny-yolo-voc.weights',
+        sha='24b4bd049fc4fa5f5e95f684a8967e65c625dff9',
+        filename='tiny-yolo-voc.weights'),
 ]
 
 # Note: models will be downloaded to current working directory
