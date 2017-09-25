@@ -97,7 +97,7 @@ int main(int argc, char** argv)
         //! [Prepare blob]
 
         Mat inputBlob = blobFromImage(frame, inScaleFactor,
-                                      Size(inWidth, inHeight), meanVal); //Convert Mat to batch of images
+                                      Size(inWidth, inHeight), meanVal, false); //Convert Mat to batch of images
         //! [Prepare blob]
 
         //! [Set input blob]
