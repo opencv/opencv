@@ -275,7 +275,7 @@ struct VxKeypointsComparator
 
 static bool openvx_harris(Mat image, OutputArray _corners,
                           int _maxCorners, double _qualityLevel, double _minDistance,
-                          int _blockSize, int gradiantSize, double _harrisK)
+                          int _blockSize, int _gradientSize, double _harrisK)
 {
     using namespace ivx;
 
@@ -295,7 +295,7 @@ static bool openvx_harris(Mat image, OutputArray _corners,
         ivx::Scalar strengthThresh = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, 0);
 
         //The gradient window size to use on the input.
-        vx_int32 gradientSize = 3;
+        vx_int32 gradientSize = _gradientSize;
 
         //The block window size used to compute the harris corner score
         vx_int32 blockSize = _blockSize;
@@ -379,7 +379,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     // Disabled due to bad accuracy
     CV_OVX_RUN(false && useHarrisDetector && _mask.empty() &&
                !ovx::skipSmallImages<VX_KERNEL_HARRIS_CORNERS>(image.cols, image.rows),
-               openvx_harris(image, _corners, maxCorners, qualityLevel, minDistance, blockSize, gradiantSize, harrisK))
+               openvx_harris(image, _corners, maxCorners, qualityLevel, minDistance, blockSize, gradientSize, harrisK))
 
     if( useHarrisDetector )
         cornerHarris( image, eig, blockSize, gradientSize, harrisK );
