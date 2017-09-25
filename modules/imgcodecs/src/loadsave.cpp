@@ -147,8 +147,8 @@ struct ImageCodecInitializer
         encoders.push_back( makePtr<PxMEncoder>() );
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
-    #endif
         encoders.push_back( makePtr<TiffEncoder>() );
+    #endif
     #ifdef HAVE_PNG
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
