@@ -316,6 +316,10 @@ namespace binding_utils
     cv::Exception exceptionFromPtr(intptr_t ptr) {
         return *reinterpret_cast<cv::Exception*>(ptr);
     }
+
+    std::string getBuildInformation() {
+        return cv::getBuildInformation();
+    }
 }
 
 EMSCRIPTEN_BINDINGS(binding_utils)
@@ -532,6 +536,8 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::CamShiftWrapper));
 
     function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::meanShiftWrapper));
+
+    function("getBuildInformation", &binding_utils::getBuildInformation);
 
     constant("CV_8UC1", CV_8UC1);
     constant("CV_8UC2", CV_8UC2);
