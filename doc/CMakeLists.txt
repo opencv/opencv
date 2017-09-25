@@ -175,28 +175,28 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   file(MAKE_DIRECTORY "${opencv_tutorial_html_dir}")
 
   # gather and copy specific files for js tutorials
-  file(GLOB_RECURSE js_assets RELATIVE "${js_tutorials_assets_dir}" "${js_tutorials_assets_dir}/*")
-  ocv_list_filterout(js_assets ".eslintrc.json")
-  foreach(f ${js_assets})
-    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
-                       DEPENDS "${js_tutorials_assets_dir}/${f}"
-                       COMMENT "Copying ${f}"
-    )
-    list(APPEND js_tutorials_assets_deps "${js_tutorials_assets_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
-  endforeach()
+  file(GLOB_RECURSE js_assets "${js_tutorials_assets_dir}/*")
+  ocv_list_filterout(js_assets "\\\\.eslintrc.json")
+
+  if(BUILD_opencv_js)
+    set(ocv_js_dir "${CMAKE_BINARY_DIR}/bin")
+    set(ocv_js "opencv.js")
+    list(APPEND js_assets "${ocv_js_dir}/${ocv_js}")
+  endif()
 
   # copy haar cascade files
   set(haar_cascade_files "")
-  list(APPEND haar_cascade_files "haarcascade_frontalface_default.xml" "haarcascade_eye.xml")
-  set(data_harrcascades_path "${PROJECT_SOURCE_DIR}/../data/haarcascades/")
-  foreach(f ${haar_cascade_files})
-    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}"
-                       DEPENDS "${data_harrcascades_path}/${f}"
-                       COMMENT "Copying ${f}"
+  set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
+  list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
+
+  foreach(f ${js_assets})
+    get_filename_component(fname "${f}" NAME)
+    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${fname}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${f}" "${opencv_tutorial_html_dir}/${fname}"
+                       DEPENDS "${f}"
+                       COMMENT "Copying ${fname}"
     )
-    list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/${f}" "${opencv_tutorial_html_dir}/${f}")
+    list(APPEND js_tutorials_assets_deps "${f}" "${opencv_tutorial_html_dir}/${fname}")
   endforeach()
 
   add_custom_target(doxygen
