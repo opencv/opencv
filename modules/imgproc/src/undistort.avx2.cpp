@@ -161,16 +161,8 @@ int initUndistortRectifyMapLine_AVX(float* m1f, float* m2f, short* m1, ushort* m
             __u = _mm256_mul_pd(__u, _mm256_set1_pd(INTER_TAB_SIZE));
             __v = _mm256_mul_pd(__v, _mm256_set1_pd(INTER_TAB_SIZE));
 
-            __m128 __u_float = _mm256_cvtpd_ps(__u);
-            __m128 __v_float = _mm256_cvtpd_ps(__v);
-            _mm256_zeroupper();
-            static const __m128 __int_max = _mm_set1_ps((float)(std::numeric_limits<int>::max()));
-            static const __m128 __int_min = _mm_set1_ps((float)(std::numeric_limits<int>::min()));
-            __u_float = _mm_max_ps(_mm_min_ps(__u_float, __int_max), __int_min);
-            __v_float = _mm_max_ps(_mm_min_ps(__v_float, __int_max), __int_min);
-
-            __m128i __iu = _mm_cvtps_epi32(__u_float);
-            __m128i __iv = _mm_cvtps_epi32(__v_float);
+            __m128i __iu = _mm256_cvtpd_epi32(__u);
+            __m128i __iv = _mm256_cvtpd_epi32(__v);
 
             static const __m128i __INTER_TAB_SIZE_m1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
             __m128i __m2 = _mm_add_epi32(
@@ -191,6 +183,8 @@ int initUndistortRectifyMapLine_AVX(float* m1f, float* m2f, short* m1, ushort* m
             _mm_storeu_si128((__m128i*) &m1[j * 2], _mm256_extracti128_si256(_mm256_permute4x64_epi64(__m1, (2 << 2) + 0), 0));
         }
     }
+
+    _mm256_zeroupper();
 
     return j;
 }
