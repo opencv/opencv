@@ -3242,19 +3242,11 @@ public:
                             vsumw += _w;
                             vsumc += _cw;
                         }
-#if CV_SSE3
-                        // use horizontal add
                         float *bufFloat = (float*)buf;
-                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumc.val);
-                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumw.val);
-                        _mm_storel_pi((__m64*)bufFloat, vsumw.val);
-
+                        v_float32x4 sum4 = v_reduce_sum4(vsumw, vsumc, vsumw, vsumc);
+                        v_store(bufFloat, sum4);
                         sum += bufFloat[1];
                         wsum += bufFloat[0];
-#else // CV_SIMD128
-                        sum += v_reduce_sum(vsumc);
-                        wsum += v_reduce_sum(vsumw);
-#endif
                     }
 #endif
                     for( ; k < maxk; k++ )
@@ -3323,24 +3315,13 @@ public:
                             vsumg += _g;
                             vsumr += _r;
                         }
-#if CV_SSE3
-                        // use horizontal add
                         float *bufFloat = (float*)buf;
-                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumb.val);
-                        vsumg.val = _mm_hadd_ps(vsumg.val, vsumr.val);
-                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumg.val);
-                        _mm_store_ps((float*)bufFloat, vsumw.val);
-
-                        wsum  += bufFloat[0];
+                        v_float32x4 sum4 = v_reduce_sum4(vsumw, vsumb, vsumg, vsumr);
+                        v_store(bufFloat, sum4);
+                        wsum += bufFloat[0];
                         sum_b += bufFloat[1];
                         sum_g += bufFloat[2];
                         sum_r += bufFloat[3];
-#else
-                        wsum += v_reduce_sum(vsumw);
-                        sum_b += v_reduce_sum(vsumb);
-                        sum_g += v_reduce_sum(vsumg);
-                        sum_r += v_reduce_sum(vsumr);
-#endif
                     }
 #endif
 
@@ -3594,20 +3575,11 @@ public:
                             vecwsum += _w;
                             vecvsum += _val;
                         }
-#if CV_SSE3
-                        // use horizontal add
                         float *bufFloat = (float*)idxBuf;
-                        __m128 sumVec;
-                        sumVec = _mm_hadd_ps(vecwsum.val, vecvsum.val);
-                        sumVec = _mm_hadd_ps(sumVec, sumVec);
-                        _mm_storel_pi((__m64*)bufFloat, sumVec);
-
+                        v_float32x4 sum4 = v_reduce_sum4(vecwsum, vecvsum, vecwsum, vecvsum);
+                        v_store(bufFloat, sum4);
                         sum += bufFloat[1];
                         wsum += bufFloat[0];
-#else
-                        sum += v_reduce_sum(vecvsum);
-                        wsum += v_reduce_sum(vecwsum);
-#endif
                     }
 #endif
 
