@@ -1911,7 +1911,7 @@ static float64_t f64_sqrt( float64_t a )
     sigZ = ((uint_fast64_t) sig32Z<<32 | 1<<5) + ((uint_fast64_t) q<<3);
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    if ( (sigZ & 0x1FF) < 1<<5 ) {
+    if ( (sigZ & 0x1FF) < 0x22 ) {
         sigZ &= ~(uint_fast64_t) 0x3F;
         shiftedSigZ = sigZ>>6;
         rem = (sigA<<52) - shiftedSigZ * shiftedSigZ;
