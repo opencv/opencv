@@ -77,18 +77,14 @@ tryIt.addEventListener('click', () => {
 });
 
 utils.loadOpenCv(() => {
-    tryIt.removeAttribute('disabled');
+    let eyeCascadeFile = 'haarcascade_eye.xml';
+    utils.createFileFromUrl(eyeCascadeFile, eyeCascadeFile, () => {
+        let faceCascadeFile = 'haarcascade_frontalface_default.xml';
+        utils.createFileFromUrl(faceCascadeFile, faceCascadeFile, () => {
+            tryIt.removeAttribute('disabled');
+        });
+    });
 });
-let Module = {
-    preRun: [function() {
-        Module.FS_createPreloadedFile('/', 'haarcascade_eye.xml',
-                                      'haarcascade_eye.xml', true, false);
-        let frontalfaceXML = 'haarcascade_frontalface_default.xml';
-        let frontalfaceDefaultXML = 'haarcascade_frontalface_default.xml';
-        Module.FS_createPreloadedFile('/', frontalfaceXML,
-                                      frontalfaceDefaultXML, true, false);
-    }],
-};
 </script>
 </body>
 </html>

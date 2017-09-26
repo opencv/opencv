@@ -131,16 +131,11 @@ function onVideoStopped() {
     startAndStop.innerText = 'Start';
 }
 
-let Module = {
-    preRun: [function() {
-        Module.FS_createPreloadedFile(
-            '/', 'haarcascade_frontalface_default.xml',
-            'haarcascade_frontalface_default.xml', true, false);
-    }],
-};
-
 utils.loadOpenCv(() => {
-    startAndStop.removeAttribute('disabled');
+    let faceCascadeFile = 'haarcascade_frontalface_default.xml';
+    utils.createFileFromUrl(faceCascadeFile, faceCascadeFile, () => {
+        startAndStop.removeAttribute('disabled');
+    });
 });
 </script>
 </body>
