@@ -3226,8 +3226,8 @@ public:
                         {
                             v_float32x4 _valF = v_float32x4(sptr[j + space_ofs[k]],
                                 sptr[j + space_ofs[k + 1]],
-                                sptr[j + space_ofs[k + 3]],
-                                sptr[j + space_ofs[k + 2]]);
+                                sptr[j + space_ofs[k + 2]],
+                                sptr[j + space_ofs[k + 3]]);
                             v_float32x4 _val = v_abs(_valF - _val0);
                             v_store(buf, v_round(_val));
 
@@ -3687,24 +3687,13 @@ public:
                             sumg += _g;
                             sumr += _r;
                         }
-#if CV_SSE3
-                        // use horizontal add
+                        v_float32x4 sum4 = v_reduce_sum4(sumw, sumb, sumg, sumr);
                         float *bufFloat = (float*)idxBuf;
-                        __m128 sum_wb = _mm_hadd_ps(sumw.val, sumb.val);
-                        __m128 sum_gr = _mm_hadd_ps(sumg.val, sumr.val);
-                        __m128 sum = _mm_hadd_ps(sum_wb, sum_gr);
-
-                        _mm_store_ps(bufFloat, sum);
+                        v_store(bufFloat, sum4);
                         wsum += bufFloat[0];
                         sum_b += bufFloat[1];
                         sum_g += bufFloat[2];
                         sum_r += bufFloat[3];
-#else
-                        wsum += v_reduce_sum(sumw);
-                        sum_b += v_reduce_sum(sumb);
-                        sum_g += v_reduce_sum(sumg);
-                        sum_r += v_reduce_sum(sumr);
-#endif
                     }
 #endif
 
