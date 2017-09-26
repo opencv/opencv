@@ -3198,12 +3198,10 @@ public:
     {
         int i, j, cn = dest->channels(), k;
         Size size = dest->size();
-        #if CV_SSE3
+#if CV_SIMD128
         int CV_DECL_ALIGNED(16) buf[4];
-        float CV_DECL_ALIGNED(16) bufSum[4];
-        static const unsigned int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
-        bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
-        #endif
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         for( i = range.start; i < range.end; i++ )
         {
@@ -3217,35 +3215,48 @@ public:
                     float sum = 0, wsum = 0;
                     int val0 = sptr[j];
                     k = 0;
-                    #if CV_SSE3
-                    if( haveSSE3 )
+#if CV_SIMD128
+                    if( haveSIMD128 )
                     {
-                        __m128 _val0 = _mm_set1_ps(static_cast<float>(val0));
-                        const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+                        v_float32x4 _val0 = v_setall_f32(static_cast<float>(val0));
+                        v_float32x4 vsumw = v_setzero_f32();
+                        v_float32x4 vsumc = v_setzero_f32();
 
                         for( ; k <= maxk - 4; k += 4 )
                         {
-                            __m128 _valF = _mm_set_ps(sptr[j + space_ofs[k+3]], sptr[j + space_ofs[k+2]],
-                                                      sptr[j + space_ofs[k+1]], sptr[j + space_ofs[k]]);
+                            v_float32x4 _valF = v_float32x4(sptr[j + space_ofs[k]],
+                                sptr[j + space_ofs[k + 1]],
+                                sptr[j + space_ofs[k + 3]],
+                                sptr[j + space_ofs[k + 2]]);
+                            v_float32x4 _val = v_abs(_valF - _val0);
+                            v_store(buf, v_round(_val));
 
-                            __m128 _val = _mm_andnot_ps(_signMask, _mm_sub_ps(_valF, _val0));
-                            _mm_store_si128((__m128i*)buf, _mm_cvtps_epi32(_val));
+                            v_float32x4 _cw = v_float32x4(color_weight[buf[0]],
+                                color_weight[buf[1]],
+                                color_weight[buf[2]],
+                                color_weight[buf[3]]);
+                            v_float32x4 _sw = v_load(space_weight+k);
+                            v_float32x4 _w = _cw * _sw;
+                            _cw = _w * _valF;
 
-                            __m128 _cw = _mm_set_ps(color_weight[buf[3]],color_weight[buf[2]],
-                                                    color_weight[buf[1]],color_weight[buf[0]]);
-                            __m128 _sw = _mm_loadu_ps(space_weight+k);
-                            __m128 _w = _mm_mul_ps(_cw, _sw);
-                             _cw = _mm_mul_ps(_w, _valF);
-
-                             _sw = _mm_hadd_ps(_w, _cw);
-                             _sw = _mm_hadd_ps(_sw, _sw);
-                             _mm_storel_pi((__m64*)bufSum, _sw);
-
-                             sum += bufSum[1];
-                             wsum += bufSum[0];
+                            vsumw += _w;
+                            vsumc += _cw;
                         }
+#if CV_SSE3
+                        // use horizontal add
+                        float *bufFloat = (float*)buf;
+                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumc.val);
+                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumw.val);
+                        _mm_storel_pi((__m64*)bufFloat, vsumw.val);
+
+                        sum += bufFloat[1];
+                        wsum += bufFloat[0];
+#else // CV_SIMD128
+                        sum += v_reduce_sum(vsumc);
+                        wsum += v_reduce_sum(vsumw);
+#endif
                     }
-                    #endif
+#endif
                     for( ; k < maxk; k++ )
                     {
                         int val = sptr[j + space_ofs[k]];
@@ -3265,58 +3276,73 @@ public:
                     float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
                     int b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
                     k = 0;
-                    #if CV_SSE3
-                    if( haveSSE3 )
+#if CV_SIMD128
+                    if( haveSIMD128 )
                     {
-                        const __m128i izero = _mm_setzero_si128();
-                        const __m128 _b0 = _mm_set1_ps(static_cast<float>(b0));
-                        const __m128 _g0 = _mm_set1_ps(static_cast<float>(g0));
-                        const __m128 _r0 = _mm_set1_ps(static_cast<float>(r0));
-                        const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+                        v_float32x4 vsumw = v_setzero_f32();
+                        v_float32x4 vsumb = v_setzero_f32();
+                        v_float32x4 vsumg = v_setzero_f32();
+                        v_float32x4 vsumr = v_setzero_f32();
+                        const v_float32x4 _b0 = v_setall_f32(static_cast<float>(b0));
+                        const v_float32x4 _g0 = v_setall_f32(static_cast<float>(g0));
+                        const v_float32x4 _r0 = v_setall_f32(static_cast<float>(r0));
 
                         for( ; k <= maxk - 4; k += 4 )
                         {
-                            const int* const sptr_k0  = reinterpret_cast<const int*>(sptr + j + space_ofs[k]);
-                            const int* const sptr_k1  = reinterpret_cast<const int*>(sptr + j + space_ofs[k+1]);
-                            const int* const sptr_k2  = reinterpret_cast<const int*>(sptr + j + space_ofs[k+2]);
-                            const int* const sptr_k3  = reinterpret_cast<const int*>(sptr + j + space_ofs[k+3]);
+                            const uchar* const sptr_k0  = sptr + j + space_ofs[k];
+                            const uchar* const sptr_k1  = sptr + j + space_ofs[k+1];
+                            const uchar* const sptr_k2  = sptr + j + space_ofs[k+2];
+                            const uchar* const sptr_k3  = sptr + j + space_ofs[k+3];
 
-                            __m128 _b = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k0[0]), izero), izero));
-                            __m128 _g = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k1[0]), izero), izero));
-                            __m128 _r = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k2[0]), izero), izero));
-                            __m128 _z = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k3[0]), izero), izero));
+                            v_float32x4 __b = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(sptr_k0)));
+                            v_float32x4 __g = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(sptr_k1)));
+                            v_float32x4 __r = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(sptr_k2)));
+                            v_float32x4 __z = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(sptr_k3)));
+                            v_float32x4 _b, _g, _r, _z;
 
-                            _MM_TRANSPOSE4_PS(_b, _g, _r, _z);
+                            v_transpose4x4(__b, __g, __r, __z, _b, _g, _r, _z);
 
-                            __m128 bt = _mm_andnot_ps(_signMask, _mm_sub_ps(_b,_b0));
-                            __m128 gt = _mm_andnot_ps(_signMask, _mm_sub_ps(_g,_g0));
-                            __m128 rt = _mm_andnot_ps(_signMask, _mm_sub_ps(_r,_r0));
+                            v_float32x4 bt = v_abs(_b -_b0);
+                            v_float32x4 gt = v_abs(_g -_g0);
+                            v_float32x4 rt = v_abs(_r -_r0);
 
-                            bt =_mm_add_ps(rt, _mm_add_ps(bt, gt));
-                            _mm_store_si128((__m128i*)buf, _mm_cvtps_epi32(bt));
+                            bt = rt + bt + gt;
+                            v_store(buf, v_round(bt));
 
-                            __m128 _w  = _mm_set_ps(color_weight[buf[3]],color_weight[buf[2]],
-                                                    color_weight[buf[1]],color_weight[buf[0]]);
-                            __m128 _sw = _mm_loadu_ps(space_weight+k);
+                            v_float32x4 _w  = v_float32x4(color_weight[buf[0]],color_weight[buf[1]],
+                                                    color_weight[buf[2]],color_weight[buf[3]]);
+                            v_float32x4 _sw = v_load(space_weight+k);
 
-                            _w = _mm_mul_ps(_w,_sw);
-                            _b = _mm_mul_ps(_b, _w);
-                            _g = _mm_mul_ps(_g, _w);
-                            _r = _mm_mul_ps(_r, _w);
+                            _w *= _sw;
+                            _b *=  _w;
+                            _g *=  _w;
+                            _r *=  _w;
 
-                            _w = _mm_hadd_ps(_w, _b);
-                            _g = _mm_hadd_ps(_g, _r);
+                            vsumw += _w;
+                            vsumb += _b;
+                            vsumg += _g;
+                            vsumr += _r;
+                        }
+#if CV_SSE3
+                        // use horizontal add
+                        float *bufFloat = (float*)buf;
+                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumb.val);
+                        vsumg.val = _mm_hadd_ps(vsumg.val, vsumr.val);
+                        vsumw.val = _mm_hadd_ps(vsumw.val, vsumg.val);
+                        _mm_store_ps((float*)bufFloat, vsumw.val);
 
-                            _w = _mm_hadd_ps(_w, _g);
-                            _mm_store_ps(bufSum, _w);
-
-                            wsum  += bufSum[0];
-                            sum_b += bufSum[1];
-                            sum_g += bufSum[2];
-                            sum_r += bufSum[3];
-                         }
+                        wsum  += bufFloat[0];
+                        sum_b += bufFloat[1];
+                        sum_g += bufFloat[2];
+                        sum_r += bufFloat[3];
+#else
+                        wsum += v_reduce_sum(vsumw);
+                        sum_b += v_reduce_sum(vsumb);
+                        sum_g += v_reduce_sum(vsumg);
+                        sum_r += v_reduce_sum(vsumr);
+#endif
                     }
-                    #endif
+#endif
 
                     for( ; k < maxk; k++ )
                     {
@@ -3515,16 +3541,10 @@ public:
     {
         int i, j, k;
         Size size = dest->size();
-        #if CV_SSE3 || CV_NEON
+#if CV_SIMD128
         int CV_DECL_ALIGNED(16) idxBuf[4];
-        float CV_DECL_ALIGNED(16) bufSum32[4];
-        static const unsigned int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
-        #endif
-        #if CV_SSE3
-        bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
-        #elif CV_NEON
-        bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
-        #endif
+        bool haveSIMD128 = hasSIMD128();
+#endif
 
         for( i = range.start; i < range.end; i++ )
         {
@@ -3538,84 +3558,58 @@ public:
                     float sum = 0, wsum = 0;
                     float val0 = sptr[j];
                     k = 0;
-                    #if CV_SSE3
-                    if( haveSSE3 )
+#if CV_SIMD128
+                    if( haveSIMD128 )
                     {
-                        __m128 psum = _mm_setzero_ps();
-                        const __m128 _val0 = _mm_set1_ps(sptr[j]);
-                        const __m128 _scale_index = _mm_set1_ps(scale_index);
-                        const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+                        v_float32x4 vecwsum = v_setzero_f32();
+                        v_float32x4 vecvsum = v_setzero_f32();
+                        const v_float32x4 _val0 = v_setall_f32(sptr[j]);
+                        const v_float32x4 _scale_index = v_setall_f32(scale_index);
 
-                        for( ; k <= maxk - 4 ; k += 4 )
+                        for (; k <= maxk - 4; k += 4)
                         {
-                            __m128 _sw    = _mm_loadu_ps(space_weight + k);
-                            __m128 _val   = _mm_set_ps(sptr[j + space_ofs[k+3]], sptr[j + space_ofs[k+2]],
-                                                       sptr[j + space_ofs[k+1]], sptr[j + space_ofs[k]]);
-                            __m128 _alpha = _mm_mul_ps(_mm_andnot_ps( _signMask, _mm_sub_ps(_val,_val0)), _scale_index);
+                            v_float32x4 _sw = v_load(space_weight + k);
+                            v_float32x4 _val = v_float32x4(sptr[j + space_ofs[k]],
+                                sptr[j + space_ofs[k + 1]],
+                                sptr[j + space_ofs[k + 2]],
+                                sptr[j + space_ofs[k + 3]]);
+                            v_float32x4 _alpha = v_abs(_val - _val0) * _scale_index;
 
-                            __m128i _idx = _mm_cvtps_epi32(_alpha);
-                            _mm_store_si128((__m128i*)idxBuf, _idx);
-                            _alpha = _mm_sub_ps(_alpha, _mm_cvtepi32_ps(_idx));
+                            v_int32x4 _idx = v_round(_alpha);
+                            v_store(idxBuf, _idx);
+                            _alpha -= v_cvt_f32(_idx);
 
-                            __m128 _explut  = _mm_set_ps(expLUT[idxBuf[3]], expLUT[idxBuf[2]],
-                                                         expLUT[idxBuf[1]], expLUT[idxBuf[0]]);
-                            __m128 _explut1 = _mm_set_ps(expLUT[idxBuf[3]+1], expLUT[idxBuf[2]+1],
-                                                         expLUT[idxBuf[1]+1], expLUT[idxBuf[0]+1]);
+                            v_float32x4 _explut = v_float32x4(expLUT[idxBuf[0]],
+                                expLUT[idxBuf[1]],
+                                expLUT[idxBuf[2]],
+                                expLUT[idxBuf[3]]);
+                            v_float32x4 _explut1 = v_float32x4(expLUT[idxBuf[0] + 1],
+                                expLUT[idxBuf[1] + 1],
+                                expLUT[idxBuf[2] + 1],
+                                expLUT[idxBuf[3] + 1]);
 
-                            __m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
-                            _val = _mm_mul_ps(_w, _val);
+                            v_float32x4 _w = _sw * (_explut + (_alpha * (_explut1 - _explut)));
+                            _val *= _w;
 
-                            _sw = _mm_hadd_ps(_w, _val);
-                            _sw = _mm_hadd_ps(_sw, _sw);
-                            psum = _mm_add_ps(_sw, psum);
+                            vecwsum += _w;
+                            vecvsum += _val;
                         }
-                        _mm_storel_pi((__m64*)bufSum32, psum);
+#if CV_SSE3
+                        // use horizontal add
+                        float *bufFloat = (float*)idxBuf;
+                        __m128 sumVec;
+                        sumVec = _mm_hadd_ps(vecwsum.val, vecvsum.val);
+                        sumVec = _mm_hadd_ps(sumVec, sumVec);
+                        _mm_storel_pi((__m64*)bufFloat, sumVec);
 
-                        sum = bufSum32[1];
-                        wsum = bufSum32[0];
+                        sum += bufFloat[1];
+                        wsum += bufFloat[0];
+#else
+                        sum += v_reduce_sum(vecvsum);
+                        wsum += v_reduce_sum(vecwsum);
+#endif
                     }
-                    #elif CV_NEON
-                    if( haveNEON )
-                    {
-                        float32x2_t psum = vdup_n_f32(0.0f);
-                        const volatile float32x4_t _val0 = vdupq_n_f32(sptr[j]);
-                        const float32x4_t _scale_index = vdupq_n_f32(scale_index);
-                        const uint32x4_t _signMask = vld1q_u32(bufSignMask);
-
-                        for( ; k <= maxk - 4 ; k += 4 )
-                        {
-                            float32x4_t _sw  = vld1q_f32(space_weight + k);
-                            float CV_DECL_ALIGNED(16) _data[] = {sptr[j + space_ofs[k]],   sptr[j + space_ofs[k+1]],
-                                                                 sptr[j + space_ofs[k+2]], sptr[j + space_ofs[k+3]],};
-                            float32x4_t _val = vld1q_f32(_data);
-                            float32x4_t _alpha = vsubq_f32(_val, _val0);
-                            _alpha = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(_alpha), _signMask));
-                            _alpha = vmulq_f32(_alpha, _scale_index);
-                            int32x4_t _idx = vcvtq_s32_f32(_alpha);
-                            vst1q_s32(idxBuf, _idx);
-                            _alpha = vsubq_f32(_alpha, vcvtq_f32_s32(_idx));
-
-                            bufSum32[0] = expLUT[idxBuf[0]];
-                            bufSum32[1] = expLUT[idxBuf[1]];
-                            bufSum32[2] = expLUT[idxBuf[2]];
-                            bufSum32[3] = expLUT[idxBuf[3]];
-                            float32x4_t _explut = vld1q_f32(bufSum32);
-                            bufSum32[0] = expLUT[idxBuf[0]+1];
-                            bufSum32[1] = expLUT[idxBuf[1]+1];
-                            bufSum32[2] = expLUT[idxBuf[2]+1];
-                            bufSum32[3] = expLUT[idxBuf[3]+1];
-                            float32x4_t _explut1 = vld1q_f32(bufSum32);
-
-                            float32x4_t _w = vmulq_f32(_sw, vaddq_f32(_explut, vmulq_f32(_alpha, vsubq_f32(_explut1, _explut))));
-                            _val = vmulq_f32(_w, _val);
-
-                            float32x2_t _wval = vpadd_f32(vpadd_f32(vget_low_f32(_w),vget_high_f32(_w)), vpadd_f32(vget_low_f32(_val), vget_high_f32(_val)));
-                            psum = vadd_f32(_wval, psum);
-                        }
-                        sum = vget_lane_f32(psum, 1);
-                        wsum = vget_lane_f32(psum, 0);
-                    }
-                    #endif
+#endif
 
                     for( ; k < maxk; k++ )
                     {
@@ -3638,129 +3632,81 @@ public:
                     float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
                     float b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
                     k = 0;
-                    #if  CV_SSE3
-                    if( haveSSE3 )
+#if CV_SIMD128
+                    if( haveSIMD128 )
                     {
-                        __m128 sum = _mm_setzero_ps();
-                        const __m128 _b0 = _mm_set1_ps(b0);
-                        const __m128 _g0 = _mm_set1_ps(g0);
-                        const __m128 _r0 = _mm_set1_ps(r0);
-                        const __m128 _scale_index = _mm_set1_ps(scale_index);
-                        const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+                        v_float32x4 sumw = v_setzero_f32();
+                        v_float32x4 sumb = v_setzero_f32();
+                        v_float32x4 sumg = v_setzero_f32();
+                        v_float32x4 sumr = v_setzero_f32();
+                        const v_float32x4 _b0 = v_setall_f32(b0);
+                        const v_float32x4 _g0 = v_setall_f32(g0);
+                        const v_float32x4 _r0 = v_setall_f32(r0);
+                        const v_float32x4 _scale_index = v_setall_f32(scale_index);
 
                         for( ; k <= maxk-4; k += 4 )
                         {
-                            __m128 _sw = _mm_loadu_ps(space_weight + k);
+                            v_float32x4 _sw = v_load(space_weight + k);
 
                             const float* const sptr_k0 = sptr + j + space_ofs[k];
                             const float* const sptr_k1 = sptr + j + space_ofs[k+1];
                             const float* const sptr_k2 = sptr + j + space_ofs[k+2];
                             const float* const sptr_k3 = sptr + j + space_ofs[k+3];
 
-                            __m128 _b = _mm_loadu_ps(sptr_k0);
-                            __m128 _g = _mm_loadu_ps(sptr_k1);
-                            __m128 _r = _mm_loadu_ps(sptr_k2);
-                            __m128 _z = _mm_loadu_ps(sptr_k3);
-                            _MM_TRANSPOSE4_PS(_b, _g, _r, _z);
+                            v_float32x4 _v0 = v_load(sptr_k0);
+                            v_float32x4 _v1 = v_load(sptr_k1);
+                            v_float32x4 _v2 = v_load(sptr_k2);
+                            v_float32x4 _v3 = v_load(sptr_k3);
+                            v_float32x4 _b, _g, _r, _dummy;
 
-                            __m128 _bt = _mm_andnot_ps(_signMask,_mm_sub_ps(_b,_b0));
-                            __m128 _gt = _mm_andnot_ps(_signMask,_mm_sub_ps(_g,_g0));
-                            __m128 _rt = _mm_andnot_ps(_signMask,_mm_sub_ps(_r,_r0));
+                            v_transpose4x4(_v0, _v1, _v2, _v3, _b, _g, _r, _dummy);
 
-                            __m128 _alpha = _mm_mul_ps(_scale_index, _mm_add_ps(_rt,_mm_add_ps(_bt, _gt)));
+                            v_float32x4 _bt = v_abs(_b - _b0);
+                            v_float32x4 _gt = v_abs(_g - _g0);
+                            v_float32x4 _rt = v_abs(_r - _r0);
+                            v_float32x4 _alpha = _scale_index * (_bt + _gt + _rt);
 
-                            __m128i _idx  = _mm_cvtps_epi32(_alpha);
-                            _mm_store_si128((__m128i*)idxBuf, _idx);
-                            _alpha = _mm_sub_ps(_alpha, _mm_cvtepi32_ps(_idx));
+                            v_int32x4 _idx = v_round(_alpha);
+                            v_store((int*)idxBuf, _idx);
+                            v_float32x4 _explut = v_float32x4(expLUT[idxBuf[0]],
+                                expLUT[idxBuf[1]],
+                                expLUT[idxBuf[2]],
+                                expLUT[idxBuf[3]]);
+                            v_float32x4 _explut1 = v_float32x4(expLUT[idxBuf[0] + 1],
+                                expLUT[idxBuf[1] + 1],
+                                expLUT[idxBuf[2] + 1],
+                                expLUT[idxBuf[3] + 1]);
 
-                            __m128 _explut  = _mm_set_ps(expLUT[idxBuf[3]], expLUT[idxBuf[2]], expLUT[idxBuf[1]], expLUT[idxBuf[0]]);
-                            __m128 _explut1 = _mm_set_ps(expLUT[idxBuf[3]+1], expLUT[idxBuf[2]+1], expLUT[idxBuf[1]+1], expLUT[idxBuf[0]+1]);
+                            v_float32x4 _w = _sw * (_explut + (_alpha * (_explut1 - _explut)));
 
-                            __m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
-
-                            _b = _mm_mul_ps(_b, _w);
-                            _g = _mm_mul_ps(_g, _w);
-                            _r = _mm_mul_ps(_r, _w);
-
-                             _w = _mm_hadd_ps(_w, _b);
-                             _g = _mm_hadd_ps(_g, _r);
-
-                             _w = _mm_hadd_ps(_w, _g);
-                             sum = _mm_add_ps(sum, _w);
+                            _b *=  _w;
+                            _g *=  _w;
+                            _r *=  _w;
+                            sumw += _w;
+                            sumb += _b;
+                            sumg += _g;
+                            sumr += _r;
                         }
-                        _mm_store_ps(bufSum32, sum);
-                        wsum  = bufSum32[0];
-                        sum_b = bufSum32[1];
-                        sum_g = bufSum32[2];
-                        sum_r = bufSum32[3];
+#if CV_SSE3
+                        // use horizontal add
+                        float *bufFloat = (float*)idxBuf;
+                        __m128 sum_wb = _mm_hadd_ps(sumw.val, sumb.val);
+                        __m128 sum_gr = _mm_hadd_ps(sumg.val, sumr.val);
+                        __m128 sum = _mm_hadd_ps(sum_wb, sum_gr);
+
+                        _mm_store_ps(bufFloat, sum);
+                        wsum += bufFloat[0];
+                        sum_b += bufFloat[1];
+                        sum_g += bufFloat[2];
+                        sum_r += bufFloat[3];
+#else
+                        wsum += v_reduce_sum(sumw);
+                        sum_b += v_reduce_sum(sumb);
+                        sum_g += v_reduce_sum(sumg);
+                        sum_r += v_reduce_sum(sumr);
+#endif
                     }
-                    #elif CV_NEON
-                    if( haveNEON )
-                    {
-                        float32x4_t sum = vdupq_n_f32(0.0f);
-                        const float32x4_t _b0 = vdupq_n_f32(b0);
-                        const float32x4_t _g0 = vdupq_n_f32(g0);
-                        const float32x4_t _r0 = vdupq_n_f32(r0);
-                        const float32x4_t _scale_index = vdupq_n_f32(scale_index);
-                        const uint32x4_t _signMask = vld1q_u32(bufSignMask);
-
-                        for( ; k <= maxk-4; k += 4 )
-                        {
-                            float32x4_t _sw = vld1q_f32(space_weight + k);
-
-                            const float* const sptr_k0 = sptr + j + space_ofs[k];
-                            const float* const sptr_k1 = sptr + j + space_ofs[k+1];
-                            const float* const sptr_k2 = sptr + j + space_ofs[k+2];
-                            const float* const sptr_k3 = sptr + j + space_ofs[k+3];
-
-                            float32x4_t _v0 = vld1q_f32(sptr_k0);
-                            float32x4_t _v1 = vld1q_f32(sptr_k1);
-                            float32x4_t _v2 = vld1q_f32(sptr_k2);
-                            float32x4_t _v3 = vld1q_f32(sptr_k3);
-
-                            float32x4x2_t v01 = vtrnq_f32(_v0, _v1);
-                            float32x4x2_t v23 = vtrnq_f32(_v2, _v3);
-                            float32x4_t _b = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0]));
-                            float32x4_t _g = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1]));
-                            float32x4_t _r = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0]));
-
-                            float32x4_t _bt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_b, _b0)), _signMask));
-                            float32x4_t _gt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_g, _g0)), _signMask));
-                            float32x4_t _rt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_r, _r0)), _signMask));
-                            float32x4_t _alpha = vmulq_f32(_scale_index, vaddq_f32(_bt, vaddq_f32(_gt, _rt)));
-
-                            int32x4_t _idx = vcvtq_s32_f32(_alpha);
-                            vst1q_s32((int*)idxBuf, _idx);
-                            bufSum32[0] = expLUT[idxBuf[0]];
-                            bufSum32[1] = expLUT[idxBuf[1]];
-                            bufSum32[2] = expLUT[idxBuf[2]];
-                            bufSum32[3] = expLUT[idxBuf[3]];
-                            float32x4_t _explut = vld1q_f32(bufSum32);
-                            bufSum32[0] = expLUT[idxBuf[0]+1];
-                            bufSum32[1] = expLUT[idxBuf[1]+1];
-                            bufSum32[2] = expLUT[idxBuf[2]+1];
-                            bufSum32[3] = expLUT[idxBuf[3]+1];
-                            float32x4_t _explut1 = vld1q_f32(bufSum32);
-
-                            float32x4_t _w = vmulq_f32(_sw, vaddq_f32(_explut, vmulq_f32(_alpha, vsubq_f32(_explut1, _explut))));
-
-                            _b = vmulq_f32(_b, _w);
-                            _g = vmulq_f32(_g, _w);
-                            _r = vmulq_f32(_r, _w);
-
-                            float32x2_t _wb = vpadd_f32(vpadd_f32(vget_low_f32(_w),vget_high_f32(_w)), vpadd_f32(vget_low_f32(_b), vget_high_f32(_b)));
-                            float32x2_t _gr = vpadd_f32(vpadd_f32(vget_low_f32(_g),vget_high_f32(_g)), vpadd_f32(vget_low_f32(_r), vget_high_f32(_r)));
-
-                            _w = vcombine_f32(_wb, _gr);
-                            sum = vaddq_f32(sum, _w);
-                        }
-                        vst1q_f32(bufSum32, sum);
-                        wsum  = bufSum32[0];
-                        sum_b = bufSum32[1];
-                        sum_g = bufSum32[2];
-                        sum_r = bufSum32[3];
-                    }
-                    #endif
+#endif
 
                     for(; k < maxk; k++ )
                     {
