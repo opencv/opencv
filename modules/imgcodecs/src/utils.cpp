@@ -410,6 +410,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
                      int& y, int height,
                      int count3, PaletteEntry clr )
 {
+    CV_Assert(step >= 0);
     do
     {
         uchar* end = data + count3;
@@ -442,6 +443,7 @@ uchar* FillUniGray( uchar* data, uchar*& line_end,
                     int& y, int height,
                     int count, uchar clr )
 {
+    CV_Assert(step >= 0);
     do
     {
         uchar* end = data + count;
