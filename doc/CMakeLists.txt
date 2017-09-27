@@ -183,6 +183,8 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     set(ocv_js_dir "${CMAKE_BINARY_DIR}/bin")
     set(ocv_js "opencv.js")
     list(APPEND js_assets "${ocv_js_dir}/${ocv_js}")
+  elseif(DEFINED OPENCV_JS_LOCATION)
+    list(APPEND js_assets "${OPENCV_JS_LOCATION}")
   endif()
 
   # copy haar cascade files
