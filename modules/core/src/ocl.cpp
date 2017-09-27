@@ -51,6 +51,8 @@
 #include <inttypes.h>
 #endif
 
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include "opencv2/core/ocl_genbase.hpp"
 #include "opencl_kernels_core.hpp"
 
