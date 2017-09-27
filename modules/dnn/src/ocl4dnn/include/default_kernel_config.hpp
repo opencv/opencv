@@ -1,7 +1,6 @@
 #ifndef _OPENCV_OCL4DNN_DEFAULT_KERNEL_CONFIG_HPP_
 #define _OPENCV_OCL4DNN_DEFAULT_KERNEL_CONFIG_HPP_
-#define CONFIG_NUM (sizeof(default_kernel_config) / sizeof(char *) / 2)
-const char *default_kernel_config[] = {
+const char *default_kernel_config_intel[] = {
 // Below is the information for OpenCL based on which these configurations tuned
 /*******************************************************************************
 Number of platforms                               1

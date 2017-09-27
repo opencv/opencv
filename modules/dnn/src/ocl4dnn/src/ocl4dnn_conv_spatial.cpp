@@ -423,7 +423,7 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
                << "num" << num_ << "_"
                << "M" << M_;
 
-    key_ = "EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
+    key_ = ocl::Device::getDefault().vendorName() + "_EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
     short_key_ = keyBuilder.str();
 }
 
@@ -1569,9 +1569,13 @@ bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
     cv::AutoLock lock(kernelConfigMutex);
     if (!defaultConfigLoaded)
     {
-        for (int i = 0; i < CONFIG_NUM; i++)
+        const size_t numConfigs = sizeof(default_kernel_config_intel)/sizeof(default_kernel_config_intel[0])/2;
+        for (size_t i = 0; i < numConfigs; i++)
         {
-            kernelConfigMap.insert(std::pair<std::string, std::string>(default_kernel_config[2 * i], default_kernel_config[2 * i + 1]));
+            std::pair<std::string, std::string> entry(
+                    std::string("Intel(R) Corporation_") + default_kernel_config_intel[2 * i],
+                    default_kernel_config_intel[2 * i + 1]);
+            kernelConfigMap.insert(entry);
         }
         defaultConfigLoaded = true;
     }
