@@ -1823,7 +1823,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(_lowerb, stype, lkind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The lower bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
 
@@ -1832,7 +1832,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(_upperb, stype, ukind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The upper bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
 
@@ -1944,7 +1944,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(lb, src.type(), lkind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The lower bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
 
@@ -1953,7 +1953,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(ub, src.type(), ukind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The upper bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
 
