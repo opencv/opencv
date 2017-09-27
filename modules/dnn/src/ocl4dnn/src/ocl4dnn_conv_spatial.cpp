@@ -41,6 +41,9 @@
 //M*/
 
 #include "../../precomp.hpp"
+
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include <string>
 #include <vector>
 #include <fstream>
@@ -122,43 +125,36 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     bottom_dim_ = channels_ * in_spatial_dim_;
     top_dim_ = num_output_ * out_spatial_dim_;
 
-    if (std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH")) {
-        cache_path_ << std::getenv("OPENCV_OCL4DNN_KERNEL_CONFIG_PATH");
-    }
+    cache_path_ = utils::getConfigurationParameterString("OPENCV_OCL4DNN_CONFIG_PATH", "");
 
-    bool hasCacheDir = false;
-#if defined WIN32 || defined _WIN32
-    if (cache_path_.str().empty() && std::getenv("USERPROFILE"))
-        cache_path_ << std::getenv("USERPROFILE");
-
-    struct _stat file_stat;
-    cache_path_ << "\\spatialkernels\\";
-    hasCacheDir = _stat(cache_path_.str().c_str(), &file_stat) == 0 &&
-                  ((_S_IFDIR & file_stat.st_mode) != 0);
+    use_cache_path_ = false;
+    if (!cache_path_.empty())
+    {
+#if defined _WIN32
+        struct _stat file_stat;
+        use_cache_path_ = _stat(cache_path_.c_str(), &file_stat) == 0 &&
+                      ((_S_IFDIR & file_stat.st_mode) != 0);
 #else
-    if (cache_path_.str().empty() && std::getenv("HOME"))
-        cache_path_ << std::getenv("HOME");
-
-    struct stat file_stat;
-    cache_path_ << "/spatialkernels/";
-    hasCacheDir = stat(cache_path_.str().c_str(), &file_stat) == 0 &&
-                  S_ISDIR(file_stat.st_mode);
+        struct stat file_stat;
+        use_cache_path_ = stat(cache_path_.c_str(), &file_stat) == 0 &&
+                      S_ISDIR(file_stat.st_mode);
 #endif
+        if (!use_cache_path_)
+        {
+            static int warn_ = 0;
+            if (!warn_)
+            {
+                std::cerr
+                    << "OpenCV(ocl4dnn): Kernel configuration cache directory doesn't exist: " << cache_path_ << std::endl
+                    << std::endl;
+                warn_ = true;
+            }
+        }
+    }
 
-    if (!hasCacheDir) {
-#if defined WIN32 || defined _WIN32
-        int result = _mkdir(cache_path_.str().c_str());
-#else
-        int result = mkdir(cache_path_.str().c_str(), 0755);
-#endif
-        hasCacheDir = (result == -1) ? false : true;
-    }
-    if (!hasCacheDir) {
-        std::cout << "Failed to create cache directory: "
-                  << cache_path_.str()
-                  << ", disable auto-tuning." << std::endl;
-    }
-    auto_tuning_ = hasCacheDir && getenv("OPENCV_OCL4DNN_ENABLE_AUTO_TUNING");
+    force_auto_tuning_ =
+            (use_cache_path_ && !utils::getConfigurationParameterBool("OPENCV_OCL4DNN_DISABLE_AUTO_TUNING", false))
+            || utils::getConfigurationParameterBool("OPENCV_OCL4DNN_FORCE_AUTO_TUNING", false);
 }
 
 template<typename Dtype>
@@ -1369,8 +1365,13 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(UMat &bottom,
             }
         }
     }
+}
 
-    if (tuned_) {
+template<>
+void OCL4DNNConvSpatial<float>::cacheTunedConfig()
+{
+    if (tuned_)
+    {
         cv::AutoLock lock(kernelConfigMutex);
         std::stringstream outputKernel;
         outputKernel << bestKernelConfig->workItem_output[0] << " "
@@ -1384,8 +1385,6 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(UMat &bottom,
                      << bestKernelConfig->use_null_local << " ";
         kernelConfigMap.insert(std::pair<std::string, std::string>(key_, outputKernel.str()));
     }
-
-    return;
 }
 
 template<>
@@ -1507,9 +1506,18 @@ void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
     }
     kernelQueue.clear();
     tuned_ = true;
+    saveTunedConfig();
+}
+
+template<typename Dtype>
+void OCL4DNNConvSpatial<Dtype>::saveTunedConfig()
+{
+    CV_Assert(tuned_);
+    if (!use_cache_path_ || cache_path_.empty())
+        return;
+
     std::string outputFile;
-    outputFile = cache_path_.str() + key_;
-    std::ifstream cachedKernel(outputFile.c_str());
+    outputFile = cache_path_ + "/" + key_; // TODO Sanitize key_ symbols
     std::ofstream outputKernel;
     outputKernel.open(outputFile.c_str());
     outputKernel << bestKernelConfig->workItem_output[0] << " "
@@ -1543,24 +1551,24 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(UMat &bottom, UMat &top,
         bestKernelConfig.release();
     }
 
-    UMat benchData;
-    if (auto_tuning_) {
-        if (loadTunedConfig())
-            return;
-        else {
-            benchData.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
-            calculateBenchmark(bottom, benchData, weight, bias, numImages);
-            return setupConvolution(bottom, top, weight, bias, numImages, benchData);
-        }
-    } else {
-        if (loadCachedConfig())
-            return;
-        else {
-            benchData.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
-            calculateBenchmark(bottom, benchData, weight, bias, numImages);
-            useFirstAvailable(bottom, top, weight, bias, numImages, benchData);
-        }
+    if (loadCachedConfig()) // check in-memory cache
+        return;
+    if (loadTunedConfig()) // check external storage
+        return;
+
+    UMat benchData(1, numImages * top_dim_, CV_32FC1);
+    if (force_auto_tuning_)
+    {
+        calculateBenchmark(bottom, benchData, weight, bias, numImages);
+        setupConvolution(bottom, top, weight, bias, numImages, benchData);
     }
+    else
+    {
+        benchData.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
+        calculateBenchmark(bottom, benchData, weight, bias, numImages);
+        useFirstAvailable(bottom, top, weight, bias, numImages, benchData);
+    }
+    cacheTunedConfig();
 }
 
 template<typename Dtype>
@@ -1651,12 +1659,26 @@ bool OCL4DNNConvSpatial<Dtype>::setupKernelByConfig(int x, int y, int z, int typ
 template<typename Dtype>
 bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
 {
+    if (!use_cache_path_)
+    {
+        if (cache_path_.empty() && !force_auto_tuning_)
+        {
+            static int warn_ = 0;
+            if (!warn_)
+            {
+                std::cout << "OpenCV(ocl4dnn): consider to specify kernel configuration cache directory " << std::endl
+                          << "                 via OPENCV_OCL4DNN_CONFIG_PATH parameter." << std::endl;
+                warn_ = true;
+            }
+        }
+        return false;
+    }
+
     int32_t x, y, z, type, lx, ly, lz;
     bool swizzle, nullLocal;
 
     // Find cached kernel configuration from file
-    std::string cacheFile;
-    cacheFile = cache_path_.str() + key_;
+    std::string cacheFile = cache_path_ + "/" + key_;
     std::ifstream cachedKernel(cacheFile.c_str());
     if (cachedKernel)
     {

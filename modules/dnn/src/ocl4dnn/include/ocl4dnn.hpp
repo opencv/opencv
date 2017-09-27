@@ -243,7 +243,10 @@ class OCL4DNNConvSpatial
                                int32_t* workItemOutput,
                                size_t* localSizes,
                                size_t* globalSizes);
+        void cacheTunedConfig();
         bool loadTunedConfig();
+
+        void saveTunedConfig();
         bool loadCachedConfig();
 
         void unloadProgram(const std::string& kernelName);
@@ -291,7 +294,9 @@ class OCL4DNNConvSpatial
         std::string key_;
         std::string short_key_;
         std::string kernel_name_;
-        std::stringstream cache_path_;
+        std::string cache_path_;
+        bool use_cache_path_; // true if cache_path_ directory exists
+        bool force_auto_tuning_;
         int32_t kernel_index_;
         std::vector< cv::Ptr<kernelConfig> > kernelQueue;
         cv::Ptr<kernelConfig> bestKernelConfig;
@@ -311,7 +316,6 @@ class OCL4DNNConvSpatial
         std::stringstream options_;
         cv::ocl::ProgramSource src_;
         int32_t prev_kernel_type_;
-        bool auto_tuning_;
 };
 
 typedef enum {
