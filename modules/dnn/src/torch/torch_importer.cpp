@@ -796,10 +796,7 @@ struct TorchImporter : public ::cv::dnn::Importer
                 layerParams.set("adj_h", static_cast<int>(scalarParams.get<double>("adjH")));
                 layerParams.set("num_output", static_cast<int>(scalarParams.get<double>("nOutputPlane")));
 
-                Mat weights = tensorParams["weight"].second;
-                CV_Assert(weights.dims == 4);
-                int reorderedShape[] = { weights.size[1], weights.size[0], weights.size[2], weights.size[3] };
-                layerParams.blobs.push_back(weights.reshape(1, 4, reorderedShape));
+                layerParams.blobs.push_back(tensorParams["weight"].second);
 
                 bool bias = tensorParams.count("bias");
                 layerParams.set("bias_term", bias);
