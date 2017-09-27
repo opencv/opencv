@@ -407,59 +407,23 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(UMat &bottom, UMat &verifyTop
 
 #define TUNING_SIZE(x) ((x) > 256 ? 256 : (alignSize(x, 16)))
 
-// Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
-static
-uint64 crc64(const uchar* data, size_t size, uint64 crc0 = 0)
-{
-    static uint64 table[256];
-    static bool initialized = false;
-
-    if( !initialized )
-    {
-        for( int i = 0; i < 256; i++ )
-        {
-            uint64 c = i;
-            for( int j = 0; j < 8; j++ )
-                c = ((c & 1) ? CV_BIG_UINT(0xc96c5795d7870f42) : 0) ^ (c >> 1);
-            table[i] = c;
-        }
-        initialized = true;
-    }
-
-    uint64 crc = ~crc0;
-    for( size_t idx = 0; idx < size; idx++ )
-        crc = table[(uchar)crc ^ data[idx]] ^ (crc >> 8);
-
-    return ~crc;
-}
-
 template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::generateKey()
 {
     std::stringstream keyBuilder;
     // FIXME: to support fuse?
-    keyBuilder << kernel_w_ << "_"
-               << kernel_h_ << "_"
-               << channels_ << "_"
-               << group_ << "_"
-               << stride_h_ << "_"
-               << stride_w_ << "_"
-               << dilation_h_ << "_"
-               << dilation_w_ << "_"
-               << bias_term_ << "_"
-               << TUNING_SIZE(width_) << "_"
-               << TUNING_SIZE(height_) << "_"
-               << pad_w_ << "_"
-               << pad_h_ << "_"
-               << num_ << "_"
-               << M_;
+    keyBuilder << "k" << kernel_w_ << "x" << kernel_h_ << "_"
+               << "cn" << channels_ << "_"
+               << "g" << group_ << "_"
+               << "s" << stride_h_ << "x" << stride_w_ << "_"
+               << "d" << dilation_h_ << "x" << dilation_w_ << "_"
+               << "b" << bias_term_ << "_"
+               << "in" << TUNING_SIZE(width_) << "x" << TUNING_SIZE(height_) << "_"
+               << "p" << pad_w_ << "x" << pad_h_ << "_"
+               << "num" << num_ << "_"
+               << "M" << M_;
 
-    std::string prefix = ocl::Device::getDefault().name() +
-                         ocl::Device::getDefault().vendorName() +
-                         cv::format("%d", ocl::Device::getDefault().maxComputeUnits());
-
-    prefix = prefix + keyBuilder.str();
-    key_ = cv::format("%08llx", crc64((uchar*)prefix.c_str(), prefix.size()));
+    key_ = "EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
     short_key_ = keyBuilder.str();
 }
 

@@ -2,289 +2,854 @@
 #define _OPENCV_OCL4DNN_DEFAULT_KERNEL_CONFIG_HPP_
 #define CONFIG_NUM (sizeof(default_kernel_config) / sizeof(char *) / 2)
 const char *default_kernel_config[] = {
-// Configs for 72 EUs device
-"631d9d8eea647618","6 3 16 2 1 1 16 1 0 ",
-"16013322e42b2298","8 1 16 2 1 1 16 1 0 ",
-"a477ef6d8b0c372f","6 4 16 2 1 1 16 1 0 ",
-"14ed1e5e75f28cd5","1 8 32 5 1 8 1 1 0 ",
-"d435eef93d10ce07","1 8 32 5 1 8 1 1 0 ",
-"761e5ad79603df98","1 8 32 5 1 8 1 1 0 ",
-"b85e458fa12bdcb3","1 8 32 5 1 8 1 1 0 ",
-"5ded952e758265de","8 3 8 2 1 1 8 1 0 ",
-"27b59f2900db033b","4 3 16 2 1 1 16 1 0 ",
-"72577b4ec7d14d8c","2 7 16 2 1 1 16 1 0 ",
-"18601cb66aee15f","4 5 16 2 1 1 16 1 0 ",
-"971592116e3127df","1 8 32 5 1 8 1 1 0 ",
-"984c62cd8b6ca974","1 8 32 5 1 8 1 1 0 ",
-"4367e7963ce31d80","1 8 32 5 1 8 1 1 0 ",
-"416019d49038aee1","8 2 8 2 1 1 8 1 0 ",
-"b349e50a3dd33169","4 5 8 2 1 1 8 1 0 ",
-"b90d59fbce6b8a8c","2 8 32 5 1 8 1 1 0 ",
-"3e10419fb52aa17f","11 2 16 2 1 1 16 1 0 ",
-"c93337558c318b87","8 3 8 2 1 1 8 1 0 ",
-"fa15bedcab13984a","1 8 32 5 1 8 1 1 0 ",
-"65fe7dc7a88b7754","2 5 16 2 1 1 16 1 0 ",
-"596a35dcd4e88316","1 8 32 5 1 8 1 1 0 ",
-"ced9ea867df06654","1 8 32 5 1 8 1 1 0 ",
-"4c5878ed39e2d852","4 5 16 2 1 1 16 1 0 ",
-"e8ea74641b858430","12 2 8 2 1 1 8 1 0 ",
-"72fbd54130ed5bb5","1 8 32 5 1 8 1 1 0 ",
-"58cba49db8177695","1 1 1 4 1 1 1 0 1 ",
-"b8e0b0b3fd500a8e","1 8 32 5 1 8 1 1 0 ",
-"94a14ef08b3176b0","8 1 8 2 1 1 8 1 0 ",
-"32866f3dde5a0e0e","2 8 32 5 1 8 1 1 0 ",
-"61b1f05ec8c0fa9","12 2 8 2 1 1 8 1 0 ",
-"7a5025917c38fd29","8 3 8 2 1 1 8 1 0 ",
-"a4ca60a4980d6ac4","1 8 32 5 1 8 1 1 0 ",
-"88df61849188d38b","2 8 32 5 1 8 1 1 0 ",
-"76c85004de23d6ed","1 8 32 5 1 8 1 1 0 ",
-"55c14497c040aadb","6 4 16 2 1 1 16 1 0 ",
-"b75908cb1f2fa61a","2 8 32 5 1 8 1 1 0 ",
-"f535152f03edd1c2","8 3 8 2 1 1 8 1 0 ",
-"5cbd50cf2ed4ad88","1 8 32 5 1 8 1 1 0 ",
-"ab84b7038ab67d76","8 3 16 2 1 1 16 1 0 ",
-"ee11bfae2e51c26d","4 3 8 2 1 1 8 1 0 ",
-"f1416dd0be7ee3ab","4 5 8 2 1 1 8 1 0 ",
-"79e1e0defe16e65e","4 2 8 2 1 1 8 1 0 ",
-"9ebc9cda0a6f5960","4 2 8 2 1 1 8 1 0 ",
-"b292d012ed4494d4","8 1 8 2 1 1 8 1 0 ",
-"68dc3a36cb3b227f","2 8 32 5 1 8 1 1 0 ",
-"41d29178fd58f003","1 8 32 5 1 8 1 1 0 ",
-"eb81a8f3692c367f","8 3 8 2 1 1 8 1 0 ",
-"3402f1f673fc27d8","1 8 32 5 1 8 1 1 0 ",
-"5d75e30c986995a4","4 3 8 2 1 1 8 1 0 ",
-"7c3bfb6ddf20c996","1 8 32 5 1 8 1 1 0 ",
-"573e7caa699f518b","4 4 8 2 1 1 8 1 0 ",
-"c3e9db4420beb715","1 8 32 5 1 8 1 1 0 ",
-"3be44d1f17d23d07","4 1 16 2 1 1 16 1 0 ",
-"8cf21a956f999151","8 3 8 2 1 1 8 1 0 ",
-"40a5eadd3e6512a4","2 8 32 5 1 8 1 1 0 ",
-"76324de2dc1f9166","1 1 1 4 1 1 1 0 1 ",
-"a66260e7a1da28f","4 3 8 2 1 1 8 1 0 ",
-"a1348dda4f2cd18e","1 8 32 5 1 8 1 1 0 ",
-"2afce191b561ecce","8 2 8 2 1 1 8 1 0 ",
-"300abc099d6c462a","1 8 32 5 1 8 1 1 0 ",
-"a7107e3668af7d62","1 8 32 5 1 8 1 1 0 ",
-"400076cddf4057cd","2 7 16 2 1 1 16 1 0 ",
-"d4192fa5aaa2b380","8 3 8 2 1 1 8 1 0 ",
-"11428c8f57a1b120","8 3 8 2 1 1 8 1 0 ",
-"b9027aaccc25f546","4 4 8 2 1 1 8 1 0 ",
-"8881eea10102189b","2 8 32 5 1 8 1 1 0 ",
-"279e42e474f2d7f7","8 3 8 2 1 1 8 1 0 ",
-"7bde0bcc13f787ba","1 8 32 5 1 8 1 1 0 ",
-"887f0c875d3d63db","12 2 8 2 1 1 8 1 0 ",
-"5cad82fe740106de","6 2 8 2 1 1 8 1 0 ",
-"f294327e40548578","1 8 32 5 1 8 1 1 0 ",
-"d438ece5689d87e7","2 8 32 5 1 8 1 1 0 ",
-"b88f02386c1abb04","4 2 16 2 1 1 16 1 0 ",
-"16e3abde1418e59a","1 8 32 5 1 8 1 1 0 ",
-"a3cd9cd819395f58","2 8 32 5 1 8 1 1 0 ",
-"3032adc0825ec0fc","8 1 16 2 1 1 16 1 0 ",
-"58da71ddba3aa851","1 8 32 5 1 8 1 1 0 ",
-"c3cdd2121a6adb27","1 8 32 5 1 8 1 1 0 ",
-"b29184f8d1bba213","2 5 16 2 1 1 16 1 0 ",
-"73620bb13a7d473d","1 8 32 5 1 8 1 1 0 ",
-"79aab860fbf6e0c","10 2 16 2 1 1 16 1 0 ",
-"dc8345d213b2f311","1 8 32 5 1 8 1 1 0 ",
-"6a63cd7cdc72f844","1 8 32 5 1 8 1 1 0 ",
-"8fdeb4c7ef769391","4 4 8 2 1 1 8 1 0 ",
-"af031f6b96791ede","1 8 32 5 1 8 1 1 0 ",
-"8189e467fcc717b6","2 7 16 2 1 1 16 1 0 ",
-"32ad196270e33152","1 8 32 5 1 8 1 1 0 ",
-"2236eb04a51d9eb0","1 8 32 5 1 8 1 1 0 ",
-"40bdf904cc410a26","8 3 8 2 1 1 8 1 0 ",
-"973a618c5caf26f2","2 8 32 5 1 8 1 1 0 ",
-"6ba92d67bb3af373","4 3 8 2 1 1 8 1 0 ",
-"3eea59e96344c5dc","4 2 16 2 1 1 16 1 0 ",
-"8a5af500dcb2b9a4","4 2 8 2 1 1 8 1 0 ",
-"158c7287a5c49e0","4 2 16 2 1 1 16 1 0 ",
-"a51185b4a92e2ce8","1 8 32 5 1 8 1 1 0 ",
-"276b59ca1c29ab84","4 3 16 2 1 1 16 1 0 ",
-"7acc7a51ccb8a28","1 8 32 5 1 8 1 1 0 ",
-"f22ab147ccd751e4","12 2 8 2 1 1 8 1 0 ",
-"b2dfa1dec0265ec8","2 8 32 5 1 8 1 1 0 ",
-"eac2066591cea395","1 8 32 5 1 8 1 1 0 ",
-"bf8ab8b52304f3d1","1 8 32 5 1 8 1 1 0 ",
-"71cfac785f17e371","8 3 8 2 1 1 8 1 0 ",
-"e3ed32265bf30eee","10 2 16 2 1 1 16 1 0 ",
-"5fd27e3c9863043a","4 4 16 2 1 1 16 1 0 ",
-"7a8ece2d48a14fec","1 8 32 5 1 8 1 1 0 ",
-"9216aecfbb5e0c13","1 8 32 5 1 8 1 1 0 ",
-"8483731e9ca4dd57","12 2 8 2 1 1 8 1 0 ",
-"eb59fc5c582c377","1 8 32 5 1 8 1 1 0 ",
-"67325768e011f693","1 8 32 5 1 8 1 1 0 ",
-"6b1cb78a778ded9f","2 7 16 2 1 1 16 1 0 ",
-"6c08952709710339","1 8 32 5 1 8 1 1 0 ",
-"d772f332d80b01cf","8 1 8 2 1 1 8 1 0 ",
-"472d500da2d0b00a","8 3 8 2 1 1 8 1 0 ",
-"930a1968d4a58e5b","4 2 8 2 1 1 8 1 0 ",
-"4294541fc9e3aaa2","1 8 32 5 1 8 1 1 0 ",
-"da9dc0493708a53e","8 1 16 2 1 1 16 1 0 ",
-"5c29dc2ff567bc51","2 8 32 5 1 8 1 1 0 ",
-"a2b0edfcfad13f33","1 8 32 5 1 8 1 1 0 ",
-"67dea3e34eb11686","6 3 16 2 1 1 16 1 0 ",
-"ac696be2bac75bc0","4 2 8 2 1 1 8 1 0 ",
-"6520bb94575f4f8d","1 8 32 5 1 8 1 1 0 ",
-"f47b21e63c7490f3","10 2 16 2 1 1 16 1 0 ",
-"202881e78af9edcd","8 3 8 2 1 1 8 1 0 ",
-"5c63bb731a4d1f4d","4 4 8 2 1 1 8 1 0 ",
-"b539878ab2d06c3f","4 3 8 2 1 1 8 1 0 ",
-"163922ebfb19a44e","2 8 32 5 1 8 1 1 0 ",
-"5c972913a91c6a6c","1 8 32 5 1 8 1 1 0 ",
-"38f4dc7247fe93f3","1 8 32 5 1 8 1 1 0 ",
-"4b793ea8cb4e1996","4 3 16 2 1 1 16 1 0 ",
-"611eceefc4a5526e","1 8 32 5 1 8 1 1 0 ",
-"aeb270436777faff","2 8 32 5 1 8 1 1 0 ",
-"b1b6dd37940cca39","6 4 16 2 1 1 16 1 0 ",
-"7661376fef126cf1","8 2 8 2 1 1 8 1 0 ",
-"67538736f64d4c85","12 1 8 2 1 1 8 1 0 ",
-"cdb236110f59d41b","8 2 8 2 1 1 8 1 0 ",
-"ccf7f73d3140eaa","8 1 8 2 1 1 8 1 0 ",
-"f09a87fe21beec37","1 8 32 5 1 8 1 1 0 ",
-"92bfc9a48a6fb60f","8 2 8 2 1 1 8 1 0 ",
-"bcade87dee76c8b3","1 8 32 5 1 8 1 1 0 ",
-"381e2e470898dce2","1 8 32 5 1 8 1 1 0 ",
-// Configs for 48 EUs device
-"cd0ce2506cb1bd54","4 3 8 2 1 1 8 1 0 ",
-"8e94c1d836b5b1dd","1 8 32 5 1 8 1 1 0 ",
-"1b73be59f6fd8fd9","1 8 32 5 1 8 1 1 0 ",
-"16f52dc7ddf30f28","4 7 16 2 1 1 16 1 0 ",
-"cd5b527932320e68","1 8 32 5 1 8 1 1 0 ",
-"c2182491b91fb9a1","2 8 32 5 1 8 1 1 0 ",
-"d9a5fb7edff5a444","1 8 32 5 1 8 1 1 0 ",
-"5853c2b1a5dc6601","2 7 16 2 1 1 16 1 0 ",
-"e5e6faac4ad23bc3","4 5 8 2 1 1 8 1 0 ",
-"414d08555c8f0b59","8 2 8 2 1 1 8 1 0 ",
-"3d0632c1cc3bf9d9","8 2 8 2 1 1 8 1 0 ",
-"d66d2d4e20c89fc1","10 2 16 2 1 1 16 1 0 ",
-"3c881c9ca3f4834a","8 3 8 2 1 1 8 1 0 ",
-"76442a0c07c8b498","4 4 8 2 1 1 8 1 0 ",
-"23cd061e5d2a2b3e","8 1 16 2 1 1 16 1 0 ",
-"856fb4835fddaebc","1 8 32 5 1 8 1 1 0 ",
-"979c217d71d7e98f","1 8 32 5 1 8 1 1 0 ",
-"caf8be4eb53f6cb","1 8 32 5 1 8 1 1 0 ",
-"f26f90da02d368cf","4 2 8 2 1 1 8 1 0 ",
-"dbab4efebe1fcd0b","1 8 32 5 1 8 1 1 0 ",
-"8361db5be26fd321","1 8 32 5 1 8 1 1 0 ",
-"c3d5644e2ca7d9a7","1 8 32 5 1 8 1 1 0 ",
-"898ffdd6cdf362a4","1 8 32 5 1 8 1 1 0 ",
-"acd7bfa3d92f328f","8 2 8 2 1 1 8 1 0 ",
-"2a1cb71a1d38ff02","4 5 16 2 1 1 16 1 0 ",
-"5f8fd05bb5322348","4 4 16 2 1 1 16 1 0 ",
-"4098e467249bd24f","1 8 32 5 1 8 1 1 0 ",
-"8288bb948d85e87a","2 7 16 2 1 1 16 1 0 ",
-"3dd262de8bb9c4a6","1 8 32 5 1 8 1 1 0 ",
-"13c3ea87303288a1","1 8 32 5 1 8 1 1 0 ",
-"bcf79b0f31eb9301","4 4 16 2 1 1 16 1 0 ",
-"66c94e17cabd6cbc","1 8 32 5 1 8 1 1 0 ",
-"89736b3224b95586","1 8 32 5 1 8 1 1 0 ",
-"bbf849fbe17e43aa","4 2 16 2 1 1 16 1 0 ",
-"47395c2796d02205","1 8 32 5 1 8 1 1 0 ",
-"7ef08d975fe18be7","1 8 32 5 1 8 1 1 0 ",
-"7718152f6ac69d6d","2 8 32 5 1 8 1 1 0 ",
-"b98e00a415ce9733","1 8 32 5 1 8 1 1 0 ",
-"7c0fb5aaf63e70b7","1 8 32 5 1 8 1 1 0 ",
-"8dd204bf020eeb7c","2 8 32 5 1 8 1 1 0 ",
-"1b7ebc45a370c639","1 8 32 5 1 8 1 1 0 ",
-"936f8c8f3e8afd8f","1 8 32 5 1 8 1 1 0 ",
-"93ebd25ebfec4700","6 2 8 2 1 1 8 1 0 ",
-"7b475d12d3b4fa","2 8 32 5 1 8 1 1 0 ",
-"9ac405ed579e7165","4 4 16 2 1 1 16 1 0 ",
-"6daaf6c10562e83e","8 2 8 2 1 1 8 1 0 ",
-"962c657c1f05c2c8","6 4 16 2 1 1 16 1 0 ",
-"5d50fe6f70b34dcd","1 8 32 5 1 8 1 1 0 ",
-"5fe98fc3b5fc95a","8 1 16 2 1 1 16 1 0 ",
-"d3ba286c1650b85c","1 8 32 5 1 8 1 1 0 ",
-"7dd7d4581a56e3cd","6 2 16 2 1 1 16 1 0 ",
-"ed979327b9ef77c5","8 3 8 2 1 1 8 1 0 ",
-"d5ada0f29c7e5021","2 8 32 5 1 8 1 1 0 ",
-"66ff2234d9c98898","2 7 16 2 1 1 16 1 0 ",
-"8d433704d51bb2a2","4 4 16 2 1 1 16 1 0 ",
-"de04dc2f9c4cf0fe","1 8 32 5 1 8 1 1 0 ",
-"516f35bb4b1aa0be","1 8 32 5 1 8 1 1 0 ",
-"2165ff7f0936b159","2 7 16 2 1 1 16 1 0 ",
-"775cab592d6f42da","1 8 32 5 1 8 1 1 0 ",
-"6b03afbcac6b441b","4 3 16 2 1 1 16 1 0 ",
-"258456c55a23e24b","1 8 32 5 1 8 1 1 0 ",
-"bd112bee0c3c0c52","6 4 16 2 1 1 16 1 0 ",
-"1beb479f9ed7a978","1 8 32 5 1 8 1 1 0 ",
-"479931245a659255","1 8 32 5 1 8 1 1 0 ",
-"8fe3ba7df588537a","1 8 32 5 1 8 1 1 0 ",
-"490abb226b31e2ad","14 2 16 2 1 1 16 1 0 ",
-"f65fe83e8ad9c066","2 8 32 5 1 8 1 1 0 ",
-"9233b3ac5384d47a","4 2 8 2 1 1 8 1 0 ",
-"e8d81244bf1f9629","1 8 32 5 1 8 1 1 0 ",
-"3fdcd75eea53ade9","2 8 32 5 1 8 1 1 0 ",
-"8695d7db40974f59","4 1 16 2 1 1 16 1 0 ",
-"9024e4626808053f","8 2 8 2 1 1 8 1 0 ",
-"d3f759a03b327240","8 1 8 2 1 1 8 1 0 ",
-"bc295dec2d193bbe","4 4 16 2 1 1 16 1 0 ",
-"9a1ac30e4b6cd9da","4 2 16 2 1 1 16 1 0 ",
-"b9580a775dee9e46","1 8 32 5 1 8 1 1 0 ",
-"e2a3e4f8cf267664","4 2 16 2 1 1 16 1 0 ",
-"ab70a9e6b36e50c6","4 2 16 2 1 1 16 1 0 ",
-"c4907a1aa9539400","4 2 8 2 1 1 8 1 0 ",
-"cf49be85857cb776","1 8 32 5 1 8 1 1 0 ",
-"3a73458fc800901c","1 8 32 5 1 8 1 1 0 ",
-"8c21b736f70e5c5e","1 8 32 5 1 8 1 1 0 ",
-"de6c074abd210446","6 4 8 2 1 1 8 1 0 ",
-"9afd86d0bb374feb","8 3 16 2 1 1 16 1 0 ",
-"bdbd85e1fb001a6b","2 8 32 5 1 8 1 1 0 ",
-"1abb827ec581612e","1 8 32 5 1 8 1 1 0 ",
-"b6177a800e7de75b","4 4 8 2 1 1 8 1 0 ",
-"31b8d597191636b2","2 8 32 5 1 8 1 1 0 ",
-"3dd8d97df8a24b1c","1 8 32 5 1 8 1 1 0 ",
-"b92767cf24ff2d2f","4 7 8 2 1 1 8 1 0 ",
-"4b99682363170a5a","8 2 8 2 1 1 8 1 0 ",
-"677e96b73afae93d","1 8 32 5 1 8 1 1 0 ",
-"b37dabcd14cd8848","1 8 32 5 1 8 1 1 0 ",
-"77a6e01336bd4b50","2 8 32 5 1 8 1 1 0 ",
-"5df999044182f7d1","1 8 32 5 1 8 1 1 0 ",
-"93d179b362f12bb2","1 8 32 5 1 8 1 1 0 ",
-"13c51572d85fb2cf","1 8 32 5 1 8 1 1 0 ",
-"934f38f51aa1b770","8 3 8 2 1 1 8 1 0 ",
-"35f0746556476ac5","1 8 32 5 1 8 1 1 0 ",
-"2648d9bf74a6569e","1 8 32 5 1 8 1 1 0 ",
-"49bf4757efd91c0","1 8 32 5 1 8 1 1 0 ",
-"8f74361cf82724f9","4 2 16 2 1 1 16 1 0 ",
-"f5c4c7425d479024","8 1 8 2 1 1 8 1 0 ",
-"eb3f7cb20ac45f30","4 2 8 2 1 1 8 1 0 ",
-"73ebb8dd259b896d","1 8 32 5 1 8 1 1 0 ",
-"c2a8156acf4fb9cc","2 8 32 5 1 8 1 1 0 ",
-"848bf97b75077c0","1 1 1 4 1 1 1 0 1 ",
-"c51266df5d7ad1bb","6 4 16 2 1 1 16 1 0 ",
-"b57ca6177cd45514","1 8 32 5 1 8 1 1 0 ",
-"f129e2296ea7aa0c","2 8 32 5 1 8 1 1 0 ",
-"a856bee75a476d13","8 3 8 2 1 1 8 1 0 ",
-"9a8714370badeb05","2 7 16 2 1 1 16 1 0 ",
-"20059066464e4875","8 2 8 2 1 1 8 1 0 ",
-"39ae2d2f6e619001","1 1 1 4 1 1 1 0 1 ",
-"10aa25ca896105e5","1 8 32 5 1 8 1 1 0 ",
-"6e72dd7a84c19050","1 8 32 5 1 8 1 1 0 ",
-"e0ec6dd52ab1f122","1 8 32 5 1 8 1 1 0 ",
-"d45c0e3864a68aab","4 2 8 2 1 1 8 1 0 ",
-"68562e96a3423cbc","1 8 32 5 1 8 1 1 0 ",
-"ed70bba46ef0df6e","2 7 16 2 1 1 16 1 0 ",
-"8ffba9a407ac4bf8","1 8 32 5 1 8 1 1 0 ",
-"6360e84203baa11","4 2 8 2 1 1 8 1 0 ",
-"1b35ac23aa4e1bbd","1 8 32 5 1 8 1 1 0 ",
-"6b8c300453e02b1a","1 8 32 5 1 8 1 1 0 ",
-"70cce815e8e9b20f","1 8 32 5 1 8 1 1 0 ",
-"3baa4f4826410484","1 8 32 5 1 8 1 1 0 ",
-"6bb63bff7f079ac2","1 8 32 5 1 8 1 1 0 ",
-"d868d049181d6c18","2 8 32 5 1 8 1 1 0 ",
-"c1f3cf650e6f82a9","1 8 32 5 1 8 1 1 0 ",
-"98782c0aa2721055","1 8 32 5 1 8 1 1 0 ",
-"8ae42141bf5ad0eb","1 8 32 5 1 8 1 1 0 ",
-"a4ef7dc770d7b2ad","4 4 8 2 1 1 8 1 0 ",
-"9ad6f08f158e70b7","1 8 32 5 1 8 1 1 0 ",
-"a898f343855c5758","6 3 16 2 1 1 16 1 0 ",
-"526e5731ce7ed9af","2 8 32 5 1 8 1 1 0 ",
-"d63c8179c959408e","2 8 32 5 1 8 1 1 0 ",
-"a34ec587c29c42e7","1 8 32 5 1 8 1 1 0 ",
-"f7b28cd28c13d22d","2 8 32 5 1 8 1 1 0 ",
-"afbc6334ab8680c0","2 8 32 5 1 8 1 1 0 ",
-"570a326d4081e8aa","2 8 32 5 1 8 1 1 0 ",
-"bc245b11f19006e3","1 8 32 5 1 8 1 1 0 ",
+// Below is the information for OpenCL based on which these configurations tuned
+/*******************************************************************************
+Number of platforms                               1
+  Platform Name                                   Intel(R) OpenCL
+  Platform Vendor                                 Intel(R) Corporation
+  Platform Version                                OpenCL 2.0
+  Platform Profile                                FULL_PROFILE
+  Platform Extensions                             cl_intel_accelerator cl_intel_advanced_motion_estimation cl_intel_device_side_avc_motion_estimation cl_intel_driver_diagnostics cl_intel_media_block_io cl_intel_motion_estimation cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_required_subgroup_size cl_intel_subgroups cl_intel_subgroups_short cl_intel_va_api_media_sharing cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_fp16 cl_khr_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_spir cl_khr_subgroups
+  Platform Extensions function suffix             INTEL
+
+  Platform Name                                   Intel(R) OpenCL
+Number of devices                                 1
+  Device Name                                     Intel(R) HD Graphics
+  Device Vendor                                   Intel(R) Corporation
+  Device Vendor ID                                0x8086
+  Device Version                                  OpenCL 2.0
+  Driver Version                                  r4.1.61547
+  Device OpenCL C Version                         OpenCL C 2.0
+  Device Type                                     GPU
+  Device Profile                                  FULL_PROFILE
+  Max compute units                               72
+  Max clock frequency                             950MHz
+  Device Partition                                (core)
+    Max number of sub-devices                     0
+    Supported partition types                     by <unknown> (0x7FE000000000)
+  Max work item dimensions                        3
+  Max work item sizes                             256x256x256
+  Max work group size                             256
+  Preferred work group size multiple              32
+  Preferred / native vector sizes
+    char                                                16 / 16
+    short                                                8 / 8
+    int                                                  4 / 4
+    long                                                 1 / 1
+    half                                                 8 / 8        (cl_khr_fp16)
+    float                                                1 / 1
+    double                                               1 / 1        (cl_khr_fp64)
+  Half-precision Floating-point support           (cl_khr_fp16)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  No
+  Single-precision Floating-point support         (core)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  Yes
+  Double-precision Floating-point support         (cl_khr_fp64)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  No
+  Address bits                                    64, Little-Endian
+  Global memory size                              26887677543 (25.04GiB)
+  Error Correction support                        No
+  Max memory allocation                           4294959103 (4GiB)
+  Unified memory for Host and Device              Yes
+  Shared Virtual Memory (SVM) capabilities        (core)
+    Coarse-grained buffer sharing                 Yes
+    Fine-grained buffer sharing                   No
+    Fine-grained system sharing                   No
+    Atomics                                       No
+  Minimum alignment for any data type             128 bytes
+  Alignment of base address                       1024 bits (128 bytes)
+  Preferred alignment for atomics
+    SVM                                           64 bytes
+    Global                                        64 bytes
+    Local                                         64 bytes
+  Max size for global variable                    65536 (64KiB)
+  Preferred total size of global vars             4294959103 (4GiB)
+  Global Memory cache type                        Read/Write
+  Global Memory cache size                        1572864
+  Global Memory cache line                        64 bytes
+  Image support                                   Yes
+    Max number of samplers per kernel             16
+    Max size for 1D images from buffer            268434943 pixels
+    Max 1D or 2D image array size                 2048 images
+    Base address alignment for 2D image buffers   4 bytes
+    Pitch alignment for 2D image buffers          4 bytes
+    Max 2D image size                             16384x16384 pixels
+    Max 3D image size                             16384x16384x2048 pixels
+    Max number of read image args                 128
+    Max number of write image args                128
+    Max number of read/write image args           128
+  Max number of pipe args                         16
+  Max active pipe reservations                    1
+  Max pipe packet size                            1024
+  Local memory type                               Local
+  Local memory size                               65536 (64KiB)
+  Max constant buffer size                        4294959103 (4GiB)
+  Max number of constant args                     8
+  Max size of kernel argument                     1024
+  Queue properties (on host)
+    Out-of-order execution                        Yes
+    Profiling                                     Yes
+  Queue properties (on device)
+    Out-of-order execution                        Yes
+    Profiling                                     Yes
+    Preferred size                                131072 (128KiB)
+    Max size                                      67108864 (64MiB)
+  Max queues on device                            1
+  Max events on device                            1024
+  Prefer user sync for interop                    Yes
+  Profiling timer resolution                      83ns
+  Execution capabilities
+    Run OpenCL kernels                            Yes
+    Run native kernels                            No
+    SPIR versions                                 1.2
+  printf() buffer size                            4194304 (4MiB)
+  Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel
+  Motion Estimation accelerator version	(Intel)   2
+  Device Available                                Yes
+  Compiler Available                              Yes
+  Linker Available                                Yes
+  Device Extensions                               cl_intel_accelerator cl_intel_advanced_motion_estimation cl_intel_device_side_avc_motion_estimation cl_intel_driver_diagnostics cl_intel_media_block_io cl_intel_motion_estimation cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_required_subgroup_size cl_intel_subgroups cl_intel_subgroups_short cl_intel_va_api_media_sharing cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_fp16 cl_khr_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_spir cl_khr_subgroups
+
+NULL platform behavior
+  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  No platform
+  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   No platform
+  clCreateContext(NULL, ...) [default]            No platform
+  clCreateContext(NULL, ...) [other]              Success [INTEL]
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  No platform
+********************************************************************************/
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32","12 2 8 2 1 1 8 1 0 ",
+"EU72_k7x7_cn3_g1_s2x2_d1x1_b1_in224x224_p3x3_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU72_k5x5_cn48_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M128","4 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn64_g1_s1x1_d1x1_b1_in64x64_p1x1_num2_M192","2 7 16 2 1 1 16 1 0 ",
+"EU72_k5x5_cn16_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M48","4 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M96","1 8 32 5 1 8 1 1 0 ",
+"EU72_k11x7_cn3_g1_s4x3_d1x1_b1_in64x64_p3x2_num1_M64","4 1 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M64","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","4 6 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn4_g1_s1x1_d1x1_b1_in256x256_p1x1_num1_M4","14 1 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M4","4 4 8 2 1 1 8 1 0 ",
+"EU72_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M128","4 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M192","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M192","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn96_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M208","2 6 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M384","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn160_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M320","2 5 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M256","1 8 32 5 1 8 1 1 0 ",
+"EU72_k5x1_cn32_g1_s1x1_d1x1_b0_in64x64_p2x0_num1_M32","4 6 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn16_g1_s1x1_d1x1_b0_in256x256_p0x0_num1_M4","12 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn64_g1_s1x1_d1x1_b1_in64x64_p0x0_num1_M64","2 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M16","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn32_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M128","1 16 32 5 1 16 1 1 0 ",
+"EU72_k3x3_cn32_g1_s1x1_d2x2_b1_in64x64_p2x2_num1_M32","3 6 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn32_g1_s1x1_d16x16_b1_in64x64_p16x16_num1_M32","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn128_g1_s1x1_d1x1_b0_in32x32_p0x0_num1_M512","2 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn192_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M384","2 7 16 2 1 1 16 1 0 ",
+"EU72_k5x4_cn6_g3_s2x3_d1x1_b1_in128x80_p1x0_num2_M4","1 1 1 4 1 1 1 0 1 ",
+"EU72_k5x5_cn32_g1_s1x1_d1x1_b1_in32x32_p2x2_num2_M96","4 5 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn64_g1_s1x1_d1x1_b1_in64x64_p1x1_num1_M192","10 2 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn128_g1_s1x1_d1x1_b1_in32x32_p1x1_num1_M192","6 4 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn4_g1_s1x1_d1x1_b0_in256x256_p0x0_num1_M16","2 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M96","8 3 8 2 1 1 8 1 0 ",
+"EU72_k5x5_cn16_g1_s1x1_d1x1_b1_in32x32_p2x2_num1_M32","8 1 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M384","4 7 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn128_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M256","2 6 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn96_g1_s1x1_d1x1_b1_in32x32_p1x1_num1_M128","6 4 16 2 1 1 16 1 0 ",
+"EU72_k5x5_cn24_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M64","4 4 16 2 1 1 16 1 0 ",
+"EU72_k5x5_cn16_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M48","4 3 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M5","2 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M24","8 2 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn128_g1_s1x1_d1x1_b0_in32x32_p1x1_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn96_g1_s1x1_d1x1_b1_in32x32_p1x1_num2_M128","2 7 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M32","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M112","8 2 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU72_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M128","4 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn64_g1_s1x1_d1x1_b1_in64x64_p0x0_num2_M64","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn64_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M16","2 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M144","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","8 2 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn16_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU72_k3x3_cn112_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M224","2 7 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M256","4 6 8 2 1 1 8 1 0 ",
+"EU72_k5x5_cn32_g1_s1x1_d1x1_b1_in32x32_p2x2_num1_M96","4 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s2x2_d1x1_b0_in32x32_p0x0_num1_M256","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn128_g1_s1x1_d1x1_b1_in32x32_p1x1_num2_M192","10 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M64","12 2 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn384_g2_s1x1_d1x1_b1_in16x16_p1x1_num1_M128","2 5 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M48","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M48","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M256","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","2 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn144_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M288","2 5 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn1024_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M256","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M96","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s2x2_d1x1_b0_in32x32_p0x0_num1_M1024","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn2048_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M512","4 6 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn512_g1_s1x1_d1x1_b0_in16x16_p1x1_num1_M512","2 5 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M16","8 2 8 2 1 1 8 1 0 ",
+"EU72_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M64","4 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","8 3 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn144_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M288","2 7 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn16_g1_s1x1_d1x1_b1_in128x128_p1x1_num1_M16","2 5 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn32_g1_s1x1_d8x8_b1_in64x64_p8x8_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn64_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M4","8 3 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn128_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M256","2 7 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn256_g1_s1x1_d1x1_b0_in16x16_p1x1_num1_M256","2 5 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn112_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M224","2 5 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k2x2_cn16_g1_s2x2_d1x1_b0_in256x256_p0x0_num1_M16","6 4 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M192","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn1024_g1_s2x2_d1x1_b0_in16x16_p0x0_num1_M512","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn384_g2_s1x1_d1x1_b1_in16x16_p1x1_num1_M192","2 5 16 2 1 1 16 1 0 ",
+"EU72_k5x5_cn96_g2_s1x1_d1x1_b1_in32x32_p2x2_num1_M128","4 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","8 2 8 2 1 1 8 1 0 ",
+"EU72_k2x2_cn64_g1_s2x2_d1x1_b0_in128x128_p0x0_num1_M32","8 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn64_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M256","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32","12 2 8 2 1 1 8 1 0 ",
+"EU72_k5x5_cn16_g1_s1x1_d1x1_b1_in32x32_p2x2_num2_M32","4 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M16","12 1 8 2 1 1 8 1 0 ",
+"EU72_k11x11_cn3_g1_s4x4_d1x1_b1_in224x224_p0x0_num1_M96","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M256","4 7 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn192_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M384","2 5 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M16","12 1 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn256_g1_s2x2_d1x1_b0_in64x64_p0x0_num1_M512","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M16","2 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M192","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M96","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","12 1 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M64","12 2 8 2 1 1 8 1 0 ",
+"EU72_k3x3_cn256_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M384","2 7 16 2 1 1 16 1 0 ",
+"EU72_k5x5_cn24_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M64","4 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M24","12 1 8 2 1 1 8 1 0 ",
+"EU72_k5x5_cn48_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M128","4 2 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M144","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn32_g1_s1x1_d4x4_b1_in64x64_p4x4_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn3_g1_s2x2_d1x1_b1_in256x256_p1x1_num1_M13","1 1 1 4 1 1 1 0 1 ",
+"EU72_k3x3_cn32_g1_s1x1_d1x1_b1_in64x64_p1x1_num1_M32","6 4 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M32","1 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn64_g1_s1x1_d1x1_b0_in64x64_p1x1_num1_M64","2 7 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M1024","2 8 32 5 1 8 1 1 0 ",
+"EU72_k3x3_cn160_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M320","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x5_cn32_g1_s1x1_d1x1_b1_in64x64_p0x2_num1_M32","4 6 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn64_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU72_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","4 6 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b0_in32x32_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M64","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M64","12 2 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M128","2 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","8 3 8 2 1 1 8 1 0 ",
+"EU72_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M32","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M112","1 8 32 5 1 8 1 1 0 ",
+"EU72_k4x4_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M2","1 3 16 2 1 1 16 1 0 ",
+"EU72_k1x1_cn1024_g1_s2x2_d1x1_b0_in16x16_p0x0_num1_M2048","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn256_g1_s2x2_d1x1_b0_in64x64_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU72_k7x7_cn3_g1_s2x2_d1x1_b1_in224x224_p3x3_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU72_k1x1_cn512_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M2048","1 8 32 5 1 8 1 1 0 ",
+"EU72_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M64","8 1 16 2 1 1 16 1 0 ",
+"EU72_k3x3_cn96_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M208","2 7 16 2 1 1 16 1 0 ",
+// Below is the information for OpenCL based on which these configurations tuned
+/*******************************************************************************
+Number of platforms                               1
+  Platform Name                                   Intel(R) OpenCL
+  Platform Vendor                                 Intel(R) Corporation
+  Platform Version                                OpenCL 2.0
+  Platform Profile                                FULL_PROFILE
+  Platform Extensions                             cl_intel_accelerator cl_intel_advanced_motion_estimation cl_intel_driver_diagnostics cl_intel_motion_estimation cl_intel_packed_yuv cl_intel_required_subgroup_size cl_intel_subgroups cl_intel_subgroups_short cl_intel_va_api_media_sharing cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_fp16 cl_khr_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_spir cl_khr_subgroups
+  Platform Extensions function suffix             INTEL
+
+  Platform Name                                   Intel(R) OpenCL
+Number of devices                                 1
+  Device Name                                     Intel(R) HD Graphics
+  Device Vendor                                   Intel(R) Corporation
+  Device Vendor ID                                0x8086
+  Device Version                                  OpenCL 2.0
+  Driver Version                                  16.5.56875
+  Device OpenCL C Version                         OpenCL C 2.0 ( using IGC )
+  Device Type                                     GPU
+  Device Profile                                  FULL_PROFILE
+  Max compute units                               48
+  Max clock frequency                             950MHz
+  Device Partition                                (core)
+    Max number of sub-devices                     0
+    Supported partition types                     by <unknown> (0x7F4B00000000)
+  Max work item dimensions                        3
+  Max work item sizes                             256x256x256
+  Max work group size                             256
+  Preferred work group size multiple              32
+  Preferred / native vector sizes
+    char                                                16 / 16
+    short                                                8 / 8
+    int                                                  4 / 4
+    long                                                 1 / 1
+    half                                                 8 / 8        (cl_khr_fp16)
+    float                                                1 / 1
+    double                                               1 / 1        (cl_khr_fp64)
+  Half-precision Floating-point support           (cl_khr_fp16)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  No
+  Single-precision Floating-point support         (core)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  Yes
+  Double-precision Floating-point support         (cl_khr_fp64)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  No
+  Address bits                                    64, Little-Endian
+  Global memory size                              13361912218 (12.44GiB)
+  Error Correction support                        No
+  Max memory allocation                           4294959103 (4GiB)
+  Unified memory for Host and Device              Yes
+  Shared Virtual Memory (SVM) capabilities        (core)
+    Coarse-grained buffer sharing                 Yes
+    Fine-grained buffer sharing                   No
+    Fine-grained system sharing                   No
+    Atomics                                       No
+  Minimum alignment for any data type             128 bytes
+  Alignment of base address                       1024 bits (128 bytes)
+  Preferred alignment for atomics
+    SVM                                           64 bytes
+    Global                                        64 bytes
+    Local                                         64 bytes
+  Max size for global variable                    65536 (64KiB)
+  Preferred total size of global vars             4294959103 (4GiB)
+  Global Memory cache type                        Read/Write
+  Global Memory cache size                        1048576
+  Global Memory cache line                        64 bytes
+  Image support                                   Yes
+    Max number of samplers per kernel             16
+    Max size for 1D images from buffer            268434943 pixels
+    Max 1D or 2D image array size                 2048 images
+    Base address alignment for 2D image buffers   4 bytes
+    Pitch alignment for 2D image buffers          4 bytes
+    Max 2D image size                             16384x16384 pixels
+    Max 3D image size                             16384x16384x2048 pixels
+    Max number of read image args                 128
+    Max number of write image args                128
+    Max number of read/write image args           128
+  Max number of pipe args                         16
+  Max active pipe reservations                    1
+  Max pipe packet size                            1024
+  Local memory type                               Local
+  Local memory size                               65536 (64KiB)
+  Max constant buffer size                        4294959103 (4GiB)
+  Max number of constant args                     8
+  Max size of kernel argument                     1024
+  Queue properties (on host)
+    Out-of-order execution                        Yes
+    Profiling                                     Yes
+  Queue properties (on device)
+    Out-of-order execution                        Yes
+    Profiling                                     Yes
+    Preferred size                                131072 (128KiB)
+    Max size                                      67108864 (64MiB)
+  Max queues on device                            1
+  Max events on device                            1024
+  Prefer user sync for interop                    Yes
+  Profiling timer resolution                      83ns
+  Execution capabilities
+    Run OpenCL kernels                            Yes
+    Run native kernels                            No
+    SPIR versions                                 1.2
+  printf() buffer size                            4194304 (4MiB)
+  Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel
+  Motion Estimation accelerator version	(Intel)   2
+  Device Available                                Yes
+  Compiler Available                              Yes
+  Linker Available                                Yes
+  Device Extensions                               cl_intel_accelerator cl_intel_advanced_motion_estimation cl_intel_driver_diagnostics cl_intel_motion_estimation cl_intel_packed_yuv cl_intel_required_subgroup_size cl_intel_subgroups cl_intel_subgroups_short cl_intel_va_api_media_sharing cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_fp16 cl_khr_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_spir cl_khr_subgroups
+
+NULL platform behavior
+  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  No platform
+  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   No platform
+  clCreateContext(NULL, ...) [default]            No platform
+  clCreateContext(NULL, ...) [other]              Success [INTEL]
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  No platform
+********************************************************************************/
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M64","8 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn32_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M128","1 16 32 5 1 16 1 1 0 ",
+"EU48_k5x5_cn16_g1_s1x1_d1x1_b1_in32x32_p2x2_num1_M32","8 1 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M144","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M96","1 16 32 5 1 16 1 1 0 ",
+"EU48_k3x3_cn128_g1_s1x1_d1x1_b0_in32x32_p1x1_num1_M128","6 4 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M128","2 8 32 5 1 8 1 1 0 ",
+"EU48_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M64","8 1 16 2 1 1 16 1 0 ",
+"EU48_k2x2_cn16_g1_s2x2_d1x1_b0_in256x256_p0x0_num1_M16","2 7 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn4_g1_s1x1_d1x1_b1_in256x256_p1x1_num1_M4","6 4 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn128_g1_s1x1_d1x1_b0_in32x32_p0x0_num1_M512","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M112","8 3 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn512_g1_s1x1_d1x1_b0_in16x16_p1x1_num1_M512","2 7 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M64","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M384","4 6 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M16","8 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M96","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M1024","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M192","4 7 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn160_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M320","2 7 16 2 1 1 16 1 0 ",
+"EU48_k7x7_cn3_g1_s2x2_d1x1_b1_in224x224_p3x3_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU48_k5x5_cn16_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M48","4 2 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M256","2 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn64_g1_s1x1_d1x1_b1_in64x64_p1x1_num1_M192","2 8 16 2 1 1 16 1 0 ",
+"EU48_k11x11_cn3_g1_s4x4_d1x1_b1_in224x224_p0x0_num1_M96","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M112","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","12 1 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s2x2_d1x1_b0_in32x32_p0x0_num1_M256","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","12 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M64","8 2 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn128_g1_s1x1_d1x1_b1_in32x32_p1x1_num2_M192","2 7 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn128_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M256","2 5 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn16_g1_s1x1_d1x1_b0_in256x256_p0x0_num1_M4","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x5_cn32_g1_s1x1_d1x1_b1_in64x64_p0x2_num1_M32","4 7 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M256","4 7 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn3_g1_s2x2_d1x1_b1_in256x256_p1x1_num1_M13","1 1 1 4 1 1 1 0 1 ",
+"EU48_k11x7_cn3_g1_s4x3_d1x1_b1_in64x64_p3x2_num1_M64","4 1 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M96","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M16","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn32_g1_s1x1_d2x2_b1_in64x64_p2x2_num1_M32","3 3 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn32_g1_s1x1_d8x8_b1_in64x64_p8x8_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M96","2 8 32 5 1 8 1 1 0 ",
+"EU48_k2x2_cn64_g1_s2x2_d1x1_b0_in128x128_p0x0_num1_M32","4 4 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","4 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b0_in32x32_p0x0_num1_M128","2 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn16_g1_s1x1_d1x1_b1_in128x128_p1x1_num1_M16","2 7 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn4_g1_s1x1_d1x1_b0_in256x256_p0x0_num1_M16","2 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn384_g2_s1x1_d1x1_b1_in16x16_p1x1_num1_M128","6 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M4","4 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M144","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M384","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn256_g1_s2x2_d1x1_b0_in64x64_p0x0_num1_M128","1 16 32 5 1 16 1 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M192","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn1024_g1_s2x2_d1x1_b0_in16x16_p0x0_num1_M2048","1 16 32 5 1 16 1 1 0 ",
+"EU48_k3x3_cn192_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M384","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M128","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn16_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","4 7 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn384_g2_s1x1_d1x1_b1_in16x16_p1x1_num1_M192","2 5 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn96_g1_s1x1_d1x1_b1_in32x32_p1x1_num1_M128","6 4 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M64","12 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M64","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn2048_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M512","4 7 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M64","12 2 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn112_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M224","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn256_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M384","2 7 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn32_g1_s1x1_d4x4_b1_in64x64_p4x4_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M256","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn192_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M384","2 4 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn144_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M288","2 4 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M48","4 6 8 2 1 1 8 1 0 ",
+"EU48_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M64","8 1 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","12 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M192","4 6 8 2 1 1 8 1 0 ",
+"EU48_k5x5_cn96_g2_s1x1_d1x1_b1_in32x32_p2x2_num1_M128","4 5 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn256_g1_s1x1_d1x1_b0_in16x16_p1x1_num1_M256","2 6 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","8 3 8 2 1 1 8 1 0 ",
+"EU48_k5x5_cn16_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M48","4 2 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn64_g1_s1x1_d1x1_b0_in64x64_p1x1_num1_M64","10 2 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","4 6 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","4 5 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn96_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M208","2 5 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M256","4 6 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M2048","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M48","4 6 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn64_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M256","1 16 32 5 1 16 1 1 0 ",
+"EU48_k3x3_cn112_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M224","2 7 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M32","1 8 32 5 1 8 1 1 0 ",
+"EU48_k5x1_cn32_g1_s1x1_d1x1_b0_in64x64_p2x0_num1_M32","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn64_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn144_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M288","2 7 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn128_g1_s1x1_d1x1_b1_in32x32_p1x1_num1_M192","2 7 16 2 1 1 16 1 0 ",
+"EU48_k5x5_cn16_g1_s1x1_d1x1_b1_in32x32_p2x2_num2_M32","4 3 16 2 1 1 16 1 0 ",
+"EU48_k5x5_cn32_g1_s1x1_d1x1_b1_in32x32_p2x2_num2_M96","4 2 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn96_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M208","2 5 16 2 1 1 16 1 0 ",
+"EU48_k5x5_cn32_g1_s1x1_d1x1_b1_in32x32_p2x2_num1_M96","4 2 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M24","12 1 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn64_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M16","4 7 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn256_g1_s2x2_d1x1_b0_in64x64_p0x0_num1_M512","2 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn1024_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M256","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M32","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn160_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M320","2 8 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn64_g1_s1x1_d1x1_b1_in64x64_p1x1_num2_M192","6 4 16 2 1 1 16 1 0 ",
+"EU48_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M128","4 3 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","4 6 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","1 8 32 5 1 8 1 1 0 ",
+"EU48_k3x3_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M5","2 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M192","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn64_g1_s1x1_d1x1_b1_in64x64_p0x0_num2_M64","1 16 32 5 1 16 1 1 0 ",
+"EU48_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M128","8 2 16 2 1 1 16 1 0 ",
+"EU48_k7x7_cn3_g1_s2x2_d1x1_b1_in224x224_p3x3_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","4 6 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M32","1 16 32 5 1 16 1 1 0 ",
+"EU48_k1x1_cn1024_g1_s2x2_d1x1_b0_in16x16_p0x0_num1_M512","1 8 32 5 1 8 1 1 0 ",
+"EU48_k5x5_cn24_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M64","4 4 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","12 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M64","8 3 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn512_g1_s2x2_d1x1_b0_in32x32_p0x0_num1_M1024","1 8 32 5 1 8 1 1 0 ",
+"EU48_k5x4_cn6_g3_s2x3_d1x1_b1_in128x80_p1x0_num2_M4","1 1 1 4 1 1 1 0 1 ",
+"EU48_k3x3_cn128_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M256","2 7 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M24","8 2 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M16","12 1 8 2 1 1 8 1 0 ",
+"EU48_k3x3_cn96_g1_s1x1_d1x1_b1_in32x32_p1x1_num2_M128","10 2 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn64_g1_s1x1_d1x1_b1_in64x64_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU48_k3x3_cn32_g1_s1x1_d16x16_b1_in64x64_p16x16_num1_M32","1 16 32 5 1 16 1 1 0 ",
+"EU48_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","4 7 8 2 1 1 8 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M16","12 2 8 2 1 1 8 1 0 ",
+"EU48_k4x4_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M2","1 4 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn64_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M4","8 2 8 2 1 1 8 1 0 ",
+"EU48_k5x5_cn24_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M64","4 2 16 2 1 1 16 1 0 ",
+"EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M16","1 8 32 5 1 8 1 1 0 ",
+"EU48_k5x5_cn48_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M128","4 2 16 2 1 1 16 1 0 ",
+"EU48_k3x3_cn32_g1_s1x1_d1x1_b1_in64x64_p1x1_num1_M32","2 8 16 2 1 1 16 1 0 ",
+"EU48_k5x5_cn48_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M128","4 2 16 2 1 1 16 1 0 ",
+// Below is the information for OpenCL based on which these configurations tuned
+/*******************************************************************************
+Number of platforms                               1
+  Platform Name                                   Intel(R) OpenCL
+  Platform Vendor                                 Intel(R) Corporation
+  Platform Version                                OpenCL 2.0
+  Platform Profile                                FULL_PROFILE
+  Platform Extensions                             cl_intel_accelerator cl_intel_advanced_motion_estimation cl_intel_device_side_avc_motion_estimation cl_intel_driver_diagnostics cl_intel_media_block_io cl_intel_motion_estimation cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_required_subgroup_size cl_intel_subgroups cl_intel_subgroups_short cl_intel_va_api_media_sharing cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_fp16 cl_khr_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_spir cl_khr_subgroups
+  Platform Extensions function suffix             INTEL
+
+  Platform Name                                   Intel(R) OpenCL
+Number of devices                                 1
+  Device Name                                     Intel(R) HD Graphics
+  Device Vendor                                   Intel(R) Corporation
+  Device Vendor ID                                0x8086
+  Device Version                                  OpenCL 2.0
+  Driver Version                                  16.5.59288
+  Device OpenCL C Version                         OpenCL C 2.0
+  Device Type                                     GPU
+  Device Profile                                  FULL_PROFILE
+  Max compute units                               24
+  Max clock frequency                             1050MHz
+  Device Partition                                (core)
+    Max number of sub-devices                     0
+    Supported partition types                     by <unknown> (0x7F5100000000)
+  Max work item dimensions                        3
+  Max work item sizes                             256x256x256
+  Max work group size                             256
+  Preferred work group size multiple              32
+  Preferred / native vector sizes
+    char                                                16 / 16
+    short                                                8 / 8
+    int                                                  4 / 4
+    long                                                 1 / 1
+    half                                                 8 / 8        (cl_khr_fp16)
+    float                                                1 / 1
+    double                                               1 / 1        (cl_khr_fp64)
+  Half-precision Floating-point support           (cl_khr_fp16)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  No
+  Single-precision Floating-point support         (core)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  Yes
+  Double-precision Floating-point support         (cl_khr_fp64)
+    Denormals                                     Yes
+    Infinity and NANs                             Yes
+    Round to nearest                              Yes
+    Round to zero                                 Yes
+    Round to infinity                             Yes
+    IEEE754-2008 fused multiply-add               Yes
+    Support is emulated in software               No
+    Correctly-rounded divide and sqrt operations  No
+  Address bits                                    64, Little-Endian
+  Global memory size                              6588802663 (6.136GiB)
+  Error Correction support                        No
+  Max memory allocation                           3294401331 (3.068GiB)
+  Unified memory for Host and Device              Yes
+  Shared Virtual Memory (SVM) capabilities        (core)
+    Coarse-grained buffer sharing                 Yes
+    Fine-grained buffer sharing                   No
+    Fine-grained system sharing                   No
+    Atomics                                       No
+  Minimum alignment for any data type             128 bytes
+  Alignment of base address                       1024 bits (128 bytes)
+  Preferred alignment for atomics
+    SVM                                           64 bytes
+    Global                                        64 bytes
+    Local                                         64 bytes
+  Max size for global variable                    65536 (64KiB)
+  Preferred total size of global vars             3294401331 (3.068GiB)
+  Global Memory cache type                        Read/Write
+  Global Memory cache size                        524288
+  Global Memory cache line                        64 bytes
+  Image support                                   Yes
+    Max number of samplers per kernel             16
+    Max size for 1D images from buffer            205900083 pixels
+    Max 1D or 2D image array size                 2048 images
+    Base address alignment for 2D image buffers   4 bytes
+    Pitch alignment for 2D image buffers          4 bytes
+    Max 2D image size                             16384x16384 pixels
+    Max 3D image size                             16384x16384x2048 pixels
+    Max number of read image args                 128
+    Max number of write image args                128
+    Max number of read/write image args           128
+  Max number of pipe args                         16
+  Max active pipe reservations                    1
+  Max pipe packet size                            1024
+  Local memory type                               Local
+  Local memory size                               65536 (64KiB)
+  Max constant buffer size                        3294401331 (3.068GiB)
+  Max number of constant args                     8
+  Max size of kernel argument                     1024
+  Queue properties (on host)
+    Out-of-order execution                        Yes
+    Profiling                                     Yes
+  Queue properties (on device)
+    Out-of-order execution                        Yes
+    Profiling                                     Yes
+    Preferred size                                131072 (128KiB)
+    Max size                                      67108864 (64MiB)
+  Max queues on device                            1
+  Max events on device                            1024
+  Prefer user sync for interop                    Yes
+  Profiling timer resolution                      83ns
+  Execution capabilities
+    Run OpenCL kernels                            Yes
+    Run native kernels                            No
+    SPIR versions                                 1.2
+  printf() buffer size                            4194304 (4MiB)
+  Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel
+  Motion Estimation accelerator version	(Intel)   2
+  Device Available                                Yes
+  Compiler Available                              Yes
+  Linker Available                                Yes
+  Device Extensions                               cl_intel_accelerator cl_intel_advanced_motion_estimation cl_intel_device_side_avc_motion_estimation cl_intel_driver_diagnostics cl_intel_media_block_io cl_intel_motion_estimation cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_required_subgroup_size cl_intel_subgroups cl_intel_subgroups_short cl_intel_va_api_media_sharing cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_fp16 cl_khr_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_spir cl_khr_subgroups
+
+NULL platform behavior
+  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  No platform
+  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   No platform
+  clCreateContext(NULL, ...) [default]            No platform
+  clCreateContext(NULL, ...) [other]              Success [INTEL]
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No platform
+  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  No platform
+********************************************************************************/
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M64","2 8 32 5 1 8 1 1 0 ",
+"EU24_k5x1_cn32_g1_s1x1_d1x1_b0_in64x64_p2x0_num1_M32","4 6 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k5x5_cn48_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M128","4 2 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn112_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M224","2 5 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU24_k2x2_cn16_g1_s2x2_d1x1_b0_in256x256_p0x0_num1_M16","1 8 32 5 1 8 1 1 0 ",
+"EU24_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M128","4 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M256","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn192_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M384","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn256_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M384","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn2048_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M512","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M16","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn384_g2_s1x1_d1x1_b1_in16x16_p1x1_num1_M128","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M192","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn112_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M224","2 7 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn32_g1_s1x1_d8x8_b1_in64x64_p8x8_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn96_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M208","2 7 16 2 1 1 16 1 0 ",
+"EU24_k11x11_cn3_g1_s4x4_d1x1_b1_in224x224_p0x0_num1_M96","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","1 8 32 5 1 8 1 1 0 ",
+"EU24_k7x7_cn3_g1_s2x2_d1x1_b1_in224x224_p3x3_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn32_g1_s1x1_d2x2_b1_in64x64_p2x2_num1_M32","3 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M24","8 3 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn128_g1_s1x1_d1x1_b0_in32x32_p1x1_num1_M128","6 4 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M144","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn1024_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M256","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn96_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M208","2 7 16 2 1 1 16 1 0 ",
+"EU24_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M128","4 3 16 2 1 1 16 1 0 ",
+"EU24_k5x5_cn16_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M48","4 2 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M2048","4 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M16","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn64_g1_s1x1_d1x1_b1_in64x64_p1x1_num1_M192","6 4 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b0_in16x16_p0x0_num1_M1024","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn32_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M128","1 16 32 5 1 16 1 1 0 ",
+"EU24_k1x1_cn4_g1_s1x1_d1x1_b0_in256x256_p0x0_num1_M16","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn192_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M384","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M256","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn128_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","4 6 8 2 1 1 8 1 0 ",
+"EU24_k5x5_cn48_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M128","4 4 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","8 2 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn1024_g1_s2x2_d1x1_b0_in16x16_p0x0_num1_M2048","1 16 32 5 1 16 1 1 0 ",
+"EU24_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M64","4 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M384","1 8 32 5 1 8 1 1 0 ",
+"EU24_k5x4_cn6_g3_s2x3_d1x1_b1_in128x80_p1x0_num2_M4","1 1 1 4 1 1 1 0 1 ",
+"EU24_k3x3_cn128_g1_s1x1_d1x1_b1_in32x32_p1x1_num2_M192","6 4 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn256_g1_s1x1_d1x1_b0_in16x16_p1x1_num1_M256","2 7 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn160_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M320","2 8 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s2x2_d1x1_b0_in32x32_p0x0_num1_M256","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn64_g1_s1x1_d1x1_b1_in64x64_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M192","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M256","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn128_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M256","2 5 16 2 1 1 16 1 0 ",
+"EU24_k5x5_cn24_g1_s1x1_d1x1_b1_in16x16_p2x2_num2_M64","4 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M16","8 3 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M112","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn64_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M16","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M96","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn64_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M256","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k5x5_cn16_g1_s1x1_d1x1_b1_in32x32_p2x2_num2_M32","4 2 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M96","8 3 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn16_g1_s1x1_d1x1_b1_in128x128_p1x1_num1_M16","6 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M112","1 8 32 5 1 8 1 1 0 ",
+"EU24_k5x5_cn32_g1_s1x1_d1x1_b1_in32x32_p2x2_num2_M96","4 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","8 2 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M192","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn144_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M288","2 8 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn144_g1_s1x1_d1x1_b1_in16x16_p1x1_num1_M288","2 7 16 2 1 1 16 1 0 ",
+"EU24_k7x7_cn3_g1_s2x2_d1x1_b1_in224x224_p3x3_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b0_in32x32_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn4_g1_s1x1_d1x1_b1_in256x256_p1x1_num1_M4","10 2 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn32_g1_s1x1_d16x16_b1_in64x64_p16x16_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M16","8 2 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU24_k1x5_cn32_g1_s1x1_d1x1_b1_in64x64_p0x2_num1_M32","4 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","8 3 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn384_g2_s1x1_d1x1_b1_in16x16_p1x1_num1_M192","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M32","4 6 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","4 6 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn32_g1_s1x1_d4x4_b1_in64x64_p4x4_num1_M32","1 8 32 5 1 8 1 1 0 ",
+"EU24_k2x2_cn64_g1_s2x2_d1x1_b0_in128x128_p0x0_num1_M32","2 8 32 5 1 8 1 1 0 ",
+"EU24_k5x5_cn96_g2_s1x1_d1x1_b1_in32x32_p2x2_num1_M128","4 3 16 2 1 1 16 1 0 ",
+"EU24_k5x5_cn16_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M48","8 1 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn16_g1_s1x1_d1x1_b0_in256x256_p0x0_num1_M4","8 3 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M256","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M144","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn96_g1_s1x1_d1x1_b1_in32x32_p1x1_num1_M128","6 4 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn256_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M32","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn128_g1_s1x1_d1x1_b1_in32x32_p1x1_num1_M192","2 7 16 2 1 1 16 1 0 ",
+"EU24_k5x5_cn32_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M64","4 2 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M160","1 8 32 5 1 8 1 1 0 ",
+"EU24_k5x5_cn32_g1_s1x1_d1x1_b1_in32x32_p2x2_num1_M96","4 4 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","4 6 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M32","2 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn32_g1_s1x1_d1x1_b1_in64x64_p1x1_num1_M32","2 8 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn96_g1_s1x1_d1x1_b1_in32x32_p1x1_num2_M128","10 2 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn160_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M320","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M32","8 3 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn64_g1_s1x1_d1x1_b0_in64x64_p1x1_num1_M64","2 8 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M5","2 3 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn16_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M48","4 6 8 2 1 1 8 1 0 ",
+"EU24_k5x5_cn24_g1_s1x1_d1x1_b1_in16x16_p2x2_num1_M64","4 2 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn64_g1_s1x1_d1x1_b0_in128x128_p0x0_num1_M4","8 2 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M64","8 2 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M96","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn64_g1_s1x1_d1x1_b0_in64x64_p0x0_num1_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M192","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M48","4 6 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn128_g1_s1x1_d1x1_b1_in16x16_p1x1_num2_M256","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M4","4 4 16 2 1 1 16 1 0 ",
+"EU24_k4x4_cn3_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M2","1 3 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M96","1 8 32 5 1 8 1 1 0 ",
+"EU24_k3x3_cn512_g1_s1x1_d1x1_b0_in16x16_p1x1_num1_M512","2 7 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn256_g1_s2x2_d1x1_b0_in64x64_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s2x2_d1x1_b0_in32x32_p0x0_num1_M1024","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k11x7_cn3_g1_s4x3_d1x1_b1_in64x64_p3x2_num1_M64","4 1 16 2 1 1 16 1 0 ",
+"EU24_k3x3_cn64_g1_s1x1_d1x1_b1_in64x64_p1x1_num2_M192","6 4 16 2 1 1 16 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M64","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn64_g1_s1x1_d1x1_b1_in64x64_p0x0_num1_M64","1 16 32 5 1 16 1 1 0 ",
+"EU24_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M16","8 3 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn128_g1_s1x1_d1x1_b0_in32x32_p0x0_num1_M512","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn1024_g1_s2x2_d1x1_b0_in16x16_p0x0_num1_M512","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M128","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn832_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M384","4 7 8 2 1 1 8 1 0 ",
+"EU24_k1x1_cn528_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M160","1 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn480_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M64","8 3 8 2 1 1 8 1 0 ",
+"EU24_k3x3_cn3_g1_s2x2_d1x1_b1_in256x256_p1x1_num1_M13","1 1 1 4 1 1 1 0 1 ",
+"EU24_k1x1_cn256_g1_s2x2_d1x1_b0_in64x64_p0x0_num1_M512","2 8 32 5 1 8 1 1 0 ",
+"EU24_k1x1_cn512_g1_s1x1_d1x1_b1_in16x16_p0x0_num2_M24","8 3 8 2 1 1 8 1 0 ",
+"EU24_k5x5_cn16_g1_s1x1_d1x1_b1_in32x32_p2x2_num1_M32","4 3 16 2 1 1 16 1 0 ",
 };
 #endif
