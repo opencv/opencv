@@ -4365,7 +4365,7 @@ float normL2Sqr_(const float* a, const float* b, int n)
     for( ; j <= n - 8; j += 8 )
     {
         __m256 t0 = _mm256_sub_ps(_mm256_loadu_ps(a + j), _mm256_loadu_ps(b + j));
-#ifdef CV_FMA3
+#if CV_FMA3
         d0 = _mm256_fmadd_ps(t0, t0, d0);
 #else
         d0 = _mm256_add_ps(d0, _mm256_mul_ps(t0, t0));

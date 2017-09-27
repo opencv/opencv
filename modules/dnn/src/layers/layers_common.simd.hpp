@@ -59,7 +59,7 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 
 #if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
 
-#if !CV_FMA // AVX workaround
+#if !CV_FMA3 // AVX workaround
 #undef _mm256_fmadd_ps
 #define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 #endif
