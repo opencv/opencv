@@ -12,7 +12,7 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             onloadCallback();
         });
         script.addEventListener('error', () => {
-            this.printError('Failed to load ' + OPENCV_URL);
+            self.printError('Failed to load ' + OPENCV_URL);
         });
         script.src = OPENCV_URL;
         let node = document.getElementsByTagName('script')[0];
@@ -99,7 +99,7 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         let inputElement = document.getElementById(fileInputId);
         inputElement.addEventListener('change', (e) => {
             let imgUrl = URL.createObjectURL(e.target.files[0]);
-            loadImageToCanvas(imgUrl, canvasId);
+            self.loadImageToCanvas(imgUrl, canvasId);
         }, false);
     };
 
