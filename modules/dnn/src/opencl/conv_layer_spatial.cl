@@ -374,6 +374,13 @@ convolve_simd(
 
 #else // KERNEL_GEMM_LIKE
 
+#if APPLY_BIAS
+// Dtype bias[4];
+#define SUBGROUP_GET_BIAS(k, i) intel_sub_group_shuffle(bias[k], i)
+#else
+#define SUBGROUP_GET_BIAS(k, i) ((Dtype)0)
+#endif
+
 #ifdef Conv_Interleaved
 typedef struct float1 { float s0; } float1;
 typedef struct float5 { float s0; float s1; float s2; float s3; float s4; } float5;
@@ -590,8 +597,6 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         Dtype4 *bias_vec;
         bias_vec = (Dtype4*)bias;
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
-#else
-        const Dtype bias[4] = {0, 0, 0, 0};
 #endif
 #ifdef FUSED_CONV_CHANNEL_RELU
         Dtype slope[4];
@@ -607,20 +612,20 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
             negative_slope = intel_sub_group_shuffle(slope[0], i);
 #endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 0 + i ) * out_pitch_y, blockC00[i] + intel_sub_group_shuffle(bias[0], i));
+            ACTIVATION_FUNCTION(dst, out_offset + ( 0 + i ) * out_pitch_y, blockC00[i] + SUBGROUP_GET_BIAS(0, i));
 
 #ifdef FUSED_CONV_CHANNEL_RELU
             negative_slope = intel_sub_group_shuffle(slope[1], i);
 #endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 8 + i ) * out_pitch_y, blockC10[i] + intel_sub_group_shuffle(bias[1], i));
+            ACTIVATION_FUNCTION(dst, out_offset + ( 8 + i ) * out_pitch_y, blockC10[i] + SUBGROUP_GET_BIAS(1, i));
 #ifdef FUSED_CONV_CHANNEL_RELU
             negative_slope = intel_sub_group_shuffle(slope[2], i);
 #endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 16 + i ) * out_pitch_y, blockC20[i] + intel_sub_group_shuffle(bias[2], i));
+            ACTIVATION_FUNCTION(dst, out_offset + ( 16 + i ) * out_pitch_y, blockC20[i] + SUBGROUP_GET_BIAS(2, i));
 #ifdef FUSED_CONV_CHANNEL_RELU
             negative_slope = intel_sub_group_shuffle(slope[3], i);
 #endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 24 + i ) * out_pitch_y, blockC30[i] + intel_sub_group_shuffle(bias[3], i));
+            ACTIVATION_FUNCTION(dst, out_offset + ( 24 + i ) * out_pitch_y, blockC30[i] + SUBGROUP_GET_BIAS(3, i));
             }
         }
     }
@@ -772,8 +777,6 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         Dtype4 *bias_vec;
         bias_vec = (Dtype4*)bias;
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
-#else
-        const Dtype bias[4] = {0, 0, 0, 0};
 #endif
 
 #ifdef FUSED_CONV_CHANNEL_RELU
@@ -793,21 +796,21 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
                   negative_slope = intel_sub_group_shuffle(slope[0], i);
 #endif
-                  ACTIVATION_FUNCTION(dst, out_offset + ( 0+i) * out_pitch_y, blockC[0][i] + intel_sub_group_shuffle(bias[0], i));
+                  ACTIVATION_FUNCTION(dst, out_offset + ( 0+i) * out_pitch_y, blockC[0][i] + SUBGROUP_GET_BIAS(0, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 1 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                   negative_slope = intel_sub_group_shuffle(slope[1], i);
 #endif
-                  ACTIVATION_FUNCTION(dst, out_offset + ( 8+i) * out_pitch_y, blockC[1][i] + intel_sub_group_shuffle(bias[1], i));
+                  ACTIVATION_FUNCTION(dst, out_offset + ( 8+i) * out_pitch_y, blockC[1][i] + SUBGROUP_GET_BIAS(1, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 2 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                   negative_slope = intel_sub_group_shuffle(slope[2], i);
 #endif
-                  ACTIVATION_FUNCTION(dst, out_offset + (16+i) * out_pitch_y, blockC[2][i] + intel_sub_group_shuffle(bias[2], i));
+                  ACTIVATION_FUNCTION(dst, out_offset + (16+i) * out_pitch_y, blockC[2][i] + SUBGROUP_GET_BIAS(2, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 3 )
                 {
@@ -815,7 +818,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
                   negative_slope = intel_sub_group_shuffle(slope[3], i);
 #endif
-                  ACTIVATION_FUNCTION(dst, out_offset + (24+i) * out_pitch_y, blockC[3][i] + intel_sub_group_shuffle(bias[3], i));
+                  ACTIVATION_FUNCTION(dst, out_offset + (24+i) * out_pitch_y, blockC[3][i] + SUBGROUP_GET_BIAS(3, i));
                 }
             }
         }
@@ -1039,8 +1042,6 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         Dtype4 *bias_vec;
         bias_vec = (Dtype4*)bias;
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
-#else
-        const Dtype bias[4] = {0, 0, 0, 0};
 #endif
 
 #ifdef FUSED_CONV_CHANNEL_RELU
@@ -1058,19 +1059,19 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[0], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC00[i] + intel_sub_group_shuffle(bias[0], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC00[i] + SUBGROUP_GET_BIAS(0, i));
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[1], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC10[i] + intel_sub_group_shuffle(bias[1], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC10[i] + SUBGROUP_GET_BIAS(1, i));
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[2], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC20[i] + intel_sub_group_shuffle(bias[2], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC20[i] + SUBGROUP_GET_BIAS(2, i));
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[3], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC30[i] + intel_sub_group_shuffle(bias[3], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC30[i] + SUBGROUP_GET_BIAS(3, i));
             }
         }
         if( global_y * TILE_M + 1 < output_width * output_height )
@@ -1081,22 +1082,22 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[0], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC01[i] + intel_sub_group_shuffle(bias[0], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC01[i] + SUBGROUP_GET_BIAS(0, i));
 
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[1], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC11[i] + intel_sub_group_shuffle(bias[1], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC11[i] + SUBGROUP_GET_BIAS(1, i));
 
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[2], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC21[i] + intel_sub_group_shuffle(bias[2], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC21[i] + SUBGROUP_GET_BIAS(2, i));
 
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[3], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC31[i] + intel_sub_group_shuffle(bias[3], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC31[i] + SUBGROUP_GET_BIAS(3, i));
             }
         }
     }
@@ -1286,8 +1287,6 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         Dtype4 *bias_vec;
         bias_vec = (Dtype4*)bias;
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
-#else
-        const Dtype bias[4] = {0, 0, 0, 0};
 #endif
 #ifdef FUSED_CONV_CHANNEL_RELU
         Dtype slope[4];
@@ -1306,28 +1305,28 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
                   negative_slope = intel_sub_group_shuffle(slope[0], i);
 #endif
-                  ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC0[0][i] + intel_sub_group_shuffle(bias[0], i));
+                  ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC0[0][i] + SUBGROUP_GET_BIAS(0, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 1 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[1], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC0[1][i] + intel_sub_group_shuffle(bias[1], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC0[1][i] + SUBGROUP_GET_BIAS(1, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 2 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                negative_slope = intel_sub_group_shuffle(slope[2], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC0[2][i] + intel_sub_group_shuffle(bias[2], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC0[2][i] + SUBGROUP_GET_BIAS(2, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 3 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[3], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC0[3][i] + intel_sub_group_shuffle(bias[3], i));
+                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC0[3][i] + SUBGROUP_GET_BIAS(3, i));
                 }
             }
         }
@@ -1340,28 +1339,28 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[0], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC1[0][i] + intel_sub_group_shuffle(bias[0], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC1[0][i] + SUBGROUP_GET_BIAS(0, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 1 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[1], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC1[1][i] + intel_sub_group_shuffle(bias[1], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC1[1][i] + SUBGROUP_GET_BIAS(1, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 2 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[2], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC1[2][i] + intel_sub_group_shuffle(bias[2], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC1[2][i] + SUBGROUP_GET_BIAS(2, i));
                 }
                 if ( TILE_N_LAST_DIV8 > 3 )
                 {
 #ifdef FUSED_CONV_CHANNEL_RELU
                 negative_slope = intel_sub_group_shuffle(slope[3], i);
 #endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC1[3][i] + intel_sub_group_shuffle(bias[3], i));
+                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC1[3][i] + SUBGROUP_GET_BIAS(3, i));
                 }
             }
         }
@@ -1379,9 +1378,9 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         for (int i = 0; i < 16; i++) \
         { \
           negative_slope = intel_sub_group_shuffle(slope[0], i); \
-          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + intel_sub_group_shuffle(bias[0], i)); \
+          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
           negative_slope = intel_sub_group_shuffle(slope[1], i); \
-          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + intel_sub_group_shuffle(bias[1], i)); \
+          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
         } \
       } \
       else if( ( OUT_DEPTH % 16 ) == 0 ) { \
@@ -1389,16 +1388,16 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
           for ( int i = 0; i < 16; i++ ) \
           { \
             negative_slope = intel_sub_group_shuffle(slope[0], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + intel_sub_group_shuffle(bias[0], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
             negative_slope = intel_sub_group_shuffle(slope[1], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + intel_sub_group_shuffle(bias[1], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
           } \
         } \
         else { \
           for (int i = 0; i < 16; i++) \
           { \
           negative_slope = intel_sub_group_shuffle(slope[0], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + intel_sub_group_shuffle(bias[0], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
           } \
         } \
       } \
@@ -1408,9 +1407,9 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
           for ( int i = 0; i < 16; i++ ) \
           { \
           negative_slope = intel_sub_group_shuffle(slope[0], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + intel_sub_group_shuffle(bias[0], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
           negative_slope = intel_sub_group_shuffle(slope[1], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + intel_sub_group_shuffle(bias[1], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
           } \
         } \
         else { \
@@ -1418,19 +1417,19 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
             for (int i = 0; i < 16 ; i++) \
             { \
           negative_slope = intel_sub_group_shuffle(slope[0], i); \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + intel_sub_group_shuffle(bias[0], i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
             } \
             for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
             { \
           negative_slope = intel_sub_group_shuffle(slope[1], i); \
-              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + intel_sub_group_shuffle(bias[1], i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
             } \
           } \
           else { \
             for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
             { \
             negative_slope = intel_sub_group_shuffle(slope[0], i); \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + intel_sub_group_shuffle(bias[0], i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
             } \
           } \
         } \
@@ -1444,22 +1443,22 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
       if ( ( OUT_DEPTH % TILE_N ) == 0 ) {\
         for (int i = 0; i < 16; i++) \
         { \
-          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + intel_sub_group_shuffle(bias[0], i)); \
-          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + intel_sub_group_shuffle(bias[1], i)); \
+          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
+          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
         } \
       } \
       else if( ( OUT_DEPTH % 16 ) == 0 ) { \
         if ( ( global_x + 1 ) < get_global_size(0) ) { \
           for ( int i = 0; i < 16; i++ ) \
           { \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + intel_sub_group_shuffle(bias[0], i)); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + intel_sub_group_shuffle(bias[1], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
           } \
         } \
         else { \
           for (int i = 0; i < 16; i++) \
           { \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + intel_sub_group_shuffle(bias[0], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
           } \
         } \
       } \
@@ -1468,25 +1467,25 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         { \
           for ( int i = 0; i < 16; i++ ) \
           { \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + intel_sub_group_shuffle(bias[0], i)); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + intel_sub_group_shuffle(bias[1], i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
           } \
         } \
         else { \
           if ( (OUT_DEPTH % TILE_N) > 16 ) { \
             for (int i = 0; i < 16 ; i++) \
             { \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + intel_sub_group_shuffle(bias[0], i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
             } \
             for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
             { \
-              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + intel_sub_group_shuffle(bias[1], i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
             } \
           } \
           else { \
             for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
             { \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + intel_sub_group_shuffle(bias[0], i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
             } \
           } \
         } \
@@ -1662,8 +1661,6 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     Dtype2 *bias_vec;
     bias_vec = (Dtype2*)bias;
     *bias_vec = as_Dtype2(SUB_GROUP_BLOCK_READ2((__global INT_TYPE *)biases_base + group_x * TILE_N));
-#else
-    const Dtype bias[4] = {0, 0, 0, 0};
 #endif
 #ifdef FUSED_CONV_CHANNEL_RELU
         Dtype slope[2];
