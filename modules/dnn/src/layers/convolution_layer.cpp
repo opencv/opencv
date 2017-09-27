@@ -252,24 +252,13 @@ public:
         }
 
         Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inpGroupCn);
-
-        Halide::Expr kc = r.z;
-        if (group > 1)
-        {
-            int outCnBound = outGroupCn;
-            int inpChBound = inpGroupCn;
-            Halide::Expr shift = select(c < outCnBound, 0, inpChBound);
-            for (int i = 2; i < group; ++i)
-            {
-                outCnBound += outGroupCn;
-                inpChBound += inpGroupCn;
-                shift = select(c < outCnBound, shift, inpChBound);
-            }
-            kc += shift;
-        }
-
         Halide::Expr kx = x * stride.width - pad.width + r.x * dilation.width;
         Halide::Expr ky = y * stride.height - pad.height + r.y * dilation.height;
+        Halide::Expr kc = r.z;
+        for (int i = 1; i < group; ++i)
+        {
+            kc = select(c < outGroupCn * i, kc, inpGroupCn * i + r.z);
+        }
         Halide::Expr topExpr = sum(padded_input(kx, ky, kc, n) *
                                    weights(r.x, r.y, r.z, c));
         if (hasBias())
@@ -278,7 +267,6 @@ public:
             topExpr += bias(c);
         }
         top(x, y, c, n) = topExpr;
-        Ptr<BackendNode> pp(new HalideBackendNode({ padded_input, top }));
         return Ptr<BackendNode>(new HalideBackendNode({ padded_input, top }));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
@@ -793,7 +781,7 @@ public:
         int inpH = inpShape[2];
         int inpW = inpShape[3];
         int outCn = outShape[1];
-        int ngroups = inpCn / blobs[0].size[1];
+        int ngroups = inpCn / blobs[0].size[0];
         int outGroupCn = outCn / ngroups;
         int ksize = outGroupCn * kernel.height * kernel.width;
         return shape(ksize, inpH * inpW);
@@ -804,7 +792,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(!hasBias() || blobs[1].total() == (size_t)blobs[0].size[0]);
+        CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
         CV_Assert(inputs.size() != 0);
 
         int inpCn = inputs[0][1];
@@ -813,12 +801,13 @@ public:
 
         int outH = stride.height * (inpH - 1) + kernel.height - 2 * pad.height + adjustPad.height;
         int outW = stride.width * (inpW - 1) + kernel.width - 2 * pad.width + adjustPad.width;
-        int outCn = blobs[0].size[0];
+        int outCn = numOutput;
 
-        int ngroups = inpCn / blobs[0].size[1];
+        CV_Assert(outCn % blobs[0].size[1] == 0);
+        int ngroups = outCn / blobs[0].size[1];
 
         CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
-        CV_Assert(blobs[0].size[0] == outCn && blobs[0].size[1] == inpCn / ngroups);
+        CV_Assert(blobs[0].size[0] == inpCn);
 
         int dims[] = {inputs[0][0], outCn, outH, outW};
         outputs.resize(inputs.size(), shape(dims));
@@ -1073,7 +1062,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        int outCn = blobs[0].size[0];
+        int outCn = numOutput;
         int inpCn = inputs[0]->size[1];
         bool is1x1flag = is1x1();
         int nstripes = getNumThreads();
@@ -1086,9 +1075,9 @@ public:
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
-            int ngroups = inpCn / blobs[0].size[1];
-            int inpGroupCn = blobs[0].size[1];
-            int outGroupCn = outCn / ngroups;
+            int ngroups = outCn / blobs[0].size[1];
+            int inpGroupCn = inpCn / ngroups;
+            int outGroupCn = blobs[0].size[1];
             const Mat& inp = *inputs[ii];
             Mat& out = outputs[ii];
             int numImg = inp.size[0];
@@ -1126,18 +1115,16 @@ public:
 #ifdef HAVE_HALIDE
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
-        int inW, inH, inC, inN, outC = blobs[0].size[0];
+        int inW, inH, inC, inN;
         getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-
-        if (inC / blobs[0].size[1] != 1)
-            CV_Error(cv::Error::StsNotImplemented,
-                     "Halide backend for Deconvolution with group > 1 is not implemented");
+        const int outGroupCn = blobs[0].size[1];
+        const int group = numOutput / outGroupCn;
+        const int inpGroupCn = blobs[0].size[0] / group;
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
         Halide::Func padded_input(name + "_constant_exterior");
-        auto weights = wrapToHalideBuffer(blobs[0], {kernel.width,
-                                                     kernel.height, outC, inC});
+        auto weights = wrapToHalideBuffer(blobs[0]);
 
         Halide::Func dilated_input("dilated_input");
         dilated_input(x, y, c, n) = 0.0f;
@@ -1153,13 +1140,21 @@ public:
                                                           0, inC, 0, inN);
         padded_input(x, y, c, n) = bounded(x, y, c, n);
 
-        Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inC);
-        Halide::Expr topExpr = sum(
-            padded_input(x + pad.width - r.x, y + pad.height - r.y, r.z, n) *
-            weights(r.x, r.y, c, r.z));
+        Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inpGroupCn);
+        Halide::Expr kx = x + pad.width - r.x;
+        Halide::Expr ky = y + pad.height - r.y;
+        Halide::Expr kInC = r.z;
+        Halide::Expr kOutC = c;
+        for (int i = 1; i < group; ++i)
+        {
+            kInC = select(c < outGroupCn * i, kInC, inpGroupCn * i + r.z);
+            kOutC = select(c < outGroupCn * i, kOutC, c - outGroupCn * i);
+        }
+        Halide::Expr topExpr = sum(padded_input(kx, ky, kInC, n) *
+                                   weights(r.x, r.y, kOutC, kInC));
         if (hasBias())
         {
-            auto bias = wrapToHalideBuffer(blobs[1], {outC});
+            auto bias = wrapToHalideBuffer(blobs[1], {numOutput});
             topExpr += bias(c);
         }
         top(x, y, c, n) = topExpr;
@@ -1194,13 +1189,13 @@ static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const Laye
                                l->dilation.width, l->padMode);
 
     bool bias = params.get<bool>("bias_term", true);
-    int numOutput = params.get<int>("num_output");
+    l->numOutput = params.get<int>("num_output");
     int ngroups = params.get<int>("group", 1);
 
     l->adjustPad.height = params.get<int>("adj_h", 0);
     l->adjustPad.width = params.get<int>("adj_w", 0);
 
-    CV_Assert(numOutput % ngroups == 0);
+    CV_Assert(l->numOutput % ngroups == 0);
     CV_Assert((bias && l->blobs.size() == 2) || (!bias && l->blobs.size() == 1));
     CV_Assert(l->adjustPad.width < l->stride.width &&
               l->adjustPad.height < l->stride.height);

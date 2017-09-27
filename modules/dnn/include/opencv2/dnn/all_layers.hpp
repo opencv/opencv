@@ -199,6 +199,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     public:
         Size kernel, stride, pad, dilation, adjustPad;
         String padMode;
+        int numOutput;
     };
 
     class CV_EXPORTS ConvolutionLayer : public BaseConvolutionLayer

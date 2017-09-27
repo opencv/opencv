@@ -107,7 +107,7 @@ TEST_P(Deconvolution, Accuracy)
     Size adjPad = Size(get<5>(GetParam())[2], get<5>(GetParam())[3]);
     bool hasBias = get<6>(GetParam());
 
-    Mat weights({outChannels, inChannels / group, kernel.height, kernel.width}, CV_32F);
+    Mat weights({inChannels, outChannels / group, kernel.height, kernel.width}, CV_32F);
     randu(weights, -1.0f, 1.0f);
 
     LayerParams lp;
@@ -139,7 +139,7 @@ TEST_P(Deconvolution, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Deconvolution, Combine(
 /*in channels, out channels, group*/
-             Values(Vec3i(6, 4, 1), Vec3i(6, 9, 1)),
+             Values(Vec3i(6, 4, 1), Vec3i(6, 9, 3)),
 /*in size*/  Values(Size(5, 6)),
 /*kernel*/   Values(Size(3, 1), Size(1, 3)),
 /*pad*/      Values(Size(1, 0), Size(0, 1)),

@@ -1038,13 +1038,11 @@ void TFImporter::populateNet(Net dstNet)
             }
 
             kernelFromTensor(getConstBlob(layer, value_id, 1), layerParams.blobs[0]);
-            // Swap just numbers of input and output channels.
-            std::swap(layerParams.blobs[0].size[0], layerParams.blobs[0].size[1]);
 
             const int* kshape = layerParams.blobs[0].size.p;
             layerParams.set("kernel_h", kshape[2]);
             layerParams.set("kernel_w", kshape[3]);
-            layerParams.set("num_output", kshape[0]);
+            layerParams.set("num_output", kshape[1]);
 
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
