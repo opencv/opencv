@@ -137,7 +137,7 @@ if(BUILD_IPP_IW)
 
   # Package sources
   get_filename_component(__PATH "${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" ABSOLUTE)
-  ippiw_setup("${_PATH}" 1)
+  ippiw_setup("${__PATH}" 1)
 endif()
 
 
