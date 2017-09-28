@@ -333,8 +333,12 @@ public:
     void* ptr() const;
     static Queue& getDefault();
 
+    /// @brief Returns OpenCL command queue with enable profiling mode support
+    const Queue& getProfilingQueue() const;
+
+    struct Impl; friend struct Impl;
+    inline Impl* getImpl() const { return p; }
 protected:
-    struct Impl;
     Impl* p;
 };
 
@@ -568,6 +572,12 @@ public:
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
+
+    /** @brief Similar to synchronized run() call with returning of kernel execution time
+     * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
+     * @return Execution time in nanoseconds or negative number on error
+     */
+    int64 runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q=Queue());
 
     size_t workGroupSize() const;
     size_t preferedWorkGroupSizeMultiple() const;
