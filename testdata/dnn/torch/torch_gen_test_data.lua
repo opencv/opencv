@@ -149,6 +149,17 @@ net_normalize:add(nn.Normalize(1, 1e-3))
 net_normalize:add(nn.Normalize(2.7))
 save(net_normalize, torch.rand(1, 24) * 3 - 0.5, 'net_normalize')
 
+local net_padding = nn.Sequential()
+net_padding:add(nn.Padding(2, 2, 4))
+net_padding:add(nn.Padding(1, -1, 2))
+net_padding:add(nn.Padding(3, -3, 3, 3))
+net_padding:add(nn.SpatialZeroPadding(3, 1, 2, 0));
+save(net_padding, torch.rand(2, 1, 3, 4), 'net_padding')
+
+local net_spatial_zero_padding = nn.Sequential()
+net_spatial_zero_padding:add(nn.SpatialZeroPadding(1, 0, 2, 3));
+save(net_spatial_zero_padding, torch.rand(4, 2, 3), 'net_spatial_zero_padding')
+
 -- OpenFace network.
 -- require 'image'
 -- torch.setdefaulttensortype('torch.FloatTensor')
