@@ -1564,7 +1564,6 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(UMat &bottom, UMat &top,
     }
     else
     {
-        benchData.create(1, numImages * num_output_ * out_spatial_dim_, CV_32FC1);
         calculateBenchmark(bottom, benchData, weight, bias, numImages);
         useFirstAvailable(bottom, top, weight, bias, numImages, benchData);
     }
