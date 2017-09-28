@@ -198,6 +198,36 @@ conv = tf.layers.conv2d(inp, filters=4, kernel_size=[5, 5], strides=(2, 2),
                         bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'spatial_padding')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3], 'input')
+bn = tf.add(inp, tf.Variable(tf.random_normal(inp.shape)))
+reshape = tf.reshape(bn, [-1, 3])
+save(inp, reshape, 'reshape_reduce')
+################################################################################
+times = 4  # Sequence length (number of batches in different time stamps)
+batch_size = 2
+input_size = 5*6*3  # W*H*C
+output_size = 10
+# Define LSTM blobk.
+inp = tf.placeholder(tf.float32, [times, batch_size, input_size], 'input')
+lstm_cell = tf.contrib.rnn.LSTMBlockFusedCell(output_size, forget_bias=0.9,
+                                           cell_clip=0.4, use_peephole=True)
+outputs, state = lstm_cell(inp, dtype=tf.float32)
+# shape(outputs) is a (times, batch_size, output_size)
+
+# Slice the last time iteration:
+last_output = tf.slice(outputs, [times - 1, 0, 0], [1, -1, output_size])
+# shape(last_output) is a (1, batch_size, output_size)
+
+# Remove time axis.
+last_output = tf.reshape(last_output, [-1, 10])
+# shape(last_output) is a (batch_size, output_size)
+
+# Fully-connected
+weights = tf.Variable(tf.random_normal([10, 2]))
+biases = tf.Variable(tf.random_normal([2]))
+sigmoid = tf.nn.sigmoid(tf.matmul(last_output, weights) + biases)
+save(inp, sigmoid, 'lstm')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
