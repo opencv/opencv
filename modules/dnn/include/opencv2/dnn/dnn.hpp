@@ -629,7 +629,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     /** @brief Reads a network model stored in Tensorflow model file.
       * @details This is shortcut consisting from createTensorflowImporter and Net::populateNet calls.
       */
-    CV_EXPORTS_W Net readNetFromTensorflow(const String &model);
+    CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
 
     /** @brief Reads a network model stored in Torch model file.
       * @details This is shortcut consisting from createTorchImporter and Net::populateNet calls.
