@@ -35,6 +35,28 @@ static void test(LayerParams& params, Mat& input)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Padding
+////////////////////////////////////////////////////////////////////////////////
+TEST(Padding_Halide, Accuracy)
+{
+    static const int kNumRuns = 10;
+    std::vector<int> paddings(8);
+    for (int t = 0; t < kNumRuns; ++t)
+    {
+        for (int i = 0; i < paddings.size(); ++i)
+            paddings[i] = rand() % 5;
+
+        LayerParams lp;
+        lp.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+        lp.type = "Padding";
+        lp.name = "testLayer";
+
+        Mat input({1 + rand() % 10, 1 + rand() % 10, 1 + rand() % 10, 1 + rand() % 10}, CV_32F);
+        test(lp, input);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Convolution
 ////////////////////////////////////////////////////////////////////////////////
 typedef TestWithParam<tuple<Vec3i, Size, Size, Size, Size, Size, bool> > Convolution;
