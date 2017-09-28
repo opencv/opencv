@@ -877,6 +877,34 @@ void TFImporter::populateNet(Net dstNet)
             // one input only
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
         }
+        else if (type == "Slice")
+        {
+            // op: "Slice"
+            // input: "input_node"
+            // input: "Slice/begin"
+            // input: "Slice/size"
+            CV_Assert(layer.input_size() == 3);
+
+            const tensorflow::TensorProto begins = getConstBlob(layer, value_id, 1);
+            const tensorflow::TensorProto sizes = getConstBlob(layer, value_id, 2);
+            std::string beginsData = begins.tensor_content();
+            std::string sizesData = sizes.tensor_content();
+            CV_Assert(begins.dtype() == tensorflow::DT_INT32);
+            CV_Assert(sizes.dtype() == tensorflow::DT_INT32);
+            CV_Assert(!beginsData.empty());
+            CV_Assert(!sizesData.empty());
+            CV_Assert(beginsData.size() == sizesData.size());
+
+            layerParams.set("begin", DictValue::arrayInt((int*)beginsData.c_str(),
+                                                         beginsData.size() / 4));
+            layerParams.set("size", DictValue::arrayInt((int*)sizesData.c_str(),
+                                                        sizesData.size() / 4));
+
+            int id = dstNet.addLayer(name, "Slice", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
         else if (type == "Mul")
         {
             bool haveConst = false;
@@ -1029,6 +1057,82 @@ void TFImporter::populateNet(Net dstNet)
 
             // one input only
             connect(layer_id, dstNet, parsePin(layer.input(2)), id, 0);
+        }
+        else if (type == "BlockLSTM")
+        {
+            // op: "BlockLSTM"
+            // input: "lstm_block_wrapper/ToInt64/x"  (ignore, number of time stamps)
+            // input: "input"
+            // input: "lstm_block_wrapper/zeros"      (ignore)
+            // input: "lstm_block_wrapper/zeros"      (ignore)
+            // input: "lstm_block_wrapper/kernel"
+            // input: "lstm_block_wrapper/w_i_diag"
+            // input: "lstm_block_wrapper/w_f_diag"
+            // input: "lstm_block_wrapper/w_o_diag"
+            // input: "lstm_block_wrapper/bias"
+            if (layer.input_size() != 9)
+                CV_Error(Error::StsNotImplemented, "Unexpected number of input nodes");
+
+            if (hasLayerAttr(layer, "forget_bias"))
+                layerParams.set("forget_bias", getLayerAttr(layer, "forget_bias").f());
+
+            if (hasLayerAttr(layer, "forget_bias"))
+            {
+                float cellClip = getLayerAttr(layer, "cell_clip").f();
+                // Cell clip disabled if it's negative.
+                if (cellClip >= 0)
+                {
+                    layerParams.set("use_cell_clip", true);
+                    layerParams.set("cell_clip", cellClip);
+                }
+            }
+
+            Mat W, Wh, Wx, b;
+            blobFromTensor(getConstBlob(layer, value_id, 4), W);
+            blobFromTensor(getConstBlob(layer, value_id, 8), b);
+            const int outSize = W.cols / 4;
+
+            // IGFO->IFOG
+            float* weightData = (float*)W.data;
+            for (int i = 0; i < W.rows; ++i)
+                for (int j = 0; j < outSize; ++j)
+                {
+                    std::swap(weightData[i * W.cols + 1 * outSize + j],
+                              weightData[i * W.cols + 2 * outSize + j]);
+                    std::swap(weightData[i * W.cols + 2 * outSize + j],
+                              weightData[i * W.cols + 3 * outSize + j]);
+                }
+            Wx = W.rowRange(0, W.rows - outSize).t();
+            Wh = W.rowRange(W.rows - outSize, W.rows).t();
+
+            layerParams.blobs.resize(3);
+            layerParams.blobs[0] = Wh;
+            layerParams.blobs[1] = Wx;
+            layerParams.blobs[2] = b;
+
+            if (hasLayerAttr(layer, "use_peephole"))
+            {
+                bool usePeephole = getLayerAttr(layer, "use_peephole").b();
+                if (usePeephole)
+                {
+                    layerParams.set("use_peephole", true);
+                    layerParams.blobs.resize(6);
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        Mat w;
+                        blobFromTensor(getConstBlob(layer, value_id, 5 + i), w);
+                        w = w.reshape(1, w.total());  // Single column.
+                        w = Mat::diag(w);  // Make a diagonal matrix.
+                        layerParams.blobs[3 + i] = w;
+                    }
+                }
+            }
+
+            int id = dstNet.addLayer(name, "LSTM", layerParams);
+            layer_id[name] = id;
+
+            // one input only
+            connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
         }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
                  type == "Relu" || type == "Elu" || type == "Softmax" ||
