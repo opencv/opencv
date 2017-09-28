@@ -409,6 +409,17 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
                << "M" << M_;
 
     key_ = ocl::Device::getDefault().vendorName() + "_EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
+    key_sanitized_ = key_;
+    for (size_t i = 0; i < key_sanitized_.size(); i++)
+    {
+        char c = key_sanitized_[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'))
+        {
+            key_sanitized_[i] = '_';
+        }
+    }
+    // TODO add hash?
+    // key_sanitized_ = key_sanitized_ + cv::format("_%08llx", crc64((uchar*)key_.c_str(), key_.size()));
     short_key_ = keyBuilder.str();
 }
 
@@ -1438,7 +1449,7 @@ void OCL4DNNConvSpatial<Dtype>::saveTunedConfig()
         return;
 
     std::string outputFile;
-    outputFile = cache_path_ + "/" + key_; // TODO Sanitize key_ symbols
+    outputFile = cache_path_ + "/" + key_sanitized_;
     std::ofstream outputKernel;
     outputKernel.open(outputFile.c_str());
     outputKernel << bestKernelConfig->workItem_output[0] << " "
@@ -1598,7 +1609,7 @@ bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
     bool swizzle, nullLocal;
 
     // Find cached kernel configuration from file
-    std::string cacheFile = cache_path_ + "/" + key_;
+    std::string cacheFile = cache_path_ + "/" + key_sanitized_;
     std::ifstream cachedKernel(cacheFile.c_str());
     if (cachedKernel)
     {

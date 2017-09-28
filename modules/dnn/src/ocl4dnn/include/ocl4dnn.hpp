@@ -287,7 +287,7 @@ class OCL4DNNConvSpatial
         int32_t N_;
 
         bool tuned_;
-        std::string key_;
+        std::string key_, key_sanitized_;
         std::string short_key_;
         std::string kernel_name_;
         std::string cache_path_;
