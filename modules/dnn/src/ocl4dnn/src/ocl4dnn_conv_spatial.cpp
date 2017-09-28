@@ -1142,6 +1142,9 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
         workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
         if (workgroupSize_used != simd_size)
         {
+            std::cerr << "OpenCV(ocl4dnn): The OpenCL compiler chose a simd size (" << workgroupSize_used << ") that " << std::endl;
+            std::cerr << "                 does not equal the size (" << simd_size << ") kernel source required." << std::endl;
+            std::cerr << "                 Skip this kernel " << kernel_name_ << std::endl;
             unloadProgram(kernel_name_);
             return false;
         }

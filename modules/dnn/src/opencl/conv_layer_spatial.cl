@@ -183,6 +183,7 @@ __kernel void ConvolveBasic(
 // NOTE: for beignet this reqd_work_group_size does not guarantee that SIMD16 mode will be used, the compiler could choose to use two SIMD8 threads, and if that happens the code will break.
 #ifndef __BEIGNET__
 __attribute__((reqd_work_group_size(1, 1, SIMD_SIZE)))
+__attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 #endif
 __kernel void
 convolve_simd(
