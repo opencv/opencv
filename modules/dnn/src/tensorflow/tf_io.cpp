@@ -52,9 +52,24 @@ bool ReadProtoFromBinaryFileTF(const char* filename, Message* proto) {
     return success;
 }
 
+bool ReadProtoFromTextFileTF(const char* filename, Message* proto) {
+    std::ifstream fs(filename, std::ifstream::in);
+    CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
+    IstreamInputStream input(&fs);
+    bool success = google::protobuf::TextFormat::Parse(&input, proto);
+    fs.close();
+    return success;
+}
+
 void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
                                       tensorflow::GraphDef* param) {
   CHECK(ReadProtoFromBinaryFileTF(param_file, param))
+      << "Failed to parse GraphDef file: " << param_file;
+}
+
+void ReadTFNetParamsFromTextFileOrDie(const char* param_file,
+                                      tensorflow::GraphDef* param) {
+  CHECK(ReadProtoFromTextFileTF(param_file, param))
       << "Failed to parse GraphDef file: " << param_file;
 }
 
