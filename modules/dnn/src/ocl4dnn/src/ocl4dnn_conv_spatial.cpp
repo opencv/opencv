@@ -357,26 +357,15 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
                                         UMat& top,
                                         int32_t numImages)
 {
-    int32_t total_bottom_size = bottom.total();
-    int32_t total_kernel_size = weight.total();
-    int32_t total_bias_size   = bias.total();
-    int32_t total_top_size    = top.total();
-
-    UMat bottom_reshaped = bottom.reshape(1, 1, &total_bottom_size);
-    UMat top_reshaped    = top.reshape(1, 1, &total_top_size);
-    UMat weight_reshaped = weight.reshape(1, 1, &total_kernel_size);
-    UMat bias_reshaped;
-    if (bias_term_)
-        bias_reshaped = bias.reshape(1, 1, &total_bias_size);
     num_ = numImages;
 
-    prepareKernel(bottom_reshaped, top_reshaped, weight_reshaped, bias_reshaped, numImages);
-    return convolve(bottom_reshaped, top_reshaped, weight_reshaped, bias_reshaped, numImages, bestKernelConfig);
+    prepareKernel(bottom, top, weight, bias, numImages);
+    return convolve(bottom, top, weight, bias, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(UMat &bottom, UMat &verifyTop,
-                                                   UMat &weight, UMat &bias,
+void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &verifyTop,
+                                                   const UMat &weight, const UMat &bias,
                                                    int32_t numImages)
 {
     options_.str(""); options_.clear(); // clear contents and state flags
@@ -501,7 +490,7 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
 }
 
 template<typename Dtype>
-bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(UMat &weight,
+bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
                                               int32_t swizzled_factor,
                                               bool interleave)
 {
@@ -613,7 +602,7 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::CreateSubBuffer(UMat& buffer, UMat& sub_buffer,
+void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
                                                 int32_t offset, int32_t size, bool write_only)
 {
     cl_mem sub_mem;
@@ -639,8 +628,8 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(UMat& buffer, UMat& sub_buffer,
 }
 
 template<>
-bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
-                                         UMat &weight, UMat &bias,
+bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
+                                         const UMat &weight, const UMat &bias,
                                          int32_t numImages, kernelConfig* config)
 {
     ocl::Queue queue = ocl::Queue::getDefault();
@@ -911,8 +900,8 @@ bool OCL4DNNConvSpatial<float>::convolve(UMat &bottom, UMat &top,
 }
 
 template<>
-float OCL4DNNConvSpatial<float>::timedConvolve(UMat &bottom, UMat &top,
-                                               UMat &weight, UMat &bias,
+float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
+                                               const UMat &weight, const UMat &bias,
                                                int32_t numImages, kernelConfig* config)
 {
     // warm up.
@@ -961,10 +950,10 @@ float OCL4DNNConvSpatial<float>::timedConvolve(UMat &bottom, UMat &top,
 }
 
 template<>
-bool OCL4DNNConvSpatial<float>::verifyResult(UMat &bottom,
+bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                                              UMat &top,
-                                             UMat &weight,
-                                             UMat &bias,
+                                             const UMat &weight,
+                                             const UMat &bias,
                                              int32_t numImages,
                                              kernelConfig* config,
                                              UMat &verifyTop)
@@ -1160,8 +1149,8 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
 }
 
 template<>
-bool OCL4DNNConvSpatial<float>::tuneLocalSize(UMat &bottom, UMat &top,
-                                              UMat &weight, UMat &bias,
+bool OCL4DNNConvSpatial<float>::tuneLocalSize(const UMat &bottom, UMat &top,
+                                              const UMat &weight, const UMat &bias,
                                               kernelConfig* config)
 {
     if (config->use_null_local || !config->autoTune)
@@ -1336,10 +1325,10 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::useFirstAvailable(UMat &bottom,
+void OCL4DNNConvSpatial<float>::useFirstAvailable(const UMat &bottom,
                                                   UMat &top,
-                                                  UMat &weight,
-                                                  UMat &bias,
+                                                  const UMat &weight,
+                                                  const UMat &bias,
                                                   int32_t numImages,
                                                   UMat &verifyTop)
 {
@@ -1394,10 +1383,10 @@ void OCL4DNNConvSpatial<float>::cacheTunedConfig()
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::setupConvolution(UMat &bottom,
+void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                                                  UMat &top,
-                                                 UMat &weight,
-                                                 UMat &bias,
+                                                 const UMat &weight,
+                                                 const UMat &bias,
                                                  int32_t numImages,
                                                  UMat &verifyTop)
 {
@@ -1539,8 +1528,8 @@ void OCL4DNNConvSpatial<Dtype>::saveTunedConfig()
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::prepareKernel(UMat &bottom, UMat &top,
-                                              UMat &weight, UMat &bias,
+void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
+                                              const UMat &weight, const UMat &bias,
                                               int32_t numImages)
 {
     std::string previous_key = key_;

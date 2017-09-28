@@ -170,10 +170,10 @@ class OCL4DNNConvSpatial
             options_ << " -D " << name << "=" << value;
         }
 
-        void useFirstAvailable(UMat &bottom,
+        void useFirstAvailable(const UMat &bottom,
                                UMat &top,
-                               UMat &weight,
-                               UMat &bias,
+                               const UMat &weight,
+                               const UMat &bias,
                                int32_t numImages,
                                UMat &verifyTop);
         void setupKernel();
@@ -186,15 +186,15 @@ class OCL4DNNConvSpatial
         ocl::Program compileKernel();
         typedef std::map<std::string, ocl::Program> phash_t;
         phash_t phash;
-        void calculateBenchmark(UMat &bottom, UMat &verifyTop,
-                                UMat &weight, UMat &bias,
+        void calculateBenchmark(const UMat &bottom, UMat &verifyTop,
+                                const UMat &weight, const UMat &bias,
                                 int32_t numImages);
 
 
-        void setupConvolution(UMat &bottom,
+        void setupConvolution(const UMat &bottom,
                               UMat &top,
-                              UMat &weight,
-                              UMat &bias,
+                              const UMat &weight,
+                              const UMat &bias,
                               int32_t numImags,
                               UMat &verifyTop);
         bool createConvolutionKernel(int32_t kernelType,
@@ -210,28 +210,28 @@ class OCL4DNNConvSpatial
         bool createGEMMLikeConvKernel(int32_t blockWidth,
                                       int32_t blockHeight,
                                       int32_t blockDepth);
-        void CreateSubBuffer(UMat& buffer, UMat& sub_buffer,
+        void CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
                              int32_t offset, int32_t size, bool write_only);
-        bool convolve(UMat &bottom, UMat &top,
-                      UMat &weight, UMat &bias,
+        bool convolve(const UMat &bottom, UMat &top,
+                      const UMat &weight, const UMat &bias,
                       int32_t numImages,
                       kernelConfig* config);
-        float timedConvolve(UMat &bottom, UMat &top,
-                            UMat &weight, UMat &bias,
+        float timedConvolve(const UMat &bottom, UMat &top,
+                            const UMat &weight, const UMat &bias,
                             int32_t numImages, kernelConfig* config);
 
-        bool verifyResult(UMat &bottom,
+        bool verifyResult(const UMat &bottom,
                           UMat &top,
-                          UMat &weight,
-                          UMat &bias,
+                          const UMat &weight,
+                          const UMat &bias,
                           int32_t numImages,
                           kernelConfig* config,
                           UMat &verifyTop);
 
-        bool tuneLocalSize(UMat &bottom, UMat &top,
-                           UMat &weight, UMat &bias,
+        bool tuneLocalSize(const UMat &bottom, UMat &top,
+                           const UMat &weight, const UMat &bias,
                            kernelConfig* config);
-        bool swizzleWeight(UMat &weight,
+        bool swizzleWeight(const UMat &weight,
                            int32_t swizzled_factor,
                            bool interleave = false);
 
@@ -250,8 +250,8 @@ class OCL4DNNConvSpatial
         bool loadCachedConfig();
 
         void unloadProgram(const std::string& kernelName);
-        void prepareKernel(UMat &bottom, UMat &top,
-                           UMat &weight, UMat &bias,
+        void prepareKernel(const UMat &bottom, UMat &top,
+                           const UMat &weight, const UMat &bias,
                            int32_t numImages);
         bool setupKernelByConfig(int x, int y, int z, int type,
                                  int lx, int ly, int lz,
