@@ -12,7 +12,7 @@ layer {
   convolution_param
   {
   	group: 3
-    num_output: 12
+    num_output: 15
 
   	pad_h: 0
   	pad_w: 1
