@@ -190,6 +190,12 @@ TEST(Torch_Importer, net_normalize)
     runTorchNet("net_normalize", "", false, true);
 }
 
+TEST(Torch_Importer, net_padding)
+{
+    runTorchNet("net_padding", "", false, true);
+    runTorchNet("net_spatial_zero_padding", "", false, true);
+}
+
 TEST(Torch_Importer, ENet_accuracy)
 {
     Net net;
