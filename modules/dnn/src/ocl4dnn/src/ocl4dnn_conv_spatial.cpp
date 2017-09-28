@@ -594,7 +594,7 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
         size_t globalSize[3];
         computeGlobalSize(1, workItemOutput, localSize, globalSize);
         kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], &localSize[0], &workItemOutput[0],
-                                                    false, false, true, KERNEL_TYPE_BASIC));
+                                                    false, true, KERNEL_TYPE_BASIC));
         return true;
     }
     else
@@ -1086,7 +1086,7 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
         else
         {
             kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        false, true, false, KERNEL_TYPE_GEMM_LIKE));
+                                                        true, false, KERNEL_TYPE_GEMM_LIKE));
             return true;
         }
     }
@@ -1140,96 +1140,12 @@ bool OCL4DNNConvSpatial<float>::setupIDLF(int32_t blockWidth,
         else
         {
             kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        false, true, false, KERNEL_TYPE_INTEL_IDLF));
+                                                        true, false, KERNEL_TYPE_INTEL_IDLF));
             return true;
         }
     }
     else
         return false;
-}
-
-template<>
-bool OCL4DNNConvSpatial<float>::tuneLocalSize(const UMat &bottom, UMat &top,
-                                              const UMat &weight, const UMat &bias,
-                                              kernelConfig* config)
-{
-    if (config->use_null_local || !config->autoTune)
-        return true;
-
-    float fastestTime = std::numeric_limits<float>::infinity();
-    uint32_t multiplier = 4;
-    uint32_t localSize[3] = { 1, 1, 1 };
-
-    int32_t skip = 0;
-    cv::ocl::Timer timer;
-    bool allFailed = true;
-    for (int32_t z = 0; z <= 16; z++) {
-        for (int32_t y = 0; y <= 16; y++) {
-            for (int32_t x = 1; x <= 16; x++) {
-                timer.start();
-                skip = 0;
-
-                if (config->autoTune) {
-                    config->local_work_size[0] =
-                        (multiplier * x == 0) ? 1 : multiplier * x;
-                    config->local_work_size[1] =
-                        (multiplier * y == 0) ? 1 : multiplier * y;
-                    config->local_work_size[2] =
-                        (multiplier * z == 0) ? 1 : multiplier * z;
-
-                    computeGlobalSize(1, config->workItem_output,
-                                      config->local_work_size,
-                                      config->global_work_size);
-                }
-                if (config->workItem_output[2] * config->global_work_size[2] != M_)
-                    break;
-
-                if (config->swizzle_weights)
-                    z = 32;
-
-                bool res = true;
-                res = convolve(bottom, top, weight, bias, 1, config);
-
-                if (!res)
-                    skip = 1;
-
-                if (skip) {
-                    timer.stop();
-                    break;
-                }
-                timer.stop();
-                allFailed = false;
-                float elapsedTime = timer.milliSeconds();
-
-                if (elapsedTime < fastestTime) {
-                    fastestTime = elapsedTime;
-                    localSize[0] = config->local_work_size[0];
-                    localSize[1] = config->local_work_size[1];
-                    localSize[2] = config->local_work_size[2];
-                }
-            }
-        }
-    }
-    if (allFailed) {
-        // 1,1,1 is never a good local size and no need to test at all.
-        dbgPrint(std::cout << "Can't find good local size for " << config->kernelName << std::endl);
-        return false;
-    }
-
-    dbgPrint(std::cout << "Best local size[" << localSize[0] << "]["
-             << localSize[1] << "]["<< localSize[2] << "]: " << fastestTime
-             << " Kernel_h: " << kernel_h_ << " kernel_w_: " << kernel_w_
-             << " stride_w: " << stride_w_ << " pad_w_: " << pad_w_ << std::endl);
-
-    if (config->autoTune) {
-        for (int32_t li = 0; li < 3; li++)
-            config->local_work_size[li] = localSize[li];
-
-        computeGlobalSize(1, config->workItem_output,
-                          config->local_work_size,
-                          config->global_work_size);
-    }
-    return true;
 }
 
 template<>
@@ -1342,8 +1258,7 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(const UMat &bottom,
                                     tunerItems[i]->blockHeight,
                                     tunerItems[i]->blockDepth)) {
             int kernelIdx = kernelQueue.size() - 1;
-            if (tuneLocalSize(bottom, top, weight, bias, kernelQueue[kernelIdx]) &&
-                verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernelIdx], verifyTop)) {
+            if (verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernelIdx], verifyTop)) {
                 bestKernelConfig = kernelQueue[kernelIdx];
                 if (bestKernelConfig->kernelType != KERNEL_TYPE_INTEL_IDLF &&
                     bestKernelConfig->kernelType != KERNEL_TYPE_GEMM_LIKE)
@@ -1400,14 +1315,8 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                                 tunerItems[i]->blockDepth);
 
     for (int32_t x = 0; x < kernelQueue.size(); x++) {
-        if (tuneLocalSize(bottom, top, weight, bias, kernelQueue[x])) {
-            kernelQueue[x]->executionTime = timedConvolve(bottom, top, weight, bias, numImages,
-                                                          kernelQueue[x]);
-        } else {
-            // skip those kernels without a good local size.
-            kernelQueue[x]->verified = false;
-            kernelQueue[x]->tested = true;
-        }
+        kernelQueue[x]->executionTime = timedConvolve(bottom, top, weight, bias, numImages,
+                                                      kernelQueue[x]);
         #ifdef TEST_ALL_KERNELS
         if (kernelQueue[x]->tested == false) {
             bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[x], verifyTop);

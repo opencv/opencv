@@ -99,7 +99,6 @@ class OCL4DNNConvSpatial
             size_t global_work_size[3];
             int32_t workItem_output[3];
             bool verified;
-            bool autoTune;
             bool tested;
             bool swizzle_weights;
             bool use_null_local;
@@ -110,7 +109,7 @@ class OCL4DNNConvSpatial
 
             kernelConfig(const std::string& name, size_t* global_size, size_t* local_size,
                          int32_t* workItem,
-                         bool tune, bool swizzle, bool null_local,
+                         bool swizzle, bool null_local,
                          int32_t type = 0)
             {
                 kernelName = name;
@@ -120,7 +119,6 @@ class OCL4DNNConvSpatial
                     global_work_size[x] = global_size[x];
                     workItem_output[x] = workItem[x];
                 }
-                autoTune = tune;
                 swizzle_weights = swizzle;
                 use_null_local = null_local;
                 verified = false;
@@ -228,9 +226,6 @@ class OCL4DNNConvSpatial
                           kernelConfig* config,
                           UMat &verifyTop);
 
-        bool tuneLocalSize(const UMat &bottom, UMat &top,
-                           const UMat &weight, const UMat &bias,
-                           kernelConfig* config);
         bool swizzleWeight(const UMat &weight,
                            int32_t swizzled_factor,
                            bool interleave = false);
