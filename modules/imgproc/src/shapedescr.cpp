@@ -39,8 +39,9 @@
 //
 //M*/
 #include "precomp.hpp"
-#include "opencv2/core/eigensystem.hpp"
-
+//#include <modules/opencv_core/Src/lda.cpp>
+//#include "opencv2/core/eigensystem.hpp"
+#include "/Users/jaspershemilt/Developer/OpenCV_Dev/OpenCV-2017-Fork2/opencv/modules/core/src/lda.cpp"
 namespace cv
 {
 
@@ -541,8 +542,11 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
             Mat eVal, eVec;
-            EigenvalueDecomposition::eigensystem(M, eVal, eVec);
-
+//            EigenvalueDecomposition::eigensystem(M, eVal, eVec);
+        EigenvalueDecomposition eigensystem(M);
+        eVal = eigensystem.eigenvalues();
+        eVec = eigensystem.eigenvectors();
+        
         // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
             int minpos = 0;
             double normi, normEVali, normMinpos, normEValMinpos;
@@ -713,7 +717,10 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
         Mat eVal, eVec;
-        EigenvalueDecomposition::eigensystem(M, eVal, eVec);
+//        EigenvalueDecomposition::eigensystem(M, eVal, eVec);
+        EigenvalueDecomposition eigensystem(M);
+        eVal = eigensystem.eigenvalues();
+        eVec = eigensystem.eigenvectors();
 
         // Select the eigen vector {a,b,c} which satisfies 4ac-b^2 > 0
         double cond[3];
