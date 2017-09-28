@@ -294,10 +294,10 @@ void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
         // Angle of the incoming ray:
         double theta = atan(r);
 
-        double theta2 = theta*theta, theta3 = theta2*theta, theta4 = theta2*theta2, theta5 = theta4*theta,
-                theta6 = theta3*theta3, theta7 = theta6*theta, theta8 = theta4*theta4, theta9 = theta8*theta;
+        double theta2 = theta*theta, theta4 = theta2*theta2,
+               theta6 = theta4*theta2, theta8 = theta4*theta4;
 
-        double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
+        double theta_d = theta + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8;
 
         double inv_r = r > 1e-8 ? 1.0/r : 1;
         double cdist = r > 1e-8 ? theta_d * inv_r : 1;
