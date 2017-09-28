@@ -5230,8 +5230,11 @@ bool internal::isCLBuffer(UMat& u)
 
 struct Timer::Impl
 {
-    Impl()
-        : initted_(false)
+    const Queue queue;
+
+    Impl(const Queue& q)
+        : queue(q)
+        , initted_(false)
         , running_(false)
         , has_run_at_least_once_(false)
     {
@@ -5253,7 +5256,6 @@ struct Timer::Impl
         {
             clWaitForEvents(1, &start_gpu_cl_);
             clReleaseEvent(start_gpu_cl_);
-            ocl::Queue queue = ocl::Queue::getDefault();
             ocl::Kernel kernel("null_kernel_float", ocl::core::benchmark_oclsrc);
             float arg = 0;
             clSetKernelArg((cl_kernel)kernel.ptr(), 0, sizeof(arg), &arg);
@@ -5273,7 +5275,6 @@ struct Timer::Impl
         {
             clWaitForEvents(1, &stop_gpu_cl_);
             clReleaseEvent(stop_gpu_cl_);
-            ocl::Queue queue = ocl::Queue::getDefault();
             ocl::Kernel kernel("null_kernel_float", ocl::core::benchmark_oclsrc);
             float arg = 0;
             clSetKernelArg((cl_kernel)kernel.ptr(), 0, sizeof(arg), &arg);
@@ -5341,6 +5342,7 @@ struct Timer::Impl
 
     void init()
     {
+        CV_Assert(queue.getImpl() && queue.getImpl()->isProfilingQueue_);
         if (!initted())
         {
             start_gpu_cl_ = 0;
@@ -5362,9 +5364,9 @@ struct Timer::Impl
     cl_event stop_gpu_cl_;
 };
 
-Timer::Timer()
+Timer::Timer(const Queue& q)
 {
-    p = new Impl();
+    p = new Impl(q);
 }
 
 Timer::~Timer()

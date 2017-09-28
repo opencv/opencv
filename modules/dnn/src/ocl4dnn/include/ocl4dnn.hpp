@@ -213,7 +213,8 @@ class OCL4DNNConvSpatial
         bool convolve(const UMat &bottom, UMat &top,
                       const UMat &weight, const UMat &bias,
                       int32_t numImages,
-                      kernelConfig* config);
+                      kernelConfig* config,
+                      const cv::ocl::Queue& queue);
         float timedConvolve(const UMat &bottom, UMat &top,
                             const UMat &weight, const UMat &bias,
                             int32_t numImages, kernelConfig* config);

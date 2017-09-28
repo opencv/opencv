@@ -735,8 +735,8 @@ protected:
 class CV_EXPORTS Timer
 {
 public:
-    Timer();
-    virtual ~Timer();
+    Timer(const Queue& q);
+    ~Timer();
     void start();
     void stop();
     float milliSeconds();
