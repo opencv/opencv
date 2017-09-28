@@ -45,10 +45,6 @@ button[disabled] {
     color: red;
     font-weight: bold;
 }
-.inputoutput {
-    margin-top: 1em;
-    margin-bottom: 1em;
-}
 .caption {
     margin: 0;
     font-weight: bold;
@@ -68,4 +64,7 @@ button[disabled] {
 }
 .hidden {
     display: none;
+}
+.small {
+    max-width: 300px;
 }
