@@ -52,9 +52,6 @@ namespace ocl {
 
 using namespace perf;
 
-using std::tr1::get;
-using std::tr1::tuple;
-
 #define OCL_PERF_STRATEGY PERF_STRATEGY_SIMPLE
 
 #define OCL_PERF_TEST(fixture, name) SIMPLE_PERF_TEST(fixture, name)
