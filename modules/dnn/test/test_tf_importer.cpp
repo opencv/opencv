@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2016, Intel Corporation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 /*
@@ -147,6 +147,7 @@ TEST(Test_TensorFlow, defun)
 TEST(Test_TensorFlow, reshape)
 {
     runTensorFlowNet("shift_reshape_no_reorder");
+    runTensorFlowNet("reshape_reduce");
 }
 
 TEST(Test_TensorFlow, fp16)
@@ -162,6 +163,11 @@ TEST(Test_TensorFlow, fp16)
     runTensorFlowNet("fp16_pad_and_concat", l1, lInf);
     runTensorFlowNet("fp16_max_pool_even", l1, lInf);
     runTensorFlowNet("fp16_padding_same", l1, lInf);
+}
+
+TEST(Test_TensorFlow, lstm)
+{
+    runTensorFlowNet("lstm");
 }
 
 }
