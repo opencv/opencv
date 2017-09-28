@@ -855,6 +855,11 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
 
+        # Add Class to json file.
+        py_signatures = self.py_signatures.setdefault(classinfo.cname, []) 
+        py_signatures.append(dict(name=classinfo.name)) 
+        #print(classinfo.name)
+
     def split_decl_name(self, name):
         chunks = name.split('.')
         namespace = chunks[:-1]
@@ -875,6 +880,37 @@ class PythonWrapperGenerator(object):
                 % (name, cname))
             sys.exit(-1)
         ns.consts[name] = cname
+
+        """        
+           Add Constant to json file.
+             We will use the following example in the comments:
+               NEW_CONST = PREV_CONST + (1 << 16) + 0xFFFF
+        """
+        compat_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).upper() # "NEW_CONST"
+        value = decl[1] # "PREV_CONST + (1 << 16) + 0xFFFF"
+        # 1. replace "PREV_CONST" by it's int value
+        valueList = re.sub("[^\w]", " ", value).split()
+        for elem in valueList:
+            # try converting each element to a number, if it fails it means it's a constant
+            try:
+                eval(elem)
+            except NameError:
+                # find PREV_CONST in the py_signatures dictionary
+                for key, tmp_value in self.py_signatures.items():
+                    if elem in key: # match found
+                       const_int = tmp_value[0].get('ret') # get int value i.e: PREV_CONST = 4
+                       value = value.replace(elem, str(const_int), 1) # result i.e: value = "4 + (1 << 16) + 0xFFFF"
+                       break
+        # 2. convert string to int value:
+        #    i.e: "4 + (1 << 16) + 0xFFFF" = 4 + 65536 + 65535 = 131075
+        try:
+            value = eval(value)
+        except NameError:
+            pass # in case PREV_CONST is not defined
+        # 3. add NEW_CONST to the json file
+        py_signatures = self.py_signatures.setdefault(cname, []) 
+        py_signatures.append(dict(name=compat_name, ret=value)) 
+        #print(compat_name + " = " + str(value))
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
