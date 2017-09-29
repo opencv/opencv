@@ -20,7 +20,6 @@
 #include <iostream>
 #include <map>
 #include <set>
-#include "opencv2/core/EigenvalueDecomposition.hpp"
 
 namespace cv
 {

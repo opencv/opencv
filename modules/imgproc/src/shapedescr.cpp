@@ -39,9 +39,6 @@
 //
 //M*/
 #include "precomp.hpp"
-//#include <modules/opencv_core/Src/lda.cpp>
-#include "opencv2/core/EigenvalueDecomposition.hpp"
-//#include "/Users/jaspershemilt/Developer/OpenCV_Dev/OpenCV-2017-Fork2/opencv/modules/core/src/lda.cpp"
 namespace cv
 {
 
