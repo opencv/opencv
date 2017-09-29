@@ -375,6 +375,9 @@ decode_rle4_bad: ;
                                                 gray_palette[code] );
 
                         line_end_flag = y - prev_y;
+
+                        if( y >= m_height )
+                            break;
                     }
                     else if( code > 2 ) // absolute mode
                     {
