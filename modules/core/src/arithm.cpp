@@ -1368,191 +1368,24 @@ struct InRange_SIMD
     }
 };
 
-#if CV_SSE2
+#if CV_SIMD128
 
 template <>
 struct InRange_SIMD<uchar>
 {
     int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = v_uint8x16::nlanes;
 
-        if (USE_SSE2)
+        for (; x <= len - width; x += width)
         {
-            __m128i v_full = _mm_set1_epi8(-1), v_128 = _mm_set1_epi8(-128);
+            v_uint8x16 values = v_load(src1 + x);
+            v_uint8x16 low = v_load(src2 + x);
+            v_uint8x16 high = v_load(src3 + x);
 
-            for ( ; x <= len - 16; x += 16 )
-            {
-                __m128i v_src = _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)), v_128);
-                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_add_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_128), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src3 + x)), v_128));
-                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<schar>
-{
-    int operator () (const schar * src1, const schar * src2, const schar * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_full = _mm_set1_epi8(-1);
-
-            for ( ; x <= len - 16; x += 16 )
-            {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
-                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
-                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<ushort>
-{
-    int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1), v_32768 = _mm_set1_epi16(-32768);
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128i v_src = _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src1 + x)), v_32768);
-                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_add_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_32768), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src3 + x)), v_32768));
-                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<short>
-{
-    int operator () (const short * src1, const short * src2, const short * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1);
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
-                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
-                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<int>
-{
-    int operator () (const int * src1, const int * src2, const int * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi32(-1);
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
-                __m128i v_res1 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src),
-                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x))));
-
-                v_src = _mm_loadu_si128((const __m128i *)(src1 + x + 4));
-                __m128i v_res2 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x + 4)), v_src),
-                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x + 4))));
-
-                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(_mm_andnot_si128(v_res1, v_full), 16),
-                                                _mm_srli_epi32(_mm_andnot_si128(v_res2, v_full), 16));
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<float>
-{
-    int operator () (const float * src1, const float * src2, const float * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128();
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128 v_src = _mm_loadu_ps(src1 + x);
-                __m128 v_res1 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x), v_src),
-                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x)));
-
-                v_src = _mm_loadu_ps(src1 + x + 4);
-                __m128 v_res2 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x + 4), v_src),
-                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x + 4)));
-
-                __m128i v_res1i = _mm_cvtps_epi32(v_res1), v_res2i = _mm_cvtps_epi32(v_res2);
-                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(v_res1i, 16), _mm_srli_epi32(v_res2i, 16));
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-#elif CV_NEON
-
-template <>
-struct InRange_SIMD<uchar>
-{
-    int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        for ( ; x <= len - 16; x += 16 )
-        {
-            uint8x16_t values = vld1q_u8(src1 + x);
-            uint8x16_t low = vld1q_u8(src2 + x);
-            uint8x16_t high = vld1q_u8(src3 + x);
-
-            vst1q_u8(dst + x, vandq_u8(vcgeq_u8(values, low), vcgeq_u8(high, values)));
+            v_store(dst + x, (values >= low) & (high >= values));
         }
         return x;
     }
@@ -1562,17 +1395,18 @@ template <>
 struct InRange_SIMD<schar>
 {
     int operator () (const schar * src1, const schar * src2, const schar * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = v_int8x16::nlanes;
 
-        for ( ; x <= len - 16; x += 16 )
+        for (; x <= len - width; x += width)
         {
-            int8x16_t values = vld1q_s8(src1 + x);
-            int8x16_t low = vld1q_s8(src2 + x);
-            int8x16_t high = vld1q_s8(src3 + x);
+            v_int8x16 values = v_load(src1 + x);
+            v_int8x16 low = v_load(src2 + x);
+            v_int8x16 high = v_load(src3 + x);
 
-            vst1q_u8(dst + x, vandq_u8(vcgeq_s8(values, low), vcgeq_s8(high, values)));
+            v_store((schar*)(dst + x), (values >= low) & (high >= values));
         }
         return x;
     }
@@ -1582,23 +1416,22 @@ template <>
 struct InRange_SIMD<ushort>
 {
     int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = v_uint16x8::nlanes * 2;
 
-        for ( ; x <= len - 16; x += 16 )
+        for (; x <= len - width; x += width)
         {
-            uint16x8_t values = vld1q_u16((const uint16_t*)(src1 + x));
-            uint16x8_t low = vld1q_u16((const uint16_t*)(src2 + x));
-            uint16x8_t high = vld1q_u16((const uint16_t*)(src3 + x));
-            uint8x8_t  r1 = vmovn_u16(vandq_u16(vcgeq_u16(values, low), vcgeq_u16(high, values)));
+            v_uint16x8 values1 = v_load(src1 + x);
+            v_uint16x8 low1 = v_load(src2 + x);
+            v_uint16x8 high1 = v_load(src3 + x);
 
-            values = vld1q_u16((const uint16_t*)(src1 + x + 8));
-            low = vld1q_u16((const uint16_t*)(src2 + x + 8));
-            high = vld1q_u16((const uint16_t*)(src3 + x + 8));
-            uint8x8_t  r2 = vmovn_u16(vandq_u16(vcgeq_u16(values, low), vcgeq_u16(high, values)));
+            v_uint16x8 values2 = v_load(src1 + x + v_uint16x8::nlanes);
+            v_uint16x8 low2 = v_load(src2 + x + v_uint16x8::nlanes);
+            v_uint16x8 high2 = v_load(src3 + x + v_uint16x8::nlanes);
 
-            vst1q_u8(dst + x, vcombine_u8(r1, r2));
+            v_store(dst + x, v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
         }
         return x;
     }
@@ -1608,23 +1441,22 @@ template <>
 struct InRange_SIMD<short>
 {
     int operator () (const short * src1, const short * src2, const short * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = (int)v_int16x8::nlanes * 2;
 
-        for ( ; x <= len - 16; x += 16 )
+        for (; x <= len - width; x += width)
         {
-            int16x8_t values = vld1q_s16((const int16_t*)(src1 + x));
-            int16x8_t low = vld1q_s16((const int16_t*)(src2 + x));
-            int16x8_t high = vld1q_s16((const int16_t*)(src3 + x));
-            uint8x8_t r1 = vmovn_u16(vandq_u16(vcgeq_s16(values, low), vcgeq_s16(high, values)));
+            v_int16x8 values1 = v_load(src1 + x);
+            v_int16x8 low1 = v_load(src2 + x);
+            v_int16x8 high1 = v_load(src3 + x);
 
-            values = vld1q_s16((const int16_t*)(src1 + x + 8));
-            low = vld1q_s16((const int16_t*)(src2 + x + 8));
-            high = vld1q_s16((const int16_t*)(src3 + x + 8));
-            uint8x8_t r2 = vmovn_u16(vandq_u16(vcgeq_s16(values, low), vcgeq_s16(high, values)));
+            v_int16x8 values2 = v_load(src1 + x + v_int16x8::nlanes);
+            v_int16x8 low2 = v_load(src2 + x + v_int16x8::nlanes);
+            v_int16x8 high2 = v_load(src3 + x + v_int16x8::nlanes);
 
-            vst1q_u8(dst + x, vcombine_u8(r1, r2));
+            v_store((schar*)(dst + x), v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
         }
         return x;
     }
@@ -1634,27 +1466,22 @@ template <>
 struct InRange_SIMD<int>
 {
     int operator () (const int * src1, const int * src2, const int * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = (int)v_int32x4::nlanes * 2;
 
-        for ( ; x <= len - 8; x += 8 )
+        for (; x <= len - width; x += width)
         {
-            int32x4_t values = vld1q_s32((const int32_t*)(src1 + x));
-            int32x4_t low = vld1q_s32((const int32_t*)(src2 + x));
-            int32x4_t high = vld1q_s32((const int32_t*)(src3 + x));
+            v_int32x4 values1 = v_load(src1 + x);
+            v_int32x4 low1 = v_load(src2 + x);
+            v_int32x4 high1 = v_load(src3 + x);
 
-            uint16x4_t r1 = vmovn_u32(vandq_u32(vcgeq_s32(values, low), vcgeq_s32(high, values)));
+            v_int32x4 values2 = v_load(src1 + x + v_int32x4::nlanes);
+            v_int32x4 low2 = v_load(src2 + x + v_int32x4::nlanes);
+            v_int32x4 high2 = v_load(src3 + x + v_int32x4::nlanes);
 
-            values = vld1q_s32((const int32_t*)(src1 + x + 4));
-            low = vld1q_s32((const int32_t*)(src2 + x + 4));
-            high = vld1q_s32((const int32_t*)(src3 + x + 4));
-
-            uint16x4_t r2 = vmovn_u32(vandq_u32(vcgeq_s32(values, low), vcgeq_s32(high, values)));
-
-            uint16x8_t res_16 = vcombine_u16(r1, r2);
-
-            vst1_u8(dst + x, vmovn_u16(res_16));
+            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2))));
         }
         return x;
     }
@@ -1664,27 +1491,22 @@ template <>
 struct InRange_SIMD<float>
 {
     int operator () (const float * src1, const float * src2, const float * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = (int)v_float32x4::nlanes * 2;
 
-        for ( ; x <= len - 8; x += 8 )
+        for (; x <= len - width; x += width)
         {
-            float32x4_t values = vld1q_f32((const float32_t*)(src1 + x));
-            float32x4_t low = vld1q_f32((const float32_t*)(src2 + x));
-            float32x4_t high = vld1q_f32((const float32_t*)(src3 + x));
+            v_float32x4 values1 = v_load(src1 + x);
+            v_float32x4 low1 = v_load(src2 + x);
+            v_float32x4 high1 = v_load(src3 + x);
 
-            uint16x4_t r1 = vmovn_u32(vandq_u32(vcgeq_f32(values, low), vcgeq_f32(high, values)));
+            v_float32x4 values2 = v_load(src1 + x + v_float32x4::nlanes);
+            v_float32x4 low2 = v_load(src2 + x + v_float32x4::nlanes);
+            v_float32x4 high2 = v_load(src3 + x + v_float32x4::nlanes);
 
-            values = vld1q_f32((const float32_t*)(src1 + x + 4));
-            low = vld1q_f32((const float32_t*)(src2 + x + 4));
-            high = vld1q_f32((const float32_t*)(src3 + x + 4));
-
-            uint16x4_t r2 = vmovn_u32(vandq_u32(vcgeq_f32(values, low), vcgeq_f32(high, values)));
-
-            uint16x8_t res_16 = vcombine_u16(r1, r2);
-
-            vst1_u8(dst + x, vmovn_u16(res_16));
+            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32((values1 >= low1) & (high1 >= values1)), v_reinterpret_as_u32((values2 >= low2) & (high2 >= values2))));
         }
         return x;
     }
@@ -2829,33 +2651,17 @@ void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
-            #if CV_SSE2
-            if( USE_SSE2 )
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
-                __m128i c128 = _mm_set1_epi8 (-128);
-                for( ; x <= width - 16; x += 16 )
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+
+                for( ; x <= width - v_uint8x16::nlanes; x += v_uint8x16::nlanes )
                 {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    // no simd for 8u comparison, that's why we need the trick
-                    r00 = _mm_sub_epi8(r00,c128);
-                    r10 = _mm_sub_epi8(r10,c128);
-
-                    r00 =_mm_xor_si128(_mm_cmpgt_epi8(r00, r10), m128);
-                    _mm_storeu_si128((__m128i*)(dst + x),r00);
-
+                    v_store(dst + x, (v_load(src1 + x) > v_load(src2 + x)) ^ mask);
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_GT ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                vst1q_u8(dst+x, veorq_u8(vcgtq_u8(vld1q_u8(src1+x), vld1q_u8(src2+x)), mask));
-            }
-
-           #endif
+#endif
 
             for( ; x < width; x++ ){
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
@@ -2868,26 +2674,17 @@ void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-            #if CV_SSE2
-            if( USE_SSE2 )
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
-                for( ; x <= width - 16; x += 16 )
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+
+                for( ; x <= width - v_uint8x16::nlanes; x += v_uint8x16::nlanes )
                 {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi8 (r00, r10), m128);
-                    _mm_storeu_si128((__m128i*)(dst + x), r00);
+                    v_store(dst+x, (v_load(src1+x) == v_load(src2+x)) ^ mask);
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_EQ ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                vst1q_u8(dst+x, veorq_u8(vceqq_u8(vld1q_u8(src1+x), vld1q_u8(src2+x)), mask));
-            }
-           #endif
+#endif
            for( ; x < width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
         }
@@ -2932,49 +2729,26 @@ void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
-            #if CV_SSE2
-            if( USE_SSE2)
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
-                for( ; x <= width - 16; x += 16 )
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
-                    __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-                    __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
-                    r01 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r01, r11), m128);
-                    r11 = _mm_packs_epi16(r00, r01);
-                    _mm_storeu_si128((__m128i*)(dst + x), r11);
-                }
-                if( x <= width-8)
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
-                    r10 = _mm_packs_epi16(r00, r00);
-                    _mm_storel_epi64((__m128i*)(dst + x), r10);
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+                const int dWidth = v_uint8x16::nlanes;
 
-                    x += 8;
+                for( ; x <= width - dWidth; x += dWidth )
+                {
+                    v_int16x8 in1 = v_load(src1 + x);
+                    v_int16x8 in2 = v_load(src2 + x);
+                    v_uint16x8 t1 = v_reinterpret_as_u16(in1 > in2);
+
+                    in1 = v_load(src1 + x + v_uint16x8::nlanes);
+                    in2 = v_load(src2 + x + v_uint16x8::nlanes);
+                    v_uint16x8 t2 = v_reinterpret_as_u16(in1 > in2);
+
+                    v_store(dst+x, (v_pack(t1, t2)) ^ mask);
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_GT ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                int16x8_t in1 = vld1q_s16(src1 + x);
-                int16x8_t in2 = vld1q_s16(src2 + x);
-                uint8x8_t t1 = vmovn_u16(vcgtq_s16(in1, in2));
-
-                in1 = vld1q_s16(src1 + x + 8);
-                in2 = vld1q_s16(src2 + x + 8);
-                uint8x8_t t2 = vmovn_u16(vcgtq_s16(in1, in2));
-
-                vst1q_u8(dst+x, veorq_u8(vcombine_u8(t1, t2), mask));
-            }
-            #endif
-
+#endif
             for( ; x < width; x++ ){
                  dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
             }
@@ -2986,48 +2760,26 @@ void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-            #if CV_SSE2
-            if( USE_SSE2 )
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
-                for( ; x <= width - 16; x += 16 )
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
-                    __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-                    __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
-                    r01 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r01, r11), m128);
-                    r11 = _mm_packs_epi16(r00, r01);
-                    _mm_storeu_si128((__m128i*)(dst + x), r11);
-                }
-                if( x <= width - 8)
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
-                    r10 = _mm_packs_epi16(r00, r00);
-                    _mm_storel_epi64((__m128i*)(dst + x), r10);
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+                const int dWidth = v_uint8x16::nlanes;
 
-                    x += 8;
+                for( ; x <= width - dWidth; x += dWidth )
+                {
+                    v_int16x8 in1 = v_load(src1 + x);
+                    v_int16x8 in2 = v_load(src2 + x);
+                    v_uint16x8 t1 = v_reinterpret_as_u16(in1 == in2);
+
+                    in1 = v_load(src1 + x + 8);
+                    in2 = v_load(src2 + x + 8);
+                    v_uint16x8 t2 = v_reinterpret_as_u16(in1 == in2);
+
+                    v_store(dst+x, (v_pack(t1, t2)^ mask));
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_EQ ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                int16x8_t in1 = vld1q_s16(src1 + x);
-                int16x8_t in2 = vld1q_s16(src2 + x);
-                uint8x8_t t1 = vmovn_u16(vceqq_s16(in1, in2));
-
-                in1 = vld1q_s16(src1 + x + 8);
-                in2 = vld1q_s16(src2 + x + 8);
-                uint8x8_t t2 = vmovn_u16(vceqq_s16(in1, in2));
-
-                vst1q_u8(dst+x, veorq_u8(vcombine_u8(t1, t2), mask));
-            }
-            #endif
+#endif
             for( ; x < width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
         }
@@ -3280,59 +3032,33 @@ addWeighted8u( const uchar* src1, size_t step1,
     {
         int x = 0;
 
-#if CV_SSE2
-        if( USE_SSE2 )
+#if CV_SIMD128
+        if( hasSIMD128() )
         {
-            __m128 a4 = _mm_set1_ps(alpha), b4 = _mm_set1_ps(beta), g4 = _mm_set1_ps(gamma);
-            __m128i z = _mm_setzero_si128();
+            v_float32x4 g = v_setall_f32(gamma);
+            v_float32x4 a = v_setall_f32(alpha);
+            v_float32x4 b = v_setall_f32(beta);
 
-            for( ; x <= width - 8; x += 8 )
+            for( ; x <= width - v_uint16x8::nlanes; x += v_uint16x8::nlanes )
             {
-                __m128i u = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(src1 + x)), z);
-                __m128i v = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(src2 + x)), z);
+                v_uint16x8 in1_16 = v_load_expand(src1 + x);
+                v_int32x4 in1_32_l, in1_32_h;
+                v_expand(v_reinterpret_as_s16(in1_16), in1_32_l, in1_32_h);
+                v_float32x4 in1_f_l = v_cvt_f32(in1_32_l);
+                v_float32x4 in1_f_h = v_cvt_f32(in1_32_h);
 
-                __m128 u0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(u, z));
-                __m128 u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(u, z));
-                __m128 v0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v, z));
-                __m128 v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v, z));
+                v_uint16x8 in2_16 = v_load_expand(src2 + x);
+                v_int32x4 in2_32_l, in2_32_h;
+                v_expand(v_reinterpret_as_s16(in2_16), in2_32_l, in2_32_h);
+                v_float32x4 in2_f_l = v_cvt_f32(in2_32_l);
+                v_float32x4 in2_f_h = v_cvt_f32(in2_32_h);
 
-                u0 = _mm_add_ps(_mm_mul_ps(u0, a4), _mm_mul_ps(v0, b4));
-                u1 = _mm_add_ps(_mm_mul_ps(u1, a4), _mm_mul_ps(v1, b4));
-                u0 = _mm_add_ps(u0, g4); u1 = _mm_add_ps(u1, g4);
+                v_int32x4 out_l = v_round(in1_f_l * a + in2_f_l * b + g);
+                v_int32x4 out_h = v_round(in1_f_h * a + in2_f_h * b + g);
 
-                u = _mm_packs_epi32(_mm_cvtps_epi32(u0), _mm_cvtps_epi32(u1));
-                u = _mm_packus_epi16(u, u);
-
-                _mm_storel_epi64((__m128i*)(dst + x), u);
+                v_int16x8 out_16 = v_pack(out_l, out_h);
+                v_pack_u_store(dst + x, out_16);
             }
-        }
-#elif CV_NEON
-        float32x4_t g = vdupq_n_f32 (gamma);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            uint8x8_t in1 = vld1_u8(src1+x);
-            uint16x8_t in1_16 = vmovl_u8(in1);
-            float32x4_t in1_f_l = vcvtq_f32_u32(vmovl_u16(vget_low_u16(in1_16)));
-            float32x4_t in1_f_h = vcvtq_f32_u32(vmovl_u16(vget_high_u16(in1_16)));
-
-            uint8x8_t in2 = vld1_u8(src2+x);
-            uint16x8_t in2_16 = vmovl_u8(in2);
-            float32x4_t in2_f_l = vcvtq_f32_u32(vmovl_u16(vget_low_u16(in2_16)));
-            float32x4_t in2_f_h = vcvtq_f32_u32(vmovl_u16(vget_high_u16(in2_16)));
-
-            float32x4_t out_f_l = vaddq_f32(vmulq_n_f32(in1_f_l, alpha), vmulq_n_f32(in2_f_l, beta));
-            float32x4_t out_f_h = vaddq_f32(vmulq_n_f32(in1_f_h, alpha), vmulq_n_f32(in2_f_h, beta));
-            out_f_l = vaddq_f32(out_f_l, g);
-            out_f_h = vaddq_f32(out_f_h, g);
-
-            uint16x4_t out_16_l = vqmovun_s32(cv_vrndq_s32_f32(out_f_l));
-            uint16x4_t out_16_h = vqmovun_s32(cv_vrndq_s32_f32(out_f_h));
-
-            uint16x8_t out_16 = vcombine_u16(out_16_l, out_16_h);
-            uint8x8_t out = vqmovn_u16(out_16);
-
-            vst1_u8(dst+x, out);
         }
 #endif
         #if CV_ENABLE_UNROLLED
