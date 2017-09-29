@@ -1257,7 +1257,6 @@ Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
     initConvDeconvLayerFromCaffe(l, params);
 
 #ifdef HAVE_OPENCL
-    Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
     size_t n = params.blobs.size();
     conv_ptr->umat_blobs.resize(n);
     for (int i = 0; i < n; i++)
