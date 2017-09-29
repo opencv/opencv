@@ -40,8 +40,8 @@
 //M*/
 #include "precomp.hpp"
 //#include <modules/opencv_core/Src/lda.cpp>
-//#include "opencv2/core/eigensystem.hpp"
-#include "/Users/jaspershemilt/Developer/OpenCV_Dev/OpenCV-2017-Fork2/opencv/modules/core/src/lda.cpp"
+#include "opencv2/core/EigenvalueDecomposition.hpp"
+//#include "/Users/jaspershemilt/Developer/OpenCV_Dev/OpenCV-2017-Fork2/opencv/modules/core/src/lda.cpp"
 namespace cv
 {
 
@@ -542,12 +542,11 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
             Mat eVal, eVec;
-//            EigenvalueDecomposition::eigensystem(M, eVal, eVec);
-        EigenvalueDecomposition eigensystem(M);
-        eVal = eigensystem.eigenvalues();
-        eVec = eigensystem.eigenvectors();
-        
-        // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
+            EigenvalueDecomposition eigensystem(M);
+            eVal = eigensystem.eigenvalues();
+            eVec = eigensystem.eigenvectors();
+
+            // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
             int minpos = 0;
             double normi, normEVali, normMinpos, normEValMinpos;
             normMinpos = sqrt(eVec.at<double>(0,minpos)*eVec.at<double>(0,minpos) + eVec.at<double>(1,minpos)*eVec.at<double>(1,minpos) + \
@@ -717,7 +716,6 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
         Mat eVal, eVec;
-//        EigenvalueDecomposition::eigensystem(M, eVal, eVec);
         EigenvalueDecomposition eigensystem(M);
         eVal = eigensystem.eigenvalues();
         eVec = eigensystem.eigenvectors();
