@@ -57,18 +57,11 @@ OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config
     K_ = config.K;
     phase_test_ = config.phase_test;
     image_copied_ = false;
-
-    // Set up the bias multiplier
-    if (bias_term_)
-    {
-        bias_multiplier_ = UMat(1, M_, 1.0f, CV_32FC1);
-    }
 }
 
 template<typename Dtype>
 OCL4DNNInnerProduct<Dtype>::~OCL4DNNInnerProduct()
 {
-    bias_multiplier_.release();
 }
 
 template<typename Dtype>
