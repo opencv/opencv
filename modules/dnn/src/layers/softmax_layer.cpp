@@ -108,7 +108,7 @@ public:
         srcMat = inputs[0]->getUMat(ACCESS_READ);
         dstMat = outputs[0].getUMat(ACCESS_WRITE);
 
-        if (softmaxOp->Forward(srcMat, dstMat))
+        if (!logSoftMax && softmaxOp->Forward(srcMat, dstMat))
             return true;
 
         const Mat &src = *inputs[0];

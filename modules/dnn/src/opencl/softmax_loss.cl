@@ -65,7 +65,7 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
       Dtype tmp = data[(n * channels + c) * spatial_dim + s];
       maxval = max((Dtype)tmp, (Dtype)maxval);
     }
-    maxval = sub_group_reduce_max(maxval);
+    maxval = sub_group_reduce_max(maxval * 100000);
     //if (get_sub_group_local_id() == 0)
     group_tmp[get_sub_group_id() * spatial_dim + s] = maxval;
   }
@@ -77,7 +77,7 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
     int s = index / get_max_sub_group_size();
     Dtype maxval = sub_group_reduce_max(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
-    scale_tmp[s] = maxval;
+    scale_tmp[s] = maxval / 100000;
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
@@ -95,7 +95,7 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
     for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
       sum += out_tmp[c * spatial_dim + s];
     }
-    sum = sub_group_reduce_add(sum);
+    sum = sub_group_reduce_add(sum * 100000);
     group_tmp[get_sub_group_id() * spatial_dim + s] = sum;
   }
   barrier(CLK_LOCAL_MEM_FENCE);
@@ -105,7 +105,7 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
     int s = index / get_max_sub_group_size();
     Dtype sum = sub_group_reduce_add(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
-    scale_tmp[s] = sum;
+    scale_tmp[s] = sum / 100000;
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -131,7 +131,7 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
       Dtype tmp = data[(n * channels + c) * spatial_dim + s];
       maxval = max((Dtype)tmp, (Dtype)maxval);
     }
-    maxval = sub_group_reduce_max(maxval);
+    maxval = sub_group_reduce_max(maxval * 100000);
     //if (get_sub_group_local_id() == 0)
     group_tmp[get_sub_group_id() * spatial_dim + s] = maxval;
   }
@@ -142,7 +142,7 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
     int s = index / get_max_sub_group_size();
     Dtype maxval = sub_group_reduce_max(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
-    scale[n * spatial_dim + s] = maxval;
+    scale[n * spatial_dim + s] = maxval / 100000;
   }
 
   barrier(CLK_GLOBAL_MEM_FENCE);
@@ -160,7 +160,7 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
     for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
       sum += out[n * channels * spatial_dim + c * spatial_dim + s];
     }
-    sum = sub_group_reduce_add(sum);
+    sum = sub_group_reduce_add(sum * 100000);
     group_tmp[get_sub_group_id() * spatial_dim + s] = sum;
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
@@ -170,7 +170,7 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
     int s = index / get_max_sub_group_size();
     Dtype sum = sub_group_reduce_add(group_tmp[get_sub_group_local_id() * spatial_dim + s]);
     //if (get_sub_group_local_id() == 0)
-    scale[n * spatial_dim + s] = sum;
+    scale[n * spatial_dim + s] = sum / 100000;
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
 

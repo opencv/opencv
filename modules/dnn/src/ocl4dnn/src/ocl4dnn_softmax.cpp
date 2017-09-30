@@ -83,7 +83,7 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
 {
     bool ret = false;
     ocl::Queue queue = ocl::Queue::getDefault();
-    bool intel_subgroup = 0 && ocl::Device::getDefault().intelSubgroupsSupport();
+    bool intel_subgroup = ocl::Device::getDefault().intelSubgroupsSupport();
     if (intel_subgroup && inner_num_ < 128)
     {
         String opts = clOptionSupport("-cl-no-subgroup-ifp") ? " -cl-no-subgroup-ifp " : "";
