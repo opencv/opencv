@@ -1,0 +1,64 @@
+node {
+  name: "input"
+  op: "Placeholder"
+}
+node {
+  name: "lstm_block_wrapper/BlockLSTM"
+  op: "BlockLSTM"
+  input: "lstm_block_wrapper/ToInt64/_1__cf__1"
+  input: "input"
+  input: "lstm_block_wrapper/zeros/_0__cf__0"
+  input: "lstm_block_wrapper/zeros/_0__cf__0"
+  input: "lstm_block_wrapper/kernel"
+  input: "lstm_block_wrapper/w_i_diag"
+  input: "lstm_block_wrapper/w_f_diag"
+  input: "lstm_block_wrapper/w_o_diag"
+  input: "lstm_block_wrapper/bias"
+  attr { key: "cell_clip" value { f: 0.4 } }
+  attr { key: "forget_bias" value { f: 0.9 } }
+  attr { key: "use_peephole" value { b: true } }
+}
+node {
+  name: "Slice"
+  op: "Slice"
+  # Here is a key configuration change: replaced "lstm_block_wrapper/BlockLSTM:6" to
+  # "lstm_block_wrapper/BlockLSTM" (6th tensor of LSTM block is an output).
+  input: "lstm_block_wrapper/BlockLSTM"
+  input: "Slice/begin"
+  input: "Slice/size"
+}
+node {
+  name: "Reshape"
+  op: "Reshape"
+  input: "Slice"
+  input: "Reshape/shape"
+}
+node {
+  name: "MatMul"
+  op: "MatMul"
+  input: "Reshape"
+  input: "Variable"
+  attr {
+    key: "transpose_a"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "transpose_b"
+    value {
+      b: false
+    }
+  }
+}
+node {
+  name: "add"
+  op: "Add"
+  input: "MatMul"
+  input: "Variable_1"
+}
+node {
+  name: "Sigmoid"
+  op: "Sigmoid"
+  input: "add"
+}

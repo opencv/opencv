@@ -1,0 +1,19 @@
+node {
+  name: "input"
+  op: "Placeholder"
+}
+node {
+  name: "batch_norm"
+  op: "FusedBatchNorm"
+  input: "input"
+  input: "batch_norm/gamma"
+  input: "batch_norm/beta"
+  input: "batch_norm/moving_mean"
+  input: "batch_norm/moving_variance"
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}

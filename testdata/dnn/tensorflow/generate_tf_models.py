@@ -3,6 +3,7 @@ import tensorflow as tf
 import os
 import argparse
 import struct
+import cv2 as cv
 from prepare_for_dnn import prepare_for_dnn
 
 parser = argparse.ArgumentParser(description='Script for OpenCV\'s DNN module '
@@ -242,6 +243,59 @@ scaled = tf.image.resize_nearest_neighbor(conv, size=(15, 8))
 scaled = tf.image.resize_nearest_neighbor(scaled, size=(9, 12))
 save(inp, scaled, 'resize_nearest_neighbor')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+bn = tf.layers.batch_normalization(inp, training=isTraining, fused=False, name='batch_norm',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   gamma_initializer=tf.random_normal_initializer(),
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'batch_norm_text')
+# Override the graph by a frozen one.
+os.rename('frozen_graph.pb', 'batch_norm_text_net.pb')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 4, 5], 'input')
+flatten = tf.contrib.layers.flatten(inp)
+save(inp, flatten, 'flatten')
+################################################################################
+# Generate test data for MobileNet-SSD object detection model from TensorFlow
+# model zoo, https://github.com/tensorflow/models/tree/master/research/object_detection
+# 1. Download and extract ssd_mobilenet_v1_coco.tar.gz
+# 2. Place frozen_inference_graph.pb as a ssd_mobilenet_v1_coco.pb nearby this script
+with tf.gfile.FastGFile('../ssd_mobilenet_v1_coco.pb') as f:
+    # Load the model
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
+
+with tf.Session() as sess:
+    # Restore session
+    sess.graph.as_default()
+    tf.import_graph_def(graph_def, name='')
+
+    # Receive output
+    inp = cv.imread('../street.png')
+    inp = cv.resize(inp, (300, 300))
+    inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
+    out = sess.run([sess.graph.get_tensor_by_name('concat:0'),    # All detections
+                    sess.graph.get_tensor_by_name('concat_1:0'),  # Classification
+                    sess.graph.get_tensor_by_name('num_detections:0'),     # Postprocessed output
+                    sess.graph.get_tensor_by_name('detection_scores:0'),   #
+                    sess.graph.get_tensor_by_name('detection_boxes:0'),    #
+                    sess.graph.get_tensor_by_name('detection_classes:0')], #
+                   feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
+    np.save('ssd_mobilenet_v1_coco.concat.npy', out[0])
+    np.save('ssd_mobilenet_v1_coco.concat_1.npy', out[1])
+    # Pack detections in format [id, class_id, confidence, left, top, right, bottom]
+    num_detections = int(out[2][0])
+    detections = np.zeros([1, 1, num_detections, 7], np.float32)
+    detections[0, 0, :, 0] = 0  # bounding boxes ids
+    detections[0, 0, :, 1] = out[5][0]
+    detections[0, 0, :, 2] = out[3][0]
+    detections[0, 0, :, 3:] = out[4][0][:, [1, 0, 3, 2]]
+    # Detections are sorted in descending by confidence order. Group them by classes
+    # to make OpenCV test more simple.
+    detections = sorted(detections[0, 0, :, :], cmp=lambda x, y: -1 if x[1] < y[1] and x[2] < y[2] else 0)
+    np.save('ssd_mobilenet_v1_coco.detection_out.npy', detections)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
@@ -249,9 +303,13 @@ save(inp, scaled, 'resize_nearest_neighbor')
 #     graph_def.ParseFromString(f.read())
 #     print graph_def
 
-os.remove('checkpoint')
-os.remove('graph.pb')
-os.remove('frozen_graph.pb')
-os.remove('tmp.ckpt.data-00000-of-00001')
-os.remove('tmp.ckpt.index')
-os.remove('tmp.ckpt.meta')
+def rm(f):
+    if os.path.exists(f):
+        os.remove(f)
+
+rm('checkpoint')
+rm('graph.pb')
+rm('frozen_graph.pb')
+rm('tmp.ckpt.data-00000-of-00001')
+rm('tmp.ckpt.index')
+rm('tmp.ckpt.meta')
