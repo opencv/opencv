@@ -183,7 +183,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
 
         // options
         options_ << " -cl-fast-relaxed-math -D KERNEL_IDLF -D convolve_simd=" << kernel_name_;
-        if (build_option_check())
+        if (clOptionSupport("-cl-no-subgroup-ifp"))
             options_ << " -cl-no-subgroup-ifp ";
 
         // defs
@@ -234,7 +234,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
 
         // opts
         options_ << " -cl-fast-relaxed-math -D ConvolveBasic=" << kernel_name_;
-        if (build_option_check())
+        if (clOptionSupport("-cl-no-subgroup-ifp"))
             options_ << " -cl-no-subgroup-ifp ";
 
         // defs
@@ -262,6 +262,8 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         options_ << " -cl-fast-relaxed-math " << " -D " << kernelDef.str()
             << " -D Conv_Interleaved=" << kernel_name_.c_str();
         options_ << " -cl-mad-enable";
+        if (clOptionSupport("-cl-no-subgroup-ifp"))
+            options_ << " -cl-no-subgroup-ifp ";
 
         addDef("INPUT_DEPTH", channels_);
         addDef("WIDTH1", M_);

@@ -42,16 +42,16 @@
 
 #include "../../precomp.hpp"
 #include "common.hpp"
+#include "opencl_kernels_dnn.hpp"
 
 using namespace cv;
 
 #ifdef HAVE_OPENCL
-
-bool build_option_check()
+bool clOptionSupport(cv::String option)
 {
-    int major = ocl::Device::getDefault().deviceVersionMajor();
-    int minor = ocl::Device::getDefault().deviceVersionMinor();
-    return (major >= 2) && (minor >= 1);
+    cv::String errmsg;
+    ocl::Program program = ocl::Context::getDefault().getProg(ocl::dnn::dummy_oclsrc, option, errmsg);
+    return program.ptr() ? true : false;
 }
 
 #endif // HAVE_OPENCL

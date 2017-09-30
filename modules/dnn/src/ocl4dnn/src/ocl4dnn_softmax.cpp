@@ -86,7 +86,7 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
     bool intel_subgroup = 0 && ocl::Device::getDefault().intelSubgroupsSupport();
     if (intel_subgroup && inner_num_ < 128)
     {
-        String opts = build_option_check() ? " -cl-no-subgroup-ifp " : "";
+        String opts = clOptionSupport("-cl-no-subgroup-ifp") ? " -cl-no-subgroup-ifp " : "";
         String kname;
         ocl::Kernel oclk_softmax_forward_kernel;
 

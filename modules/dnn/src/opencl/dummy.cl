@@ -10,7 +10,6 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -39,24 +38,6 @@
 //
 //M*/
 
-#ifndef _OPENCV_LIBDNN_COMMON_HPP_
-#define _OPENCV_LIBDNN_COMMON_HPP_
-#include "../../precomp.hpp"
-#include "../../caffe/glog_emulator.hpp"
-#include <opencv2/core/opencl/runtime/opencl_core.hpp>
-
-#ifdef HAVE_OPENCL
-
-// Macro to select the single (_float) or double (_double) precision kernel
-#define CL_KERNEL_SELECT(kernel) kernel "_float"
-
-#define OCL_CHECK(condition) \
-    do { \
-        cl_int error = (condition); \
-        CHECK_EQ(error, CL_SUCCESS) << " " << cv::ocl::getOpenCLErrorString(error); \
-    } while (0)
-
-bool clOptionSupport(cv::String option);
-
-#endif // HAVE_OPENCL
-#endif
+__kernel void dummy_kernel()
+{
+}

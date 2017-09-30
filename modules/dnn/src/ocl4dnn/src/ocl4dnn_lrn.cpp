@@ -98,7 +98,7 @@ bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
     cl_uint argIdx = 0;
     int32_t n_threads = num_ * height_ * width_;
     size_t global_work_size_[1] = {(size_t)n_threads};
-    String opts = build_option_check() ? " -cl-no-subgroup-ifp " : "";
+    String opts = clOptionSupport("-cl-no-subgroup-ifp") ? " -cl-no-subgroup-ifp " : "";
     ocl::Kernel oclk_lrn_fill;
     if (!oclk_lrn_fill.create(CL_KERNEL_SELECT("lrn_full_no_scale"), ocl::dnn::ocl4dnn_lrn_oclsrc, opts))
         return false;
