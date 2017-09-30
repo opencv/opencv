@@ -1913,8 +1913,9 @@ matrix src:
 @code
     src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
 @endcode
-@note in the new and the old interfaces different ordering of eigenvalues and eigenvectors
-parameters is used.
+
+@note Use cv::eigenNonSymmetric for calculation of real eigenvalues and eigenvectors of non-symmetric matrix.
+
 @param src input matrix that must have CV_32FC1 or CV_64FC1 type, square size and be symmetrical
 (src ^T^ == src).
 @param eigenvalues output vector of eigenvalues of the same type as src; the eigenvalues are stored
@@ -1922,10 +1923,27 @@ in the descending order.
 @param eigenvectors output matrix of eigenvectors; it has the same size and type as src; the
 eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding
 eigenvalues.
-@sa completeSymm , PCA
+@sa eigenNonSymmetric, completeSymm , PCA
 */
 CV_EXPORTS_W bool eigen(InputArray src, OutputArray eigenvalues,
                         OutputArray eigenvectors = noArray());
+
+/** @brief Calculates eigenvalues and eigenvectors of a non-symmetric matrix (real eigenvalues only).
+
+@note Assumes real eigenvalues.
+
+The function calculates eigenvalues and eigenvectors (optional) of the square matrix src:
+@code
+    src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
+@endcode
+
+@param src input matrix (CV_32FC1 or CV_64FC1 type).
+@param eigenvalues output vector of eigenvalues (type is the same type as src).
+@param eigenvectors output matrix of eigenvectors (type is the same type as src). The eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding eigenvalues.
+@sa eigen
+*/
+CV_EXPORTS_W void eigenNonSymmetric(InputArray src, OutputArray eigenvalues,
+                                    OutputArray eigenvectors);
 
 /** @brief Calculates the covariance matrix of a set of vectors.
 

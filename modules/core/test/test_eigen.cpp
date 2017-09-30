@@ -412,3 +412,124 @@ TEST(Core_Eigen, scalar_32) {Core_EigenTest_Scalar_32 test; test.safe_run(); }
 TEST(Core_Eigen, scalar_64) {Core_EigenTest_Scalar_64 test; test.safe_run(); }
 TEST(Core_Eigen, vector_32) { Core_EigenTest_32 test; test.safe_run(); }
 TEST(Core_Eigen, vector_64) { Core_EigenTest_64 test; test.safe_run(); }
+
+template<typename T>
+static void testEigen(const Mat_<T>& src, const Mat_<T>& expected_eigenvalues, bool runSymmetric = false)
+{
+    SCOPED_TRACE(runSymmetric ? "cv::eigen" : "cv::eigenNonSymmetric");
+
+    int type = traits::Type<T>::value;
+    const T eps = 1e-6f;
+
+    Mat eigenvalues, eigenvectors, eigenvalues0;
+
+    if (runSymmetric)
+    {
+        cv::eigen(src, eigenvalues0, noArray());
+        cv::eigen(src, eigenvalues, eigenvectors);
+    }
+    else
+    {
+        cv::eigenNonSymmetric(src, eigenvalues0, noArray());
+        cv::eigenNonSymmetric(src, eigenvalues, eigenvectors);
+    }
+#if 0
+    std::cout << "src = " << src << std::endl;
+    std::cout << "eigenvalues.t() = " << eigenvalues.t() << std::endl;
+    std::cout << "eigenvectors = " << eigenvectors << std::endl;
+#endif
+    ASSERT_EQ(type, eigenvalues0.type());
+    ASSERT_EQ(type, eigenvalues.type());
+    ASSERT_EQ(type, eigenvectors.type());
+
+    ASSERT_EQ(src.rows, eigenvalues.rows);
+    ASSERT_EQ(eigenvalues.rows, eigenvectors.rows);
+    ASSERT_EQ(src.rows, eigenvectors.cols);
+
+    EXPECT_LT(cvtest::norm(eigenvalues, eigenvalues0, NORM_INF), eps);
+
+    // check definition: src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
+    for (int i = 0; i < src.rows; i++)
+    {
+        EXPECT_NEAR(eigenvalues.at<T>(i), expected_eigenvalues(i), eps) << "i=" << i;
+        Mat lhs = src*eigenvectors.row(i).t();
+        Mat rhs = eigenvalues.at<T>(i)*eigenvectors.row(i).t();
+        EXPECT_LT(cvtest::norm(lhs, rhs, NORM_INF), eps)
+                << "i=" << i << " eigenvalue=" << eigenvalues.at<T>(i) << std::endl
+                << "lhs=" << lhs.t() << std::endl
+                << "rhs=" << rhs.t();
+    }
+}
+
+template<typename T>
+static void testEigenSymmetric3x3()
+{
+    /*const*/ T values_[] = {
+            2, -1, 0,
+            -1, 2, -1,
+            0, -1, 2
+    };
+    Mat_<T> src(3, 3, values_);
+
+    /*const*/ T expected_eigenvalues_[] = { 3.414213562373095f, 2, 0.585786437626905f };
+    Mat_<T> expected_eigenvalues(3, 1, expected_eigenvalues_);
+
+    testEigen(src, expected_eigenvalues);
+    testEigen(src, expected_eigenvalues, true);
+}
+TEST(Core_EigenSymmetric, float3x3) { testEigenSymmetric3x3<float>(); }
+TEST(Core_EigenSymmetric, double3x3) { testEigenSymmetric3x3<double>(); }
+
+template<typename T>
+static void testEigenSymmetric5x5()
+{
+    /*const*/ T values_[5*5] = {
+            5, -1, 0, 2, 1,
+            -1, 4, -1, 0, 0,
+            0, -1, 3, 1, -1,
+            2, 0, 1, 4, 0,
+            1, 0, -1, 0, 1
+    };
+    Mat_<T> src(5, 5, values_);
+
+    /*const*/ T expected_eigenvalues_[] = { 7.028919644935684f, 4.406130784616501f, 3.73626552682258f, 1.438067799899037f, 0.390616243726198f };
+    Mat_<T> expected_eigenvalues(5, 1, expected_eigenvalues_);
+
+    testEigen(src, expected_eigenvalues);
+    testEigen(src, expected_eigenvalues, true);
+}
+TEST(Core_EigenSymmetric, float5x5) { testEigenSymmetric5x5<float>(); }
+TEST(Core_EigenSymmetric, double5x5) { testEigenSymmetric5x5<double>(); }
+
+
+template<typename T>
+static void testEigen2x2()
+{
+    /*const*/ T values_[] = { 4, 1, 6, 3 };
+    Mat_<T> src(2, 2, values_);
+
+    /*const*/ T expected_eigenvalues_[] = { 6, 1 };
+    Mat_<T> expected_eigenvalues(2, 1, expected_eigenvalues_);
+
+    testEigen(src, expected_eigenvalues);
+}
+TEST(Core_EigenNonSymmetric, float2x2) { testEigen2x2<float>(); }
+TEST(Core_EigenNonSymmetric, double2x2) { testEigen2x2<double>(); }
+
+template<typename T>
+static void testEigen3x3()
+{
+    /*const*/ T values_[3*3] = {
+            3,1,0,
+            0,3,1,
+            0,0,3
+    };
+    Mat_<T> src(3, 3, values_);
+
+    /*const*/ T expected_eigenvalues_[] = { 3, 3, 3 };
+    Mat_<T> expected_eigenvalues(3, 1, expected_eigenvalues_);
+
+    testEigen(src, expected_eigenvalues);
+}
+TEST(Core_EigenNonSymmetric, float3x3) { testEigen3x3<float>(); }
+TEST(Core_EigenNonSymmetric, double3x3) { testEigen3x3<double>(); }
