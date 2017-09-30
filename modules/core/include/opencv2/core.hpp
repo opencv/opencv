@@ -2577,7 +2577,7 @@ protected:
 /**
  @brief EigenDecomposition
 
- Class for computing Eigen Value Decomposition of a general non-symetric 
+ Class for computing Eigen Value Decomposition of a general non-symetric
  floating-point matrix.
 
  @sa eigen
@@ -2634,7 +2634,7 @@ private:
 
 public:
     /** @brief the default constructor
-    
+
     initializes an empty EigenDecomposition structure.
     To find eigenvalues and eigenvectors compute(InputArray src) must first be run.
     */
@@ -2645,9 +2645,9 @@ public:
      @param src input matrix of which to compute the Eigenvalue Decomposition.
      */
     EigenDecomposition(InputArray src) ;
-    
+
     /** @brief computes the Eigenvalue Decomposition
-     
+
      This function computes the Eigenvalue Decomposition for a general matrix src
      @param src input matrix of which to compute the Eigenvalue Decomposition.
      */
@@ -2656,13 +2656,13 @@ public:
     ~EigenDecomposition();
 
     /** @brief Returns the eigenvalues of the Eigenvalue Decomposition.
-     
+
      Returns the eigenvalues of the Eigenvalue Decomposition.
      */
     Mat eigenvalues() ;
-    
+
     /** @brief Returns the eigenvectors of the Eigenvalue Decomposition.
-     
+
      Returns the eigenvectors of the Eigenvalue Decomposition.
      */
     Mat eigenvectors() ;
