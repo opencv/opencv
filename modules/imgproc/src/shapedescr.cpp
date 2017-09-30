@@ -539,7 +539,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
             Mat eVal, eVec;
-            EigenvalueDecomposition eigensystem(M);
+            EigenDecomposition eigensystem(M);
             eVal = eigensystem.eigenvalues();
             eVec = eigensystem.eigenvectors();
 
@@ -713,7 +713,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
     if (fabs(cv::determinant(M)) > 1.0e-10) {
         Mat eVal, eVec;
-        EigenvalueDecomposition eigensystem(M);
+        EigenDecomposition eigensystem(M);
         eVal = eigensystem.eigenvalues();
         eVec = eigensystem.eigenvectors();
 
