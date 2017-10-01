@@ -130,7 +130,7 @@ Or
 >>> b = img[:,:,0]
 @endcode
 Suppose, you want to make all the red pixels to zero, you need not split like this and put it equal
-to zero. You can simply use Numpy indexing, and that is more faster.
+to zero. You can simply use Numpy indexing, and that is faster.
 @code{.py}
 >>> img[:,:,2] = 0
 @endcode
