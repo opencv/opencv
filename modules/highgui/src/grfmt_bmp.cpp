@@ -473,8 +473,10 @@ decode_rle8_bad: ;
 
                 if( !color )
                     icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, cvSize(m_width,1) );
-                else
-                    icvCvt_BGRA2BGR_8u_C4C3R( src, 0, data, 0, cvSize(m_width,1) );
+                else if( img.channels() == 3 )
+                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, cvSize(m_width, 1));
+                else if( img.channels() == 4 )
+                    memcpy(data, src, m_width * 4);
             }
             result = true;
             break;
