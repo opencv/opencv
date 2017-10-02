@@ -34,7 +34,7 @@ applications, rotation invariance is not required, so no need of finding this or
 speeds up the process. SURF provides such a functionality called Upright-SURF or U-SURF. It improves
 speed and is robust upto \f$\pm 15^{\circ}\f$. OpenCV supports both, depending upon the flag,
 **upright**. If it is 0, orientation is calculated. If it is 1, orientation is not calculated and it
-is more faster.
+is faster.
 
 ![image](images/surf_orientation.jpg)
 
@@ -130,7 +130,7 @@ False
 
 >>> plt.imshow(img2),plt.show()
 @endcode
-See the results below. All the orientations are shown in same direction. It is more faster than
+See the results below. All the orientations are shown in same direction. It is faster than
 previous. If you are working on cases where orientation is not a problem (like panorama stitching)
 etc, this is better.
 

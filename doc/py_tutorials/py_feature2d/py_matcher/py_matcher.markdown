@@ -140,7 +140,7 @@ FLANN based Matcher
 
 FLANN stands for Fast Library for Approximate Nearest Neighbors. It contains a collection of
 algorithms optimized for fast nearest neighbor search in large datasets and for high dimensional
-features. It works more faster than BFMatcher for large datasets. We will see the second example
+features. It works faster than BFMatcher for large datasets. We will see the second example
 with FLANN based matcher.
 
 For FLANN based matcher, we need to pass two dictionaries which specifies the algorithm to be used,

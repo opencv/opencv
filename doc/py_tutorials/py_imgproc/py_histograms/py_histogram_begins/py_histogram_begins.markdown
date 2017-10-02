@@ -99,7 +99,7 @@ as 0-0.99, 1-1.99, 2-2.99 etc. So final range would be 255-255.99. To represent 
 np.histogram(). So for one-dimensional histograms, you can better try that. Don't forget to set
 minlength = 256 in np.bincount. For example, hist = np.bincount(img.ravel(),minlength=256)
 
-@note OpenCV function is more faster than (around 40X) than np.histogram(). So stick with OpenCV
+@note OpenCV function is faster than (around 40X) than np.histogram(). So stick with OpenCV
 function.
 
 Now we should plot histograms, but how?
