@@ -665,6 +665,7 @@ CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS const char* vecopTypeToStr(int t);
+CV_EXPORTS const char* getOpenCLErrorString(int errorCode);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
 
@@ -731,6 +732,21 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS Timer
+{
+public:
+    Timer(const Queue& q);
+    ~Timer();
+    void start();
+    void stop();
+    float milliSeconds();
+    float microSeconds();
+    float seconds();
+
+protected:
+    struct Impl;
+    Impl* p;
+};
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 

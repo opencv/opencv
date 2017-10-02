@@ -40,47 +40,16 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
-#endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
-}
+#define CONCAT(A,B) A##_##B
+#define TEMPLATE(name,type) CONCAT(name,type)
+#define Dtype float
 
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
-}
-
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
-}
-
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
+__kernel void TEMPLATE(axpy,Dtype)(const int n, const Dtype alpha, __global const Dtype* x,
+                                   const int offx, __global Dtype* y,
+                                   const int offy) {
+  for (int index = get_global_id(0); index < n; index += get_global_size(0)) {
+    Dtype src = x[offx + index];
+    Dtype dst = y[offy + index];
+    y[offy + index] = alpha * src + dst;
   }
-}
-
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
-}
-
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
 }

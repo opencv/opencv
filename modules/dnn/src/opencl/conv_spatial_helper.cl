@@ -11,7 +11,6 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2017, Intel Corporation, all rights reserved.
-// Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,47 +39,35 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
-#endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
-}
+#define CONCAT(A,B) A##_##B
+#define TEMPLATE(name,type) CONCAT(name,type)
+#define Dtype float
 
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
-}
+__kernel void TEMPLATE(copyWeightsSwizzled, Dtype)
+    (__global Dtype* weightIn,
+     __global Dtype* weightOut,
+     const int kernel_w,
+     const int kernel_h,
+     const int channels,
+     const int outputs,
+     const int swizzleFactor) {
 
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
-}
+  unsigned int sX = get_global_id(0);
 
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
-  }
-}
+  //Original location
 
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
-}
+  //Output location
+  int outputSublayer = channels / swizzleFactor;
+  int outputSublayerIndex = channels % swizzleFactor;
 
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
+  int filter = sX / (kernel_w*kernel_h*channels);
+  int kernel_X = sX % kernel_w;
+  int kernel_Y = (sX / kernel_w) % kernel_h;
+  int kernel_C = (sX / (kernel_w * kernel_h)) % channels;
+
+  int FP = filter / swizzleFactor;
+  int F1 = filter % swizzleFactor;
+
+  weightOut[FP*(kernel_w*kernel_h*channels*swizzleFactor) + kernel_C*(kernel_w*kernel_h*swizzleFactor) + kernel_Y*(kernel_w*swizzleFactor) + kernel_X*swizzleFactor + F1]
+  = weightIn[filter*(kernel_w*kernel_h*channels) + kernel_C*(kernel_w*kernel_h) + kernel_Y*kernel_w + kernel_X];
 }

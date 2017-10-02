@@ -6,6 +6,7 @@
 
 #include <opencv2/core/utils/trace.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
 
 #include <cstdarg> // va_start
 

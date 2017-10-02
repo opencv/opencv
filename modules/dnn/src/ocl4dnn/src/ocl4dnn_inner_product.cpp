@@ -40,47 +40,69 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
-#endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
+#include "../../precomp.hpp"
+#include "common.hpp"
+#include "ocl4dnn.hpp"
+#include "math_functions.hpp"
+
+#ifdef HAVE_OPENCL
+namespace cv { namespace dnn { namespace ocl4dnn {
+template<typename Dtype>
+OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config)
+{
+    bias_term_  = config.bias_term;
+    transpose_  = config.transpose;
+    N_ = num_output_ = config.num_output;
+    M_ = config.M;
+    K_ = config.K;
+    phase_test_ = config.phase_test;
+    image_copied_ = false;
 }
 
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
+template<typename Dtype>
+OCL4DNNInnerProduct<Dtype>::~OCL4DNNInnerProduct()
+{
 }
 
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
+template<typename Dtype>
+bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
+                                         const UMat& weight,
+                                         const UMat& bias,
+                                         UMat& top)
+{
+    bool ret;
+
+    if (M_ == 1)
+    {
+        ret = ocl4dnnGEMV<Dtype>(CblasNoTrans, N_, K_, (Dtype) 1.,
+                                 weight, 0, bottom, 0, (Dtype) 0., top, 0);
+
+        if (bias_term_ && ret)
+            ret = ocl4dnnAXPY<Dtype>(N_, 1, bias, 0, top, 0);
+
+        return ret;
+    }
+    else
+    {
+        ret = false;
+        size_t max_image_size = std::min(ocl::Device::getDefault().image2DMaxWidth(),
+                                         ocl::Device::getDefault().image2DMaxHeight());
+        if (M_ <= max_image_size &&
+            N_ <= max_image_size &&
+            K_ <= max_image_size &&
+            cv::traits::Depth<Dtype>::value == CV_32F &&
+            ocl::Device::getDefault().intelSubgroupsSupport())
+        {
+            ret = ocl4dnnGEMMCommon<Dtype>(transpose_ ? CblasNoTrans : CblasTrans,
+                                           M_, N_, K_, bottom, weight, UMat(), top,
+                                           max_image_size);
+        }
+        return ret;
+    }
 }
 
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
-  }
+template class OCL4DNNInnerProduct<float>;
+} // namespace ocl4dnn
 }
-
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
 }
-
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
-}
+#endif // HAVE_OPENCL

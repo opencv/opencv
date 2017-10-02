@@ -40,47 +40,51 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
+#ifndef _OPENCV_GREENTEA_MATH_FUNCTIONS_HPP_
+#define _OPENCV_GREENTEA_MATH_FUNCTIONS_HPP_
+#include "../../precomp.hpp"
+#include "common.hpp"
+
+namespace cv
+{
+namespace dnn
+{
+namespace ocl4dnn
+{
+
+#ifdef HAVE_OPENCL
+enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
+
+template<typename Dtype>
+bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
+                       const int32_t M, const int32_t N, const int32_t K,
+                       const UMat A, const UMat B,
+                       const UMat B_image, UMat C,
+                       const size_t max_image_size);
+
+template<typename Dtype>
+ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
+                                          bool is_matrix_a, bool transpose,
+                                          bool padding, int padded_height,
+                                          int padded_width, int height,
+                                          int width,  int ld);
+
+template<typename Dtype>
+bool ocl4dnnGEMV(const CBLAS_TRANSPOSE TransA,
+                 const int32_t M, const int32_t N, const Dtype alpha,
+                 const UMat A, const int32_t offA, const UMat x,
+                 const int32_t offx, const Dtype beta, UMat y,
+                 const int32_t offy);
+
+template<typename Dtype>
+bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
+                 const UMat x, const int32_t offx, UMat y,
+                 const int32_t offy);
+
+#endif  // HAVE_OPENCL
+
+} // namespace ocl4dnn
+} // namespace dnn
+} // namespce cv
+
 #endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
-}
-
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
-}
-
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
-}
-
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
-  }
-}
-
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
-}
-
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
-}

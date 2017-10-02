@@ -21,6 +21,8 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninit
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4701 /wd4100)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
+
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146
