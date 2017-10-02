@@ -282,15 +282,21 @@ void processImage(int /*h*/, void*)
         }
         if (fitEllipseQ) {
             box = fitEllipse(pts);
-            if( MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height)*30 ){continue;};
+            if( MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height)*30 ||
+               MAX(box.size.width, box.size.height) <= 0 ||
+               MIN(box.size.width, box.size.height) <= 0){continue;};
         }
         if (fitEllipseAMSQ) {
             boxAMS = fitEllipseAMS(pts);
-            if( MAX(boxAMS.size.width, boxAMS.size.height) > MIN(boxAMS.size.width, boxAMS.size.height)*30 ){continue;};
+            if( MAX(boxAMS.size.width, boxAMS.size.height) > MIN(boxAMS.size.width, boxAMS.size.height)*30 ||
+               MAX(box.size.width, box.size.height) <= 0 ||
+               MIN(box.size.width, box.size.height) <= 0){continue;};
         }
         if (fitEllipseDirectQ) {
             boxDirect = fitEllipseDirect(pts);
-            if( MAX(boxDirect.size.width, boxDirect.size.height) > MIN(boxDirect.size.width, boxDirect.size.height)*30 ){continue;};
+            if( MAX(boxDirect.size.width, boxDirect.size.height) > MIN(boxDirect.size.width, boxDirect.size.height)*30 ||
+               MAX(box.size.width, box.size.height) <= 0 ||
+               MIN(box.size.width, box.size.height) <= 0 ){continue;};
         }
 
         if (fitEllipseQ) {
