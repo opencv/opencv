@@ -308,6 +308,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #ifdef CV_DOXYGEN
 #   undef CV_SSE2
 #   undef CV_NEON
+#   undef CV_VSX
 #endif
 
 #if CV_SSE2
@@ -317,6 +318,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #elif CV_NEON
 
 #include "opencv2/core/hal/intrin_neon.hpp"
+
+#elif CV_VSX
+
+#include "opencv2/core/hal/intrin_vsx.hpp"
 
 #else
 
