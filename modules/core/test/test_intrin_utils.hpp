@@ -156,15 +156,19 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     return out;
 }
 
+#ifndef EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR
+#  define EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR 0.00002f
+#endif
+
 template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
 template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
 {
-    EXPECT_FLOAT_EQ( a, b );
+    EXPECT_NEAR( a, b, EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR );
 }
 
 template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b)
 {
-    EXPECT_DOUBLE_EQ( a, b );
+    EXPECT_NEAR( a, b, EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR );
 }
 
 template<typename R> struct TheTest
