@@ -5239,78 +5239,31 @@ struct Timer::Impl
 
     Impl(const Queue& q)
         : queue(q)
-        , initted_(false)
-        , running_(false)
-        , has_run_at_least_once_(false)
     {
-        init();
     }
 
-    ~Impl()
-    {
-        clWaitForEvents(1, &start_gpu_cl_);
-        clWaitForEvents(1, &stop_gpu_cl_);
-        clReleaseEvent(start_gpu_cl_);
-        clReleaseEvent(stop_gpu_cl_);
-    }
+    ~Impl(){}
 
     void start()
     {
 #ifdef HAVE_OPENCL
-        if (!running())
-        {
-            clWaitForEvents(1, &start_gpu_cl_);
-            clReleaseEvent(start_gpu_cl_);
-            ocl::Kernel kernel("null_kernel_float", ocl::core::benchmark_oclsrc);
-            float arg = 0;
-            clSetKernelArg((cl_kernel)kernel.ptr(), 0, sizeof(arg), &arg);
-            clEnqueueTask((cl_command_queue)queue.ptr(), (cl_kernel)kernel.ptr(), 0,
-                          NULL, &start_gpu_cl_);
-            clFinish((cl_command_queue)queue.ptr());
-            running_ = true;
-            has_run_at_least_once_ = true;
-        }
+        clFinish((cl_command_queue)queue.ptr());
+        timer.start();
 #endif
     }
 
     void stop()
     {
 #ifdef HAVE_OPENCL
-        if (running())
-        {
-            clWaitForEvents(1, &stop_gpu_cl_);
-            clReleaseEvent(stop_gpu_cl_);
-            ocl::Kernel kernel("null_kernel_float", ocl::core::benchmark_oclsrc);
-            float arg = 0;
-            clSetKernelArg((cl_kernel)kernel.ptr(), 0, sizeof(arg), &arg);
-            clEnqueueTask((cl_command_queue)queue.ptr(), (cl_kernel)kernel.ptr(), 0,
-                          NULL, &stop_gpu_cl_);
-            clFinish((cl_command_queue)queue.ptr());
-            running_ = false;
-        }
+        clFinish((cl_command_queue)queue.ptr());
+        timer.stop();
 #endif
     }
 
     float microSeconds()
     {
 #ifdef HAVE_OPENCL
-        if (!has_run_at_least_once())
-        {
-            return 0;
-        }
-        if (running())
-        {
-            stop();
-        }
-        cl_ulong startTime, stopTime;
-        clWaitForEvents(1, &stop_gpu_cl_);
-        clGetEventProfilingInfo(start_gpu_cl_, CL_PROFILING_COMMAND_END,
-                                sizeof startTime, &startTime, NULL);
-        clGetEventProfilingInfo(stop_gpu_cl_, CL_PROFILING_COMMAND_START,
-                                sizeof stopTime, &stopTime, NULL);
-        double us = static_cast<double>(stopTime - startTime) / 1000.0;
-        elapsed_microseconds_ = static_cast<float>(us);
-        return elapsed_microseconds_;
+        return (float)timer.getTimeMicro();
 #else
         return 0;
 #endif
@@ -5319,22 +5272,7 @@ struct Timer::Impl
     float milliSeconds()
     {
 #ifdef HAVE_OPENCL
-        if (!has_run_at_least_once())
-        {
-            return 0;
-        }
-        if (running())
-        {
-            stop();
-        }
-        cl_ulong startTime = 0, stopTime = 0;
-        clGetEventProfilingInfo(start_gpu_cl_, CL_PROFILING_COMMAND_END,
-                                sizeof startTime, &startTime, NULL);
-        clGetEventProfilingInfo(stop_gpu_cl_, CL_PROFILING_COMMAND_START,
-                                sizeof stopTime, &stopTime, NULL);
-        double ms = static_cast<double>(stopTime - startTime) / 1000000.0;
-        elapsed_milliseconds_ = static_cast<float>(ms);
-        return elapsed_milliseconds_;
+        return (float)timer.getTimeMilli();
 #else
         return 0;
 #endif
@@ -5342,31 +5280,13 @@ struct Timer::Impl
 
     float seconds()
     {
-        return milliSeconds() / 1000.f;
+#ifdef HAVE_OPENCL
+        return (float)timer.getTimeSec();
+#else
+        return 0;
+#endif
     }
-
-    void init()
-    {
-        CV_Assert(queue.getImpl() && queue.getImpl()->isProfilingQueue_);
-        if (!initted())
-        {
-            start_gpu_cl_ = 0;
-            stop_gpu_cl_ = 0;
-            initted_ = true;
-        }
-    }
-
-    inline bool initted() { return initted_; }
-    inline bool running() { return running_; }
-    inline bool has_run_at_least_once() { return has_run_at_least_once_; }
-
-    bool initted_;
-    bool running_;
-    bool has_run_at_least_once_;
-    float elapsed_milliseconds_;
-    float elapsed_microseconds_;
-    cl_event start_gpu_cl_;
-    cl_event stop_gpu_cl_;
+    TickMeter timer;
 };
 
 Timer::Timer(const Queue& q)
