@@ -16,6 +16,7 @@
 //
 //! @{
 
+namespace cv {
 namespace utils {
 namespace logging {
 
@@ -77,7 +78,7 @@ enum LogLevel {
 #endif
 
 
-}} // namespace
+}}} // namespace
 
 //! @}
 
