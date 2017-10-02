@@ -228,6 +228,14 @@ biases = tf.Variable(tf.random_normal([2]))
 sigmoid = tf.nn.sigmoid(tf.matmul(last_output, weights) + biases)
 save(inp, sigmoid, 'lstm')
 ################################################################################
+bgr = tf.placeholder(tf.float32, [4, 5, 6, 3], 'input')
+b, g, r = tf.split(bgr, num_or_size_splits=3, axis=3)
+rgb = tf.concat([r, g, b], axis=3)
+alpha, beta = tf.split(rgb, num_or_size_splits=2, axis=0)
+res = tf.layers.conv2d(alpha, filters=1, kernel_size=[1, 1]) + \
+      tf.layers.conv2d(beta, filters=1, kernel_size=[1, 1])
+save(bgr, res, 'split_equals')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
