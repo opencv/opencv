@@ -116,7 +116,7 @@ public:
         }
         else  // Divide input blob on equal parts by axis.
         {
-            CV_Assert(0 < axis && axis < inpShape.size());
+            CV_Assert(0 <= axis && axis < inpShape.size());
             CV_Assert(requiredOutputs > 0 && inpShape[axis] % requiredOutputs == 0);
             inpShape[axis] /= requiredOutputs;
             outputs.resize(requiredOutputs, inpShape);
