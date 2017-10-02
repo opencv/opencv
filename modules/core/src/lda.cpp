@@ -241,35 +241,19 @@ Mat LDA::subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     return X;
 }
 
-
-class EigenvalueDecomposition {
-private:
-
-    // Holds the data dimension.
-    int n;
-
-    // Stores real/imag part of a complex division.
-    double cdivr, cdivi;
-
-    // Pointer to internal memory.
-    double *d, *e, *ort;
-    double **V, **H;
-
-    // Holds the computed eigenvalues.
-    Mat _eigenvalues;
-
-    // Holds the computed eigenvectors.
-    Mat _eigenvectors;
+    //------------------------------------------------------------------------------
+    // cv::EigenDecomposition
+    //------------------------------------------------------------------------------
 
     // Allocates memory.
     template<typename _Tp>
-    _Tp *alloc_1d(int m) {
+    _Tp * EigenDecomposition::alloc_1d(int m) {
         return new _Tp[m];
     }
 
     // Allocates memory.
     template<typename _Tp>
-    _Tp *alloc_1d(int m, _Tp val) {
+    _Tp * EigenDecomposition::alloc_1d(int m, _Tp val) {
         _Tp *arr = alloc_1d<_Tp> (m);
         for (int i = 0; i < m; i++)
             arr[i] = val;
@@ -278,7 +262,7 @@ private:
 
     // Allocates memory.
     template<typename _Tp>
-    _Tp **alloc_2d(int m, int _n) {
+    _Tp ** EigenDecomposition::alloc_2d(int m, int _n) {
         _Tp **arr = new _Tp*[m];
         for (int i = 0; i < m; i++)
             arr[i] = new _Tp[_n];
@@ -287,7 +271,7 @@ private:
 
     // Allocates memory.
     template<typename _Tp>
-    _Tp **alloc_2d(int m, int _n, _Tp val) {
+    _Tp ** EigenDecomposition::alloc_2d(int m, int _n, _Tp val) {
         _Tp **arr = alloc_2d<_Tp> (m, _n);
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < _n; j++) {
@@ -297,7 +281,7 @@ private:
         return arr;
     }
 
-    void cdiv(double xr, double xi, double yr, double yi) {
+    void EigenDecomposition::cdiv(double xr, double xi, double yr, double yi) {
         double r, dv;
         if (std::abs(yr) > std::abs(yi)) {
             r = yi / yr;
@@ -314,7 +298,7 @@ private:
 
     // Nonsymmetric reduction from Hessenberg to real Schur form.
 
-    void hqr2() {
+    void EigenDecomposition::hqr2() {
 
         //  This is derived from the Algol procedure hqr2,
         //  by Martin and Wilkinson, Handbook for Auto. Comp.,
@@ -753,7 +737,7 @@ private:
     }
 
     // Nonsymmetric reduction to Hessenberg form.
-    void orthes() {
+    void EigenDecomposition::orthes() {
         //  This is derived from the Algol procedures orthes and ortran,
         //  by Martin and Wilkinson, Handbook for Auto. Comp.,
         //  Vol.ii-Linear Algebra, and the corresponding
@@ -843,7 +827,7 @@ private:
     }
 
     // Releases all internal working memory.
-    void release() {
+    void EigenDecomposition::release() {
         // releases the working data
         delete[] d;
         delete[] e;
@@ -857,7 +841,7 @@ private:
     }
 
     // Computes the Eigenvalue Decomposition for a matrix given in H.
-    void compute() {
+    void EigenDecomposition::compute() {
         // Allocate memory for the working data.
         V = alloc_2d<double> (n, n, 0.0);
         d = alloc_1d<double> (n);
@@ -874,22 +858,23 @@ private:
         }
         // Copy eigenvectors to OpenCV Matrix.
         _eigenvectors.create(n, n, CV_64FC1);
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++)
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
                 _eigenvectors.at<double> (i, j) = V[i][j];
+            }
+        }
         // Deallocate the memory by releasing all internal working data.
         release();
     }
 
-public:
-    EigenvalueDecomposition()
+    EigenDecomposition::EigenDecomposition()
         : n(0), cdivr(0), cdivi(0), d(0), e(0), ort(0), V(0), H(0) {}
 
     // Initializes & computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    EigenvalueDecomposition(InputArray src) {
+    EigenDecomposition::EigenDecomposition(InputArray src) {
         compute(src);
     }
 
@@ -897,7 +882,7 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    void compute(InputArray src)
+    void EigenDecomposition::compute(InputArray src)
     {
         CV_INSTRUMENT_REGION()
 
@@ -927,13 +912,12 @@ public:
         }
     }
 
-    ~EigenvalueDecomposition() {}
+    EigenDecomposition::~EigenDecomposition() {}
 
     // Returns the eigenvalues of the Eigenvalue Decomposition.
-    Mat eigenvalues() {    return _eigenvalues; }
+    Mat EigenDecomposition::eigenvalues() {    return _eigenvalues; }
     // Returns the eigenvectors of the Eigenvalue Decomposition.
-    Mat eigenvectors() { return _eigenvectors; }
-};
+    Mat EigenDecomposition::eigenvectors() { return _eigenvectors; }
 
 
 //------------------------------------------------------------------------------
@@ -1079,7 +1063,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // M = inv(Sw)*Sb
     Mat M;
     gemm(Swi, Sb, 1.0, Mat(), 0.0, M);
-    EigenvalueDecomposition es(M);
+    EigenDecomposition es(M);
     _eigenvalues = es.eigenvalues();
     _eigenvectors = es.eigenvectors();
     // reshape eigenvalues, so they are stored by column

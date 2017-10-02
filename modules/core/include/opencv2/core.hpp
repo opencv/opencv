@@ -2573,6 +2573,102 @@ protected:
     void lda(InputArrayOfArrays src, InputArray labels);
 };
 
+
+/**
+ @brief EigenDecomposition
+
+ Class for computing Eigen Value Decomposition of a general non-symetric
+ floating-point matrix.
+
+ @sa eigen
+ */
+class CV_EXPORTS EigenDecomposition {
+private:
+
+    // Holds the data dimension.
+    int n;
+
+    // Stores real/imag part of a complex division.
+    double cdivr, cdivi;
+
+    // Pointer to internal memory.
+    double *d, *e, *ort;
+    double **V, **H;
+
+    // Holds the computed eigenvalues.
+    Mat _eigenvalues;
+
+    // Holds the computed eigenvectors.
+    Mat _eigenvectors;
+
+    // Allocates memory.
+    template<typename _Tp>
+    _Tp *alloc_1d(int m) ;
+
+    // Allocates memory.
+    template<typename _Tp>
+    _Tp *alloc_1d(int m, _Tp val) ;
+
+    // Allocates memory.
+    template<typename _Tp>
+    _Tp **alloc_2d(int m, int _n) ;
+
+    // Allocates memory.
+    template<typename _Tp>
+    _Tp **alloc_2d(int m, int _n, _Tp val) ;
+
+    void cdiv(double xr, double xi, double yr, double yi) ;
+
+    // Nonsymmetric reduction from Hessenberg to real Schur form.
+
+    void hqr2() ;
+
+    // Nonsymmetric reduction to Hessenberg form.
+    void orthes() ;
+
+    // Releases all internal working memory.
+    void release() ;
+
+    // Computes the Eigenvalue Decomposition for a matrix given in H.
+    void compute() ;
+
+public:
+    /** @brief the default constructor
+
+    initializes an empty EigenDecomposition structure.
+    To find eigenvalues and eigenvectors compute(InputArray src) must first be run.
+    */
+    EigenDecomposition();
+
+    /** @overload
+     Initializes & computes the Eigenvalue Decomposition for a general matrix src
+     @param src input matrix of which to compute the Eigenvalue Decomposition.
+     */
+    EigenDecomposition(InputArray src) ;
+
+    /** @brief computes the Eigenvalue Decomposition
+
+     This function computes the Eigenvalue Decomposition for a general matrix src
+     @param src input matrix of which to compute the Eigenvalue Decomposition.
+     */
+    void compute(InputArray src);
+
+    ~EigenDecomposition();
+
+    /** @brief Returns the eigenvalues of the Eigenvalue Decomposition.
+
+     Returns the eigenvalues of the Eigenvalue Decomposition.
+     */
+    Mat eigenvalues() ;
+
+    /** @brief Returns the eigenvectors of the Eigenvalue Decomposition.
+
+     Returns the eigenvectors of the Eigenvalue Decomposition.
+     */
+    Mat eigenvectors() ;
+};
+
+
 /** @brief Singular Value Decomposition
 
 Class for computing Singular Value Decomposition of a floating-point
