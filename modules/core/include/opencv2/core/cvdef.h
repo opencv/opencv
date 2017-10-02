@@ -153,6 +153,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define CV_CPU_NEON   100
 
+#define CV_CPU_VSX 200
+
 // when adding to this list remember to update the following enum
 #define CV_HARDWARE_MAX_FEATURE 255
 
@@ -182,7 +184,9 @@ enum CpuFeatures {
     CPU_AVX_512VBMI     = 20,
     CPU_AVX_512VL       = 21,
 
-    CPU_NEON            = 100
+    CPU_NEON            = 100,
+
+    CPU_VSX             = 200
 };
 
 
