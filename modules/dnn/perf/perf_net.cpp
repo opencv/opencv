@@ -40,7 +40,7 @@ public:
 
         if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
         {
-#if 0 //defined(HAVE_OPENCL)
+#if defined(HAVE_OPENCL)
             if (!cv::ocl::useOpenCL())
 #endif
             {

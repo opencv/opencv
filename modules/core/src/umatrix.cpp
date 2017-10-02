@@ -267,19 +267,22 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     UMat hdr;
     if(!data)
         return hdr;
-    Size wholeSize;
-    Point ofs;
-    locateROI(wholeSize, ofs);
-    Size sz(cols, rows);
-    if (ofs.x != 0 || ofs.y != 0)
+    if (data != datastart)
     {
-        Mat src = *this;
-        int dtop = ofs.y;
-        int dbottom = wholeSize.height - src.rows - ofs.y;
-        int dleft = ofs.x;
-        int dright = wholeSize.width - src.cols - ofs.x;
-        src.adjustROI(dtop, dbottom, dleft, dright);
-        return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+        Size wholeSize;
+        Point ofs;
+        locateROI(wholeSize, ofs);
+        Size sz(cols, rows);
+        if (ofs.x != 0 || ofs.y != 0)
+        {
+            Mat src = *this;
+            int dtop = ofs.y;
+            int dbottom = wholeSize.height - src.rows - ofs.y;
+            int dleft = ofs.x;
+            int dright = wholeSize.width - src.cols - ofs.x;
+            src.adjustROI(dtop, dbottom, dleft, dright);
+            return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+        }
     }
     CV_Assert(data == datastart);
 

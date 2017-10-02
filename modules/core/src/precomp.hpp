@@ -297,12 +297,6 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #define CL_RUNTIME_EXPORT
 #endif
 
-namespace utils {
-bool getConfigurationParameterBool(const char* name, bool defaultValue);
-size_t getConfigurationParameterSizeT(const char* name, size_t defaultValue);
-cv::String getConfigurationParameterString(const char* name, const char* defaultValue);
-}
-
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)
 

@@ -47,6 +47,10 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
 
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -149,6 +153,11 @@ public:
     Ptr<ActivationLayer> activ;
     Ptr<BatchNormLayer> bnorm;
     Ptr<ScaleLayer> scaleLayer;
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
+    std::vector<UMat> umat_blobs;
+#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
     {
@@ -636,6 +645,42 @@ public:
         }
     };
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        int group = inputs[0]->size[1] / umat_blobs[0].size[1];
+
+        if (convolutionOp.empty())
+        {
+            OCL4DNNConvConfig config;
+            config.in_shape = shape(*inputs[0]);
+            config.out_shape = shape(outputs[0]);
+            config.kernel = kernel;
+            config.pad = pad;
+            config.stride = stride;
+            config.dilation = dilation;
+            config.group = group;
+            config.bias_term = (hasBias()) ? true : false;
+
+            convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
+        }
+
+        for (size_t ii = 0; ii < outputs.size(); ii++)
+        {
+            UMat inpMat, outMat;
+            inpMat = inputs[ii]->getUMat(ACCESS_READ);
+            outMat = outputs[ii].getUMat(ACCESS_WRITE);
+
+            int batch_size = inpMat.size[0];
+
+            if (!convolutionOp->Forward(inpMat, umat_blobs[0], hasBias() ? umat_blobs[1] : UMat(),
+                                        outMat, batch_size))
+               return false;
+        }
+        return true;
+    }
+#endif
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -648,6 +693,10 @@ public:
         CV_Assert(inputs.size() == (size_t)1 && inputs[0]->size[1] % blobs[0].size[1] == 0);
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs, outputs, internals))
 
         int k, outCn = blobs[0].size[0];
 
@@ -1203,8 +1252,17 @@ static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const Laye
 
 Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 {
-    Ptr<BaseConvolutionLayer> l(new ConvolutionLayerImpl);
+    ConvolutionLayerImpl* conv_ptr = new ConvolutionLayerImpl;
+    Ptr<BaseConvolutionLayer> l(conv_ptr);
     initConvDeconvLayerFromCaffe(l, params);
+
+#ifdef HAVE_OPENCL
+    size_t n = params.blobs.size();
+    conv_ptr->umat_blobs.resize(n);
+    for (int i = 0; i < n; i++)
+        conv_ptr->umat_blobs[i] = params.blobs[i].getUMat(ACCESS_READ);
+#endif
+
     return l;
 }
 

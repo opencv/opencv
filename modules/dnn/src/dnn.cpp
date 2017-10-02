@@ -875,7 +875,7 @@ struct Net::Impl
 
         if (preferableBackend == DNN_BACKEND_DEFAULT)
         {
-            CV_Assert(preferableTarget == DNN_TARGET_CPU);
+            CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_OPENCL);
             return;
         }
 
@@ -1000,6 +1000,7 @@ struct Net::Impl
         Ptr<Layer> layerPtr = ld.getLayerInstance();
         {
             layerPtr->finalize(ld.inputBlobs, ld.outputBlobs);
+            layerPtr->preferableTarget = preferableTarget;
 #if 0
             std::cout << "\toutputs:";
             size_t noutputs = ld.outputBlobs.size();
@@ -1026,7 +1027,7 @@ struct Net::Impl
 
     void fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
-        if( !fusion || preferableBackend == DNN_BACKEND_HALIDE )
+        if( !fusion || !(preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_CPU))
             return;
 
         CV_TRACE_FUNCTION();
@@ -1236,7 +1237,6 @@ struct Net::Impl
         }
 
         layersTimings.resize(lastLayerId + 1, 0);
-
         fuseLayers(blobsToKeep_);
     }
 
@@ -1402,7 +1402,7 @@ struct Net::Impl
         }
         else
         {
-            CV_Assert(preferableTarget == DNN_TARGET_CPU);
+            CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_OPENCL);
         }
         return ld.outputBlobs[pin.oid];
     }
@@ -1963,12 +1963,12 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
 
 Importer::~Importer() {}
 
-Layer::Layer() {}
+Layer::Layer() { preferableTarget = DNN_TARGET_CPU; }
 
 Layer::Layer(const LayerParams &params)
     : blobs(params.blobs), name(params.name), type(params.type)
 {
-
+    preferableTarget = DNN_TARGET_CPU;
 }
 
 void Layer::setParamsFrom(const LayerParams &params)

@@ -10,7 +10,6 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
@@ -40,47 +39,22 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
-#endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
-}
+__kernel void concat(const int nthreads,
+                     __global const Dtype* in_data,
+                     const int num_concats,
+                     const int concat_size,
+                     const int top_concat_axis,
+                     const int bottom_concat_axis,
+                     const int offset_concat_axis,
+                     __global Dtype* out_data) {
 
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
-}
-
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
-}
-
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
+  for (int index = get_global_id(0); index < nthreads;
+      index += get_global_size(0)) {
+    const int total_concat_size = concat_size * bottom_concat_axis;
+    const int concat_num = index / total_concat_size;
+    const int concat_index = index % total_concat_size;
+    const int top_index = concat_index
+        + (concat_num * top_concat_axis + offset_concat_axis) * concat_size;
+    out_data[top_index] = in_data[index];
   }
-}
-
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
-}
-
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
 }

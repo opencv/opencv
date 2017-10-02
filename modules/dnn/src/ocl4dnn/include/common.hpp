@@ -10,7 +10,6 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
@@ -40,47 +39,24 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
+#ifndef _OPENCV_LIBDNN_COMMON_HPP_
+#define _OPENCV_LIBDNN_COMMON_HPP_
+#include "../../precomp.hpp"
+#include "../../caffe/glog_emulator.hpp"
+#include <opencv2/core/opencl/runtime/opencl_core.hpp>
+
+#ifdef HAVE_OPENCL
+
+// Macro to select the single (_float) or double (_double) precision kernel
+#define CL_KERNEL_SELECT(kernel) kernel "_float"
+
+#define OCL_CHECK(condition) \
+    do { \
+        cl_int error = (condition); \
+        CHECK_EQ(error, CL_SUCCESS) << " " << cv::ocl::getOpenCLErrorString(error); \
+    } while (0)
+
+bool clOptionSupport(cv::String option);
+
+#endif // HAVE_OPENCL
 #endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
-}
-
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
-}
-
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
-}
-
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
-  }
-}
-
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
-}
-
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
-}

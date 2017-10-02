@@ -44,6 +44,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/ts/ocl_test.hpp>
 
 namespace cvtest
 {
@@ -70,13 +71,16 @@ TEST(Torch_Importer, simple_read)
     ASSERT_FALSE(net.empty());
 }
 
-static void runTorchNet(String prefix, String outLayerName = "",
+static void runTorchNet(String prefix, int targetId = DNN_TARGET_CPU, String outLayerName = "",
                         bool check2ndBlob = false, bool isBinary = false)
 {
     String suffix = (isBinary) ? ".dat" : ".txt";
 
     Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
     ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     Mat inp, outRef;
     ASSERT_NO_THROW( inp = readTorchBlob(_tf(prefix + "_input" + suffix), isBinary) );
@@ -103,9 +107,19 @@ TEST(Torch_Importer, run_convolution)
     runTorchNet("net_conv");
 }
 
+OCL_TEST(Torch_Importer, run_convolution)
+{
+    runTorchNet("net_conv", DNN_TARGET_OPENCL);
+}
+
 TEST(Torch_Importer, run_pool_max)
 {
-    runTorchNet("net_pool_max", "", true);
+    runTorchNet("net_pool_max", DNN_TARGET_CPU, "", true);
+}
+
+OCL_TEST(Torch_Importer, run_pool_max)
+{
+    runTorchNet("net_pool_max", DNN_TARGET_OPENCL, "", true);
 }
 
 TEST(Torch_Importer, run_pool_ave)
@@ -113,12 +127,17 @@ TEST(Torch_Importer, run_pool_ave)
     runTorchNet("net_pool_ave");
 }
 
+OCL_TEST(Torch_Importer, run_pool_ave)
+{
+    runTorchNet("net_pool_ave", DNN_TARGET_OPENCL);
+}
+
 TEST(Torch_Importer, run_reshape)
 {
     runTorchNet("net_reshape");
     runTorchNet("net_reshape_batch");
     runTorchNet("net_reshape_single_sample");
-    runTorchNet("net_reshape_channels", "", false, true);
+    runTorchNet("net_reshape_channels", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, run_linear)
@@ -128,13 +147,19 @@ TEST(Torch_Importer, run_linear)
 
 TEST(Torch_Importer, run_paralel)
 {
-    runTorchNet("net_parallel", "l5_torchMerge");
+    runTorchNet("net_parallel", DNN_TARGET_CPU, "l5_torchMerge");
 }
 
 TEST(Torch_Importer, run_concat)
 {
-    runTorchNet("net_concat", "l5_torchMerge");
-    runTorchNet("net_depth_concat", "", false, true);
+    runTorchNet("net_concat", DNN_TARGET_CPU, "l5_torchMerge");
+    runTorchNet("net_depth_concat", DNN_TARGET_CPU, "", false, true);
+}
+
+OCL_TEST(Torch_Importer, run_concat)
+{
+    runTorchNet("net_concat", DNN_TARGET_OPENCL, "l5_torchMerge");
+    runTorchNet("net_depth_concat", DNN_TARGET_OPENCL, "", false, true);
 }
 
 TEST(Torch_Importer, run_deconv)
@@ -163,37 +188,49 @@ TEST(Torch_Importer, net_softmax)
     runTorchNet("net_softmax_spatial");
 }
 
+OCL_TEST(Torch_Importer, net_softmax)
+{
+    runTorchNet("net_softmax", DNN_TARGET_OPENCL);
+    runTorchNet("net_softmax_spatial", DNN_TARGET_OPENCL);
+}
+
 TEST(Torch_Importer, net_logsoftmax)
 {
     runTorchNet("net_logsoftmax");
     runTorchNet("net_logsoftmax_spatial");
 }
 
+OCL_TEST(Torch_Importer, net_logsoftmax)
+{
+    runTorchNet("net_logsoftmax", DNN_TARGET_OPENCL);
+    runTorchNet("net_logsoftmax_spatial", DNN_TARGET_OPENCL);
+}
+
 TEST(Torch_Importer, net_lp_pooling)
 {
-    runTorchNet("net_lp_pooling_square", "", false, true);
-    runTorchNet("net_lp_pooling_power", "", false, true);
+    runTorchNet("net_lp_pooling_square", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_lp_pooling_power", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, net_conv_gemm_lrn)
 {
-    runTorchNet("net_conv_gemm_lrn", "", false, true);
+    runTorchNet("net_conv_gemm_lrn", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, net_inception_block)
 {
-    runTorchNet("net_inception_block", "", false, true);
+    runTorchNet("net_inception_block", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, net_normalize)
 {
-    runTorchNet("net_normalize", "", false, true);
+    runTorchNet("net_normalize", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, net_padding)
 {
-    runTorchNet("net_padding", "", false, true);
-    runTorchNet("net_spatial_zero_padding", "", false, true);
+    runTorchNet("net_padding", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_spatial_zero_padding", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, ENet_accuracy)
@@ -243,6 +280,62 @@ TEST(Torch_Importer, OpenFace_accuracy)
 
     Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
     normAssert(out, outRef);
+}
+
+OCL_TEST(Torch_Importer, OpenFace_accuracy)
+{
+    const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
+    Net net = readNetFromTorch(model);
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    Mat sample = imread(findDataFile("cv/shared/lena.png", false));
+    Mat sampleF32(sample.size(), CV_32FC3);
+    sample.convertTo(sampleF32, sampleF32.type());
+    sampleF32 /= 255;
+    resize(sampleF32, sampleF32, Size(96, 96), 0, 0, INTER_NEAREST);
+
+    Mat inputBlob = blobFromImage(sampleF32);
+
+    net.setInput(inputBlob);
+    Mat out = net.forward();
+
+    Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
+    normAssert(out, outRef);
+}
+
+OCL_TEST(Torch_Importer, ENet_accuracy)
+{
+    Net net;
+    {
+        const string model = findDataFile("dnn/Enet-model-best.net", false);
+        Ptr<Importer> importer = createTorchImporter(model, true);
+        ASSERT_TRUE(importer != NULL);
+        importer->populateNet(net);
+    }
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    Mat sample = imread(_tf("street.png", false));
+    Mat inputBlob = blobFromImage(sample, 1./255);
+
+    net.setInput(inputBlob, "");
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(_tf("torch_enet_prob.npy", false));
+    // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
+    // thresholds for ENet must be changed. Accuracy of resuults was checked on
+    // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
+    normAssert(ref, out, "", 0.00044, 0.44);
+
+    const int N = 3;
+    for (int i = 0; i < N; i++)
+    {
+        net.setInput(inputBlob, "");
+        Mat out = net.forward();
+        normAssert(ref, out, "", 0.00044, 0.44);
+    }
 }
 
 }
