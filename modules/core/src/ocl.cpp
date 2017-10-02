@@ -993,6 +993,11 @@ static cl_device_id selectOpenCLDevice()
     return NULL;
 }
 #else
+// std::tolower is int->int
+static char char_tolower(char ch)
+{
+    return (char)std::tolower((int)ch);
+}
 static cl_device_id selectOpenCLDevice()
 {
     std::string platform, deviceName;
@@ -1077,7 +1082,7 @@ static cl_device_id selectOpenCLDevice()
     {
         int deviceType = 0;
         std::string tempStrDeviceType = deviceTypes[t];
-        std::transform( tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), tolower );
+        std::transform(tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), char_tolower);
 
         if (tempStrDeviceType == "gpu" || tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             deviceType = Device::TYPE_GPU;
