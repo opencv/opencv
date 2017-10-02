@@ -544,15 +544,15 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
             // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
             int minpos = 0;
             double normi, normEVali, normMinpos, normEValMinpos;
-            normMinpos = sqrt(eVec.at<double>(0,minpos)*eVec.at<double>(0,minpos) + eVec.at<double>(1,minpos)*eVec.at<double>(1,minpos) + \
-                              eVec.at<double>(2,minpos)*eVec.at<double>(2,minpos) + eVec.at<double>(3,minpos)*eVec.at<double>(3,minpos) + \
-                              eVec.at<double>(4,minpos)*eVec.at<double>(4,minpos) );
-            normEValMinpos = eVal.at<double>(0,minpos) * normMinpos;
+            normMinpos = sqrt(eVec.at<double>(minpos,0)*eVec.at<double>(minpos,0) + eVec.at<double>(minpos,1)*eVec.at<double>(minpos,1) + \
+                              eVec.at<double>(minpos,2)*eVec.at<double>(minpos,2) + eVec.at<double>(minpos,3)*eVec.at<double>(minpos,3) + \
+                              eVec.at<double>(minpos,4)*eVec.at<double>(minpos,4) );
+            normEValMinpos = eVal.at<double>(minpos,0) * normMinpos;
             for (i=1; i<5; i++) {
-                normi = sqrt(eVec.at<double>(0,i)*eVec.at<double>(0,i) + eVec.at<double>(1,i)*eVec.at<double>(1,i) + \
-                             eVec.at<double>(2,i)*eVec.at<double>(2,i) + eVec.at<double>(3,i)*eVec.at<double>(3,i) + \
-                             eVec.at<double>(4,i)*eVec.at<double>(4,i) );
-                normEVali = eVal.at<double>(0,i) * normi;
+                normi = sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + \
+                             eVec.at<double>(i,2)*eVec.at<double>(i,2) + eVec.at<double>(i,3)*eVec.at<double>(i,3) + \
+                             eVec.at<double>(i,4)*eVec.at<double>(i,4) );
+                normEVali = eVal.at<double>(i,0) * normi;
                 if (normEVali < normEValMinpos) {
                     minpos = i;
                     normMinpos=normi;
@@ -560,11 +560,11 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
                 }
             };
 
-            pVec(0) =eVec.at<double>(0,minpos) / normMinpos;
-            pVec(1) =eVec.at<double>(1,minpos) / normMinpos;
-            pVec(2) =eVec.at<double>(2,minpos) / normMinpos;
-            pVec(3) =eVec.at<double>(3,minpos) / normMinpos;
-            pVec(4) =eVec.at<double>(4,minpos) / normMinpos;
+            pVec(0) =eVec.at<double>(minpos,0) / normMinpos;
+            pVec(1) =eVec.at<double>(minpos,1) / normMinpos;
+            pVec(2) =eVec.at<double>(minpos,2) / normMinpos;
+            pVec(3) =eVec.at<double>(minpos,3) / normMinpos;
+            pVec(4) =eVec.at<double>(minpos,4) / normMinpos;
 
             coeffs(0) =pVec(0) ;
             coeffs(1) =pVec(1) ;
@@ -715,19 +715,19 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         // Select the eigen vector {a,b,c} which satisfies 4ac-b^2 > 0
         double cond[3];
-        cond[0]=(4.0 * eVec.at<double>(0,0) * eVec.at<double>(2,0) - eVec.at<double>(1,0) * eVec.at<double>(1,0));
-        cond[1]=(4.0 * eVec.at<double>(0,1) * eVec.at<double>(2,1) - eVec.at<double>(1,1) * eVec.at<double>(1,1));
-        cond[2]=(4.0 * eVec.at<double>(0,2) * eVec.at<double>(2,2) - eVec.at<double>(1,2) * eVec.at<double>(1,2));
+        cond[0]=(4.0 * eVec.at<double>(0,0) * eVec.at<double>(0,2) - eVec.at<double>(0,1) * eVec.at<double>(0,1));
+        cond[1]=(4.0 * eVec.at<double>(1,0) * eVec.at<double>(1,2) - eVec.at<double>(1,1) * eVec.at<double>(1,1));
+        cond[2]=(4.0 * eVec.at<double>(2,0) * eVec.at<double>(2,2) - eVec.at<double>(2,1) * eVec.at<double>(2,1));
         if (cond[0]<cond[1]) {
             i = (cond[1]<cond[2]) ? 2 : 1;
         } else {
             i = (cond[0]<cond[2]) ? 2 : 0;
         }
-        double norm = std::sqrt(eVec.at<double>(0,i)*eVec.at<double>(0,i) + eVec.at<double>(1,i)*eVec.at<double>(1,i) + eVec.at<double>(2,i)*eVec.at<double>(2,i));
-        if (((eVec.at<double>(0,i)<0.0  ? -1 : 1) * (eVec.at<double>(1,i)<0.0  ? -1 : 1) * (eVec.at<double>(2,i)<0.0  ? -1 : 1)) <= 0.0) {
+        double norm = std::sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + eVec.at<double>(i,2)*eVec.at<double>(i,2));
+        if (((eVec.at<double>(i,0)<0.0  ? -1 : 1) * (eVec.at<double>(i,1)<0.0  ? -1 : 1) * (eVec.at<double>(i,2)<0.0  ? -1 : 1)) <= 0.0) {
                 norm=-1.0*norm;
             }
-        pVec(0) =eVec.at<double>(0,i)/norm; pVec(1) =eVec.at<double>(1,i)/norm;pVec(2) =eVec.at<double>(2,i)/norm;
+        pVec(0) =eVec.at<double>(i,0)/norm; pVec(1) =eVec.at<double>(i,1)/norm;pVec(2) =eVec.at<double>(i,2)/norm;
 
     //  Q = (TM . pVec)/Ts;
         Q(0,0) = (TM(0,0)*pVec(0) +TM(0,1)*pVec(1) +TM(0,2)*pVec(2) )/Ts;
