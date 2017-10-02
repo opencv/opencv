@@ -559,6 +559,13 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
   gridType = SYMMETRIC_GRID;
 }
 
+CirclesGridFinderParameters2::CirclesGridFinderParameters2()
+: CirclesGridFinderParameters()
+{
+    squareSize = 1.0f;
+    maxRectifiedDistance = squareSize/2.0f;
+}
+
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,
                                      const CirclesGridFinderParameters &_parameters) :
   patternSize(static_cast<size_t> (_patternSize.width), static_cast<size_t> (_patternSize.height))
