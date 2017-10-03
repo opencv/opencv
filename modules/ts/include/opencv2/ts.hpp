@@ -47,6 +47,14 @@
 #define GTEST_DONT_DEFINE_ASSERT_GT 0
 #define GTEST_DONT_DEFINE_TEST      0
 
+#ifndef GTEST_LANG_CXX11
+#if __cplusplus >= 201103L || (defined(_MSVC_LANG) && !(_MSVC_LANG < 201103))
+#  define GTEST_LANG_CXX11 1
+#  define GTEST_HAS_TR1_TUPLE 0
+#  define GTEST_HAS_COMBINE 1
+# endif
+#endif
+
 #include "opencv2/ts/ts_gtest.h"
 #include "opencv2/ts/ts_ext.hpp"
 
