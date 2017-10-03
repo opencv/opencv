@@ -145,9 +145,7 @@ QUnit.test('Cascade classification', function(assert) {
         assert.equal(hog.winSize.height, 128);
         assert.equal(hog.winSize.width, 64);
         assert.equal(hog.nbins, 9);
-        assert.equal(hog.derivAperture, 1);
         assert.equal(hog.winSigma, -1);
-        assert.equal(hog.histogramNormType, 0);
         assert.equal(hog.nlevels, 64);
 
         hog.nlevels = 32;
