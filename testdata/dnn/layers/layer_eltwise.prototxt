@@ -1,0 +1,69 @@
+name: "test_Eltwise"
+input: "input"
+input_dim: 2
+input_dim: 6
+input_dim: 75
+input_dim: 113
+
+layer {
+  type: "Eltwise"
+  name: "eltwise_sum"
+  bottom: "input"
+  bottom: "input"
+  top: "eltwise_sum"
+  eltwise_param {
+    operation: SUM
+    coeff: 0.1
+    coeff: 0.2
+  }
+}
+
+layer {
+  type: "Reshape"
+  name: "reshape_input_3d"
+  bottom: "input"
+  reshape_param{ shape { dim: 6 dim: 2 dim: 8475 } }
+  top: "reshape_input_3d"
+}
+layer {
+  type: "Reshape"
+  name: "reshape_eltwise_sum_3d"
+  bottom: "eltwise_sum"
+  reshape_param{ shape { dim: 6 dim: 2 dim: 8475 } }
+  top: "reshape_eltwise_sum_3d"
+}
+layer {
+  type: "Eltwise"
+  name: "eltwise_prod"
+  bottom: "reshape_input_3d"
+  bottom: "reshape_eltwise_sum_3d"
+  top: "eltwise_prod"
+  eltwise_param {
+    operation: PROD
+  }
+}
+
+layer {
+  type: "Reshape"
+  name: "reshape_eltwise_sum_2d"
+  bottom: "eltwise_sum"
+  reshape_param{ shape { dim: 2 dim: 50850 } }
+  top: "reshape_eltwise_sum_2d"
+}
+layer {
+  type: "Reshape"
+  name: "reshape_eltwise_prod_2d"
+  bottom: "eltwise_prod"
+  reshape_param{ shape { dim: 2 dim: 50850 } }
+  top: "reshape_eltwise_prod_2d"
+}
+layer {
+  type: "Eltwise"
+  name: "output"
+  bottom: "reshape_eltwise_sum_2d"
+  bottom: "reshape_eltwise_prod_2d"
+  top: "output"
+  eltwise_param {
+    operation: MAX
+  }
+}
