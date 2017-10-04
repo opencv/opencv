@@ -47,7 +47,9 @@
 #define OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP
 
 #include "../common.hpp"
-#include "opencv2/core/private.cuda.hpp"
+#if __CUDACC_VER_MAJOR__ >= 9
+#include <cuda_fp16.h>
+#endif
 
 namespace cv { namespace cudev {
 
@@ -275,7 +277,7 @@ template <typename T, typename D> __device__ __forceinline__ D cast_fp16(T v);
 
 template <> __device__ __forceinline__ float cast_fp16<short, float>(short v)
 {
-#if __CUDACC_VER_MAJOR__  >= 9
+#if __CUDACC_VER_MAJOR__ >= 9
   return float(*(__half*)&v);
 #else
     return __half2float(v);
@@ -284,7 +286,7 @@ template <> __device__ __forceinline__ float cast_fp16<short, float>(short v)
 
 template <> __device__ __forceinline__ short cast_fp16<float, short>(float v)
 {
-#if __CUDACC_VER_MAJOR__  >= 9
+#if __CUDACC_VER_MAJOR__ >= 9
   __half h(v);
   return *(short*)&v;
 #else
