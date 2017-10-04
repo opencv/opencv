@@ -101,7 +101,7 @@ Additional Resources
 --------------------
 
 -#  Canny edge detector at [Wikipedia](http://en.wikipedia.org/wiki/Canny_edge_detector)
--#  [Canny Edge Detection Tutorial](http://dasl.mem.drexel.edu/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html) by
+-#  [Canny Edge Detection Tutorial](http://dasl.unlv.edu/daslDrexel/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html) by
     Bill Green, 2002.
 
 Exercises
