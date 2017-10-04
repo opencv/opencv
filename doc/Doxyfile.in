@@ -255,7 +255,7 @@ PREDEFINED             = __cplusplus=1 \
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 TAGFILES               =
-GENERATE_TAGFILE       =
+GENERATE_TAGFILE       = @CMAKE_DOXYGEN_OUTPUT_PATH@/html/opencv.tag
 ALLEXTERNALS           = NO
 EXTERNAL_GROUPS        = YES
 EXTERNAL_PAGES         = YES
