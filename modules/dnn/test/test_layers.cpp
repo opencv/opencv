@@ -274,6 +274,11 @@ OCL_TEST(Layer_Test_Concat, Accuracy)
     testLayerUsingCaffeModels("layer_concat", DNN_TARGET_OPENCL);
 }
 
+TEST(Layer_Test_Eltwise, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_eltwise");
+}
+
 //template<typename XMat>
 //static void test_Layer_Concat()
 //{
