@@ -1,9 +1,9 @@
 
 /* png.h - header file for PNG reference library
  *
- * libpng version 1.6.24, August 4, 2016
+ * libpng version 1.6.34, September 29, 2017
  *
- * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+ * Copyright (c) 1998-2002,2004,2006-2017 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -12,7 +12,7 @@
  * Authors and maintainers:
  *   libpng versions 0.71, May 1995, through 0.88, January 1996: Guy Schalnat
  *   libpng versions 0.89, June 1996, through 0.96, May 1997: Andreas Dilger
- *   libpng versions 0.97, January 1998, through 1.6.24, August 4, 2016:
+ *   libpng versions 0.97, January 1998, through 1.6.34, September 29, 2017:
  *     Glenn Randers-Pehrson.
  *   See also "Contributing Authors", below.
  */
@@ -25,12 +25,8 @@
  *
  * This code is released under the libpng license.
  *
- * Some files in the "contrib" directory and some configure-generated
- * files that are distributed with libpng have other copyright owners and
- * are released under other open source licenses.
- *
- * libpng versions 1.0.7, July 1, 2000 through 1.6.24, August 4, 2016 are
- * Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+ * libpng versions 1.0.7, July 1, 2000 through 1.6.34, September 29, 2017 are
+ * Copyright (c) 2000-2002, 2004, 2006-2017 Glenn Randers-Pehrson, are
  * derived from libpng-1.0.6, and are distributed according to the same
  * disclaimer and license as libpng-1.0.6 with the following individuals
  * added to the list of Contributing Authors:
@@ -41,6 +37,9 @@
  *    Cosmin Truta
  *    Gilles Vollant
  *    James Yu
+ *    Mandar Sahastrabuddhe
+ *    Google Inc.
+ *    Vadim Barkov
  *
  * and with the following additions to the disclaimer:
  *
@@ -51,9 +50,9 @@
  *    risk of satisfactory quality, performance, accuracy, and effort is with
  *    the user.
  *
- * Some files in the "contrib" directory have other copyright owners and
+ * Some files in the "contrib" directory and some configure-generated
+ * files that are distributed with libpng have other copyright owners and
  * are released under other open source licenses.
- *
  *
  * libpng versions 0.97, January 1998, through 1.0.6, March 20, 2000, are
  * Copyright (c) 1998-2000 Glenn Randers-Pehrson, are derived from
@@ -64,9 +63,6 @@
  *    Tom Lane
  *    Glenn Randers-Pehrson
  *    Willem van Schaik
- *
- * Some files in the "scripts" directory have different copyright owners
- * but are also released under this license.
  *
  * libpng versions 0.89, June 1996, through 0.96, May 1997, are
  * Copyright (c) 1996-1997 Andreas Dilger, are derived from libpng-0.88,
@@ -213,11 +209,11 @@
  *    ...
  *    1.0.19                  10    10019  10.so.0.19[.0]
  *    ...
- *    1.2.56                  13    10256  12.so.0.56[.0]
+ *    1.2.59                  13    10257  12.so.0.59[.0]
  *    ...
- *    1.5.27                  15    10527  15.so.15.27[.0]
+ *    1.5.30                  15    10527  15.so.15.30[.0]
  *    ...
- *    1.6.24                  16    10624  16.so.16.24[.0]
+ *    1.6.34                  16    10633  16.so.16.34[.0]
  *
  *    Henceforth the source version will match the shared-library major
  *    and minor numbers; the shared-library major version number will be
@@ -238,20 +234,20 @@
  *
  * See libpng.txt or libpng.3 for more information.  The PNG specification
  * is available as a W3C Recommendation and as an ISO Specification,
- * <http://www.w3.org/TR/2003/REC-PNG-20031110/
+ * <https://www.w3.org/TR/2003/REC-PNG-20031110/
  */
 
 /*
  * Y2K compliance in libpng:
  * =========================
  *
- *    August 4, 2016
+ *    September 29, 2017
  *
  *    Since the PNG Development group is an ad-hoc body, we can't make
  *    an official declaration.
  *
  *    This is your unofficial assurance that libpng from version 0.71 and
- *    upward through 1.6.24 are Y2K compliant.  It is my belief that
+ *    upward through 1.6.34 are Y2K compliant.  It is my belief that
  *    earlier versions were also Y2K compliant.
  *
  *    Libpng only has two year fields.  One is a 2-byte unsigned integer
@@ -313,8 +309,8 @@
  */
 
 /* Version information for png.h - this should match the version in png.c */
-#define PNG_LIBPNG_VER_STRING "1.6.24"
-#define PNG_HEADER_VERSION_STRING " libpng version 1.6.24 - August 4, 2016\n"
+#define PNG_LIBPNG_VER_STRING "1.6.34"
+#define PNG_HEADER_VERSION_STRING " libpng version 1.6.34 - September 29, 2017\n"
 
 #define PNG_LIBPNG_VER_SONUM   16
 #define PNG_LIBPNG_VER_DLLNUM  16
@@ -322,7 +318,7 @@
 /* These should match the first 3 components of PNG_LIBPNG_VER_STRING: */
 #define PNG_LIBPNG_VER_MAJOR   1
 #define PNG_LIBPNG_VER_MINOR   6
-#define PNG_LIBPNG_VER_RELEASE 24
+#define PNG_LIBPNG_VER_RELEASE 34
 
 /* This should match the numeric part of the final component of
  * PNG_LIBPNG_VER_STRING, omitting any leading zero:
@@ -353,7 +349,7 @@
  * version 1.0.0 was mis-numbered 100 instead of 10000).  From
  * version 1.0.1 it's    xxyyzz, where x=major, y=minor, z=release
  */
-#define PNG_LIBPNG_VER 10624 /* 1.6.24 */
+#define PNG_LIBPNG_VER 10634 /* 1.6.34 */
 
 /* Library configuration: these options cannot be changed after
  * the library has been built.
@@ -463,7 +459,7 @@ extern "C" {
 /* This triggers a compiler error in png.c, if png.c and png.h
  * do not agree upon the version number.
  */
-typedef char* png_libpng_version_1_6_24;
+typedef char* png_libpng_version_1_6_34;
 
 /* Basic control structions.  Read libpng-manual.txt or libpng.3 for more info.
  *
@@ -780,6 +776,7 @@ typedef png_unknown_chunk * * png_unknown_chunkpp;
 #define PNG_INFO_sPLT 0x2000U  /* ESR, 1.0.6 */
 #define PNG_INFO_sCAL 0x4000U  /* ESR, 1.0.6 */
 #define PNG_INFO_IDAT 0x8000U  /* ESR, 1.0.6 */
+#define PNG_INFO_eXIf 0x10000U /* GR-P, 1.6.31 */
 
 /* This is used for the transformation routines, as some of them
  * change these values for the row.  It also should enable using
@@ -1792,7 +1789,8 @@ PNG_EXPORT(99, void, png_data_freer, (png_const_structrp png_ptr,
 #define PNG_FREE_PLTE 0x1000U
 #define PNG_FREE_TRNS 0x2000U
 #define PNG_FREE_TEXT 0x4000U
-#define PNG_FREE_ALL  0x7fffU
+#define PNG_FREE_EXIF 0x8000U /* Added at libpng-1.6.31 */
+#define PNG_FREE_ALL  0xffffU
 #define PNG_FREE_MUL  0x4220U /* PNG_FREE_SPLT|PNG_FREE_TEXT|PNG_FREE_UNKN */
 
 #ifdef PNG_USER_MEM_SUPPORTED
@@ -2011,6 +2009,18 @@ PNG_FIXED_EXPORT(233, void, png_set_cHRM_XYZ_fixed, (png_const_structrp png_ptr,
     png_fixed_point int_blue_Z))
 #endif
 
+#ifdef PNG_eXIf_SUPPORTED
+PNG_EXPORT(246, png_uint_32, png_get_eXIf, (png_const_structrp png_ptr,
+    png_inforp info_ptr, png_bytep *exif));
+PNG_EXPORT(247, void, png_set_eXIf, (png_const_structrp png_ptr,
+    png_inforp info_ptr, const png_bytep exif));
+
+PNG_EXPORT(248, png_uint_32, png_get_eXIf_1, (png_const_structrp png_ptr,
+    png_const_inforp info_ptr, png_uint_32 *num_exif, png_bytep *exif));
+PNG_EXPORT(249, void, png_set_eXIf_1, (png_const_structrp png_ptr,
+    png_inforp info_ptr, const png_uint_32 num_exif, const png_bytep exif));
+#endif
+
 #ifdef PNG_gAMA_SUPPORTED
 PNG_FP_EXPORT(137, png_uint_32, png_get_gAMA, (png_const_structrp png_ptr,
     png_const_inforp info_ptr, double *file_gamma))
@@ -2029,9 +2039,6 @@ PNG_FIXED_EXPORT(140, void, png_set_gAMA_fixed, (png_const_structrp png_ptr,
 #ifdef PNG_hIST_SUPPORTED
 PNG_EXPORT(141, png_uint_32, png_get_hIST, (png_const_structrp png_ptr,
     png_inforp info_ptr, png_uint_16p *hist));
-#endif
-
-#ifdef PNG_hIST_SUPPORTED
 PNG_EXPORT(142, void, png_set_hIST, (png_const_structrp png_ptr,
     png_inforp info_ptr, png_const_uint_16p hist));
 #endif
@@ -2757,7 +2764,7 @@ typedef struct
  *
  * When the simplified API needs to convert between sRGB and linear colorspaces,
  * the actual sRGB transfer curve defined in the sRGB specification (see the
- * article at http://en.wikipedia.org/wiki/SRGB) is used, not the gamma=1/2.2
+ * article at https://en.wikipedia.org/wiki/SRGB) is used, not the gamma=1/2.2
  * approximation used elsewhere in libpng.
  *
  * When an alpha channel is present it is expected to denote pixel coverage
@@ -2811,6 +2818,8 @@ typedef struct
 #ifdef PNG_FORMAT_AFIRST_SUPPORTED
 #  define PNG_FORMAT_FLAG_AFIRST 0x20U /* alpha channel comes first */
 #endif
+
+#define PNG_FORMAT_FLAG_ASSOCIATED_ALPHA 0x40U /* alpha channel is associated */
 
 /* Commonly used formats have predefined macros.
  *
@@ -3226,7 +3235,14 @@ PNG_EXPORT(245, int, png_image_write_to_memory, (png_imagep image, void *memory,
 #endif
 #define PNG_MAXIMUM_INFLATE_WINDOW 2 /* SOFTWARE: force maximum window */
 #define PNG_SKIP_sRGB_CHECK_PROFILE 4 /* SOFTWARE: Check ICC profile for sRGB */
-#define PNG_OPTION_NEXT  6 /* Next option - numbers must be even */
+#ifdef PNG_MIPS_MSA_API_SUPPORTED
+#  define PNG_MIPS_MSA   6 /* HARDWARE: MIPS Msa SIMD instructions supported */
+#endif
+#define PNG_IGNORE_ADLER32 8
+#ifdef PNG_POWERPC_VSX_API_SUPPORTED
+#  define PNG_POWERPC_VSX   10 /* HARDWARE: PowerPC VSX SIMD instructions supported */
+#endif
+#define PNG_OPTION_NEXT  12 /* Next option - numbers must be even */
 
 /* Return values: NOTE: there are four values and 'off' is *not* zero */
 #define PNG_OPTION_UNSET   0 /* Unset - defaults to off */
@@ -3250,7 +3266,7 @@ PNG_EXPORT(244, int, png_set_option, (png_structrp png_ptr, int option,
  * one to use is one more than this.)
  */
 #ifdef PNG_EXPORT_LAST_ORDINAL
-  PNG_EXPORT_LAST_ORDINAL(245);
+  PNG_EXPORT_LAST_ORDINAL(249);
 #endif
 
 #ifdef __cplusplus
