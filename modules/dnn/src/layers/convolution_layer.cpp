@@ -311,15 +311,15 @@ public:
                          Size kernel, Size pad, Size stride, Size dilation,
                          const ActivationLayer* activ, int ngroups, int nstripes )
         {
-            CV_Assert( input.dims == 4 && output.dims == 4 &&
-                       input.size[0] == output.size[0] &&
-                       weights.rows == output.size[1] &&
-                       weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height &&
-                       input.type() == output.type() &&
-                       input.type() == weights.type() &&
-                       input.type() == CV_32F &&
-                       input.isContinuous() &&
-                       output.isContinuous() &&
+            CV_Assert( input.dims == 4 && output.dims == 4,
+                       input.size[0] == output.size[0],
+                       weights.rows == output.size[1],
+                       weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height,
+                       input.type() == output.type(),
+                       input.type() == weights.type(),
+                       input.type() == CV_32F,
+                       input.isContinuous(),
+                       output.isContinuous(),
                        biasvec.size() == (size_t)output.size[1]+2);
             ParallelConv p;
 
@@ -1237,7 +1237,6 @@ static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const Laye
                                l->pad.width, l->stride.height, l->stride.width, l->dilation.height,
                                l->dilation.width, l->padMode);
 
-    bool bias = params.get<bool>("bias_term", true);
     l->numOutput = params.get<int>("num_output");
     int ngroups = params.get<int>("group", 1);
 
@@ -1245,7 +1244,6 @@ static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const Laye
     l->adjustPad.width = params.get<int>("adj_w", 0);
 
     CV_Assert(l->numOutput % ngroups == 0);
-    CV_Assert((bias && l->blobs.size() == 2) || (!bias && l->blobs.size() == 1));
     CV_Assert(l->adjustPad.width < l->stride.width &&
               l->adjustPad.height < l->stride.height);
 }

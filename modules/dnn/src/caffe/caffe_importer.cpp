@@ -293,14 +293,13 @@ public:
         addedBlobs.reserve(layersSize + 1);
 
         //setup input layer names
+        std::vector<String> netInputs(net.input_size());
         {
-            std::vector<String> netInputs(net.input_size());
             for (int inNum = 0; inNum < net.input_size(); inNum++)
             {
                 addedBlobs.push_back(BlobNote(net.input(inNum), 0, inNum));
                 netInputs[inNum] = net.input(inNum);
             }
-            dstNet.setInputsNames(netInputs);
         }
 
         for (int li = 0; li < layersSize; li++)
@@ -317,6 +316,13 @@ public:
             if (repetitions)
                 name += String("_") + toString(repetitions);
 
+            if (type == "Input")
+            {
+                addedBlobs.push_back(BlobNote(name, 0, netInputs.size()));
+                netInputs.push_back(name);
+                continue;
+            }
+
             int id = dstNet.addLayer(name, type, layerParams);
 
             for (int inNum = 0; inNum < layer.bottom_size(); inNum++)
@@ -325,6 +331,7 @@ public:
             for (int outNum = 0; outNum < layer.top_size(); outNum++)
                 addOutput(layer, id, outNum);
         }
+        dstNet.setInputsNames(netInputs);
 
         addedBlobs.clear();
     }
