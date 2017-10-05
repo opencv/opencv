@@ -866,8 +866,6 @@ void TFImporter::populateNet(Net dstNet)
             CV_Assert(layer.input_size() == 2);
             // num_split
             // 1st blob is dims tensor
-            layerParams.set("slice_point", DictValue::arrayReal((double*)0, 0));
-
             int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
             layerParams.set("axis", toNCHW[axis]);
 

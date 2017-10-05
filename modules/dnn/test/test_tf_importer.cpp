@@ -170,4 +170,9 @@ TEST(Test_TensorFlow, lstm)
     runTensorFlowNet("lstm");
 }
 
+TEST(Test_TensorFlow, split)
+{
+    runTensorFlowNet("split_equals");
+}
+
 }
