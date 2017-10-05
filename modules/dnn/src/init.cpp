@@ -106,6 +106,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(MaxUnpool,      MaxUnpoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dropout,        BlankLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Identity,       BlankLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Silence,        BlankLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
