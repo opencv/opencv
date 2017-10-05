@@ -857,9 +857,14 @@ class PythonWrapperGenerator(object):
         self.classes[classinfo.name] = classinfo
 
         # Add Class to json file.
+        namespace, classes, name = self.split_decl_name(name)
+        namespace = '.'.join(namespace)
+        name = '_'.join(classes+[name])
+
+        compat_name = namespace.replace("cv", "cv2", 1) + "." + name
         py_signatures = self.py_signatures.setdefault(classinfo.cname, [])
-        py_signatures.append(dict(name=classinfo.name))
-        #print(classinfo.name)
+        py_signatures.append(dict(name=compat_name))
+        #print(compat_name)
 
     def split_decl_name(self, name):
         chunks = name.split('.')
