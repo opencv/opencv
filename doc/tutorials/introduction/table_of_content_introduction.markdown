@@ -171,3 +171,11 @@ Additionally you can find very basic sample source code to introduce you to the 
     _Author:_ Maksim Shabunin
 
     This document describes some aspects of 2.4 -> 3.0 transition process.
+
+-   @subpage tutorial_cross_referencing
+
+    _Compatibility:_ \> OpenCV 3.3.0
+
+    _Author:_ Sebastian Höffner
+
+    This document outlines how to create cross references to the OpenCV documentation from other Doxygen projects.
