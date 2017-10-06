@@ -539,6 +539,17 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief Resize input 4-dimensional blob by nearest neghbor strategy.
+     *
+     * Layer is used to support TensorFlow's resize_nearest_neighbor op.
+     */
+    class CV_EXPORTS ResizeNearestNeighborLayer : public Layer
+    {
+    public:
+        static Ptr<ResizeNearestNeighborLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
