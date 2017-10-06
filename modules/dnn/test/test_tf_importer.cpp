@@ -175,4 +175,9 @@ TEST(Test_TensorFlow, split)
     runTensorFlowNet("split_equals");
 }
 
+TEST(Test_TensorFlow, resize_nearest_neighbor)
+{
+    runTensorFlowNet("resize_nearest_neighbor");
+}
+
 }
