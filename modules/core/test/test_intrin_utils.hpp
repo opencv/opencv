@@ -156,15 +156,31 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     return out;
 }
 
+#ifdef __PPC64__
+// Some of VSX floating point intrins' results don't fit to gtest's default absolute error so we have to increase it.
+#  ifndef EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR
+#    define EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR 0.00002f
+#  endif
+#endif
+
 template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
 template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
 {
+#ifndef __PPC64__
     EXPECT_FLOAT_EQ( a, b );
+#else
+    EXPECT_NEAR( a, b, EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR );
+#endif
 }
 
 template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b)
 {
+
+#ifndef __PPC64__
     EXPECT_DOUBLE_EQ( a, b );
+#else
+    EXPECT_NEAR( a, b, EXPECT_COMPARE_EQ_FLOAT_ABS_ERROR );
+#endif
 }
 
 template<typename R> struct TheTest
