@@ -236,6 +236,12 @@ res = tf.layers.conv2d(alpha, filters=1, kernel_size=[1, 1]) + \
       tf.layers.conv2d(beta, filters=1, kernel_size=[1, 1])
 save(bgr, res, 'split_equals')
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 10, 11, 3], 'input')
+conv = tf.layers.conv2d(inp, filters=7, kernel_size=[1, 1])
+scaled = tf.image.resize_nearest_neighbor(conv, size=(15, 8))
+scaled = tf.image.resize_nearest_neighbor(scaled, size=(9, 12))
+save(inp, scaled, 'resize_nearest_neighbor')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
