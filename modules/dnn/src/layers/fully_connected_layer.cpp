@@ -107,14 +107,18 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &) const
     {
-        CV_Assert(inputs.size() > 0);
+        CV_Assert(inputs.size() == 1);
         CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
         CV_Assert(blobs[0].dims == 2);
 
         int cAxis = clamp(axis, inputs[0]);
-        int outerSize = total(inputs[0], 0, cAxis);
         int numOutput = blobs[0].size[0];
-        outputs.resize(inputs.size(), shape(outerSize, numOutput));
+        MatShape outShape(cAxis + 1);
+        for (int i = 0; i < cAxis; ++i)
+            outShape[i] = inputs[0][i];
+        outShape.back() = numOutput;
+
+        outputs.resize(inputs.size(), outShape);
 
         CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
         return false;
@@ -278,8 +282,8 @@ public:
         for (size_t i = 0; i < input.size(); i++)
         {
             UMat srcMat, dstMat;
-            srcMat = input[i]->getUMat(ACCESS_READ);
-            dstMat = output[i].getUMat(ACCESS_WRITE);
+            srcMat = input[i]->reshape(1, outerSize).getUMat(ACCESS_READ);
+            dstMat = output[i].reshape(1, outerSize).getUMat(ACCESS_WRITE);
             dstMat.setTo(0.0f);
 
             if (!innerProductOp->Forward(srcMat, umat_blobs[0], (bias) ? umat_blobs[1] : UMat(), dstMat))
