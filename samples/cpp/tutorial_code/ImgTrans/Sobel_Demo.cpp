@@ -30,6 +30,7 @@ int main( int argc, char** argv )
   cout << "\nPress 'ESC' to exit program.\nPress 'R' to reset values ( ksize will be -1 equal to Scharr function )";
 
   //![variables]
+  // First we declare the variables we are going to use
   Mat image,src, src_gray;
   Mat grad;
   const String window_name = "Sobel Demo - Simple Edge Detector";
@@ -40,11 +41,14 @@ int main( int argc, char** argv )
   //![variables]
 
   //![load]
-  String imageName = parser.get<String>("@input"); // by default
+  String imageName = parser.get<String>("@input");
+  // As usual we load our source image (src)
   image = imread( imageName, IMREAD_COLOR ); // Load an image
 
+  // Check if image is loaded fine
   if( image.empty() )
   {
+    printf("Error opening image: %s\n", imageName.c_str());
     return 1;
   }
   //![load]
@@ -52,10 +56,12 @@ int main( int argc, char** argv )
   for (;;)
   {
     //![reduce_noise]
+    // Remove noise by blurring with a Gaussian filter ( kernel size = 3 )
     GaussianBlur(image, src, Size(3, 3), 0, 0, BORDER_DEFAULT);
     //![reduce_noise]
 
     //![convert_to_gray]
+    // Convert the image to grayscale
     cvtColor(src, src_gray, COLOR_BGR2GRAY);
     //![convert_to_gray]
 
@@ -72,6 +78,7 @@ int main( int argc, char** argv )
     //![sobel]
 
     //![convert]
+    // converting back to CV_8U
     convertScaleAbs(grad_x, abs_grad_x);
     convertScaleAbs(grad_y, abs_grad_y);
     //![convert]
