@@ -211,4 +211,27 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
     normAssert(out, ref, "", l1, lInf);
 }
 
+// https://github.com/richzhang/colorization
+TEST(Reproducibility_Colorization, Accuracy)
+{
+    const float l1 = 1e-5;
+    const float lInf = 3e-3;
+
+    Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
+    Mat ref = blobFromNPY(_tf("colorization_out.npy"));
+    Mat kernel = blobFromNPY(_tf("colorization_pts_in_hull.npy"));
+
+    const string proto = findDataFile("dnn/colorization_deploy_v2.prototxt", false);
+    const string model = findDataFile("dnn/colorization_release_v2.caffemodel", false);
+    Net net = readNetFromCaffe(proto, model);
+
+    net.getLayer(net.getLayerId("class8_ab"))->blobs.push_back(kernel);
+    net.getLayer(net.getLayerId("conv8_313_rh"))->blobs.push_back(Mat(1, 313, CV_32F, 2.606));
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    normAssert(out, ref, "", l1, lInf);
+}
+
 }
