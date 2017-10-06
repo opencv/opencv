@@ -15,56 +15,60 @@ using namespace cv;
  */
 int main ( int argc, char** argv )
 {
-  /// Declare variables
-  Mat src, dst;
+    // Declare variables
+    Mat src, dst;
 
-  Mat kernel;
-  Point anchor;
-  double delta;
-  int ddepth;
-  int kernel_size;
-  const char* window_name = "filter2D Demo";
+    Mat kernel;
+    Point anchor;
+    double delta;
+    int ddepth;
+    int kernel_size;
+    const char* window_name = "filter2D Demo";
 
-  //![load]
-  String imageName("../data/lena.jpg"); // by default
-  if (argc > 1)
-  {
-    imageName = argv[1];
-  }
-  src = imread( imageName, IMREAD_COLOR ); // Load an image
+    //![load]
+    const char* imageName = argc >=2 ? argv[1] : "../data/lena.jpg";
 
-  if( src.empty() )
-    { return -1; }
-  //![load]
+    // Loads an image
+    src = imread( imageName, IMREAD_COLOR ); // Load an image
 
-  //![init_arguments]
-  /// Initialize arguments for the filter
-  anchor = Point( -1, -1 );
-  delta = 0;
-  ddepth = -1;
-  //![init_arguments]
+    if( src.empty() )
+    {
+        printf(" Error opening image\n");
+        printf(" Program Arguments: [image_name -- default ../data/lena.jpg] \n");
+        return -1;
+    }
+    //![load]
 
-  /// Loop - Will filter the image with different kernel sizes each 0.5 seconds
-  int ind = 0;
-  for(;;)
-       {
-         char c = (char)waitKey(500);
-         /// Press 'ESC' to exit the program
-         if( c == 27 )
-           { break; }
+    //![init_arguments]
+    // Initialize arguments for the filter
+    anchor = Point( -1, -1 );
+    delta = 0;
+    ddepth = -1;
+    //![init_arguments]
 
-         //![update_kernel]
-         /// Update kernel size for a normalized box filter
-         kernel_size = 3 + 2*( ind%5 );
-         kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
-         //![update_kernel]
+    // Loop - Will filter the image with different kernel sizes each 0.5 seconds
+    int ind = 0;
+    for(;;)
+    {
+        //![update_kernel]
+        // Update kernel size for a normalized box filter
+        kernel_size = 3 + 2*( ind%5 );
+        kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
+        //![update_kernel]
 
-         //![apply_filter]
-         filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
-         //![apply_filter]
-         imshow( window_name, dst );
-         ind++;
-       }
+        //![apply_filter]
+        // Apply filter
+        filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
+        //![apply_filter]
+        imshow( window_name, dst );
 
-  return 0;
+        char c = (char)waitKey(500);
+        // Press 'ESC' to exit the program
+        if( c == 27 )
+        { break; }
+
+        ind++;
+    }
+
+    return 0;
 }

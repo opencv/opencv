@@ -4,28 +4,32 @@
  * @author OpenCV team
  */
 
-#include <iostream>
 #include <opencv2/opencv.hpp>
+
+void show_wait_destroy(const char* winname, cv::Mat img);
 
 using namespace std;
 using namespace cv;
 
 int main(int, char** argv)
 {
-//! [load_image]
+    //! [load_image]
     // Load the image
     Mat src = imread(argv[1]);
 
     // Check if image is loaded fine
-    if(!src.data)
-        cerr << "Problem loading image!!!" << endl;
+    if(src.empty()){
+        printf(" Error opening image\n");
+        printf(" Program Arguments: [image_path]\n");
+        return -1;
+    }
 
     // Show source image
     imshow("src", src);
-//! [load_image]
+    //! [load_image]
 
-//! [gray]
-    // Transform source image to gray if it is not
+    //! [gray]
+    // Transform source image to gray if it is not already
     Mat gray;
 
     if (src.channels() == 3)
@@ -38,58 +42,58 @@ int main(int, char** argv)
     }
 
     // Show gray image
-    imshow("gray", gray);
-//! [gray]
+    show_wait_destroy("gray", gray);
+    //! [gray]
 
-//! [bin]
+    //! [bin]
     // Apply adaptiveThreshold at the bitwise_not of gray, notice the ~ symbol
     Mat bw;
     adaptiveThreshold(~gray, bw, 255, CV_ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, -2);
 
     // Show binary image
-    imshow("binary", bw);
-//! [bin]
+    show_wait_destroy("binary", bw);
+    //! [bin]
 
-//! [init]
+    //! [init]
     // Create the images that will use to extract the horizontal and vertical lines
     Mat horizontal = bw.clone();
     Mat vertical = bw.clone();
-//! [init]
+    //! [init]
 
-//! [horiz]
+    //! [horiz]
     // Specify size on horizontal axis
-    int horizontalsize = horizontal.cols / 30;
+    int horizontal_size = horizontal.cols / 30;
 
     // Create structure element for extracting horizontal lines through morphology operations
-    Mat horizontalStructure = getStructuringElement(MORPH_RECT, Size(horizontalsize,1));
+    Mat horizontalStructure = getStructuringElement(MORPH_RECT, Size(horizontal_size, 1));
 
     // Apply morphology operations
     erode(horizontal, horizontal, horizontalStructure, Point(-1, -1));
     dilate(horizontal, horizontal, horizontalStructure, Point(-1, -1));
 
     // Show extracted horizontal lines
-    imshow("horizontal", horizontal);
-//! [horiz]
+    show_wait_destroy("horizontal", horizontal);
+    //! [horiz]
 
-//! [vert]
+    //! [vert]
     // Specify size on vertical axis
-    int verticalsize = vertical.rows / 30;
+    int vertical_size = vertical.rows / 30;
 
     // Create structure element for extracting vertical lines through morphology operations
-    Mat verticalStructure = getStructuringElement(MORPH_RECT, Size( 1,verticalsize));
+    Mat verticalStructure = getStructuringElement(MORPH_RECT, Size(1, vertical_size));
 
     // Apply morphology operations
     erode(vertical, vertical, verticalStructure, Point(-1, -1));
     dilate(vertical, vertical, verticalStructure, Point(-1, -1));
 
     // Show extracted vertical lines
-    imshow("vertical", vertical);
-//! [vert]
+    show_wait_destroy("vertical", vertical);
+    //! [vert]
 
-//! [smooth]
+    //! [smooth]
     // Inverse vertical image
     bitwise_not(vertical, vertical);
-    imshow("vertical_bit", vertical);
+    show_wait_destroy("vertical_bit", vertical);
 
     // Extract edges and smooth image according to the logic
     // 1. extract edges
@@ -101,12 +105,12 @@ int main(int, char** argv)
     // Step 1
     Mat edges;
     adaptiveThreshold(vertical, edges, 255, CV_ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 3, -2);
-    imshow("edges", edges);
+    show_wait_destroy("edges", edges);
 
     // Step 2
     Mat kernel = Mat::ones(2, 2, CV_8UC1);
     dilate(edges, edges, kernel);
-    imshow("dilate", edges);
+    show_wait_destroy("dilate", edges);
 
     // Step 3
     Mat smooth;
@@ -119,9 +123,15 @@ int main(int, char** argv)
     smooth.copyTo(vertical, edges);
 
     // Show final result
-    imshow("smooth", vertical);
-//! [smooth]
+    show_wait_destroy("smooth - final", vertical);
+    //! [smooth]
 
-    waitKey(0);
     return 0;
+}
+
+void show_wait_destroy(const char* winname, cv::Mat img) {
+    imshow(winname, img);
+    moveWindow(winname, 500, 0);
+    waitKey(0);
+    destroyWindow(winname);
 }

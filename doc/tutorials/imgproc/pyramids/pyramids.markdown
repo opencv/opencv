@@ -1,12 +1,15 @@
 Image Pyramids {#tutorial_pyramids}
 ==============
 
+@prev_tutorial{tutorial_morph_lines_detection}
+@next_tutorial{tutorial_threshold}
+
 Goal
 ----
 
 In this tutorial you will learn how to:
 
--   Use the OpenCV functions @ref cv::pyrUp and @ref cv::pyrDown to downsample or upsample a given
+-   Use the OpenCV functions **pyrUp()** and **pyrDown()** to downsample or upsample a given
     image.
 
 Theory
@@ -19,7 +22,7 @@ Theory
     -#  *Upsize* the image (zoom in) or
     -#  *Downsize* it (zoom out).
 -   Although there is a *geometric transformation* function in OpenCV that -literally- resize an
-    image (@ref cv::resize , which we will show in a future tutorial), in this section we analyze
+    image (**resize** , which we will show in a future tutorial), in this section we analyze
     first the use of **Image Pyramids**, which are widely applied in a huge range of vision
     applications.
 
@@ -52,12 +55,12 @@ Theory
     predecessor. Iterating this process on the input image \f$G_{0}\f$ (original image) produces the
     entire pyramid.
 -   The procedure above was useful to downsample an image. What if we want to make it bigger?:
-    columns filled with zeros (\f$0\f$)
+    columns filled with zeros (\f$0 \f$)
     -   First, upsize the image to twice the original in each dimension, wit the new even rows and
     -   Perform a convolution with the same kernel shown above (multiplied by 4) to approximate the
         values of the "missing pixels"
 -   These two procedures (downsampling and upsampling as explained above) are implemented by the
-    OpenCV functions @ref cv::pyrUp and @ref cv::pyrDown , as we will see in an example with the
+    OpenCV functions **pyrUp()** and **pyrDown()** , as we will see in an example with the
     code below:
 
 @note When we reduce the size of an image, we are actually *losing* information of the image.
@@ -65,76 +68,134 @@ Theory
 Code
 ----
 
-This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Pyramids.cpp)
+This tutorial code's is shown lines below.
 
-@include samples/cpp/tutorial_code/ImgProc/Pyramids.cpp
+@add_toggle_cpp
+You can also download it from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp)
+@include samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp
+@end_toggle
+
+@add_toggle_java
+You can also download it from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java)
+@include samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java
+@end_toggle
+
+@add_toggle_python
+You can also download it from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/Pyramids/pyramids.py)
+@include samples/python/tutorial_code/imgProc/Pyramids/pyramids.py
+@end_toggle
 
 Explanation
 -----------
 
 Let's check the general structure of the program:
 
--   Load an image (in this case it is defined in the program, the user does not have to enter it
-    as an argument)
-    @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp load
+#### Load an image
 
--   Create a Mat object to store the result of the operations (*dst*) and one to save temporal
-    results (*tmp*).
-    @code{.cpp}
-    Mat src, dst, tmp;
-    /* ... */
-    tmp = src;
-    dst = tmp;
-    @endcode
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp load
+@end_toggle
 
--   Create a window to display the result
-    @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp create_window
+@add_toggle_java
+@snippet java/tutorial_code/ImgProc/Pyramids/Pyramids.java load
+@end_toggle
 
--   Perform an infinite loop waiting for user input.
-    @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp infinite_loop
+@add_toggle_python
+@snippet python/tutorial_code/imgProc/Pyramids/pyramids.py load
+@end_toggle
 
-    Our program exits if the user presses *ESC*. Besides, it has two options:
+#### Create window
 
-    -   **Perform upsampling (after pressing 'u')**
-        @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp pyrup
-        We use the function @ref cv::pyrUp with three arguments:
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp show_image
+@end_toggle
 
-        -   *tmp*: The current image, it is initialized with the *src* original image.
-        -   *dst*: The destination image (to be shown on screen, supposedly the double of the
+@add_toggle_java
+@snippet java/tutorial_code/ImgProc/Pyramids/Pyramids.java show_image
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/imgProc/Pyramids/pyramids.py show_image
+@end_toggle
+
+#### Loop
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp loop
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/ImgProc/Pyramids/Pyramids.java loop
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/imgProc/Pyramids/pyramids.py loop
+@end_toggle
+
+Perform an infinite loop waiting for user input.
+Our program exits if the user presses **ESC**. Besides, it has two options:
+
+-   **Perform upsampling - Zoom 'i'n (after pressing 'i')**
+
+    We use the function **pyrUp()** with three arguments:
+        -   *src*: The current and destination image (to be shown on screen, supposedly the double of the
             input image)
-        -   *Size( tmp.cols*2, tmp.rows\*2 )\* : The destination size. Since we are upsampling,
-            @ref cv::pyrUp expects a size double than the input image (in this case *tmp*).
-    -   **Perform downsampling (after pressing 'd')**
-        @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp pyrdown
-        Similarly as with @ref cv::pyrUp , we use the function @ref cv::pyrDown with three arguments:
+        -   *Size( tmp.cols*2, tmp.rows\*2 )* : The destination size. Since we are upsampling,
+            **pyrUp()** expects a size double than the input image (in this case *src*).
 
-        -   *tmp*: The current image, it is initialized with the *src* original image.
-        -   *dst*: The destination image (to be shown on screen, supposedly half the input
-            image)
-        -   *Size( tmp.cols/2, tmp.rows/2 )* : The destination size. Since we are upsampling,
-            @ref cv::pyrDown expects half the size the input image (in this case *tmp*).
-    -   Notice that it is important that the input image can be divided by a factor of two (in
-        both dimensions). Otherwise, an error will be shown.
-    -   Finally, we update the input image **tmp** with the current image displayed, so the
-        subsequent operations are performed on it.
-        @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp update_tmp
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp pyrup
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/ImgProc/Pyramids/Pyramids.java pyrup
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/imgProc/Pyramids/pyramids.py pyrup
+@end_toggle
+
+-   **Perform downsampling - Zoom 'o'ut (after pressing 'o')**
+
+    We use the function **pyrDown()** with three arguments (similarly to **pyrUp()**):
+            -   *src*: The current and destination image  (to be shown on screen, supposedly half the input
+                image)
+            -   *Size( tmp.cols/2, tmp.rows/2 )* : The destination size. Since we are upsampling,
+                **pyrDown()** expects half the size the input image (in this case *src*).
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp pyrdown
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/ImgProc/Pyramids/Pyramids.java pyrdown
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/imgProc/Pyramids/pyramids.py pyrdown
+@end_toggle
+
+Notice that it is important that the input image can be divided by a factor of two (in both dimensions).
+Otherwise, an error will be shown.
 
 Results
 -------
 
--   After compiling the code above we can test it. The program calls an image **chicky_512.jpg**
-    that comes in the *samples/data* folder. Notice that this image is \f$512 \times 512\f$,
+-   The program calls by default an image [chicky_512.png](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/chicky_512.png)
+    that comes in the `samples/data` folder. Notice that this image is \f$512 \times 512\f$,
     hence a downsample won't generate any error (\f$512 = 2^{9}\f$). The original image is shown below:
 
     ![](images/Pyramids_Tutorial_Original_Image.jpg)
 
--   First we apply two successive @ref cv::pyrDown operations by pressing 'd'. Our output is:
+-   First we apply two successive **pyrDown()** operations by pressing 'd'. Our output is:
 
     ![](images/Pyramids_Tutorial_PyrDown_Result.jpg)
 
 -   Note that we should have lost some resolution due to the fact that we are diminishing the size
-    of the image. This is evident after we apply @ref cv::pyrUp twice (by pressing 'u'). Our output
+    of the image. This is evident after we apply **pyrUp()** twice (by pressing 'u'). Our output
     is now:
 
     ![](images/Pyramids_Tutorial_PyrUp_Result.jpg)
