@@ -1170,11 +1170,16 @@ void CV_FitEllipseTest::generate_point_set( void* pointsSet )
     a = cos(box0.angle*CV_PI/180.);
     b = sin(box0.angle*CV_PI/180.);
 
-    if( box0.size.width > box0.size.height )
+    if( box0.size.width < box0.size.height )
     {
         float t;
         CV_SWAP( box0.size.width, box0.size.height, t );
+        box0.angle += 90;
     }
+    if( box0.angle < 0 )
+        box0.angle += 180;
+    if( box0.angle > 180 )
+        box0.angle -= 180;
     memset( &reader, 0, sizeof(reader) );
 
     if( CV_IS_SEQ(pointsSet) )
@@ -1256,11 +1261,16 @@ int CV_FitEllipseTest::validate_test_results( int test_case_idx )
         goto _exit_;
     }
 
-    box.angle = (float)(90-box.angle);
+    if(box.size.width < box.size.height)
+    {
+        float t;
+        CV_SWAP(box.size.width, box.size.height, t);
+        box.angle += 90;
+    }
     if( box.angle < 0 )
-        box.angle += 360;
-    if( box.angle > 360 )
-        box.angle -= 360;
+        box.angle += 180;
+    if( box.angle > 180 )
+        box.angle -= 180;
 
     if( fabs(box.center.x - box0.center.x) > 3 ||
         fabs(box.center.y - box0.center.y) > 3 ||
@@ -1381,12 +1391,6 @@ void CV_FitEllipseParallelTest::generate_point_set( void* )
     const int dim = max(height, width);
     const Point center = Point(dim*2, dim*2);
 
-    if( width > height )
-    {
-        int t;
-        CV_SWAP( width, height, t );
-    }
-
     Mat image = Mat::zeros(dim*4, dim*4, CV_8UC1);
     ellipse(image, center, Size(height, width), angle,
             0, 360, Scalar(255, 0, 0), 1, 8);
@@ -1396,6 +1400,17 @@ void CV_FitEllipseParallelTest::generate_point_set( void* )
     box0.size.width = (float)width*2;
     box0.size.height = (float)height*2;
     box0.angle = (float)angle;
+
+    if( box0.size.width < box0.size.height )
+    {
+        float t;
+        CV_SWAP( box0.size.width, box0.size.height, t );
+        box0.angle += 90;
+    }
+    if( box0.angle < 0 )
+        box0.angle += 180;
+    if( box0.angle > 180 )
+        box0.angle -= 180;
 
     vector<vector<Point> > contours;
     findContours(image, contours,  RETR_EXTERNAL,  CHAIN_APPROX_NONE);

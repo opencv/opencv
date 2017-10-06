@@ -278,6 +278,14 @@ enum BorderTypes {
     BORDER_ISOLATED    = 16 //!< do not look outside of ROI
 };
 
+//! ellipse fit flags
+enum EllipsefitTypes {
+    /** Ellipse fit method, provided by @cite Halir98numericallystable */
+    ELLIPSEFIT_HALIR = 0,
+    /** Ellipse fit method, provided by @cite Fitzgibbon95*/
+    ELLIPSEFIT_FITZGIBBON = 1
+};
+
 //! @} core_array
 
 //! @addtogroup core_utils
