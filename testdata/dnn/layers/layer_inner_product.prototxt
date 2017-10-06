@@ -6,18 +6,40 @@ input_dim: 6
 input_dim: 75
 input_dim: 113
 
+# 2x6x75x113 -> 2x6x10
+layer {
+  type: "InnerProduct"
+  inner_product_param
+  {
+    axis: 2
+    num_output: 10
+    weight_filler {
+      type: "xavier"
+      std: 0.1
+    }
+    bias_filler {
+      type: 'uniform'
+      min: -1
+      max: 1
+    }
+  }
+  name: "fc1"
+  bottom: "input"
+  top: "fc1"
+}
+
+# 2x6x10 -> 2x20
 layer {
   type: "InnerProduct"
 
   inner_product_param
   {
-    axis: 3
-    num_output: 2
+    axis: 1
+    num_output: 20
 
-    weight_filler{
-      type: 'uniform'
-      min: -1
-      max: 1
+    weight_filler {
+      type: "xavier"
+      std: 0.1
     }
     bias_filler {
       type: 'uniform'
@@ -27,6 +49,6 @@ layer {
   }
 
   name: "output"
-  bottom: "input"
+  bottom: "fc1"
   top: "output"
 }
