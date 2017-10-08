@@ -593,8 +593,8 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 
             x0 = p1/l3 + c.x;
             y0 = p2/l3 + c.y;
-            a = sqrt(2)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
-            b = sqrt(2)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+            a = std::sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+            b = std::sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
             if (pVec(1)  == 0) {
                 if (pVec(0)  < pVec(2) ) {
                     theta = 0;
@@ -746,8 +746,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         x0 = p1/l3 + c.x;
         y0 = p2/l3 + c.y;
-        a = sqrt(2)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
-        b = sqrt(2)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+        a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+        b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
         if (pVec(1)  == 0) {
             if (pVec(0)  < pVec(2) ) {
                 theta = 0;
