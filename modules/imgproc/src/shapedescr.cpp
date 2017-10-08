@@ -43,58 +43,58 @@
 namespace cv
 {
 
-// inner product
-static float innerProduct(Point2f &v1, Point2f &v2)
-{
-    return v1.x * v2.y - v1.y * v2.x;
-}
-
 static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
 {
-    // two edges of the triangle v1, v2
+    // center is intersection of midperpendicular lines of the two edges v1, v2
+    // a1*x + b1*y = c1 where a1 = v1.x, b1 = v1.y
+    // a2*x + b2*y = c2 where a2 = v2.x, b2 = v2.y
     Point2f v1 = pts[1] - pts[0];
     Point2f v2 = pts[2] - pts[0];
+    Point2f midPoint1 = (pts[0] + pts[1]) / 2.0f;
+    float c1 = midPoint1.x * v1.x + midPoint1.y * v1.y;
+    Point2f midPoint2 = (pts[0] + pts[2]) / 2.0f;
+    float c2 = midPoint2.x * v2.x + midPoint2.y * v2.y;
+    float det = v1.x * v2.y - v1.y * v2.x;
+    float cx = (c1 * v2.y - c2 * v1.y) / det;
+    float cy = (v1.x * c2 - v2.x * c1) / det;
+    center.x = (float)cx;
+    center.y = (float)cy;
+    cx -= pts[0].x;
+    cy -= pts[0].y;
+    radius = (float)(std::sqrt(cx *cx + cy * cy));
+}
 
-    if (innerProduct(v1, v2) == 0.0f)
+static void findEnclosingCircle3pts(Point2f *pts, Point2f &center, float &radius)
+{
+
+    // find the longest distance as diameter line
+    // if other point(not from longest distance) isn't in circle, find circle from 3 points
+    float d1 = (float)norm(pts[0] - pts[1]);
+    float d2 = (float)norm(pts[0] - pts[2]);
+    float d3 = (float)norm(pts[1] - pts[2]);
+    int i; // index of other point
+    if (d1 >= d2 && d1 >= d3)
     {
-        // v1, v2 colineation, can not determine a unique circle
-        // find the longtest distance as diameter line
-        float d1 = (float)norm(pts[0] - pts[1]);
-        float d2 = (float)norm(pts[0] - pts[2]);
-        float d3 = (float)norm(pts[1] - pts[2]);
-        if (d1 >= d2 && d1 >= d3)
-        {
-            center = (pts[0] + pts[1]) / 2.0f;
-            radius = (d1 / 2.0f);
-        }
-        else if (d2 >= d1 && d2 >= d3)
-        {
-            center = (pts[0] + pts[2]) / 2.0f;
-            radius = (d2 / 2.0f);
-        }
-        else if (d3 >= d1 && d3 >= d2)
-        {
-            center = (pts[1] + pts[2]) / 2.0f;
-            radius = (d3 / 2.0f);
-        }
+        center = (pts[0] + pts[1]) / 2.0f;
+        radius = (d1 / 2.0f);
+        i = 2;
+    }
+    else if (d2 >= d1 && d2 >= d3)
+    {
+        center = (pts[0] + pts[2]) / 2.0f;
+        radius = (d2 / 2.0f);
+        i = 1;
     }
     else
     {
-        // center is intersection of midperpendicular lines of the two edges v1, v2
-        // a1*x + b1*y = c1 where a1 = v1.x, b1 = v1.y
-        // a2*x + b2*y = c2 where a2 = v2.x, b2 = v2.y
-        Point2f midPoint1 = (pts[0] + pts[1]) / 2.0f;
-        float c1 = midPoint1.x * v1.x + midPoint1.y * v1.y;
-        Point2f midPoint2 = (pts[0] + pts[2]) / 2.0f;
-        float c2 = midPoint2.x * v2.x + midPoint2.y * v2.y;
-        float det = v1.x * v2.y - v1.y * v2.x;
-        float cx = (c1 * v2.y - c2 * v1.y) / det;
-        float cy = (v1.x * c2 - v2.x * c1) / det;
-        center.x = (float)cx;
-        center.y = (float)cy;
-        cx -= pts[0].x;
-        cy -= pts[0].y;
-        radius = (float)(std::sqrt(cx *cx + cy * cy));
+        center = (pts[1] + pts[2]) / 2.0f;
+        radius = (d3 / 2.0f);
+        i = 0;
+    }
+
+    if ((float)norm(center - pts[i]) > radius)
+    {
+        findCircle3pts(pts, center, radius);
     }
 }
 
@@ -114,7 +114,7 @@ static void findEnclosingCircle3pts_orLess_32f(Point2f *pts, int count, Point2f 
         radius = (float)(norm(pts[0] - pts[1]) / 2.0);
         break;
     case 3:
-        findCircle3pts(pts, center, radius);
+        findEnclosingCircle3pts(pts, center, radius);
         break;
     default:
         break;
