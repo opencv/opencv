@@ -11,7 +11,7 @@ def get_class_list():
     with open('synset_words.txt', 'rt') as f:
         return [x[x.find(" ") + 1:] for x in f]
 
-blob = dnn.blobFromImage(cv2.imread('space_shuttle.jpg'), 1, (224, 224), (104, 117, 123), false)
+blob = dnn.blobFromImage(cv2.imread('space_shuttle.jpg'), 1, (224, 224), (104, 117, 123), False)
 print("Input:", blob.shape, blob.dtype)
 
 net = dnn.readNetFromCaffe('bvlc_googlenet.prototxt', 'bvlc_googlenet.caffemodel')

@@ -41,7 +41,7 @@ if __name__ == "__main__":
     while True:
         # Capture frame-by-frame
         ret, frame = cap.read()
-        blob = cv.dnn.blobFromImage(frame, inScaleFactor, (inWidth, inHeight), meanVal, false)
+        blob = cv.dnn.blobFromImage(frame, inScaleFactor, (inWidth, inHeight), meanVal, False)
         net.setInput(blob)
         detections = net.forward()
 
