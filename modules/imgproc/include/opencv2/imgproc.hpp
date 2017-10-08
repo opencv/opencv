@@ -3920,9 +3920,8 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 /** @brief Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
-specified point set. See the OpenCV sample minarea.cpp . Developer should keep in mind that the
-returned rotatedRect can contain negative indices when data is close to the containing Mat element
-boundary.
+specified point set. Developer should keep in mind that the returned RotatedRect can contain negative
+indices when data is close to the containing Mat element boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
  */
@@ -3943,8 +3942,7 @@ CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
 
 /** @brief Finds a circle of the minimum area enclosing a 2D point set.
 
-The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm. See
-the OpenCV sample minarea.cpp .
+The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
 @param center Output center of the circle.
@@ -3973,7 +3971,7 @@ than \f$\theta(n)\f$. Thus the overall complexity of the function is \f$O(n log(
 
 @param points Input vector of 2D points with depth CV_32S or CV_32F, stored in std::vector\<\> or Mat
 @param triangle Output vector of three 2D points defining the vertices of the triangle. The depth
-of the OutputArray must be CV_32F.
+of the OutputArray could be CV_32S or CV_32F.
  */
 CV_EXPORTS_W double minEnclosingTriangle( InputArray points, CV_OUT OutputArray triangle );
 
