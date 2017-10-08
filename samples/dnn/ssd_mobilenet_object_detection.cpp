@@ -34,8 +34,17 @@ const char* params
       "{ proto          | MobileNetSSD_deploy.prototxt | model configuration }"
       "{ model          | MobileNetSSD_deploy.caffemodel | model weights }"
       "{ video          |       | video for detection }"
-      "{ out            |       | path to output video file}"
+      "{ out            | my.avi| path to output video file}"
       "{ min_confidence | 0.2   | min confidence      }";
+
+struct fcc {
+    union {
+        int i;
+        char c[4];
+    };
+    fcc(int i) : i(i) {}
+    string s() { return string(c); }
+};
 
 int main(int argc, char** argv)
 {
@@ -54,6 +63,7 @@ int main(int argc, char** argv)
     //! [Initialize network]
     dnn::Net net = readNetFromCaffe(modelConfiguration, modelBinary);
     //! [Initialize network]
+
 
     VideoCapture cap(parser.get<String>("video"));
     if(!cap.isOpened()) // check if we succeeded
@@ -86,9 +96,15 @@ int main(int argc, char** argv)
               cropSize);
 
     VideoWriter outputVideo;
-    outputVideo.open(parser.get<String>("out") ,
-                     static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)),
-                     cap.get(CV_CAP_PROP_FPS), cropSize, true);
+    String ovid = parser.get<String>("out");
+    //if (!ovid.empty())
+    {
+        fcc cc(cap.get(CV_CAP_PROP_FOURCC));
+        cout << cc.s() << endl;
+        outputVideo.open(ovid,
+                     static_cast<int>(VideoWriter::fourcc('M','J','P','G')),
+                     2, cropSize, true);
+    }
 
     for(;;)
     {
