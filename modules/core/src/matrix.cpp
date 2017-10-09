@@ -484,21 +484,31 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
+    try
     {
-        CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end && _rowRange.end <= m.rows );
-        rows = _rowRange.size();
-        data += step*_rowRange.start;
-        flags |= SUBMATRIX_FLAG;
-    }
+        if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
+        {
+            CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end
+                       && _rowRange.end <= m.rows );
+            rows = _rowRange.size();
+            data += step*_rowRange.start;
+            flags |= SUBMATRIX_FLAG;
+        }
 
-    if( _colRange != Range::all() && _colRange != Range(0,cols) )
+        if( _colRange != Range::all() && _colRange != Range(0,cols) )
+        {
+            CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end
+                       && _colRange.end <= m.cols );
+            cols = _colRange.size();
+            data += _colRange.start*elemSize();
+            flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
+            flags |= SUBMATRIX_FLAG;
+        }
+    }
+    catch(...)
     {
-        CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols );
-        cols = _colRange.size();
-        data += _colRange.start*elemSize();
-        flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
-        flags |= SUBMATRIX_FLAG;
+        release();
+        throw;
     }
 
     if( rows == 1 )
