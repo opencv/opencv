@@ -34,7 +34,7 @@ Here is the general structure of the program:
     @snippet histo3D.cpp slide_bar_for_thresh
     We are ready to open a viz window with a callback function to capture keyboard event in viz window. Using @ref cv::viz::Viz3d::spinOnce enable keyboard event to be capture in @ref cv::imshow window too.
     @snippet histo3D.cpp manage_viz_imshow_window
-    The function DrawHistogram3D processes histogram Mat to display it in a Viz window. Number of plan, row and column in (three dimensional Mat)[http://docs.opencv.org/master/d3/d63/classcv_1_1Mat.html#details] can be found using  this code :
+    The function DrawHistogram3D processes histogram Mat to display it in a Viz window. Number of plan, row and column in [three dimensional Mat](@ref CVMat_Details ) can be found using  this code :
     @snippet histo3D.cpp get_cube_size
     To get histogram value at a specific location we use @ref cv::Mat::at(int i0,int i1, int i2)  method with three arguments k, i and j where k is plane number, i row number and j column number.
     @snippet histo3D.cpp get_cube_values
