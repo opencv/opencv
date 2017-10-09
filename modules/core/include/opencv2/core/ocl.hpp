@@ -613,8 +613,10 @@ public:
     String getPrefix() const;
     static String getPrefix(const String& buildflags);
 
-protected:
+
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+protected:
     Impl* p;
 };
 
@@ -635,8 +637,9 @@ public:
     const String& source() const;
     hash_t hash() const; // deprecated
 
-protected:
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+protected:
     Impl* p;
 };
 
