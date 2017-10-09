@@ -31,6 +31,7 @@ void  KeyboardViz3d(const viz::KeyboardEvent &w, void *t);
 
 void DrawHistogram3D(Histo3DData &h)
 {
+    //! [get_cube_size]
     int planSize = h.histogram.step1(0);
     int cols = h.histogram.step1(1);
     int rows = planSize / cols;
@@ -39,6 +40,8 @@ void DrawHistogram3D(Histo3DData &h)
     h.nbWidget=0;
     if (h.nbWidget==0)
         h.fen3D->showWidget("Axis", viz::WCoordinateSystem(10));
+    //! [get_cube_size]
+    //! [get_cube_values]
     for (int k = 0; k < plans; k++)
     {
         for (int i = 0; i < rows; i++)
@@ -55,9 +58,10 @@ void DrawHistogram3D(Histo3DData &h)
             }
         }
     }
+    //! [get_cube_values]
     h.status = false;
 }
-
+//! [viz_keyboard_callback]
 void  KeyboardViz3d(const viz::KeyboardEvent &w, void *t)
 {
    Histo3DData *x=(Histo3DData *)t;
@@ -80,6 +84,7 @@ void  KeyboardViz3d(const viz::KeyboardEvent &w, void *t)
        DrawHistogram3D(*x);
    }
 }
+//! [viz_keyboard_callback]
 
 
 void AddSlidebar(String sliderName, String windowName, int sliderMin, int sliderMax, int defaultSlider, int *sliderVal, void(*f)(int, void *), void *r)
@@ -101,6 +106,7 @@ void UpdateThreshold(int , void * r)
 
 int main (int argc,char **argv)
 {
+    //! [command_line_parser]
     CommandLineParser parser(argc, argv, keys);
 
     if (parser.has("help"))
@@ -119,6 +125,8 @@ int main (int argc,char **argv)
             return 0;
         }
     }
+    //! [command_line_parser]
+    //! [synthetic_image]
     else
     {
         img = Mat(512,512,CV_8UC3);
@@ -129,6 +137,8 @@ int main (int argc,char **argv)
         r.fill(img(Rect(0, 256, 256, 256)), RNG::NORMAL, Vec3b(90, 100, 50), Vec3b(10, 20, 20));
         r.fill(img(Rect(256, 256, 256, 256)), RNG::NORMAL, Vec3b(100, 10, 150), Vec3b(10, 5, 40));
     }
+    //! [synthetic_image]
+    //! [calchist_for_histo3d]
     Histo3DData h;
     h.status=true;
     h.seuil=90;
@@ -141,11 +151,14 @@ int main (int argc,char **argv)
     calcHist(&img, 1, channel, Mat(), h.histogram, 3, histSize, etendu, true, false);
     normalize(h.histogram, h.histogram, 100.0/(img.total()), 0, NORM_MINMAX, -1, Mat());
     minMaxIdx(h.histogram,NULL,&h.maxH,NULL,NULL);
+    //! [calchist_for_histo3d]
+    //! [slide_bar_for_thresh]
     namedWindow("Image");
     imshow("Image",img);
     AddSlidebar("threshold","Image",0,100,h.seuil,&h.seuil, UpdateThreshold,&h);
     waitKey(30);
-
+    //! [slide_bar_for_thresh]
+    //! [manage_viz_imshow_window]
     h.fen3D = new viz::Viz3d("3D Histogram");
     h.nbWidget=0;
     h.fen3D->registerKeyboardCallback(KeyboardViz3d,&h);
@@ -158,6 +171,7 @@ int main (int argc,char **argv)
         if (h.code!=27)
             h.code= waitKey(30);
     }
+    //! [manage_viz_imshow_window]
     return 0;
 }
 #else
