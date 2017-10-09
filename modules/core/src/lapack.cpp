@@ -43,6 +43,12 @@
 #include "precomp.hpp"
 #include <limits>
 
+#ifdef HAVE_EIGEN
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
+#include "opencv2/core/eigen.hpp"
+#endif
+
 #if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
 #pragma float_control(precise, on)
 #endif
@@ -1396,6 +1402,47 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
         v = _evects.getMat();
     }
 
+#ifdef HAVE_EIGEN
+    const bool evecNeeded = _evects.needed();
+    const int esOptions = evecNeeded ? Eigen::ComputeEigenvectors : Eigen::EigenvaluesOnly;
+    _evals.create(n, 1, type);
+    cv::Mat evals = _evals.getMat();
+    if ( type == CV_64F )
+    {
+        Eigen::MatrixXd src_eig, zeros_eig;
+        cv::cv2eigen(src, src_eig);
+
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es;
+        es.compute(src_eig, esOptions);
+        if ( es.info() == Eigen::Success )
+        {
+            cv::eigen2cv(es.eigenvalues().reverse().eval(), evals);
+            if ( evecNeeded )
+            {
+                cv::Mat evects = _evects.getMat();
+                cv::eigen2cv(es.eigenvectors().rowwise().reverse().transpose().eval(), v);
+            }
+            return true;
+        }
+    } else { // CV_32F
+        Eigen::MatrixXf src_eig, zeros_eig;
+        cv::cv2eigen(src, src_eig);
+
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> es;
+        es.compute(src_eig, esOptions);
+        if ( es.info() == Eigen::Success )
+        {
+            cv::eigen2cv(es.eigenvalues().reverse().eval(), evals);
+            if ( evecNeeded )
+            {
+                cv::eigen2cv(es.eigenvectors().rowwise().reverse().transpose().eval(), v);
+            }
+            return true;
+        }
+    }
+    return false;
+#else
+
     size_t elemSize = src.elemSize(), astep = alignSize(n*elemSize, 16);
     AutoBuffer<uchar> buf(n*astep + n*5*elemSize + 32);
     uchar* ptr = alignPtr((uchar*)buf, 16);
@@ -1408,6 +1455,7 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 
     w.copyTo(_evals);
     return ok;
+#endif
 }
 
 namespace cv
