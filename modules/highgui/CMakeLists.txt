@@ -42,9 +42,11 @@ if(HAVE_QT5)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
   QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
   list(APPEND highgui_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h
+       ${_MOC_OUTFILES}
        ${_RCC_OUTFILES})
 
   foreach(dt5_dep Core Gui Widgets Test Concurrent)
