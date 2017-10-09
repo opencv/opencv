@@ -216,7 +216,7 @@ public:
                 shape.push_back((int)_shape.dim(i));
         }
         else
-            CV_Error(Error::StsError, "Unknown shape of input blob");
+            shape.resize(1, 1);  // Is a scalar.
     }
 
     void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
@@ -274,9 +274,9 @@ public:
     struct BlobNote
     {
         BlobNote(const std::string &_name, int _layerId, int _outNum) :
-            name(_name.c_str()), layerId(_layerId), outNum(_outNum) {}
+            name(_name), layerId(_layerId), outNum(_outNum) {}
 
-        const char *name;
+        std::string name;
         int layerId, outNum;
     };
 

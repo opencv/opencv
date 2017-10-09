@@ -754,8 +754,15 @@ Ptr<PowerLayer> PowerLayer::create(const LayerParams& params)
     return l;
 }
 
-Ptr<ChannelsPReLULayer> ChannelsPReLULayer::create(const LayerParams& params)
+Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
+    CV_Assert(params.blobs.size() == 1);
+    if (params.blobs[0].total() == 1)
+    {
+        LayerParams reluParams = params;
+        reluParams.set("negative_slope", params.blobs[0].at<float>(0));
+        return ReLULayer::create(reluParams);
+    }
     Ptr<ChannelsPReLULayer> l(new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(params.blobs[0])));
     l->setParamsFrom(params);
 
