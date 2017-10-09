@@ -53,8 +53,8 @@ public:
             norm = cv::norm(*inputs[0], NORM_L2);
         else
         {
-            pow(abs(*inputs[0]), pnorm, internals[0]);
-            norm = pow(sum(internals[0])[0], 1.0f / pnorm);
+            cv::pow(abs(*inputs[0]), pnorm, internals[0]);
+            norm = pow((float)sum(internals[0])[0], 1.0f / pnorm);
         }
         multiply(*inputs[0], 1.0f / (norm + epsilon), outputs[0]);
     }
