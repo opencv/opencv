@@ -2489,25 +2489,156 @@ size_t Kernel::localMemSize() const
                                     sizeof(val), &val, &retsz) == CL_SUCCESS ? (size_t)val : 0;
 }
 
+
+
+///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
+
+struct ProgramSource::Impl
+{
+    Impl(const String& src)
+    {
+        init(cv::String(), cv::String(), src, cv::String());
+    }
+    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        init(module, name, codeStr, codeHash);
+    }
+    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        refcount = 1;
+        module_ = module;
+        name_ = name;
+        codeStr_ = codeStr;
+        codeHash_ = codeHash;
+
+        isHashUpdated = false;
+        if (codeHash_.empty())
+        {
+            updateHash();
+            codeHash_ = cv::format("%08llx", hash_);
+        }
+    }
+
+    void updateHash()
+    {
+        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
+        isHashUpdated = true;
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+
+    String module_;
+    String name_;
+    String codeStr_;
+    String codeHash_;
+    // TODO std::vector<ProgramSource> includes_;
+
+    bool isHashUpdated;
+    ProgramSource::hash_t hash_;
+};
+
+
+ProgramSource::ProgramSource()
+{
+    p = 0;
+}
+
+ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
+{
+    p = new Impl(module, name, codeStr, codeHash);
+}
+
+ProgramSource::ProgramSource(const char* prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::ProgramSource(const String& prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::~ProgramSource()
+{
+    if(p)
+        p->release();
+}
+
+ProgramSource::ProgramSource(const ProgramSource& prog)
+{
+    p = prog.p;
+    if(p)
+        p->addref();
+}
+
+ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+{
+    Impl* newp = (Impl*)prog.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+const String& ProgramSource::source() const
+{
+    CV_Assert(p);
+    return p->codeStr_;
+}
+
+ProgramSource::hash_t ProgramSource::hash() const
+{
+    CV_Assert(p);
+    if (!p->isHashUpdated)
+        p->updateHash();
+    return p->hash_;
+}
+
+
+internal::ProgramEntry::operator ProgramSource&() const
+{
+    if (this->pProgramSource == NULL)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (this->pProgramSource == NULL)
+        {
+            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
+            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
+        }
+    }
+    return *this->pProgramSource;
+}
+
+
+
 /////////////////////////////////////////// Program /////////////////////////////////////////////
 
 struct Program::Impl
 {
     Impl(const ProgramSource& _src,
-         const String& _buildflags, String& errmsg)
+         const String& _buildflags, String& errmsg) :
+         src(_src),
+         buildflags(_buildflags),
+         handle(NULL)
     {
-        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", _src.hash(), _buildflags.c_str()).c_str());
         refcount = 1;
-        const Context& ctx = Context::getDefault();
-        src = _src;
-        buildflags = _buildflags;
+        compile(Context::getDefault(), errmsg);
+    }
+
+    bool compile(const Context& ctx, String& errmsg)
+    {
+        CV_Assert(handle == NULL);
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", src.hash(), buildflags.c_str()).c_str());
         const String& srcstr = src.source();
         const char* srcptr = srcstr.c_str();
         size_t srclen = srcstr.size();
         cl_int retval = 0;
 
         handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
-        if( handle && retval == CL_SUCCESS )
+        CV_OclDbgAssert(handle && retval == CL_SUCCESS);
+        if (handle && retval == CL_SUCCESS)
         {
             int i, n = (int)ctx.ndevices();
             AutoBuffer<void*> deviceListBuf(n+1);
@@ -2525,26 +2656,41 @@ struct Program::Impl
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
 #if !CV_OPENCL_ALWAYS_SHOW_BUILD_LOG
-            if( retval != CL_SUCCESS )
+            if (retval != CL_SUCCESS)
 #endif
             {
+                AutoBuffer<char, 4096> buffer; buffer[0] = 0;
+
                 size_t retsz = 0;
-                cl_int buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                               CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if (buildInfo_retval == CL_SUCCESS && retsz > 1)
+                cl_int log_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                                          CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
+                if (log_retval == CL_SUCCESS && retsz > 1)
                 {
-                    AutoBuffer<char> bufbuf(retsz + 16);
-                    char* buf = bufbuf;
-                    buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                                   CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
-                    if (buildInfo_retval == CL_SUCCESS)
+                    buffer.resize(retsz + 16);
+                    log_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                                       CL_PROGRAM_BUILD_LOG, retsz+1, (char*)buffer, &retsz);
+                    if (log_retval == CL_SUCCESS)
                     {
-                        // TODO It is useful to see kernel name & program file name also
-                        errmsg = String(buf);
-                        printf("OpenCL program build log: %s\n%s\n", buildflags.c_str(), errmsg.c_str());
-                        fflush(stdout);
+                        if (retsz < buffer.size())
+                            buffer[retsz] = 0;
+                        else
+                            buffer[buffer.size() - 1] = 0;
+                    }
+                    else
+                    {
+                        buffer[0] = 0;
                     }
                 }
+
+                errmsg = String(buffer);
+                printf("OpenCL program build log: %s (%s)\nStatus %d: %s\n%s\n%s\n",
+                        src.getImpl()->name_.c_str(), src.getImpl()->module_.c_str(),
+                        retval, getOpenCLErrorString(retval),
+                        buildflags.c_str(), errmsg.c_str());
+                fflush(stdout);
+
+                // don't remove "retval != CL_SUCCESS" condition here:
+                // it would break CV_OPENCL_ALWAYS_SHOW_BUILD_LOG mode
                 if (retval != CL_SUCCESS && handle)
                 {
                     clReleaseProgram(handle);
@@ -2552,6 +2698,7 @@ struct Program::Impl
                 }
             }
         }
+        return handle != NULL;
     }
 
     Impl(const String& _buf, const String& _buildflags)
@@ -2717,125 +2864,6 @@ String Program::getPrefix(const String& buildflags)
                   dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
 }
 
-///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
-
-struct ProgramSource::Impl
-{
-    Impl(const String& src)
-    {
-        init(cv::String(), cv::String(), src, cv::String());
-    }
-    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
-    {
-        init(module, name, codeStr, codeHash);
-    }
-    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
-    {
-        refcount = 1;
-        module_ = module;
-        name_ = name;
-        codeStr_ = codeStr;
-        codeHash_ = codeHash;
-
-        isHashUpdated = false;
-        if (codeHash_.empty())
-        {
-            updateHash();
-            codeHash_ = cv::format("%08llx", hash_);
-        }
-    }
-
-    void updateHash()
-    {
-        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
-        isHashUpdated = true;
-    }
-
-    IMPLEMENT_REFCOUNTABLE();
-
-    String module_;
-    String name_;
-    String codeStr_;
-    String codeHash_;
-    // TODO std::vector<ProgramSource> includes_;
-
-    bool isHashUpdated;
-    ProgramSource::hash_t hash_;
-};
-
-
-ProgramSource::ProgramSource()
-{
-    p = 0;
-}
-
-ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
-{
-    p = new Impl(module, name, codeStr, codeHash);
-}
-
-ProgramSource::ProgramSource(const char* prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::ProgramSource(const String& prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::~ProgramSource()
-{
-    if(p)
-        p->release();
-}
-
-ProgramSource::ProgramSource(const ProgramSource& prog)
-{
-    p = prog.p;
-    if(p)
-        p->addref();
-}
-
-ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
-{
-    Impl* newp = (Impl*)prog.p;
-    if(newp)
-        newp->addref();
-    if(p)
-        p->release();
-    p = newp;
-    return *this;
-}
-
-const String& ProgramSource::source() const
-{
-    CV_Assert(p);
-    return p->codeStr_;
-}
-
-ProgramSource::hash_t ProgramSource::hash() const
-{
-    CV_Assert(p);
-    if (!p->isHashUpdated)
-        p->updateHash();
-    return p->hash_;
-}
-
-
-internal::ProgramEntry::operator ProgramSource&() const
-{
-    if (this->pProgramSource == NULL)
-    {
-        cv::AutoLock lock(cv::getInitializationMutex());
-        if (this->pProgramSource == NULL)
-        {
-            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
-            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
-        }
-    }
-    return *this->pProgramSource;
-}
 
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
