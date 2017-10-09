@@ -402,7 +402,10 @@ typedef enum {
 struct OCL4DNNLRNConfig
 {
     OCL4DNNLRNConfig() :
-        phase_test(true)
+        lrn_type(LRNParameter_NormRegion_ACROSS_CHANNELS),
+        phase_test(true),
+        local_size(0), alpha(0.f), beta(0.f), k(0.f), norm_by_size(false),
+        batch_size(0), channels(0), height(0), width(0)
     {}
     MatShape in_shape;
     LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type;
@@ -442,7 +445,7 @@ class OCL4DNNLRN
 
 struct OCL4DNNSoftmaxConfig
 {
-    OCL4DNNSoftmaxConfig()
+    OCL4DNNSoftmaxConfig() : axis(0), channels(0)
     {}
     MatShape in_shape;
     int axis;
