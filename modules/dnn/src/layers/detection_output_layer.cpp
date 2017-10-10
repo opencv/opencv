@@ -81,6 +81,8 @@ public:
 
     float _nmsThreshold;
     int _topK;
+    // Whenever predicted bounding boxes are respresented in YXHW instead of XYWH layout.
+    bool _locPredTransposed;
 
     enum { _numAxes = 4 };
     static const std::string _layerName;
@@ -148,6 +150,7 @@ public:
         _keepTopK = getParameter<int>(params, "keep_top_k");
         _confidenceThreshold = getParameter<float>(params, "confidence_threshold", 0, false, -FLT_MAX);
         _topK = getParameter<int>(params, "top_k", 0, false, -1);
+        _locPredTransposed = getParameter<bool>(params, "loc_pred_transposed", 0, false, false);
 
         getCodeType(params);
 
@@ -209,7 +212,7 @@ public:
             // Retrieve all location predictions
             std::vector<LabelBBox> allLocationPredictions;
             GetLocPredictions(locationData, num, numPriors, _numLocClasses,
-                              _shareLocation, allLocationPredictions);
+                              _shareLocation, _locPredTransposed, allLocationPredictions);
 
             // Retrieve all confidences
             GetConfidenceScores(confidenceData, num, numPriors, _numClasses, allConfidenceScores);
@@ -540,11 +543,14 @@ public:
     //    num_loc_classes: number of location classes. It is 1 if share_location is
     //      true; and is equal to number of classes needed to predict otherwise.
     //    share_location: if true, all classes share the same location prediction.
+    //    loc_pred_transposed: if true, represent four bounding box values as
+    //                         [y,x,height,width] or [x,y,width,height] otherwise.
     //    loc_preds: stores the location prediction, where each item contains
     //      location prediction for an image.
     static void GetLocPredictions(const float* locData, const int num,
                            const int numPredsPerClass, const int numLocClasses,
-                           const bool shareLocation, std::vector<LabelBBox>& locPreds)
+                           const bool shareLocation, const bool locPredTransposed,
+                           std::vector<LabelBBox>& locPreds)
     {
         locPreds.clear();
         if (shareLocation)
@@ -566,10 +572,20 @@ public:
                         labelBBox[label].resize(numPredsPerClass);
                     }
                     caffe::NormalizedBBox& bbox = labelBBox[label][p];
-                    bbox.set_xmin(locData[startIdx + c * 4]);
-                    bbox.set_ymin(locData[startIdx + c * 4 + 1]);
-                    bbox.set_xmax(locData[startIdx + c * 4 + 2]);
-                    bbox.set_ymax(locData[startIdx + c * 4 + 3]);
+                    if (locPredTransposed)
+                    {
+                        bbox.set_ymin(locData[startIdx + c * 4]);
+                        bbox.set_xmin(locData[startIdx + c * 4 + 1]);
+                        bbox.set_ymax(locData[startIdx + c * 4 + 2]);
+                        bbox.set_xmax(locData[startIdx + c * 4 + 3]);
+                    }
+                    else
+                    {
+                        bbox.set_xmin(locData[startIdx + c * 4]);
+                        bbox.set_ymin(locData[startIdx + c * 4 + 1]);
+                        bbox.set_xmax(locData[startIdx + c * 4 + 2]);
+                        bbox.set_ymax(locData[startIdx + c * 4 + 3]);
+                    }
                 }
             }
         }
