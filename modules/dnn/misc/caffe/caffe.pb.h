@@ -1537,6 +1537,13 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   float offset() const;
   void set_offset(float value);
 
+  // optional bool additional_y_offset = 14 [default = false];
+  bool has_additional_y_offset() const;
+  void clear_additional_y_offset();
+  static const int kAdditionalYOffsetFieldNumber = 14;
+  bool additional_y_offset() const;
+  void set_additional_y_offset(bool value);
+
   // @@protoc_insertion_point(class_scope:caffe.PriorBoxParameter)
  private:
   inline void set_has_min_size();
@@ -1561,6 +1568,8 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   inline void clear_has_step_w();
   inline void set_has_offset();
   inline void clear_has_offset();
+  inline void set_has_additional_y_offset();
+  inline void clear_has_additional_y_offset();
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::HasBits<1> _has_bits_;
@@ -1575,6 +1584,7 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   float step_;
   float step_h_;
   float step_w_;
+  bool additional_y_offset_;
   bool flip_;
   bool clip_;
   float offset_;
@@ -13633,6 +13643,30 @@ inline void PriorBoxParameter::set_offset(float value) {
   set_has_offset();
   offset_ = value;
   // @@protoc_insertion_point(field_set:caffe.PriorBoxParameter.offset)
+}
+
+// optional bool additional_y_offset = 14 [default = false];
+inline bool PriorBoxParameter::has_additional_y_offset() const {
+  return (_has_bits_[0] & 0x00002000u) != 0;
+}
+inline void PriorBoxParameter::set_has_additional_y_offset() {
+  _has_bits_[0] |= 0x00002000u;
+}
+inline void PriorBoxParameter::clear_has_additional_y_offset() {
+  _has_bits_[0] &= ~0x00002000u;
+}
+inline void PriorBoxParameter::clear_additional_y_offset() {
+  additional_y_offset_ = false;
+  clear_has_additional_y_offset();
+}
+inline bool PriorBoxParameter::additional_y_offset() const {
+  // @@protoc_insertion_point(field_get:caffe.PriorBoxParameter.additional_y_offset)
+  return additional_y_offset_;
+}
+inline void PriorBoxParameter::set_additional_y_offset(bool value) {
+  set_has_additional_y_offset();
+  additional_y_offset_ = value;
+  // @@protoc_insertion_point(field_set:caffe.PriorBoxParameter.additional_y_offset)
 }
 
 inline const PriorBoxParameter* PriorBoxParameter::internal_default_instance() {
