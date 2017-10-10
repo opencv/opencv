@@ -22,6 +22,9 @@ namespace dnn {
 void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
                                       tensorflow::GraphDef* param);
 
+void ReadTFNetParamsFromTextFileOrDie(const char* param_file,
+                                      tensorflow::GraphDef* param);
+
 }
 }
 
