@@ -1,0 +1,37 @@
+name: "test_PReLU"
+layer {
+  name: "input"
+  type: "Input"
+  top: "input"
+  input_param {
+    shape { dim: 2 dim: 6 dim: 75 dim: 113 }
+  }
+}
+layer {
+  name: "prelu_1"
+  type: "PReLU"
+  bottom: "input"
+  top: "input"
+  prelu_param {
+    filler {
+      type: "gaussian"
+      mean: 0.0
+      std: 0.01
+    }
+    channel_shared: false
+  }
+}
+layer {
+  name: "output"
+  type: "PReLU"
+  bottom: "input"
+  top: "output"
+  prelu_param {
+    filler {
+      type: "gaussian"
+      mean: 0.0
+      std: 0.01
+    }
+    channel_shared: true
+  }
+}
