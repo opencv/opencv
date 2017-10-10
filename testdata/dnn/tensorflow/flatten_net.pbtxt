@@ -1,0 +1,9 @@
+node {
+  name: "input"
+  op: "Placeholder"
+}
+node {
+  name: "flatten"
+  op: "Flatten"
+  input: "input"
+}
