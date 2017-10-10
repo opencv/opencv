@@ -1059,6 +1059,34 @@ const uchar* Mat::ptr(const int* idx) const
 }
 
 template<typename _Tp> inline
+_Tp* Mat::ptr(const int* idx)
+{
+    int i, d = dims;
+    uchar* p = data;
+    CV_DbgAssert( d >= 1 && p );
+    for( i = 0; i < d; i++ )
+    {
+        CV_DbgAssert( (unsigned)idx[i] < (unsigned)size.p[i] );
+        p += idx[i] * step.p[i];
+    }
+    return (_Tp*)p;
+}
+
+template<typename _Tp> inline
+const _Tp* Mat::ptr(const int* idx) const
+{
+    int i, d = dims;
+    uchar* p = data;
+    CV_DbgAssert( d >= 1 && p );
+    for( i = 0; i < d; i++ )
+    {
+        CV_DbgAssert( (unsigned)idx[i] < (unsigned)size.p[i] );
+        p += idx[i] * step.p[i];
+    }
+    return (const _Tp*)p;
+}
+
+template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1)
 {
     CV_DbgAssert(dims <= 2);
