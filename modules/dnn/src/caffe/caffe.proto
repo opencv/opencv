@@ -145,6 +145,8 @@ message PriorBoxParameter {
   optional float step_w = 12;
   // Offset to the top left corner of each cell.
   optional float offset = 13 [default = 0.5];
+  // If true, two additional boxes for each center will be generated. Their centers will be shifted by y coordinate.
+  optional bool additional_y_offset = 14 [default = false];
 }
 
 // Message that store parameters used by DetectionOutputLayer
