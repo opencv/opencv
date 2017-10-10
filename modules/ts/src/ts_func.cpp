@@ -3091,6 +3091,9 @@ void printVersionInfo(bool useStdOut)
 #if CV_FP16
     if (checkHardwareSupport(CV_CPU_FP16)) cpu_features += " fp16";
 #endif
+#if CV_VSX
+    if (checkHardwareSupport(CV_CPU_VSX)) cpu_features += " VSX";
+#endif
 
     cpu_features.erase(0, 1); // erase initial space
 

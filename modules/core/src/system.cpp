@@ -80,6 +80,18 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #  include <cpu-features.h>
 #endif
 
+#ifndef __VSX__
+# if defined __PPC64__ && defined __linux__
+#   include "sys/auxv.h"
+#   ifndef AT_HWCAP2
+#     define AT_HWCAP2 26
+#   endif
+#   ifndef PPC_FEATURE2_ARCH_2_07
+#     define PPC_FEATURE2_ARCH_2_07 0x80000000
+#   endif
+# endif
+#endif
+
 #if defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -295,6 +307,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
+
+        g_hwFeatureNames[CPU_VSX] = "VSX";
     }
 
     void initialize(void)
@@ -502,6 +516,16 @@ struct HWFeatures
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
         have[CV_CPU_FP16] = true;
     #endif
+    #endif
+
+    #ifdef __VSX__
+        have[CV_CPU_VSX] = true;
+    #elif (defined __PPC64__ && defined __linux__)
+        uint64 hwcaps = getauxval(AT_HWCAP);
+        uint64 hwcap2 = getauxval(AT_HWCAP2);
+        have[CV_CPU_VSX] = (hwcaps & PPC_FEATURE_PPC_LE && hwcaps & PPC_FEATURE_HAS_VSX && hwcap2 & PPC_FEATURE2_ARCH_2_07);
+    #else
+        have[CV_CPU_VSX] = false;
     #endif
 
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
