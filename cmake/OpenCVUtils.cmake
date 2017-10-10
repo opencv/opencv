@@ -5,8 +5,8 @@ if(UNIX)
   find_package(PkgConfig)
 endif()
 
-# Search packages for host system instead of packages for target system
-# in case of cross compilation thess macro should be defined by toolchain file
+# Search packages for the host system instead of packages for target system
+# in case of cross compilation these macros should be defined by the toolchain file
 if(NOT COMMAND find_host_package)
   macro(find_host_package)
     find_package(${ARGN})
@@ -82,7 +82,7 @@ macro(ocv_check_environment_variables)
   endforeach()
 endmacro()
 
-# adds include directories in such way that directories from the OpenCV source tree go first
+# adds include directories in such a way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   set(__add_before "")
   foreach(dir ${ARGN})
@@ -337,7 +337,7 @@ macro(ocv_check_modules define)
 endmacro()
 
 
-# Macros that checks if module have been installed.
+# Macro that checks if module has been installed.
 # After it adds module to build and define
 # constants passed as second arg
 macro(CHECK_MODULE module_name define)
@@ -526,7 +526,7 @@ macro(ocv_list_add_suffix LST SUFFIX)
 endmacro()
 
 
-# gets and removes the first element from list
+# gets and removes the first element from the list
 macro(ocv_list_pop_front LST VAR)
   if(${LST})
     list(GET ${LST} 0 ${VAR})

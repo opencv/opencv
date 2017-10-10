@@ -10,7 +10,7 @@
 if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "
 FATAL: In-source builds are not allowed.
-       You should create separate directory for build files.
+       You should create a separate directory for build files.
 ")
 endif()
 
@@ -77,8 +77,8 @@ ocv_clear_vars(OpenCVModules_TARGETS)
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
 if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
-  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
-  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
+  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
 # ----------------------------------------------------------------------------
@@ -189,7 +189,7 @@ OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"     
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT IOS) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
-OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
+OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of statically linked CRT for staticaly linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )

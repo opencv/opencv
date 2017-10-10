@@ -241,7 +241,7 @@ endif(HAVE_INTELPERC)
 if(IOS)
   add_definitions(-DHAVE_IOS=1)
   list(APPEND highgui_srcs src/ios_conversions.mm src/cap_ios_abstract_camera.mm src/cap_ios_photo_camera.mm src/cap_ios_video_camera.mm)
-  list(APPEND HIGHGUI_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
+  list(APPEND HIGHGUI_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
 endif()
 
 if(WIN32)

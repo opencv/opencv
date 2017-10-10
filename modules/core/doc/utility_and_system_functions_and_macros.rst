@@ -31,7 +31,7 @@ Aligns a buffer size to the specified number of bytes.
 
     :param n: Alignment size that must be a power of two.
 
-The function returns the minimum number that is greater or equal to ``sz`` and is divisible by ``n`` :
+The function returns the minimum number that is greater than or equal to ``sz`` and is divisible by ``n`` :
 
 .. math::
 
@@ -363,7 +363,7 @@ Always returns 0 if called outside of parallel region.
 
 .. ocv:function:: int getThreadNum()
 
-The exact meaning of return value depends on the threading framework used by OpenCV library:
+The exact meaning of the return value depends on the threading framework used by OpenCV library:
 
     * **TBB** – Unsupported with current 4.1 TBB release. May be will be supported in future.
     * **OpenMP** – The thread number, within the current team, of the calling thread.
@@ -450,7 +450,7 @@ This operation is used in the simplest or most complex image processing function
 setNumThreads
 -----------------
 OpenCV will try to set the number of threads for the next parallel region.
-If ``threads == 0``, OpenCV will disable threading optimizations and run all it's
+If ``threads == 0``, OpenCV will disable threading optimizations and run all its
 functions sequentially. Passing ``threads < 0`` will reset threads number to system default.
 This function must be called outside of parallel region.
 
@@ -458,14 +458,14 @@ This function must be called outside of parallel region.
 
     :param nthreads: Number of threads used by OpenCV.
 
-OpenCV will try to run it's functions with specified threads number, but
+OpenCV will try to run its functions with specified threads number, but
 some behaviour differs from framework:
 
     * **TBB** – User-defined parallel constructions will run with the same threads number,
-      if another does not specified. If late on user creates own scheduler, OpenCV will be use it.
+      if another is not specified. If late on user creates his own scheduler, OpenCV will be use it.
     * **OpenMP** – No special defined behaviour.
     * **Concurrency** – If ``threads == 1``, OpenCV will disable threading optimizations
-      and run it's functions sequentially.
+      and run its functions sequentially.
     * **GCD** – Supports only values <= 0.
     * **C=** – No special defined behaviour.
 
