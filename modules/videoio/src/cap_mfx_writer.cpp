@@ -40,8 +40,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     }
 
     // Init device and session
-
-    deviceHandler = new VAHandle();
+    deviceHandler = createDeviceHandler();
     session = new MFXVideoSession();
     if (!deviceHandler->init(*session))
     {
@@ -71,7 +70,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     memset(&params, 0, sizeof(params));
     params.mfx.CodecId = codecId;
     params.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-    params.mfx.TargetKbps = frameSize.area() * fps / 500; // TODO: set in options
+    params.mfx.TargetKbps = (mfxU16)cvRound(frameSize.area() * fps / 500); // TODO: set in options
     params.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
     params.mfx.FrameInfo.FrameRateExtN = cvRound(fps * 1000);
     params.mfx.FrameInfo.FrameRateExtD = 1000;
@@ -80,10 +79,10 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     params.mfx.FrameInfo.PicStruct = MFX_PICSTRUCT_PROGRESSIVE;
     params.mfx.FrameInfo.CropX = 0;
     params.mfx.FrameInfo.CropY = 0;
-    params.mfx.FrameInfo.CropW = frameSize.width;
-    params.mfx.FrameInfo.CropH = frameSize.height;
-    params.mfx.FrameInfo.Width = alignSize(frameSize.width, 32);
-    params.mfx.FrameInfo.Height = alignSize(frameSize.height, 32);
+    params.mfx.FrameInfo.CropW = (mfxU16)frameSize.width;
+    params.mfx.FrameInfo.CropH = (mfxU16)frameSize.height;
+    params.mfx.FrameInfo.Width = (mfxU16)alignSize(frameSize.width, 32);
+    params.mfx.FrameInfo.Height = (mfxU16)alignSize(frameSize.height, 32);
     params.IOPattern = MFX_IOPATTERN_IN_SYSTEM_MEMORY;
     res = encoder->Query(&params, &params);
     DBG(cout << "MFX Query: " << res << endl << params.mfx << params.mfx.FrameInfo);
@@ -263,7 +262,6 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
             MSG(cerr << "MFX: Bad status: " << res << endl);
             return false;
         }
-        return true;
     }
 }
 
