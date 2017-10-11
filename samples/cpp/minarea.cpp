@@ -42,7 +42,7 @@ int main( int /*argc*/, char** /*argv*/ )
         box.points(vtx);
 
         // Find the minimum area enclosing triangle
-        vector<Point> triangle;
+        vector<Point2f> triangle;
         minEnclosingTriangle(points, triangle);
 
         // Find the minimum area enclosing circle
