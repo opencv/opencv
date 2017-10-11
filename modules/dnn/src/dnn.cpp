@@ -85,15 +85,15 @@ static String toString(const T &v)
 }
 
 Mat blobFromImage(const Mat& image, double scalefactor, const Size& size,
-                  const Scalar& mean, bool swapRB)
+                  const Scalar& mean, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images(1, image);
-    return blobFromImages(images, scalefactor, size, mean, swapRB);
+    return blobFromImages(images, scalefactor, size, mean, swapRB, crop);
 }
 
 Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size size,
-                   const Scalar& mean_, bool swapRB)
+                   const Scalar& mean_, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images = images_;
@@ -104,13 +104,18 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
             size = imgSize;
         if (size != imgSize)
         {
-            float resizeFactor = std::max(size.width / (float)imgSize.width,
-                                          size.height / (float)imgSize.height);
-            resize(images[i], images[i], Size(), resizeFactor, resizeFactor);
-            Rect crop(Point(0.5 * (images[i].cols - size.width),
-                            0.5 * (images[i].rows - size.height)),
-                      size);
-            images[i] = images[i](crop);
+            if(crop)
+            {
+              float resizeFactor = std::max(size.width / (float)imgSize.width,
+                                            size.height / (float)imgSize.height);
+              resize(images[i], images[i], Size(), resizeFactor, resizeFactor);
+              Rect crop(Point(0.5 * (images[i].cols - size.width),
+                              0.5 * (images[i].rows - size.height)),
+                        size);
+              images[i] = images[i](crop);
+            }
+            else
+              resize(images[i], images[i], size);
         }
         if(images[i].depth() == CV_8U)
             images[i].convertTo(images[i], CV_32F);
