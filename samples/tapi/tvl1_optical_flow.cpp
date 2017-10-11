@@ -37,7 +37,7 @@ template <typename T> inline T clamp (T x, T a, T b)
 
 template <typename T> inline T mapValue(T x, T a, T b, T c, T d)
 {
-    x = clamp(x, a, b);
+    x = ::clamp(x, a, b);
     return c + (d - c) * (x - a) / (b - a);
 }
 
