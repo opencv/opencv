@@ -100,6 +100,7 @@ public:
             config.in_shape = shape(*inputs[0]);
             config.axis = axisRaw;
             config.channels = inputs[0]->size[axisRaw];
+            config.logsoftmax = logSoftMax;
 
             softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
         }
@@ -108,7 +109,7 @@ public:
         srcMat = inputs[0]->getUMat(ACCESS_READ);
         dstMat = outputs[0].getUMat(ACCESS_WRITE);
 
-        if (!logSoftMax && softmaxOp->Forward(srcMat, dstMat))
+        if (softmaxOp->Forward(srcMat, dstMat))
             return true;
 
         const Mat &src = *inputs[0];
