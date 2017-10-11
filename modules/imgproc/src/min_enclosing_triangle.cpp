@@ -322,12 +322,7 @@ static void findMinEnclosingTriangle(cv::InputArray points,
 
     createConvexHull(points, polygon);
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
-
-    if (triangle.depth() == CV_32S) {
-        cv::Mat(resultingTriangle).convertTo(triangle,CV_32S);
-    } else {
-        cv::Mat(resultingTriangle).copyTo(triangle);
-    }
+    cv::Mat(resultingTriangle).copyTo(triangle);
 }
 
 //! Create the convex hull of the given set of points
