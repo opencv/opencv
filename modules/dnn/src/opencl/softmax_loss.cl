@@ -112,7 +112,11 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
   for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
     int s = index % spatial_dim;
-    out[n * channels * spatial_dim + index] = out_tmp[index] / scale_tmp[s];
+    Dtype v = out_tmp[index] / scale_tmp[s];
+#ifdef LOG_SOFTMAX
+    v = log(v);
+#endif
+    out[n * channels * spatial_dim + index] = v;
   }
 }
 
@@ -177,6 +181,10 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
   for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
     int s = index % spatial_dim;
-    out[n * channels * spatial_dim + index] /= scale[n * spatial_dim + s];
+    Dtype v = out[n * channels * spatial_dim + index] / scale[n * spatial_dim + s];
+#ifdef LOG_SOFTMAX
+    v = log(v);
+#endif
+    out[n * channels * spatial_dim + index] = v;
   }
 }
