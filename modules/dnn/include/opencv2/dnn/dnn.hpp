@@ -695,12 +695,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param scalefactor multiplier for @p image values.
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
-     *  @details input image is resized so one side after resize is equal to corresponing
+     *  @param crop flag which indicates whether image will be cropped after resize or not
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
+     *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImage(const Mat& image, double scalefactor=1.0, const Size& size = Size(),
-                                   const Scalar& mean = Scalar(), bool swapRB=true);
+                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
      *  crops @p images from center, subtract @p mean values, scales values by @p scalefactor,
      *  swap Blue and Red channels.
@@ -711,12 +713,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param scalefactor multiplier for @p images values.
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
-     *  @details input image is resized so one side after resize is equal to corresponing
+     *  @param crop flag which indicates whether image will be cropped after resize or not
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
+     *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImages(const std::vector<Mat>& images, double scalefactor=1.0,
-                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true);
+                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single
