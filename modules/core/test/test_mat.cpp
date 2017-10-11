@@ -133,7 +133,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 
     assert( opRes.type() == CV_64FC1 );
     Mat _dst, dst, diff;
-    reduce( src, _dst, dim, opType, dstType );
+    cv::reduce( src, _dst, dim, opType, dstType );
     _dst.convertTo( dst, CV_64FC1 );
 
     absdiff( opRes,dst,diff );
@@ -313,7 +313,7 @@ protected:
         Mat rBackPrjTestPoints = rPCA.backProject( rPrjTestPoints );
 
         Mat avg(1, sz.width, CV_32FC1 );
-        reduce( rPoints, avg, 0, CV_REDUCE_AVG );
+        cv::reduce( rPoints, avg, 0, CV_REDUCE_AVG );
         Mat Q = rPoints - repeat( avg, rPoints.rows, 1 ), Qt = Q.t(), eval, evec;
         Q = Qt * Q;
         Q = Q /(float)rPoints.rows;
