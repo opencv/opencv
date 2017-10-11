@@ -216,6 +216,14 @@ public:
           _stepY = 0;
           _stepX = 0;
         }
+        if(params.has("additional_y_offset"))
+        {
+          _additional_y_offset = getParameter<bool>(params, "additional_y_offset");
+          if(_additional_y_offset)
+            _numPriors *= 2;
+        }
+        else
+          _additional_y_offset = false;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -246,10 +254,11 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        size_t real_numPriors = _additional_y_offset ? _numPriors / 2 : _numPriors;
         if (_scales.empty())
-            _scales.resize(_numPriors, 1.0f);
+            _scales.resize(real_numPriors, 1.0f);
         else
-            CV_Assert(_scales.size() == _numPriors);
+            CV_Assert(_scales.size() == real_numPriors);
 
         int _layerWidth = inputs[0]->size[3];
         int _layerHeight = inputs[0]->size[2];
@@ -289,6 +298,19 @@ public:
                 // ymax
                 outputPtr[idx++] = (center_y + _boxHeight / 2.) / _imageHeight;
 
+                if(_additional_y_offset)
+                {
+                  float center_y_offset_1 = (h + 1.0) * stepY;
+                  // xmin
+                  outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
+                  // ymin
+                  outputPtr[idx++] = (center_y_offset_1 - _boxHeight / 2.) / _imageHeight;
+                  // xmax
+                  outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
+                  // ymax
+                  outputPtr[idx++] = (center_y_offset_1 + _boxHeight / 2.) / _imageHeight;
+                }
+
                 if (_maxSize > 0)
                 {
                     // second prior: aspect_ratio = 1, size = sqrt(min_size * max_size)
@@ -301,6 +323,19 @@ public:
                     outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
                     // ymax
                     outputPtr[idx++] = (center_y + _boxHeight / 2.) / _imageHeight;
+
+                    if(_additional_y_offset)
+                    {
+                      float center_y_offset_1 = (h + 1.0) * stepY;
+                      // xmin
+                      outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
+                      // ymin
+                      outputPtr[idx++] = (center_y_offset_1 - _boxHeight / 2.) / _imageHeight;
+                      // xmax
+                      outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
+                      // ymax
+                      outputPtr[idx++] = (center_y_offset_1 + _boxHeight / 2.) / _imageHeight;
+                    }
                 }
 
                 // rest of priors
@@ -319,6 +354,18 @@ public:
                     outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
                     // ymax
                     outputPtr[idx++] = (center_y + _boxHeight / 2.) / _imageHeight;
+                    if(_additional_y_offset)
+                    {
+                      float center_y_offset_1 = (h + 1.0) * stepY;
+                      // xmin
+                      outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
+                      // ymin
+                      outputPtr[idx++] = (center_y_offset_1 - _boxHeight / 2.) / _imageHeight;
+                      // xmax
+                      outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
+                      // ymax
+                      outputPtr[idx++] = (center_y_offset_1 + _boxHeight / 2.) / _imageHeight;
+                    }
                 }
             }
         }
@@ -385,6 +432,7 @@ public:
 
     bool _flip;
     bool _clip;
+    bool _additional_y_offset;
 
     size_t _numPriors;
 
