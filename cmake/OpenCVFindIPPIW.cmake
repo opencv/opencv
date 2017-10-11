@@ -31,9 +31,10 @@ file(TO_CMAKE_PATH "${IPPROOT}" IPPROOT)
 
 # This function detects Intel IPP IW version by analyzing .h file
 macro(ippiw_setup PATH BUILD)
-  set(FILE "${PATH}/include/iw/iw_version.h")
+  set(FILE "${PATH}/include/iw/iw_ll.h") # check if Intel IPP IW is OpenCV specific
   ippiw_debugmsg("Checking path: ${PATH}")
   if(EXISTS "${FILE}")
+    set(FILE "${PATH}/include/iw/iw_version.h")
     ippiw_debugmsg("vfile\tok")
     file(STRINGS "${FILE}" IW_VERSION_MAJOR  REGEX "IW_VERSION_MAJOR")
     file(STRINGS "${FILE}" IW_VERSION_MINOR  REGEX "IW_VERSION_MINOR")
