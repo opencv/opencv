@@ -254,10 +254,11 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        size_t real_numPriors = _additional_y_offset ? _numPriors / 2 : _numPriors;
         if (_scales.empty())
-            _scales.resize(_numPriors, 1.0f);
+            _scales.resize(real_numPriors, 1.0f);
         else
-            CV_Assert(_scales.size() == _numPriors);
+            CV_Assert(_scales.size() == real_numPriors);
 
         int _layerWidth = inputs[0]->size[3];
         int _layerHeight = inputs[0]->size[2];
