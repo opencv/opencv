@@ -445,11 +445,12 @@ class OCL4DNNLRN
 
 struct OCL4DNNSoftmaxConfig
 {
-    OCL4DNNSoftmaxConfig() : axis(0), channels(0)
+    OCL4DNNSoftmaxConfig() : axis(0), channels(0), logsoftmax(false)
     {}
     MatShape in_shape;
     int axis;
     int channels;
+    bool logsoftmax;
 };
 
 template<typename Dtype>
@@ -467,6 +468,7 @@ class OCL4DNNSoftmax
         int32_t channels_;
         int32_t count_;
         bool use_slm_;
+        bool log_softmax_;
         UMat scale_data_;
 };
 #endif // HAVE_OPENCL
