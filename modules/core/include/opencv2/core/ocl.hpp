@@ -261,6 +261,8 @@ public:
     void setUseSVM(bool enabled);
 
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+//protected:
     Impl* p;
 };
 

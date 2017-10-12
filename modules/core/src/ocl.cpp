@@ -47,22 +47,31 @@
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
+#include <fstream>
 #if !(defined _MSC_VER) || (defined _MSC_VER && _MSC_VER > 1700)
 #include <inttypes.h>
 #endif
 
 #include <opencv2/core/utils/configuration.private.hpp>
 
+#include <opencv2/core/utils/logger.hpp>
+
 #include "opencv2/core/ocl_genbase.hpp"
 #include "opencl_kernels_core.hpp"
 
-#define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
+#include "opencv2/core/utils/lock.private.hpp"
+#include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/core/utils/filesystem.private.hpp"
 
-#define CV_OPENCL_SHOW_RUN_KERNELS      0
-#define CV_OPENCL_TRACE_CHECK           0
+#define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
 
-#define CV_OPENCL_SHOW_SVM_ERROR_LOG    1
-#define CV_OPENCL_SHOW_SVM_LOG          0
+#define CV_OPENCL_SHOW_RUN_KERNELS               0
+#define CV_OPENCL_TRACE_CHECK                    0
+
+#define CV_OPENCL_VALIDATE_BINARY_PROGRAMS       1
+
+#define CV_OPENCL_SHOW_SVM_ERROR_LOG             1
+#define CV_OPENCL_SHOW_SVM_LOG                   0
 
 #include "opencv2/core/bufferpool.hpp"
 #ifndef LOG_BUFFER_POOL
@@ -167,6 +176,16 @@ void traceOpenCLCheck(cl_int status, const char* message)
 #define CV_OCL_DBG_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_DBG_CHECK_RESULT(__cl_result, #expr); } while (0)
 #endif
 
+
+static const bool CV_OPENCL_CACHE_ENABLE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_ENABLE", true);
+static const bool CV_OPENCL_CACHE_WRITE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_WRITE", true);
+static const bool CV_OPENCL_CACHE_LOCK_ENABLE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_LOCK_ENABLE", true);
+
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+static const bool CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE = utils::getConfigurationParameterBool("OPENCV_OPENCL_VALIDATE_BINARY_PROGRAMS", false);
+#endif
+
+
 struct UMat2D
 {
     UMat2D(const UMat& m)
@@ -225,6 +244,486 @@ static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
 
     return ~crc;
 }
+
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+struct OpenCLBinaryCacheConfigurator
+{
+    cv::String cache_path_;
+    cv::String cache_lock_filename_;
+    cv::Ptr<utils::fs::FileLock> cache_lock_;
+
+    typedef std::map<std::string, std::string> ContextCacheType;
+    ContextCacheType prepared_contexts_;
+
+    OpenCLBinaryCacheConfigurator()
+    {
+        CV_LOG_DEBUG(NULL, "Initializing OpenCL cache configuration...");
+        if (!CV_OPENCL_CACHE_ENABLE)
+        {
+            CV_LOG_INFO(NULL, "OpenCL cache is disabled");
+            return;
+        }
+        cache_path_ = utils::fs::getCacheDirectory("opencl_cache", "OPENCV_OPENCL_CACHE_DIR");
+        if (cache_path_.empty())
+        {
+            CV_LOG_INFO(NULL, "Specify OPENCV_OPENCL_CACHE_DIR configuration parameter to enable OpenCL cache");
+        }
+        do
+        {
+            try
+            {
+                if (cache_path_.empty())
+                    break;
+                if (cache_path_ == "disabled")
+                    break;
+                if (!utils::fs::createDirectories(cache_path_))
+                {
+                    CV_LOG_DEBUG(NULL, "Can't use OpenCL cache directory: " << cache_path_);
+                    clear();
+                    break;
+                }
+
+                if (CV_OPENCL_CACHE_LOCK_ENABLE)
+                {
+                    cache_lock_filename_ = cache_path_ + ".lock";
+                    if (!utils::fs::exists(cache_lock_filename_))
+                    {
+                        CV_LOG_DEBUG(NULL, "Creating lock file... (" << cache_lock_filename_ << ")");
+                        std::ofstream lock_filename(cache_lock_filename_.c_str(), std::ios::out);
+                        if (!lock_filename.is_open())
+                        {
+                            CV_LOG_WARNING(NULL, "Can't create lock file for OpenCL program cache: " << cache_lock_filename_);
+                            break;
+                        }
+                    }
+
+                    try
+                    {
+                        cache_lock_ = makePtr<utils::fs::FileLock>(cache_lock_filename_.c_str());
+                        CV_LOG_VERBOSE(NULL, 0, "Checking cache lock... (" << cache_lock_filename_ << ")");
+                        {
+                            utils::shared_lock_guard<utils::fs::FileLock> lock(*cache_lock_);
+                        }
+                        CV_LOG_VERBOSE(NULL, 0, "Checking cache lock... Done!");
+                    }
+                    catch (const cv::Exception& e)
+                    {
+                        CV_LOG_WARNING(NULL, "Can't create OpenCL program cache lock: " << cache_lock_filename_ << std::endl << e.what());
+                    }
+                    catch (...)
+                    {
+                        CV_LOG_WARNING(NULL, "Can't create OpenCL program cache lock: " << cache_lock_filename_);
+                    }
+                }
+                else
+                {
+                    if (CV_OPENCL_CACHE_WRITE)
+                    {
+                        CV_LOG_WARNING(NULL, "OpenCL cache lock is disabled while cache write is allowed "
+                                "(not safe for multiprocess environment)");
+                    }
+                    else
+                    {
+                        CV_LOG_INFO(NULL, "OpenCL cache lock is disabled");
+                    }
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_WARNING(NULL, "Can't prepare OpenCL program cache: " << cache_path_ << std::endl << e.what());
+                clear();
+            }
+        } while (0);
+        if (!cache_path_.empty())
+        {
+            if (cache_lock_.empty() && CV_OPENCL_CACHE_LOCK_ENABLE)
+            {
+                CV_LOG_WARNING(NULL, "Initialized OpenCL cache directory, but interprocess synchronization lock is not available. "
+                        "Consider to disable OpenCL cache: OPENCV_OPENCL_CACHE_DIR=disabled");
+            }
+            else
+            {
+                CV_LOG_INFO(NULL, "Successfully initialized OpenCL cache directory: " << cache_path_);
+            }
+        }
+    }
+
+    void clear()
+    {
+        cache_path_.clear();
+        cache_lock_filename_.clear();
+        cache_lock_.release();
+    }
+
+    std::string prepareCacheDirectoryForContext(const std::string& ctx_prefix)
+    {
+        if (cache_path_.empty())
+            return std::string();
+
+        ContextCacheType::iterator i = prepared_contexts_.find(ctx_prefix);
+        if (i != prepared_contexts_.end())
+            return i->second;
+
+        CV_LOG_INFO(NULL, "Preparing OpenCL cache configuration for context: " << ctx_prefix);
+
+        std::string target_directory = cache_path_ + ctx_prefix + "/";
+        bool result = utils::fs::isDirectory(target_directory);
+        if (!result)
+        {
+            try
+            {
+                CV_LOG_VERBOSE(NULL, 0, "Creating directory: " << target_directory);
+                if (utils::fs::createDirectories(target_directory))
+                {
+                    result = true;
+                }
+                else
+                {
+                    CV_LOG_WARNING(NULL, "Can't create directory: " << target_directory);
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "Can't create OpenCL program cache directory for context: " << target_directory << std::endl << e.what());
+            }
+        }
+        target_directory = result ? target_directory : std::string();
+        prepared_contexts_.insert(std::pair<std::string, std::string>(ctx_prefix, target_directory));
+
+        CV_LOG_VERBOSE(NULL, 1, "  Result: " << (target_directory.empty() ? std::string("Failed") : target_directory));
+
+        return target_directory;
+    }
+
+    static OpenCLBinaryCacheConfigurator& getSingletonInstance()
+    {
+        CV_SINGLETON_LAZY_INIT_REF(OpenCLBinaryCacheConfigurator, new OpenCLBinaryCacheConfigurator());
+    }
+};
+class BinaryProgramFile
+{
+    enum { MAX_ENTRIES = 64 };
+
+    typedef unsigned int uint32_t;
+
+    struct CV_DECL_ALIGNED(4) FileHeader
+    {
+        uint32_t sourceSignatureSize;
+        //char sourceSignature[];
+    };
+
+    struct CV_DECL_ALIGNED(4) FileTable
+    {
+        uint32_t numberOfEntries;
+        //uint32_t firstEntryOffset[];
+    };
+
+    struct CV_DECL_ALIGNED(4) FileEntry
+    {
+        uint32_t nextEntryFileOffset; // 0 for the last entry in chain
+        uint32_t keySize;
+        uint32_t dataSize;
+        //char key[];
+        //char data[];
+    };
+
+    const std::string fileName_;
+    const char* const sourceSignature_;
+    const size_t sourceSignatureSize_;
+
+    std::fstream f;
+
+    uint32_t entryOffsets[MAX_ENTRIES];
+
+    uint32_t getHash(const std::string& options)
+    {
+        uint64 hash = crc64((const uchar*)options.c_str(), options.size(), 0);
+        return hash & (MAX_ENTRIES - 1);
+    }
+
+    inline size_t getFileSize()
+    {
+        size_t pos = (size_t)f.tellg();
+        f.seekg(0, std::fstream::end);
+        size_t fileSize = (size_t)f.tellg();
+        f.seekg(pos, std::fstream::beg);
+        return fileSize;
+    }
+    inline uint32_t readUInt32()
+    {
+        uint32_t res = 0;
+        f.read((char*)&res, sizeof(uint32_t));
+        CV_Assert(!f.fail());
+        return res;
+    }
+    inline void writeUInt32(const uint32_t value)
+    {
+        uint32_t v = value;
+        f.write((char*)&v, sizeof(uint32_t));
+        CV_Assert(!f.fail());
+    }
+
+    inline void seekReadAbsolute(size_t pos)
+    {
+        f.seekg(pos, std::fstream::beg);
+        CV_Assert(!f.fail());
+    }
+    inline void seekReadRelative(size_t pos)
+    {
+        f.seekg(pos, std::fstream::cur);
+        CV_Assert(!f.fail());
+    }
+
+    inline void seekWriteAbsolute(size_t pos)
+    {
+        f.seekp(pos, std::fstream::beg);
+        CV_Assert(!f.fail());
+    }
+
+    void clearFile()
+    {
+        f.close();
+        if (0 != remove(fileName_.c_str()))
+            CV_LOG_ERROR(NULL, "Can't remove: " << fileName_);
+        return;
+    }
+
+public:
+    BinaryProgramFile(const std::string& fileName, const char* sourceSignature)
+        : fileName_(fileName), sourceSignature_(sourceSignature), sourceSignatureSize_(sourceSignature_ ? strlen(sourceSignature_) : 0)
+    {
+        CV_StaticAssert(sizeof(uint32_t) == 4, "");
+        CV_Assert(sourceSignature_ != NULL);
+        CV_Assert(sourceSignatureSize_ > 0);
+        memset(entryOffsets, 0, sizeof(entryOffsets));
+
+        f.rdbuf()->pubsetbuf(0, 0); // disable buffering
+        f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
+        if(f.is_open() && getFileSize() > 0)
+        {
+            bool isValid = false;
+            try
+            {
+                uint32_t fileSourceSignatureSize = readUInt32();
+                if (fileSourceSignatureSize == sourceSignatureSize_)
+                {
+                    cv::AutoBuffer<char> fileSourceSignature(fileSourceSignatureSize + 1);
+                    f.read((char*)fileSourceSignature, fileSourceSignatureSize);
+                    if (f.eof())
+                    {
+                        CV_LOG_ERROR(NULL, "Unexpected EOF");
+                    }
+                    else if (memcmp(sourceSignature, (const char*)fileSourceSignature, fileSourceSignatureSize) == 0)
+                    {
+                        isValid = true;
+                    }
+                }
+                if (!isValid)
+                {
+                    CV_LOG_ERROR(NULL, "Source code signature/hash mismatch (program source code has been changed/updated)");
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "Can't open binary program file: " << fileName << " : " << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_ERROR(NULL, "Can't open binary program file: " << fileName << " : Unknown error");
+            }
+            if (!isValid)
+            {
+                clearFile();
+            }
+            else
+            {
+                seekReadAbsolute(0);
+            }
+        }
+    }
+
+    bool read(const std::string& key, std::vector<char>& buf)
+    {
+        if (!f.is_open())
+            return false;
+
+        size_t fileSize = getFileSize();
+        if (fileSize == 0)
+        {
+            CV_LOG_ERROR(NULL, "Invalid file (empty): " << fileName_);
+            clearFile();
+            return false;
+        }
+        seekReadAbsolute(0);
+
+        // bypass FileHeader
+        uint32_t fileSourceSignatureSize = readUInt32();
+        CV_Assert(fileSourceSignatureSize > 0);
+        seekReadRelative(fileSourceSignatureSize);
+
+        uint32_t numberOfEntries = readUInt32();
+        CV_Assert(numberOfEntries > 0);
+        if (numberOfEntries != MAX_ENTRIES)
+        {
+            CV_LOG_ERROR(NULL, "Invalid file: " << fileName_);
+            clearFile();
+            return false;
+        }
+        f.read((char*)&entryOffsets[0], sizeof(entryOffsets));
+        CV_Assert(!f.fail());
+
+        uint32_t entryNum = getHash(key);
+
+        uint32_t entryOffset = entryOffsets[entryNum];
+        FileEntry entry;
+        while (entryOffset > 0)
+        {
+            seekReadAbsolute(entryOffset);
+            //CV_StaticAssert(sizeof(entry) == sizeof(uint32_t) * 3, "");
+            f.read((char*)&entry, sizeof(entry));
+            CV_Assert(!f.fail());
+            cv::AutoBuffer<char> fileKey(entry.keySize + 1);
+            if (key.size() == entry.keySize)
+            {
+                if (entry.keySize > 0)
+                {
+                    f.read((char*)fileKey, entry.keySize);
+                    CV_Assert(!f.fail());
+                }
+                if (memcmp((const char*)fileKey, key.c_str(), entry.keySize) == 0)
+                {
+                    buf.resize(entry.dataSize);
+                    f.read(&buf[0], entry.dataSize);
+                    CV_Assert(!f.fail());
+                    seekReadAbsolute(0);
+                    CV_LOG_VERBOSE(NULL, 0, "Read...");
+                    return true;
+                }
+            }
+            if (entry.nextEntryFileOffset == 0)
+                break;
+            entryOffset = entry.nextEntryFileOffset;
+        }
+        return false;
+    }
+
+    bool write(const std::string& key, std::vector<char>& buf)
+    {
+        if (!f.is_open())
+        {
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
+            if (!f.is_open())
+            {
+                f.open(fileName_.c_str(), std::ios::out|std::ios::binary);
+                if (!f.is_open())
+                {
+                    CV_LOG_ERROR(NULL, "Can't create file: " << fileName_);
+                    return false;
+                }
+            }
+        }
+
+        size_t fileSize = getFileSize();
+        if (fileSize == 0)
+        {
+            // Write header
+            seekWriteAbsolute(0);
+            writeUInt32((uint32_t)sourceSignatureSize_);
+            f.write(sourceSignature_, sourceSignatureSize_);
+            CV_Assert(!f.fail());
+
+            writeUInt32(MAX_ENTRIES);
+            memset(entryOffsets, 0, sizeof(entryOffsets));
+            f.write((char*)entryOffsets, sizeof(entryOffsets));
+            CV_Assert(!f.fail());
+            f.flush();
+            CV_Assert(!f.fail());
+            f.close();
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
+            CV_Assert(f.is_open());
+            fileSize = getFileSize();
+        }
+        seekReadAbsolute(0);
+
+        // bypass FileHeader
+        uint32_t fileSourceSignatureSize = readUInt32();
+        CV_Assert(fileSourceSignatureSize == sourceSignatureSize_);
+        seekReadRelative(fileSourceSignatureSize);
+
+        uint32_t numberOfEntries = readUInt32();
+        CV_Assert(numberOfEntries > 0);
+        if (numberOfEntries != MAX_ENTRIES)
+        {
+            CV_LOG_ERROR(NULL, "Invalid file: " << fileName_);
+            clearFile();
+            return false;
+        }
+        size_t tableEntriesOffset = (size_t)f.tellg();
+        f.read((char*)&entryOffsets[0], sizeof(entryOffsets));
+        CV_Assert(!f.fail());
+
+        uint32_t entryNum = getHash(key);
+
+        uint32_t entryOffset = entryOffsets[entryNum];
+        FileEntry entry;
+        while (entryOffset > 0)
+        {
+            seekReadAbsolute(entryOffset);
+            //CV_StaticAssert(sizeof(entry) == sizeof(uint32_t) * 3, "");
+            f.read((char*)&entry, sizeof(entry));
+            CV_Assert(!f.fail());
+            cv::AutoBuffer<char> fileKey(entry.keySize + 1);
+            if (key.size() == entry.keySize)
+            {
+                if (entry.keySize > 0)
+                {
+                    f.read((char*)fileKey, entry.keySize);
+                    CV_Assert(!f.fail());
+                }
+                if (0 == memcmp((const char*)fileKey, key.c_str(), entry.keySize))
+                {
+                    // duplicate
+                    CV_LOG_VERBOSE(NULL, 0, "Duplicate key ignored: " << fileName_);
+                    return false;
+                }
+            }
+            if (entry.nextEntryFileOffset == 0)
+                break;
+            entryOffset = entry.nextEntryFileOffset;
+        }
+        seekReadAbsolute(0);
+        if (entryOffset > 0)
+        {
+            seekWriteAbsolute(entryOffset);
+            entry.nextEntryFileOffset = (uint32_t)fileSize;
+            f.write((char*)&entry, sizeof(entry));
+            CV_Assert(!f.fail());
+        }
+        else
+        {
+            entryOffsets[entryNum] = (uint32_t)fileSize;
+            seekWriteAbsolute(tableEntriesOffset);
+            f.write((char*)entryOffsets, sizeof(entryOffsets));
+            CV_Assert(!f.fail());
+        }
+        seekWriteAbsolute(fileSize);
+        entry.nextEntryFileOffset = 0;
+        entry.dataSize = (uint32_t)buf.size();
+        entry.keySize = (uint32_t)key.size();
+        f.write((char*)&entry, sizeof(entry));
+        CV_Assert(!f.fail());
+        f.write(key.c_str(), entry.keySize);
+        CV_Assert(!f.fail());
+        f.write(&buf[0], entry.dataSize);
+        CV_Assert(!f.fail());
+        f.flush();
+        CV_Assert(!f.fail());
+        CV_LOG_VERBOSE(NULL, 0, "Write... (" << buf.size() << " bytes)");
+        return true;
+    }
+};
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+
 
 bool haveOpenCL()
 {
@@ -1470,10 +1969,31 @@ struct Context::Impl
         }
     }
 
+    std::string getPrefixString()
+    {
+        if (prefix.empty())
+        {
+            const Device& d = devices[0];
+            prefix = d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
+            // sanitize chars
+            for (size_t i = 0; i < prefix.size(); i++)
+            {
+                char c = prefix[i];
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                {
+                    prefix[i] = '_';
+                }
+            }
+        }
+        return prefix;
+    }
+
     IMPLEMENT_REFCOUNTABLE();
 
     cl_context handle;
     std::vector<Device> devices;
+
+    std::string prefix;
 
     cv::Mutex program_cache_mutex;
     typedef std::map<std::string, Program> phash_t;
@@ -2700,13 +3220,141 @@ struct Program::Impl
          handle(NULL)
     {
         refcount = 1;
-        compile(Context::getDefault(), errmsg);
+        const Context ctx = Context::getDefault();
+        Device device = ctx.device(0);
+        if (device.isAMD())
+            buildflags += " -D AMD_DEVICE";
+        else if (device.isIntel())
+            buildflags += " -D INTEL_DEVICE";
+        compile(ctx, errmsg);
     }
 
     bool compile(const Context& ctx, String& errmsg)
     {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+        OpenCLBinaryCacheConfigurator& config = OpenCLBinaryCacheConfigurator::getSingletonInstance();
+        const std::string base_dir = config.prepareCacheDirectoryForContext(ctx.getImpl()->getPrefixString());
+        const std::string fname = base_dir.empty() ? std::string() :
+                std::string(base_dir + src.getImpl()->module_.c_str() + "--" + src.getImpl()->name_ + "_" + src.getImpl()->codeHash_ + ".bin");
+        const cv::Ptr<utils::fs::FileLock> fileLock = config.cache_lock_; // can be empty
+        const String& hash_str = src.getImpl()->codeHash_;
+        if (!fname.empty() && CV_OPENCL_CACHE_ENABLE)
+        {
+            try
+            {
+                std::vector<char> binaryBuf;
+                bool res = false;
+                {
+                    cv::utils::optional_shared_lock_guard<cv::utils::fs::FileLock> lock_fs(fileLock.get());
+                    BinaryProgramFile file(fname, hash_str.c_str());
+                    res = file.read(buildflags, binaryBuf);
+                }
+                if (res)
+                {
+                    CV_Assert(!binaryBuf.empty());
+                    bool isLoaded = createFromBinary(ctx, binaryBuf, errmsg);
+                    if (isLoaded)
+                        return true;
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_UNUSED(e);
+                CV_LOG_VERBOSE(NULL, 0, "Can't load OpenCL binary: " + fname << std::endl << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_VERBOSE(NULL, 0, "Can't load OpenCL binary: " + fname);
+            }
+        }
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
         CV_Assert(handle == NULL);
-        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", src.hash(), buildflags.c_str()).c_str());
+        if (!buildFromSources(ctx, errmsg))
+        {
+            return true;
+        }
+        CV_Assert(handle != NULL);
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+        if (!fname.empty() && CV_OPENCL_CACHE_WRITE)
+        {
+            try
+            {
+                std::vector<char> binaryBuf;
+                getProgramBinary(binaryBuf);
+                {
+                    cv::utils::optional_lock_guard<cv::utils::fs::FileLock> lock_fs(fileLock.get());
+                    BinaryProgramFile file(fname, hash_str.c_str());
+                    file.write(buildflags, binaryBuf);
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_WARNING(NULL, "Can't save OpenCL binary into cache: " + fname << std::endl << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_WARNING(NULL, "Can't save OpenCL binary into cache: " + fname);
+            }
+        }
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+        if (CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
+        {
+            std::vector<char> binaryBuf;
+            getProgramBinary(binaryBuf);
+            if (!binaryBuf.empty())
+            {
+                CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                handle = NULL;
+                createFromBinary(ctx, binaryBuf, errmsg);
+            }
+        }
+#endif
+        return handle != NULL;
+    }
+
+    void dumpBuildLog_(cl_int result, const cl_device_id* deviceList, String& errmsg)
+    {
+        AutoBuffer<char, 4096> buffer; buffer[0] = 0;
+
+        size_t retsz = 0;
+        cl_int log_retval = clGetProgramBuildInfo(handle, deviceList[0],
+                                                  CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
+        if (log_retval == CL_SUCCESS && retsz > 1)
+        {
+            buffer.resize(retsz + 16);
+            log_retval = clGetProgramBuildInfo(handle, deviceList[0],
+                                               CL_PROGRAM_BUILD_LOG, retsz+1, (char*)buffer, &retsz);
+            if (log_retval == CL_SUCCESS)
+            {
+                if (retsz < buffer.size())
+                    buffer[retsz] = 0;
+                else
+                    buffer[buffer.size() - 1] = 0;
+            }
+            else
+            {
+                buffer[0] = 0;
+            }
+        }
+
+        errmsg = String(buffer);
+        printf("OpenCL program build log: %s/%s\nStatus %d: %s\n%s\n%s\n",
+                src.getImpl()->module_.c_str(), src.getImpl()->name_.c_str(),
+                result, getOpenCLErrorString(result),
+                buildflags.c_str(), errmsg.c_str());
+        fflush(stdout);
+    }
+
+    bool buildFromSources(const Context& ctx, String& errmsg)
+    {
+        CV_Assert(handle == NULL);
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Build OpenCL program: %s/%s %" PRIx64 " options: %s",
+                src.getImpl()->module_.c_str(), src.getImpl()->name_.c_str(),
+                src.hash(), buildflags.c_str()).c_str());
+
+        CV_LOG_VERBOSE(NULL, 0, "Compile... " << src.getImpl()->module_.c_str() << "/" << src.getImpl()->name_.c_str());
+
         const String& srcstr = src.source();
         const char* srcptr = srcstr.c_str();
         size_t srclen = srcstr.size();
@@ -2717,54 +3365,20 @@ struct Program::Impl
         CV_Assert(handle || retval != CL_SUCCESS);
         if (handle && retval == CL_SUCCESS)
         {
-            int i, n = (int)ctx.ndevices();
-            AutoBuffer<void*> deviceListBuf(n+1);
-            void** deviceList = deviceListBuf;
-            for( i = 0; i < n; i++ )
-                deviceList[i] = ctx.device(i).ptr();
+            size_t n = ctx.ndevices();
+            AutoBuffer<cl_device_id, 4> deviceListBuf(n + 1);
+            cl_device_id* deviceList = deviceListBuf;
+            for (size_t i = 0; i < n; i++)
+            {
+                deviceList[i] = (cl_device_id)(ctx.device(i).ptr());
+            }
 
-            Device device = Device::getDefault();
-            if (device.isAMD())
-                buildflags += " -D AMD_DEVICE";
-            else if (device.isIntel())
-                buildflags += " -D INTEL_DEVICE";
-
-            retval = clBuildProgram(handle, n,
-                                    (const cl_device_id*)deviceList,
-                                    buildflags.c_str(), 0, 0);
+            retval = clBuildProgram(handle, (cl_uint)n, deviceList, buildflags.c_str(), 0, 0);
 #if !CV_OPENCL_ALWAYS_SHOW_BUILD_LOG
             if (retval != CL_SUCCESS)
 #endif
             {
-                AutoBuffer<char, 4096> buffer; buffer[0] = 0;
-
-                size_t retsz = 0;
-                cl_int log_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                                          CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if (log_retval == CL_SUCCESS && retsz > 1)
-                {
-                    buffer.resize(retsz + 16);
-                    log_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                                       CL_PROGRAM_BUILD_LOG, retsz+1, (char*)buffer, &retsz);
-                    if (log_retval == CL_SUCCESS)
-                    {
-                        if (retsz < buffer.size())
-                            buffer[retsz] = 0;
-                        else
-                            buffer[buffer.size() - 1] = 0;
-                    }
-                    else
-                    {
-                        buffer[0] = 0;
-                    }
-                }
-
-                errmsg = String(buffer);
-                printf("OpenCL program build log: %s (%s)\nStatus %d: %s\n%s\n%s\n",
-                        src.getImpl()->name_.c_str(), src.getImpl()->module_.c_str(),
-                        retval, getOpenCLErrorString(retval),
-                        buildflags.c_str(), errmsg.c_str());
-                fflush(stdout);
+                dumpBuildLog_(retval, deviceList, errmsg);
 
                 // don't remove "retval != CL_SUCCESS" condition here:
                 // it would break CV_OPENCL_ALWAYS_SHOW_BUILD_LOG mode
@@ -2774,6 +3388,7 @@ struct Program::Impl
                     handle = NULL;
                 }
             }
+
         }
         return handle != NULL;
     }
@@ -2828,6 +3443,135 @@ struct Program::Impl
             return String();
         buf[progsz] = (uchar)'\0';
         return String((const char*)(uchar*)bufbuf, prefixlen + progsz);
+    }
+
+    void getProgramBinary(std::vector<char>& buf)
+    {
+        CV_Assert(handle);
+        size_t sz = 0;
+        CV_OCL_CHECK(clGetProgramInfo(handle, CL_PROGRAM_BINARY_SIZES, sizeof(sz), &sz, NULL));
+        buf.resize(sz);
+        uchar* ptr = (uchar*)&buf[0];
+        CV_OCL_CHECK(clGetProgramInfo(handle, CL_PROGRAM_BINARIES, sizeof(ptr), &ptr, NULL));
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+        if (CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
+        {
+            CV_LOG_INFO(NULL, "OpenCL: query kernel names (compiled)...");
+            size_t retsz = 0;
+            char kernels_buffer[4096] = {0};
+            cl_int result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+            if (retsz < sizeof(kernels_buffer))
+                kernels_buffer[retsz] = 0;
+            else
+                kernels_buffer[0] = 0;
+            CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
+        }
+#endif
+    }
+
+    bool createFromBinary(const Context& ctx, const std::vector<char>& buf, String& errmsg)
+    {
+        CV_Assert(handle == NULL);
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE("Load OpenCL program");
+        CV_LOG_VERBOSE(NULL, 0, "Load from binary... " << src.getImpl()->module_.c_str() << "/" << src.getImpl()->name_.c_str());
+
+        const uchar* binaryPtr = (uchar*)&buf[0];
+        size_t binarySize = buf.size();
+        CV_Assert(binarySize > 0);
+
+        size_t ndevices = (int)ctx.ndevices();
+        AutoBuffer<cl_device_id> devices_(ndevices);
+        AutoBuffer<const uchar*> binaryPtrs_(ndevices);
+        AutoBuffer<size_t> binarySizes_(ndevices);
+
+        cl_device_id* devices = devices_;
+        const uchar** binaryPtrs = binaryPtrs_;
+        size_t* binarySizes = binarySizes_;
+        for (size_t i = 0; i < ndevices; i++)
+        {
+            devices[i] = (cl_device_id)ctx.device(i).ptr();
+            binaryPtrs[i] = binaryPtr;
+            binarySizes[i] = binarySize;
+        }
+
+        cl_int result = 0;
+        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), (cl_uint)ndevices, (cl_device_id*)devices_,
+                                           binarySizes, binaryPtrs, NULL, &result);
+        if (result != CL_SUCCESS)
+        {
+            CV_LOG_ERROR(NULL, CV_OCL_API_ERROR_MSG(result, "clCreateProgramWithBinary"));
+            if (handle)
+            {
+                CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                handle = NULL;
+            }
+        }
+        if (!handle)
+            return false;
+        cl_build_status build_status = CL_BUILD_NONE;
+        size_t retsz = 0;
+        CV_OCL_DBG_CHECK(result = clGetProgramBuildInfo(handle, devices[0], CL_PROGRAM_BUILD_STATUS,
+                sizeof(build_status), &build_status, &retsz));
+        if (result == CL_SUCCESS && build_status == CL_BUILD_SUCCESS)
+        {
+            CV_LOG_VERBOSE(NULL, 0, "clGetProgramBuildInfo() pre-check returns CL_BUILD_SUCCESS. Skip clBuildProgram() call");
+        }
+        else
+        {
+            result = clBuildProgram(handle, (cl_uint)ndevices, (cl_device_id*)devices_, buildflags.c_str(), 0, 0);
+            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clBuildProgram(binary: %s/%s)", src.getImpl()->module_.c_str(), src.getImpl()->name_.c_str()).c_str());
+            if (result != CL_SUCCESS)
+            {
+                dumpBuildLog_(result, devices, errmsg);
+                if (handle)
+                {
+                    CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                    handle = NULL;
+                }
+                return false;
+            }
+        }
+        if (build_status != CL_BUILD_SUCCESS)
+        {
+            CV_OCL_DBG_CHECK(result = clGetProgramBuildInfo(handle, devices[0], CL_PROGRAM_BUILD_STATUS,
+                    sizeof(build_status), &build_status, &retsz));
+            if (result == CL_SUCCESS)
+            {
+                if (build_status == CL_BUILD_SUCCESS)
+                {
+                    return true;
+                }
+                else
+                {
+                    CV_LOG_WARNING(NULL, "clGetProgramBuildInfo() returns " << build_status);
+                    return false;
+                }
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, CV_OCL_API_ERROR_MSG(result, "clGetProgramBuildInfo()"));
+                if (handle)
+                {
+                    CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                    handle = NULL;
+                }
+            }
+        }
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+        if (handle && CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
+        {
+            CV_LOG_INFO(NULL, "OpenCL: query kernel names (binary)...");
+            retsz = 0;
+            char kernels_buffer[4096] = {0};
+            result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+            if (retsz < sizeof(kernels_buffer))
+                kernels_buffer[retsz] = 0;
+            else
+                kernels_buffer[0] = 0;
+            CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
+        }
+#endif
+        return handle != NULL;
     }
 
     ~Impl()

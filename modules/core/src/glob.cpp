@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#include "opencv2/core/utils/filesystem.hpp"
+
 #if defined _WIN32 || defined WINCE
 # include <windows.h>
 const char dir_separators[] = "/\\";
@@ -167,6 +169,12 @@ static bool isDir(const cv::String& path, DIR* dir)
     int is_dir = S_ISDIR( stat_buf.st_mode);
     return is_dir != 0;
 #endif
+}
+
+bool cv::utils::fs::isDirectory(const cv::String& path)
+{
+    CV_INSTRUMENT_REGION()
+    return isDir(path, NULL);
 }
 
 static bool wildcmp(const char *string, const char *wild)
