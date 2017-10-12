@@ -103,14 +103,14 @@ namespace cv {
 
                 void setLayerBlobs(int i, std::vector<cv::Mat> blobs)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams &params = net->layers[i].layerParams;
+                    cv::dnn::LayerParams &params = net->layers[i].layerParams;
                     params.blobs = blobs;
                 }
 
-                cv::dnn::experimental_dnn_v1::LayerParams getParamConvolution(int kernel, int pad,
+                cv::dnn::LayerParams getParamConvolution(int kernel, int pad,
                     int stride, int filters_num)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams params;
+                    cv::dnn::LayerParams params;
                     params.name = "Convolution-name";
                     params.type = "Convolution";
 
@@ -128,7 +128,7 @@ namespace cv {
                 void setConvolution(int kernel, int pad, int stride,
                     int filters_num, int channels_num, int use_batch_normalize, int use_relu)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams conv_param =
+                    cv::dnn::LayerParams conv_param =
                         getParamConvolution(kernel, pad, stride, filters_num);
 
                     darknet::LayerParameter lp;
@@ -148,7 +148,7 @@ namespace cv {
 
                     if (use_batch_normalize)
                     {
-                        cv::dnn::experimental_dnn_v1::LayerParams bn_param;
+                        cv::dnn::LayerParams bn_param;
 
                         bn_param.name = "BatchNorm-name";
                         bn_param.type = "BatchNorm";
@@ -168,7 +168,7 @@ namespace cv {
 
                     if (use_relu)
                     {
-                        cv::dnn::experimental_dnn_v1::LayerParams activation_param;
+                        cv::dnn::LayerParams activation_param;
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.name = "ReLU-name";
                         activation_param.type = "ReLU";
@@ -189,7 +189,7 @@ namespace cv {
 
                 void setMaxpool(size_t kernel, size_t pad, size_t stride)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams maxpool_param;
+                    cv::dnn::LayerParams maxpool_param;
                     maxpool_param.set<cv::String>("pool", "max");
                     maxpool_param.set<int>("kernel_size", kernel);
                     maxpool_param.set<int>("pad", pad);
@@ -212,7 +212,7 @@ namespace cv {
 
                 void setConcat(int number_of_inputs, int *input_indexes)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams concat_param;
+                    cv::dnn::LayerParams concat_param;
                     concat_param.name = "Concat-name";
                     concat_param.type = "Concat";
                     concat_param.set<int>("axis", 1);	// channels are in axis = 1
@@ -235,7 +235,7 @@ namespace cv {
 
                 void setIdentity(int bottom_index)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams identity_param;
+                    cv::dnn::LayerParams identity_param;
                     identity_param.name = "Identity-name";
                     identity_param.type = "Identity";
 
@@ -256,7 +256,7 @@ namespace cv {
 
                 void setReorg(int stride)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams reorg_params;
+                    cv::dnn::LayerParams reorg_params;
                     reorg_params.name = "Reorg-name";
                     reorg_params.type = "Reorg";
                     reorg_params.set<int>("reorg_stride", stride);
@@ -277,7 +277,7 @@ namespace cv {
 
                 void setPermute()
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams permute_params;
+                    cv::dnn::LayerParams permute_params;
                     permute_params.name = "Permute-name";
                     permute_params.type = "Permute";
                     int permute[] = { 0, 2, 3, 1 };
@@ -300,7 +300,7 @@ namespace cv {
 
                 void setRegion(float thresh, int coords, int classes, int anchors, int classfix, int softmax, int softmax_tree, float *biasData)
                 {
-                    cv::dnn::experimental_dnn_v1::LayerParams region_param;
+                    cv::dnn::LayerParams region_param;
                     region_param.name = "Region-name";
                     region_param.type = "Region";
 
