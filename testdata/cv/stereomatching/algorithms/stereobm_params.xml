@@ -1,14 +1,21 @@
 <?xml version="1.0"?>
 <opencv_storage>
 <params>
-	<!-- caseName, datasetName, numDisp, winSize -->
-	case_barn2 barn2 "16" "19"
-	case_bull bull "16" "39"
-	case_cones cones "64" "11"
-	case_poster poster "48" "9"
-	case_sawtooth sawtooth "16" "13"
-	case_teddy teddy "48" "15"
-	case_tsukuba tsukuba "16" "21"
-	case_venus venus "32" "43"
+	<!-- caseName, datasetName, numDisp, minDisp, winSize -->
+	case_barn2 barn2 "16" "0" "19"
+	case_bull bull "16" "0" "39"
+	case_cones cones "64" "0" "11"
+	case_cones_p16 cones "48" "16" "11"
+	case_cones_p32 cones "32" "32" "11"
+	case_cones_m16 cones "80" "-16" "11"
+	case_poster poster "48" "0" "9"
+	case_poster_p16 poster "32" "16" "9"
+	case_poster_m16 poster "64" "-16" "9"
+	case_sawtooth sawtooth "16" "0" "13"
+	case_teddy teddy "48" "0" "15"
+	case_teddy_p16 teddy "32" "16" "15"
+	case_teddy_m16 teddy "64" "-16" "15"
+	case_tsukuba tsukuba "16" "0" "21"
+	case_venus venus "32" "0" "43"
 </params>
 </opencv_storage>
