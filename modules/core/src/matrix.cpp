@@ -1151,7 +1151,7 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
 }
 
 template <typename T> static inline
-void scalarToRawData(const Scalar& s, T * const buf, const int cn, const int unroll_to)
+void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
 {
     int i = 0;
     for(; i < cn; i++)
@@ -1169,25 +1169,25 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     switch(depth)
     {
     case CV_8U:
-        scalarToRawData<uchar>(s, (uchar*)_buf, cn, unroll_to);
+        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
         break;
     case CV_8S:
-        scalarToRawData<schar>(s, (schar*)_buf, cn, unroll_to);
+        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
         break;
     case CV_16U:
-        scalarToRawData<ushort>(s, (ushort*)_buf, cn, unroll_to);
+        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
         break;
     case CV_16S:
-        scalarToRawData<short>(s, (short*)_buf, cn, unroll_to);
+        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_32S:
-            scalarToRawData<int>(s, (int*)_buf, cn, unroll_to);
+        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
         break;
     case CV_32F:
-        scalarToRawData<float>(s, (float*)_buf, cn, unroll_to);
+        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
         break;
     case CV_64F:
-        scalarToRawData<double>(s, (double*)_buf, cn, unroll_to);
+        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
         break;
     default:
         CV_Error(CV_StsUnsupportedFormat,"");
