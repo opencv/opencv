@@ -231,6 +231,7 @@ TEST(Torch_Importer, net_padding)
 {
     runTorchNet("net_padding", DNN_TARGET_CPU, "", false, true);
     runTorchNet("net_spatial_zero_padding", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_spatial_reflection_padding", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, ENet_accuracy)
@@ -335,6 +336,49 @@ OCL_TEST(Torch_Importer, ENet_accuracy)
         net.setInput(inputBlob, "");
         Mat out = net.forward();
         normAssert(ref, out, "", 0.00044, 0.44);
+    }
+}
+
+// Check accuracy of style transfer models from https://github.com/jcjohnson/fast-neural-style
+// th fast_neural_style.lua \
+//   -input_image ~/opencv_extra/testdata/dnn/googlenet_1.png \
+//   -output_image lena.png \
+//   -median_filter 0 \
+//   -image_size 0 \
+//   -model models/eccv16/starry_night.t7
+// th fast_neural_style.lua \
+//   -input_image ~/opencv_extra/testdata/dnn/googlenet_1.png \
+//   -output_image lena.png \
+//   -median_filter 0 \
+//   -image_size 0 \
+//   -model models/instance_norm/feathers.t7
+TEST(Torch_Importer, FastNeuralStyle_accuracy)
+{
+    std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
+                            "dnn/fast_neural_style_instance_norm_feathers.t7"};
+    std::string targets[] = {"dnn/lena_starry_night.png", "dnn/lena_feathers.png"};
+
+    for (int i = 0; i < 2; ++i)
+    {
+        const string model = findDataFile(models[i], false);
+        Net net = readNetFromTorch(model);
+
+        Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
+        Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
+
+        net.setInput(inputBlob);
+        Mat out = net.forward();
+
+        // Deprocessing.
+        getPlane(out, 0, 0) += 103.939;
+        getPlane(out, 0, 1) += 116.779;
+        getPlane(out, 0, 2) += 123.68;
+        out = cv::min(cv::max(0, out), 255);
+
+        Mat ref = imread(findDataFile(targets[i]));
+        Mat refBlob = blobFromImage(ref, 1.0, Size(), Scalar(), false);
+
+        normAssert(out, refBlob, "", 0.5, 1.1);
     }
 }
 
