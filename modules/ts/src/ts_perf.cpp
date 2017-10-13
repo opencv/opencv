@@ -623,7 +623,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
         }
         else if(param_verify_sanity)
         {
-            ADD_FAILURE() << "  No regression data for " << name << " argument";
+            ADD_FAILURE() << "  No regression data for " << name << " argument, test node: " << nodename;
         }
     }
     else
