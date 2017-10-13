@@ -47,9 +47,9 @@
 #include "fstream"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
@@ -130,6 +130,5 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 MatchTemplType::all(),
                                 Bool())
                            );
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif

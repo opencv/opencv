@@ -7,6 +7,7 @@
 #include <math.h>
 #include "opencv2/core/softfloat.hpp"
 
+namespace {
 using namespace cv;
 using namespace std;
 
@@ -3681,4 +3682,5 @@ TEST(Core_SoftFloat, sincos64)
     }
 }
 
+} // namespace
 /* End of file. */

@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+namespace {
 
 using namespace cvtest;
 
@@ -54,8 +55,6 @@ namespace
     IMPLEMENT_PARAM_CLASS(FAST_Threshold, int)
     IMPLEMENT_PARAM_CLASS(FAST_NonmaxSuppression, bool)
 }
-
-namespace {
 
 PARAM_TEST_CASE(FAST, cv::cuda::DeviceInfo, FAST_Threshold, FAST_NonmaxSuppression)
 {
@@ -711,5 +710,4 @@ INSTANTIATE_TEST_CASE_P(CUDA_Features2D, BruteForceMatcher, testing::Combine(
     testing::Values(UseMask(false), UseMask(true))));
 
 } // namespace
-
 #endif // HAVE_CUDA

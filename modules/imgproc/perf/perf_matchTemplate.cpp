@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -81,3 +83,5 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
 
     SANITY_CHECK(result, eps);
 }
+
+} // namespace

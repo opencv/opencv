@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -36,3 +38,5 @@ PERF_TEST_P( TestBilateralFilter, BilateralFilter,
 
     SANITY_CHECK(dst, .01, ERROR_RELATIVE);
 }
+
+} // namespace

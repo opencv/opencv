@@ -3,11 +3,9 @@
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
-
-namespace cvtest
-{
-namespace ocl
-{
+namespace cvtest {
+namespace ocl {
+namespace {
 
 using std::tr1::tuple;
 using std::tr1::get;
@@ -112,7 +110,5 @@ OCL_PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     SANITY_CHECK_NOTHING();
 }
 
-}
-}
-
+}}} // namespace
 #endif

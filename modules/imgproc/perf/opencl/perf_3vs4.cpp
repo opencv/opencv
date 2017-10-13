@@ -9,9 +9,9 @@
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////// 3 channels Vs 4 ////////////////////////
 
@@ -132,6 +132,5 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Subtract,
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL

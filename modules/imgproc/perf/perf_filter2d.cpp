@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -99,3 +101,5 @@ PERF_TEST_P( Image_KernelSize, GaborFilter2d,
 
     SANITY_CHECK(filteredImage, 1e-6, ERROR_RELATIVE);
 }
+
+} // namespace

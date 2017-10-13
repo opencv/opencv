@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -69,3 +71,5 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
     }
     SANITY_CHECK(warpMat, 3e-3);
 }
+
+} // namespace

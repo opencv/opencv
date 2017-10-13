@@ -1,6 +1,8 @@
 #include "perf_precomp.hpp"
 #include "opencv2/core/core_c.h"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -66,3 +68,5 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
 
     SANITY_CHECK(vec, 1);
 }
+
+} // namespace

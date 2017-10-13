@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -68,3 +70,5 @@ PERF_TEST_P( TestRemap, Remap,
 
     SANITY_CHECK(dst);
 }
+
+} // namespace

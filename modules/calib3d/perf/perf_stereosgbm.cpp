@@ -36,8 +36,7 @@
 
 #include "perf_precomp.hpp"
 
-namespace cvtest
-{
+namespace cvtest { namespace {
 using namespace perf;
 using namespace testing;
 
@@ -156,4 +155,4 @@ void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_right_view)
     }
 }
 
-}
+}} // namespace

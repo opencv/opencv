@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -376,3 +378,5 @@ PERF_TEST_P(EdgeAwareDemosaicingTest, demosaicingEA,
 
     SANITY_CHECK(dst, 1);
 }
+
+} // namespace

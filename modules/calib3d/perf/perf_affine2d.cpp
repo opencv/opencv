@@ -43,8 +43,7 @@
 #include <algorithm>
 #include <functional>
 
-namespace cvtest
-{
+namespace cvtest { namespace {
 
 using std::tr1::tuple;
 using std::tr1::get;
@@ -167,4 +166,4 @@ PERF_TEST_P( EstimateAffine, EstimateAffinePartial2D, ESTIMATE_PARAMS )
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace cvtest
+}} // namespace cvtest

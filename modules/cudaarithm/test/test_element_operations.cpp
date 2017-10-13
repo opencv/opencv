@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+namespace {
 
 using namespace cvtest;
 
@@ -2795,4 +2796,5 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, PolarToCart, testing::Combine(
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
     WHOLE_SUBMAT));
 
+} // namespace
 #endif // HAVE_CUDA

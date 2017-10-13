@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -57,3 +59,5 @@ PERF_TEST_P( Size_MatType_CmpType, compareScalar,
 
     SANITY_CHECK(dst);
 }
+
+} // namespace

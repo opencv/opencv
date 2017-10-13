@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -67,3 +69,5 @@ PERF_TEST_P(Size_MatType_Flag, dct, testing::Combine(
 
     SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
 }
+
+} // namespace

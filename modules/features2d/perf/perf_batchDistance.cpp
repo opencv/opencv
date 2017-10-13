@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -165,3 +167,5 @@ void generateData( Mat& query, Mat& train, const int sourceType )
         }
     }
 }
+
+} // namespace

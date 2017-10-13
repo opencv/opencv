@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -271,3 +273,5 @@ PERF_TEST_P(Path_Win_Deriv_Border_Reuse, OpticalFlowPyrLK_pyr, testing::Combine(
 
     SANITY_CHECK(pyramid);
 }
+
+} // namespace

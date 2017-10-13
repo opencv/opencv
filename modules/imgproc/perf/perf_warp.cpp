@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -289,3 +291,5 @@ PERF_TEST(Transform, getPerspectiveTransform)
 
     SANITY_CHECK(transformCoefficient, 1e-5);
 }
+
+} // namespace
