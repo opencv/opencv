@@ -16,6 +16,11 @@ bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
         dv = dnn::DictValue((int64)PyLong_AsLongLong(o));
         return true;
     }
+    else if (PyInt_Check(o))
+    {
+        dv = dnn::DictValue((int64)PyInt_AS_LONG(o));
+        return true;
+    }
     else if (PyFloat_Check(o))
     {
         dv = dnn::DictValue(PyFloat_AS_DOUBLE(o));
