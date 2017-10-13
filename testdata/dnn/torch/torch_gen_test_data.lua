@@ -169,3 +169,7 @@ save(net_spatial_zero_padding, torch.rand(4, 2, 3), 'net_spatial_zero_padding')
 -- input = image.scale(input, 96, 96, 'simple'):reshape(1, 3, 96, 96)
 -- output = net:forward(input):reshape(1, 128)
 -- torch.save('net_openface_output.dat', output)
+
+local net_spatial_reflection_padding = nn.Sequential()
+net_spatial_reflection_padding:add(nn.SpatialReflectionPadding(5, 5, 5, 5));
+save(net_spatial_reflection_padding, torch.rand(1, 3, 7, 8), 'net_spatial_reflection_padding')
