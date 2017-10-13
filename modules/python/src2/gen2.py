@@ -811,7 +811,9 @@ class FuncInfo(object):
             cname = classinfo.cname + '::' + cname
         py_signatures = codegen.py_signatures.setdefault(cname, [])
         for v in self.variants:
-            compat_name = self.namespace.replace("cv", "cv2", 1) + "." + v.name
+            compat_name = v.name
+            if not self.isclassmethod:
+                compat_name = self.namespace.replace("cv", "cv2", 1) + "." + compat_name
             s = dict(name=compat_name, arg=v.py_arg_str, ret=v.py_return_str)
             for old in py_signatures:
                 if s == old:
