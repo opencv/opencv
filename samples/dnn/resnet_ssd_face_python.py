@@ -1,8 +1,5 @@
 import numpy as np
 import argparse
-import os
-import sys
-sys.path.append('/home/arrybn/build/opencv/lib')
 import cv2 as cv
 try:
     import cv2 as cv
