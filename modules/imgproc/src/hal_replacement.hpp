@@ -619,19 +619,15 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 
 #if defined __GNUC__
 #  pragma GCC diagnostic pop
-#define EXPAND
 #elif defined _MSC_VER
 #  pragma warning( pop )
-#define EXPAND(x) x
-#else
-#define EXPAND
 #endif
 
 #include "custom_hal.hpp"
 
 //! @cond IGNORED
 #define CALL_HAL_RET(name, fun, retval, ...) \
-    int res = EXPAND(fun(__VA_ARGS__, &retval)); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__, &retval)); \
     if (res == CV_HAL_ERROR_OK) \
         return retval; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
@@ -640,7 +636,7 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 
 
 #define CALL_HAL(name, fun, ...) \
-    int res = EXPAND(fun(__VA_ARGS__)); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__)); \
     if (res == CV_HAL_ERROR_OK) \
         return; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
