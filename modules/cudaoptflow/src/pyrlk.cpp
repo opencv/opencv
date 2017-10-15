@@ -103,9 +103,12 @@ namespace
     };
 
     PyrLKOpticalFlowBase::PyrLKOpticalFlowBase(Size winSize, int maxLevel, int iters, bool useInitialFlow) :
-        winSize_({winSize.width, winSize.height}), halfWinSize_({(winSize.width - 1) / 2, (winSize.height - 1) / 2}),
         maxLevel_(maxLevel), iters_(iters), useInitialFlow_(useInitialFlow)
     {
+        winSize_[0] = winSize.width;
+        winSize_[1] = winSize.height;
+        halfWinSize_[0] = (winSize.width - 1) / 2;
+        halfWinSize_[1] = (winSize.height - 1) / 2;
         pyrlk::loadWinSize(winSize_, halfWinSize_, 0);
         pyrlk::loadIters(&iters_, 0);
     }
