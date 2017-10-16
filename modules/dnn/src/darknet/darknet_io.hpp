@@ -99,6 +99,8 @@ namespace cv {
                 std::map<int, std::map<std::string, std::string> > layers_cfg;
                 std::map<std::string, std::string> net_cfg;
 
+                NetParameter() : width(0), height(0), channels(0) {}
+
                 int layer_size() const { return layers.size(); }
 
                 int input_size() const { return 1; }

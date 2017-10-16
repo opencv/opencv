@@ -122,7 +122,7 @@ public:
         int channels;
         size_t planeSize;
 
-        EltwiseInvoker() : srcs(0), nsrcs(0), dst(0), coeffs(0), op(EltwiseLayer::PROD), nstripes(0), activ(0) {}
+        EltwiseInvoker() : srcs(0), nsrcs(0), dst(0), coeffs(0), op(EltwiseLayer::PROD), nstripes(0), activ(0), channels(0), planeSize(0)  {}
 
         static void run(const Mat** srcs, int nsrcs, Mat& dst,
                         const std::vector<float>& coeffs, EltwiseOp op,
