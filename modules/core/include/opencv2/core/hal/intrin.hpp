@@ -440,7 +440,7 @@ template <> struct V_RegTrait128<double> {
 
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700)
+#if (_MSC_VER < 1700) || defined(_M_ARM)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;
