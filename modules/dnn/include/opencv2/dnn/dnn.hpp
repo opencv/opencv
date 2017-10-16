@@ -734,6 +734,19 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst);
 
+    /** @brief
+     * @param bboxes
+     * @param scores
+     * @param score_threshold
+     * @param nms_threshold
+     * @param eta
+     * @param top_k
+     * @param indices
+     */
+    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+                               const float score_threshold, const float nms_threshold,
+                               const float eta, const int top_k, CV_OUT std::vector<int>& indices);
+
 
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
