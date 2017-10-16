@@ -95,9 +95,9 @@ if __name__ == "__main__":
         else:
             cropSize = (cols, int(cols / WHRatio))
 
-        y1 = (rows - cropSize[1]) / 2
+        y1 = int((rows - cropSize[1]) / 2)
         y2 = y1 + cropSize[1]
-        x1 = (cols - cropSize[0]) / 2
+        x1 = int((cols - cropSize[0]) / 2)
         x2 = x1 + cropSize[0]
         frame = frame[y1:y2, x1:x2]
 
