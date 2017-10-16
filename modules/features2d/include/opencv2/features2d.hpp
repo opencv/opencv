@@ -43,8 +43,12 @@
 #ifndef OPENCV_FEATURES_2D_HPP
 #define OPENCV_FEATURES_2D_HPP
 
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
+
+#ifdef HAVE_OPENCV_FLANN
 #include "opencv2/flann/miniflann.hpp"
+#endif
 
 /**
   @defgroup features2d 2D Features Framework
@@ -1099,6 +1103,7 @@ protected:
     bool crossCheck;
 };
 
+#if defined(HAVE_OPENCV_FLANN) || defined(CV_DOXYGEN)
 
 /** @brief Flann-based descriptor matcher.
 
@@ -1144,6 +1149,8 @@ protected:
     DescriptorCollection mergedDescriptors;
     int addedDescCount;
 };
+
+#endif
 
 //! @} features2d_match
 
