@@ -2468,13 +2468,14 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
 /** @brief Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
-The function getRectSubPix extracts pixels from src:
+The function GetRectSubPix extracts pixels from src:
 
 \f[dst(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
 
 where the values of the pixels at non-integer coordinates are retrieved using bilinear
-interpolation. Every channel of multi-channel images is processed independently. While the center of
-the rectangle must be inside the image, parts of the rectangle may be outside. In this case, the
+interpolation. Every channel of multi-channel images is processed independently. Also
+the image should be a single channel or three channel image.While the center of the
+rectangle must be inside the image, parts of the rectangle may be outside. In this case, the
 replication border mode (see cv::BorderTypes) is used to extrapolate the pixel values outside of
 the image.
 
