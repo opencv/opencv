@@ -105,12 +105,8 @@ Installation by Making Your Own Libraries from the Source Files {#tutorial_windo
 You may find the content of this tutorial also inside the following videos:
 [Part 1](https://www.youtube.com/watch?v=NnovZ1cTlMs) and [Part 2](https://www.youtube.com/watch?v=qGNWMcfWwPU), hosted on YouTube.
 
-\htmlonly
-<div align="center">
-<iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="http://www.youtube.com/embed/NnovZ1cTlMs?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-<iframe title="Install OpenCV by using its source files - Part 2" width="560" height="349" src="http://www.youtube.com/embed/qGNWMcfWwPU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{NnovZ1cTlMs}
+@youtube{qGNWMcfWwPU}
 
 **warning**
 
