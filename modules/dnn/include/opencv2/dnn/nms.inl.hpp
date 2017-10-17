@@ -48,23 +48,10 @@ inline void GetMaxScoreIndex(const std::vector<float>& scores, const float thres
                      SortScorePairDescend<int>);
 
     // Keep top_k scores if needed.
-    if (top_k > -1 && top_k < (int)score_index_vec.size())
+    if (top_k > 0 && top_k < (int)score_index_vec.size())
     {
         score_index_vec.resize(top_k);
     }
-}
-
-template <typename BoxType>
-struct NMSOverlap
-{
-    float operator() (const BoxType& a, const BoxType& b);
-};
-
-template <>
-inline float NMSOverlap<Rect>::operator() (const Rect& a, const Rect& b)
-{
-    float rectIntersectionArea = (float)(a & b).area();
-    return rectIntersectionArea / (a.area() + b.area() - rectIntersectionArea);
 }
 
 // Do non maximum suppression given bboxes and scores.
@@ -74,13 +61,13 @@ inline float NMSOverlap<Rect>::operator() (const Rect& a, const Rect& b)
 //    scores: a set of corresponding confidences.
 //    score_threshold: a threshold used to filter detection results.
 //    nms_threshold: a threshold used in non maximum suppression.
-//    top_k: if not -1, keep at most top_k picked indices.
+//    top_k: if not > 0, keep at most top_k picked indices.
 //    indices: the kept indices of bboxes after nms.
 template <typename BoxType>
 inline void NMSFast_(const std::vector<BoxType>& bboxes,
       const std::vector<float>& scores, const float score_threshold,
       const float nms_threshold, const float eta, const int top_k,
-      std::vector<int>& indices, NMSOverlap<BoxType> computeOverlap)
+      std::vector<int>& indices, float (*computeOverlap)(const BoxType&, const BoxType&))
 {
     CV_Assert(bboxes.size() == scores.size());
 
@@ -91,8 +78,8 @@ inline void NMSFast_(const std::vector<BoxType>& bboxes,
     // Do nms.
     float adaptive_threshold = nms_threshold;
     indices.clear();
-    while (score_index_vec.size() != 0) {
-        const int idx = score_index_vec.front().second;
+    for (size_t i = 0; i < score_index_vec.size(); ++i) {
+        const int idx = score_index_vec[i].second;
         bool keep = true;
         for (int k = 0; k < (int)indices.size() && keep; ++k) {
             const int kept_idx = indices[k];
@@ -101,7 +88,6 @@ inline void NMSFast_(const std::vector<BoxType>& bboxes,
         }
         if (keep)
             indices.push_back(idx);
-        score_index_vec.erase(score_index_vec.begin());
         if (keep && eta < 1 && adaptive_threshold > 0.5) {
           adaptive_threshold *= eta;
         }
