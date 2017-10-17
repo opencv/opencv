@@ -279,8 +279,4 @@ quality cameras.
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=ViPN810E0SU).
 
-\htmlonly
-<div align="center">
-<iframe title=" Camera calibration With OpenCV - Chessboard or asymmetrical circle pattern." width="560" height="349" src="http://www.youtube.com/embed/ViPN810E0SU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{ViPN810E0SU}
