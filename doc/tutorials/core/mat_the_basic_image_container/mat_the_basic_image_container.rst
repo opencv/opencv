@@ -307,5 +307,5 @@ You can also find a quick video demonstration of this on `YouTube <https://www.y
 .. raw:: html
 
   <div align="center">
-  <iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="http://www.youtube.com/embed/1tibU7vGWpk?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+  <iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="https://www.youtube.com/embed/1tibU7vGWpk?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>

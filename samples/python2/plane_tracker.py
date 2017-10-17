@@ -8,7 +8,7 @@ Example of using features2d framework for interactive video homography matching.
 ORB features and FLANN matcher are used. This sample provides PlaneTracker class
 and an example of its usage.
 
-video: http://www.youtube.com/watch?v=pzVbhxx6aog
+video: https://www.youtube.com/watch?v=pzVbhxx6aog
 
 Usage
 -----

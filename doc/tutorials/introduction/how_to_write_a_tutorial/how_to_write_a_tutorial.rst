@@ -358,7 +358,7 @@ Now here's our recommendation for the structure of the tutorial (although, remem
           .. raw:: html
 
              <div align="center">
-             <iframe title="Creating a video with OpenCV" width="560" height="349" src="http://www.youtube.com/embed/jpBwHxsl1_0?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+             <iframe title="Creating a video with OpenCV" width="560" height="349" src="https://www.youtube.com/embed/jpBwHxsl1_0?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
              </div>
 
        This results in the text and video: You may observe a runtime instance of this on the `YouTube here <https://www.youtube.com/watch?v=jpBwHxsl1_0>`_.
@@ -366,7 +366,7 @@ Now here's our recommendation for the structure of the tutorial (although, remem
        .. raw:: html
 
           <div align="center">
-          <iframe title="Creating a video with OpenCV" width="560" height="349" src="http://www.youtube.com/embed/jpBwHxsl1_0?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+          <iframe title="Creating a video with OpenCV" width="560" height="349" src="https://www.youtube.com/embed/jpBwHxsl1_0?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
           </div>
 
      When these aren't self-explanatory make sure to throw in a few guiding lines about what and why we can see.

@@ -120,10 +120,10 @@ After the processing we need to convert it back to UIImage.
      :alt: header
      :align: center
 
-Check out an instance of running code with more Image Effects on `YouTube <http://www.youtube.com/watch?v=Ko3K_xdhJ1I>`_ .
+Check out an instance of running code with more Image Effects on `YouTube <https://www.youtube.com/watch?v=Ko3K_xdhJ1I>`_ .
 
 .. raw:: html
 
   <div align="center">
- <iframe width="560" height="350" src="http://www.youtube.com/embed/Ko3K_xdhJ1I" frameborder="0" allowfullscreen></iframe>
+ <iframe width="560" height="350" src="https://www.youtube.com/embed/Ko3K_xdhJ1I" frameborder="0" allowfullscreen></iframe>
   </div>

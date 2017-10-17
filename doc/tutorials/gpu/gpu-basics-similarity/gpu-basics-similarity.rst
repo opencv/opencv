@@ -144,5 +144,5 @@ In both cases we managed a performance increase of almost 100% compared to the C
 .. raw:: html
 
   <div align="center">
-  <iframe title="Similarity check (PNSR and SSIM) on the GPU" width="560" height="349" src="http://www.youtube.com/embed/3_ESXmFlnvY?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+  <iframe title="Similarity check (PNSR and SSIM) on the GPU" width="560" height="349" src="https://www.youtube.com/embed/3_ESXmFlnvY?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>

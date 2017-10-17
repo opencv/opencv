@@ -129,5 +129,5 @@ Result
    .. raw:: html
 
      <div align="center">
-     <iframe title="Introduction - Display an Image" width="560" height="349" src="http://www.youtube.com/embed/1OJEqpuaGc4?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+     <iframe title="Introduction - Display an Image" width="560" height="349" src="https://www.youtube.com/embed/1OJEqpuaGc4?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
      </div>
