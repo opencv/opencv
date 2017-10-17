@@ -42,6 +42,7 @@ The references are:
 */
 
 #include "precomp.hpp"
+#include "fast.hpp"
 #include "fast_score.hpp"
 #include "opencl_kernels_features2d.hpp"
 #include "opencv2/core/hal/intrin.hpp"
@@ -59,21 +60,20 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 {
     Mat img = _img.getMat();
     const int K = patternSize/2, N = patternSize + K + 1;
+    int i, j, k, pixel[25];
+    makeOffsets(pixel, (int)img.step, patternSize);
+
 #if CV_SIMD128
     const int quarterPatternSize = patternSize/4;
     v_uint8x16 delta = v_setall_u8(0x80), t = v_setall_u8((char)threshold), K16 = v_setall_u8((char)K);
     bool hasSimd = hasSIMD128();
 #if CV_TRY_AVX2
-    __m256i delta256, t256, K16_256;
-    if (CV_CPU_HAS_SUPPORT_AVX2)
-    {
-        delta256 = _mm256_broadcastsi128_si256(delta.val), t256 = _mm256_broadcastsi128_si256(t.val), K16_256 = _mm256_broadcastsi128_si256(K16.val);
-    }
+    Ptr<opt_AVX2::FAST_t_patternSize16_AVX2> fast_t_impl_avx2;
+    if(CV_CPU_HAS_SUPPORT_AVX2)
+        fast_t_impl_avx2 = opt_AVX2::FAST_t_patternSize16_AVX2::getImpl(img.cols, threshold, nonmax_suppression, pixel);
 #endif
 
 #endif
-    int i, j, k, pixel[25];
-    makeOffsets(pixel, (int)img.step, patternSize);
 
     keypoints.clear();
 
@@ -109,68 +109,8 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                 if( patternSize == 16 )
                 {
 #if CV_TRY_AVX2
-                    if (CV_CPU_HAS_SUPPORT_AVX2)
-                    {
-                        for(; j < img.cols - 32 - 3; j += 32, ptr += 32)
-                        {
-                            __m256i m0, m1;
-                            __m256i v0 = _mm256_loadu_si256((const __m256i*)ptr);
-
-                            __m256i v1 = _mm256_xor_si256(_mm256_subs_epu8(v0, t256), delta256);
-                            v0 = _mm256_xor_si256(_mm256_adds_epu8(v0, t256), delta256);
-
-                            __m256i x0 = _mm256_sub_epi8(_mm256_loadu_si256((const __m256i*)(ptr + pixel[0])), delta256);
-                            __m256i x1 = _mm256_sub_epi8(_mm256_loadu_si256((const __m256i*)(ptr + pixel[4])), delta256);
-                            __m256i x2 = _mm256_sub_epi8(_mm256_loadu_si256((const __m256i*)(ptr + pixel[8])), delta256);
-                            __m256i x3 = _mm256_sub_epi8(_mm256_loadu_si256((const __m256i*)(ptr + pixel[12])), delta256);
-
-                            m0 = _mm256_and_si256(_mm256_cmpgt_epi8(x0, v0), _mm256_cmpgt_epi8(x1, v0));
-                            m1 = _mm256_and_si256(_mm256_cmpgt_epi8(v1, x0), _mm256_cmpgt_epi8(v1, x1));
-                            m0 = _mm256_or_si256(m0, _mm256_and_si256(_mm256_cmpgt_epi8(x1, v0), _mm256_cmpgt_epi8(x2, v0)));
-                            m1 = _mm256_or_si256(m1, _mm256_and_si256(_mm256_cmpgt_epi8(v1, x1), _mm256_cmpgt_epi8(v1, x2)));
-                            m0 = _mm256_or_si256(m0, _mm256_and_si256(_mm256_cmpgt_epi8(x2, v0), _mm256_cmpgt_epi8(x3, v0)));
-                            m1 = _mm256_or_si256(m1, _mm256_and_si256(_mm256_cmpgt_epi8(v1, x2), _mm256_cmpgt_epi8(v1, x3)));
-                            m0 = _mm256_or_si256(m0, _mm256_and_si256(_mm256_cmpgt_epi8(x3, v0), _mm256_cmpgt_epi8(x0, v0)));
-                            m1 = _mm256_or_si256(m1, _mm256_and_si256(_mm256_cmpgt_epi8(v1, x3), _mm256_cmpgt_epi8(v1, x0)));
-                            m0 = _mm256_or_si256(m0, m1);
-
-                            unsigned int mask = _mm256_movemask_epi8(m0); //unsigned is important!
-                            if (mask == 0){
-                                continue;
-                            }
-                            if ((mask & 0xffff) == 0)
-                            {
-                                j -= 16;
-                                ptr -= 16;
-                                continue;
-                            }
-
-                            __m256i c0 = _mm256_setzero_si256(), c1 = c0, max0 = c0, max1 = c0;
-                            for (k = 0; k < N; k++)
-                            {
-                                __m256i x = _mm256_xor_si256(_mm256_loadu_si256((const __m256i*)(ptr + pixel[k])), delta256);
-                                m0 = _mm256_cmpgt_epi8(x, v0);
-                                m1 = _mm256_cmpgt_epi8(v1, x);
-
-                                c0 = _mm256_and_si256(_mm256_sub_epi8(c0, m0), m0);
-                                c1 = _mm256_and_si256(_mm256_sub_epi8(c1, m1), m1);
-
-                                max0 = _mm256_max_epu8(max0, c0);
-                                max1 = _mm256_max_epu8(max1, c1);
-                            }
-
-                            max0 = _mm256_max_epu8(max0, max1);
-                            unsigned int m = _mm256_movemask_epi8(_mm256_cmpgt_epi8(max0, K16_256));
-
-                            for (k = 0; m > 0 && k < 32; k++, m >>= 1)
-                                if (m & 1)
-                                {
-                                    cornerpos[ncorners++] = j + k;
-                                    if (nonmax_suppression)
-                                        curr[j + k] = (uchar)cornerScore<patternSize>(ptr + k, pixel, threshold);
-                                }
-                        }
-                    } //CV_CPU_HAS_SUPPORT_AVX2
+                    if (fast_t_impl_avx2)
+                        fast_t_impl_avx2->process(j, ptr, curr, cornerpos, ncorners);
 #endif
                     //vz if (j <= (img.cols - 27)) //it doesn't make sense using vectors for less than 8 elements
                     {
