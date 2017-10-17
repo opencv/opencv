@@ -45,7 +45,7 @@
 #include <float.h>
 #include <string>
 #include <caffe.pb.h>
-#include <opencv2/dnn/nms.inl.hpp>
+#include "../nms.inl.hpp"
 
 namespace cv
 {
