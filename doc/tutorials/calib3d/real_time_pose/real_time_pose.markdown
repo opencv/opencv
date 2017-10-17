@@ -791,13 +791,5 @@ int minInliersKalman = 30;    // Kalman threshold updating
 You can watch the real time pose estimation on the [YouTube
 here](http://www.youtube.com/user/opencvdev/videos).
 
-\htmlonly
-<div align="center">
-<iframe title="Pose estimation of textured object using OpenCV" width="560" height="349" src="http://www.youtube.com/embed/XNATklaJlSQ?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
-\htmlonly
-<div align="center">
-<iframe title="Pose estimation of textured object using OpenCV in cluttered background" width="560" height="349" src="http://www.youtube.com/embed/YLS9bWek78k?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{XNATklaJlSQ}
+@youtube{YLS9bWek78k}
