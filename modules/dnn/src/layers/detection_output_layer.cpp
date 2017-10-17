@@ -62,6 +62,8 @@ static inline bool SortScorePairDescend(const std::pair<float, T>& pair1,
     return pair1.first > pair2.first;
 }
 
+static inline float caffe_box_overlap(const caffe::NormalizedBBox& a, const caffe::NormalizedBBox& b);
+
 } // namespace
 
 class DetectionOutputLayerImpl : public DetectionOutputLayer
@@ -309,7 +311,8 @@ public:
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
                 CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
-            ApplyNMSFast(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK, indices[c]);
+            NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
+                indices[c], util::caffe_box_overlap);
             numDetections += indices[c].size();
         }
         if (_keepTopK > -1 && numDetections > (size_t)_keepTopK)
@@ -620,16 +623,6 @@ public:
         }
     }
 
-
-
-    static void ApplyNMSFast(const std::vector<caffe::NormalizedBBox>& bboxes,
-          const std::vector<float>& scores, const float score_threshold,
-          const float nms_threshold, const float eta, const int top_k,
-          std::vector<int>& indices)
-    {
-        NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, NMSOverlap<caffe::NormalizedBBox>());
-    }
-
     // Compute the jaccard (intersection over union IoU) overlap between two bboxes.
     template<bool normalized>
     static float JaccardOverlap(const caffe::NormalizedBBox& bbox1,
@@ -675,8 +668,7 @@ public:
     }
 };
 
-template <>
-float NMSOverlap<caffe::NormalizedBBox>::operator() (const caffe::NormalizedBBox& a, const caffe::NormalizedBBox& b)
+float util::caffe_box_overlap(const caffe::NormalizedBBox& a, const caffe::NormalizedBBox& b)
 {
     return DetectionOutputLayerImpl::JaccardOverlap<true>(a, b);
 }
