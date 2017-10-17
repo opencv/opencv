@@ -125,5 +125,5 @@ You may observe a runtime instance of this on the `YouTube here <https://www.you
 .. raw:: html
 
   <div align="center">
-  <iframe title="Interoperability with OpenCV 1" width="560" height="349" src="http://www.youtube.com/embed/qckm-zvo31w?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+  <iframe title="Interoperability with OpenCV 1" width="560" height="349" src="https://www.youtube.com/embed/qckm-zvo31w?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>

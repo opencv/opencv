@@ -8,9 +8,9 @@ Example of using features2d framework for interactive video homography matching.
 ORB features and FLANN matcher are used. The actual tracking is implemented by
 PlaneTracker class in plane_tracker.py
 
-Inspired by http://www.youtube.com/watch?v=-ZNYoL8rzPY
+Inspired by https://www.youtube.com/watch?v=-ZNYoL8rzPY
 
-video: http://www.youtube.com/watch?v=FirtmYcC0Vc
+video: https://www.youtube.com/watch?v=FirtmYcC0Vc
 
 Usage
 -----

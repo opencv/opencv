@@ -40,8 +40,8 @@ You may find the content of this tutorial also inside the following videos: `Par
 .. raw:: html
 
   <div align="center">
-  <iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="http://www.youtube.com/embed/NnovZ1cTlMs?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-  <iframe title="Install OpenCV by using its source files - Part 2" width="560" height="349" src="http://www.youtube.com/embed/qGNWMcfWwPU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+  <iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="https://www.youtube.com/embed/NnovZ1cTlMs?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+  <iframe title="Install OpenCV by using its source files - Part 2" width="560" height="349" src="https://www.youtube.com/embed/qGNWMcfWwPU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>
 
 .. warning:: These videos above are long-obsolete and contain inaccurate information. Be careful, since solutions described in those videos are no longer supported and may even break your install.

@@ -128,7 +128,7 @@ For example:
 
 You can download this source code from :download:`here <../../../../samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp>` or look in the OpenCV source code libraries sample directory at :file:`samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
 
-Check out an instance of running the program on our `YouTube channel <http://www.youtube.com/watch?v=7PF1tAU9se4>`_ .
+Check out an instance of running the program on our `YouTube channel <https://www.youtube.com/watch?v=7PF1tAU9se4>`_ .
 
 .. raw:: html
 
