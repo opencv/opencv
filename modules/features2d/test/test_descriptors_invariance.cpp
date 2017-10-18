@@ -11,7 +11,7 @@ using std::tr1::make_tuple;
 using std::tr1::get;
 using namespace testing;
 
-#define SHOW_DEBUG_LOG 0
+#define SHOW_DEBUG_LOG 1
 
 typedef std::tr1::tuple<std::string, Ptr<FeatureDetector>, Ptr<DescriptorExtractor>, float>
     String_FeatureDetector_DescriptorExtractor_Float_t;
@@ -72,7 +72,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
     vector<KeyPoint> keypoints0;
     Mat descriptors0;
     featureDetector->detect(image0, keypoints0, mask0);
-    std::cout << "Intial keypoints: " << keypoints0.size() << std::endl;
+    std::cout << "Keypoints: " << keypoints0.size() << std::endl;
     EXPECT_GE(keypoints0.size(), 15u);
     descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
@@ -109,7 +109,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
 #if SHOW_DEBUG_LOG
         std::cout
             << "angle = " << angle
-            << ", keypoints = " << keypoints1.size()
+            << ", inliers = " << descInliersCount
             << ", descInliersRatio = " << static_cast<float>(descInliersCount) / keypoints0.size()
             << std::endl;
 #endif
@@ -121,6 +121,7 @@ TEST_P(DescriptorScaleInvariance, scale)
 {
     vector<KeyPoint> keypoints0;
     featureDetector->detect(image0, keypoints0);
+    std::cout << "Keypoints: " << keypoints0.size() << std::endl;
     EXPECT_GE(keypoints0.size(), 15u);
     Mat descriptors0;
     descriptorExtractor->compute(image0, keypoints0, descriptors0);
@@ -159,6 +160,7 @@ TEST_P(DescriptorScaleInvariance, scale)
 #if SHOW_DEBUG_LOG
         std::cout
             << "scale = " << scale
+            << ", inliers = " << descInliersCount
             << ", descInliersRatio = " << static_cast<float>(descInliersCount) / keypoints0.size()
             << std::endl;
 #endif
@@ -179,7 +181,7 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorRotationInvariance,
                         Value(IMAGE_TSUKUBA, AKAZE::create(), AKAZE::create(), 0.99f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.002f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.99f));
 
 /*
  * Descriptor's scale invariance check
@@ -189,4 +191,4 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorScaleInvariance,
                         Value(IMAGE_BIKES, AKAZE::create(), AKAZE::create(), 0.6f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorScaleInvariance,
-                        Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.0004f));
+                        Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.55f));

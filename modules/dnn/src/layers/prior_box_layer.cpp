@@ -124,6 +124,20 @@ public:
         }
     }
 
+    void getScales(const LayerParams &params)
+    {
+        DictValue scalesParameter;
+        bool scalesRetieved = getParameterDict(params, "scales", scalesParameter);
+        if (scalesRetieved)
+        {
+            _scales.resize(scalesParameter.size());
+            for (int i = 0; i < scalesParameter.size(); ++i)
+            {
+                _scales[i] = scalesParameter.get<float>(i);
+            }
+        }
+    }
+
     void getVariance(const LayerParams &params)
     {
         DictValue varianceParameter;
@@ -169,13 +183,14 @@ public:
         _flip = getParameter<bool>(params, "flip");
         _clip = getParameter<bool>(params, "clip");
 
+        _scales.clear();
         _aspectRatios.clear();
-        _aspectRatios.push_back(1.);
 
         getAspectRatios(params);
         getVariance(params);
+        getScales(params);
 
-        _numPriors = _aspectRatios.size();
+        _numPriors = _aspectRatios.size() + 1;  // + 1 for an aspect ratio 1.0
 
         _maxSize = -1;
         if (params.has("max_size"))
@@ -201,6 +216,14 @@ public:
           _stepY = 0;
           _stepX = 0;
         }
+        if(params.has("additional_y_offset"))
+        {
+          _additional_y_offset = getParameter<bool>(params, "additional_y_offset");
+          if(_additional_y_offset)
+            _numPriors *= 2;
+        }
+        else
+          _additional_y_offset = false;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -231,6 +254,12 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        size_t real_numPriors = _additional_y_offset ? _numPriors / 2 : _numPriors;
+        if (_scales.empty())
+            _scales.resize(real_numPriors, 1.0f);
+        else
+            CV_Assert(_scales.size() == real_numPriors);
+
         int _layerWidth = inputs[0]->size[3];
         int _layerHeight = inputs[0]->size[2];
 
@@ -256,7 +285,7 @@ public:
         {
             for (size_t w = 0; w < _layerWidth; ++w)
             {
-                _boxWidth = _boxHeight = _minSize;
+                _boxWidth = _boxHeight = _minSize * _scales[0];
 
                 float center_x = (w + 0.5) * stepX;
                 float center_y = (h + 0.5) * stepY;
@@ -269,10 +298,23 @@ public:
                 // ymax
                 outputPtr[idx++] = (center_y + _boxHeight / 2.) / _imageHeight;
 
+                if(_additional_y_offset)
+                {
+                  float center_y_offset_1 = (h + 1.0) * stepY;
+                  // xmin
+                  outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
+                  // ymin
+                  outputPtr[idx++] = (center_y_offset_1 - _boxHeight / 2.) / _imageHeight;
+                  // xmax
+                  outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
+                  // ymax
+                  outputPtr[idx++] = (center_y_offset_1 + _boxHeight / 2.) / _imageHeight;
+                }
+
                 if (_maxSize > 0)
                 {
                     // second prior: aspect_ratio = 1, size = sqrt(min_size * max_size)
-                    _boxWidth = _boxHeight = sqrt(_minSize * _maxSize);
+                    _boxWidth = _boxHeight = sqrt(_minSize * _maxSize) * _scales[1];
                     // xmin
                     outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
                     // ymin
@@ -281,18 +323,29 @@ public:
                     outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
                     // ymax
                     outputPtr[idx++] = (center_y + _boxHeight / 2.) / _imageHeight;
+
+                    if(_additional_y_offset)
+                    {
+                      float center_y_offset_1 = (h + 1.0) * stepY;
+                      // xmin
+                      outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
+                      // ymin
+                      outputPtr[idx++] = (center_y_offset_1 - _boxHeight / 2.) / _imageHeight;
+                      // xmax
+                      outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
+                      // ymax
+                      outputPtr[idx++] = (center_y_offset_1 + _boxHeight / 2.) / _imageHeight;
+                    }
                 }
 
                 // rest of priors
+                CV_Assert((_maxSize > 0 ? 2 : 1) + _aspectRatios.size() == _scales.size());
                 for (size_t r = 0; r < _aspectRatios.size(); ++r)
                 {
                     float ar = _aspectRatios[r];
-                    if (fabs(ar - 1.) < 1e-6)
-                    {
-                        continue;
-                    }
-                    _boxWidth = _minSize * sqrt(ar);
-                    _boxHeight = _minSize / sqrt(ar);
+                    float scale = _scales[(_maxSize > 0 ? 2 : 1) + r];
+                    _boxWidth = _minSize * sqrt(ar) * scale;
+                    _boxHeight = _minSize / sqrt(ar) * scale;
                     // xmin
                     outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
                     // ymin
@@ -301,6 +354,18 @@ public:
                     outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
                     // ymax
                     outputPtr[idx++] = (center_y + _boxHeight / 2.) / _imageHeight;
+                    if(_additional_y_offset)
+                    {
+                      float center_y_offset_1 = (h + 1.0) * stepY;
+                      // xmin
+                      outputPtr[idx++] = (center_x - _boxWidth / 2.) / _imageWidth;
+                      // ymin
+                      outputPtr[idx++] = (center_y_offset_1 - _boxHeight / 2.) / _imageHeight;
+                      // xmax
+                      outputPtr[idx++] = (center_x + _boxWidth / 2.) / _imageWidth;
+                      // ymax
+                      outputPtr[idx++] = (center_y_offset_1 + _boxHeight / 2.) / _imageHeight;
+                    }
                 }
             }
         }
@@ -363,9 +428,11 @@ public:
 
     std::vector<float> _aspectRatios;
     std::vector<float> _variance;
+    std::vector<float> _scales;
 
     bool _flip;
     bool _clip;
+    bool _additional_y_offset;
 
     size_t _numPriors;
 

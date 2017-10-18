@@ -89,6 +89,7 @@ typedef std::vector<char> vector_char;
 typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
 typedef std::vector<double> vector_double;
+typedef std::vector<size_t> vector_size_t;
 typedef std::vector<Point> vector_Point;
 typedef std::vector<Point2f> vector_Point2f;
 typedef std::vector<Point3f> vector_Point3f;
@@ -101,6 +102,7 @@ typedef std::vector<Rect> vector_Rect;
 typedef std::vector<Rect2d> vector_Rect2d;
 typedef std::vector<KeyPoint> vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
+typedef std::vector<std::vector<Mat> > vector_vector_Mat;
 typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
@@ -149,7 +151,7 @@ public:
     {
         if( data != 0 )
         {
-            CV_Error(Error::StsAssert, "The data should normally be NULL!");
+            // issue #6969: CV_Error(Error::StsAssert, "The data should normally be NULL!");
             // probably this is safe to do in such extreme case
             return stdAllocator->allocate(dims0, sizes, type, data, step, flags, usageFlags);
         }
@@ -1076,7 +1078,7 @@ template<typename _Tp> struct pyopencvVecConverter
         int i, j, n = (int)PySequence_Fast_GET_SIZE(seq);
         value.resize(n);
 
-        int type = DataType<_Tp>::type;
+        int type = traits::Type<_Tp>::value;
         int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
         PyObject** items = PySequence_Fast_ITEMS(seq);
 
@@ -1159,7 +1161,9 @@ template<typename _Tp> struct pyopencvVecConverter
     {
         if(value.empty())
             return PyTuple_New(0);
-        Mat src((int)value.size(), DataType<_Tp>::channels, DataType<_Tp>::depth, (uchar*)&value[0]);
+        int type = traits::Type<_Tp>::value;
+        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+        Mat src((int)value.size(), channels, depth, (uchar*)&value[0]);
         return pyopencv_from(src);
     }
 };
@@ -1609,14 +1613,20 @@ void initcv2()
     return;
 #endif
 
+
 #if PY_MAJOR_VERSION >= 3
-  Py_INCREF(&cv2_UMatWrapperType);
+#define PUBLISH_OBJECT(name, type) Py_INCREF(&type);\
+  PyModule_AddObject(m, name, (PyObject *)&type);
 #else
-  // Unrolled Py_INCREF(&cv2_UMatWrapperType) without (PyObject*) cast
-  // due to "warning: dereferencing type-punned pointer will break strict-aliasing rules"
-  _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&cv2_UMatWrapperType)->ob_refcnt++;
+// Unrolled Py_INCREF(&type) without (PyObject*) cast
+// due to "warning: dereferencing type-punned pointer will break strict-aliasing rules"
+#define PUBLISH_OBJECT(name, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++;\
+  PyModule_AddObject(m, name, (PyObject *)&type);
 #endif
-  PyModule_AddObject(m, "UMat", (PyObject *)&cv2_UMatWrapperType);
+
+  PUBLISH_OBJECT("UMat", cv2_UMatWrapperType);
+
+#include "pyopencv_generated_type_publish.h"
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 //#define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))

@@ -133,7 +133,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 
     assert( opRes.type() == CV_64FC1 );
     Mat _dst, dst, diff;
-    reduce( src, _dst, dim, opType, dstType );
+    cv::reduce( src, _dst, dim, opType, dstType );
     _dst.convertTo( dst, CV_64FC1 );
 
     absdiff( opRes,dst,diff );
@@ -313,7 +313,7 @@ protected:
         Mat rBackPrjTestPoints = rPCA.backProject( rPrjTestPoints );
 
         Mat avg(1, sz.width, CV_32FC1 );
-        reduce( rPoints, avg, 0, CV_REDUCE_AVG );
+        cv::reduce( rPoints, avg, 0, CV_REDUCE_AVG );
         Mat Q = rPoints - repeat( avg, rPoints.rows, 1 ), Qt = Q.t(), eval, evec;
         Q = Qt * Q;
         Q = Q /(float)rPoints.rows;
@@ -671,6 +671,13 @@ struct InitializerFunctor5D{
     }
 };
 
+template<typename Pixel>
+struct EmptyFunctor
+{
+    void operator()(const Pixel &, const int *) const {}
+};
+
+
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
@@ -797,6 +804,17 @@ void Core_ArrayOpTest::run( int /* start_from */)
             ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
             errcount++;
         }
+    }
+
+    // test const cv::Mat::forEach
+    {
+        const Mat a(10, 10, CV_32SC3);
+        Mat b(10, 10, CV_32SC3);
+        const Mat & c = b;
+        a.forEach<Point3i>(EmptyFunctor<Point3i>());
+        b.forEach<Point3i>(EmptyFunctor<const Point3i>());
+        c.forEach<Point3i>(EmptyFunctor<Point3i>());
+        // tests compilation, no runtime check is needed
     }
 
     RNG rng;
@@ -1399,13 +1417,22 @@ TEST(Core_Matx, fromMat_)
 }
 
 #ifdef CV_CXX11
+
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b = {10, 11, 12, 13};
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
-#endif
+
+TEST(Core_Mat, regression_9507)
+{
+    cv::Mat m = Mat::zeros(5, 5, CV_8UC3);
+    cv::Mat m2{m};
+    EXPECT_EQ(25u, m2.total());
+}
+
+#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {
@@ -1775,6 +1802,26 @@ TEST(Mat_, from_initializer_list)
     Mat_<float> B(3, 1); B << 1, 2, 3;
 
     ASSERT_DOUBLE_EQ(norm(A, B, NORM_INF), 0.);
+}
+
+
+TEST(Mat, template_based_ptr)
+{
+    Mat mat = (Mat_<float>(2, 2) << 11.0f, 22.0f, 33.0f, 44.0f);
+    int idx[2] = {1, 0};
+    ASSERT_FLOAT_EQ(33.0f, *(mat.ptr<float>(idx)));
+    idx[0] = 1;
+    idx[1] = 1;
+    ASSERT_FLOAT_EQ(44.0f, *(mat.ptr<float>(idx)));
+}
+
+TEST(Mat_, template_based_ptr)
+{
+    int dim[4] = {2, 2, 1, 2};
+    Mat_<float> mat = (Mat_<float>(4, dim) << 11.0f, 22.0f, 33.0f, 44.0f,
+                                              55.0f, 66.0f, 77.0f, 88.0f);
+    int idx[4] = {1, 0, 0, 1};
+    ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
 
 #endif

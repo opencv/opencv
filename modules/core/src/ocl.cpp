@@ -43,6 +43,7 @@
 #include <list>
 #include <map>
 #include <deque>
+#include <set>
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
@@ -50,7 +51,10 @@
 #include <inttypes.h>
 #endif
 
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include "opencv2/core/ocl_genbase.hpp"
+#include "opencl_kernels_core.hpp"
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
 #define CV_OPENCL_SHOW_RUN_ERRORS       0
@@ -173,24 +177,6 @@ static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
 
     return ~crc;
 }
-
-struct HashKey
-{
-    typedef uint64 part;
-    HashKey(part _a, part _b) : a(_a), b(_b) {}
-    part a, b;
-};
-
-inline bool operator == (const HashKey& h1, const HashKey& h2)
-{
-    return h1.a == h2.a && h1.b == h2.b;
-}
-
-inline bool operator < (const HashKey& h1, const HashKey& h2)
-{
-    return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
-}
-
 
 bool haveOpenCL()
 {
@@ -536,6 +522,7 @@ struct Device::Impl
 
         name_ = getStrProp(CL_DEVICE_NAME);
         version_ = getStrProp(CL_DEVICE_VERSION);
+        extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
@@ -545,6 +532,20 @@ struct Device::Impl
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+
+        size_t pos = 0;
+        while (pos < extensions_.size())
+        {
+            size_t pos2 = extensions_.find(' ', pos);
+            if (pos2 == String::npos)
+                pos2 = extensions_.size();
+            if (pos2 > pos)
+            {
+                std::string extensionName = extensions_.substr(pos, pos2 - pos);
+                extensions_set_.insert(extensionName);
+            }
+            pos = pos2 + 1;
+        }
 
         intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
 
@@ -587,23 +588,19 @@ struct Device::Impl
             sz < sizeof(buf) ? String(buf) : String();
     }
 
-    bool isExtensionSupported(const String& extensionName) const
+    bool isExtensionSupported(const std::string& extensionName) const
     {
-        bool ret = false;
-        size_t pos = getStrProp(CL_DEVICE_EXTENSIONS).find(extensionName);
-        if (pos != String::npos)
-        {
-            ret = true;
-        }
-        return ret;
+        return extensions_set_.count(extensionName) > 0;
     }
 
 
     IMPLEMENT_REFCOUNTABLE();
+
     cl_device_id handle;
 
     String name_;
     String version_;
+    std::string extensions_;
     int doubleFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
@@ -615,6 +612,8 @@ struct Device::Impl
     String vendorName_;
     int vendorID_;
     bool intelSubgroupsSupport_;
+
+    std::set<std::string> extensions_set_;
 };
 
 
@@ -669,7 +668,10 @@ String Device::name() const
 { return p ? p->name_ : String(); }
 
 String Device::extensions() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? String(p->extensions_) : String(); }
+
+bool Device::isExtensionSupported(const String& extensionName) const
+{ return p ? p->isExtensionSupported(extensionName) : false; }
 
 String Device::version() const
 { return p ? p->version_ : String(); }
@@ -762,16 +764,7 @@ bool Device::imageSupport() const
 
 bool Device::imageFromBufferSupport() const
 {
-    bool ret = false;
-    if (p)
-    {
-        size_t pos = p->getStrProp(CL_DEVICE_EXTENSIONS).find("cl_khr_image2d_from_buffer");
-        if (pos != String::npos)
-        {
-            ret = true;
-        }
-    }
-    return ret;
+    return p ? p->isExtensionSupported("cl_khr_image2d_from_buffer") : false;
 }
 
 uint Device::imagePitchAlignment() const
@@ -1003,6 +996,11 @@ static cl_device_id selectOpenCLDevice()
     return NULL;
 }
 #else
+// std::tolower is int->int
+static char char_tolower(char ch)
+{
+    return (char)std::tolower((int)ch);
+}
 static cl_device_id selectOpenCLDevice()
 {
     std::string platform, deviceName;
@@ -1087,7 +1085,7 @@ static cl_device_id selectOpenCLDevice()
     {
         int deviceType = 0;
         std::string tempStrDeviceType = deviceTypes[t];
-        std::transform( tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), tolower );
+        std::transform(tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), char_tolower);
 
         if (tempStrDeviceType == "gpu" || tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             deviceType = Device::TYPE_GPU;
@@ -1351,7 +1349,7 @@ struct Context::Impl
                     const String& buildflags, String& errmsg)
     {
         size_t limit = getProgramCountLimit();
-        String key = Program::getPrefix(buildflags);
+        String key = cv::format("codehash=%08llx ", src.hash()) + Program::getPrefix(buildflags);
         {
             cv::AutoLock lock(program_cache_mutex);
             phash_t::iterator it = phash.find(key);
@@ -1398,6 +1396,23 @@ struct Context::Impl
         return prog;
     }
 
+    void unloadProg(Program& prog)
+    {
+        cv::AutoLock lock(program_cache_mutex);
+        for (CacheList::iterator i = cacheList.begin(); i != cacheList.end(); ++i)
+        {
+              phash_t::iterator it = phash.find(*i);
+              if (it != phash.end())
+              {
+                  if (it->second.ptr() == prog.ptr())
+                  {
+                      phash.erase(*i);
+                      cacheList.erase(i);
+                      return;
+                  }
+              }
+        }
+    }
 
     IMPLEMENT_REFCOUNTABLE();
 
@@ -1661,7 +1676,11 @@ Program Context::getProg(const ProgramSource& prog,
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
 
-
+void Context::unloadProg(Program& prog)
+{
+    if (p)
+        p->unloadProg(prog);
+}
 
 #ifdef HAVE_OPENCL_SVM
 bool Context::useSVM() const
@@ -1829,9 +1848,35 @@ void initializeContextFromHandle(Context& ctx, void* platform, void* _context, v
 
 struct Queue::Impl
 {
-    Impl(const Context& c, const Device& d)
+    inline void __init()
     {
         refcount = 1;
+        handle = 0;
+        isProfilingQueue_ = false;
+    }
+
+    Impl(cl_command_queue q)
+    {
+        __init();
+        handle = q;
+
+        cl_command_queue_properties props = 0;
+        cl_int result = clGetCommandQueueInfo(handle, CL_QUEUE_PROPERTIES, sizeof(cl_command_queue_properties), &props, NULL);
+        CV_Assert(result && "clGetCommandQueueInfo(CL_QUEUE_PROPERTIES)");
+        isProfilingQueue_ = !!(props & CL_QUEUE_PROFILING_ENABLE);
+    }
+
+    Impl(cl_command_queue q, bool isProfilingQueue)
+    {
+        __init();
+        handle = q;
+        isProfilingQueue_ = isProfilingQueue;
+    }
+
+    Impl(const Context& c, const Device& d, bool withProfiling = false)
+    {
+        __init();
+
         const Context* pc = &c;
         cl_context ch = (cl_context)pc->ptr();
         if( !ch )
@@ -1843,8 +1888,10 @@ struct Queue::Impl
         if( !dh )
             dh = (cl_device_id)pc->device(0).ptr();
         cl_int retval = 0;
-        handle = clCreateCommandQueue(ch, dh, 0, &retval);
+        cl_command_queue_properties props = withProfiling ? CL_QUEUE_PROFILING_ENABLE : 0;
+        handle = clCreateCommandQueue(ch, dh, props, &retval);
         CV_OclDbgAssert(retval == CL_SUCCESS);
+        isProfilingQueue_ = withProfiling;
     }
 
     ~Impl()
@@ -1862,9 +1909,37 @@ struct Queue::Impl
         }
     }
 
+    const cv::ocl::Queue& getProfilingQueue(const cv::ocl::Queue& self)
+    {
+        if (isProfilingQueue_)
+            return self;
+
+        if (profiling_queue_.ptr())
+            return profiling_queue_;
+
+        cl_context ctx = 0;
+        CV_Assert(CL_SUCCESS == clGetCommandQueueInfo(handle, CL_QUEUE_CONTEXT, sizeof(cl_context), &ctx, NULL));
+
+        cl_device_id device = 0;
+        CV_Assert(CL_SUCCESS == clGetCommandQueueInfo(handle, CL_QUEUE_DEVICE, sizeof(cl_device_id), &device, NULL));
+
+        cl_int result = CL_SUCCESS;
+        cl_command_queue_properties props = CL_QUEUE_PROFILING_ENABLE;
+        cl_command_queue q = clCreateCommandQueue(ctx, device, props, &result);
+        CV_Assert(result == CL_SUCCESS && "clCreateCommandQueue(with CL_QUEUE_PROFILING_ENABLE)");
+
+        Queue queue;
+        queue.p = new Impl(q, true);
+        profiling_queue_ = queue;
+
+        return profiling_queue_;
+    }
+
     IMPLEMENT_REFCOUNTABLE();
 
     cl_command_queue handle;
+    bool isProfilingQueue_;
+    cv::ocl::Queue profiling_queue_;
 };
 
 Queue::Queue()
@@ -1916,6 +1991,12 @@ void Queue::finish()
     {
         CV_OclDbgAssert(clFinish(p->handle) == CL_SUCCESS);
     }
+}
+
+const Queue& Queue::getProfilingQueue() const
+{
+    CV_Assert(p);
+    return p->getProfilingQueue(*this);
 }
 
 void* Queue::ptr() const
@@ -2020,6 +2101,9 @@ struct Kernel::Impl
         isInProgress = false;
         release();
     }
+
+    bool run(int dims, size_t _globalsize[], size_t _localsize[],
+            bool sync, int64* timeNS, const Queue& q);
 
     ~Impl()
     {
@@ -2161,7 +2245,7 @@ int Kernel::set(int i, const Image2D& image2D)
 
 int Kernel::set(int i, const UMat& m)
 {
-    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
+    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m));
 }
 
 int Kernel::set(int i, const KernelArg& arg)
@@ -2248,35 +2332,48 @@ int Kernel::set(int i, const KernelArg& arg)
     return i+1;
 }
 
-
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
-    CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
-
-    if(!p || !p->handle || p->isInProgress)
+    if (!p)
         return false;
 
-    cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1};
+    size_t globalsize[CV_MAX_DIM] = {1,1,1};
     size_t total = 1;
-    CV_Assert(_globalsize != 0);
+    CV_Assert(_globalsize != NULL);
     for (int i = 0; i < dims; i++)
     {
         size_t val = _localsize ? _localsize[i] :
             dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
-        globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
+        if (_globalsize[i] == 1)
+            val = 1;
+        globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
     }
-    if( total == 0 )
-        return true;
-    if( p->haveTempDstUMats )
+    CV_Assert(total > 0);
+
+    return p->run(dims, globalsize, _localsize, sync, NULL, q);
+}
+
+
+bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
+        bool sync, int64* timeNS, const Queue& q)
+{
+    CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
+
+    if (!handle || isInProgress)
+        return false;
+
+    cl_command_queue qq = getQueue(q);
+    if (haveTempDstUMats)
+        sync = true;
+    if (timeNS)
         sync = true;
     cl_event asyncEvent = 0;
-    cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, _localsize, 0, 0,
-                                           sync ? 0 : &asyncEvent);
+    cl_int retval = clEnqueueNDRangeKernel(qq, handle, (cl_uint)dims,
+                                           NULL, globalsize, localsize, 0, 0,
+                                           (sync && !timeNS) ? 0 : &asyncEvent);
 #if CV_OPENCL_SHOW_RUN_ERRORS
     if (retval != CL_SUCCESS)
     {
@@ -2284,16 +2381,31 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         fflush(stdout);
     }
 #endif
-    if( sync || retval != CL_SUCCESS )
+    if (sync || retval != CL_SUCCESS)
     {
         CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
-        p->cleanupUMats();
+        if (timeNS)
+        {
+            if (retval == CL_SUCCESS)
+            {
+                clWaitForEvents(1, &asyncEvent);
+                cl_ulong startTime, stopTime;
+                CV_Assert(CL_SUCCESS == clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_START, sizeof(startTime), &startTime, NULL));
+                CV_Assert(CL_SUCCESS == clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_END, sizeof(stopTime), &stopTime, NULL));
+                *timeNS = (int64)(stopTime - startTime);
+            }
+            else
+            {
+                *timeNS = -1;
+            }
+        }
+        cleanupUMats();
     }
     else
     {
-        p->addref();
-        p->isInProgress = true;
-        CV_OclDbgAssert(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
+        addref();
+        isInProgress = true;
+        CV_OclDbgAssert(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this) == CL_SUCCESS);
     }
     if (asyncEvent)
         clReleaseEvent(asyncEvent);
@@ -2324,6 +2436,17 @@ bool Kernel::runTask(bool sync, const Queue& q)
     return retval == CL_SUCCESS;
 }
 
+int64 Kernel::runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q_)
+{
+    CV_Assert(p && p->handle && !p->isInProgress);
+    Queue q = q_.ptr() ? q_ : Queue::getDefault();
+    CV_Assert(q.ptr());
+    q.finish(); // call clFinish() on base queue
+    Queue profilingQueue = q.getProfilingQueue();
+    int64 timeNs = -1;
+    bool res = p->run(dims, globalsize, localsize, true, &timeNs, profilingQueue);
+    return res ? timeNs : -1;
+}
 
 size_t Kernel::workGroupSize() const
 {
@@ -2366,25 +2489,156 @@ size_t Kernel::localMemSize() const
                                     sizeof(val), &val, &retsz) == CL_SUCCESS ? (size_t)val : 0;
 }
 
+
+
+///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
+
+struct ProgramSource::Impl
+{
+    Impl(const String& src)
+    {
+        init(cv::String(), cv::String(), src, cv::String());
+    }
+    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        init(module, name, codeStr, codeHash);
+    }
+    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        refcount = 1;
+        module_ = module;
+        name_ = name;
+        codeStr_ = codeStr;
+        codeHash_ = codeHash;
+
+        isHashUpdated = false;
+        if (codeHash_.empty())
+        {
+            updateHash();
+            codeHash_ = cv::format("%08llx", hash_);
+        }
+    }
+
+    void updateHash()
+    {
+        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
+        isHashUpdated = true;
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+
+    String module_;
+    String name_;
+    String codeStr_;
+    String codeHash_;
+    // TODO std::vector<ProgramSource> includes_;
+
+    bool isHashUpdated;
+    ProgramSource::hash_t hash_;
+};
+
+
+ProgramSource::ProgramSource()
+{
+    p = 0;
+}
+
+ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
+{
+    p = new Impl(module, name, codeStr, codeHash);
+}
+
+ProgramSource::ProgramSource(const char* prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::ProgramSource(const String& prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::~ProgramSource()
+{
+    if(p)
+        p->release();
+}
+
+ProgramSource::ProgramSource(const ProgramSource& prog)
+{
+    p = prog.p;
+    if(p)
+        p->addref();
+}
+
+ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+{
+    Impl* newp = (Impl*)prog.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+const String& ProgramSource::source() const
+{
+    CV_Assert(p);
+    return p->codeStr_;
+}
+
+ProgramSource::hash_t ProgramSource::hash() const
+{
+    CV_Assert(p);
+    if (!p->isHashUpdated)
+        p->updateHash();
+    return p->hash_;
+}
+
+
+internal::ProgramEntry::operator ProgramSource&() const
+{
+    if (this->pProgramSource == NULL)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (this->pProgramSource == NULL)
+        {
+            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
+            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
+        }
+    }
+    return *this->pProgramSource;
+}
+
+
+
 /////////////////////////////////////////// Program /////////////////////////////////////////////
 
 struct Program::Impl
 {
     Impl(const ProgramSource& _src,
-         const String& _buildflags, String& errmsg)
+         const String& _buildflags, String& errmsg) :
+         src(_src),
+         buildflags(_buildflags),
+         handle(NULL)
     {
-        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", _src.hash(), _buildflags.c_str()).c_str());
         refcount = 1;
-        const Context& ctx = Context::getDefault();
-        src = _src;
-        buildflags = _buildflags;
+        compile(Context::getDefault(), errmsg);
+    }
+
+    bool compile(const Context& ctx, String& errmsg)
+    {
+        CV_Assert(handle == NULL);
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", src.hash(), buildflags.c_str()).c_str());
         const String& srcstr = src.source();
         const char* srcptr = srcstr.c_str();
         size_t srclen = srcstr.size();
         cl_int retval = 0;
 
         handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
-        if( handle && retval == CL_SUCCESS )
+        CV_OclDbgAssert(handle && retval == CL_SUCCESS);
+        if (handle && retval == CL_SUCCESS)
         {
             int i, n = (int)ctx.ndevices();
             AutoBuffer<void*> deviceListBuf(n+1);
@@ -2402,26 +2656,41 @@ struct Program::Impl
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
 #if !CV_OPENCL_ALWAYS_SHOW_BUILD_LOG
-            if( retval != CL_SUCCESS )
+            if (retval != CL_SUCCESS)
 #endif
             {
+                AutoBuffer<char, 4096> buffer; buffer[0] = 0;
+
                 size_t retsz = 0;
-                cl_int buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                               CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if (buildInfo_retval == CL_SUCCESS && retsz > 1)
+                cl_int log_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                                          CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
+                if (log_retval == CL_SUCCESS && retsz > 1)
                 {
-                    AutoBuffer<char> bufbuf(retsz + 16);
-                    char* buf = bufbuf;
-                    buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                                   CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
-                    if (buildInfo_retval == CL_SUCCESS)
+                    buffer.resize(retsz + 16);
+                    log_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                                       CL_PROGRAM_BUILD_LOG, retsz+1, (char*)buffer, &retsz);
+                    if (log_retval == CL_SUCCESS)
                     {
-                        // TODO It is useful to see kernel name & program file name also
-                        errmsg = String(buf);
-                        printf("OpenCL program build log: %s\n%s\n", buildflags.c_str(), errmsg.c_str());
-                        fflush(stdout);
+                        if (retsz < buffer.size())
+                            buffer[retsz] = 0;
+                        else
+                            buffer[buffer.size() - 1] = 0;
+                    }
+                    else
+                    {
+                        buffer[0] = 0;
                     }
                 }
+
+                errmsg = String(buffer);
+                printf("OpenCL program build log: %s (%s)\nStatus %d: %s\n%s\n%s\n",
+                        src.getImpl()->name_.c_str(), src.getImpl()->module_.c_str(),
+                        retval, getOpenCLErrorString(retval),
+                        buildflags.c_str(), errmsg.c_str());
+                fflush(stdout);
+
+                // don't remove "retval != CL_SUCCESS" condition here:
+                // it would break CV_OPENCL_ALWAYS_SHOW_BUILD_LOG mode
                 if (retval != CL_SUCCESS && handle)
                 {
                     clReleaseProgram(handle);
@@ -2429,6 +2698,7 @@ struct Program::Impl
                 }
             }
         }
+        return handle != NULL;
     }
 
     Impl(const String& _buf, const String& _buildflags)
@@ -2594,125 +2864,6 @@ String Program::getPrefix(const String& buildflags)
                   dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
 }
 
-///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
-
-struct ProgramSource::Impl
-{
-    Impl(const String& src)
-    {
-        init(cv::String(), cv::String(), src, cv::String());
-    }
-    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
-    {
-        init(module, name, codeStr, codeHash);
-    }
-    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
-    {
-        refcount = 1;
-        module_ = module;
-        name_ = name;
-        codeStr_ = codeStr;
-        codeHash_ = codeHash;
-
-        isHashUpdated = false;
-        if (codeHash_.empty())
-        {
-            updateHash();
-            codeHash_ = cv::format("%08llx", hash_);
-        }
-    }
-
-    void updateHash()
-    {
-        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
-        isHashUpdated = true;
-    }
-
-    IMPLEMENT_REFCOUNTABLE();
-
-    String module_;
-    String name_;
-    String codeStr_;
-    String codeHash_;
-    // TODO std::vector<ProgramSource> includes_;
-
-    bool isHashUpdated;
-    ProgramSource::hash_t hash_;
-};
-
-
-ProgramSource::ProgramSource()
-{
-    p = 0;
-}
-
-ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
-{
-    p = new Impl(module, name, codeStr, codeHash);
-}
-
-ProgramSource::ProgramSource(const char* prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::ProgramSource(const String& prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::~ProgramSource()
-{
-    if(p)
-        p->release();
-}
-
-ProgramSource::ProgramSource(const ProgramSource& prog)
-{
-    p = prog.p;
-    if(p)
-        p->addref();
-}
-
-ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
-{
-    Impl* newp = (Impl*)prog.p;
-    if(newp)
-        newp->addref();
-    if(p)
-        p->release();
-    p = newp;
-    return *this;
-}
-
-const String& ProgramSource::source() const
-{
-    CV_Assert(p);
-    return p->codeStr_;
-}
-
-ProgramSource::hash_t ProgramSource::hash() const
-{
-    CV_Assert(p);
-    if (!p->isHashUpdated)
-        p->updateHash();
-    return p->hash_;
-}
-
-
-internal::ProgramEntry::operator ProgramSource&() const
-{
-    if (this->pProgramSource == NULL)
-    {
-        cv::AutoLock lock(cv::getInitializationMutex());
-        if (this->pProgramSource == NULL)
-        {
-            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
-            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
-        }
-    }
-    return *this->pProgramSource;
-}
 
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
@@ -4598,6 +4749,102 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
     return buf;
 }
 
+const char* getOpenCLErrorString(int errorCode)
+{
+    switch (errorCode)
+    {
+    case   0: return "CL_SUCCESS";
+    case  -1: return "CL_DEVICE_NOT_FOUND";
+    case  -2: return "CL_DEVICE_NOT_AVAILABLE";
+    case  -3: return "CL_COMPILER_NOT_AVAILABLE";
+    case  -4: return "CL_MEM_OBJECT_ALLOCATION_FAILURE";
+    case  -5: return "CL_OUT_OF_RESOURCES";
+    case  -6: return "CL_OUT_OF_HOST_MEMORY";
+    case  -7: return "CL_PROFILING_INFO_NOT_AVAILABLE";
+    case  -8: return "CL_MEM_COPY_OVERLAP";
+    case  -9: return "CL_IMAGE_FORMAT_MISMATCH";
+    case -10: return "CL_IMAGE_FORMAT_NOT_SUPPORTED";
+    case -11: return "CL_BUILD_PROGRAM_FAILURE";
+    case -12: return "CL_MAP_FAILURE";
+    case -13: return "CL_MISALIGNED_SUB_BUFFER_OFFSET";
+    case -14: return "CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST";
+    case -15: return "CL_COMPILE_PROGRAM_FAILURE";
+    case -16: return "CL_LINKER_NOT_AVAILABLE";
+    case -17: return "CL_LINK_PROGRAM_FAILURE";
+    case -18: return "CL_DEVICE_PARTITION_FAILED";
+    case -19: return "CL_KERNEL_ARG_INFO_NOT_AVAILABLE";
+    case -30: return "CL_INVALID_VALUE";
+    case -31: return "CL_INVALID_DEVICE_TYPE";
+    case -32: return "CL_INVALID_PLATFORM";
+    case -33: return "CL_INVALID_DEVICE";
+    case -34: return "CL_INVALID_CONTEXT";
+    case -35: return "CL_INVALID_QUEUE_PROPERTIES";
+    case -36: return "CL_INVALID_COMMAND_QUEUE";
+    case -37: return "CL_INVALID_HOST_PTR";
+    case -38: return "CL_INVALID_MEM_OBJECT";
+    case -39: return "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR";
+    case -40: return "CL_INVALID_IMAGE_SIZE";
+    case -41: return "CL_INVALID_SAMPLER";
+    case -42: return "CL_INVALID_BINARY";
+    case -43: return "CL_INVALID_BUILD_OPTIONS";
+    case -44: return "CL_INVALID_PROGRAM";
+    case -45: return "CL_INVALID_PROGRAM_EXECUTABLE";
+    case -46: return "CL_INVALID_KERNEL_NAME";
+    case -47: return "CL_INVALID_KERNEL_DEFINITION";
+    case -48: return "CL_INVALID_KERNEL";
+    case -49: return "CL_INVALID_ARG_INDEX";
+    case -50: return "CL_INVALID_ARG_VALUE";
+    case -51: return "CL_INVALID_ARG_SIZE";
+    case -52: return "CL_INVALID_KERNEL_ARGS";
+    case -53: return "CL_INVALID_WORK_DIMENSION";
+    case -54: return "CL_INVALID_WORK_GROUP_SIZE";
+    case -55: return "CL_INVALID_WORK_ITEM_SIZE";
+    case -56: return "CL_INVALID_GLOBAL_OFFSET";
+    case -57: return "CL_INVALID_EVENT_WAIT_LIST";
+    case -58: return "CL_INVALID_EVENT";
+    case -59: return "CL_INVALID_OPERATION";
+    case -60: return "CL_INVALID_GL_OBJECT";
+    case -61: return "CL_INVALID_BUFFER_SIZE";
+    case -62: return "CL_INVALID_MIP_LEVEL";
+    case -63: return "CL_INVALID_GLOBAL_WORK_SIZE";
+    case -64: return "CL_INVALID_PROPERTY";
+    case -65: return "CL_INVALID_IMAGE_DESCRIPTOR";
+    case -66: return "CL_INVALID_COMPILER_OPTIONS";
+    case -67: return "CL_INVALID_LINKER_OPTIONS";
+    case -68: return "CL_INVALID_DEVICE_PARTITION_COUNT";
+    case -69: return "CL_INVALID_PIPE_SIZE";
+    case -70: return "CL_INVALID_DEVICE_QUEUE";
+    case -1000: return "CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR";
+    case -1001: return "CL_PLATFORM_NOT_FOUND_KHR";
+    case -1002: return "CL_INVALID_D3D10_DEVICE_KHR";
+    case -1003: return "CL_INVALID_D3D10_RESOURCE_KHR";
+    case -1004: return "CL_D3D10_RESOURCE_ALREADY_ACQUIRED_KHR";
+    case -1005: return "CL_D3D10_RESOURCE_NOT_ACQUIRED_KHR";
+    case -1024: return "clBLAS: Functionality is not implemented";
+    case -1023: return "clBLAS: Library is not initialized yet";
+    case -1022: return "clBLAS: Matrix A is not a valid memory object";
+    case -1021: return "clBLAS: Matrix B is not a valid memory object";
+    case -1020: return "clBLAS: Matrix C is not a valid memory object";
+    case -1019: return "clBLAS: Vector X is not a valid memory object";
+    case -1018: return "clBLAS: Vector Y is not a valid memory object";
+    case -1017: return "clBLAS: An input dimension (M:N:K) is invalid";
+    case -1016: return "clBLAS: Leading dimension A must not be less than the "
+                       "size of the first dimension";
+    case -1015: return "clBLAS: Leading dimension B must not be less than the "
+                       "size of the second dimension";
+    case -1014: return "clBLAS: Leading dimension C must not be less than the "
+                       "size of the third dimension";
+    case -1013: return "clBLAS: The increment for a vector X must not be 0";
+    case -1012: return "clBLAS: The increment for a vector Y must not be 0";
+    case -1011: return "clBLAS: The memory object for Matrix A is too small";
+    case -1010: return "clBLAS: The memory object for Matrix B is too small";
+    case -1009: return "clBLAS: The memory object for Matrix C is too small";
+    case -1008: return "clBLAS: The memory object for Vector X is too small";
+    case -1007: return "clBLAS: The memory object for Vector Y is too small";
+    default: return "Unknown OpenCL error";
+    }
+}
+
 template <typename T>
 static std::string kerToStr(const Mat & k)
 {
@@ -5014,4 +5261,64 @@ bool internal::isCLBuffer(UMat& u)
     return true;
 }
 
-}}
+struct Timer::Impl
+{
+    const Queue queue;
+
+    Impl(const Queue& q)
+        : queue(q)
+    {
+    }
+
+    ~Impl(){}
+
+    void start()
+    {
+#ifdef HAVE_OPENCL
+        clFinish((cl_command_queue)queue.ptr());
+        timer.start();
+#endif
+    }
+
+    void stop()
+    {
+#ifdef HAVE_OPENCL
+        clFinish((cl_command_queue)queue.ptr());
+        timer.stop();
+#endif
+    }
+
+    uint64 durationNS() const
+    {
+#ifdef HAVE_OPENCL
+        return (uint64)(timer.getTimeSec() * 1e9);
+#else
+        return 0;
+#endif
+    }
+
+    TickMeter timer;
+};
+
+Timer::Timer(const Queue& q) : p(new Impl(q)) { }
+Timer::~Timer() { delete p; }
+
+void Timer::start()
+{
+    CV_Assert(p);
+    p->start();
+}
+
+void Timer::stop()
+{
+    CV_Assert(p);
+    p->stop();
+}
+
+uint64 Timer::durationNS() const
+{
+    CV_Assert(p);
+    return p->durationNS();
+}
+
+}} // namespace

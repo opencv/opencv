@@ -41,7 +41,7 @@
 //M*/
 
 #include "cap_ffmpeg_api.hpp"
-#if !(defined(WIN32) || defined(_WIN32) || defined(WINCE))
+#if !(defined(_WIN32) || defined(WINCE))
 # include <pthread.h>
 #endif
 #include <assert.h>
@@ -92,7 +92,7 @@ extern "C" {
 #define CV_WARN(message) fprintf(stderr, "warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
 #endif
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
     #include <windows.h>
     #if defined _MSC_VER && _MSC_VER < 1900
     struct timespec
@@ -172,7 +172,7 @@ extern "C" {
 #define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
 #define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
 
-#ifdef WIN32
+#ifdef _WIN32
 // http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
 
 static
@@ -289,7 +289,7 @@ static int get_number_of_cpus(void)
 {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(52, 111, 0)
     return 1;
-#elif defined WIN32 || defined _WIN32
+#elif defined _WIN32
     SYSTEM_INFO sysinfo;
     GetSystemInfo( &sysinfo );
 
@@ -584,7 +584,7 @@ private:
     ImplMutex& operator = (const ImplMutex& m);
 };
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 
 struct ImplMutex::Impl
 {
@@ -781,7 +781,23 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+#ifndef NO_GETENV
+    char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    if(options == NULL)
+    {
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+    }
+    else
+    {
+#if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(52, 17, 100) : CALC_FFMPEG_VERSION(52, 7, 0))
+        av_dict_parse_string(&dict, options, ";", "|", 0);
+#else
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
+    }
+#else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
     int err = avformat_open_input(&ic, _filename, NULL, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);

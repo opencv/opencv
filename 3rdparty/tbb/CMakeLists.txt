@@ -67,13 +67,13 @@ else()
                  )
 endif()
 
-if (HAVE_LIBPTHREAD)
+if(HAVE_PTHREAD)
   add_definitions(-DUSE_PTHREAD) #required for Unix
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_COMPILER_IS_CLANGCXX)
   add_definitions(-DTBB_USE_GCC_BUILTINS=1) #required for ARM GCC
-  if (NOT CMAKE_OPENCV_GCC_VERSION_NUM LESS 600)
+  if(NOT CMAKE_CXX_COMPILER_VERSION LESS 6.0)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flifetime-dse=1") # workaround for GCC 6.x
   endif()
 endif()

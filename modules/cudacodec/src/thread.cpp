@@ -47,7 +47,7 @@
 
 using namespace cv::cudacodec::detail;
 
-#ifdef WIN32
+#ifdef _WIN32
 
 namespace
 {
@@ -160,7 +160,7 @@ void cv::cudacodec::detail::Thread::wait()
 
 void cv::cudacodec::detail::Thread::sleep(int ms)
 {
-#ifdef WIN32
+#ifdef _WIN32
     ::Sleep(ms);
 #else
     ::usleep(ms * 1000);

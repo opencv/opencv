@@ -808,12 +808,12 @@ protected:
 
 class IVideoWriter;
 
+/** @example videowriter_basic.cpp
+An example using VideoCapture and VideoWriter class
+ */
 /** @brief Video writer class.
 
 The class provides C++ API for writing video files or image sequences.
-
-Here is how the class can be used:
-@include samples/cpp/videowriter_basic.cpp
  */
 class CV_EXPORTS_W VideoWriter
 {

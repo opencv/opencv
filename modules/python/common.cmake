@@ -48,17 +48,28 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h")
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h"
+)
+
+set(OPENCV_${PYTHON}_SIGNATURES_FILE "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_signatures.json" CACHE INTERNAL "")
+
+set(cv2_generated_files ${cv2_generated_hdrs}
+    "${OPENCV_${PYTHON}_SIGNATURES_FILE}"
+)
 
 string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
 add_custom_command(
-   OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${PYTHON}"
-   DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
-   DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
-   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-   DEPENDS ${opencv_hdrs})
+    OUTPUT ${cv2_generated_files}
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${PYTHON}"
+    DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
+    DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
+    DEPENDS ${opencv_hdrs}
+    COMMENT "Generate files for ${the_module}"
+)
+
+add_custom_target(gen_${the_module} DEPENDS ${cv2_generated_files})
 
 set(cv2_custom_hdr "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_custom_headers.h")
 file(WRITE ${cv2_custom_hdr} "//user-defined headers\n")
@@ -67,17 +78,18 @@ foreach(uh ${opencv_userdef_hdrs})
 endforeach(uh)
 
 ocv_add_library(${the_module} MODULE ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs} ${opencv_userdef_hdrs} ${cv2_custom_hdr})
+add_dependencies(${the_module} gen_${the_module})
 
 if(APPLE)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
 elseif(WIN32 OR OPENCV_FORCE_PYTHON_LIBS)
   if(${PYTHON}_DEBUG_LIBRARIES AND NOT ${PYTHON}_LIBRARIES MATCHES "optimized.*debug")
-    ocv_target_link_libraries(${the_module} debug ${${PYTHON}_DEBUG_LIBRARIES} optimized ${${PYTHON}_LIBRARIES})
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE debug ${${PYTHON}_DEBUG_LIBRARIES} optimized ${${PYTHON}_LIBRARIES})
   else()
-    ocv_target_link_libraries(${the_module} ${${PYTHON}_LIBRARIES})
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${${PYTHON}_LIBRARIES})
   endif()
 endif()
-ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
+ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS})
 
 if(DEFINED ${PYTHON}_CVPY_SUFFIX)
   set(CVPY_SUFFIX "${${PYTHON}_CVPY_SUFFIX}")
@@ -118,6 +130,7 @@ if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Woverloaded-virtual -Wunused-private-field)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef) # accurate guard via #pragma doesn't work (C++ preprocessor doesn't handle #pragma)
 
 if(MSVC AND NOT BUILD_SHARED_LIBS)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")

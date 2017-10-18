@@ -64,7 +64,7 @@ PlanarTarget = namedtuple('PlaneTarget', 'image, rect, keypoints, descrs, data')
   p0     - matched points coords in target image
   p1     - matched points coords in input frame
   H      - homography matrix from p0 to p1
-  quad   - target bounary quad in input frame
+  quad   - target boundary quad in input frame
 '''
 TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 

@@ -796,7 +796,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     int depth = matA.depth(), cn = matA.channels();
     int type = CV_MAKETYPE(depth, cn);
 
-    CV_Assert( type == matB.type() && (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
+    CV_Assert( type == matB.type(), (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
 
     const ocl::Device & dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0;
@@ -1555,7 +1555,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
     Size a_size = A.size(), d_size;
     int len = 0, type = A.type();
 
-    CV_Assert( type == B.type() && (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
+    CV_Assert( type == B.type(), (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
 
     switch( flags & (GEMM_1_T|GEMM_2_T) )
     {
@@ -1583,7 +1583,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
     if( !C.empty() )
     {
-        CV_Assert( C.type() == type &&
+        CV_Assert( C.type() == type,
             (((flags&GEMM_3_T) == 0 && C.rows == d_size.height && C.cols == d_size.width) ||
              ((flags&GEMM_3_T) != 0 && C.rows == d_size.width && C.cols == d_size.height)));
     }
@@ -2537,7 +2537,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert( data && nsamples > 0 );
+    CV_Assert( data, nsamples > 0 );
     Size size = data[0].size();
     int sz = size.width * size.height, esz = (int)data[0].elemSize();
     int type = data[0].type();
@@ -2560,7 +2560,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
 
     for( int i = 0; i < nsamples; i++ )
     {
-        CV_Assert( data[i].size() == size && data[i].type() == type );
+        CV_Assert( data[i].size() == size, data[i].type() == type );
         if( data[i].isContinuous() )
             memcpy( _data.ptr(i), data[i].ptr(), sz*esz );
         else
@@ -2596,7 +2596,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         int i = 0;
         for(std::vector<cv::Mat>::iterator each = src.begin(); each != src.end(); ++each, ++i )
         {
-            CV_Assert( (*each).size() == size && (*each).type() == type );
+            CV_Assert( (*each).size() == size, (*each).type() == type );
             Mat dataRow(size.height, size.width, type, _data.ptr(i));
             (*each).copyTo(dataRow);
         }
@@ -2675,8 +2675,8 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
     AutoBuffer<double> buf(len);
     double result = 0;
 
-    CV_Assert( type == v2.type() && type == icovar.type() &&
-        sz == v2.size() && len == icovar.rows && len == icovar.cols );
+    CV_Assert( type == v2.type(), type == icovar.type(),
+        sz == v2.size(), len == icovar.rows && len == icovar.cols );
 
     sz.width *= v1.channels();
     if( v1.isContinuous() && v2.isContinuous() )
@@ -2968,8 +2968,8 @@ void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
 
     if( !delta.empty() )
     {
-        CV_Assert( delta.channels() == 1 &&
-            (delta.rows == src.rows || delta.rows == 1) &&
+        CV_Assert( delta.channels() == 1,
+            (delta.rows == src.rows || delta.rows == 1),
             (delta.cols == src.cols || delta.cols == 1));
         if( delta.type() != dtype )
             delta.convertTo(delta, dtype);
@@ -3101,7 +3101,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
 #if ARITHM_USE_IPP
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, src1, len*sizeof(uchar), src2, len*sizeof(uchar), ippiSize(len, 1), &r) >= 0, r);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, src1, len*sizeof(uchar), src2, len*sizeof(uchar), ippiSize(len, 1), &r) >= 0, r);
 #endif
     int i = 0;
 
@@ -3380,7 +3380,7 @@ double Mat::dot(InputArray _mat) const
     Mat mat = _mat.getMat();
     int cn = channels();
     DotProdFunc func = getDotProdFunc(depth());
-    CV_Assert( mat.type() == type() && mat.size == size && func != 0 );
+    CV_Assert( mat.type() == type(), mat.size == size, func != 0 );
 
     if( isContinuous() && mat.isContinuous() )
     {
@@ -3416,8 +3416,8 @@ CV_IMPL void cvGEMM( const CvArr* Aarr, const CvArr* Barr, double alpha,
     if( Carr )
         C = cv::cvarrToMat(Carr);
 
-    CV_Assert( (D.rows == ((flags & CV_GEMM_A_T) == 0 ? A.rows : A.cols)) &&
-               (D.cols == ((flags & CV_GEMM_B_T) == 0 ? B.cols : B.rows)) &&
+    CV_Assert( (D.rows == ((flags & CV_GEMM_A_T) == 0 ? A.rows : A.cols)),
+               (D.cols == ((flags & CV_GEMM_B_T) == 0 ? B.cols : B.rows)),
                D.type() == A.type() );
 
     gemm( A, B, alpha, C, beta, D, flags );
@@ -3439,7 +3439,7 @@ cvTransform( const CvArr* srcarr, CvArr* dstarr,
         m = _m;
     }
 
-    CV_Assert( dst.depth() == src.depth() && dst.channels() == m.rows );
+    CV_Assert( dst.depth() == src.depth(), dst.channels() == m.rows );
     cv::transform( src, dst, m );
 }
 
@@ -3449,7 +3449,7 @@ cvPerspectiveTransform( const CvArr* srcarr, CvArr* dstarr, const CvMat* mat )
 {
     cv::Mat m = cv::cvarrToMat(mat), src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
 
-    CV_Assert( dst.type() == src.type() && dst.channels() == m.rows-1 );
+    CV_Assert( dst.type() == src.type(), dst.channels() == m.rows-1 );
     cv::perspectiveTransform( src, dst, m );
 }
 
@@ -3459,7 +3459,7 @@ CV_IMPL void cvScaleAdd( const CvArr* srcarr1, CvScalar scale,
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
 
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size, src1.type() == dst.type() );
     cv::scaleAdd( src1, scale.val[0], cv::cvarrToMat(srcarr2), dst );
 }
 
@@ -3469,7 +3469,7 @@ cvCalcCovarMatrix( const CvArr** vecarr, int count,
                    CvArr* covarr, CvArr* avgarr, int flags )
 {
     cv::Mat cov0 = cv::cvarrToMat(covarr), cov = cov0, mean0, mean;
-    CV_Assert( vecarr != 0 && count >= 1 );
+    CV_Assert( vecarr != 0, count >= 1 );
 
     if( avgarr )
         mean = mean0 = cv::cvarrToMat(avgarr);
@@ -3549,9 +3549,9 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
     int ecount0 = evals0.cols + evals0.rows - 1;
     int ecount = evals.cols + evals.rows - 1;
 
-    CV_Assert( (evals0.cols == 1 || evals0.rows == 1) &&
-                ecount0 <= ecount &&
-                evects0.cols == evects.cols &&
+    CV_Assert( (evals0.cols == 1 || evals0.rows == 1),
+                ecount0 <= ecount,
+                evects0.cols == evects.cols,
                 evects0.rows == ecount0 );
 
     cv::Mat temp = evals0;
@@ -3580,12 +3580,12 @@ cvProjectPCA( const CvArr* data_arr, const CvArr* avg_arr,
     int n;
     if( mean.rows == 1 )
     {
-        CV_Assert(dst.cols <= evects.rows && dst.rows == data.rows);
+        CV_Assert(dst.cols <= evects.rows, dst.rows == data.rows);
         n = dst.cols;
     }
     else
     {
-        CV_Assert(dst.rows <= evects.rows && dst.cols == data.cols);
+        CV_Assert(dst.rows <= evects.rows, dst.cols == data.cols);
         n = dst.rows;
     }
     pca.eigenvectors = evects.rowRange(0, n);
@@ -3611,12 +3611,12 @@ cvBackProjectPCA( const CvArr* proj_arr, const CvArr* avg_arr,
     int n;
     if( mean.rows == 1 )
     {
-        CV_Assert(data.cols <= evects.rows && dst.rows == data.rows);
+        CV_Assert(data.cols <= evects.rows, dst.rows == data.rows);
         n = data.cols;
     }
     else
     {
-        CV_Assert(data.rows <= evects.rows && dst.cols == data.cols);
+        CV_Assert(data.rows <= evects.rows, dst.cols == data.cols);
         n = data.rows;
     }
     pca.eigenvectors = evects.rowRange(0, n);

@@ -239,7 +239,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_LIBV4L
+#if !defined _WIN32 && defined HAVE_LIBV4L
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 

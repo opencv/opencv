@@ -71,7 +71,7 @@ class KNearest(StatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        retval, results, neigh_resp, dists = self.model.findNearest(samples, self.k)
+        _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, self.k)
         return results.ravel()
 
 class SVM(StatModel):
@@ -147,7 +147,7 @@ class digits_test(NewOpenCVTests):
         samples = preprocess_hog(digits2)
 
         train_n = int(0.9*len(samples))
-        digits_train, digits_test = np.split(digits2, [train_n])
+        _digits_train, digits_test = np.split(digits2, [train_n])
         samples_train, samples_test = np.split(samples, [train_n])
         labels_train, labels_test = np.split(labels, [train_n])
         errors = list()
@@ -195,3 +195,7 @@ class digits_test(NewOpenCVTests):
 
         self.assertLess(errors[0] - 0.034, eps)
         self.assertLess(errors[1] - 0.018, eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

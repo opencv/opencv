@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Image Histogram Example</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Image Histogram Example</h2>
+<p>
+    &lt;canvas&gt; elements named <b>canvasInput</b> and <b>canvasOutput</b> have been prepared.<br>
+    Click <b>Try it</b> button to see the result. You can choose another image.<br>
+    You can change the code in the &lt;textarea&gt; to investigate more.
+</p>
+<div>
+<div class="control"><button id="tryIt" disabled>Try it</button></div>
+<textarea class="code" rows="9" cols="100" id="codeEditor" spellcheck="false">
+</textarea>
+<p class="err" id="errorMessage"></p>
+</div>
+<div>
+    <table cellpadding="0" cellspacing="0" width="0" border="0">
+    <tr>
+        <td>
+            <canvas id="canvasInput"></canvas>
+        </td>
+        <td>
+            <canvas id="canvasOutput"></canvas>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="caption">canvasInput <input type="file" id="fileInput" name="file" accept="image/*" /></div>
+        </td>
+        <td>
+            <div class="caption">canvasOutput</div>
+        </td>
+    </tr>
+    </table>
+</div>
+<script src="utils.js" type="text/javascript"></script>
+<script id="codeSnippet" type="text/code-snippet">
+let src = cv.imread('canvasInput');
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+let srcVec = new cv.MatVector();
+srcVec.push_back(src);
+let accumulate = false;
+let channels = [0];
+let histSize = [256];
+let ranges = [0, 255];
+let hist = new cv.Mat();
+let mask = new cv.Mat();
+let color = new cv.Scalar(255, 255, 255);
+let scale = 2;
+// You can try more different parameters
+cv.calcHist(srcVec, channels, mask, hist, histSize, ranges, accumulate);
+let result = cv.minMaxLoc(hist, mask);
+let max = result.maxVal;
+let dst = new cv.Mat.zeros(src.rows, histSize[0] * scale,
+                           cv.CV_8UC3);
+// draw histogram
+for (let i = 0; i < histSize[0]; i++) {
+    let binVal = hist.data32F[i] * src.rows / max;
+    let pioint1 = new cv.Point(i * scale, src.rows - 1);
+    let pioint2 = new cv.Point((i + 1) * scale - 1, src.rows - binVal);
+    cv.rectangle(dst, pioint1, pioint2, color, cv.FILLED);
+}
+cv.imshow('canvasOutput', dst);
+src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete();
+</script>
+<script type="text/javascript">
+let utils = new Utils('errorMessage');
+
+utils.loadCode('codeSnippet', 'codeEditor');
+utils.loadImageToCanvas('lena.jpg', 'canvasInput');
+utils.addFileInputHandler('fileInput', 'canvasInput');
+
+let tryIt = document.getElementById('tryIt');
+tryIt.addEventListener('click', () => {
+    utils.executeCode('codeEditor');
+});
+
+utils.loadOpenCv(() => {
+    tryIt.removeAttribute('disabled');
+});
+</script>
+</body>
+</html>

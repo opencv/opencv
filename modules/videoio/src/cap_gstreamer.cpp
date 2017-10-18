@@ -87,6 +87,12 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
+#if defined(__MINGW32__)
+inline char *realpath(const char *path, char *resolved_path)
+{
+    return _fullpath(resolved_path,path,PATH_MAX);
+}
+#endif
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #define strcasecmp _stricmp

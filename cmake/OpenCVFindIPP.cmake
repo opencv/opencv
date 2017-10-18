@@ -11,13 +11,13 @@
 #
 # On return this will define:
 #
-# HAVE_IPP          - True if Intel IPP found
-# HAVE_IPP_ICV_ONLY - True if Intel IPP ICV version is available
-# IPP_ROOT_DIR      - root of IPP installation
-# IPP_INCLUDE_DIRS  - IPP include folder
-# IPP_LIBRARIES     - IPP libraries that are used by OpenCV
-# IPP_VERSION_STR   - string with the newest detected IPP version
-# IPP_VERSION_MAJOR - numbers of IPP version (MAJOR.MINOR.BUILD)
+# HAVE_IPP            - True if Intel IPP found
+# HAVE_IPP_ICV        - True if Intel IPP ICV version is available
+# IPP_ROOT_DIR        - root of IPP installation
+# IPP_INCLUDE_DIRS    - IPP include folder
+# IPP_LIBRARIES       - IPP libraries that are used by OpenCV
+# IPP_VERSION_STR     - string with the newest detected IPP version
+# IPP_VERSION_MAJOR   - numbers of IPP version (MAJOR.MINOR.BUILD)
 # IPP_VERSION_MINOR
 # IPP_VERSION_BUILD
 #
@@ -25,7 +25,7 @@
 #
 
 unset(HAVE_IPP CACHE)
-unset(HAVE_IPP_ICV_ONLY)
+unset(HAVE_IPP_ICV)
 unset(IPP_ROOT_DIR)
 unset(IPP_INCLUDE_DIRS)
 unset(IPP_LIBRARIES)
@@ -79,7 +79,7 @@ endmacro()
 macro(_ipp_not_supported)
   message(STATUS ${ARGN})
   unset(HAVE_IPP)
-  unset(HAVE_IPP_ICV_ONLY)
+  unset(HAVE_IPP_ICV)
   unset(IPP_VERSION_STR)
   return()
 endmacro()
@@ -92,7 +92,7 @@ macro(ipp_detect_version)
   set(__msg)
   if(EXISTS ${IPP_ROOT_DIR}/include/ippicv_redefs.h)
     set(__msg " (ICV version)")
-    set(HAVE_IPP_ICV_ONLY 1)
+    set(HAVE_IPP_ICV 1)
   elseif(EXISTS ${IPP_ROOT_DIR}/include/ipp.h)
     # nothing
   else()
@@ -118,7 +118,7 @@ macro(ipp_detect_version)
     set(IPP_LIBRARY_DIR ${DIR})
   endmacro()
 
-  if(APPLE AND NOT HAVE_IPP_ICV_ONLY)
+  if(APPLE AND NOT HAVE_IPP_ICV)
     _ipp_set_library_dir(${IPP_ROOT_DIR}/lib)
   elseif(IPP_X64)
     _ipp_set_library_dir(${IPP_ROOT_DIR}/lib/intel64)
@@ -128,7 +128,7 @@ macro(ipp_detect_version)
 
   macro(_ipp_add_library name)
     # dynamic linking is only supported for standalone version of Intel IPP
-    if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+    if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV)
       if (WIN32)
         set(IPP_LIB_PREFIX ${CMAKE_IMPORT_LIBRARY_PREFIX})
         set(IPP_LIB_SUFFIX ${CMAKE_IMPORT_LIBRARY_SUFFIX})
@@ -141,7 +141,7 @@ macro(ipp_detect_version)
       set(IPP_LIB_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
     endif ()
     if (EXISTS ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-      if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+      if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV)
         # When using dynamic libraries from standalone Intel IPP it is your responsibility to install those on the target system
         list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
       else ()
@@ -167,14 +167,14 @@ macro(ipp_detect_version)
 
   set(IPP_PREFIX "ipp")
   if(${IPP_VERSION_STR} VERSION_LESS "8.0")
-    if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+    if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV)
       set(IPP_SUFFIX "")      # dynamic not threaded libs suffix Intel IPP 7.x
     else ()
       set(IPP_SUFFIX "_l")    # static not threaded libs suffix Intel IPP 7.x
     endif ()
   else ()
     if(WIN32)
-      if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+      if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV)
         set(IPP_SUFFIX "")    # dynamic not threaded libs suffix Intel IPP 8.x for Windows
       else ()
         set(IPP_SUFFIX "mt")  # static not threaded libs suffix Intel IPP 8.x for Windows
@@ -184,7 +184,7 @@ macro(ipp_detect_version)
     endif()
   endif()
 
-  if(HAVE_IPP_ICV_ONLY)
+  if(HAVE_IPP_ICV)
     _ipp_add_library(icv)
   else()
     _ipp_add_library(cv)

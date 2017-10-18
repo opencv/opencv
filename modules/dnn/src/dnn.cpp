@@ -47,6 +47,7 @@
 #include <iostream>
 #include <sstream>
 #include <iterator>
+#include <numeric>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -84,15 +85,15 @@ static String toString(const T &v)
 }
 
 Mat blobFromImage(const Mat& image, double scalefactor, const Size& size,
-                  const Scalar& mean, bool swapRB)
+                  const Scalar& mean, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images(1, image);
-    return blobFromImages(images, scalefactor, size, mean, swapRB);
+    return blobFromImages(images, scalefactor, size, mean, swapRB, crop);
 }
 
 Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size size,
-                   const Scalar& mean_, bool swapRB)
+                   const Scalar& mean_, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images = images_;
@@ -103,13 +104,18 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
             size = imgSize;
         if (size != imgSize)
         {
-            float resizeFactor = std::max(size.width / (float)imgSize.width,
-                                          size.height / (float)imgSize.height);
-            resize(images[i], images[i], Size(), resizeFactor, resizeFactor);
-            Rect crop(Point(0.5 * (images[i].cols - size.width),
-                            0.5 * (images[i].rows - size.height)),
-                      size);
-            images[i] = images[i](crop);
+            if(crop)
+            {
+              float resizeFactor = std::max(size.width / (float)imgSize.width,
+                                            size.height / (float)imgSize.height);
+              resize(images[i], images[i], Size(), resizeFactor, resizeFactor);
+              Rect crop(Point(0.5 * (images[i].cols - size.width),
+                              0.5 * (images[i].rows - size.height)),
+                        size);
+              images[i] = images[i](crop);
+            }
+            else
+              resize(images[i], images[i], size);
         }
         if(images[i].depth() == CV_8U)
             images[i].convertTo(images[i], CV_32F);
@@ -198,125 +204,6 @@ struct LayerPin
     }
 };
 
-// Objects of this class manages wrappers. For every CPU memory pointer and shape
-// one and only wrapper. Now it support wrapping for single backend and target.
-class BackendWrapManager
-{
-public:
-    Ptr<BackendWrapper> wrap(const Mat& m, int backendId, int targetId)
-    {
-        CV_TRACE_FUNCTION();
-
-        CV_Assert(backendId != DNN_BACKEND_DEFAULT);
-
-        std::map<void*, Ptr<BackendWrapper> >::iterator hostsIt;
-        // Check that the same CPU memory was previously wrapped.
-        hostsIt = hostWrappers.find(m.data);
-        if (hostsIt == hostWrappers.end())
-        {
-            // If not wrapped before.
-            return (hostWrappers[m.data] = wrapHost(m, backendId, targetId));
-        }
-        else
-        {
-            // Find if wrapper of this host and shape was created before.
-            std::map<std::pair<void*, MatSize>, Ptr<BackendWrapper> >::iterator it;
-            std::pair<void*, MatSize> key(m.data, m.size);
-            it = extraWrappers.find(key);
-            if (it == extraWrappers.end())
-            {
-                MatShape shape(m.dims);
-                for (int i = 0; i < m.dims; ++i)
-                    shape[i] = m.size.p[i];
-                return (extraWrappers[key] = wrapUser(hostsIt->second, shape));
-            }
-            else
-                return it->second;
-        }
-    }
-
-    std::vector<Ptr<BackendWrapper> > wrap(const std::vector<Mat*>& mats,
-                                           int backendId, int targetId)
-    {
-        const int num = mats.size();
-        std::vector<Ptr<BackendWrapper> > dst(num);
-        for (int i = 0; i < num; ++i)
-        {
-            dst[i] = wrap(*mats[i], backendId, targetId);
-        }
-        return dst;
-    }
-
-    std::vector<Ptr<BackendWrapper> > wrap(const std::vector<Mat>& mats,
-                                           int backendId, int targetId)
-    {
-        const int num = mats.size();
-        std::vector<Ptr<BackendWrapper> > dst(num);
-        for (int i = 0; i < num; ++i)
-        {
-            dst[i] = wrap(mats[i], backendId, targetId);
-        }
-        return dst;
-    }
-
-    void reset()
-    {
-        CV_TRACE_FUNCTION();
-
-        hostWrappers.clear();
-        extraWrappers.clear();
-    }
-
-private:
-    // Backend-specific wrapping function.
-    Ptr<BackendWrapper> wrapHost(const Mat& m, int backendId, int targetId)
-    {
-        if (backendId == DNN_BACKEND_DEFAULT)
-        {
-            return Ptr<BackendWrapper>();
-        }
-        else if (backendId == DNN_BACKEND_HALIDE)
-        {
-            CV_Assert(haveHalide());
-#ifdef HAVE_HALIDE
-            return Ptr<BackendWrapper>(new HalideBackendWrapper(targetId, m));
-#endif  // HAVE_HALIDE
-        }
-        else
-        {
-            CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
-        }
-        return Ptr<BackendWrapper>();
-    }
-
-    // Backend-specific wrapping function.
-    Ptr<BackendWrapper> wrapUser(const Ptr<BackendWrapper>& host, const MatShape& shape)
-    {
-        int backendId = host->backendId;
-        if (backendId == DNN_BACKEND_DEFAULT)
-        {
-            return Ptr<BackendWrapper>();
-        }
-        else if (backendId == DNN_BACKEND_HALIDE)
-        {
-            CV_Assert(haveHalide());
-#ifdef HAVE_HALIDE
-            return Ptr<BackendWrapper>(new HalideBackendWrapper(host, shape));
-#endif  // HAVE_HALIDE
-        }
-        else
-        {
-            CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
-        }
-        return Ptr<BackendWrapper>();
-    }
-
-    // Wrappers that initialized for memory hosts (first wrapping of CPU data).
-    std::map<void*, Ptr<BackendWrapper> > hostWrappers;
-    // The rest of wrappers. They initialized for non-host cv::Mat.
-    std::map<std::pair<void*, MatSize>, Ptr<BackendWrapper> > extraWrappers;
-};
-
 struct LayerData
 {
     LayerData() : id(-1), flag(0) {}
@@ -339,6 +226,8 @@ struct LayerData
     std::set<int> inputLayersId;
     std::set<int> requiredOutputs;
     std::vector<LayerPin> consumers;
+    std::vector<Ptr<BackendWrapper> > outputBlobsWrappers;
+    std::vector<Ptr<BackendWrapper> > inputBlobsWrappers;
 
     Ptr<Layer> layerInstance;
     std::vector<Mat> outputBlobs;
@@ -617,6 +506,24 @@ private:
     std::map<LayerPin, Mat> memHosts;
 };
 
+static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, const cv::Mat& m)
+{
+    if (backendId == DNN_BACKEND_DEFAULT)
+    {
+        return Ptr<BackendWrapper>();
+    }
+    else if (backendId == DNN_BACKEND_HALIDE)
+    {
+        CV_Assert(haveHalide());
+#ifdef HAVE_HALIDE
+        return Ptr<BackendWrapper>(new HalideBackendWrapper(targetId, m));
+#endif  // HAVE_HALIDE
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+    return Ptr<BackendWrapper>();
+}
+
 struct Net::Impl
 {
     typedef std::map<int, LayerShapes> LayersShapesMap;
@@ -633,7 +540,7 @@ struct Net::Impl
         inpl.layerInstance = netInputLayer;
         layerNameToId.insert(std::make_pair(inpl.name, inpl.id));
 
-        lastLayerId = 1;
+        lastLayerId = 0;
         netWasAllocated = false;
         fusion = true;
         preferableBackend = DNN_BACKEND_DEFAULT;
@@ -649,14 +556,45 @@ struct Net::Impl
     int preferableBackend;
     int preferableTarget;
     String halideConfigFile;
-    // Backend-specific wrapping manager.
-    BackendWrapManager backendWrapper;
+    // Map host data to backend specific wrapper.
+    std::map<void*, Ptr<BackendWrapper> > backendWrappers;
 
     int lastLayerId;
 
     bool netWasAllocated;
     bool fusion;
+    std::vector<int64> layersTimings;
 
+    Ptr<BackendWrapper> wrap(const Mat& host)
+    {
+        if (preferableBackend == DNN_BACKEND_DEFAULT)
+            return Ptr<BackendWrapper>();
+
+        MatShape shape(host.dims);
+        for (int i = 0; i < host.dims; ++i)
+            shape[i] = host.size[i];
+
+        void* data = host.data;
+        if (backendWrappers.find(data) != backendWrappers.end())
+        {
+            Ptr<BackendWrapper> baseBuffer = backendWrappers[data];
+            if (preferableBackend == DNN_BACKEND_HALIDE)
+            {
+                CV_Assert(haveHalide());
+  #ifdef HAVE_HALIDE
+                return Ptr<BackendWrapper>(new HalideBackendWrapper(baseBuffer, shape));
+  #endif  // HAVE_HALIDE
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+        }
+
+        Ptr<BackendWrapper> wrapper = wrapMat(preferableBackend, preferableTarget, host);
+        backendWrappers[data] = wrapper;
+        return wrapper;
+    }
+
+#ifdef HAVE_HALIDE
     void compileHalide()
     {
         CV_TRACE_FUNCTION();
@@ -664,8 +602,8 @@ struct Net::Impl
         CV_Assert(preferableBackend == DNN_BACKEND_HALIDE);
 
         HalideScheduler scheduler(halideConfigFile);
-        MapIdToLayerData::iterator it;
-        for (it = layers.begin(); it != layers.end(); ++it)
+        std::vector< std::reference_wrapper<LayerData> > compileList; compileList.reserve(64);
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
             Ptr<Layer> layer = ld.layerInstance;
@@ -680,11 +618,30 @@ struct Net::Impl
                                                 ld.inputBlobs, ld.outputBlobs,
                                                 preferableTarget);
                 }
-                dnn::compileHalide(ld.outputBlobs, ld.backendNodes[DNN_BACKEND_HALIDE],
-                                   preferableTarget);
+                compileList.emplace_back(ld);
             }
         }
+        std::atomic<int> progress(0);
+        auto fn = ([&] () -> void
+        {
+            for (;;)
+            {
+                int id = progress.fetch_add(1);
+                if ((size_t)id >= compileList.size())
+                    return;
+                const LayerData& ld = compileList[id].get();
+                Ptr<BackendNode> node = ld.backendNodes.find(DNN_BACKEND_HALIDE)->second;
+                dnn::compileHalide(ld.outputBlobs, node, preferableTarget);
+            }
+        });
+        size_t num_threads = std::min(compileList.size(), (size_t)std::thread::hardware_concurrency());
+        num_threads = std::max((size_t)1u, std::min((size_t)8u, num_threads));
+        std::vector<std::thread> threads(num_threads - 1);
+        for (auto& t: threads) t = std::thread(fn);
+        fn(); // process own tasks
+        for (auto& t: threads) t.join();
     }
+#endif
 
     void clear()
     {
@@ -716,6 +673,8 @@ struct Net::Impl
         it = layers.find(0);
         CV_Assert(it != layers.end());
         it->second.skipFlags[DNN_BACKEND_DEFAULT] = true;
+
+        layersTimings.clear();
     }
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>())
@@ -732,10 +691,12 @@ struct Net::Impl
 
             if (!netWasAllocated )
             {
-                // If user didn't call compileHalide() between
-                // setPreferableBackend(DNN_BACKEND_HALIDE) and forward().
+#ifdef HAVE_HALIDE
                 if (preferableBackend == DNN_BACKEND_HALIDE)
                     compileHalide();
+#else
+                CV_Assert(preferableBackend != DNN_BACKEND_HALIDE);
+#endif
             }
 
             netWasAllocated = true;
@@ -913,10 +874,9 @@ struct Net::Impl
     {
         CV_TRACE_FUNCTION();
 
-        backendWrapper.reset();
         if (preferableBackend == DNN_BACKEND_DEFAULT)
         {
-            CV_Assert(preferableTarget == DNN_TARGET_CPU);
+            CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_OPENCL);
             return;
         }
 
@@ -963,12 +923,10 @@ struct Net::Impl
             }
             // No layers fusion.
             ldTop.skipFlags[preferableBackend] = false;
-            std::vector<Ptr<BackendWrapper> > inputs =
-                backendWrapper.wrap(ldTop.inputBlobs, preferableBackend,
-                                    preferableTarget);
             if (preferableBackend == DNN_BACKEND_HALIDE)
             {
-                ldTop.backendNodes[DNN_BACKEND_HALIDE] = layerTop->initHalide(inputs);
+                ldTop.backendNodes[DNN_BACKEND_HALIDE] =
+                    layerTop->initHalide(ldTop.inputBlobsWrappers);
                 baseIt = it;
             }
             else
@@ -1017,12 +975,14 @@ struct Net::Impl
 
         //bind inputs
         ld.inputBlobs.resize(ninputs);
+        ld.inputBlobsWrappers.resize(ninputs);
         for (size_t i = 0; i < ninputs; i++)
         {
             LayerPin from = ld.inputBlobsId[i];
             CV_Assert(from.valid());
             CV_DbgAssert(layers.count(from.lid) && (int)layers[from.lid].outputBlobs.size() > from.oid);
             ld.inputBlobs[i] = &layers[from.lid].outputBlobs[from.oid];
+            ld.inputBlobsWrappers[i] = layers[from.lid].outputBlobsWrappers[from.oid];
         }
 
         LayersShapesMap::const_iterator layerShapesIt = layersShapes.find(lid);
@@ -1032,10 +992,16 @@ struct Net::Impl
         std::vector<LayerPin> pinsForInternalBlobs;
         bool maximizeReuse = preferableBackend == DNN_BACKEND_HALIDE;
         blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs, maximizeReuse);
+        ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
+        for (int i = 0; i < ld.outputBlobs.size(); ++i)
+        {
+            ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
+        }
 
         Ptr<Layer> layerPtr = ld.getLayerInstance();
         {
             layerPtr->finalize(ld.inputBlobs, ld.outputBlobs);
+            layerPtr->preferableTarget = preferableTarget;
 #if 0
             std::cout << "\toutputs:";
             size_t noutputs = ld.outputBlobs.size();
@@ -1062,7 +1028,7 @@ struct Net::Impl
 
     void fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
-        if( !fusion || preferableBackend == DNN_BACKEND_HALIDE )
+        if( !fusion || !(preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_CPU))
             return;
 
         CV_TRACE_FUNCTION();
@@ -1173,7 +1139,7 @@ struct Net::Impl
             // (and so we eliminate the concatenation layer, because the channels
             // are concatenated implicitly).
             Ptr<ConcatLayer> concatLayer = ld.layerInstance.dynamicCast<ConcatLayer>();
-            if( !concatLayer.empty() && concatLayer->axis == 1 &&
+            if( !concatLayer.empty() && concatLayer->axis == 1 && !concatLayer->padding &&
                 ld.outputBlobs.size() == 1 )
             {
                 Mat& output = ld.outputBlobs[0];
@@ -1252,6 +1218,8 @@ struct Net::Impl
         getLayersShapes(inputShapes, layersShapes);
 
         blobManager.reset();
+        backendWrappers.clear();
+        blobManager.addReference(LayerPin(0, 0));
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             const LayerData& ld = it->second;
@@ -1269,6 +1237,7 @@ struct Net::Impl
             allocateLayer(lid, layersShapes);
         }
 
+        layersTimings.resize(lastLayerId + 1, 0);
         fuseLayers(blobsToKeep_);
     }
 
@@ -1278,26 +1247,44 @@ struct Net::Impl
 
         Ptr<Layer> layer = ld.layerInstance;
 
+        TickMeter tm;
+        tm.start();
+
         if (preferableBackend == DNN_BACKEND_DEFAULT ||
             !layer->supportBackend(preferableBackend))
         {
             if( !ld.skipFlags[DNN_BACKEND_DEFAULT] )
+            {
+                for (int i = 0, n = ld.inputBlobsWrappers.size(); i < n; ++i)
+                {
+                    if (!ld.inputBlobsWrappers[i].empty())
+                        ld.inputBlobsWrappers[i]->copyToHost();
+                }
                 layer->forward(ld.inputBlobs, ld.outputBlobs, ld.internals);
+                for (int i = 0, n = ld.outputBlobsWrappers.size(); i < n; ++i)
+                {
+                    if (!ld.outputBlobsWrappers[i].empty())
+                        ld.outputBlobsWrappers[i]->setHostDirty();
+                }
+            }
+            else
+                tm.reset();
         }
         else if (!ld.skipFlags[preferableBackend])
         {
-            std::vector<Ptr<BackendWrapper> > outputs =
-                backendWrapper.wrap(ld.outputBlobs, preferableBackend, preferableTarget);
             Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
             if (preferableBackend == DNN_BACKEND_HALIDE)
             {
-                forwardHalide(outputs, node);
+                forwardHalide(ld.outputBlobsWrappers, node);
             }
             else
             {
                 CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
             }
         }
+
+        tm.stop();
+        layersTimings[ld.id] = tm.getTimeTicks();
 
         ld.flag = 1;
     }
@@ -1319,7 +1306,7 @@ struct Net::Impl
 
         //forward parents
         MapIdToLayerData::iterator it;
-        for (it = layers.begin(); it->second.id < ld.id; it++)
+        for (it = layers.begin(); it != layers.end() && (it->second.id < ld.id); ++it)
         {
             LayerData &ld = it->second;
             if (ld.flag)
@@ -1335,7 +1322,9 @@ struct Net::Impl
     {
         CV_TRACE_FUNCTION();
 
-        forwardToLayer(layers.rbegin()->second, true);
+        MapIdToLayerData::reverse_iterator last_layer = layers.rbegin();
+        CV_Assert(last_layer != layers.rend());
+        forwardToLayer(last_layer->second, true);
     }
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
@@ -1407,15 +1396,14 @@ struct Net::Impl
             CV_Error(Error::StsOutOfRange, "Layer \"" + ld.name + "\" produce only " + toString(ld.outputBlobs.size()) +
                                            " outputs, the #" + toString(pin.oid) + " was requsted");
         }
-        if (preferableBackend != DNN_BACKEND_DEFAULT)
+        if (preferableBackend != DNN_TARGET_CPU)
         {
             // Transfer data to CPU if it's require.
-            backendWrapper.wrap(ld.outputBlobs[pin.oid], preferableBackend,
-                                preferableTarget)->copyToHost();
+            ld.outputBlobsWrappers[pin.oid]->copyToHost();
         }
         else
         {
-            CV_Assert(preferableTarget == DNN_TARGET_CPU);
+            CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_OPENCL);
         }
         return ld.outputBlobs[pin.oid];
     }
@@ -1619,6 +1607,7 @@ void Net::setInput(const Mat &blob_, const String& name)
 
     LayerData &ld = impl->layers[pin.lid];
     ld.outputBlobs.resize( std::max(pin.oid+1, (int)ld.requiredOutputs.size()) );
+    ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
     MatShape prevShape = shape(ld.outputBlobs[pin.oid]);
     bool oldShape = prevShape == shape(blob_);
     if (oldShape)
@@ -1626,6 +1615,10 @@ void Net::setInput(const Mat &blob_, const String& name)
     else
         ld.outputBlobs[pin.oid] = blob_.clone();
 
+    if (!ld.outputBlobsWrappers[pin.oid].empty())
+    {
+        ld.outputBlobsWrappers[pin.oid]->setHostDirty();
+    }
     impl->netWasAllocated = impl->netWasAllocated && oldShape;
 }
 
@@ -1717,16 +1710,13 @@ std::vector<int> Net::getUnconnectedOutLayers() const
 }
 
 void Net::getLayersShapes(const ShapesVec& netInputShapes,
-                          std::vector<int>* layersIds,
-                          std::vector<ShapesVec>* inLayersShapes,
-                          std::vector<ShapesVec>* outLayersShapes) const
+                          std::vector<int>& layersIds,
+                          std::vector<ShapesVec>& inLayersShapes,
+                          std::vector<ShapesVec>& outLayersShapes) const
 {
-    if ((layersIds || inLayersShapes || outLayersShapes) == false)
-        return;
-
-    if (layersIds) layersIds->clear();
-    if (inLayersShapes) inLayersShapes->clear();
-    if (outLayersShapes) outLayersShapes->clear();
+    layersIds.clear();
+    inLayersShapes.clear();
+    outLayersShapes.clear();
 
     Impl::LayersShapesMap inOutShapes;
     impl->getLayersShapes(netInputShapes, inOutShapes);
@@ -1734,19 +1724,16 @@ void Net::getLayersShapes(const ShapesVec& netInputShapes,
     for(Impl::LayersShapesMap::const_iterator it = inOutShapes.begin();
         it != inOutShapes.end(); it++)
     {
-        if (layersIds)
-            layersIds->push_back(it->first);
-        if (inLayersShapes)
-            inLayersShapes->push_back(it->second.in);
-        if (outLayersShapes)
-            outLayersShapes->push_back(it->second.out);
+        layersIds.push_back(it->first);
+        inLayersShapes.push_back(it->second.in);
+        outLayersShapes.push_back(it->second.out);
     }
 }
 
 void Net::getLayersShapes(const MatShape& netInputShape,
-                          std::vector<int>* layerIds,
-                          std::vector<ShapesVec>* inLayersShapes,
-                          std::vector<ShapesVec>* outLayersShapes) const
+                          std::vector<int>& layerIds,
+                          std::vector<ShapesVec>& inLayersShapes,
+                          std::vector<ShapesVec>& outLayersShapes) const
 {
     getLayersShapes(ShapesVec(1, netInputShape),
                     layerIds, inLayersShapes, outLayersShapes);
@@ -1754,8 +1741,8 @@ void Net::getLayersShapes(const MatShape& netInputShape,
 
 void Net::getLayerShapes(const MatShape& netInputShape,
                          const int layerId,
-                         ShapesVec* inLayerShapes,
-                         ShapesVec* outLayerShapes) const
+                         ShapesVec& inLayerShapes,
+                         ShapesVec& outLayerShapes) const
 {
     getLayerShapes(ShapesVec(1, netInputShape),
                    layerId, inLayerShapes, outLayerShapes);
@@ -1764,15 +1751,13 @@ void Net::getLayerShapes(const MatShape& netInputShape,
 
 void Net::getLayerShapes(const ShapesVec& netInputShapes,
                     const int layerId,
-                    ShapesVec* inLayerShapes,
-                    ShapesVec* outLayerShapes) const
+                    ShapesVec& inLayerShapes,
+                    ShapesVec& outLayerShapes) const
 {
     LayerShapes shapes;
     impl->getLayerShapes(netInputShapes, layerId, shapes);
-    if (inLayerShapes)
-        *inLayerShapes = shapes.in;
-    if (outLayerShapes)
-        *outLayerShapes = shapes.out;
+    inLayerShapes = shapes.in;
+    outLayerShapes = shapes.out;
 }
 
 int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes) const
@@ -1782,7 +1767,7 @@ int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes) const
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape> > inShapes, outShapes;
-    getLayersShapes(netInputShapes, &ids, &inShapes, &outShapes);
+    getLayersShapes(netInputShapes, ids, inShapes, outShapes);
     CV_Assert(inShapes.size() == outShapes.size());
     CV_Assert(inShapes.size() == ids.size());
 
@@ -1867,8 +1852,8 @@ void Net::getMemoryConsumption(const int layerId,
         weights += weightsBlob.total()*weightsBlob.elemSize();
     }
 
-    std::vector<MatShape> outLayerShapes;
-    getLayerShapes(netInputShapes, layerId, 0, &outLayerShapes);
+    ShapesVec inLayerShapes, outLayerShapes;
+    getLayerShapes(netInputShapes, layerId, inLayerShapes, outLayerShapes);
     for(int i = 0; i < outLayerShapes.size(); i++)
     {
         blobs += total(outLayerShapes[i]) * sizeof(float);
@@ -1917,9 +1902,9 @@ void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
     weights.clear();
     blobs.clear();
 
-    std::vector<std::vector<MatShape> > outLayerShapes;
+    std::vector<std::vector<MatShape> > inLayerShapes, outLayerShapes;
 
-    getLayersShapes(netInputShapes, &layerIds, 0, &outLayerShapes);
+    getLayersShapes(netInputShapes, layerIds, inLayerShapes, outLayerShapes);
 
     for(int i = 0; i < layerIds.size(); i++)
     {
@@ -1968,16 +1953,23 @@ void Net::setHalideScheduler(const String& scheduler)
     impl->halideConfigFile = scheduler;
 }
 
+int64 Net::getPerfProfile(std::vector<double>& timings)
+{
+    timings = std::vector<double>(impl->layersTimings.begin() + 1, impl->layersTimings.end());
+    int64 total = std::accumulate(timings.begin(), timings.end(), 0);
+    return total;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 Importer::~Importer() {}
 
-Layer::Layer() {}
+Layer::Layer() { preferableTarget = DNN_TARGET_CPU; }
 
 Layer::Layer(const LayerParams &params)
     : blobs(params.blobs), name(params.name), type(params.type)
 {
-
+    preferableTarget = DNN_TARGET_CPU;
 }
 
 void Layer::setParamsFrom(const LayerParams &params)

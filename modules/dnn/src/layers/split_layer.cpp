@@ -75,7 +75,7 @@ public:
 
         Layer::getMemoryShapes(inputs, max(1, outputsCount >= 0 ? outputsCount : requiredOutputs),
                                outputs, internals);
-        return true;
+        return false;
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -86,8 +86,7 @@ public:
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[0]->total() == outputs[i].total());
-            if (outputs[i].data != inputs[0]->data)
-                inputs[0]->copyTo(outputs[i]);
+            inputs[0]->copyTo(outputs[i]);
         }
     }
 };

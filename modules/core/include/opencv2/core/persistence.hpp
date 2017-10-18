@@ -44,6 +44,11 @@
 #ifndef OPENCV_CORE_PERSISTENCE_HPP
 #define OPENCV_CORE_PERSISTENCE_HPP
 
+#ifndef CV_DOXYGEN
+/// Define to support persistence legacy formats
+#define CV__LEGACY_PERSISTENCE
+#endif
+
 #ifndef __cplusplus
 #  error persistence.hpp header must be compiled as C++
 #endif
@@ -108,7 +113,7 @@ XML/YAML/JSON file storages.     {#xml_storage}
 Writing to a file storage.
 --------------------------
 You can store and then restore various OpenCV data structures to/from XML (<http://www.w3c.org/XML>),
-YAML (<http://www.yaml.org>) or JSON (<http://www.json.org/>) formats. Also, it is possible store
+YAML (<http://www.yaml.org>) or JSON (<http://www.json.org/>) formats. Also, it is possible to store
 and load arbitrarily complex data structures, which include OpenCV data structures, as well as
 primitive data types (integer and floating-point numbers and text strings) as their elements.
 
@@ -155,7 +160,7 @@ Here is an example:
         return 0;
     }
 @endcode
-The sample above stores to XML and integer, text string (calibration date), 2 matrices, and a custom
+The sample above stores to YML an integer, a text string (calibration date), 2 matrices, and a custom
 structure "feature", which includes feature coordinates and LBP (local binary pattern) value. Here
 is output of the sample:
 @code{.yaml}
@@ -700,8 +705,10 @@ CV_EXPORTS void write( FileStorage& fs, const String& name, double value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const String& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const SparseMat& value );
+#ifdef CV__LEGACY_PERSISTENCE
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& value);
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<DMatch>& value);
+#endif
 
 CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
@@ -720,8 +727,12 @@ CV_EXPORTS void read(const FileNode& node, String& value, const String& default_
 CV_EXPORTS void read(const FileNode& node, std::string& value, const std::string& default_value);
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
+#ifdef CV__LEGACY_PERSISTENCE
 CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
 CV_EXPORTS void read(const FileNode& node, std::vector<DMatch>& matches);
+#endif
+CV_EXPORTS void read(const FileNode& node, KeyPoint& value, const KeyPoint& default_value);
+CV_EXPORTS void read(const FileNode& node, DMatch& value, const DMatch& default_value);
 
 template<typename _Tp> static inline void read(const FileNode& node, Point_<_Tp>& value, const Point_<_Tp>& default_value)
 {
@@ -815,7 +826,7 @@ namespace internal
         VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
         void operator()(const std::vector<_Tp>& vec) const
         {
-            int _fmt = DataType<_Tp>::fmt;
+            int _fmt = traits::SafeFmt<_Tp>::fmt;
             char fmt[] = { (char)((_fmt >> 8) + '1'), (char)_fmt, '\0' };
             fs->writeRaw(fmt, !vec.empty() ? (uchar*)&vec[0] : 0, vec.size() * sizeof(_Tp));
         }
@@ -846,7 +857,7 @@ namespace internal
         {
             size_t remaining = it->remaining;
             size_t cn = DataType<_Tp>::channels;
-            int _fmt = DataType<_Tp>::fmt;
+            int _fmt = traits::SafeFmt<_Tp>::fmt;
             char fmt[] = { (char)((_fmt >> 8)+'1'), (char)_fmt, '\0' };
             size_t remaining1 = remaining / cn;
             count = count < remaining1 ? count : remaining1;
@@ -949,57 +960,16 @@ void write(FileStorage& fs, const Scalar_<_Tp>& s )
 }
 
 static inline
-void write(FileStorage& fs, const KeyPoint& kpt )
-{
-    write(fs, kpt.pt.x);
-    write(fs, kpt.pt.y);
-    write(fs, kpt.size);
-    write(fs, kpt.angle);
-    write(fs, kpt.response);
-    write(fs, kpt.octave);
-    write(fs, kpt.class_id);
-}
-
-static inline
-void write(FileStorage& fs, const DMatch& m )
-{
-    write(fs, m.queryIdx);
-    write(fs, m.trainIdx);
-    write(fs, m.imgIdx);
-    write(fs, m.distance);
-}
-
-static inline
 void write(FileStorage& fs, const Range& r )
 {
     write(fs, r.start);
     write(fs, r.end);
 }
 
-static inline
-void write( FileStorage& fs, const std::vector<KeyPoint>& vec )
-{
-    size_t npoints = vec.size();
-    for(size_t i = 0; i < npoints; i++ )
-    {
-        write(fs, vec[i]);
-    }
-}
-
-static inline
-void write( FileStorage& fs, const std::vector<DMatch>& vec )
-{
-    size_t npoints = vec.size();
-    for(size_t i = 0; i < npoints; i++ )
-    {
-        write(fs, vec[i]);
-    }
-}
-
 template<typename _Tp> static inline
 void write( FileStorage& fs, const std::vector<_Tp>& vec )
 {
-    cv::internal::VecWriterProxy<_Tp, DataType<_Tp>::fmt != 0> w(&fs);
+    cv::internal::VecWriterProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> w(&fs);
     w(vec);
 }
 
@@ -1060,23 +1030,32 @@ void write(FileStorage& fs, const String& name, const Range& r )
 }
 
 static inline
-void write(FileStorage& fs, const String& name, const KeyPoint& r )
+void write(FileStorage& fs, const String& name, const KeyPoint& kpt)
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, r);
+    write(fs, kpt.pt.x);
+    write(fs, kpt.pt.y);
+    write(fs, kpt.size);
+    write(fs, kpt.angle);
+    write(fs, kpt.response);
+    write(fs, kpt.octave);
+    write(fs, kpt.class_id);
 }
 
 static inline
-void write(FileStorage& fs, const String& name, const DMatch& r )
+void write(FileStorage& fs, const String& name, const DMatch& m)
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, r);
+    write(fs, m.queryIdx);
+    write(fs, m.trainIdx);
+    write(fs, m.imgIdx);
+    write(fs, m.distance);
 }
 
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
-    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+(traits::SafeFmt<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
     write(fs, vec);
 }
 
@@ -1086,10 +1065,28 @@ void write( FileStorage& fs, const String& name, const std::vector< std::vector<
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
     for(size_t i = 0; i < vec.size(); i++)
     {
-        cv::internal::WriteStructContext ws_(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
+        cv::internal::WriteStructContext ws_(fs, name, FileNode::SEQ+(traits::SafeFmt<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
         write(fs, vec[i]);
     }
 }
+
+#ifdef CV__LEGACY_PERSISTENCE
+// This code is not needed anymore, but it is preserved here to keep source compatibility
+// Implementation is similar to templates instantiations
+static inline void write(FileStorage& fs, const KeyPoint& kpt) { write(fs, String(), kpt); }
+static inline void write(FileStorage& fs, const DMatch& m) { write(fs, String(), m); }
+static inline void write(FileStorage& fs, const std::vector<KeyPoint>& vec)
+{
+    cv::internal::VecWriterProxy<KeyPoint, 0> w(&fs);
+    w(vec);
+}
+static inline void write(FileStorage& fs, const std::vector<DMatch>& vec)
+{
+    cv::internal::VecWriterProxy<DMatch, 0> w(&fs);
+    w(vec);
+
+}
+#endif
 
 //! @} FileStorage
 
@@ -1139,7 +1136,7 @@ void read(const FileNode& node, short& value, short default_value)
 template<typename _Tp> static inline
 void read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount = (size_t)INT_MAX )
 {
-    cv::internal::VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
+    cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
     r(vec, maxCount);
 }
 
@@ -1228,7 +1225,7 @@ FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
 template<typename _Tp> static inline
 FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
 {
-    cv::internal::VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
+    cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
     r(vec, (size_t)INT_MAX);
     return it;
 }
@@ -1259,27 +1256,28 @@ void operator >> (const FileNode& n, std::vector<_Tp>& vec)
 */
 //It needs special handling because it contains two types of fields, int & float.
 static inline
-void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
-{
-    read(n, vec);
-}
-
-static inline
 void operator >> (const FileNode& n, KeyPoint& kpt)
 {
     FileNodeIterator it = n.begin();
     it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave >> kpt.class_id;
 }
 
-/** @brief Reads DMatch from a file storage.
-*/
-//It needs special handling because it contains two types of fields, int & float.
+#ifdef CV__LEGACY_PERSISTENCE
+static inline
+void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
+{
+    read(n, vec);
+}
 static inline
 void operator >> (const FileNode& n, std::vector<DMatch>& vec)
 {
     read(n, vec);
 }
+#endif
 
+/** @brief Reads DMatch from a file storage.
+*/
+//It needs special handling because it contains two types of fields, int & float.
 static inline
 void operator >> (const FileNode& n, DMatch& m)
 {

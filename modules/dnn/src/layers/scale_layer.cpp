@@ -33,6 +33,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
+        CV_Assert(blobs.size() == 1 + hasBias);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
@@ -47,8 +48,6 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        CV_Assert(blobs.size() == 1 + hasBias);
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {

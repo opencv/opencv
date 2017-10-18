@@ -194,8 +194,6 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #define IPP_DISABLE_WARPAFFINE          1 // Different results
 #define IPP_DISABLE_WARPPERSPECTIVE     1 // Different results
 #define IPP_DISABLE_REMAP               1 // Different results
-#define IPP_DISABLE_MORPH_ADV           1 // mask flipping in IPP
-#define IPP_DISABLE_SORT_IDX            0 // different order in index tables
 #define IPP_DISABLE_YUV_RGB             1 // accuracy difference
 #define IPP_DISABLE_RGB_YUV             1 // breaks OCL accuracy tests
 #define IPP_DISABLE_RGB_HSV             1 // breaks OCL accuracy tests
@@ -205,21 +203,12 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
 #define IPP_DISABLE_HAAR                1 // improper integration/results
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
-#define IPP_DISABLE_RESIZE_8U           1 // Incompatible accuracy
-#define IPP_DISABLE_RESIZE_NEAREST      1 // Accuracy mismatch (max diff 1)
-#define IPP_DISABLE_RESIZE_AREA         1 // Accuracy mismatch (max diff 1)
-
-#define IPP_DISABLE_MINMAX_NAN_SSE42    1 // cv::minMaxIdx problem with NaN input
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
 #define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
 #define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
 #define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
-#define IPP_DISABLE_PERF_HISTU32F_SSE42 1 // cv::calcHist optimizations problem
-#define IPP_DISABLE_PERF_MORPH_SSE42    1 // cv::erode, cv::dilate optimizations problem
-#define IPP_DISABLE_PERF_MAG_SSE42      1 // cv::magnitude optimizations problem
-#define IPP_DISABLE_PERF_BOX16S_SSE42   1 // cv::boxFilter optimizations problem
 
 #ifdef HAVE_IPP
 #include "ippversion.h"
@@ -229,7 +218,7 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 
 #define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR*10 + IPP_VERSION_UPDATE)
 
-#ifdef HAVE_IPP_ICV_ONLY
+#ifdef HAVE_IPP_ICV
 #define ICV_BASE
 #if IPP_VERSION_X100 >= 201700
 #include "ippicv.h"
@@ -241,6 +230,7 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #endif
 #ifdef HAVE_IPP_IW
 #include "iw++/iw.hpp"
+#include "iw/iw_ll.h"
 #endif
 
 #if IPP_VERSION_X100 >= 201700
@@ -250,6 +240,22 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #endif
 
 #define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
+
+#if IPP_VERSION_X100 >= 201700
+#define ippCPUID_AVX512_SKX (ippCPUID_AVX512F|ippCPUID_AVX512CD|ippCPUID_AVX512VL|ippCPUID_AVX512BW|ippCPUID_AVX512DQ)
+#define ippCPUID_AVX512_KNL (ippCPUID_AVX512F|ippCPUID_AVX512CD|ippCPUID_AVX512PF|ippCPUID_AVX512ER)
+#else
+#define ippCPUID_AVX512_SKX 0xFFFFFFFF
+#define ippCPUID_AVX512_KNL 0xFFFFFFFF
+#endif
+
+namespace cv
+{
+namespace ipp
+{
+CV_EXPORTS   unsigned long long getIppTopFeatures(); // Returns top major enabled IPP feature flag
+}
+}
 
 static inline IppiSize ippiSize(size_t width, size_t height)
 {
@@ -322,7 +328,43 @@ static inline IppDataType ippiGetDataType(int depth)
         (IppDataType)-1;
 }
 
+static inline int ippiSuggestThreadsNum(size_t width, size_t height, size_t elemSize, double multiplier)
+{
+    int threads = cv::getNumThreads();
+    if(threads > 1 && height >= 64)
+    {
+        size_t opMemory = (int)(width*height*elemSize*multiplier);
+        int l2cache = 0;
+#if IPP_VERSION_X100 >= 201700
+        ippGetL2CacheSize(&l2cache);
+#endif
+        if(!l2cache)
+            l2cache = 1 << 18;
+
+        return IPP_MAX(1, (IPP_MIN((int)(opMemory/l2cache), threads)));
+    }
+    return 1;
+}
+
+static inline int ippiSuggestThreadsNum(const cv::Mat &image, double multiplier)
+{
+    return ippiSuggestThreadsNum(image.cols, image.rows, image.elemSize(), multiplier);
+}
+
 #ifdef HAVE_IPP_IW
+static inline bool ippiCheckAnchor(int x, int y, int kernelWidth, int kernelHeight)
+{
+    if(x != ((kernelWidth-1)/2) || y != ((kernelHeight-1)/2))
+        return 0;
+    else
+        return 1;
+}
+
+static inline ::ipp::IwiSize ippiGetSize(const cv::Size & size)
+{
+    return ::ipp::IwiSize((IwSize)size.width, (IwSize)size.height);
+}
+
 static inline IwiDerivativeType ippiGetDerivType(int dx, int dy, bool nvert)
 {
     return (dx == 1 && dy == 0) ? ((nvert)?iwiDerivNVerFirst:iwiDerivVerFirst) :
@@ -341,10 +383,10 @@ static inline void ippiGetImage(const cv::Mat &src, ::ipp::IwiImage &dst)
         cv::Point offset;
         src.locateROI(origSize, offset);
 
-        inMemBorder.borderLeft   = (Ipp32u)offset.x;
-        inMemBorder.borderTop    = (Ipp32u)offset.y;
-        inMemBorder.borderRight  = (Ipp32u)(origSize.width - src.cols - offset.x);
-        inMemBorder.borderBottom = (Ipp32u)(origSize.height - src.rows - offset.y);
+        inMemBorder.left   = (IwSize)offset.x;
+        inMemBorder.top    = (IwSize)offset.y;
+        inMemBorder.right  = (IwSize)(origSize.width - src.cols - offset.x);
+        inMemBorder.bottom = (IwSize)(origSize.height - src.rows - offset.y);
     }
 
     dst.Init(ippiSize(src.size()), ippiGetDataType(src.depth()), src.channels(), inMemBorder, (void*)src.ptr(), src.step);
@@ -357,7 +399,7 @@ static inline ::ipp::IwiImage ippiGetImage(const cv::Mat &src)
     return image;
 }
 
-static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorderType, IppiBorderSize &borderSize)
+static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorderType, ipp::IwiBorderSize &borderSize)
 {
     int            inMemFlags = 0;
     IppiBorderType border     = ippiGetBorderType(ocvBorderType & ~cv::BORDER_ISOLATED);
@@ -366,90 +408,59 @@ static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorder
 
     if(!(ocvBorderType & cv::BORDER_ISOLATED))
     {
-        if(image.m_inMemSize.borderLeft)
+        if(image.m_inMemSize.left)
         {
-            if(image.m_inMemSize.borderLeft >= borderSize.borderLeft)
+            if(image.m_inMemSize.left >= borderSize.left)
                 inMemFlags |= ippBorderInMemLeft;
             else
                 return (IppiBorderType)0;
         }
         else
-            borderSize.borderLeft = 0;
-        if(image.m_inMemSize.borderTop)
+            borderSize.left = 0;
+        if(image.m_inMemSize.top)
         {
-            if(image.m_inMemSize.borderTop >= borderSize.borderTop)
+            if(image.m_inMemSize.top >= borderSize.top)
                 inMemFlags |= ippBorderInMemTop;
             else
                 return (IppiBorderType)0;
         }
         else
-            borderSize.borderTop = 0;
-        if(image.m_inMemSize.borderRight)
+            borderSize.top = 0;
+        if(image.m_inMemSize.right)
         {
-            if(image.m_inMemSize.borderRight >= borderSize.borderRight)
+            if(image.m_inMemSize.right >= borderSize.right)
                 inMemFlags |= ippBorderInMemRight;
             else
                 return (IppiBorderType)0;
         }
         else
-            borderSize.borderRight = 0;
-        if(image.m_inMemSize.borderBottom)
+            borderSize.right = 0;
+        if(image.m_inMemSize.bottom)
         {
-            if(image.m_inMemSize.borderBottom >= borderSize.borderBottom)
+            if(image.m_inMemSize.bottom >= borderSize.bottom)
                 inMemFlags |= ippBorderInMemBottom;
             else
                 return (IppiBorderType)0;
         }
         else
-            borderSize.borderBottom = 0;
+            borderSize.bottom = 0;
     }
     else
-        borderSize.borderLeft = borderSize.borderRight = borderSize.borderTop = borderSize.borderBottom = 0;
+        borderSize.left = borderSize.right = borderSize.top = borderSize.bottom = 0;
 
     return (IppiBorderType)(border|inMemFlags);
 }
 
-static inline ::ipp::IwValue ippiGetValue(const cv::Scalar &scalar)
+static inline ::ipp::IwValueFloat ippiGetValue(const cv::Scalar &scalar)
 {
-    return ::ipp::IwValue(scalar[0], scalar[1], scalar[2], scalar[3]);
+    return ::ipp::IwValueFloat(scalar[0], scalar[1], scalar[2], scalar[3]);
 }
 
 static inline int ippiSuggestThreadsNum(const ::ipp::IwiImage &image, double multiplier)
 {
-    int threads = cv::getNumThreads();
-    if(image.m_size.height > threads)
-    {
-        size_t opMemory = (int)(image.m_step*image.m_size.height*multiplier);
-        int l2cache  = 0;
-#if IPP_VERSION_X100 >= 201700
-        ippGetL2CacheSize(&l2cache);
-#endif
-        if(!l2cache)
-            l2cache = 1 << 18;
-
-        return IPP_MAX(1, (IPP_MIN((int)(opMemory/l2cache), threads)));
-    }
-    return 1;
+    return ippiSuggestThreadsNum(image.m_size.width, image.m_size.height, image.m_typeSize*image.m_channels, multiplier);
 }
 #endif
-
-static inline int ippiSuggestThreadsNum(const cv::Mat &image, double multiplier)
-{
-    int threads = cv::getNumThreads();
-    if(image.rows > threads)
-    {
-        size_t opMemory = (int)(image.total()*multiplier);
-        int l2cache = 0;
-#if IPP_VERSION_X100 >= 201700
-        ippGetL2CacheSize(&l2cache);
-#endif
-        if(!l2cache)
-            l2cache = 1 << 18;
-
-        return IPP_MAX(1, (IPP_MIN((int)(opMemory/l2cache), threads)));
-    }
-    return 1;
-}
 
 // IPP temporary buffer helper
 template<typename T>
@@ -474,7 +485,7 @@ private:
 };
 
 // Extracts border interpolation type without flags
-#if IPP_VERSION_MAJOR >= 2017
+#if IPP_VERSION_X100 >= 201700
 #define IPP_BORDER_INTER(BORDER) (IppiBorderType)((BORDER)&0xF|((((BORDER)&ippBorderInMem) == ippBorderInMem)?ippBorderInMem:0));
 #else
 #define IPP_BORDER_INTER(BORDER) (IppiBorderType)((BORDER)&0xF);

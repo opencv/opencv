@@ -38,8 +38,7 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
     mfxStatus res = MFX_ERR_NONE;
 
     // Init device and session
-
-    deviceHandler = new VAHandle();
+    deviceHandler = createDeviceHandler();
     session = new MFXVideoSession();
     if (!deviceHandler->init(*session))
     {
@@ -227,7 +226,6 @@ bool VideoCapture_IntelMFX::grabFrame()
             MSG(cerr << "MFX: Bad status: " << res << endl);
             return false;
         }
-        return false;
     }
 }
 

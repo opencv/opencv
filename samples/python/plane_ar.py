@@ -92,7 +92,7 @@ class App:
                         [0, fx*w, 0.5*(h-1)],
                         [0.0,0.0,      1.0]])
         dist_coef = np.zeros(4)
-        ret, rvec, tvec = cv2.solvePnP(quad_3d, tracked.quad, K, dist_coef)
+        _ret, rvec, tvec = cv2.solvePnP(quad_3d, tracked.quad, K, dist_coef)
         verts = ar_verts * [(x1-x0), (y1-y0), -(x1-x0)*0.3] + (x0, y0, 0)
         verts = cv2.projectPoints(verts, rvec, tvec, K, dist_coef)[0].reshape(-1, 2)
         for i, j in ar_edges:

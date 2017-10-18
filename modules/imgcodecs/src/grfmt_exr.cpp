@@ -195,7 +195,7 @@ bool  ExrDecoder::readData( Mat& img )
     bool color = img.channels() > 1;
 
     uchar* data = img.ptr();
-    int step = img.step;
+    size_t step = img.step;
     bool justcopy = m_native_depth;
     bool chromatorgb = false;
     bool rgbtogray = false;
@@ -203,8 +203,8 @@ bool  ExrDecoder::readData( Mat& img )
     FrameBuffer frame;
     int xsample[3] = {1, 1, 1};
     char *buffer;
-    int xstep;
-    int ystep;
+    size_t xstep = 0;
+    size_t ystep = 0;
 
     xstep = m_native_depth ? 4 : 1;
 
@@ -593,7 +593,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     bool issigned = depth == CV_8S || depth == CV_16S || depth == CV_32S;
     bool isfloat = depth == CV_32F || depth == CV_64F;
     depth = CV_ELEM_SIZE1(depth)*8;
-    const int step = img.step;
+    const size_t step = img.step;
 
     Header header( width, height );
     Imf::PixelType type;
@@ -623,7 +623,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     FrameBuffer frame;
 
     char *buffer;
-    int bufferstep;
+    size_t bufferstep;
     int size;
     if( type == FLOAT && depth == 32 )
     {

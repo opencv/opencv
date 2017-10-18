@@ -91,19 +91,11 @@ int main(int argc, char **argv)
 
     vector<cv::Vec3b> colors = readColors();
 
-    //! [Create the importer of Caffe model]
-    Ptr<dnn::Importer> importer;
-    try                                     //Try to import Caffe GoogleNet model
-    {
-        importer = dnn::createCaffeImporter(modelTxt, modelBin);
-    }
-    catch (const cv::Exception &err)        //Importer can throw errors, we will catch them
-    {
-        cerr << err.msg << endl;
-    }
-    //! [Create the importer of Caffe model]
+    //! [Initialize network]
+    dnn::Net net = readNetFromCaffe(modelTxt, modelBin);
+    //! [Initialize network]
 
-    if (!importer)
+    if (net.empty())
     {
         cerr << "Can't load network by using the following files: " << endl;
         cerr << "prototxt:   " << modelTxt << endl;
@@ -113,12 +105,6 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    //! [Initialize network]
-    dnn::Net net;
-    importer->populateNet(net);
-    importer.release();                     //We don't need importer anymore
-    //! [Initialize network]
-
     //! [Prepare blob]
     Mat img = imread(imageFile);
     if (img.empty())
@@ -127,8 +113,8 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    resize(img, img, Size(500, 500));       //FCN accepts 500x500 RGB-images
-    Mat inputBlob = blobFromImage(img);   //Convert Mat to batch of images
+    resize(img, img, Size(500, 500));       //FCN accepts 500x500 BGR-images
+    Mat inputBlob = blobFromImage(img, 1, Size(), Scalar(), false);   //Convert Mat to batch of images
     //! [Prepare blob]
 
     //! [Set input blob]

@@ -413,7 +413,12 @@ endif(ANDROID)
 
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Wundef)
+if(MSVC)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+else()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Wundef -Wdeprecated-declarations)
+endif()
+
 
 ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
@@ -435,14 +440,14 @@ if(BUILD_FAT_JAVA_LIB)
   endif()
   if(APPLE)
     foreach(_dep ${__deps})
-      ocv_target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
+      ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-force_load "${_dep}")
     endforeach()
   else()
-    ocv_target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
   endif()
-  ocv_target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
-  ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
 
 # Additional target properties
@@ -451,19 +456,18 @@ set_target_properties(${the_module} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    LINK_INTERFACE_LIBRARIES ""
     )
 
 if(ANDROID)
-  ocv_target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
-  ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_LINKER_LIBS} jnigraphics)
+  ocv_target_link_libraries(${the_module} LINK_PUBLIC jnigraphics) # for Mat <=> Bitmap converters
+  ocv_target_link_libraries(${the_module} LINK_PUBLIC log dl z)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_LINKER_LIBS})
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
-  get_target_property(__opencv_java_location ${the_module} LOCATION)
   # Turn off stripping in debug build
   if ( NOT (CMAKE_BUILD_TYPE MATCHES "Debug"))
-    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
+    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${the_module}>")
   endif()
 endif()
 

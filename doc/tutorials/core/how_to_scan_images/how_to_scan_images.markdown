@@ -214,8 +214,4 @@ the safety trait of iterators.
 
 Finally, you may watch a sample run of the program on the [video posted](https://www.youtube.com/watch?v=fB3AN5fjgwc) on our YouTube channel.
 
-\htmlonly
-<div align="center">
-<iframe title="How to scan images in OpenCV?" width="560" height="349" src="http://www.youtube.com/embed/fB3AN5fjgwc?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{fB3AN5fjgwc}

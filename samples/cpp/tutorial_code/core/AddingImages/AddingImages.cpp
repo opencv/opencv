@@ -3,7 +3,6 @@
  * @brief Simple linear blender ( dst = alpha*src1 + beta*src2 )
  * @author OpenCV team
  */
-
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include <iostream>
@@ -24,7 +23,7 @@ int main( void )
    /// Ask the user enter alpha
    cout << " Simple Linear Blender " << endl;
    cout << "-----------------------" << endl;
-   cout << "* Enter alpha [0-1]: ";
+   cout << "* Enter alpha [0.0-1.0]: ";
    cin >> input;
 
    // We use the alpha provided by the user if it is between 0 and 1

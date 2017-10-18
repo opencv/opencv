@@ -44,17 +44,20 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <float.h>
 #include <algorithm>
 using std::max;
 using std::min;
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
 namespace dnn
 {
 
-//TODO: add ceil_mode param
 class PoolingLayerImpl : public PoolingLayer
 {
 public:
@@ -79,7 +82,12 @@ public:
         getPoolingKernelParams(params, kernel.height, kernel.width, globalPooling,
                                pad.height, pad.width, stride.height, stride.width, padMode);
         setParamsFrom(params);
+        ceilMode = params.get<bool>("ceil_mode", true);
     }
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNPool<float> > poolOp;
+#endif
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
     {
@@ -93,7 +101,7 @@ public:
             kernel = inp;
         }
 
-        getConvPoolPaddings(inp, out, kernel, stride, padMode, pad);
+        getConvPoolPaddings(inp, out, kernel, stride, padMode, Size(1, 1), pad);
     }
 
     virtual bool supportBackend(int backendId)
@@ -104,10 +112,58 @@ public:
                 type == PoolingLayer::AVE && !pad.width && !pad.height);
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        if (poolOp.empty())
+        {
+            OCL4DNNPoolConfig config;
+
+            config.in_shape = shape(*inputs[0]);
+            config.out_shape = shape(outputs[0]);
+            config.kernel = kernel;
+            config.pad = pad;
+            config.stride = stride;
+            config.channels = inputs[0]->size[1];
+            config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
+                                (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
+                                               LIBDNN_POOLING_METHOD_STO);
+            poolOp = Ptr<OCL4DNNPool<float> >(new OCL4DNNPool<float>(config));
+        }
+
+        for (size_t ii = 0; ii < inputs.size(); ii++)
+        {
+            UMat inpMat, outMat, maskMat;
+
+            inpMat = inputs[ii]->getUMat(ACCESS_READ);
+
+            if (type == MAX)
+            {
+                outMat = outputs[2 * ii].getUMat(ACCESS_WRITE);
+                maskMat = outputs[2 * ii + 1].getUMat(ACCESS_WRITE);
+            } else {
+                outMat = outputs[ii].getUMat(ACCESS_WRITE);
+                maskMat = UMat();
+            }
+
+            CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
+
+            if (!poolOp->Forward(inpMat, outMat, maskMat))
+                return false;
+        }
+
+        return true;
+    }
+#endif
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs, outputs, internals))
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {
@@ -572,11 +628,10 @@ public:
         }
         else if (padMode.empty())
         {
-            //Yeah, something strange Caffe scheme-)
-            out.height = static_cast<int>(ceil(static_cast<float>(in.height + 2 * pad.height -
-                                                                  kernel.height) / stride.height)) + 1;
-            out.width = static_cast<int>(ceil(static_cast<float>(in.width + 2 * pad.width -
-                                                                 kernel.width) / stride.width)) + 1;
+            float height = (float)(in.height + 2 * pad.height - kernel.height) / stride.height;
+            float width = (float)(in.width + 2 * pad.width - kernel.width) / stride.width;
+            out.height = 1 + (ceilMode ? ceil(height) : floor(height));
+            out.width = 1 + (ceilMode ? ceil(width) : floor(width));
 
             if (pad.height || pad.width)
             {
@@ -592,8 +647,7 @@ public:
         }
         else
         {
-            getConvPoolOutParams(in, kernel, stride,
-                                 padMode, out);
+            getConvPoolOutParams(in, kernel, stride, padMode, Size(1, 1), out);
         }
 
         outputs.resize(type == MAX ? 2 * inputs.size() : inputs.size());

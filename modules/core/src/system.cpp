@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include <iostream>
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
 namespace cv {
@@ -66,7 +67,7 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 # endif
 #endif
 
-#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__
+#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __HAIKU__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
@@ -79,7 +80,19 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #  include <cpu-features.h>
 #endif
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#ifndef __VSX__
+# if defined __PPC64__ && defined __linux__
+#   include "sys/auxv.h"
+#   ifndef AT_HWCAP2
+#     define AT_HWCAP2 26
+#   endif
+#   ifndef PPC_FEATURE2_ARCH_2_07
+#     define PPC_FEATURE2_ARCH_2_07 0x80000000
+#   endif
+# endif
+#endif
+
+#if defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
@@ -202,7 +215,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -294,6 +307,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
+
+        g_hwFeatureNames[CPU_VSX] = "VSX";
     }
 
     void initialize(void)
@@ -503,6 +518,16 @@ struct HWFeatures
     #endif
     #endif
 
+    #ifdef __VSX__
+        have[CV_CPU_VSX] = true;
+    #elif (defined __PPC64__ && defined __linux__)
+        uint64 hwcaps = getauxval(AT_HWCAP);
+        uint64 hwcap2 = getauxval(AT_HWCAP2);
+        have[CV_CPU_VSX] = (hwcaps & PPC_FEATURE_PPC_LE && hwcaps & PPC_FEATURE_HAS_VSX && hwcap2 & PPC_FEATURE2_ARCH_2_07);
+    #else
+        have[CV_CPU_VSX] = false;
+    #endif
+
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
         if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0])))
         {
@@ -655,7 +680,7 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
@@ -675,7 +700,7 @@ int64 getTickCount(void)
 
 double getTickFrequency(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
@@ -737,7 +762,7 @@ int64 getCPUTickCount(void)
 
 #endif
 
-#elif defined _MSC_VER && defined WIN32 && defined _M_IX86
+#elif defined _MSC_VER && defined _WIN32 && defined _M_IX86
 
 int64 getCPUTickCount(void)
 {
@@ -799,7 +824,7 @@ String tempfile( const char* suffix )
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 #ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
     std::wstring temp_dir = GetTempPathWinRT();
@@ -1124,7 +1149,7 @@ bool __termination = false;
 namespace cv
 {
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 
 struct Mutex::Impl
 {
@@ -1210,7 +1235,7 @@ bool Mutex::trylock() { return impl->trylock(); }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
@@ -1229,16 +1254,16 @@ public:
     void  SetData(void *pData);
 
 private:
-#ifdef WIN32
+#ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
 #endif
-#else // WIN32
+#else // _WIN32
     pthread_key_t  tlsKey;
 #endif
 };
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
@@ -1270,7 +1295,7 @@ void  TlsAbstraction::SetData(void *pData)
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
 }
 #endif
-#else // WIN32
+#else // _WIN32
 TlsAbstraction::TlsAbstraction()
 {
     CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
@@ -1306,7 +1331,8 @@ struct ThreadData
 class TlsStorage
 {
 public:
-    TlsStorage()
+    TlsStorage() :
+        tlsSlotsSize(0)
     {
         tlsSlots.reserve(32);
         threads.reserve(32);
@@ -1351,9 +1377,10 @@ public:
     size_t reserveSlot()
     {
         AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlotsSize == tlsSlots.size());
 
         // Find unused slots
-        for(size_t slot = 0; slot < tlsSlots.size(); slot++)
+        for(size_t slot = 0; slot < tlsSlotsSize; slot++)
         {
             if(!tlsSlots[slot])
             {
@@ -1363,15 +1390,16 @@ public:
         }
 
         // Create new slot
-        tlsSlots.push_back(1);
-        return (tlsSlots.size()-1);
+        tlsSlots.push_back(1); tlsSlotsSize++;
+        return tlsSlotsSize - 1;
     }
 
     // Release TLS storage index and pass associated data to caller
     void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
     {
         AutoLock guard(mtxGlobalAccess);
-        CV_Assert(tlsSlots.size() > slotIdx);
+        CV_Assert(tlsSlotsSize == tlsSlots.size());
+        CV_Assert(tlsSlotsSize > slotIdx);
 
         for(size_t i = 0; i < threads.size(); i++)
         {
@@ -1393,7 +1421,9 @@ public:
     // Get data by TLS storage index
     void* getData(size_t slotIdx) const
     {
-        CV_Assert(tlsSlots.size() > slotIdx);
+#ifndef CV_THREAD_SANITIZER
+        CV_Assert(tlsSlotsSize > slotIdx);
+#endif
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1406,7 +1436,8 @@ public:
     void gather(size_t slotIdx, std::vector<void*> &dataVec)
     {
         AutoLock guard(mtxGlobalAccess);
-        CV_Assert(tlsSlots.size() > slotIdx);
+        CV_Assert(tlsSlotsSize == tlsSlots.size());
+        CV_Assert(tlsSlotsSize > slotIdx);
 
         for(size_t i = 0; i < threads.size(); i++)
         {
@@ -1422,7 +1453,9 @@ public:
     // Set data to storage index
     void setData(size_t slotIdx, void* pData)
     {
-        CV_Assert(tlsSlots.size() > slotIdx && pData != NULL);
+#ifndef CV_THREAD_SANITIZER
+        CV_Assert(tlsSlotsSize > slotIdx);
+#endif
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(!threadData)
@@ -1438,9 +1471,8 @@ public:
 
         if(slotIdx >= threadData->slots.size())
         {
-            AutoLock guard(mtxGlobalAccess);
-            while(slotIdx >= threadData->slots.size())
-                threadData->slots.push_back(NULL);
+            AutoLock guard(mtxGlobalAccess); // keep synchronization with gather() calls
+            threadData->slots.resize(slotIdx + 1, NULL);
         }
         threadData->slots[slotIdx] = pData;
     }
@@ -1449,6 +1481,8 @@ private:
     TlsAbstraction tls; // TLS abstraction layer instance
 
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
+    size_t tlsSlotsSize;              // equal to tlsSlots.size() in synchronized sections
+                                      // without synchronization this counter doesn't desrease - it is used for slotIdx sanity checks
     std::vector<int> tlsSlots;        // TLS keys state
     std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
 };
@@ -1511,7 +1545,7 @@ TLSData<CoreTLSData>& getCoreTlsData()
     CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
 }
 
-#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#if defined CVAPI_EXPORTS && defined _WIN32 && !defined WINCE
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
@@ -1532,7 +1566,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
         {
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
-            cv::deleteThreadAllocData();
             cv::getTlsStorage().releaseThread();
         }
     }
@@ -1901,55 +1934,127 @@ struct IPPInitSingleton
 public:
     IPPInitSingleton()
     {
-        useIPP       = true;
-        ippStatus    = 0;
-        funcname     = NULL;
-        filename     = NULL;
-        linen        = 0;
-        ippFeatures  = 0;
+        useIPP         = true;
+        useIPP_NE      = false;
+        ippStatus      = 0;
+        funcname       = NULL;
+        filename       = NULL;
+        linen          = 0;
+        cpuFeatures    = 0;
+        ippFeatures    = 0;
+        ippTopFeatures = 0;
+        pIppLibInfo    = NULL;
+
+        ippStatus = ippGetCpuFeatures(&cpuFeatures, NULL);
+        if(ippStatus < 0)
+        {
+            std::cerr << "ERROR: IPP cannot detect CPU features, IPP was disabled " << std::endl;
+            useIPP = false;
+            return;
+        }
+        ippFeatures = cpuFeatures;
 
         const char* pIppEnv = getenv("OPENCV_IPP");
         cv::String env = pIppEnv;
         if(env.size())
         {
+#if IPP_VERSION_X100 >= 201703
+            const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
+                ippCPUID_ADCOX|ippCPUID_RDSEED|ippCPUID_PREFETCHW|ippCPUID_SHA|ippCPUID_MPX|ippCPUID_AVX512CD|ippCPUID_AVX512ER|
+                ippCPUID_AVX512PF|ippCPUID_AVX512BW|ippCPUID_AVX512DQ|ippCPUID_AVX512VL|ippCPUID_AVX512VBMI;
+#elif IPP_VERSION_X100 >= 201700
+            const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
+                ippCPUID_ADCOX|ippCPUID_RDSEED|ippCPUID_PREFETCHW|ippCPUID_SHA|ippCPUID_AVX512CD|ippCPUID_AVX512ER|
+                ippCPUID_AVX512PF|ippCPUID_AVX512BW|ippCPUID_AVX512DQ|ippCPUID_AVX512VL|ippCPUID_AVX512VBMI;
+#else
+            const Ipp64u minorFeatures = 0;
+#endif
+
+            env = env.toLowerCase();
+            if(env.substr(0, 2) == "ne")
+            {
+                useIPP_NE = true;
+                env = env.substr(3, env.size());
+            }
+
             if(env == "disabled")
             {
                 std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
                 useIPP = false;
             }
-#if IPP_VERSION_X100 >= 900
-            else if(env == "sse")
-                ippFeatures = ippCPUID_SSE;
-            else if(env == "sse2")
-                ippFeatures = ippCPUID_SSE2;
-            else if(env == "sse3")
-                ippFeatures = ippCPUID_SSE3;
-            else if(env == "ssse3")
-                ippFeatures = ippCPUID_SSSE3;
-            else if(env == "sse41")
-                ippFeatures = ippCPUID_SSE41;
             else if(env == "sse42")
-                ippFeatures = ippCPUID_SSE42;
-            else if(env == "avx")
-                ippFeatures = ippCPUID_AVX;
+                ippFeatures = minorFeatures|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42;
             else if(env == "avx2")
-                ippFeatures = ippCPUID_AVX2;
+                ippFeatures = minorFeatures|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42|ippCPUID_AVX|ippCPUID_AVX2;
+#if IPP_VERSION_X100 >= 201700
+#if defined (_M_AMD64) || defined (__x86_64__)
+            else if(env == "avx512")
+                ippFeatures = minorFeatures|ippCPUID_SSE2|ippCPUID_SSE3|ippCPUID_SSSE3|ippCPUID_SSE41|ippCPUID_SSE42|ippCPUID_AVX|ippCPUID_AVX2|ippCPUID_AVX512F;
+#endif
 #endif
             else
-                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << std::endl;
+                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << ". Correct values are: disabled, sse42, avx2, avx512 (Intel64 only)" << std::endl;
+
+            // Trim unsupported features
+            ippFeatures &= cpuFeatures;
         }
 
-        IPP_INITIALIZER(ippFeatures)
+        // Disable AVX1 since we don't track regressions for it. SSE42 will be used instead
+        if(cpuFeatures&ippCPUID_AVX && !(cpuFeatures&ippCPUID_AVX2))
+            ippFeatures &= ~((Ipp64u)ippCPUID_AVX);
+
+        // IPP integrations in OpenCV support only SSE4.2, AVX2 and AVX-512 optimizations.
+        if(!(
+#if IPP_VERSION_X100 >= 201700
+            cpuFeatures&ippCPUID_AVX512F ||
+#endif
+            cpuFeatures&ippCPUID_AVX2 ||
+            cpuFeatures&ippCPUID_SSE42
+            ))
+        {
+            useIPP = false;
+            return;
+        }
+
+        if(ippFeatures == cpuFeatures)
+            IPP_INITIALIZER(0)
+        else
+            IPP_INITIALIZER(ippFeatures)
         ippFeatures = ippGetEnabledCpuFeatures();
+
+        // Detect top level optimizations to make comparison easier for optimizations dependent conditions
+#if IPP_VERSION_X100 >= 201700
+        if(ippFeatures&ippCPUID_AVX512F)
+        {
+            if((ippFeatures&ippCPUID_AVX512_SKX) == ippCPUID_AVX512_SKX)
+                ippTopFeatures = ippCPUID_AVX512_SKX;
+            else if((ippFeatures&ippCPUID_AVX512_KNL) == ippCPUID_AVX512_KNL)
+                ippTopFeatures = ippCPUID_AVX512_KNL;
+            else
+                ippTopFeatures = ippCPUID_AVX512F; // Unknown AVX512 configuration
+        }
+        else
+#endif
+        if(ippFeatures&ippCPUID_AVX2)
+            ippTopFeatures = ippCPUID_AVX2;
+        else if(ippFeatures&ippCPUID_SSE42)
+            ippTopFeatures = ippCPUID_SSE42;
+
+        pIppLibInfo = ippiGetLibVersion();
     }
 
-    bool useIPP;
+public:
+    bool        useIPP;
+    bool        useIPP_NE;
 
-    int         ippStatus; // 0 - all is ok, -1 - IPP functions failed
+    int         ippStatus;  // 0 - all is ok, -1 - IPP functions failed
     const char *funcname;
     const char *filename;
     int         linen;
     Ipp64u      ippFeatures;
+    Ipp64u      cpuFeatures;
+    Ipp64u      ippTopFeatures;
+    const IppLibraryVersion *pIppLibInfo;
 };
 
 static IPPInitSingleton& getIPPSingleton()
@@ -1970,6 +2075,17 @@ int getIppFeatures()
 #else
     return (int)getIPPSingleton().ippFeatures;
 #endif
+#else
+    return 0;
+#endif
+}
+
+unsigned long long getIppTopFeatures();
+
+unsigned long long getIppTopFeatures()
+{
+#ifdef HAVE_IPP
+    return getIPPSingleton().ippTopFeatures;
 #else
     return 0;
 #endif
@@ -2005,6 +2121,19 @@ String getIppErrorLocation()
 #endif
 }
 
+String getIppVersion()
+{
+#ifdef HAVE_IPP
+    const IppLibraryVersion *pInfo = getIPPSingleton().pIppLibInfo;
+    if(pInfo)
+        return format("%s %s %s", pInfo->Name, pInfo->Version, pInfo->BuildDate);
+    else
+        return String("error");
+#else
+    return String("disabled");
+#endif
+}
+
 bool useIPP()
 {
 #ifdef HAVE_IPP
@@ -2027,6 +2156,31 @@ void setUseIPP(bool flag)
 #else
     (void)flag;
     data->useIPP = false;
+#endif
+}
+
+bool useIPP_NE()
+{
+#ifdef HAVE_IPP
+    CoreTLSData* data = getCoreTlsData().get();
+    if(data->useIPP_NE < 0)
+    {
+        data->useIPP_NE = getIPPSingleton().useIPP_NE;
+    }
+    return (data->useIPP_NE > 0);
+#else
+    return false;
+#endif
+}
+
+void setUseIPP_NE(bool flag)
+{
+    CoreTLSData* data = getCoreTlsData().get();
+#ifdef HAVE_IPP
+    data->useIPP_NE = (getIPPSingleton().useIPP_NE)?flag:false;
+#else
+    (void)flag;
+    data->useIPP_NE = false;
 #endif
 }
 

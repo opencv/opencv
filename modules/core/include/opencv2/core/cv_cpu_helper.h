@@ -180,5 +180,20 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_NEON(fn, args, mode, ...)  CV_CPU_CALL_NEON(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_VSX
+#  define CV_TRY_VSX 1
+#  define CV_CPU_HAS_SUPPORT_VSX 1
+#  define CV_CPU_CALL_VSX(fn, args) return (opt_VSX::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_VSX
+#  define CV_TRY_VSX 1
+#  define CV_CPU_HAS_SUPPORT_VSX (cv::checkHardwareSupport(CV_CPU_VSX))
+#  define CV_CPU_CALL_VSX(fn, args) if (CV_CPU_HAS_SUPPORT_VSX) return (opt_VSX::fn args)
+#else
+#  define CV_TRY_VSX 0
+#  define CV_CPU_HAS_SUPPORT_VSX 0
+#  define CV_CPU_CALL_VSX(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_VSX(fn, args, mode, ...)  CV_CPU_CALL_VSX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #define CV_CPU_CALL_BASELINE(fn, args) return (cpu_baseline::fn args)
 #define __CV_CPU_DISPATCH_CHAIN_BASELINE(fn, args, mode, ...)  CV_CPU_CALL_BASELINE(fn, args) /* last in sequence */

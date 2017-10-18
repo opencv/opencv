@@ -64,7 +64,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
 
     if( groupThreshold <= 0 || rectList.empty() )
     {
-        if( weights )
+        if( weights && !levelWeights )
         {
             size_t i, sz = rectList.size();
             weights->resize(sz);
@@ -609,7 +609,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
-        if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel())
+        if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel() || ocl::Device::getDefault().isNVidia())
         {
             localSize = Size(8, 8);
             lbufSize = Size(origWinSize.width + localSize.width,
@@ -1666,7 +1666,7 @@ void clipObjects(Size sz, std::vector<Rect>& objects,
     for( i = 0; i < n; i++ )
     {
         Rect r = win0 & objects[i];
-        if( r.area() > 0 )
+        if( !r.empty() )
         {
             objects[j] = r;
             if( i > j )

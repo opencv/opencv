@@ -39,7 +39,6 @@
 //
 //M*/
 #include "precomp.hpp"
-
 namespace cv
 {
 
@@ -451,6 +450,329 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     if( box.angle > 360 )
         box.angle -= 360;
 
+    return box;
+}
+
+cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
+{
+    Mat points = _points.getMat();
+    int i, n = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    RotatedRect box;
+
+    if( n < 5 )
+        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+
+    Point2f c(0,0);
+
+    bool is_float = depth == CV_32F;
+    const Point* ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
+
+    Mat A( n, 6, CV_64F);
+    Matx<double, 6, 6> DM;
+    Matx<double, 5, 5> M;
+    Matx<double, 5, 1> pVec;
+    Matx<double, 6, 1> coeffs;
+
+    double x0, y0, a, b, theta;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        c += p;
+    }
+    c.x /= (float)n;
+    c.y /= (float)n;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        p -= c;
+
+        A.at<double>(i,0) = (double)(p.x)*(p.x);
+        A.at<double>(i,1) = (double)(p.x)*(p.y);
+        A.at<double>(i,2) = (double)(p.y)*(p.y);
+        A.at<double>(i,3) = (double)p.x;
+        A.at<double>(i,4) = (double)p.y;
+        A.at<double>(i,5) = 1.0;
+    }
+    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+    DM *= (1.0/n);
+    double dnm = ( DM(2,5)*(DM(0,5) + DM(2,5)) - (DM(1,5)*DM(1,5)) );
+    double ddm =  (4.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
+    double ddmm = (2.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
+
+    M(0,0)=((-DM(0,0) + DM(0,2) + DM(0,5)*DM(0,5))*(DM(1,5)*DM(1,5)) + (-2*DM(0,1)*DM(1,5) + DM(0,5)*(DM(0,0) \
+            - (DM(0,5)*DM(0,5)) + (DM(1,5)*DM(1,5))))*DM(2,5) + (DM(0,0) - (DM(0,5)*DM(0,5)))*(DM(2,5)*DM(2,5))) / ddm;
+    M(0,1)=((DM(1,5)*DM(1,5))*(-DM(0,1) + DM(1,2) + DM(0,5)*DM(1,5)) + (DM(0,1)*DM(0,5) - ((DM(0,5)*DM(0,5)) + 2*DM(1,1))*DM(1,5) + \
+            (DM(1,5)*DM(1,5)*DM(1,5)))*DM(2,5) + (DM(0,1) - DM(0,5)*DM(1,5))*(DM(2,5)*DM(2,5))) / ddm;
+    M(0,2)=(-2*DM(1,2)*DM(1,5)*DM(2,5) - DM(0,5)*(DM(2,5)*DM(2,5))*(DM(0,5) + DM(2,5)) + DM(0,2)*dnm + \
+            (DM(1,5)*DM(1,5))*(DM(2,2) + DM(2,5)*(DM(0,5) + DM(2,5))))/ddm;
+    M(0,3)=(DM(1,5)*(DM(1,5)*DM(2,3) - 2*DM(1,3)*DM(2,5)) + DM(0,3)*dnm) / ddm;
+    M(0,4)=(DM(1,5)*(DM(1,5)*DM(2,4) - 2*DM(1,4)*DM(2,5)) + DM(0,4)*dnm) / ddm;
+    M(1,0)=(-(DM(0,2)*DM(0,5)*DM(1,5)) + (2*DM(0,1)*DM(0,5) - DM(0,0)*DM(1,5))*DM(2,5))/ddmm;
+    M(1,1)=(-(DM(0,1)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,2)*DM(1,5)) + 2*DM(1,1)*DM(2,5)))/ddmm;
+    M(1,2)=(-(DM(0,2)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,2)) + 2*DM(1,2)*DM(2,5)))/ddmm;
+    M(1,3)=(-(DM(0,3)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,3)) + 2*DM(1,3)*DM(2,5)))/ddmm;
+    M(1,4)=(-(DM(0,4)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,4)) + 2*DM(1,4)*DM(2,5)))/ddmm;
+    M(2,0)=(-2*DM(0,1)*DM(0,5)*DM(1,5) + (DM(0,0) + (DM(0,5)*DM(0,5)))*(DM(1,5)*DM(1,5)) + DM(0,5)*(-(DM(0,5)*DM(0,5)) \
+            + (DM(1,5)*DM(1,5)))*DM(2,5) - (DM(0,5)*DM(0,5))*(DM(2,5)*DM(2,5)) + DM(0,2)*(-(DM(1,5)*DM(1,5)) + DM(0,5)*(DM(0,5) + DM(2,5)))) / ddm;
+    M(2,1)=((DM(0,5)*DM(0,5))*(DM(1,2) - DM(1,5)*DM(2,5)) + (DM(1,5)*DM(1,5))*(DM(0,1) - DM(1,2) + DM(1,5)*DM(2,5)) \
+            + DM(0,5)*(DM(1,2)*DM(2,5) + DM(1,5)*(-2*DM(1,1) + (DM(1,5)*DM(1,5)) - (DM(2,5)*DM(2,5))))) / ddm;
+    M(2,2)=((DM(0,5)*DM(0,5))*(DM(2,2) - (DM(2,5)*DM(2,5))) + (DM(1,5)*DM(1,5))*(DM(0,2) - DM(2,2) + (DM(2,5)*DM(2,5))) + \
+             DM(0,5)*(-2*DM(1,2)*DM(1,5) + DM(2,5)*((DM(1,5)*DM(1,5)) + DM(2,2) - (DM(2,5)*DM(2,5))))) / ddm;
+    M(2,3)=((DM(1,5)*DM(1,5))*(DM(0,3) - DM(2,3)) + (DM(0,5)*DM(0,5))*DM(2,3) + DM(0,5)*(-2*DM(1,3)*DM(1,5) + DM(2,3)*DM(2,5))) / ddm;
+    M(2,4)=((DM(1,5)*DM(1,5))*(DM(0,4) - DM(2,4)) + (DM(0,5)*DM(0,5))*DM(2,4) + DM(0,5)*(-2*DM(1,4)*DM(1,5) + DM(2,4)*DM(2,5))) / ddm;
+    M(3,0)=DM(0,3);
+    M(3,1)=DM(1,3);
+    M(3,2)=DM(2,3);
+    M(3,3)=DM(3,3);
+    M(3,4)=DM(3,4);
+    M(4,0)=DM(0,4);
+    M(4,1)=DM(1,4);
+    M(4,2)=DM(2,4);
+    M(4,3)=DM(3,4);
+    M(4,4)=DM(4,4);
+
+    if (fabs(cv::determinant(M)) > 1.0e-10) {
+            Mat eVal, eVec;
+            eigenNonSymmetric(M, eVal, eVec);
+
+            // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
+            int minpos = 0;
+            double normi, normEVali, normMinpos, normEValMinpos;
+            normMinpos = sqrt(eVec.at<double>(minpos,0)*eVec.at<double>(minpos,0) + eVec.at<double>(minpos,1)*eVec.at<double>(minpos,1) + \
+                              eVec.at<double>(minpos,2)*eVec.at<double>(minpos,2) + eVec.at<double>(minpos,3)*eVec.at<double>(minpos,3) + \
+                              eVec.at<double>(minpos,4)*eVec.at<double>(minpos,4) );
+            normEValMinpos = eVal.at<double>(minpos,0) * normMinpos;
+            for (i=1; i<5; i++) {
+                normi = sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + \
+                             eVec.at<double>(i,2)*eVec.at<double>(i,2) + eVec.at<double>(i,3)*eVec.at<double>(i,3) + \
+                             eVec.at<double>(i,4)*eVec.at<double>(i,4) );
+                normEVali = eVal.at<double>(i,0) * normi;
+                if (normEVali < normEValMinpos) {
+                    minpos = i;
+                    normMinpos=normi;
+                    normEValMinpos=normEVali;
+                }
+            };
+
+            pVec(0) =eVec.at<double>(minpos,0) / normMinpos;
+            pVec(1) =eVec.at<double>(minpos,1) / normMinpos;
+            pVec(2) =eVec.at<double>(minpos,2) / normMinpos;
+            pVec(3) =eVec.at<double>(minpos,3) / normMinpos;
+            pVec(4) =eVec.at<double>(minpos,4) / normMinpos;
+
+            coeffs(0) =pVec(0) ;
+            coeffs(1) =pVec(1) ;
+            coeffs(2) =pVec(2) ;
+            coeffs(3) =pVec(3) ;
+            coeffs(4) =pVec(4) ;
+            coeffs(5) =-pVec(0) *DM(0,5)-pVec(1) *DM(1,5)-coeffs(2) *DM(2,5);
+
+        // Check that an elliptical solution has been found. AMS sometimes produces Parabolic solutions.
+        bool is_ellipse = (coeffs(0)  < 0 && \
+                           coeffs(2)  < (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) && \
+                           coeffs(5)  > (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) )) / \
+                                        ((coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) )) || \
+                          (coeffs(0)  > 0 && \
+                           coeffs(2)  > (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) && \
+                           coeffs(5)  < (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) )) / \
+                                        ( (coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) ));
+        if (is_ellipse) {
+            double u1 = pVec(2) *pVec(3) *pVec(3)  - pVec(1) *pVec(3) *pVec(4)  + pVec(0) *pVec(4) *pVec(4)  + pVec(1) *pVec(1) *coeffs(5) ;
+            double u2 = pVec(0) *pVec(2) *coeffs(5) ;
+            double l1 = sqrt(pVec(1) *pVec(1)  + (pVec(0)  - pVec(2) )*(pVec(0)  - pVec(2) ));
+            double l2 = pVec(0)  + pVec(2) ;
+            double l3 = pVec(1) *pVec(1)  - 4.0*pVec(0) *pVec(2) ;
+            double p1 = 2.0*pVec(2) *pVec(3)  - pVec(1) *pVec(4) ;
+            double p2 = 2.0*pVec(0) *pVec(4) -(pVec(1) *pVec(3) );
+
+            x0 = p1/l3 + c.x;
+            y0 = p2/l3 + c.y;
+            a = std::sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+            b = std::sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+            if (pVec(1)  == 0) {
+                if (pVec(0)  < pVec(2) ) {
+                    theta = 0;
+                } else {
+                    theta = CV_PI/2.;
+                }
+            } else {
+                theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
+            }
+
+            box.center.x = (float)x0; // +c.x;
+            box.center.y = (float)y0; // +c.y;
+            box.size.width = (float)(2.0*a);
+            box.size.height = (float)(2.0*b);
+            if( box.size.width > box.size.height )
+            {
+                float tmp;
+                CV_SWAP( box.size.width, box.size.height, tmp );
+                box.angle = (float)(90 + theta*180/CV_PI);
+            } else {
+                box.angle = (float)(fmod(theta*180/CV_PI,180.0));
+            };
+
+
+        } else {
+            box = cv::fitEllipseDirect( points );
+        }
+    } else {
+        box = cv::fitEllipse( points );
+    }
+
+    return box;
+}
+
+cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
+{
+    Mat points = _points.getMat();
+    int i, n = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    RotatedRect box;
+
+    if( n < 5 )
+        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+
+    Point2f c(0,0);
+
+    bool is_float = (depth == CV_32F);
+    const Point*   ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
+
+    Mat A( n, 6, CV_64F);
+    Matx<double, 6, 6> DM;
+    Matx33d M, TM, Q;
+    Matx<double, 3, 1> pVec;
+
+    double x0, y0, a, b, theta, Ts;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        c += p;
+    }
+    c.x /= (float)n;
+    c.y /= (float)n;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        p -= c;
+
+        A.at<double>(i,0) = (double)(p.x)*(p.x);
+        A.at<double>(i,1) = (double)(p.x)*(p.y);
+        A.at<double>(i,2) = (double)(p.y)*(p.y);
+        A.at<double>(i,3) = (double)p.x;
+        A.at<double>(i,4) = (double)p.y;
+        A.at<double>(i,5) = 1.0;
+    }
+    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+    DM *= (1.0/n);
+
+    TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
+              DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
+    TM(0,1) = DM(1,5)*DM(3,5)*DM(4,4) - DM(1,5)*DM(3,4)*DM(4,5) - DM(1,4)*DM(3,5)*DM(5,4) + \
+              DM(1,3)*DM(4,5)*DM(5,4) + DM(1,4)*DM(3,4)*DM(5,5) - DM(1,3)*DM(4,4)*DM(5,5);
+    TM(0,2) = DM(2,5)*DM(3,5)*DM(4,4) - DM(2,5)*DM(3,4)*DM(4,5) - DM(2,4)*DM(3,5)*DM(5,4) + \
+              DM(2,3)*DM(4,5)*DM(5,4) + DM(2,4)*DM(3,4)*DM(5,5) - DM(2,3)*DM(4,4)*DM(5,5);
+    TM(1,0) = DM(0,5)*DM(3,3)*DM(4,5) - DM(0,5)*DM(3,5)*DM(4,3) + DM(0,4)*DM(3,5)*DM(5,3) - \
+              DM(0,3)*DM(4,5)*DM(5,3) - DM(0,4)*DM(3,3)*DM(5,5) + DM(0,3)*DM(4,3)*DM(5,5);
+    TM(1,1) = DM(1,5)*DM(3,3)*DM(4,5) - DM(1,5)*DM(3,5)*DM(4,3) + DM(1,4)*DM(3,5)*DM(5,3) - \
+              DM(1,3)*DM(4,5)*DM(5,3) - DM(1,4)*DM(3,3)*DM(5,5) + DM(1,3)*DM(4,3)*DM(5,5);
+    TM(1,2) = DM(2,5)*DM(3,3)*DM(4,5) - DM(2,5)*DM(3,5)*DM(4,3) + DM(2,4)*DM(3,5)*DM(5,3) - \
+              DM(2,3)*DM(4,5)*DM(5,3) - DM(2,4)*DM(3,3)*DM(5,5) + DM(2,3)*DM(4,3)*DM(5,5);
+    TM(2,0) = DM(0,5)*DM(3,4)*DM(4,3) - DM(0,5)*DM(3,3)*DM(4,4) - DM(0,4)*DM(3,4)*DM(5,3) + \
+              DM(0,3)*DM(4,4)*DM(5,3) + DM(0,4)*DM(3,3)*DM(5,4) - DM(0,3)*DM(4,3)*DM(5,4);
+    TM(2,1) = DM(1,5)*DM(3,4)*DM(4,3) - DM(1,5)*DM(3,3)*DM(4,4) - DM(1,4)*DM(3,4)*DM(5,3) + \
+              DM(1,3)*DM(4,4)*DM(5,3) + DM(1,4)*DM(3,3)*DM(5,4) - DM(1,3)*DM(4,3)*DM(5,4);
+    TM(2,2) = DM(2,5)*DM(3,4)*DM(4,3) - DM(2,5)*DM(3,3)*DM(4,4) - DM(2,4)*DM(3,4)*DM(5,3) + \
+              DM(2,3)*DM(4,4)*DM(5,3) + DM(2,4)*DM(3,3)*DM(5,4) - DM(2,3)*DM(4,3)*DM(5,4);
+
+    Ts=(-(DM(3,5)*DM(4,4)*DM(5,3)) + DM(3,4)*DM(4,5)*DM(5,3) + DM(3,5)*DM(4,3)*DM(5,4) - \
+          DM(3,3)*DM(4,5)*DM(5,4)  - DM(3,4)*DM(4,3)*DM(5,5) + DM(3,3)*DM(4,4)*DM(5,5));
+
+    M(0,0) = (DM(2,0) + (DM(2,3)*TM(0,0) + DM(2,4)*TM(1,0) + DM(2,5)*TM(2,0))/Ts)/2.;
+    M(0,1) = (DM(2,1) + (DM(2,3)*TM(0,1) + DM(2,4)*TM(1,1) + DM(2,5)*TM(2,1))/Ts)/2.;
+    M(0,2) = (DM(2,2) + (DM(2,3)*TM(0,2) + DM(2,4)*TM(1,2) + DM(2,5)*TM(2,2))/Ts)/2.;
+    M(1,0) = -DM(1,0) - (DM(1,3)*TM(0,0) + DM(1,4)*TM(1,0) + DM(1,5)*TM(2,0))/Ts;
+    M(1,1) = -DM(1,1) - (DM(1,3)*TM(0,1) + DM(1,4)*TM(1,1) + DM(1,5)*TM(2,1))/Ts;
+    M(1,2) = -DM(1,2) - (DM(1,3)*TM(0,2) + DM(1,4)*TM(1,2) + DM(1,5)*TM(2,2))/Ts;
+    M(2,0) = (DM(0,0) + (DM(0,3)*TM(0,0) + DM(0,4)*TM(1,0) + DM(0,5)*TM(2,0))/Ts)/2.;
+    M(2,1) = (DM(0,1) + (DM(0,3)*TM(0,1) + DM(0,4)*TM(1,1) + DM(0,5)*TM(2,1))/Ts)/2.;
+    M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
+
+    if (fabs(cv::determinant(M)) > 1.0e-10) {
+        Mat eVal, eVec;
+        eigenNonSymmetric(M, eVal, eVec);
+
+        // Select the eigen vector {a,b,c} which satisfies 4ac-b^2 > 0
+        double cond[3];
+        cond[0]=(4.0 * eVec.at<double>(0,0) * eVec.at<double>(0,2) - eVec.at<double>(0,1) * eVec.at<double>(0,1));
+        cond[1]=(4.0 * eVec.at<double>(1,0) * eVec.at<double>(1,2) - eVec.at<double>(1,1) * eVec.at<double>(1,1));
+        cond[2]=(4.0 * eVec.at<double>(2,0) * eVec.at<double>(2,2) - eVec.at<double>(2,1) * eVec.at<double>(2,1));
+        if (cond[0]<cond[1]) {
+            i = (cond[1]<cond[2]) ? 2 : 1;
+        } else {
+            i = (cond[0]<cond[2]) ? 2 : 0;
+        }
+        double norm = std::sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + eVec.at<double>(i,2)*eVec.at<double>(i,2));
+        if (((eVec.at<double>(i,0)<0.0  ? -1 : 1) * (eVec.at<double>(i,1)<0.0  ? -1 : 1) * (eVec.at<double>(i,2)<0.0  ? -1 : 1)) <= 0.0) {
+                norm=-1.0*norm;
+            }
+        pVec(0) =eVec.at<double>(i,0)/norm; pVec(1) =eVec.at<double>(i,1)/norm;pVec(2) =eVec.at<double>(i,2)/norm;
+
+    //  Q = (TM . pVec)/Ts;
+        Q(0,0) = (TM(0,0)*pVec(0) +TM(0,1)*pVec(1) +TM(0,2)*pVec(2) )/Ts;
+        Q(0,1) = (TM(1,0)*pVec(0) +TM(1,1)*pVec(1) +TM(1,2)*pVec(2) )/Ts;
+        Q(0,2) = (TM(2,0)*pVec(0) +TM(2,1)*pVec(1) +TM(2,2)*pVec(2) )/Ts;
+
+    // We compute the ellipse properties in the shifted coordinates as doing so improves the numerical accuracy.
+
+        double u1 = pVec(2)*Q(0,0)*Q(0,0) - pVec(1)*Q(0,0)*Q(0,1) + pVec(0)*Q(0,1)*Q(0,1) + pVec(1)*pVec(1)*Q(0,2);
+        double u2 = pVec(0)*pVec(2)*Q(0,2);
+        double l1 = sqrt(pVec(1)*pVec(1) + (pVec(0) - pVec(2))*(pVec(0) - pVec(2)));
+        double l2 = pVec(0) + pVec(2) ;
+        double l3 = pVec(1)*pVec(1) - 4*pVec(0)*pVec(2) ;
+        double p1 = 2*pVec(2)*Q(0,0) - pVec(1)*Q(0,1);
+        double p2 = 2*pVec(0)*Q(0,1) - pVec(1)*Q(0,0);
+
+        x0 = p1/l3 + c.x;
+        y0 = p2/l3 + c.y;
+        a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+        b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+        if (pVec(1)  == 0) {
+            if (pVec(0)  < pVec(2) ) {
+                theta = 0;
+            } else {
+                theta = CV_PI/2.;
+            }
+        } else {
+                theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
+        }
+
+        box.center.x = (float)x0;
+        box.center.y = (float)y0;
+        box.size.width = (float)(2.0*a);
+        box.size.height = (float)(2.0*b);
+        if( box.size.width > box.size.height )
+        {
+            float tmp;
+            CV_SWAP( box.size.width, box.size.height, tmp );
+            box.angle = (float)(fmod((90 + theta*180/CV_PI),180.0)) ;
+        } else {
+            box.angle = (float)(fmod(theta*180/CV_PI,180.0));
+        };
+    } else {
+        box = cv::fitEllipse( points );
+    }
     return box;
 }
 
@@ -1079,6 +1401,5 @@ cvBoundingRect( CvArr* array, int update )
         ((CvContour*)ptseq)->rect = rect;
     return rect;
 }
-
 
 /* End of file. */

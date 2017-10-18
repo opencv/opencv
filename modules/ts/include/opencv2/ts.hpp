@@ -58,8 +58,8 @@
 #  define GTEST_USES_POSIX_RE 0
 #endif
 
-#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-#define GET_PARAM(k) std::tr1::get< k >(GetParam())
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< testing::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) testing::get< k >(GetParam())
 
 namespace cvtest
 {
@@ -69,6 +69,13 @@ using std::string;
 using namespace cv;
 using testing::Values;
 using testing::Combine;
+
+// Tuple stuff from Google Tests
+using testing::get;
+using testing::make_tuple;
+using testing::tuple;
+using testing::tuple_size;
+using testing::tuple_element;
 
 
 class SkipTestException: public cv::Exception
@@ -392,14 +399,14 @@ public:
         FAIL_MEMORY_CORRUPTION_BEGIN=-7,
         FAIL_MEMORY_CORRUPTION_END=-8,
 
-        // the tested function (or test ifself) do not deallocate some memory
+        // the tested function (or test itself) do not deallocate some memory
         FAIL_MEMORY_LEAK=-9,
 
         // the tested function returned invalid object, e.g. matrix, containing NaNs,
         // structure with NULL or out-of-range fields (while it should not)
         FAIL_INVALID_OUTPUT=-10,
 
-        // the tested function returned valid object, but it does not match to
+        // the tested function returned valid object, but it does not match
         // the original (or produced by the test) object
         FAIL_MISMATCH=-11,
 
@@ -407,7 +414,7 @@ public:
         // but it differs too much from the original (or produced by the test) object
         FAIL_BAD_ACCURACY=-12,
 
-        // the tested function hung. Sometimes, can be determined by unexpectedly long
+        // the tested function hung. Sometimes, it can be determined by unexpectedly long
         // processing time (in this case there should be possibility to interrupt such a function
         FAIL_HANG=-13,
 
@@ -448,7 +455,7 @@ public:
     std::vector<std::string> data_search_subdir;
 protected:
 
-    // these are allocated within a test to try keep them valid in case of stack corruption
+    // these are allocated within a test to try to keep them valid in case of stack corruption
     RNG rng;
 
     // information about the current test

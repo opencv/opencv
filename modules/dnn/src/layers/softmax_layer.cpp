@@ -43,9 +43,13 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -62,6 +66,10 @@ public:
         logSoftMax = params.get<int>("log_softmax", false);
         setParamsFrom(params);
     }
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNSoftmax<float> > softmaxOp;
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
@@ -82,10 +90,91 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        if (softmaxOp.empty())
+        {
+            OCL4DNNSoftmaxConfig config;
+
+            config.in_shape = shape(*inputs[0]);
+            config.axis = axisRaw;
+            config.channels = inputs[0]->size[axisRaw];
+            config.logsoftmax = logSoftMax;
+
+            softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
+        }
+
+        UMat srcMat, dstMat;
+        srcMat = inputs[0]->getUMat(ACCESS_READ);
+        dstMat = outputs[0].getUMat(ACCESS_WRITE);
+
+        if (softmaxOp->Forward(srcMat, dstMat))
+            return true;
+
+        const Mat &src = *inputs[0];
+        UMat bufMat = internals[0].getUMat(ACCESS_WRITE);
+        srcMat.copyTo(dstMat);
+
+        int axis = clamp(axisRaw, src.dims);
+        size_t outerSize = src.total(0, axis);
+        size_t channels = src.size[axis];
+        size_t innerSize = src.total(axis + 1);
+
+        String buildOpts = String("-DT=") + ocl::typeToStr(src.type());
+        ocl::Kernel kmax, ksub, ksum, kdiv;
+
+        if (!kmax.create("kernel_channel_max", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!ksub.create("kernel_channel_subtract", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!ksum.create("kernel_channel_sum", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (logSoftMax) buildOpts += " -DLOG_SOFTMAX ";
+        if (!kdiv.create("kernel_channel_div", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
+        size_t bufSize = internals[0].total();
+        size_t totalSize = src.total();
+
+        kmax.args((int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!kmax.run(1, &bufSize, &wgSize, false))
+            return false;
+
+        ksub.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
+        if (!ksub.run(1, &totalSize, &wgSize, false))
+            return false;
+
+        cv::exp(dstMat, dstMat);
+
+        ksum.args((int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!ksum.run(1, &bufSize, &wgSize, false))
+            return false;
+
+        kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
+        if (!kdiv.run(1, &totalSize, &wgSize, false))
+            return false;
+
+        return true;
+    }
+#endif
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs, outputs, internals))
 
         const Mat &src = *inputs[0];
         Mat &dst = outputs[0];

@@ -63,3 +63,7 @@ class houghlines_test(NewOpenCVTests):
                     matches_counter += 1
 
         self.assertGreater(float(matches_counter) / len(testLines), .7)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

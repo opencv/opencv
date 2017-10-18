@@ -1112,8 +1112,8 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         {
             int base = y*(acols+2) + x;
             if( adata[base] > acc_threshold &&
-                adata[base] > adata[base-1] && adata[base] > adata[base+1] &&
-                adata[base] > adata[base-acols-2] && adata[base] > adata[base+acols+2] )
+                adata[base] > adata[base-1] && adata[base] >= adata[base+1] &&
+                adata[base] > adata[base-acols-2] && adata[base] >= adata[base+acols+2] )
                 cvSeqPush(centers, &base);
         }
     }

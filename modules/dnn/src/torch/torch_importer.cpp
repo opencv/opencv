@@ -126,7 +126,7 @@ struct TorchImporter : public ::cv::dnn::Importer
         rootModule = curModule = NULL;
         moduleCounter = 0;
 
-        file = cv::Ptr<THFile>(THDiskFile_new(filename.c_str(), "r", 0), THFile_free);
+        file = cv::Ptr<THFile>(THDiskFile_new(filename, "r", 0), THFile_free);
         CV_Assert(file && THFile_isOpened(file));
 
         if (isBinary)
@@ -309,6 +309,7 @@ struct TorchImporter : public ::cv::dnn::Importer
             if (vtype == TYPE_TORCH)
             {
                 int index = readInt();
+                int numModules = curModule->modules.size();
                 readTorchObject(index);
 
                 if (tensors.count(index)) //tensor was readed
@@ -323,6 +324,14 @@ struct TorchImporter : public ::cv::dnn::Importer
 
                     DictValue scalar = DictValue::arrayReal(matCasted.ptr<double>(), matCasted.total());
                     scalarParams.set(key, scalar);
+                }
+                else
+                {
+                    // Only tensors and scalars are supported for table fields.
+                    // i.e. nn.Inception has field `transfer` which is an
+                    // activation layer. So we remove added modules as readTorchObject(index).
+                    while (curModule->modules.size() > numModules)
+                        curModule->modules.pop_back();
                 }
             }
             else if (vtype == TYPE_NUMBER)
@@ -469,7 +478,8 @@ struct TorchImporter : public ::cv::dnn::Importer
             layerParams.set("torch_index", index);
 
             if (nnName == "Sequential" || nnName == "Parallel" ||
-                    nnName == "Concat" || nnName == "ConcatTable" || nnName == "JoinTable")
+                nnName == "Concat" || nnName == "ConcatTable" || nnName == "JoinTable" ||
+                nnName == "DepthConcat" || nnName == "Inception")
             {
                 Module *parentModule = curModule;
                 curModule->modules.push_back(newModule);
@@ -490,8 +500,12 @@ struct TorchImporter : public ::cv::dnn::Importer
                 {
                     layerParams.set("dimension", scalarParams.get<int>("dimension"));
                 }
+                if (nnName == "DepthConcat")
+                {
+                    layerParams.set("dimension", scalarParams.get<int>("dimension"));
+                }
             }
-            else if (nnName == "SpatialConvolution")
+            else if (nnName == "SpatialConvolution" || nnName == "SpatialConvolutionMM")
             {
                 newModule->apiType = "Convolution";
                 readTorchTable(scalarParams, tensorParams);
@@ -507,7 +521,36 @@ struct TorchImporter : public ::cv::dnn::Importer
                 layerParams.set("num_output", scalarParams.get<int>("nOutputPlane"));
                 convertTorchKernelsParams(scalarParams, layerParams);
 
+                if (nnName == "SpatialConvolutionMM")
+                {
+                    // Split weights from a [ outCh x inCh*kH*kW ] 2D matrix
+                    // onto a 4D [ outCh x inCh x kH x kW ] blob.
+                    CV_Assert(layerParams.blobs[0].dims == 2);
+                    const int kernel = layerParams.blobs[0].size[1];  // inCh * kH * kW
+                    MatShape kernelShape(4);
+                    kernelShape[0] = layerParams.blobs[0].size[0];  // outCh.
+                    kernelShape[2] = layerParams.get<int>("kernel_h");
+                    kernelShape[3] = layerParams.get<int>("kernel_w");
+                    kernelShape[1] = kernel / (kernelShape[2] * kernelShape[3]);  // inCh.
+                    layerParams.blobs[0] = layerParams.blobs[0].reshape(1, kernelShape);
+                }
                 curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "SpatialLPPooling")
+            {
+                // nn.Sequential {
+                //     [input -> (1) -> (2) -> output]
+                //     (1): nn.Sequential {
+                //       [input -> (1) -> (2) -> (3) -> (4) -> output]
+                //       (1): nn.Power
+                //       (2): nn.SpatialAveragePooling(...)
+                //       (3): nn.MulConstant
+                //       (4): nn.Power
+                //     }
+                //     (2): nn.Sigmoid
+                // }
+                // nn.SpatialLPPooling is just a table so we skip it.
+                readTorchTable(scalarParams, tensorParams);
             }
             else if (nnName == "SpatialMaxPooling" || nnName == "SpatialAveragePooling")
             {
@@ -521,6 +564,9 @@ struct TorchImporter : public ::cv::dnn::Importer
                 if (nnName == "SpatialAveragePooling")
                     layerParams.set("pool", "AVE");
                 convertTorchKernelsParams(scalarParams, layerParams);
+
+                CV_Assert(scalarParams.has("ceil_mode"));
+                layerParams.set("ceil_mode", scalarParams.get<bool>("ceil_mode"));
 
                 curModule->modules.push_back(newModule);
             }
@@ -541,7 +587,7 @@ struct TorchImporter : public ::cv::dnn::Importer
                 layerParams.set("num_output", weightBlob.size[0]);
                 curModule->modules.push_back(newModule);
             }
-            else if (nnName == "Reshape")
+            else if (nnName == "Reshape" || nnName == "View")
             {
                 newModule->apiType = "Reshape";
 
@@ -576,14 +622,23 @@ struct TorchImporter : public ::cv::dnn::Importer
                 newModule->apiType = "BatchNorm";
                 readTorchTable(scalarParams, tensorParams);
 
-                CV_Assert(tensorParams.count("running_var") &&
-                          tensorParams.count("running_mean"));
-                layerParams.blobs.push_back(tensorParams["running_mean"].second);
-                layerParams.blobs.push_back(tensorParams["running_var"].second);
-
                 CV_Assert(scalarParams.has("eps"));
                 float eps = float(scalarParams.get<double>("eps"));
                 layerParams.set("eps", eps);
+
+                CV_Assert((tensorParams.count("running_var") || tensorParams.count("running_std")) &&
+                          tensorParams.count("running_mean"));
+                layerParams.blobs.push_back(tensorParams["running_mean"].second);
+                if (tensorParams.count("running_var"))
+                {
+                    layerParams.blobs.push_back(tensorParams["running_var"].second);
+                }
+                else
+                {
+                    layerParams.blobs.push_back(tensorParams["running_std"].second);
+                    pow(layerParams.blobs.back(), -2, layerParams.blobs.back());
+                    subtract(layerParams.blobs.back(), eps, layerParams.blobs.back());
+                }
 
                 if (tensorParams.count("weight"))
                 {
@@ -642,28 +697,42 @@ struct TorchImporter : public ::cv::dnn::Importer
                 newModule->apiType = "Identity";
                 curModule->modules.push_back(newModule);
             }
+            else if (nnName == "Normalize")
+            {
+                readTorchTable(scalarParams, tensorParams);
+                CV_Assert(scalarParams.has("p"));
+
+                layerParams.set("p", scalarParams.get<float>("p"));
+                if (scalarParams.has("eps"))
+                    layerParams.set("eps", scalarParams.get<float>("eps"));
+
+                newModule->apiType = "Normalize";
+                curModule->modules.push_back(newModule);
+            }
             else if (nnName == "Padding")
             {
                 readTorchTable(scalarParams, tensorParams);
                 newModule->apiType = "Padding";
 
-                CV_Assert(scalarParams.has("pad") &&
-                          scalarParams.has("dim"));
-
-                layerParams.set("padding_dim",
-                                static_cast<int>(scalarParams.get<double>("dim") - 1));
-                layerParams.set("padding", static_cast<int>(scalarParams.get<double>("pad")));
-
-                if (scalarParams.has("nInputDim"))
-                    layerParams.set("input_dims",
-                                    static_cast<int>(scalarParams.get<double>("nInputDim")));
+                CV_Assert(scalarParams.has("pad") && scalarParams.has("dim"));
+                if (scalarParams.has("index") && scalarParams.get<int>("index") != 1)
+                    CV_Error(Error::StsNotImplemented, "Padding with offset is not implemented");
 
                 if (scalarParams.has("value"))
-                    layerParams.set("value", scalarParams.get<double>("value"));
+                    layerParams.set("value", scalarParams.get<float>("value"));
 
-                if (scalarParams.has("index"))
-                    layerParams.set("index",
-                                    static_cast<int>(scalarParams.get<double>("index") - 1));
+                if (scalarParams.has("nInputDim"))
+                    layerParams.set("input_dims", scalarParams.get<int>("nInputDim"));
+
+                int dim = scalarParams.get<int>("dim") - 1;  // In Lua we start from 1.
+                int pad = scalarParams.get<int>("pad");
+
+                std::vector<int> paddings((dim + 1) * 2, 0);
+                if (pad > 0)
+                    paddings[dim * 2 + 1] = pad;  // Pad after (right).
+                else
+                    paddings[dim * 2] = -pad;  // Pad before (left).
+                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
 
                 curModule->modules.push_back(newModule);
             }
@@ -729,10 +798,7 @@ struct TorchImporter : public ::cv::dnn::Importer
                 layerParams.set("adj_h", static_cast<int>(scalarParams.get<double>("adjH")));
                 layerParams.set("num_output", static_cast<int>(scalarParams.get<double>("nOutputPlane")));
 
-                Mat weights = tensorParams["weight"].second;
-                CV_Assert(weights.dims == 4);
-                int reorderedShape[] = { weights.size[1], weights.size[0], weights.size[2], weights.size[3] };
-                layerParams.blobs.push_back(weights.reshape(1, 4, reorderedShape));
+                layerParams.blobs.push_back(tensorParams["weight"].second);
 
                 bool bias = tensorParams.count("bias");
                 layerParams.set("bias_term", bias);
@@ -758,6 +824,71 @@ struct TorchImporter : public ::cv::dnn::Importer
             {
                 newModule->apiType = "SoftMax";
                 layerParams.set("log_softmax", true);
+                curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "SpatialCrossMapLRN")
+            {
+                newModule->apiType = "LRN";
+                readTorchTable(scalarParams, tensorParams);
+
+                CV_Assert(scalarParams.has("alpha"));
+                CV_Assert(scalarParams.has("beta"));
+                CV_Assert(scalarParams.has("k"));
+                CV_Assert(scalarParams.has("size"));
+
+                layerParams.set("norm_region", "ACROSS_CHANNELS");
+                layerParams.set("alpha", scalarParams.get<float>("alpha"));
+                layerParams.set("beta", scalarParams.get<float>("beta"));
+                layerParams.set("bias", scalarParams.get<float>("k"));
+                layerParams.set("local_size", scalarParams.get<int>("size"));
+                layerParams.set("norm_by_size", true);
+
+                curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "Square" || nnName == "Sqrt" || nnName == "Power")
+            {
+                readTorchTable(scalarParams, tensorParams);
+
+                float power;
+                if (nnName == "Square") power = 2.0f;
+                else if (nnName == "Sqrt") power = 0.5f;
+                else if (nnName == "Power") power = scalarParams.get<float>("pow", 1.0f);
+
+                newModule->apiType = "Power";
+                layerParams.set("power", power);
+                curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "MulConstant")
+            {
+                readTorchTable(scalarParams, tensorParams);
+                CV_Assert(scalarParams.has("constant_scalar"));
+                newModule->apiType = "Power";
+                layerParams.set("scale", scalarParams.get<float>("constant_scalar"));
+                curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "SpatialZeroPadding")
+            {
+                readTorchTable(scalarParams, tensorParams);
+                CV_Assert(scalarParams.has("pad_l"), scalarParams.has("pad_r"),
+                          scalarParams.has("pad_t"), scalarParams.has("pad_b"));
+                int padTop = scalarParams.get<int>("pad_t");
+                int padLeft = scalarParams.get<int>("pad_l");
+                int padRight = scalarParams.get<int>("pad_r");
+                int padBottom = scalarParams.get<int>("pad_b");
+                if (padTop < 0 || padLeft < 0 || padRight < 0 || padBottom < 0)
+                    CV_Error(Error::StsNotImplemented, "SpatialZeroPadding in cropping mode is not implemented");
+
+                newModule->apiType = "Padding";
+
+                // Torch's SpatialZeroPadding works with 3- or 4-dimensional input.
+                // So we add parameter input_dims=3 to ignore batch dimension if it will be.
+                std::vector<int> paddings(6, 0);  // CHW
+                paddings[2] = padTop;
+                paddings[3] = padBottom;
+                paddings[4] = padLeft;
+                paddings[5] = padRight;
+                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+                layerParams.set("input_dims", 3);
                 curModule->modules.push_back(newModule);
             }
             else
@@ -816,7 +947,7 @@ struct TorchImporter : public ::cv::dnn::Importer
         }
         else
         {
-            if (module->thName == "Sequential")
+            if (module->thName == "Sequential" || module->thName == "Inception")
             {
                 for (size_t i = 0; i < module->modules.size(); i++)
                 {
@@ -827,17 +958,39 @@ struct TorchImporter : public ::cv::dnn::Importer
             }
             else if (module->thName == "Concat")
             {
-                int newId, splitId, mergeId;
-                LayerParams mergeParams, splitParams;
+                int newId, mergeId;
+                LayerParams mergeParams;
                 mergeParams.set("axis", module->params.get<int>("dimension") - 1);
-
-                splitId = net.addLayer(generateLayerName("torchSplit"), "Split", splitParams);
-                net.connect(prevLayerId, prevOutNum, splitId, 0);
 
                 std::vector<int> branchIds;
                 for (int i = 0; i < (int)module->modules.size(); i++)
                 {
-                    newId = fill(module->modules[i], addedModules, splitId, i);
+                    newId = fill(module->modules[i], addedModules, prevLayerId, prevOutNum);
+                    branchIds.push_back(newId);
+                }
+
+                moduleCounter += 1;  // Skip split layer creation. See https://github.com/opencv/opencv/pull/9384.
+                mergeId = net.addLayer(generateLayerName("torchMerge"), "Concat", mergeParams);
+
+                for (int i = 0; i < branchIds.size(); i++)
+                {
+                    net.connect(branchIds[i], 0, mergeId, i);
+                }
+
+                addedModules.push_back(std::make_pair(mergeId, module));
+                return mergeId;
+            }
+            else if (module->thName == "DepthConcat")
+            {
+                int newId, mergeId;
+                LayerParams mergeParams;
+                mergeParams.set("axis", module->params.get<int>("dimension") - 1);
+                mergeParams.set("padding", true);
+
+                std::vector<int> branchIds;
+                for (int i = 0; i < (int)module->modules.size(); i++)
+                {
+                    newId = fill(module->modules[i], addedModules, prevLayerId, prevOutNum);
                     branchIds.push_back(newId);
                 }
 
@@ -884,19 +1037,12 @@ struct TorchImporter : public ::cv::dnn::Importer
                 return mergeId;
             }
             else if (module->thName == "ConcatTable") {
-                int newId = -1, splitId;
-                LayerParams splitParams;
-
-                splitId = net.addLayer(generateLayerName("torchSplit"), "Split", splitParams);
-                net.connect(prevLayerId, prevOutNum, splitId, 0);
-
-                addedModules.push_back(std::make_pair(splitId, module));
-
+                int newId = -1;
+                moduleCounter += 1;  // Skip split layer creation. See https://github.com/opencv/opencv/pull/9384.
                 for (int i = 0; i < (int)module->modules.size(); i++)
                 {
-                    newId = fill(module->modules[i], addedModules, splitId, i);
+                    newId = fill(module->modules[i], addedModules, prevLayerId, prevOutNum);
                 }
-
                 return newId;
             }
             else if (module->thName == "JoinTable") {
@@ -1028,10 +1174,9 @@ Net readNetFromTorch(const String &model, bool isBinary)
 {
     CV_TRACE_FUNCTION();
 
-    Ptr<Importer> importer = createTorchImporter(model, isBinary);
+    TorchImporter importer(model, isBinary);
     Net net;
-    if (importer)
-        importer->populateNet(net);
+    importer.populateNet(net);
     return net;
 }
 

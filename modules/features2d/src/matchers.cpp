@@ -958,7 +958,7 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
     Mat dist, distf;
 
     int iIdx, imgCount = (int)trainDescCollection.size();
-    int dtype = normType == NORM_HAMMING ||
+    int dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
         (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
 
     for( iIdx = 0; iIdx < imgCount; iIdx++ )
@@ -1005,11 +1005,14 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
 Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 {
     Ptr<DescriptorMatcher> dm;
+#ifdef HAVE_OPENCV_FLANN
     if( !descriptorMatcherType.compare( "FlannBased" ) )
     {
         dm = makePtr<FlannBasedMatcher>();
     }
-    else if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
+    else
+#endif
+    if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
     {
         dm = makePtr<BFMatcher>(int(NORM_L2)); // anonymous enums can't be template parameters
     }
@@ -1044,9 +1047,11 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
 
     switch(matcherType)
     {
+#ifdef HAVE_OPENCV_FLANN
     case FLANNBASED:
         name = "FlannBased";
         break;
+#endif
     case BRUTEFORCE:
         name = "BruteForce";
         break;
@@ -1071,6 +1076,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
 
 }
 
+#ifdef HAVE_OPENCV_FLANN
 
 /*
  * Flann based matcher
@@ -1419,4 +1425,7 @@ void FlannBasedMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vect
 
     convertToDMatches( mergedDescriptors, indices, dists, matches );
 }
+
+#endif
+
 }

@@ -30,8 +30,8 @@ def find_squares(img):
                 bin = cv2.Canny(gray, 0, 50, apertureSize=5)
                 bin = cv2.dilate(bin, None)
             else:
-                retval, bin = cv2.threshold(gray, thrs, 255, cv2.THRESH_BINARY)
-            bin, contours, hierarchy = cv2.findContours(bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+                _retval, bin = cv2.threshold(gray, thrs, 255, cv2.THRESH_BINARY)
+            bin, contours, _hierarchy = cv2.findContours(bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             for cnt in contours:
                 cnt_len = cv2.arcLength(cnt, True)
                 cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
@@ -44,7 +44,7 @@ def find_squares(img):
     return squares
 
 def intersectionRate(s1, s2):
-    area, intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
+    area, _intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
     return 2 * area / (cv2.contourArea(np.array(s1)) + cv2.contourArea(np.array(s2)))
 
 def filterSquares(squares, square):
@@ -94,3 +94,6 @@ class squares_test(NewOpenCVTests):
 
         self.assertGreater(matches_counter / len(testSquares), 0.9)
         self.assertLess( (len(squares) - matches_counter) / len(squares), 0.2)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

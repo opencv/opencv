@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>OpenCV JS Tests</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.20.0.css" type="text/css" media="screen">
+        <style>
+            body {
+                font-family: Monospace;
+                background-color: #ffffff;
+                margin: 0px;
+            }
+            a {
+                color: #0040ff;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="qunit"></div>
+        <div id="qunit-fixture"></div>
+
+        <script src="http://code.jquery.com/qunit/qunit-2.0.1.js"></script>
+        <script type="application/javascript" async src="opencv.js"></script>
+        <script type="application/javascript" src="test_mat.js"></script>
+        <script type="application/javascript" src="test_utils.js"></script>
+        <script type="application/javascript" src="test_imgproc.js"></script>
+        <script type="application/javascript" src="test_objdetect.js"></script>
+        <script type="application/javascript" src="test_video.js"></script>
+        <script  type='text/javascript'>
+            QUnit.config.autostart = false;
+
+            var Module = {
+            preRun: [function() {
+                Module.FS_createPreloadedFile('/', 'haarcascade_frontalface_default.xml', 'haarcascade_frontalface_default.xml', true, false);
+            }],
+            postRun: [] ,
+                    onRuntimeInitialized: function() {
+                        console.log("Runtime is ready...");
+                        QUnit.start();
+                    },
+            print: (function() {
+              var element = document.getElementById('output');
+              if (element) element.value = ''; // clear browser cache
+              return function(text) {
+                console.log(text);
+                if (element) {
+                  element.value += text + "\n";
+                  element.scrollTop = element.scrollHeight; // focus on bottom
+                }
+              };
+            })(),
+            printErr: function(text) {
+              console.log(text);
+            },
+            setStatus: function(text) {
+              console.log(text);
+            },
+            totalDependencies: 0
+          };
+
+          Module.setStatus('Downloading...');
+          window.onerror = function(event) {
+            Module.setStatus('Exception thrown, see JavaScript console');
+            Module.setStatus = function(text) {
+              if (text) Module.printErr('[post-exception status] ' + text);
+            };
+          };
+        </script>
+
+<!--
+    TODO
+    <script type="application/javascript" src="test_features2d.js"></script>
+-->
+
+    </body>
+</html>

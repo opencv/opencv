@@ -46,7 +46,12 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
 #include "opencv2/core/hal/hal.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
+
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -78,11 +83,52 @@ public:
         normBySize = params.get<bool>("norm_by_size", true);
     }
 
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNLRN<float> > lrnOp;
+#endif
+
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide();
     }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        if (lrnOp.empty())
+        {
+            OCL4DNNLRNConfig config;
+            config.lrn_type = type == CHANNEL_NRM ?
+                              LRNParameter_NormRegion_ACROSS_CHANNELS :
+                              LRNParameter_NormRegion_WITHIN_CHANNEL;
+
+            CHECK_EQ(size % 2, 1)<< "LRN only supports odd values for local_size";
+            config.local_size = size;
+            config.alpha = alpha;
+            config.beta = beta;
+            config.k = bias;
+            CHECK_EQ(4, inputs[0]->dims) << "Input must have 4 axes, "
+                     << "corresponding to (num, channels, height, width)";
+            config.batch_size = inputs[0]->size[0];
+            config.channels = inputs[0]->size[1];
+            config.height = inputs[0]->size[2];
+            config.width = inputs[0]->size[3];
+            config.norm_by_size = normBySize;
+
+            lrnOp = Ptr<OCL4DNNLRN<float> >(new OCL4DNNLRN<float>(config));
+        }
+
+        UMat inpMat, outMat;
+        inpMat = inputs[0]->getUMat(ACCESS_READ);
+        outMat = outputs[0].getUMat(ACCESS_WRITE);
+
+        if (!lrnOp->Forward(inpMat, outMat))
+            return false;
+
+        return true;
+    }
+#endif
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
@@ -90,6 +136,11 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_Assert(inputs.size() == outputs.size());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs, outputs, internals))
+
         for (int i = 0; i < inputs.size(); i++)
         {
             CV_Assert(inputs[i]->dims == 4);

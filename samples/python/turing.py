@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     def process_scale(a_lods, lod):
         d = a_lods[lod] - cv2.pyrUp(a_lods[lod+1])
-        for i in xrange(lod):
+        for _i in xrange(lod):
             d = cv2.pyrUp(d)
         v = cv2.GaussianBlur(d*d, (3, 3), 0)
         return np.sign(d), v

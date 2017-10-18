@@ -65,3 +65,7 @@ class grabcut_test(NewOpenCVTests):
             cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask2py.png', exp_mask2)
 
         self.assertEqual(self.verify(self.scaleMask(mask), exp_mask2), True)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

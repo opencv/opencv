@@ -17,7 +17,6 @@ from tests_common import NewOpenCVTests
 def circleApproximation(circle):
 
     nPoints = 30
-    phi = 0
     dPhi = 2*pi / nPoints
     contour = []
     for i in range(nPoints):
@@ -79,3 +78,7 @@ class houghcircles_test(NewOpenCVTests):
 
         self.assertGreater(float(matches_counter) / len(testCircles), .5)
         self.assertLess(float(len(circles) - matches_counter) / len(circles), .75)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

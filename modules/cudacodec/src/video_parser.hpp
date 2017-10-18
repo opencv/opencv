@@ -44,7 +44,11 @@
 #ifndef __VIDEO_PARSER_HPP__
 #define __VIDEO_PARSER_HPP__
 
-#include <nvcuvid.h>
+#if CUDA_VERSION >= 9000
+    #include <dynlink_nvcuvid.h>
+#else
+    #include <nvcuvid.h>
+#endif
 
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/cudacodec.hpp"

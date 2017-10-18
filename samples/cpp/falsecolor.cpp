@@ -15,6 +15,7 @@ String winName="False color";
 
 static void TrackColorMap(int x, void *r)
 {
+    std::cout << "selected: " << x << std::endl;
     ParamColorMar *p = (ParamColorMar*)r;
     Mat dst;
     p->iColormap= x;
@@ -23,9 +24,8 @@ static void TrackColorMap(int x, void *r)
         if (!lutRND)
         {
             RNG ra;
-            Mat *palette = new Mat(256, 1, CV_8UC3);
-            ra.fill(*palette, RNG::UNIFORM, 0, 256);
-            lutRND = Ptr<Mat>(palette);
+            lutRND = makePtr<Mat>(256, 1, CV_8UC3);
+            ra.fill(*lutRND, RNG::UNIFORM, 0, 256);
         }
         applyColorMap(p->img, dst, *lutRND.get());
     }
@@ -77,6 +77,7 @@ static void TrackColorMap(int x, void *r)
         colorMapName = "User colormap : random";
         break;
     }
+    std::cout << "> " << colorMapName << std::endl;
     putText(dst, colorMapName, Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255));
     imshow(winName, dst);
 }
@@ -125,11 +126,15 @@ static Mat DrawMyImage(int thickness,int nbShape)
     return img;
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
     ParamColorMar  p;
 
-    Mat img= DrawMyImage(2,256);
+    Mat img;
+    if (argc > 1)
+        img = imread(argv[1], 0);
+    else
+        img = DrawMyImage(2,256);
     p.img=img;
     p.iColormap=0;
 
@@ -140,7 +145,10 @@ int main(void)
     setTrackbarMax("colormap", winName, cv::COLORMAP_PARULA+1);
     setTrackbarPos("colormap", winName, -1);
 
-    TrackColorMap(0,(void*)&p);
-    waitKey(0);
+    TrackColorMap((int)getTrackbarPos("colormap", winName),(void*)&p);
+    while (waitKey(0) != 27)
+    {
+        std::cout << "Press 'ESC' to exit" << std::endl;
+    }
     return 0;
 }

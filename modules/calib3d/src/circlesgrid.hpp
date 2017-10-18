@@ -56,11 +56,11 @@ class CirclesGridClusterFinder
     CirclesGridClusterFinder& operator=(const CirclesGridClusterFinder&);
     CirclesGridClusterFinder(const CirclesGridClusterFinder&);
 public:
-  CirclesGridClusterFinder(bool _isAsymmetricGrid)
+  CirclesGridClusterFinder(const cv::CirclesGridFinderParameters2 &parameters)
   {
-    isAsymmetricGrid = _isAsymmetricGrid;
-    squareSize = 1.0f;
-    maxRectifiedDistance = (float)(squareSize / 2.0);
+    isAsymmetricGrid = parameters.gridType == cv::CirclesGridFinderParameters::ASYMMETRIC_GRID;
+    squareSize = parameters.squareSize;
+    maxRectifiedDistance = parameters.maxRectifiedDistance;
   }
   void findGrid(const std::vector<cv::Point2f> &points, cv::Size patternSize, std::vector<cv::Point2f>& centers);
 

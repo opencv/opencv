@@ -2,6 +2,10 @@ if(WINRT)
   ocv_module_disable(dnn)
 endif()
 
+if(DEFINED BUILD_opencv_dnn AND NOT BUILD_opencv_dnn)
+  return()
+endif()
+
 include(${OpenCV_SOURCE_DIR}/cmake/OpenCVFindLibProtobuf.cmake)
 if(NOT Protobuf_FOUND)
   ocv_module_disable(opencv_dnn)
@@ -16,6 +20,8 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninit
                                      -Wmissing-declarations -Wmissing-prototypes
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4701 /wd4100)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
 
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
@@ -72,6 +78,24 @@ ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES})
 ocv_add_samples()
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
+
+ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
+ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
+if(BUILD_PERF_TESTS)
+  if (${the_module}_PERF_CAFFE)
+    find_package(Caffe QUIET)
+    if (Caffe_FOUND)
+      add_definitions(-DHAVE_CAFFE=1)
+      ocv_target_link_libraries(opencv_perf_dnn caffe)
+    endif()
+  elseif(${the_module}_PERF_CLCAFFE)
+    find_package(Caffe QUIET)
+    if (Caffe_FOUND)
+      add_definitions(-DHAVE_CLCAFFE=1)
+      ocv_target_link_libraries(opencv_perf_dnn caffe)
+    endif()
+  endif()
+endif()
 
 # ----------------------------------------------------------------------------
 # Torch7 importer of blobs and models, produced by Torch.nn module
