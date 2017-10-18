@@ -3015,6 +3015,7 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
 
 
     for (int j=-1;j<height()/pixel_height;j++)//-1 because display the pixels top rows left columns
+    {
         for (int i=-1;i<width()/pixel_width;i++)//-1
         {
             // Calculate top left of the pixel's position in the viewport (screen space)
@@ -3067,15 +3068,15 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
                     Qt::AlignCenter, val);
             }
         }
+    }
 
-        painter->setPen(QPen(Qt::black, 1));
-        painter->drawLines(linesX.data(), linesX.size());
-        painter->drawLines(linesY.data(), linesY.size());
+    painter->setPen(QPen(Qt::black, 1));
+    painter->drawLines(linesX.data(), linesX.size());
+    painter->drawLines(linesY.data(), linesY.size());
 
-        //restore font size
-        f.setPointSize(original_font_size);
-        painter->setFont(f);
-
+    //restore font size
+    f.setPointSize(original_font_size);
+    painter->setFont(f);
 }
 
 void DefaultViewPort::drawViewOverview(QPainter *painter)
