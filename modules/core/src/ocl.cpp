@@ -5288,68 +5288,37 @@ struct Timer::Impl
 #endif
     }
 
-    float microSeconds()
+    uint64 durationNS() const
     {
 #ifdef HAVE_OPENCL
-        return (float)timer.getTimeMicro();
+        return (uint64)(timer.getTimeSec() * 1e9);
 #else
         return 0;
 #endif
     }
 
-    float milliSeconds()
-    {
-#ifdef HAVE_OPENCL
-        return (float)timer.getTimeMilli();
-#else
-        return 0;
-#endif
-    }
-
-    float seconds()
-    {
-#ifdef HAVE_OPENCL
-        return (float)timer.getTimeSec();
-#else
-        return 0;
-#endif
-    }
     TickMeter timer;
 };
 
-Timer::Timer(const Queue& q)
-{
-    p = new Impl(q);
-}
-
-Timer::~Timer()
-{
-    if(p)
-    {
-        delete p;
-        p = 0;
-    }
-}
+Timer::Timer(const Queue& q) : p(new Impl(q)) { }
+Timer::~Timer() { delete p; }
 
 void Timer::start()
 {
-    if(p)
-        p->start();
+    CV_Assert(p);
+    p->start();
 }
 
 void Timer::stop()
 {
-    if(p)
-        p->stop();
+    CV_Assert(p);
+    p->stop();
 }
 
-float Timer::microSeconds()
-{ return p ? p->microSeconds() : 0; }
+uint64 Timer::durationNS() const
+{
+    CV_Assert(p);
+    return p->durationNS();
+}
 
-float Timer::milliSeconds()
-{ return p ? p->milliSeconds() : 0; }
-
-float Timer::seconds()
-{ return p ? p->seconds() : 0; }
-
-}}
+}} // namespace
