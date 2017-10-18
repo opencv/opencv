@@ -376,11 +376,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
  * API that can write a given stream.
  */
 static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, int apiPreference, int fourcc,
-                                            double fps, CvSize frameSize, int is_color, int bitrate )
+                                            double fps, CvSize frameSize, int is_color, const std::vector<int>& params )
 {
     CV_UNUSED(frameSize);
     CV_UNUSED(is_color);
-    CV_UNUSED(bitrate);
+    CV_UNUSED(params);
 
     CvVideoWriter *result = 0;
 
@@ -396,7 +396,7 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
             if (apiPreference != CAP_ANY) break;
         #ifdef HAVE_FFMPEG
         case CAP_FFMPEG:
-            TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color, bitrate))
+            TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color, params))
             if (apiPreference != CAP_ANY) break;
         #endif
         #ifdef HAVE_VFW
@@ -433,9 +433,9 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
 }
 
 CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color, int bitrate )
+                                            double fps, CvSize frameSize, int is_color, const std::vector<int>& params )
 {
-    return cvCreateVideoWriterWithPreference(filename, CAP_ANY, fourcc, fps, frameSize, is_color, bitrate);
+    return cvCreateVideoWriterWithPreference(filename, CAP_ANY, fourcc, fps, frameSize, is_color, params);
 }
 
 CV_IMPL int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
@@ -769,15 +769,15 @@ double VideoCapture::get(int propId) const
 VideoWriter::VideoWriter()
 {}
 
-VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor, int bitrate)
+VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor, const std::vector<int>& params)
 {
-    open(filename, _fourcc, fps, frameSize, isColor, bitrate);
+    open(filename, _fourcc, fps, frameSize, isColor, params);
 }
 
 
-VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, int bitrate)
+VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, const std::vector<int>& params)
 {
-    open(filename, apiPreference, _fourcc, fps, frameSize, isColor, bitrate);
+    open(filename, apiPreference, _fourcc, fps, frameSize, isColor, params);
 }
 
 void VideoWriter::release()
@@ -791,12 +791,12 @@ VideoWriter::~VideoWriter()
     release();
 }
 
-bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor, int bitrate)
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor, const std::vector<int>& params)
 {
-    return open(filename, CAP_ANY, _fourcc, fps, frameSize, isColor, bitrate);
+    return open(filename, CAP_ANY, _fourcc, fps, frameSize, isColor, params);
 }
 
-bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, int bitrate)
+bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, const std::vector<int>& params)
 {
     CV_INSTRUMENT_REGION()
 
@@ -804,7 +804,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, d
     iwriter = IVideoWriter_create(filename, apiPreference, _fourcc, fps, frameSize, isColor);
     if (!iwriter.empty())
         return true;
-    writer.reset(cvCreateVideoWriterWithPreference(filename.c_str(), apiPreference, _fourcc, fps, frameSize, isColor, bitrate));
+    writer.reset(cvCreateVideoWriterWithPreference(filename.c_str(), apiPreference, _fourcc, fps, frameSize, isColor, params));
     return isOpened();
 }
 

@@ -1296,7 +1296,7 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
 struct CvVideoWriter_FFMPEG
 {
     bool open( const char* filename, int fourcc,
-               double fps, int width, int height, bool isColor, int bitrate );
+               double fps, int width, int height, bool isColor, const std::vector<int>& params );
     void close();
     bool writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin );
 
@@ -1864,7 +1864,7 @@ static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_
 
 /// Create a video writer object that uses FFMPEG
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
-                                 double fps, int width, int height, bool is_color, int bitrate )
+                                 double fps, int width, int height, bool is_color, const std::vector<int>& params )
 {
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     int err, codec_pix_fmt;
@@ -1993,6 +1993,16 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         // good for lossy formats, MPEG, etc.
         codec_pix_fmt = AV_PIX_FMT_YUV420P;
         break;
+    }
+
+    int bitrate = 0;
+    for( size_t i = 0; i < params.size(); i += 2 )
+    {
+        if( params[i] == cv::VIDEOWRITER_PROP_BITRATE )
+        {
+            bitrate = params[i+1];
+            bitrate = MAX(bitrate, 0);
+        }
     }
 
     double bitrate_used = bitrate <= 0 ? MIN(bitrate_scale*fps*width*height, (double)INT_MAX/2) : bitrate;
@@ -2174,13 +2184,13 @@ int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int*
 }
 
 CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,
-                                                  int width, int height, int isColor, int bitrate )
+                                                  int width, int height, int isColor, const std::vector<int>& params )
 {
     CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
     if (!writer)
         return 0;
     writer->init();
-    if( writer->open( filename, fourcc, fps, width, height, isColor != 0, bitrate ))
+    if( writer->open( filename, fourcc, fps, width, height, isColor != 0, params ))
         return writer;
     writer->close();
     free(writer);

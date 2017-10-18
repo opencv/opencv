@@ -274,13 +274,13 @@ public:
         return icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image->imageData,
              image->widthStep, image->width, image->height, image->nChannels, image->origin) !=0;
     }
-    virtual bool open( const char* filename, int fourcc, double fps, CvSize frameSize, bool isColor, int bitrate )
+    virtual bool open( const char* filename, int fourcc, double fps, CvSize frameSize, bool isColor, const std::vector<int>& params )
     {
         icvInitFFMPEG::Init();
         close();
         if( !icvCreateVideoWriter_FFMPEG_p )
             return false;
-        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename, fourcc, fps, frameSize.width, frameSize.height, isColor, bitrate );
+        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename, fourcc, fps, frameSize.width, frameSize.height, isColor, params );
         return ffmpegWriter != 0;
     }
 
@@ -298,11 +298,11 @@ protected:
 
 
 CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
-                                          double fps, CvSize frameSize, int isColor, int bitrate )
+                                          double fps, CvSize frameSize, int isColor, const std::vector<int>& params )
 {
     CvVideoWriter_FFMPEG_proxy* result = new CvVideoWriter_FFMPEG_proxy;
 
-    if( result->open( filename, fourcc, fps, frameSize, isColor != 0, bitrate ))
+    if( result->open( filename, fourcc, fps, frameSize, isColor != 0, params ))
         return result;
     delete result;
     return 0;
