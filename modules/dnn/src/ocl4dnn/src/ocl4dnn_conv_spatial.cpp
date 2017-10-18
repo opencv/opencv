@@ -890,7 +890,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
         return 1e5;
     }
 
-    float elapsedTime = timer.milliSeconds() / loop_cnt;
+    float elapsedTime = timer.durationNS() * 1e-6 / loop_cnt;
     #ifdef dbg
     double out_w = output_w_;
     double out_h = output_h_;
@@ -899,9 +899,9 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     double k_h = kernel_h_;
     double k_z = channels_;
     double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
-    std::cout << "\tEstimated Gflops:" << ((totalFlops/1000)/1000)/1000
+    std::cout << "\tEstimated Gflops:" << (totalFlops * 1e-9)
               << std::endl;
-    std::cout << "\tEstimated GFLOPS/S: " << (((totalFlops/1000)/1000)/1000)*(1000.0/elapsedTime)
+    std::cout << "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime))
               << std::endl;
     #if 0
     std::cout << "Estimated utilization: " <<
