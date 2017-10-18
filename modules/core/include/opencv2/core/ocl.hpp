@@ -742,13 +742,16 @@ public:
     ~Timer();
     void start();
     void stop();
-    float milliSeconds();
-    float microSeconds();
-    float seconds();
+
+    uint64 durationNS() const; //< duration in nanoseconds
 
 protected:
     struct Impl;
-    Impl* p;
+    Impl* const p;
+
+private:
+    Timer(const Timer&); // disabled
+    Timer& operator=(const Timer&); // disabled
 };
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
