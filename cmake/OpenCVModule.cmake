@@ -20,7 +20,6 @@
 # OPENCV_MODULE_${the_module}_PRIVATE_OPT_DEPS
 # OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD
 # OPENCV_MODULE_${the_module}_CUDA_OBJECTS - compiled CUDA objects list
-# OPENCV_MODULE_${the_module}_CHILDREN - list of submodules for compound modules (cmake >= 2.8.8)
 # OPENCV_MODULE_${the_module}_WRAPPERS - list of wrappers supporting this module
 # HAVE_${the_module} - for fast check of module availability
 
@@ -30,7 +29,6 @@
 # OPENCV_MODULE_TYPE - STATIC|SHARED - set to force override global settings for current module
 # OPENCV_MODULE_IS_PART_OF_WORLD - ON|OFF (default ON) - should the module be added to the opencv_world?
 # BUILD_${the_module}_INIT - ON|OFF (default ON) - initial value for BUILD_${the_module}
-# OPENCV_MODULE_CHILDREN - list of submodules
 
 # The verbose template for OpenCV module:
 #
@@ -208,9 +206,6 @@ macro(ocv_add_module _name)
       set(OPENCV_MODULES_DISABLED_USER ${OPENCV_MODULES_DISABLED_USER} "${the_module}" CACHE INTERNAL "List of OpenCV modules explicitly disabled by user")
     endif()
 
-    # add submodules if any
-    set(OPENCV_MODULE_${the_module}_CHILDREN "${OPENCV_MODULE_CHILDREN}" CACHE INTERNAL "List of ${the_module} submodules")
-
     # add reverse wrapper dependencies
     foreach (wrapper ${OPENCV_MODULE_${the_module}_WRAPPERS})
       ocv_add_dependencies(opencv_${wrapper} OPTIONAL ${the_module})
@@ -372,7 +367,7 @@ function(__ocv_sort_modules_by_deps __lst)
       if (NOT ";${result};" MATCHES ";${m};")
         # scan through module dependencies...
         set(unresolved_deps_found FALSE)
-        foreach (d ${OPENCV_MODULE_${m}_CHILDREN} ${OPENCV_MODULE_${m}_DEPS})
+        foreach (d ${OPENCV_MODULE_${m}_DEPS})
           # ... which are not already in the result and are enabled
           if ((NOT ";${result};" MATCHES ";${d};") AND HAVE_${d})
             set(unresolved_deps_found TRUE)
@@ -791,21 +786,6 @@ macro(_ocv_create_module)
     get_native_precompiled_header(${the_module} precomp.hpp)
   endif()
 
-  set(sub_objs "")
-  set(cuda_objs "")
-  if (OPENCV_MODULE_${the_module}_CHILDREN)
-    message(STATUS "Complex module ${the_module}")
-    foreach (m ${OPENCV_MODULE_${the_module}_CHILDREN})
-      if (BUILD_${m} AND TARGET ${m}_object)
-        list(APPEND sub_objs $<TARGET_OBJECTS:${m}_object>)
-        message(STATUS "    + ${m}")
-      else()
-        message(STATUS "    - ${m}")
-      endif()
-      list(APPEND cuda_objs ${OPENCV_MODULE_${m}_CUDA_OBJECTS})
-    endforeach()
-  endif()
-
   if(WIN32
       AND (BUILD_SHARED_LIBS AND NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC")
       AND NOT OPENCV_VS_VERSIONINFO_SKIP)
@@ -834,16 +814,9 @@ macro(_ocv_create_module)
   source_group("Src" FILES "${${the_module}_pch}")
   ocv_add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
-    ${${the_module}_pch} ${sub_objs}
+    ${${the_module}_pch}
     ${_VS_VERSION_FILE}
   )
-
-  if (cuda_objs)
-    target_link_libraries(${the_module} LINK_PRIVATE ${cuda_objs})
-  endif()
-
-  unset(sub_objs)
-  unset(cuda_objs)
 
   set_target_properties(${the_module} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
   set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
@@ -913,31 +886,17 @@ macro(_ocv_create_module)
       LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev NAMELINK_ONLY)
   endif()
 
-  foreach(m ${OPENCV_MODULE_${the_module}_CHILDREN} ${the_module})
-    # only "public" headers need to be installed
-    if(OPENCV_MODULE_${m}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${m};")
-      foreach(hdr ${OPENCV_MODULE_${m}_HEADERS})
-        string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
-        if(NOT hdr2 MATCHES "private" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
-          install(FILES ${hdr} OPTIONAL DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
-        endif()
-      endforeach()
-    endif()
-  endforeach()
+  # only "public" headers need to be installed
+  if(OPENCV_MODULE_${the_module}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${the_module};")
+    foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
+      string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
+      if(NOT hdr2 MATCHES "private" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
+        install(FILES ${hdr} OPTIONAL DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
+      endif()
+    endforeach()
+  endif()
 
   _ocv_add_precompiled_headers(${the_module})
-
-  if (TARGET ${the_module}_object)
-    # copy COMPILE_DEFINITIONS
-    get_target_property(main_defs ${the_module} COMPILE_DEFINITIONS)
-    if (main_defs)
-      set_target_properties(${the_module}_object PROPERTIES COMPILE_DEFINITIONS ${main_defs})
-    endif()
-    # use same PCH
-    if (TARGET pch_Generate_${the_module})
-      add_dependencies(${the_module}_object pch_Generate_${the_module} )
-    endif()
-  endif()
 endmacro()
 
 # opencv precompiled headers macro (can add pch to modules and tests)
