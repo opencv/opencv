@@ -5,13 +5,14 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-set(tbb_ver "tbb44_20160128oss")
-set(tbb_filename "4.4.3.tar.gz")
-set(tbb_subdir "tbb-4.4.3")
-set(tbb_md5 "8e7200af3ac16e91a0d1535c606a485c")
+set(tbb_filename "2018_U1.tar.gz")
+set(tbb_subdir "tbb-2018_U1")
+set(tbb_md5 "b2f2fa09adf44a22f4024049907f774b")
+
 set(tbb_version_file "version_string.ver")
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-parameter)
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${tbb_filename}
