@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2
+import threading
 
 # local modules
 from common import splitfn
@@ -54,37 +55,57 @@ if __name__ == '__main__':
     img_points = []
     h, w = 0, 0
     img_names_undistort = []
-    for fn in img_names:
-        print('processing %s... ' % fn, end='')
-        img = cv2.imread(fn, 0)
-        if img is None:
-            print("Failed to load", fn)
-            continue
 
-        h, w = img.shape[:2]
-        found, corners = cv2.findChessboardCorners(img, pattern_size)
-        if found:
-            term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 30, 0.1)
-            cv2.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
+    points_lock = threading.Lock()
+    imgs_lock = threading.Lock()
 
-        if debug_dir:
-            vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-            cv2.drawChessboardCorners(vis, pattern_size, corners, found)
-            path, name, ext = splitfn(fn)
-            outfile = debug_dir + name + '_chess.png'
-            cv2.imwrite(outfile, vis)
+    def calibration_worker():
+        while True:
+            imgs_lock.acquire()
+            if not len(img_names):
+                imgs_lock.release()
+                return
+            fn = img_names.pop()
+            imgs_lock.release()
+            print('processing %s... ' % fn)
+            img = cv2.imread(fn, 0)
+            if img is None:
+                print("Failed to load", fn)
+                continue
+
+            found, corners = cv2.findChessboardCorners(img, pattern_size)
             if found:
-                img_names_undistort.append(outfile)
+                term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 30, 0.1)
+                cv2.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
 
-        if not found:
-            print('chessboard not found')
-            continue
+            if debug_dir:
+                vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                cv2.drawChessboardCorners(vis, pattern_size, corners, found)
+                path, name, ext = splitfn(fn)
+                outfile = debug_dir + name + '_chess.png'
+                cv2.imwrite(outfile, vis)
+                if found:
+                    img_names_undistort.append(outfile)
 
-        img_points.append(corners.reshape(-1, 2))
-        obj_points.append(pattern_points)
-
-        print('ok')
-
+            if not found:
+                print('%s ... chessboard not found' % fn)
+                continue
+            global h,w
+            if h==0 and w==0:
+                h, w = img.shape[:2]
+            points_lock.acquire()
+            img_points.append(corners.reshape(-1, 2))
+            obj_points.append(pattern_points)
+            points_lock.release()
+            print('%s ... ok' % fn)
+    N_THREADS = 8
+    threads = []
+    for _ in range(N_THREADS):
+        t = threading.Thread(target=calibration_worker)
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
     # calculate camera distortion
     rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
