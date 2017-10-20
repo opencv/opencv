@@ -169,7 +169,7 @@ TEST(Torch_Importer, run_deconv)
 
 TEST(Torch_Importer, run_batch_norm)
 {
-    runTorchNet("net_batch_norm");
+    runTorchNet("net_batch_norm", DNN_TARGET_CPU, "", false, true);
 }
 
 TEST(Torch_Importer, net_prelu)
