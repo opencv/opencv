@@ -118,7 +118,7 @@ bool  BmpDecoder::readHeader()
 
                 if( m_bpp <= 8 )
                 {
-                    CV_Assert(clrused <= 256);
+                    CV_Assert(clrused >= 0 && clrused <= 256);
                     memset(m_palette, 0, sizeof(m_palette));
                     m_strm.getBytes(m_palette, (clrused == 0? 1<<m_bpp : clrused)*4 );
                     iscolor = IsColorPalette( m_palette, m_bpp );
