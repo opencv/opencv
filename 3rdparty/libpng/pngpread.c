@@ -1,8 +1,8 @@
 
 /* pngpread.c - read a png file in push mode
  *
- * Last changed in libpng 1.6.24 [August 4, 2016]
- * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+ * Last changed in libpng 1.6.32 [August 24, 2017]
+ * Copyright (c) 1998-2002,2004,2006-2017 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -189,6 +189,7 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
       png_crc_read(png_ptr, chunk_tag, 4);
       png_ptr->chunk_name = PNG_CHUNK_FROM_STRING(chunk_tag);
       png_check_chunk_name(png_ptr, png_ptr->chunk_name);
+      png_check_chunk_length(png_ptr, png_ptr->push_length);
       png_ptr->mode |= PNG_HAVE_CHUNK_HEADER;
    }
 
@@ -684,7 +685,12 @@ png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
             png_warning(png_ptr, "Truncated compressed data in IDAT");
 
          else
-            png_error(png_ptr, "Decompression error in IDAT");
+         {
+            if (ret == Z_DATA_ERROR)
+               png_benign_error(png_ptr, "IDAT: ADLER32 checksum mismatch");
+            else
+               png_error(png_ptr, "Decompression error in IDAT");
+         }
 
          /* Skip the check on unprocessed input */
          return;

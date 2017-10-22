@@ -1,7 +1,7 @@
 
 /* pngconf.h - machine configurable file for libpng
  *
- * libpng version 1.6.24, August 4, 2016
+ * libpng version 1.6.34, September 29, 2017
  *
  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
@@ -507,9 +507,9 @@
 #  error "libpng requires a signed 32-bit (or more) type"
 #endif
 
-#if UINT_MAX > 4294967294
+#if UINT_MAX > 4294967294U
    typedef unsigned int png_uint_32;
-#elif ULONG_MAX > 4294967294
+#elif ULONG_MAX > 4294967294U
    typedef unsigned long int png_uint_32;
 #else
 #  error "libpng requires an unsigned 32-bit (or more) type"
