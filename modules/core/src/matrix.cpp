@@ -1141,13 +1141,26 @@ Mat Mat::diag(const Mat& d)
 
 int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
 {
-    return data && (depth() == _depth || _depth <= 0) &&
-        (isContinuous() || !_requireContinuous) &&
-        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
-                        (cols == _elemChannels && channels() == 1))) ||
-        (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
-         (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
-    ? (int)(total()*channels()/_elemChannels) : -1;
+    DepthTrue = (depth() == _depth || _depth <= 0);
+    ContinousTrue = (isContinuous() || !_requireContinuous);
+    dimCheck2pre = (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
+        (cols == _elemChannels && channels() == 1));
+    dimCheck2 = (dims == 2 && dimCheck2pre);
+    dimCheck3 = (dims == 3 &&
+        channels() == 1 &&
+        size.p[2] == _elemChannels &&
+        (size.p[0] == 1 || size.p[1] == 1) &&
+        (isContinuous() || step.p[1] == step.p[2]*size.p[2]));
+    dimTrue = dimCheck2 || dimCheck3;
+    conditionTrue = data && DepthTrue && ContinousTrue && dimTrue;
+    if (conditionTrue)
+    {
+        return (int)(total()*channels()/_elemChannels);
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 template <typename T> static inline
