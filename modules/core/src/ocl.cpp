@@ -1387,7 +1387,7 @@ struct Context::Impl
             }
         }
         Program prog(src, buildflags, errmsg);
-        if(prog.ptr())
+        // Cache result of build failures too (to prevent unnecessary compiler invocations)
         {
             cv::AutoLock lock(program_cache_mutex);
             phash.insert(std::pair<std::string, Program>(key, prog));
