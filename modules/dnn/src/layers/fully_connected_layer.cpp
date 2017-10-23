@@ -242,9 +242,8 @@ public:
                     }
                 }
 
-                // TODO: check whether this is correct in the case of ChannelsPReLU.
                 if(activ)
-                    activ->forwardSlice(dptr, dptr, nw, 0, 0, 1);
+                    activ->forwardSlice(dptr, dptr, 1, 1, delta, delta + nw);
 
                 ofs += nw;
             }

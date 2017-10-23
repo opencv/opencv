@@ -177,7 +177,7 @@ public:
         : _boxWidth(0), _boxHeight(0)
     {
         setParamsFrom(params);
-        _minSize = getParameter<unsigned>(params, "min_size");
+        _minSize = getParameter<float>(params, "min_size");
         CV_Assert(_minSize > 0);
 
         _flip = getParameter<bool>(params, "flip");
