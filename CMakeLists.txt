@@ -793,7 +793,8 @@ endif()
 include(cmake/OpenCVGenHeaders.cmake)
 
 # Generate opencv.pc for pkg-config command
-if(NOT OPENCV_SKIP_PKGCONFIG_GENERATION)
+if(NOT OPENCV_SKIP_PKGCONFIG_GENERATION
+    AND NOT CMAKE_GENERATOR MATCHES "Xcode")
   include(cmake/OpenCVGenPkgconfig.cmake)
 endif()
 
