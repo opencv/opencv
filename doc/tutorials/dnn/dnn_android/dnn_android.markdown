@@ -6,13 +6,13 @@ using OpenCV deep learning module.
 
 Tutorial was written for the following versions of corresponding software:
 - Android Studio 2.3.3
-- OpenCV 3.3.0
+- OpenCV 3.3.0+
 
 ## Requirements
 
 - Download and install Android Studio from https://developer.android.com/studio.
 
-- Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases and unpack it. At this moment it's an `opencv-3.3.0-android-sdk.zip`.
+- Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases and unpack it (for example, `opencv-3.3.0-android-sdk.zip`).
 
 - Download MobileNet object detection model from https://github.com/chuanqi305/MobileNet-SSD. We need a configuration file `MobileNetSSD_deploy.prototxt` and weights `MobileNetSSD_deploy.caffemodel`.
 
