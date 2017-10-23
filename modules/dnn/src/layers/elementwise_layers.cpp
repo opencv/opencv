@@ -80,20 +80,19 @@ public:
 
         void operator()(const Range &r) const
         {
-            int nstripes = nstripes_, nsamples, outCn;
-            size_t planeSize;
+            int nstripes = nstripes_, nsamples = 1, outCn = 1;
+            size_t planeSize = 1;
 
-            if( src_->dims == 4 )
+            if (src_->dims > 1)
             {
                 nsamples = src_->size[0];
                 outCn = src_->size[1];
-                planeSize = (size_t)src_->size[2]*src_->size[3];
             }
             else
-            {
-                nsamples = outCn = 1;
-                planeSize = (size_t)src_->total();
-            }
+                outCn = src_->size[0];
+
+            for (int i = 2; i < src_->dims; ++i)
+                planeSize *= src_->size[i];
 
             size_t stripeSize = (planeSize + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
