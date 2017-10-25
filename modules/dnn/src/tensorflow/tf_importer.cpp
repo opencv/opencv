@@ -692,8 +692,11 @@ void TFImporter::populateNet(Net dstNet)
                                 int dst_i = (j * chMultiplier + i) * height* width + s;
                                 dst[dst_i] = src[src_i];
                             }
+                // TODO Use reshape instead
                 kshape[0] = inCh * chMultiplier;
                 kshape[1] = 1;
+                size_t* kstep = layerParams.blobs[0].step.p;
+                kstep[0] = kstep[1]; // fix steps too
             }
             layerParams.set("kernel_h", kshape[2]);
             layerParams.set("kernel_w", kshape[3]);
