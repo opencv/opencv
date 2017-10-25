@@ -184,7 +184,14 @@ public:
                     total = step[i];
                 }
                 else
+                {
                     step[i] = total;
+                    total *= sizes[i];
+                }
+            }
+            else
+            {
+                total *= sizes[i];
             }
             total *= sizes[i];
         }
