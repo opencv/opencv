@@ -1566,12 +1566,18 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     }
 #endif
 
-#if LIBAVCODEC_VERSION_INT>0x000409
+#if LIBAVCODEC_VERSION_INT>0x000500
     // some formats want stream headers to be seperate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
-        c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+        c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
+#elif LIBAVCODEC_VERSION_INT>0x000409
+// some formats want stream headers to be seperate
+if(oc->oformat->flags & AVFMT_GLOBALHEADER)
+{
+    c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+}
 #endif
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
@@ -1598,6 +1604,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #endif
     int ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
 
+#if LIBAVFORMAT_VERSION_MAJOR < 58    
     if (oc->oformat->flags & AVFMT_RAWPICTURE) {
         /* raw video case. The API will change slightly in the near
            futur for that */
@@ -1615,6 +1622,9 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 
         ret = av_write_frame(oc, &pkt);
     } else {
+#else
+    {
+#endif
         /* encode the image */
         AVPacket pkt;
         av_init_packet(&pkt);
@@ -1772,6 +1782,7 @@ void CvVideoWriter_FFMPEG::close()
     /* write the trailer, if any */
     if(ok && oc)
     {
+    #if LIBAVFORMAT_VERSION_MAJOR < 58        
         if( (oc->oformat->flags & AVFMT_RAWPICTURE) == 0 )
         {
             for(;;)
@@ -1781,6 +1792,17 @@ void CvVideoWriter_FFMPEG::close()
                     break;
             }
         }
+    #else
+        if( oc->oformat->flags == 0 )
+        {
+            for(;;)
+            {
+                int ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, NULL);
+                if( ret == OPENCV_NO_FRAMES_WRITTEN_CODE || ret < 0 )
+                    break;
+            }
+        }
+    #endif
         av_write_trailer(oc);
     }
 
@@ -2071,12 +2093,19 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     outbuf = NULL;
 
+#if LIBAVFORMAT_VERSION_MAJOR < 58
     if (!(oc->oformat->flags & AVFMT_RAWPICTURE)) {
         /* allocate output buffer */
         /* assume we will never get codec output with more than 4 bytes per pixel... */
         outbuf_size = width*height*4;
         outbuf = (uint8_t *) av_malloc(outbuf_size);
     }
+#else
+    /* allocate output buffer */
+    /* assume we will never get codec output with more than 4 bytes per pixel... */
+    outbuf_size = width*height*4;
+    outbuf = (uint8_t *) av_malloc(outbuf_size);
+#endif
 
     bool need_color_convert;
     need_color_convert = (c->pix_fmt != input_pix_fmt);
@@ -2372,7 +2401,13 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
         c->mb_decision = 2;
     }
 
-    #if LIBAVCODEC_VERSION_INT > 0x000409
+    #if LIBAVCODEC_VERSION_INT > 0x000500
+        // some formats want stream headers to be seperate
+        if (oc->oformat->flags & AVFMT_GLOBALHEADER)
+        {
+            c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        }
+    #elif LIBAVCODEC_VERSION_INT > 0x000409
         // some formats want stream headers to be seperate
         if (oc->oformat->flags & AVFMT_GLOBALHEADER)
         {
@@ -2477,7 +2512,7 @@ void OutputMediaStream_FFMPEG::write(unsigned char* data, int size, int keyFrame
         av_init_packet(&pkt);
 
         if (keyFrame)
-            pkt.flags |= PKT_FLAG_KEY;
+            pkt.flags |= AV_PKT_FLAG_KEY;
 
         pkt.stream_index = video_st_->index;
         pkt.data = data;
