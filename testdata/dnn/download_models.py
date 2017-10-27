@@ -147,6 +147,16 @@ models = [
         url='https://pjreddie.com/media/files/tiny-yolo-voc.weights',
         sha='24b4bd049fc4fa5f5e95f684a8967e65c625dff9',
         filename='tiny-yolo-voc.weights'),
+    Model(
+        name='DenseNet-121',  # https://github.com/shicai/DenseNet-Caffe
+        url='https://drive.google.com/uc?export=download&id=0B7ubpZO7HnlCcHlfNmJkU2VPelE',
+        sha='02b520138e8a73c94473b05879978018fefe947b',
+        filename='DenseNet_121.caffemodel'),
+    Model(
+        name='DenseNet-121',
+        url='https://raw.githubusercontent.com/shicai/DenseNet-Caffe/master/DenseNet_121.prototxt',
+        sha='4922099342af5993d9d09f63081c8a392f3c1cc6',
+        filename='DenseNet_121.prototxt'),
 ]
 
 # Note: models will be downloaded to current working directory
