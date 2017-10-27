@@ -377,6 +377,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *                 starting from the first one. The rest of dimensions won't
      *                 be padded.
      * @param value Value to be padded. Defaults to zero.
+     * @param type Padding type: 'constant', 'reflect'
      * @param input_dims Torch's parameter. If @p input_dims is not equal to the
      *                   actual input dimensionality then the `[0]th` dimension
      *                   is considered as a batch dimension and @p paddings are shifted
