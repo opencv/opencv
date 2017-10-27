@@ -634,10 +634,32 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
 
+    /** @brief Reads a network model stored in Caffe model in memory.
+      * @details This is an overloaded member function, provided for convenience.
+      * It differs from the above function only in what argument(s) it accepts.
+      * @param bufferProto buffer containing the content of the .prototxt file
+      * @param lenProto length of bufferProto
+      * @param bufferModel buffer containing the content of the .caffemodel file
+      * @param lenModel length of bufferModel
+      */
+    CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
+                                    const char *bufferModel = NULL, size_t lenModel = 0);
+
     /** @brief Reads a network model stored in Tensorflow model file.
       * @details This is shortcut consisting from createTensorflowImporter and Net::populateNet calls.
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
+
+    /** @brief Reads a network model stored in Tensorflow model in memory.
+      * @details This is an overloaded member function, provided for convenience.
+      * It differs from the above function only in what argument(s) it accepts.
+      * @param bufferModel buffer containing the content of the pb file
+      * @param lenModel length of bufferModel
+      * @param bufferConfig buffer containing the content of the pbtxt file
+      * @param lenConfig length of bufferConfig
+      */
+    CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
+                                         const char *bufferConfig = NULL, size_t lenConfig = 0);
 
     /** @brief Reads a network model stored in Torch model file.
       * @details This is shortcut consisting from createTorchImporter and Net::populateNet calls.
