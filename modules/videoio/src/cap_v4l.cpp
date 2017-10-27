@@ -1636,7 +1636,7 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
       case CV_CAP_PROP_MODE:
           return capture->palette;
       case CV_CAP_PROP_FORMAT:
-          return CV_MAKETYPE(CV_8U, capture->frame.nChannels);
+          return CV_MAKETYPE(IPL2CV_DEPTH(capture->frame.depth), capture->frame.nChannels);
       case CV_CAP_PROP_CONVERT_RGB:
           return capture->convert_rgb;
       }
