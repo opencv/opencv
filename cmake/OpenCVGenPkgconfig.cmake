@@ -57,15 +57,10 @@ ocv_get_all_libs(_modules _extra _3rdparty)
 #   when linking against static libraries, if libfoo depends on libbar, then
 #   libfoo must come first in the linker flags.
 
-# world and contrib_world are special targets whose library should come first,
+# world is a special target whose library should come first,
 # especially for static link.
 if(_modules MATCHES "opencv_world")
   set(_modules "opencv_world")
-endif()
-
-if(_modules MATCHES "opencv_contrib_world")
-  list(REMOVE_ITEM _modules "opencv_contrib_world")
-  list(INSERT _modules 0 "opencv_contrib_world")
 endif()
 
 set(HELPER_SCRIPT "")
