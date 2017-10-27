@@ -3640,6 +3640,8 @@ public:
 
                             v_int32x4 _idx = v_round(_alpha);
                             v_store((int*)idxBuf, _idx);
+                            _alpha -= v_cvt_f32(_idx);
+
                             v_float32x4 _explut = v_float32x4(expLUT[idxBuf[0]],
                                 expLUT[idxBuf[1]],
                                 expLUT[idxBuf[2]],
