@@ -1028,7 +1028,7 @@ struct Net::Impl
 
     void fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
-        if( !fusion || !(preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_CPU))
+        if( !fusion || preferableBackend != DNN_BACKEND_DEFAULT)
             return;
 
         CV_TRACE_FUNCTION();
@@ -1056,6 +1056,11 @@ struct Net::Impl
             // with the current layer if they follow it. Normally, the are fused with the convolution layer,
             // but some of them (like activation) may be fused with fully-connected, elemwise (+) and
             // some other layers.
+
+            // TODO: OpenCL target support more fusion styles.
+            if ( preferableTarget == DNN_TARGET_OPENCL && ld.layerInstance->type.compare("Convolution") )
+                continue;
+
             Ptr<Layer>& currLayer = ld.layerInstance;
             if( ld.consumers.size() == 1 && pinsToKeep.count(LayerPin(lid, 0)) == 0 )
             {
@@ -1100,16 +1105,27 @@ struct Net::Impl
                     }
                 }
 
-                Ptr<ActivationLayer> nextActivLayer;
-                if( nextData )
-                    nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
-
-                if( !nextActivLayer.empty() && pinsToKeep.count(lpNext) == 0
-                        && currLayer->setActivation(nextActivLayer) )
+                // For now,  OpenCL target only support fusion with activation of ReLU/ChannelsPReLU
+                if ( preferableTarget != DNN_TARGET_OPENCL ||
+                        (preferableTarget == DNN_TARGET_OPENCL &&
+                         nextData &&
+                        (!nextData->type.compare("ReLU") ||
+                         !nextData->type.compare("ChannelsPReLU"))) )
                 {
-                    printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
-                    nextData->skipFlags[DNN_BACKEND_DEFAULT] = true;
-                    ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+
+                    Ptr<ActivationLayer> nextActivLayer;
+
+                    if( nextData )
+                        nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
+
+                    if( !nextActivLayer.empty() && pinsToKeep.count(lpNext) == 0
+                            && currLayer->setActivation(nextActivLayer) )
+                    {
+                        LayerData *activData = nextData;
+                        printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
+                        activData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                    }
                 }
             }
 
