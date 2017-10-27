@@ -57,4 +57,23 @@ inline void normAssert(cv::InputArray ref, cv::InputArray test, const char *comm
     EXPECT_LE(normInf, lInf) << comment;
 }
 
+inline bool readFileInMemory(const std::string& filename, std::string& content)
+{
+    std::ios::openmode mode = std::ios::in | std::ios::binary;
+    std::ifstream ifs(filename.c_str(), mode);
+    if (!ifs.is_open())
+        return false;
+
+    content.clear();
+
+    ifs.seekg(0, std::ios::end);
+    content.reserve(ifs.tellg());
+    ifs.seekg(0, std::ios::beg);
+
+    content.assign((std::istreambuf_iterator<char>(ifs)),
+                   std::istreambuf_iterator<char>());
+
+    return true;
+}
+
 #endif

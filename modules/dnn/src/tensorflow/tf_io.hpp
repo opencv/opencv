@@ -25,6 +25,13 @@ void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
 void ReadTFNetParamsFromTextFileOrDie(const char* param_file,
                                       tensorflow::GraphDef* param);
 
+// Read parameters from a memory buffer into a GraphDef proto message.
+void ReadTFNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
+                                          tensorflow::GraphDef* param);
+
+void ReadTFNetParamsFromTextBufferOrDie(const char* data, size_t len,
+                                        tensorflow::GraphDef* param);
+
 }
 }
 

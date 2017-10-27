@@ -75,14 +75,32 @@ static std::string path(const std::string& file)
 }
 
 static void runTensorFlowNet(const std::string& prefix, bool hasText = false,
-                             double l1 = 1e-5, double lInf = 1e-4)
+                             double l1 = 1e-5, double lInf = 1e-4,
+                             bool memoryLoad = false)
 {
     std::string netPath = path(prefix + "_net.pb");
     std::string netConfig = (hasText ? path(prefix + "_net.pbtxt") : "");
     std::string inpPath = path(prefix + "_in.npy");
     std::string outPath = path(prefix + "_out.npy");
 
-    Net net = readNetFromTensorflow(netPath, netConfig);
+    Net net;
+    if (memoryLoad)
+    {
+        // Load files into a memory buffers
+        string dataModel;
+        ASSERT_TRUE(readFileInMemory(netPath, dataModel));
+
+        string dataConfig;
+        if (hasText)
+            ASSERT_TRUE(readFileInMemory(netConfig, dataConfig));
+
+        net = readNetFromTensorflow(dataModel.c_str(), dataModel.size(),
+                                    dataConfig.c_str(), dataConfig.size());
+    }
+    else
+        net = readNetFromTensorflow(netPath, netConfig);
+
+    ASSERT_FALSE(net.empty());
 
     cv::Mat input = blobFromNPY(inpPath);
     cv::Mat target = blobFromNPY(outPath);
@@ -214,6 +232,17 @@ TEST(Test_TensorFlow, split)
 TEST(Test_TensorFlow, resize_nearest_neighbor)
 {
     runTensorFlowNet("resize_nearest_neighbor");
+}
+
+TEST(Test_TensorFlow, memory_read)
+{
+    double l1 = 1e-5;
+    double lInf = 1e-4;
+    runTensorFlowNet("lstm", true, l1, lInf, true);
+
+    runTensorFlowNet("batch_norm", false, l1, lInf, true);
+    runTensorFlowNet("fused_batch_norm", false, l1, lInf, true);
+    runTensorFlowNet("batch_norm_text", true, l1, lInf, true);
 }
 
 }

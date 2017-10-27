@@ -94,6 +94,17 @@ public:
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
     }
 
+    CaffeImporter(const char *dataProto, size_t lenProto,
+                  const char *dataModel, size_t lenModel)
+    {
+        CV_TRACE_FUNCTION();
+
+        ReadNetParamsFromTextBufferOrDie(dataProto, lenProto, &net);
+
+        if (dataModel != NULL && lenModel > 0)
+            ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
+    }
+
     void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
     {
         const Reflection *refl = msg.GetReflection();
@@ -395,6 +406,15 @@ Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeMod
 Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
 {
     CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
+}
+
+Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
+                     const char *bufferModel, size_t lenModel)
+{
+    CaffeImporter caffeImporter(bufferProto, lenProto, bufferModel, lenModel);
     Net net;
     caffeImporter.populateNet(net);
     return net;
