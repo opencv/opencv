@@ -1,0 +1,54 @@
+name: "test_PReLU_FC"
+layer {
+  name: "input"
+  type: "Input"
+  top: "input"
+  input_param {
+    shape { dim: 2 dim: 3 dim: 4 dim: 5 }
+  }
+}
+
+layer {
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 10
+    weight_filler {
+      type: "xavier"
+      std: 0.1
+    }
+    bias_filler {
+      type: 'uniform'
+      min: -1
+      max: 1
+    }
+  }
+  name: "fc1"
+  bottom: "input"
+  top: "fc1"
+}
+layer {
+  name: "prelu_1"
+  type: "PReLU"
+  bottom: "fc1"
+  top: "fc1"
+  prelu_param {
+    filler {
+      type: "gaussian"
+      mean: 0.0
+      std: 0.01
+    }
+  }
+}
+layer {
+  name: "output"
+  type: "PReLU"
+  bottom: "fc1"
+  top: "output"
+  prelu_param {
+    filler {
+      type: "gaussian"
+      mean: 0.0
+      std: 0.01
+    }
+  }
+}
