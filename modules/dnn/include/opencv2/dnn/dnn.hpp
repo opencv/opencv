@@ -734,6 +734,21 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst);
 
+    /** @brief Performs non maximum suppression given boxes and corresponding scores.
+
+     * @param bboxes a set of bounding boxes to apply NMS.
+     * @param scores a set of corresponding confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
+     * @param top_k if `>0`, keep at most @p top_k picked indices.
+     */
+    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+                               const float score_threshold, const float nms_threshold,
+                               CV_OUT std::vector<int>& indices,
+                               const float eta = 1.f, const int top_k = 0);
+
 
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
