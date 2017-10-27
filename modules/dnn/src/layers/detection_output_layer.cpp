@@ -45,6 +45,7 @@
 #include <float.h>
 #include <string>
 #include <caffe.pb.h>
+#include "../nms.inl.hpp"
 
 namespace cv
 {
@@ -60,6 +61,8 @@ static inline bool SortScorePairDescend(const std::pair<float, T>& pair1,
 {
     return pair1.first > pair2.first;
 }
+
+static inline float caffe_box_overlap(const caffe::NormalizedBBox& a, const caffe::NormalizedBBox& b);
 
 } // namespace
 
@@ -308,7 +311,8 @@ public:
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
                 CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
-            ApplyNMSFast(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK, indices[c]);
+            NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
+                indices[c], util::caffe_box_overlap);
             numDetections += indices[c].size();
         }
         if (_keepTopK > -1 && numDetections > (size_t)_keepTopK)
@@ -619,75 +623,6 @@ public:
         }
     }
 
-    // Do non maximum suppression given bboxes and scores.
-    // Inspired by Piotr Dollar's NMS implementation in EdgeBox.
-    // https://goo.gl/jV3JYS
-    //    bboxes: a set of bounding boxes.
-    //    scores: a set of corresponding confidences.
-    //    score_threshold: a threshold used to filter detection results.
-    //    nms_threshold: a threshold used in non maximum suppression.
-    //    top_k: if not -1, keep at most top_k picked indices.
-    //    indices: the kept indices of bboxes after nms.
-    static void ApplyNMSFast(const std::vector<caffe::NormalizedBBox>& bboxes,
-          const std::vector<float>& scores, const float score_threshold,
-          const float nms_threshold, const float eta, const int top_k,
-          std::vector<int>& indices)
-    {
-        CV_Assert(bboxes.size() == scores.size());
-
-        // Get top_k scores (with corresponding indices).
-        std::vector<std::pair<float, int> > score_index_vec;
-        GetMaxScoreIndex(scores, score_threshold, top_k, score_index_vec);
-
-        // Do nms.
-        float adaptive_threshold = nms_threshold;
-        indices.clear();
-        while (score_index_vec.size() != 0) {
-            const int idx = score_index_vec.front().second;
-            bool keep = true;
-            for (int k = 0; k < (int)indices.size() && keep; ++k) {
-                const int kept_idx = indices[k];
-                float overlap = JaccardOverlap<true>(bboxes[idx], bboxes[kept_idx]);
-                keep = overlap <= adaptive_threshold;
-            }
-            if (keep)
-                indices.push_back(idx);
-            score_index_vec.erase(score_index_vec.begin());
-            if (keep && eta < 1 && adaptive_threshold > 0.5) {
-              adaptive_threshold *= eta;
-            }
-        }
-    }
-
-    // Get max scores with corresponding indices.
-    //    scores: a set of scores.
-    //    threshold: only consider scores higher than the threshold.
-    //    top_k: if -1, keep all; otherwise, keep at most top_k.
-    //    score_index_vec: store the sorted (score, index) pair.
-    static void GetMaxScoreIndex(const std::vector<float>& scores, const float threshold, const int top_k,
-                          std::vector<std::pair<float, int> >& score_index_vec)
-    {
-        CV_DbgAssert(score_index_vec.empty());
-        // Generate index score pairs.
-        for (size_t i = 0; i < scores.size(); ++i)
-        {
-            if (scores[i] > threshold)
-            {
-                score_index_vec.push_back(std::make_pair(scores[i], i));
-            }
-        }
-
-        // Sort the score pair according to the scores in descending order
-        std::stable_sort(score_index_vec.begin(), score_index_vec.end(),
-                         util::SortScorePairDescend<int>);
-
-        // Keep top_k scores if needed.
-        if (top_k > -1 && top_k < (int)score_index_vec.size())
-        {
-            score_index_vec.resize(top_k);
-        }
-    }
-
     // Compute the jaccard (intersection over union IoU) overlap between two bboxes.
     template<bool normalized>
     static float JaccardOverlap(const caffe::NormalizedBBox& bbox1,
@@ -732,6 +667,11 @@ public:
         }
     }
 };
+
+float util::caffe_box_overlap(const caffe::NormalizedBBox& a, const caffe::NormalizedBBox& b)
+{
+    return DetectionOutputLayerImpl::JaccardOverlap<true>(a, b);
+}
 
 const std::string DetectionOutputLayerImpl::_layerName = std::string("DetectionOutput");
 
