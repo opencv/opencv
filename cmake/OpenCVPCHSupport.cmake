@@ -16,6 +16,11 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
 
     IF(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.2.0")
         SET(PCHSupport_FOUND TRUE)
+        IF(${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
+            SET(PCHSupport_FOUND FALSE)
+        ELSE(${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
+            SET(PCHSupport_FOUND TRUE)
+        ENDIF()
     ENDIF()
 
     SET(_PCH_include_prefix "-I")
