@@ -136,7 +136,7 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
     Mat blob, image;
     if (nch == 3 || nch == 4)
     {
-        int sz[] = { (int)nimages, 3, image0.rows, image0.cols };
+        int sz[] = { (int)nimages, nch, image0.rows, image0.cols };
         blob = Mat(4, sz, CV_32F);
         Mat ch[4];
 
@@ -148,7 +148,7 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
             CV_Assert(image.dims == 2 && (nch == 3 || nch == 4));
             CV_Assert(image.size() == image0.size());
 
-            for( int j = 0; j < 3; j++ )
+            for( int j = 0; j < nch; j++ )
                 ch[j] = Mat(image.rows, image.cols, CV_32F, blob.ptr((int)i, j));
             if(swapRB)
                 std::swap(ch[0], ch[2]);
