@@ -234,4 +234,21 @@ TEST(Reproducibility_Colorization, Accuracy)
     normAssert(out, ref, "", l1, lInf);
 }
 
+TEST(Reproducibility_DenseNet_121, Accuracy)
+{
+    const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
+    const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
+
+    Mat inp = imread(_tf("dog416.png"));
+    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224));
+    Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
+
+    Net net = readNetFromCaffe(proto, model);
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    normAssert(out, ref);
+}
+
 }
