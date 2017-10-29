@@ -240,6 +240,7 @@ public:
 
         if (numKept == 0)
         {
+            outputs[0].release();
             return;
         }
         int outputShape[] = {1, 1, (int)numKept, 7};
