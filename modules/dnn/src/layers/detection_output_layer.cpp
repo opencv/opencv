@@ -240,6 +240,9 @@ public:
 
         if (numKept == 0)
         {
+            // Set confidences to zeros.
+            Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(2, 3)};
+            outputs[0](ranges).setTo(0);
             return;
         }
         int outputShape[] = {1, 1, (int)numKept, 7};
