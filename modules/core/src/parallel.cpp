@@ -52,7 +52,7 @@
     #undef abs
 #endif
 
-#if defined __linux__ || defined __APPLE__
+#if defined __linux__ || defined __APPLE__ || defined __GLIBC__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -672,7 +672,7 @@ int cv::getNumberOfCPUs(void)
 #elif defined __ANDROID__
     static int ncpus = getNumberOfCPUsImpl();
     return ncpus;
-#elif defined __linux__
+#elif defined __linux__ || defined __GLIBC__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;
