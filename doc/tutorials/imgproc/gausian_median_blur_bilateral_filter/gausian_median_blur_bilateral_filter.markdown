@@ -66,7 +66,7 @@ Applications](http://szeliski.org/Book/) by Richard Szeliski and to *LearningOpe
     @note
     Remember that a 2D Gaussian can be represented as :
     \f[G_{0}(x, y) = A  e^{ \dfrac{ -(x - \mu_{x})^{2} }{ 2\sigma^{2}_{x} } +  \dfrac{ -(y - \mu_{y})^{2} }{ 2\sigma^{2}_{y} } }\f]
-    where \f$\mu\f$ is the mean (the peak) and \f$\sigma\f$ represents the variance (per each of the
+    where \f$\mu\f$ is the mean (the peak) and \f$\sigma^{2}\f$ represents the variance (per each of the
     variables \f$x\f$ and \f$y\f$)
 
 ### Median Filter
