@@ -44,7 +44,7 @@ sudo apt-get install -y doxygen
 mkdir build
 cd build
 #cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DBUILD_EXAMPLES=ON -DENABLE_PRECOMPILED_HEADERS=OFF ..
-sudo cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+sudo cmake -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF -D BUILD_opencv_java=OFF -D CMAKE_INSTALL_PREFIX=/usr/local ..
 sudo make -j8
 sudo make install
 sudo ldconfig
