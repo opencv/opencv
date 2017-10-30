@@ -3613,11 +3613,12 @@ public:
                         if (u->tempUMat())
                         {
                             CV_Assert(u->mapcount == 0);
+                            flushCleanupQueue(); // workaround for CL_OUT_OF_RESOURCES problem (#9960)
                             void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                 (CL_MAP_READ | CL_MAP_WRITE),
                                 0, u->size, 0, 0, 0, &retval);
+                            CV_Assert(retval == CL_SUCCESS);
                             CV_Assert(u->origdata == data);
-                            CV_OclDbgAssert(retval == CL_SUCCESS);
                             if (u->originalUMatData)
                             {
                                 CV_Assert(u->originalUMatData->data == data);
