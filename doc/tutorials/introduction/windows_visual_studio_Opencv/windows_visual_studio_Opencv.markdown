@@ -145,6 +145,11 @@ opencv_video300d.lib
 opencv_videoio300d.lib
 opencv_videostab300d.lib
 @endcode
+
+Alternatively, your OpenCV download may have been built into one large .lib file. Check by looking in OpenCV\\build\\architecture\\vc14\\lib. In this case all you would add is, for the version 3.3.0:
+@code{.bash}
+opencv_world330.lib
+@endcode
 The letter *d* at the end just indicates that these are the libraries required for the debug. Now
 click ok to save and do the same with a new property inside the Release rule section. Make sure to
 omit the *d* letters from the library names and to save the property sheets with the save icon above
