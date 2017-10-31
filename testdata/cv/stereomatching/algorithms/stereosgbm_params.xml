@@ -27,11 +27,11 @@
 	case_teddy_2 teddy "48" "3" "2"
 	case_teddy_3 teddy "48" "3" "3"
 	case_tsukuba_0 tsukuba "16" "1" "0"
-	case_tsukuba_1 tsukuba "16" "1" "0"
+	case_tsukuba_1 tsukuba "16" "1" "1"
 	case_tsukuba_2 tsukuba "16" "1" "2"
 	case_tsukuba_3 tsukuba "16" "1" "3"
 	case_venus_0 venus "32" "3" "0"
-	case_venus_1 venus "32" "3" "0"
+	case_venus_1 venus "32" "3" "1"
 	case_venus_2 venus "32" "3" "2"
 	case_venus_3 venus "32" "3" "3"
 </params>
