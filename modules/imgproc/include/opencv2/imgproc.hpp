@@ -1257,7 +1257,7 @@ to edit those, as to tailor it for their own application.
 @param _sigma_scale Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
 @param _quant Bound to the quantization error on the gradient norm.
 @param _ang_th Gradient angle tolerance in degrees.
-@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advancent refinement
+@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement
 is chosen.
 @param _density_th Minimal density of aligned region points in the enclosing rectangle.
 @param _n_bins Number of bins in pseudo-ordering of gradient modulus.
@@ -1699,7 +1699,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
-The function finds edges in the input image image and marks them in the output map edges using the
+The function finds edges in the input image and marks them in the output map edges using the
 Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
@@ -2352,7 +2352,7 @@ borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
 @note
-Due to current implementaion limitations the size of an input and output images should be less than 32767x32767.
+Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
@@ -4212,7 +4212,7 @@ intersecting region and the red vertices are returned by the function.
 
 @param rect1 First rectangle
 @param rect2 Second rectangle
-@param intersectingRegion The output array of the verticies of the intersecting region. It returns
+@param intersectingRegion The output array of the vertices of the intersecting region. It returns
 at most 8 vertices. Stored as std::vector\<cv::Point2f\> or cv::Mat as Mx1 of type CV_32FC2.
 @returns One of cv::RectanglesIntersectTypes
  */
