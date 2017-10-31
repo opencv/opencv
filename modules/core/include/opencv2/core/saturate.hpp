@@ -58,8 +58,8 @@ namespace cv
 
 /** @brief Template function for accurate conversion from one primitive type to another.
 
- The functions saturate_cast resemble the standard C++ cast operations, such as static_cast\<T\>()
- and others. They perform an efficient and accurate conversion from one primitive type to another
+ The function saturate_cast resembles the standard C++ cast operations, such as static_cast\<T\>()
+ and others. It perform an efficient and accurate conversion from one primitive type to another
  (see the introduction chapter). saturate in the name means that when the input value v is out of the
  range of the target type, the result is not formed just by taking low bits of the input, but instead
  the value is clipped. For example:
