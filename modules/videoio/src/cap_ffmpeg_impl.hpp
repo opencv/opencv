@@ -1570,7 +1570,11 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     // some formats want stream headers to be seperate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
+#if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+        c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+#else
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+#endif
     }
 #endif
 
@@ -1598,7 +1602,12 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #endif
     int ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
 
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 0, 0)
+    if (video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO &&
+        video_st->codec->codec_id == AV_CODEC_ID_RAWVIDEO) {
+#else
     if (oc->oformat->flags & AVFMT_RAWPICTURE) {
+#endif
         /* raw video case. The API will change slightly in the near
            futur for that */
         AVPacket pkt;
@@ -1772,7 +1781,11 @@ void CvVideoWriter_FFMPEG::close()
     /* write the trailer, if any */
     if(ok && oc)
     {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 0, 0)
+        if( !(video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && video_st->codec->codec_id == AV_CODEC_ID_RAWVIDEO) )
+#else
         if( (oc->oformat->flags & AVFMT_RAWPICTURE) == 0 )
+#endif
         {
             for(;;)
             {
@@ -2071,7 +2084,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     outbuf = NULL;
 
+
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 0, 0)
+    if (!(video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && video_st->codec->codec_id == AV_CODEC_ID_RAWVIDEO)) {
+#else
     if (!(oc->oformat->flags & AVFMT_RAWPICTURE)) {
+#endif
         /* allocate output buffer */
         /* assume we will never get codec output with more than 4 bytes per pixel... */
         outbuf_size = width*height*4;
@@ -2376,7 +2394,11 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
         // some formats want stream headers to be seperate
         if (oc->oformat->flags & AVFMT_GLOBALHEADER)
         {
-            c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+            #if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+                c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+            #else
+                c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+            #endif
         }
     #endif
 
