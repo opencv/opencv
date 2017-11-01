@@ -883,6 +883,37 @@ void HoughLinesP(InputArray _image, OutputArray _lines,
 /****************************************************************************************\
 *                                     Circle Detection                                   *
 \****************************************************************************************/
+template<> class DataType<Point>
+{
+public:
+    typedef int        value_type;
+    typedef int         work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32S,
+           channels     = 2,
+           fmt          = (int)'i',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<Vec3f>
+{
+public:
+    typedef float      value_type;
+    typedef int         work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32F,
+           channels     = 3,
+           fmt          = (int)'i',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+
 struct markedCircle
 {
     markedCircle(Vec3f _c, int _idx, int _idxC) :
