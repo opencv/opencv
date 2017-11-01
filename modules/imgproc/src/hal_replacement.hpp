@@ -666,21 +666,39 @@ inline int hal_ni_threshold(const uchar* src_data, size_t src_step, uchar* dst_d
 
 /**
    @brief Calculate box filter
-   @param src_depth, dst_depth Depths of source and destination image
-   @param src_data, src_step Source image
-   @param dst_data, dst_step Destination image
+   @param src_depth,dst_depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param margins Margins for source image
    @param ksize Size of kernel
    @param anchor Anchor point
    @param normalize If true then result is normalized
    @param border_type Border type
-   @param margins Margins for source image
-   @param width, height Source image dimensions
    @param cn Number of channels
 */
-inline int hal_ni_boxFilter(int src_depth, int dst_depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, CvSize ksize, CvPoint anchor, bool normalize, int border_type, CvRect margins, int width, int height, int cn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_boxFilter(int src_depth, int dst_depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, CvRect margins, CvSize ksize, CvPoint anchor, bool normalize, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_boxFilter hal_ni_boxFilter
+//! @endcond
+
+/**
+   @brief Blurs an image using a Gaussian filter.
+   @param src_depth,dst_depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param margins Margins for source image
+   @param ksize Size of kernel
+   @param sigmaX,sigmaY Gaussian kernel standard deviation.
+   @param border_type Border type
+   @param cn Number of channels
+*/
+inline int hal_ni_gaussianBlur(int depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, CvRect margins, CvSize ksize, double sigmaX, double sigmaY, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_gaussianBlur hal_ni_gaussianBlur
 //! @endcond
 
 //! @}

@@ -1561,8 +1561,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     CvRect margin = cvRect(ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y);
 
-    CALL_HAL(boxFilter, cv_hal_boxFilter, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step,
-             (CvSize)(ksize), (CvPoint)(anchor), normalize, borderType, margin, src.cols, src.rows, cn);
+    CALL_HAL(boxFilter, cv_hal_boxFilter, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+             margin, (CvSize)(ksize), (CvPoint)(anchor), normalize, borderType);
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if ( tegra::useTegra() && tegra::box(src, dst, ksize, anchor, normalize, borderType) )
@@ -2113,6 +2113,22 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                (ksize.width == 5 && ksize.height == 5)) &&
                _src.rows() > ksize.height && _src.cols() > ksize.width);
     (void)useOpenCL;
+
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+
+    int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    if(!(borderType & BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+    borderType = (borderType&~BORDER_ISOLATED);
+
+    CvRect margin = cvRect(ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y);
+
+    CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, sdepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+             margin, (CvSize)(ksize), sigma1, sigma2, borderType);
 
     CV_IPP_RUN(!useOpenCL, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
 
