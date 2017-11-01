@@ -4584,6 +4584,8 @@ draws the contours, all the nested contours, all the nested-to-nested contours, 
 parameter is only taken into account when there is hierarchy available.
 @param offset Optional contour shift parameter. Shift all the drawn contours by the specified
 \f$\texttt{offset}=(dx,dy)\f$ .
+@note In case function is called to draw all contours with filled interior (negative contourIdx and thickness) it process nested contours as shapes with holes.
+In this mode function fill areas inner to odd amount of contours and avoid filling areas inner to even amount of contours using even-odd rule over all edges of all contours.
  */
 CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,
