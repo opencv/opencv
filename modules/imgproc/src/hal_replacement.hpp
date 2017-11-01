@@ -664,6 +664,25 @@ inline int hal_ni_threshold(const uchar* src_data, size_t src_step, uchar* dst_d
 #define cv_hal_threshold hal_ni_threshold
 //! @endcond
 
+/**
+   @brief Calculate box filter
+   @param src_depth, dst_depth Depths of source and destination image
+   @param src_data, src_step Source image
+   @param dst_data, dst_step Destination image
+   @param ksize Size of kernel
+   @param anchor Anchor point
+   @param normalize If true then result is normalized
+   @param border_type Border type
+   @param margins Margins for source image
+   @param width, height Source image dimensions
+   @param cn Number of channels
+*/
+inline int hal_ni_boxFilter(int src_depth, int dst_depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, CvSize ksize, CvPoint anchor, bool normalize, int border_type, CvRect margins, int width, int height, int cn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_boxFilter hal_ni_boxFilter
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__

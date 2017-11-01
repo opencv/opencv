@@ -1552,18 +1552,24 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         if( src.cols == 1 )
             ksize.width = 1;
     }
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if ( tegra::useTegra() && tegra::box(src, dst, ksize, anchor, normalize, borderType) )
-        return;
-#endif
-
-    CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     Point ofs;
     Size wsz(src.cols, src.rows);
     if(!(borderType&BORDER_ISOLATED))
         src.locateROI( wsz, ofs );
     borderType = (borderType&~BORDER_ISOLATED);
+
+    CvRect margin = cvRect(ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y);
+
+    CALL_HAL(boxFilter, cv_hal_boxFilter, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step,
+             (CvSize)(ksize), (CvPoint)(anchor), normalize, borderType, margin, src.cols, src.rows, cn);
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if ( tegra::useTegra() && tegra::box(src, dst, ksize, anchor, normalize, borderType) )
+        return;
+#endif
+
+    CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );
