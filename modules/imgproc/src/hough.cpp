@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -938,7 +939,7 @@ public:
         astep = acols + 2;
         nz.clear();
 #if CV_SIMD128
-        haveSIMD = checkHardwareSupport(CPU_SSE2) || checkHardwareSupport(CPU_NEON);
+        haveSIMD = hasSIMD128();
 #endif
     }
 
@@ -1604,11 +1605,11 @@ _skip: ;
         _circles.release();
 }
 
-void HoughCircles( InputArray _image, OutputArray _circles,
-                   int method, double dp, double minDist,
-                   double param1, double param2,
-                   int minRadius, int maxRadius,
-                   int maxCircles, double param3 )
+static void HoughCircles( InputArray _image, OutputArray _circles,
+                          int method, double dp, double minDist,
+                          double param1, double param2,
+                          int minRadius, int maxRadius,
+                          int maxCircles, double param3 )
 {
     CV_INSTRUMENT_REGION()
 
