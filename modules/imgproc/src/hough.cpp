@@ -1144,8 +1144,8 @@ public:
             for(; x < acols - 1; ++x, ++base )
             {
                 if( adata[base] > accThreshold &&
-                        adata[base] > adata[base-1] && adata[base] > adata[base+1] &&
-                        adata[base] > adata[base-acols] && adata[base] > adata[base+acols] )
+                    adata[base] > adata[base-1] && adata[base] >= adata[base+1] &&
+                    adata[base] > adata[base-acols] && adata[base] >= adata[base+acols] )
                     centersLocal.push_back(base);
             }
         }
