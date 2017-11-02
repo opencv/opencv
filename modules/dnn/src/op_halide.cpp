@@ -105,7 +105,7 @@ HalideBackendWrapper::HalideBackendWrapper(int targetId, const cv::Mat& m)
     {
         Halide::Target t = Halide::get_host_target();
         t.set_feature(Halide::Target::OpenCL);
-        buffer.copy_to_device(get_default_device_interface_for_target(t));
+        buffer.copy_to_device(t);
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown target identifier");
