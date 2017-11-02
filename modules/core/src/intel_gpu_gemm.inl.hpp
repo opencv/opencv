@@ -108,9 +108,8 @@ static bool intel_gpu_gemm(
                (float)beta,
                (int)(A.step / sizeof(float)),
                (int)(B.step / sizeof(float)),
-               (int)(D.step / sizeof(float)),
-               (int) 0,                          // 14 start_index
-               stride);
+               (int)(D.step / sizeof(float))
+        );
 
         ret = k.run(2, global, local, false, q);
     }
