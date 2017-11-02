@@ -318,8 +318,12 @@ public:
 
             if (type == "Input")
             {
-                addedBlobs.push_back(BlobNote(name, 0, netInputs.size()));
-                netInputs.push_back(name);
+                for (int outNum = 0; outNum < layer.top_size(); outNum++)
+                {
+                    addOutput(layer, 0, outNum);
+                    addedBlobs.back().outNum = netInputs.size();
+                    netInputs.push_back(addedBlobs.back().name);
+                }
                 continue;
             }
 
