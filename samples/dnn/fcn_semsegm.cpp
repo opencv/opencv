@@ -51,8 +51,7 @@ static void colorizeSegmentation(const Mat &score, const vector<cv::Vec3b> &colo
     const int chns = score.size[1];
 
     cv::Mat maxCl=cv::Mat::zeros(rows, cols, CV_8UC1);
-    cv::Mat maxVal=Mat(rows, cols, CV_32FC1, cv::Scalar(-FLT_MAX));
-   
+    cv::Mat maxVal(rows, cols, CV_32FC1, cv::Scalar(-FLT_MAX));
     for (int ch = 0; ch < chns; ch++)
     {
         for (int row = 0; row < rows; row++)
