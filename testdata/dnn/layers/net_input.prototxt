@@ -1,0 +1,64 @@
+name: "TestInput"
+
+input: "old_style_input_blue_green"
+input_dim: 1
+input_dim: 2
+input_dim: 10
+input_dim: 11
+
+input: "old_style_input_red"
+input_dim: 1
+input_dim: 1
+input_dim: 10
+input_dim: 11
+
+layer {
+  type: "Input"
+  name: "input_red"
+  top: "different_name_for_red"  # Top is different to 'name' field
+  input_param {
+    shape {
+      dim: 1
+      dim: 1
+      dim: 10
+      dim: 11
+    }
+  }
+}
+layer {
+  type: "Input"
+  name: "input_layer_blue_green"
+  top: "input_layer_blue_green"
+  input_param {
+    shape {
+      dim: 1
+      dim: 2
+      dim: 10
+      dim: 11
+    }
+  }
+}
+layer {
+  type: "Concat"
+  name: "first_image"
+  bottom: "old_style_input_blue_green"
+  bottom: "different_name_for_red"
+  top: "first_image_merged"
+}
+layer {
+  type: "Concat"
+  name: "second_image"
+  bottom: "input_layer_blue_green"
+  bottom: "old_style_input_red"
+  top: "second_image"
+}
+layer {
+  type: "Eltwise"
+  name: "output"
+  bottom: "first_image_merged"
+  bottom: "second_image"
+  top: "output"
+  eltwise_param {
+    operation: SUM
+  }
+}
