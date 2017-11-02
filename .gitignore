@@ -21,10 +21,5 @@ bin/
 *.log
 *.tlog
 build
-<<<<<<< HEAD
 .cache
 .vscode
-=======
-.vscode
-.cache
->>>>>>> f75f9776541b2cad36c988f433e9fa295f30a374
