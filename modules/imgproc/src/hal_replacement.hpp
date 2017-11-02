@@ -627,7 +627,7 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 
 //! @cond IGNORED
 #define CALL_HAL_RET(name, fun, retval, ...) \
-    int res = fun(__VA_ARGS__, &retval); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__, &retval)); \
     if (res == CV_HAL_ERROR_OK) \
         return retval; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
@@ -636,7 +636,7 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 
 
 #define CALL_HAL(name, fun, ...) \
-    int res = fun(__VA_ARGS__); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__)); \
     if (res == CV_HAL_ERROR_OK) \
         return; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \

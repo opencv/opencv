@@ -27,10 +27,14 @@ class TestGoodFeaturesToTrack_test(NewOpenCVTests):
                     self.assertTrue(cv2.norm(results[t][i][0] - results2[t][i][0]) == 0)
 
         for t0,t1 in zip(threshes, threshes[1:]):
-             r0 = results[t0]
-             r1 = results[t1]
-             # Increasing thresh should make result list shorter
-             self.assertTrue(len(r0) > len(r1))
-             # Increasing thresh should monly truncate result list
-             for i in range(len(r1)):
+            r0 = results[t0]
+            r1 = results[t1]
+            # Increasing thresh should make result list shorter
+            self.assertTrue(len(r0) > len(r1))
+            # Increasing thresh should monly truncate result list
+            for i in range(len(r1)):
                 self.assertTrue(cv2.norm(r1[i][0] - r0[i][0])==0)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

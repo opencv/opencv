@@ -21,4 +21,8 @@ bin/
 *.log
 *.tlog
 build
+<<<<<<< HEAD
 .vscode
+=======
+.cache
+>>>>>>> upstream/master

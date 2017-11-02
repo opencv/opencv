@@ -1,4 +1,4 @@
-#include "test_precomp.hpp"
+﻿#include "test_precomp.hpp"
 #include <cmath>
 
 using namespace cv;
@@ -15,7 +15,7 @@ const int ARITHM_MAX_SIZE_LOG = 10;
 
 struct BaseElemWiseOp
 {
-    enum { FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8, SUPPORT_MASK=16, SCALAR_OUTPUT=32 };
+    enum { FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8, SUPPORT_MASK=16, SCALAR_OUTPUT=32, SUPPORT_MULTICHANNELMASK=64 };
     BaseElemWiseOp(int _ninputs, int _flags, double _alpha, double _beta,
                    Scalar _gamma=Scalar::all(0), int _context=1)
     : ninputs(_ninputs), flags(_flags), alpha(_alpha), beta(_beta), gamma(_gamma), context(_context) {}
@@ -467,7 +467,7 @@ struct CmpSOp : public BaseElemWiseOp
 
 struct CopyOp : public BaseElemWiseOp
 {
-    CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {  }
+    CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK, 1, 1, Scalar::all(0)) {  }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
         src[0].copyTo(dst, mask);
@@ -489,7 +489,7 @@ struct CopyOp : public BaseElemWiseOp
 
 struct SetOp : public BaseElemWiseOp
 {
-    SetOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {}
+    SetOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>&, Mat& dst, const Mat& mask)
     {
         dst.setTo(gamma, mask);
@@ -1394,7 +1394,8 @@ TEST_P(ElemWiseTest, accuracy)
         op->getRandomSize(rng, size);
         int type = op->getRandomType(rng);
         int depth = CV_MAT_DEPTH(type);
-        bool haveMask = (op->flags & cvtest::BaseElemWiseOp::SUPPORT_MASK) != 0 && rng.uniform(0, 4) == 0;
+        bool haveMask = ((op->flags & cvtest::BaseElemWiseOp::SUPPORT_MASK) != 0
+                || (op->flags & cvtest::BaseElemWiseOp::SUPPORT_MULTICHANNELMASK) != 0) && rng.uniform(0, 4) == 0;
 
         double minval=0, maxval=0;
         op->getValueRange(depth, minval, maxval);
@@ -1403,8 +1404,12 @@ TEST_P(ElemWiseTest, accuracy)
         for( i = 0; i < ninputs; i++ )
             src[i] = cvtest::randomMat(rng, size, type, minval, maxval, true);
         Mat dst0, dst, mask;
-        if( haveMask )
-            mask = cvtest::randomMat(rng, size, CV_8U, 0, 2, true);
+        if( haveMask ) {
+            bool multiChannelMask = (op->flags & cvtest::BaseElemWiseOp::SUPPORT_MULTICHANNELMASK) != 0
+                    && rng.uniform(0, 2) == 0;
+            int masktype = CV_8UC(multiChannelMask ? CV_MAT_CN(type) : 1);
+            mask = cvtest::randomMat(rng, size, masktype, 0, 2, true);
+        }
 
         if( (haveMask || ninputs == 0) && !(op->flags & cvtest::BaseElemWiseOp::SCALAR_OUTPUT))
         {
@@ -1921,4 +1926,88 @@ TEST(Compare, empty)
 
     EXPECT_TRUE(dst1.empty());
     EXPECT_TRUE(dst2.empty());
+}
+
+TEST(Compare, regression_8999)
+{
+    Mat_<double> A(4,1); A << 1, 3, 2, 4;
+    Mat_<double> B(1,1); B << 2;
+    Mat C;
+    ASSERT_ANY_THROW({
+                        compare(A, B, C, CMP_LT);
+                     });
+}
+
+
+TEST(Core_minMaxIdx, regression_9207_1)
+{
+    const int rows = 4;
+    const int cols = 3;
+    uchar mask_[rows*cols] = {
+ 255, 255, 255,
+ 255,   0, 255,
+   0, 255, 255,
+   0,   0, 255
+};
+    uchar src_[rows*cols] = {
+   1,   1,   1,
+   1,   1,   1,
+   2,   1,   1,
+   2,   2,   1
+};
+    Mat mask(Size(cols, rows), CV_8UC1, mask_);
+    Mat src(Size(cols, rows), CV_8UC1, src_);
+    double minVal = -0.0, maxVal = -0.0;
+    int minIdx[2] = { -2, -2 }, maxIdx[2] = { -2, -2 };
+    minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx, mask);
+    EXPECT_EQ(0, minIdx[0]);
+    EXPECT_EQ(0, minIdx[1]);
+    EXPECT_EQ(0, maxIdx[0]);
+    EXPECT_EQ(0, maxIdx[1]);
+}
+
+
+TEST(Core_minMaxIdx, regression_9207_2)
+{
+    const int rows = 13;
+    const int cols = 15;
+    uchar mask_[rows*cols] = {
+   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+   0, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+ 255,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+ 255,   0,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0, 255, 255,
+ 255,   0,   0,   0,   0,   0,   0, 255, 255,   0,   0, 255, 255, 255,   0,
+ 255,   0,   0,   0,   0,   0,   0,   0,   0, 255, 255, 255,   0, 255,   0,
+ 255,   0,   0,   0,   0,   0,   0, 255, 255,   0,   0,   0, 255, 255,   0,
+ 255,   0,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0, 255,   0,
+ 255,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+   0, 255,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+   0, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0
+};
+    uchar src_[15*13] = {
+   5,   5,   5,   5,   5,   6,   5,   2,   0,   4,   6,   6,   4,   1,   0,
+   6,   5,   4,   4,   5,   6,   6,   5,   2,   0,   4,   6,   5,   2,   0,
+   3,   2,   1,   1,   2,   4,   6,   6,   4,   2,   3,   4,   4,   2,   0,
+   1,   0,   0,   0,   0,   1,   4,   5,   4,   4,   4,   4,   3,   2,   0,
+   0,   0,   0,   0,   0,   0,   2,   3,   4,   4,   4,   3,   2,   1,   0,
+   0,   0,   0,   0,   0,   0,   0,   2,   3,   4,   3,   2,   1,   0,   0,
+   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   0,   0,   0,   1,
+   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,
+   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   0,   0,   1,
+   0,   0,   0,   0,   0,   0,   0,   1,   2,   4,   3,   3,   1,   0,   1,
+   0,   0,   0,   0,   0,   0,   1,   4,   5,   6,   5,   4,   3,   2,   0,
+   1,   0,   0,   0,   0,   0,   3,   5,   5,   4,   3,   4,   4,   3,   0,
+   2,   0,   0,   0,   0,   2,   5,   6,   5,   2,   2,   5,   4,   3,   0
+};
+    Mat mask(Size(cols, rows), CV_8UC1, mask_);
+    Mat src(Size(cols, rows), CV_8UC1, src_);
+    double minVal = -0.0, maxVal = -0.0;
+    int minIdx[2] = { -2, -2 }, maxIdx[2] = { -2, -2 };
+    minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx, mask);
+    EXPECT_EQ(0, minIdx[0]);
+    EXPECT_EQ(14, minIdx[1]);
+    EXPECT_EQ(0, maxIdx[0]);
+    EXPECT_EQ(14, maxIdx[1]);
 }

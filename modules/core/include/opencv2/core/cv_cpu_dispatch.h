@@ -71,7 +71,11 @@
 #  define CV_AVX 1
 #endif
 #ifdef CV_CPU_COMPILE_FP16
-#  include <immintrin.h>
+#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM)
+#    include <arm_neon.h>
+#  else
+#    include <immintrin.h>
+#  endif
 #  define CV_FP16 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX2
@@ -82,7 +86,7 @@
 #  define CV_FMA3 1
 #endif
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#if defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
@@ -95,6 +99,14 @@
 #  include <arm_neon.h>
 #endif
 
+#if defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#  include <altivec.h>
+#  undef vector
+#  undef pixel
+#  undef bool
+#  define CV_VSX 1
+#endif
+
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
@@ -104,30 +116,42 @@ struct VZeroUpperGuard {
 #endif
     inline ~VZeroUpperGuard() { _mm256_zeroupper(); }
 };
-#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard;
+#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard; (void)__vzeroupper_guard;
+#endif
+
+#ifdef __CV_AVX_GUARD
+#define CV_AVX_GUARD __CV_AVX_GUARD
+#else
+#define CV_AVX_GUARD
 #endif
 
 #endif // __OPENCV_BUILD
 
 
 
-#if !defined __OPENCV_BUILD // Compatibility code
-
+#if !defined __OPENCV_BUILD /* Compatibility code */ \
+    && !defined __CUDACC__ /* do not include SSE/AVX/NEON headers for NVCC compiler */
 #if defined __SSE2__ || defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include <emmintrin.h>
 #  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
-#elif (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#elif defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
 #elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
 #  include <arm_neon.h>
 #  define CV_NEON 1
+#elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#  include <altivec.h>
+#  undef vector
+#  undef pixel
+#  undef bool
+#  define CV_VSX 1
 #endif
 
-#endif // !__OPENCV_BUILD (Compatibility code)
+#endif // !__OPENCV_BUILD && !__CUDACC (Compatibility code)
 
 
 
@@ -197,4 +221,8 @@ struct VZeroUpperGuard {
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_VSX
+#  define CV_VSX 0
 #endif

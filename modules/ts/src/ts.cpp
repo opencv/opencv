@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <time.h>
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined _WIN32
 #include <io.h>
 
 #include <windows.h>
@@ -67,7 +67,7 @@
 #endif
 
 // isDirectory
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 # include <windows.h>
 #else
 # include <dirent.h>
@@ -100,7 +100,7 @@ static std::string path_join(const std::string& prefix, const std::string& subpa
 
 // a few platform-dependent declarations
 
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined _WIN32
 #ifdef _MSC_VER
 static void SEHTranslator( unsigned int /*u*/, EXCEPTION_POINTERS* pExp )
 {
@@ -225,6 +225,7 @@ bool BaseTest::can_do_fast_forward()
 
 void BaseTest::safe_run( int start_from )
 {
+    CV_TRACE_FUNCTION();
     read_params( ts->get_file_storage() );
     ts->update_context( 0, -1, true );
     ts->update_context( this, -1, true );
@@ -235,7 +236,7 @@ void BaseTest::safe_run( int start_from )
     {
         try
         {
-        #if !defined WIN32 && !defined _WIN32
+        #if !defined _WIN32
         int _code = setjmp( tsJmpMark );
         if( !_code )
             run( start_from );
@@ -490,7 +491,7 @@ void TS::init( const string& modulename )
 
     if( ::testing::GTEST_FLAG(catch_exceptions) )
     {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 #ifdef _MSC_VER
         _set_se_translator( SEHTranslator );
 #endif
@@ -501,7 +502,7 @@ void TS::init( const string& modulename )
     }
     else
     {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 #ifdef _MSC_VER
         _set_se_translator( 0 );
 #endif
@@ -721,7 +722,7 @@ void parseCustomOptions(int argc, char **argv)
 
 static bool isDirectory(const std::string& path)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     WIN32_FILE_ATTRIBUTE_DATA all_attrs;
 #ifdef WINRT
     wchar_t wpath[MAX_PATH];

@@ -46,7 +46,7 @@
 
 #ifdef HAVE_IPL
 #  ifndef __IPL_H__
-#    if defined WIN32 || defined _WIN32
+#    if defined _WIN32
 #      include <ipl.h>
 #    else
 #      include <ipl/ipl.h>
@@ -65,7 +65,7 @@
 #include <float.h>
 #endif // SKIP_INCLUDES
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 #  define CV_CDECL __cdecl
 #  define CV_STDCALL __stdcall
 #else

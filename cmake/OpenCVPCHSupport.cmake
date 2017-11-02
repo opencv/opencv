@@ -323,10 +323,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
         get_target_property(_sources ${_targetName} SOURCES)
         foreach(src ${_sources})
-          if(NOT "${src}" MATCHES "\\.mm$"
-               AND NOT "${src}" MATCHES "\\.h$" AND NOT "${src}" MATCHES "\\.hpp$" # header files
-               AND NOT "${src}" MATCHES "^\$" # CMake generator expressions
-          )
+          if("${src}" MATCHES "\\.c(pp|xx)?$")
             get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
             get_source_file_property(oldProps2 "${src}" COMPILE_DEFINITIONS)
             if(NOT oldProps AND NOT oldProps2)

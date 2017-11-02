@@ -41,7 +41,7 @@
 //M*/
 
 #include "cap_ffmpeg_api.hpp"
-#if !(defined(WIN32) || defined(_WIN32) || defined(WINCE))
+#if !(defined(_WIN32) || defined(WINCE))
 # include <pthread.h>
 #endif
 #include <assert.h>
@@ -92,7 +92,7 @@ extern "C" {
 #define CV_WARN(message) fprintf(stderr, "warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
 #endif
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
     #include <windows.h>
     #if defined _MSC_VER && _MSC_VER < 1900
     struct timespec
@@ -172,7 +172,7 @@ extern "C" {
 #define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
 #define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
 
-#ifdef WIN32
+#ifdef _WIN32
 // http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
 
 static
@@ -289,7 +289,7 @@ static int get_number_of_cpus(void)
 {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(52, 111, 0)
     return 1;
-#elif defined WIN32 || defined _WIN32
+#elif defined _WIN32
     SYSTEM_INFO sysinfo;
     GetSystemInfo( &sysinfo );
 
@@ -584,7 +584,7 @@ private:
     ImplMutex& operator = (const ImplMutex& m);
 };
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 
 struct ImplMutex::Impl
 {
@@ -635,7 +635,7 @@ struct ImplMutex::Impl
     int refcount;
 };
 
-#elif defined __linux__ && !defined ANDROID
+#elif defined __linux__ && !defined __ANDROID__
 
 struct ImplMutex::Impl
 {
@@ -669,13 +669,13 @@ struct ImplMutex::Impl
 
 void ImplMutex::init()
 {
-    impl = (Impl*)malloc(sizeof(Impl));
+    impl = new Impl();
     impl->init();
 }
 void ImplMutex::destroy()
 {
     impl->destroy();
-    free(impl);
+    delete(impl);
     impl = NULL;
 }
 void ImplMutex::lock() { impl->lock(); }
@@ -716,12 +716,25 @@ static int LockCallBack(void **mutex, AVLockOp op)
 static ImplMutex _mutex;
 static bool _initialized = false;
 
+class AutoLock
+{
+public:
+    AutoLock(ImplMutex& m) : mutex(&m) { mutex->lock(); }
+    ~AutoLock() { mutex->unlock(); }
+protected:
+    ImplMutex* mutex;
+private:
+    AutoLock(const AutoLock&); // disabled
+    AutoLock& operator = (const AutoLock&); // disabled
+};
+
+
 class InternalFFMpegRegister
 {
 public:
     InternalFFMpegRegister()
     {
-        _mutex.lock();
+        AutoLock lock(_mutex);
         if (!_initialized)
         {
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
@@ -738,7 +751,6 @@ public:
 
             _initialized = true;
         }
-        _mutex.unlock();
     }
 
     ~InternalFFMpegRegister()
@@ -752,6 +764,7 @@ static InternalFFMpegRegister _init;
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
+    AutoLock lock(_mutex);
     unsigned i;
     bool valid = false;
 
@@ -768,7 +781,23 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+#ifndef NO_GETENV
+    char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    if(options == NULL)
+    {
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+    }
+    else
+    {
+#if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(52, 17, 100) : CALC_FFMPEG_VERSION(52, 7, 0))
+        av_dict_parse_string(&dict, options, ";", "|", 0);
+#else
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
+    }
+#else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
     int err = avformat_open_input(&ic, _filename, NULL, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
@@ -1374,7 +1403,7 @@ void CvVideoWriter_FFMPEG::init()
 static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bool alloc)
 {
     AVFrame * picture;
-    uint8_t * picture_buf;
+    uint8_t * picture_buf = 0;
     int size;
 
 #if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
@@ -1403,6 +1432,7 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
     }
     else {
     }
+
     return picture;
 }
 
@@ -1498,6 +1528,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
                 best= p;
             }
         }
+        if (best == NULL)
+            return NULL;
         c->time_base.den= best->num;
         c->time_base.num= best->den;
     }
@@ -1783,24 +1815,27 @@ void CvVideoWriter_FFMPEG::close()
 
     av_free(outbuf);
 
-    if (!(fmt->flags & AVFMT_NOFILE))
+    if (oc)
     {
-        /* close the output file */
+        if (!(fmt->flags & AVFMT_NOFILE))
+        {
+            /* close the output file */
 
 #if LIBAVCODEC_VERSION_INT < ((52<<16)+(123<<8)+0)
 #if LIBAVCODEC_VERSION_INT >= ((51<<16)+(49<<8)+0)
-        url_fclose(oc->pb);
+            url_fclose(oc->pb);
 #else
-        url_fclose(&oc->pb);
+            url_fclose(&oc->pb);
 #endif
 #else
-        avio_close(oc->pb);
+            avio_close(oc->pb);
 #endif
 
+        }
+
+        /* free the stream */
+        avformat_free_context(oc);
     }
-
-    /* free the stream */
-    avformat_free_context(oc);
 
     av_freep(&aligned_input);
 
@@ -2101,6 +2136,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG( const char* filename )
 {
     CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
+    if (!capture)
+        return 0;
     capture->init();
     if( capture->open( filename ))
         return capture;
@@ -2145,6 +2182,8 @@ CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int four
                                                   int width, int height, int isColor )
 {
     CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
+    if (!writer)
+        return 0;
     writer->init();
     if( writer->open( filename, fourcc, fps, width, height, isColor != 0 ))
         return writer;
@@ -2309,6 +2348,8 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
                 }
             }
 
+            if (best == NULL)
+                return NULL;
             c->time_base.den= best->num;
             c->time_base.num= best->den;
         }
@@ -2450,6 +2491,8 @@ void OutputMediaStream_FFMPEG::write(unsigned char* data, int size, int keyFrame
 struct OutputMediaStream_FFMPEG* create_OutputMediaStream_FFMPEG(const char* fileName, int width, int height, double fps)
 {
     OutputMediaStream_FFMPEG* stream = (OutputMediaStream_FFMPEG*) malloc(sizeof(OutputMediaStream_FFMPEG));
+    if (!stream)
+        return 0;
 
     if (stream->open(fileName, width, height, fps))
         return stream;
@@ -2717,6 +2760,8 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 InputMediaStream_FFMPEG* create_InputMediaStream_FFMPEG(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
 {
     InputMediaStream_FFMPEG* stream = (InputMediaStream_FFMPEG*) malloc(sizeof(InputMediaStream_FFMPEG));
+    if (!stream)
+        return 0;
 
     if (stream && stream->open(fileName, codec, chroma_format, width, height))
         return stream;

@@ -346,7 +346,7 @@ _exit_:
 
     if( code < 0 )
     {
-#if 0 //defined _DEBUG && defined WIN32
+#if 0 //defined _DEBUG && defined _WIN32
         IplImage* dst = cvCreateImage( img_size, 8, 3 );
         cvNamedWindow( "test", 1 );
         cvCmpS( img, 0, img, CV_CMP_GT );
@@ -485,7 +485,7 @@ _exit_:
 
     if( code < 0 )
     {
-#if 0// defined _DEBUG && defined WIN32
+#if 0// defined _DEBUG && defined _WIN32
         IplImage* dst = cvCreateImage( img_size, 8, 3 );
         cvNamedWindow( "test", 1 );
         cvCmpS( img, 0, img, CV_CMP_GT );

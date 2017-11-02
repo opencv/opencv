@@ -398,8 +398,9 @@ CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetector(
 
 LineSegmentDetectorImpl::LineSegmentDetectorImpl(int _refine, double _scale, double _sigma_scale, double _quant,
         double _ang_th, double _log_eps, double _density_th, int _n_bins)
-        :SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),
-        ANG_TH(_ang_th), LOG_EPS(_log_eps), DENSITY_TH(_density_th), N_BINS(_n_bins)
+        : img_width(0), img_height(0), LOG_NT(0), w_needed(false), p_needed(false), n_needed(false),
+          SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),
+          ANG_TH(_ang_th), LOG_EPS(_log_eps), DENSITY_TH(_density_th), N_BINS(_n_bins)
 {
     CV_Assert(_scale > 0 && _sigma_scale > 0 && _quant >= 0 &&
               _ang_th > 0 && _ang_th < 180 && _density_th >= 0 && _density_th < 1 &&
@@ -999,6 +1000,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(leftmost != NULL);
     leftmost->taken = true;
 
     // Find rightmost untaken point;
@@ -1017,6 +1019,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(rightmost != NULL);
     rightmost->taken = true;
 
     // Find last untaken point;
@@ -1035,6 +1038,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(tailp != NULL);
     tailp->taken = true;
 
     double flstep = (min_y->p.y != leftmost->p.y) ?

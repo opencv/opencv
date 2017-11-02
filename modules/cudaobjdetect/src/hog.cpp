@@ -251,7 +251,7 @@ namespace
 
         // Navneet Dalal and Bill Triggs. Histograms of oriented gradients for
         // human detection. In International Conference on Computer Vision and
-        // Pattern Recognition, volume 2, pages 886–893, June 2005
+        // Pattern Recognition, volume 2, pages 886-893, June 2005
         // http://lear.inrialpes.fr/people/triggs/pubs/Dalal-cvpr05.pdf (28.07.2015) [Figure 5]
         CV_Assert(block_stride == (block_size / 2));
 

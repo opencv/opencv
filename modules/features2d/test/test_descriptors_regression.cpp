@@ -43,6 +43,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace testing;
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -56,6 +57,7 @@ static void writeMatInBin( const Mat& mat, const string& filename )
     FILE* f = fopen( filename.c_str(), "wb");
     if( f )
     {
+        CV_Assert(4 == sizeof(int));
         int type = mat.type();
         fwrite( (void*)&mat.rows, sizeof(int), 1, f );
         fwrite( (void*)&mat.cols, sizeof(int), 1, f );
@@ -72,6 +74,7 @@ static Mat readMatFromBin( const string& filename )
     FILE* f = fopen( filename.c_str(), "rb" );
     if( f )
     {
+        CV_Assert(4 == sizeof(int));
         int rows, cols, type, dataSize;
         size_t elements_read1 = fread( (void*)&rows, sizeof(int), 1, f );
         size_t elements_read2 = fread( (void*)&cols, sizeof(int), 1, f );
@@ -123,24 +126,37 @@ protected:
         CV_Assert( DataType<ValueType>::type == validDescriptors.type() );
 
         int dimension = validDescriptors.cols;
-        DistanceType curMaxDist = std::numeric_limits<DistanceType>::min();
+        DistanceType curMaxDist = 0;
+        size_t exact_count = 0, failed_count = 0;
         for( int y = 0; y < validDescriptors.rows; y++ )
         {
             DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
+            if (dist == 0)
+                exact_count++;
             if( dist > curMaxDist )
+            {
+                if (dist > maxDist)
+                    failed_count++;
                 curMaxDist = dist;
+            }
+#if 0
+            if (dist > 0)
+            {
+                std::cout << "i=" << y << " fail_count=" << failed_count << " dist=" << dist << std::endl;
+                std::cout << "valid: " << validDescriptors.row(y) << std::endl;
+                std::cout << " calc: " << calcDescriptors.row(y) << std::endl;
+            }
+#endif
         }
 
+        float exact_percents = (100 * (float)exact_count / validDescriptors.rows);
+        float failed_percents = (100 * (float)failed_count / validDescriptors.rows);
         stringstream ss;
-        ss << "Max distance between valid and computed descriptors " << curMaxDist;
-        if( curMaxDist <= maxDist )
-            ss << "." << endl;
-        else
-        {
-            ss << ">" << maxDist  << " - bad accuracy!"<< endl;
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-        }
-        ts->printf(cvtest::TS::LOG,  ss.str().c_str() );
+        ss << "Exact count (dist == 0): " << exact_count << " (" << (int)exact_percents << "%)" << std::endl
+                << "Failed count (dist > " << maxDist << "): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
+                << "Max distance between valid and computed descriptors (" << validDescriptors.size() << "): " << curMaxDist;
+        EXPECT_LE(failed_percents, 20.0f);
+        std::cout << ss.str() << std::endl;
     }
 
     void emptyDataTest()
@@ -202,22 +218,57 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
             return;
         }
+        const std::string keypoints_filename = string(ts->get_data_path()) +
+                (detector.empty()
+                        ? (FEATURES2D_DIR + "/" + std::string("keypoints.xml.gz"))
+                        : (DESCRIPTOR_DIR + "/" + name + "_keypoints.xml.gz"));
+        FileStorage fs(keypoints_filename, FileStorage::READ);
+
         vector<KeyPoint> keypoints;
-        FileStorage fs( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::READ );
-        if(!detector.empty()) {
-            detector->detect(img, keypoints);
-        } else {
-            read( fs.getFirstTopLevelNode(), keypoints );
+        EXPECT_TRUE(fs.isOpened()) << "Keypoint testdata is missing. Re-computing and re-writing keypoints testdata...";
+        if (!fs.isOpened())
+        {
+            fs.open(keypoints_filename, FileStorage::WRITE);
+            ASSERT_TRUE(fs.isOpened()) << "File for writting keypoints can not be opened.";
+            if (detector.empty())
+            {
+                Ptr<ORB> fd = ORB::create();
+                fd->detect(img, keypoints);
+            }
+            else
+            {
+                detector->detect(img, keypoints);
+            }
+            write(fs, "keypoints", keypoints);
+            fs.release();
         }
-        if(!keypoints.empty())
+        else
+        {
+            read(fs.getFirstTopLevelNode(), keypoints);
+            fs.release();
+        }
+
+        if(!detector.empty())
+        {
+            vector<KeyPoint> calcKeypoints;
+            detector->detect(img, calcKeypoints);
+            // TODO validate received keypoints
+            int diff = abs((int)calcKeypoints.size() - (int)keypoints.size());
+            if (diff > 0)
+            {
+                std::cout << "Keypoints difference: " << diff << std::endl;
+                EXPECT_LE(diff, (int)(keypoints.size() * 0.03f));
+            }
+        }
+        ASSERT_FALSE(keypoints.empty());
         {
             Mat calcDescriptors;
             double t = (double)getTickCount();
-            dextractor->compute( img, keypoints, calcDescriptors );
+            dextractor->compute(img, keypoints, calcDescriptors);
             t = getTickCount() - t;
             ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)getTickFrequency()*1000.)/calcDescriptors.rows);
 
-            if( calcDescriptors.rows != (int)keypoints.size() )
+            if (calcDescriptors.rows != (int)keypoints.size())
             {
                 ts->printf( cvtest::TS::LOG, "Count of computed descriptors and keypoints count must be equal.\n" );
                 ts->printf( cvtest::TS::LOG, "Count of keypoints is            %d.\n", (int)keypoints.size() );
@@ -226,7 +277,7 @@ protected:
                 return;
             }
 
-            if( calcDescriptors.cols != dextractor->descriptorSize() || calcDescriptors.type() != dextractor->descriptorType() )
+            if (calcDescriptors.cols != dextractor->descriptorSize() || calcDescriptors.type() != dextractor->descriptorType())
             {
                 ts->printf( cvtest::TS::LOG, "Incorrect descriptor size or descriptor type.\n" );
                 ts->printf( cvtest::TS::LOG, "Expected size is   %d.\n", dextractor->descriptorSize() );
@@ -239,33 +290,14 @@ protected:
 
             // TODO read and write descriptor extractor parameters and check them
             Mat validDescriptors = readDescriptors();
-            if( !validDescriptors.empty() )
-                compareDescriptors( validDescriptors, calcDescriptors );
-            else
+            EXPECT_FALSE(validDescriptors.empty()) << "Descriptors testdata is missing. Re-writing descriptors testdata...";
+            if (!validDescriptors.empty())
             {
-                if( !writeDescriptors( calcDescriptors ) )
-                {
-                    ts->printf( cvtest::TS::LOG, "Descriptors can not be written.\n" );
-                    ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-                    return;
-                }
-            }
-        }
-        if(!fs.isOpened())
-        {
-            ts->printf( cvtest::TS::LOG, "Compute and write keypoints.\n" );
-            fs.open( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::WRITE );
-            if( fs.isOpened() )
-            {
-                Ptr<ORB> fd = ORB::create();
-                fd->detect(img, keypoints);
-                write( fs, "keypoints", keypoints );
+                compareDescriptors(validDescriptors, calcDescriptors);
             }
             else
             {
-                ts->printf(cvtest::TS::LOG, "File for writting keypoints can not be opened.\n");
-                ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-                return;
+                ASSERT_TRUE(writeDescriptors(calcDescriptors)) << "Descriptors can not be written.";
             }
         }
     }
@@ -344,9 +376,17 @@ TEST( Features2d_DescriptorExtractor_KAZE, regression )
 TEST( Features2d_DescriptorExtractor_AKAZE, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",
-                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
+                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)(486*0.05f),
                                               AKAZE::create(),
                                               Hamming(), AKAZE::create());
+    test.safe_run();
+}
+
+TEST( Features2d_DescriptorExtractor_AKAZE_DESCRIPTOR_KAZE, regression )
+{
+    CV_DescriptorExtractorTest< L2<float> > test( "descriptor-akaze-with-kaze-desc", 0.03f,
+                                              AKAZE::create(AKAZE::DESCRIPTOR_KAZE),
+                                              L2<float>(), AKAZE::create(AKAZE::DESCRIPTOR_KAZE));
     test.safe_run();
 }
 
@@ -378,68 +418,82 @@ TEST( Features2d_DescriptorExtractor, batch )
     }
 }
 
-TEST( Features2d_Feature2d, no_crash )
+class DescriptorImage : public TestWithParam<std::string>
 {
-    const String& pattern = string(cvtest::TS::ptr()->get_data_path() + "shared/*.png");
+protected:
+    virtual void SetUp() {
+        pattern = GetParam();
+    }
+
+    std::string pattern;
+};
+
+TEST_P(DescriptorImage, no_crash)
+{
     vector<String> fnames;
-    glob(pattern, fnames, false);
+    glob(cvtest::TS::ptr()->get_data_path() + pattern, fnames, false);
     sort(fnames.begin(), fnames.end());
 
-    Ptr<AKAZE> akaze = AKAZE::create();
+    Ptr<AKAZE> akaze_mldb = AKAZE::create(AKAZE::DESCRIPTOR_MLDB);
+    Ptr<AKAZE> akaze_mldb_upright = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT);
+    Ptr<AKAZE> akaze_mldb_256 = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 256);
+    Ptr<AKAZE> akaze_mldb_upright_256 = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT, 256);
+    Ptr<AKAZE> akaze_kaze = AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
+    Ptr<AKAZE> akaze_kaze_upright = AKAZE::create(AKAZE::DESCRIPTOR_KAZE_UPRIGHT);
     Ptr<ORB> orb = ORB::create();
     Ptr<KAZE> kaze = KAZE::create();
     Ptr<BRISK> brisk = BRISK::create();
-    size_t i, n = fnames.size();
+    size_t n = fnames.size();
     vector<KeyPoint> keypoints;
     Mat descriptors;
     orb->setMaxFeatures(5000);
 
-    for( i = 0; i < n; i++ )
+    for(size_t i = 0; i < n; i++ )
     {
         printf("%d. image: %s:\n", (int)i, fnames[i].c_str());
         if( strstr(fnames[i].c_str(), "MP.png") != 0 )
+        {
+            printf("\tskip\n");
             continue;
+        }
         bool checkCount = strstr(fnames[i].c_str(), "templ.png") == 0;
 
         Mat img = imread(fnames[i], -1);
-        printf("\tAKAZE ... "); fflush(stdout);
-        akaze->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
-        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
 
-        printf("\tKAZE ... "); fflush(stdout);
-        kaze->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
-        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
+        printf("\t%dx%d\n", img.cols, img.rows);
 
-        printf("\tORB ... "); fflush(stdout);
-        orb->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
+#define TEST_DETECTOR(name, descriptor) \
+        keypoints.clear(); descriptors.release(); \
+        printf("\t" name "\n"); fflush(stdout); \
+        descriptor->detectAndCompute(img, noArray(), keypoints, descriptors); \
+        printf("\t\t\t(%d keypoints, descriptor size = %d)\n", (int)keypoints.size(), descriptors.cols); fflush(stdout); \
+        if (checkCount) \
+        { \
+            EXPECT_GT((int)keypoints.size(), 0); \
+        } \
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
 
-        printf("\tBRISK ... "); fflush(stdout);
-        brisk->detectAndCompute(img, noArray(), keypoints, descriptors);
-        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
-        if( checkCount )
-        {
-            EXPECT_GT((int)keypoints.size(), 0);
-        }
-        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
-        printf("ok\n");
+        TEST_DETECTOR("AKAZE:MLDB", akaze_mldb);
+        TEST_DETECTOR("AKAZE:MLDB_UPRIGHT", akaze_mldb_upright);
+        TEST_DETECTOR("AKAZE:MLDB_256", akaze_mldb_256);
+        TEST_DETECTOR("AKAZE:MLDB_UPRIGHT_256", akaze_mldb_upright_256);
+        TEST_DETECTOR("AKAZE:KAZE", akaze_kaze);
+        TEST_DETECTOR("AKAZE:KAZE_UPRIGHT", akaze_kaze_upright);
+        TEST_DETECTOR("KAZE", kaze);
+        TEST_DETECTOR("ORB", orb);
+        TEST_DETECTOR("BRISK", brisk);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(Features2d, DescriptorImage,
+        testing::Values(
+            "shared/lena.png",
+            "shared/box*.png",
+            "shared/fruits*.png",
+            "shared/airplane.png",
+            "shared/graffiti.png",
+            "shared/1_itseez-0001*.png",
+            "shared/pic*.png",
+            "shared/templ.png"
+        )
+);

@@ -2547,6 +2547,7 @@ cvSetAdd( CvSet* set, CvSetElem* element, CvSetElem** inserted_element )
 CV_IMPL void
 cvSetRemove( CvSet* set, int index )
 {
+    CV_Assert(set != NULL);
     CvSetElem* elem = cvGetSetElem( set, index );
     if( elem )
         cvSetRemoveByPtr( set, elem );
@@ -2881,7 +2882,7 @@ cvGraphRemoveEdgeByPtr( CvGraph* graph, CvGraphVtx* start_vtx, CvGraphVtx* end_v
             break;
     }
 
-    assert( edge != 0 );
+    CV_Assert( edge != 0 );
 
     next_edge = edge->next[ofs];
     if( prev_edge )

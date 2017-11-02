@@ -654,6 +654,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             prevDelta = delta;
         }
 
+        CV_Assert(status != NULL);
         if( status[ptidx] && err && level == 0 && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) == 0 )
         {
             Point2f nextPoint = nextPts[ptidx] - halfWin;
@@ -1451,7 +1452,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
     }
     else
     {
-        double sa[4][4]={{0.}}, sb[4]={0.}, m[4];
+        double sa[4][4]={{0.}}, sb[4]={0.}, m[4] = {0};
         Mat A( 4, 4, CV_64F, sa ), B( 4, 1, CV_64F, sb );
         Mat MM( 4, 1, CV_64F, m );
 
@@ -1609,7 +1610,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         Point2f a[RANSAC_SIZE0];
         Point2f b[RANSAC_SIZE0];
 
-        // choose random 3 non-complanar points from A & B
+        // choose random 3 non-coplanar points from A & B
         for( i = 0; i < RANSAC_SIZE0; i++ )
         {
             for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )

@@ -50,9 +50,9 @@ You can modify the pixel values the same way.
 Numpy is a optimized library for fast array calculations. So simply accessing each and every pixel
 values and modifying it will be very slow and it is discouraged.
 
-@note Above mentioned method is normally used for selecting a region of array, say first 5 rows and
-last 3 columns like that. For individual pixel access, Numpy array methods, array.item() and
-array.itemset() is considered to be better. But it always returns a scalar. So if you want to access
+@note The above method is normally used for selecting a region of an array, say the first 5 rows
+and last 3 columns. For individual pixel access, the Numpy array methods, array.item() and
+array.itemset() are considered better, however they always return a scalar. If you want to access
 all B,G,R values, you need to call array.item() separately for all.
 
 Better pixel accessing and editing method :
@@ -73,15 +73,15 @@ Accessing Image Properties
 Image properties include number of rows, columns and channels, type of image data, number of pixels
 etc.
 
-Shape of image is accessed by img.shape. It returns a tuple of number of rows, columns and channels
+The shape of an image is accessed by img.shape. It returns a tuple of number of rows, columns, and channels
 (if image is color):
 @code{.py}
 >>> print( img.shape )
 (342, 548, 3)
 @endcode
 
-@note If image is grayscale, tuple returned contains only number of rows and columns. So it is a
-good method to check if loaded image is grayscale or color image.
+@note If an image is grayscale, the tuple returned contains only the number of rows
+and columns, so it is a good method to check whether the loaded image is grayscale or color.
 
 Total number of pixels is accessed by `img.size`:
 @code{.py}
@@ -101,9 +101,9 @@ Image ROI
 ---------
 
 Sometimes, you will have to play with certain region of images. For eye detection in images, first
-face detection is done all over the image and when face is obtained, we select the face region alone
-and search for eyes inside it instead of searching whole image. It improves accuracy (because eyes
-are always on faces :D ) and performance (because we search for a small area)
+face detection is done all over the image. When a face is obtained, we select the face region alone
+and search for eyes inside it instead of searching the whole image. It improves accuracy (because eyes
+are always on faces :D ) and performance (because we search in a small area).
 
 ROI is again obtained using Numpy indexing. Here I am selecting the ball and copying it to another
 region in the image:
@@ -118,9 +118,9 @@ Check the results below:
 Splitting and Merging Image Channels
 ------------------------------------
 
-Sometimes you will need to work separately on B,G,R channels of image. Then you need to split the
-BGR images to single planes. Or another time, you may need to join these individual channels to BGR
-image. You can do it simply by:
+Sometimes you will need to work separately on B,G,R channels of image. In this case, you need
+to split the BGR images to single channels. In other cases, you may need to join these individual
+channels to a BGR image. You can do it simply by:
 @code{.py}
 >>> b,g,r = cv2.split(img)
 >>> img = cv2.merge((b,g,r))
@@ -129,13 +129,13 @@ Or
 @code
 >>> b = img[:,:,0]
 @endcode
-Suppose, you want to make all the red pixels to zero, you need not split like this and put it equal
-to zero. You can simply use Numpy indexing, and that is more faster.
+Suppose you want to set all the red pixels to zero, you do not need to split the channels first.
+Numpy indexing is faster:
 @code{.py}
 >>> img[:,:,2] = 0
 @endcode
 
-**warning**
+**Warning**
 
 cv2.split() is a costly operation (in terms of time). So do it only if you need it. Otherwise go
 for Numpy indexing.
@@ -144,7 +144,7 @@ Making Borders for Images (Padding)
 -----------------------------------
 
 If you want to create a border around the image, something like a photo frame, you can use
-**cv2.copyMakeBorder()** function. But it has more applications for convolution operation, zero
+**cv2.copyMakeBorder()**. But it has more applications for convolution operation, zero
 padding etc. This function takes following arguments:
 
 -   **src** - input image
@@ -190,7 +190,7 @@ plt.subplot(236),plt.imshow(constant,'gray'),plt.title('CONSTANT')
 
 plt.show()
 @endcode
-See the result below. (Image is displayed with matplotlib. So RED and BLUE planes will be
+See the result below. (Image is displayed with matplotlib. So RED and BLUE channels will be
 interchanged):
 
 ![image](images/border.jpg)

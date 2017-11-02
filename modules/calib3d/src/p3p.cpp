@@ -57,6 +57,41 @@ bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat
     return result;
 }
 
+int p3p::solve(std::vector<cv::Mat>& Rs, std::vector<cv::Mat>& tvecs, const cv::Mat& opoints, const cv::Mat& ipoints)
+{
+    CV_INSTRUMENT_REGION()
+
+    double rotation_matrix[4][3][3], translation[4][3];
+    std::vector<double> points;
+    if (opoints.depth() == ipoints.depth())
+    {
+        if (opoints.depth() == CV_32F)
+            extract_points<cv::Point3f,cv::Point2f>(opoints, ipoints, points);
+        else
+            extract_points<cv::Point3d,cv::Point2d>(opoints, ipoints, points);
+    }
+    else if (opoints.depth() == CV_32F)
+        extract_points<cv::Point3f,cv::Point2d>(opoints, ipoints, points);
+    else
+        extract_points<cv::Point3d,cv::Point2f>(opoints, ipoints, points);
+
+    int solutions = solve(rotation_matrix, translation,
+                          points[0], points[1], points[2], points[3], points[4],
+                          points[5], points[6], points[7], points[8], points[9],
+                          points[10], points[11], points[12], points[13], points[14]);
+
+    for (int i = 0; i < solutions; i++) {
+        cv::Mat R, tvec;
+        cv::Mat(3, 1, CV_64F, translation[i]).copyTo(tvec);
+        cv::Mat(3, 3, CV_64F, rotation_matrix[i]).copyTo(R);
+
+        Rs.push_back(R);
+        tvecs.push_back(tvec);
+    }
+
+    return solutions;
+}
+
 bool p3p::solve(double R[3][3], double t[3],
     double mu0, double mv0,   double X0, double Y0, double Z0,
     double mu1, double mv1,   double X1, double Y1, double Z1,

@@ -113,12 +113,12 @@ namespace cv
                 if (descriptor_size == 0)
                 {
                     int t = (6 + 36 + 120) * descriptor_channels;
-                    return (int)ceil(t / 8.);
+                    return divUp(t, 8);
                 }
                 else
                 {
                     // We use the random bit selection length binary descriptor
-                    return (int)ceil(descriptor_size / 8.);
+                    return divUp(descriptor_size, 8);
                 }
 
             default:
@@ -169,39 +169,25 @@ namespace cv
         {
             CV_INSTRUMENT_REGION()
 
-            Mat img = image.getMat();
-            if (img.channels() > 1)
-                cvtColor(image, img, COLOR_BGR2GRAY);
-
-            Mat img1_32;
-            if ( img.depth() == CV_32F )
-                img1_32 = img;
-            else if ( img.depth() == CV_8U )
-                img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
-            else if ( img.depth() == CV_16U )
-                img.convertTo(img1_32, CV_32F, 1.0 / 65535.0, 0);
-
-            CV_Assert( ! img1_32.empty() );
+            CV_Assert( ! image.empty() );
 
             AKAZEOptions options;
             options.descriptor = descriptor;
             options.descriptor_channels = descriptor_channels;
             options.descriptor_size = descriptor_size;
-            options.img_width = img.cols;
-            options.img_height = img.rows;
+            options.img_width = image.cols();
+            options.img_height = image.rows();
             options.dthreshold = threshold;
             options.omax = octaves;
             options.nsublevels = sublevels;
             options.diffusivity = diffusivity;
 
             AKAZEFeatures impl(options);
-            impl.Create_Nonlinear_Scale_Space(img1_32);
+            impl.Create_Nonlinear_Scale_Space(image);
 
             if (!useProvidedKeypoints)
             {
                 impl.Feature_Detection(keypoints);
-                if( !descriptors.needed() )
-                    impl.Compute_Keypoints_Orientation(keypoints);
             }
 
             if (!mask.empty())
@@ -209,13 +195,12 @@ namespace cv
                 KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
             }
 
-            if( descriptors.needed() )
+            if(descriptors.needed())
             {
-                Mat& desc = descriptors.getMatRef();
-                impl.Compute_Descriptors(keypoints, desc);
+                impl.Compute_Descriptors(keypoints, descriptors);
 
-                CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-                CV_Assert((!desc.rows || (desc.type() == descriptorType())));
+                CV_Assert((descriptors.empty() || descriptors.cols() == descriptorSize()));
+                CV_Assert((descriptors.empty() || (descriptors.type() == descriptorType())));
             }
         }
 
@@ -259,4 +244,10 @@ namespace cv
         return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
                                    threshold, octaves, sublevels, diffusivity);
     }
+
+    String AKAZE::getDefaultName() const
+    {
+        return (Feature2D::getDefaultName() + ".AKAZE");
+    }
+
 }

@@ -19,14 +19,13 @@ void readme();
  * @function main
  * @brief Main function
  */
-int main( int argc, char** argv )
+int main()
 {
-  if( argc != 3 )
-  { readme(); return -1; }
+  readme();
 
   //-- 1. Read the images
-  Mat imgLeft = imread( argv[1], IMREAD_GRAYSCALE );
-  Mat imgRight = imread( argv[2], IMREAD_GRAYSCALE );
+  Mat imgLeft = imread( "../data/rubberwhale1.png", IMREAD_GRAYSCALE );
+  Mat imgRight = imread( "../data/rubberwhale2.png", IMREAD_GRAYSCALE );
   //-- And create the image in which we will save our disparities
   Mat imgDisparity16S = Mat( imgLeft.rows, imgLeft.cols, CV_16S );
   Mat imgDisparity8U = Mat( imgLeft.rows, imgLeft.cols, CV_8UC1 );

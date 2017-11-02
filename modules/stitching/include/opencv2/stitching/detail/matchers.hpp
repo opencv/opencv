@@ -207,7 +207,7 @@ struct CV_EXPORTS MatchesInfo
 {
     MatchesInfo();
     MatchesInfo(const MatchesInfo &other);
-    const MatchesInfo& operator =(const MatchesInfo &other);
+    MatchesInfo& operator =(const MatchesInfo &other);
 
     int src_img_idx, dst_img_idx;       //!< Images indices (optional)
     std::vector<DMatch> matches;

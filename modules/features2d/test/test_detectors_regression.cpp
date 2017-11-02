@@ -302,22 +302,8 @@ TEST( Features2d_Detector_AKAZE, regression )
     test.safe_run();
 }
 
-TEST( Features2d_Detector_AKAZE, detect_and_compute_split )
+TEST( Features2d_Detector_AKAZE_DESCRIPTOR_KAZE, regression )
 {
-    Mat testImg(100, 100, CV_8U);
-    RNG rng(101);
-    rng.fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
-
-    Ptr<Feature2D> ext = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, 1, 1, KAZE::DIFF_PM_G2);
-    vector<KeyPoint> detAndCompKps;
-    Mat desc;
-    ext->detectAndCompute(testImg, noArray(), detAndCompKps, desc);
-
-    vector<KeyPoint> detKps;
-    ext->detect(testImg, detKps);
-
-    ASSERT_EQ(detKps.size(), detAndCompKps.size());
-
-    for(size_t i = 0; i < detKps.size(); i++)
-        ASSERT_EQ(detKps[i].hash(), detAndCompKps[i].hash());
+    CV_FeatureDetectorTest test( "detector-akaze-with-kaze-desc", AKAZE::create(AKAZE::DESCRIPTOR_KAZE) );
+    test.safe_run();
 }

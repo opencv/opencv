@@ -525,7 +525,7 @@ icvFetchContour( schar                  *ptr,
     int             prev_s = -1, s, s_end;
     int             method = _method - 1;
 
-    assert( (unsigned) _method <= CV_CHAIN_APPROX_SIMPLE );
+    CV_DbgAssert( (unsigned) _method <= CV_CHAIN_APPROX_SIMPLE );
 
     /* initialize local state */
     CV_INIT_3X3_DELTAS( deltas, step, 1 );
@@ -562,12 +562,14 @@ icvFetchContour( schar                  *ptr,
         /* follow border */
         for( ;; )
         {
+            CV_Assert(i3 != NULL);
             s_end = s;
             s = std::min(s, MAX_SIZE - 1);
 
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
+                CV_Assert(i4 != NULL);
                 if( *i4 != 0 )
                     break;
             }
@@ -615,7 +617,7 @@ icvFetchContour( schar                  *ptr,
     if( _method != CV_CHAIN_CODE )
         cvBoundingRect( contour, 1 );
 
-    assert( (writer.seq->total == 0 && writer.seq->first == 0) ||
+    CV_DbgAssert( (writer.seq->total == 0 && writer.seq->first == 0) ||
             writer.seq->total > writer.seq->first->count ||
             (writer.seq->first->prev == writer.seq->first &&
              writer.seq->first->next == writer.seq->first) );
@@ -638,7 +640,7 @@ icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
     CV_INIT_3X3_DELTAS( deltas, step, 1 );
     memcpy( deltas + 8, deltas, 8 * sizeof( deltas[0] ));
 
-    assert( (*i0 & -2) != 0 );
+    CV_DbgAssert( (*i0 & -2) != 0 );
 
     s_end = s = is_hole ? 0 : 4;
 
@@ -657,11 +659,13 @@ icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
         /* follow border */
         for( ;; )
         {
+            CV_Assert(i3 != NULL);
 
             s = std::min(s, MAX_SIZE - 1);
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
+                CV_Assert(i4 != NULL);
                 if( *i4 != 0 )
                     break;
             }
@@ -693,8 +697,8 @@ icvFetchContourEx( schar*               ptr,
     int         prev_s = -1, s, s_end;
     int         method = _method - 1;
 
-    assert( (unsigned) _method <= CV_CHAIN_APPROX_SIMPLE );
-    assert( 1 < nbd && nbd < 128 );
+    CV_DbgAssert( (unsigned) _method <= CV_CHAIN_APPROX_SIMPLE );
+    CV_DbgAssert( 1 < nbd && nbd < 128 );
 
     /* initialize local state */
     CV_INIT_3X3_DELTAS( deltas, step, 1 );
@@ -735,12 +739,14 @@ icvFetchContourEx( schar*               ptr,
         /* follow border */
         for( ;; )
         {
+            CV_Assert(i3 != NULL);
             s_end = s;
             s = std::min(s, MAX_SIZE - 1);
 
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
+                CV_Assert(i4 != NULL);
                 if( *i4 != 0 )
                     break;
             }
@@ -799,7 +805,7 @@ icvFetchContourEx( schar*               ptr,
     if( _method != CV_CHAIN_CODE )
         ((CvContour*)contour)->rect = rect;
 
-    assert( (writer.seq->total == 0 && writer.seq->first == 0) ||
+    CV_DbgAssert( (writer.seq->total == 0 && writer.seq->first == 0) ||
             writer.seq->total > writer.seq->first->count ||
             (writer.seq->first->prev == writer.seq->first &&
              writer.seq->first->next == writer.seq->first) );
@@ -811,6 +817,7 @@ icvFetchContourEx( schar*               ptr,
 static int
 icvTraceContour_32s( int *ptr, int step, int *stop_ptr, int is_hole )
 {
+    CV_Assert(ptr != NULL);
     int deltas[MAX_SIZE];
     int *i0 = ptr, *i1, *i3, *i4 = NULL;
     int s, s_end;
@@ -840,12 +847,14 @@ icvTraceContour_32s( int *ptr, int step, int *stop_ptr, int is_hole )
         /* follow border */
         for( ;; )
         {
+            CV_Assert(i3 != NULL);
             s_end = s;
             s = std::min(s, MAX_SIZE - 1);
 
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
+                CV_Assert(i4 != NULL);
                 if( (*i4 & value_mask) == ccomp_val )
                     break;
             }
@@ -869,6 +878,7 @@ icvFetchContourEx_32s( int*                 ptr,
                        int                  _method,
                        CvRect*              _rect )
 {
+    CV_Assert(ptr != NULL);
     int         deltas[MAX_SIZE];
     CvSeqWriter writer;
     int        *i0 = ptr, *i1, *i3, *i4;
@@ -882,7 +892,7 @@ icvFetchContourEx_32s( int*                 ptr,
     const int   nbd0 = ccomp_val | new_flag;
     const int   nbd1 = nbd0 | right_flag;
 
-    assert( (unsigned) _method <= CV_CHAIN_APPROX_SIMPLE );
+    CV_DbgAssert( (unsigned) _method <= CV_CHAIN_APPROX_SIMPLE );
 
     /* initialize local state */
     CV_INIT_3X3_DELTAS( deltas, step, 1 );
@@ -922,11 +932,13 @@ icvFetchContourEx_32s( int*                 ptr,
         /* follow border */
         for( ;; )
         {
+            CV_Assert(i3 != NULL);
             s_end = s;
 
             do
             {
                 i4 = i3 + deltas[++s];
+                CV_Assert(i4 != NULL);
             }
             while( (*i4 & value_mask) != ccomp_val && ( s < MAX_SIZE - 1 ) );
             s &= 7;
@@ -984,7 +996,7 @@ icvFetchContourEx_32s( int*                 ptr,
     if( _method != CV_CHAIN_CODE )
         ((CvContour*)contour)->rect = rect;
 
-    assert( (writer.seq->total == 0 && writer.seq->first == 0) ||
+    CV_DbgAssert( (writer.seq->total == 0 && writer.seq->first == 0) ||
            writer.seq->total > writer.seq->first->count ||
            (writer.seq->first->prev == writer.seq->first &&
             writer.seq->first->next == writer.seq->first) );
@@ -1167,7 +1179,7 @@ cvFindNextContour( CvContourScanner scanner )
                         cur = cur->next;
                     }
 
-                    assert( par_info != 0 );
+                    CV_Assert( par_info != 0 );
 
                     /* if current contour is a hole and previous contour is a hole or
                        current contour is external and previous contour is external then

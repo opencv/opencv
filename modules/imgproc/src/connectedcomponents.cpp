@@ -95,8 +95,8 @@ namespace cv{
         std::vector<Point2ui64> integrals;
         int _nextLoc;
 
-        CCStatsOp(){}
-        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv) : _mstatsv(&_statsv), _mcentroidsv(&_centroidsv){}
+        CCStatsOp() : _mstatsv(0), _mcentroidsv(0), _nextLoc(0) {}
+        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv) : _mstatsv(&_statsv), _mcentroidsv(&_centroidsv), _nextLoc(0){}
 
         inline
         void init(int nlabels){
@@ -2586,7 +2586,7 @@ namespace cv{
         }
     };//End struct LabelingGranaParallel
 
-    // Based on �Optimized  Block-based Connected Components Labeling with Decision Trees�, Costantino Grana et al
+    // Based on "Optimized  Block-based Connected Components Labeling with Decision Trees", Costantino Grana et al
     // Only for 8-connectivity
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGrana{

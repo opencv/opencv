@@ -64,7 +64,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
 
     if( groupThreshold <= 0 || rectList.empty() )
     {
-        if( weights )
+        if( weights && !levelWeights )
         {
             size_t i, sz = rectList.size();
             weights->resize(sz);
@@ -316,7 +316,7 @@ protected:
     }
 };
 //new grouping function with using meanshift
-static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detectThreshold, std::vector<double>* foundWeights,
+static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detectThreshold, std::vector<double>& foundWeights,
                                       std::vector<double>& scales, Size winDetSize)
 {
     int detectionCount = (int)rectList.size();
@@ -326,14 +326,13 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
 
     for (int i=0; i < detectionCount; i++)
     {
-        hitWeights[i] = (*foundWeights)[i];
+        hitWeights[i] = foundWeights[i];
         hitCenter = (rectList[i].tl() + rectList[i].br())*(0.5); //center of rectangles
         hits[i] = Point3d(hitCenter.x, hitCenter.y, std::log(scales[i]));
     }
 
     rectList.clear();
-    if (foundWeights)
-        foundWeights->clear();
+    foundWeights.clear();
 
     double logZ = std::log(1.3);
     Point3d smothing(8, 16, logZ);
@@ -355,7 +354,7 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
         if (resultWeights[i] > detectThreshold)
         {
             rectList.push_back(resultRect);
-            foundWeights->push_back(resultWeights[i]);
+            foundWeights.push_back(resultWeights[i]);
         }
     }
 }
@@ -387,7 +386,7 @@ void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>&
 {
     CV_INSTRUMENT_REGION()
 
-    groupRectangles_meanshift(rectList, detectThreshold, &foundWeights, foundScales, winDetSize);
+    groupRectangles_meanshift(rectList, detectThreshold, foundWeights, foundScales, winDetSize);
 }
 
 
@@ -569,6 +568,9 @@ HaarEvaluator::HaarEvaluator()
     lbufSize = Size(0, 0);
     nchannels = 0;
     tofs = 0;
+    sqofs = 0;
+    varianceNormFactor = 0;
+    hasTiltedFeatures = false;
 }
 
 HaarEvaluator::~HaarEvaluator()
@@ -607,7 +609,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
-        if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel())
+        if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel() || ocl::Device::getDefault().isNVidia())
         {
             localSize = Size(8, 8);
             lbufSize = Size(origWinSize.width + localSize.width,
@@ -770,6 +772,8 @@ LBPEvaluator::LBPEvaluator()
     features = makePtr<std::vector<Feature> >();
     optfeatures = makePtr<std::vector<OptFeature> >();
     scaleData = makePtr<std::vector<ScaleData> >();
+    optfeaturesPtr = 0;
+    pwin = 0;
 }
 
 LBPEvaluator::~LBPEvaluator()
@@ -885,6 +889,9 @@ Ptr<FeatureEvaluator> FeatureEvaluator::create( int featureType )
 
 CascadeClassifierImpl::CascadeClassifierImpl()
 {
+#ifdef HAVE_OPENCL
+    tryOpenCL = false;
+#endif
 }
 
 CascadeClassifierImpl::~CascadeClassifierImpl()
@@ -1440,7 +1447,7 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
 
 CascadeClassifierImpl::Data::Data()
 {
-    stageType = featureType = ncategories = maxNodesPerTree = 0;
+    stageType = featureType = ncategories = maxNodesPerTree = minNodesPerTree = 0;
 }
 
 bool CascadeClassifierImpl::Data::read(const FileNode &root)
@@ -1659,7 +1666,7 @@ void clipObjects(Size sz, std::vector<Rect>& objects,
     for( i = 0; i < n; i++ )
     {
         Rect r = win0 & objects[i];
-        if( r.area() > 0 )
+        if( !r.empty() )
         {
             objects[j] = r;
             if( i > j )

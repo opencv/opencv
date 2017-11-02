@@ -69,7 +69,7 @@
 
 /* helper tables */
 extern const uchar icvSaturate8u_cv[];
-#define CV_FAST_CAST_8U(t)  (assert(-256 <= (t) && (t) <= 512), icvSaturate8u_cv[(t)+256])
+#define CV_FAST_CAST_8U(t)  ( (-256 <= (t) && (t) <= 512) ? icvSaturate8u_cv[(t)+256] : 0 )
 #define CV_CALC_MIN_8U(a,b) (a) -= CV_FAST_CAST_8U((a) - (b))
 #define CV_CALC_MAX_8U(a,b) (a) += CV_FAST_CAST_8U((b) - (a))
 
@@ -110,5 +110,16 @@ static inline IppiInterpolationType ippiGetInterpolation(int inter)
 #include "filterengine.hpp"
 
 #include "opencv2/core/sse_utils.hpp"
+
+inline bool isStorageOrMat(void * arr)
+{
+    if (CV_IS_STORAGE( arr ))
+        return true;
+    else if (CV_IS_MAT( arr ))
+        return false;
+    else
+        CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
+    return false;
+}
 
 #endif /*__OPENCV_CV_INTERNAL_H_*/

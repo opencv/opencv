@@ -237,7 +237,8 @@ enum { SOLVEPNP_ITERATIVE = 0,
        SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
        SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
        SOLVEPNP_UPNP      = 4, //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
-       SOLVEPNP_AP3P      = 5  //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
+       SOLVEPNP_AP3P      = 5, //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
+       SOLVEPNP_MAX_COUNT      //!< Used for count
 };
 
 enum { CALIB_CB_ADAPTIVE_THRESH = 1,
@@ -268,6 +269,7 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_TILTED_MODEL        = 0x40000,
        CALIB_FIX_TAUX_TAUY       = 0x80000,
        CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
+       CALIB_FIX_TANGENT_DIST    = 0x200000,
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
@@ -394,7 +396,7 @@ and a rotation matrix.
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
 sequence of rotations about the three principal axes that results in the same orientation of an
-object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angules
+object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angles
 are only one of the possible solutions.
  */
 CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ,
@@ -560,6 +562,9 @@ F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Leng
 Estimation" (@cite penate2013exhaustive). In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
+-   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem". In this case the
+function requires exactly four object and image points.
 
 The function estimates the object pose given a set of object points, their corresponding image
 projections, as well as the camera matrix and the distortion coefficients.
@@ -578,7 +583,7 @@ projections, as well as the camera matrix and the distortion coefficients.
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
    -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
-       unstable and sometimes give completly wrong results. If you pass one of these two
+       unstable and sometimes give completely wrong results. If you pass one of these two
        flags, **SOLVEPNP_EPNP** method will be used instead.
    -   The minimum number of points is 4. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
@@ -623,6 +628,13 @@ makes the function resistant to outliers.
 @note
    -   An example of how to use solvePNPRansac for object detection can be found at
         opencv_source_code/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/
+   -   The default method used to estimate the camera pose for the Minimal Sample Sets step
+       is #SOLVEPNP_EPNP. Exceptions are:
+         - if you choose #SOLVEPNP_P3P or #SOLVEPNP_AP3P, these methods will be used.
+         - if the number of input points is equal to 4, #SOLVEPNP_P3P is used.
+   -   The method used to estimate the camera pose using all the inliers is defined by the
+       flags parameters unless it is equal to #SOLVEPNP_P3P or #SOLVEPNP_AP3P. In this case,
+       the method #SOLVEPNP_EPNP will be used instead.
  */
 CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
@@ -630,6 +642,33 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
                                   float reprojectionError = 8.0, double confidence = 0.99,
                                   OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
+/** @brief Finds an object pose from 3 3D-2D point correspondences.
+
+@param objectPoints Array of object points in the object coordinate space, 3x3 1-channel or
+1x3/3x1 3-channel. vector\<Point3f\> can be also passed here.
+@param imagePoints Array of corresponding image points, 3x2 1-channel or 1x3/3x1 2-channel.
+ vector\<Point2f\> can be also passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
+@param rvecs Output rotation vectors (see Rodrigues ) that, together with tvecs , brings points from
+the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
+@param tvecs Output translation vectors.
+@param flags Method for solving a P3P problem:
+-   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
+"Complete Solution Classification for the Perspective-Three-Point Problem".
+-   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem".
+
+The function estimates the object pose given 3 object points, their corresponding image
+projections, as well as the camera matrix and the distortion coefficients.
+ */
+CV_EXPORTS_W int solveP3P( InputArray objectPoints, InputArray imagePoints,
+                           InputArray cameraMatrix, InputArray distCoeffs,
+                           OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                           int flags );
 
 /** @brief Finds an initial camera matrix from 3D-2D point correspondences.
 
@@ -744,6 +783,14 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
     GridType gridType;
 };
 
+struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters2 : public CirclesGridFinderParameters
+{
+    CV_WRAP CirclesGridFinderParameters2();
+
+    CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
+    CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from predicion. Used by CALIB_CB_CLUSTERING.
+};
+
 /** @brief Finds centers in the grid of circles.
 
 @param image grid view of input circles; it must be an 8-bit grayscale or color image.
@@ -780,6 +827,12 @@ CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags,
                                    const Ptr<FeatureDetector> &blobDetector,
                                    CirclesGridFinderParameters parameters);
+
+/** @overload */
+CV_EXPORTS_W bool findCirclesGrid2( InputArray image, Size patternSize,
+                                   OutputArray centers, int flags,
+                                   const Ptr<FeatureDetector> &blobDetector,
+                                   CirclesGridFinderParameters2 parameters);
 
 /** @overload */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
@@ -1318,9 +1371,9 @@ be floating-point (single or double precision).
 @param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
 same camera matrix.
-@param method Method for computing a fundamental matrix.
+@param method Method for computing an essential matrix.
 -   **RANSAC** for the RANSAC algorithm.
--   **MEDS** for the LMedS algorithm.
+-   **LMEDS** for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
@@ -1602,7 +1655,7 @@ to 3D points with a very large Z value (currently set to 10000).
 depth. ddepth can also be set to CV_16S, CV_32S or CV_32F.
 
 The function transforms a single-channel disparity map to a 3-channel image representing a 3D
-surface. That is, for each pixel (x,y) andthe corresponding disparity d=disparity(x,y) , it
+surface. That is, for each pixel (x,y) and the corresponding disparity d=disparity(x,y) , it
 computes:
 
 \f[\begin{array}{l} [X \; Y \; Z \; W]^T =  \texttt{Q} *[x \; y \; \texttt{disparity} (x,y) \; 1]^T  \\ \texttt{\_3dImage} (x,y) = (X/W, \; Y/W, \; Z/W) \end{array}\f]
@@ -1651,7 +1704,7 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
 @param from First input 2D point set.
 @param to Second input 2D point set.
 @param inliers Output vector indicating which points are inliers.
-@param method Robust method used to compute tranformation. The following methods are possible:
+@param method Robust method used to compute transformation. The following methods are possible:
 -   cv::RANSAC - RANSAC-based robust method
 -   cv::LMEDS - Least-Median robust method
 RANSAC is the default method.
@@ -1691,7 +1744,7 @@ two 2D point sets.
 @param from First input 2D point set.
 @param to Second input 2D point set.
 @param inliers Output vector indicating which points are inliers.
-@param method Robust method used to compute tranformation. The following methods are possible:
+@param method Robust method used to compute transformation. The following methods are possible:
 -   cv::RANSAC - RANSAC-based robust method
 -   cv::LMEDS - Least-Median robust method
 RANSAC is the default method.
@@ -1990,7 +2043,7 @@ namespace fisheye
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
-    Note that the function assumes the camera matrix of the undistorted points to be indentity.
+    Note that the function assumes the camera matrix of the undistorted points to be identity.
     This means if you want to transform back points undistorted with undistortPoints() you have to
     multiply them with \f$P^{-1}\f$.
      */

@@ -7,10 +7,10 @@
 #
 # On return this will define:
 #
-# HAVE_MKL          - True if Intel IPP found
-# MKL_ROOT_DIR      - root of IPP installation
-# MKL_INCLUDE_DIRS  - IPP include folder
-# MKL_LIBRARIES     - IPP libraries that are used by OpenCV
+# HAVE_MKL          - True if Intel MKL found
+# MKL_ROOT_DIR      - root of MKL installation
+# MKL_INCLUDE_DIRS  - MKL include folder
+# MKL_LIBRARIES     - MKL libraries that are used by OpenCV
 #
 
 macro (mkl_find_lib VAR NAME DIRS)
@@ -21,7 +21,7 @@ endmacro()
 
 macro(mkl_fail)
     set(HAVE_MKL OFF)
-    set(MKL_ROOT_DIR ${MKL_ROOT_DIR} CACHE PATH "Path to MKL directory")
+    set(MKL_ROOT_DIR "${MKL_ROOT_DIR}" CACHE PATH "Path to MKL directory")
     return()
 endmacro()
 
@@ -46,23 +46,26 @@ if(NOT DEFINED MKL_USE_MULTITHREAD)
 endif()
 
 #check current MKL_ROOT_DIR
-if(NOT MKL_ROOT_DIR OR NOT EXISTS ${MKL_ROOT_DIR}/include/mkl.h)
-    set(mkl_root_paths ${MKL_ROOT_DIR})
+if(NOT MKL_ROOT_DIR OR NOT EXISTS "${MKL_ROOT_DIR}/include/mkl.h")
+    set(mkl_root_paths "${MKL_ROOT_DIR}")
     if(DEFINED ENV{MKLROOT})
-        list(APPEND mkl_root_paths $ENV{MKLROOT})
+        list(APPEND mkl_root_paths "$ENV{MKLROOT}")
     endif()
-    if(WIN32)
+
+    if(WITH_MKL AND NOT mkl_root_paths)
+      if(WIN32)
         set(ProgramFilesx86 "ProgramFiles(x86)")
         list(APPEND mkl_root_paths $ENV{${ProgramFilesx86}}/IntelSWTools/compilers_and_libraries/windows/mkl)
-    endif()
-    if(UNIX)
+      endif()
+      if(UNIX)
         list(APPEND mkl_root_paths "/opt/intel/mkl")
+      endif()
     endif()
 
     find_path(MKL_ROOT_DIR include/mkl.h PATHS ${mkl_root_paths})
 endif()
 
-set(MKL_INCLUDE_DIRS ${MKL_ROOT_DIR}/include CACHE PATH "Path to MKL include directory")
+set(MKL_INCLUDE_DIRS "${MKL_ROOT_DIR}/include" CACHE PATH "Path to MKL include directory")
 
 if(NOT MKL_ROOT_DIR
     OR NOT EXISTS "${MKL_ROOT_DIR}"
@@ -104,7 +107,7 @@ if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQU
         if(MSVC)
             list(APPEND mkl_lib_list mkl_intel_thread libiomp5md)
         else()
-            list(APPEND mkl_lib_list libmkl_gnu_thread)
+            list(APPEND mkl_lib_list mkl_gnu_thread)
         endif()
     else()
         list(APPEND mkl_lib_list mkl_sequential)
@@ -128,9 +131,9 @@ endforeach()
 
 message(STATUS "Found MKL ${MKL_VERSION_STR} at: ${MKL_ROOT_DIR}")
 set(HAVE_MKL ON)
-set(MKL_ROOT_DIR ${MKL_ROOT_DIR} CACHE PATH "Path to MKL directory")
-set(MKL_INCLUDE_DIRS ${MKL_INCLUDE_DIRS} CACHE PATH "Path to MKL include directory")
-set(MKL_LIBRARIES ${MKL_LIBRARIES} CACHE STRING "MKL libarries")
+set(MKL_ROOT_DIR "${MKL_ROOT_DIR}" CACHE PATH "Path to MKL directory")
+set(MKL_INCLUDE_DIRS "${MKL_INCLUDE_DIRS}" CACHE PATH "Path to MKL include directory")
+set(MKL_LIBRARIES "${MKL_LIBRARIES}" CACHE STRING "MKL libarries")
 if(UNIX AND NOT MKL_LIBRARIES_DONT_HACK)
     #it's ugly but helps to avoid cyclic lib problem
     set(MKL_LIBRARIES ${MKL_LIBRARIES} ${MKL_LIBRARIES} ${MKL_LIBRARIES} "-lpthread" "-lm" "-ldl")

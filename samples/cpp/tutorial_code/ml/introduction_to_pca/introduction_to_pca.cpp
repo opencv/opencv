@@ -73,7 +73,7 @@ double getOrientation(const vector<Point> &pts, Mat &img)
         eigen_vecs[i] = Point2d(pca_analysis.eigenvectors.at<double>(i, 0),
                                 pca_analysis.eigenvectors.at<double>(i, 1));
 
-        eigen_val[i] = pca_analysis.eigenvalues.at<double>(0, i);
+        eigen_val[i] = pca_analysis.eigenvalues.at<double>(i);
     }
 
 //! [pca]
@@ -94,12 +94,16 @@ double getOrientation(const vector<Point> &pts, Mat &img)
 /**
  * @function main
  */
-int main(int, char** argv)
+int main(int argc, char** argv)
 {
 //! [pre-process]
     // Load image
-//    Mat src = imread("pca_test1.jpg");
-    Mat src = imread(argv[1]);
+    String imageName("../data/pca_test1.jpg"); // by default
+    if (argc > 1)
+    {
+        imageName = argv[1];
+    }
+    Mat src = imread( imageName );
 
     // Check if image is loaded successfully
     if(!src.data || src.empty())

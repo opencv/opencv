@@ -5,6 +5,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_gausian_median_blur_bilateral_filter
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -27,7 +29,9 @@ In this section you will learn about the image processing (manipulation) functio
 
     Here we investigate different morphology operators
 
--	@subpage tutorial_hitOrMiss
+-   @subpage tutorial_hitOrMiss
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.4
 
@@ -35,7 +39,9 @@ In this section you will learn about the image processing (manipulation) functio
 
     Learn how to find patterns in binary images using the Hit-or-Miss operation
 
--   @subpage tutorial_moprh_lines_detection
+-   @subpage tutorial_morph_lines_detection
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -44,6 +50,8 @@ In this section you will learn about the image processing (manipulation) functio
     Here we will show how we can use different morphological operators to extract horizontal and vertical lines
 
 -   @subpage tutorial_pyramids
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -69,6 +77,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_filter_2d
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -76,6 +86,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn to design our own filters by using OpenCV functions
 
 -   @subpage tutorial_copyMakeBorder
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -85,6 +97,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_sobel_derivatives
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -92,6 +106,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to calculate gradients and use them to detect edges
 
 -   @subpage tutorial_laplace_operator
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -109,6 +125,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_hough_lines
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -116,6 +134,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to detect lines
 
 -   @subpage tutorial_hough_circle
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 

@@ -28,7 +28,7 @@ def intersectionRate(s1, s2):
     x1, y1, x2, y2 = s1
     s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
-    area, intersection = cv2.intersectConvexConvex(s1, np.array(s2))
+    area, _intersection = cv2.intersectConvexConvex(s1, np.array(s2))
     return 2 * area / (cv2.contourArea(s1) + cv2.contourArea(np.array(s2)))
 
 from tests_common import NewOpenCVTests
@@ -86,7 +86,7 @@ PlanarTarget = namedtuple('PlaneTarget', 'image, rect, keypoints, descrs, data')
   p0     - matched points coords in target image
   p1     - matched points coords in input frame
   H      - homography matrix from p0 to p1
-  quad   - target bounary quad in input frame
+  quad   - target boundary quad in input frame
 '''
 TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
@@ -158,3 +158,7 @@ class PlaneTracker:
         if descrs is None:  # detectAndCompute returns descs=None if no keypoints found
             descrs = []
         return keypoints, descrs
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

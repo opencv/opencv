@@ -1755,6 +1755,7 @@ __kernel void BGR2Lab(__global const uchar * srcptr, int src_step, int src_offse
                 B = splineInterpolate(B * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
 #endif
 
+                // 7.787f = (29/3)^3/(29*4), 0.008856f = (6/29)^3, 903.3 = (29/3)^3
                 float X = fma(R, C0, fma(G, C1, B*C2));
                 float Y = fma(R, C3, fma(G, C4, B*C5));
                 float Z = fma(R, C6, fma(G, C7, B*C8));
@@ -1794,6 +1795,7 @@ inline void Lab2BGR_f(const float * srcbuf, float * dstbuf,
           C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
     float y, fy;
+    // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
     if (li <= lThresh)
     {
         y = li / 903.3f;
@@ -1963,6 +1965,10 @@ __kernel void BGR2Luv(__global const uchar * srcptr, int src_step, int src_offse
 
                 float R = src[0], G = src[1], B = src[2];
 
+                R = clamp(R, 0.f, 1.f);
+                G = clamp(G, 0.f, 1.f);
+                B = clamp(B, 0.f, 1.f);
+
 #ifdef SRGB
                 R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
                 G = splineInterpolate(G*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
@@ -2031,7 +2037,9 @@ __kernel void BGR2Luv(__global const uchar * src, int src_step, int src_offset,
                 float v = L*fma(2.25f, Y*d, -_vn);
 
                 dst[0] = SAT_CAST(L * 2.55f);
+                //0.72033 = 255/(220+134), 96.525 = 134*255/(220+134)
                 dst[1] = SAT_CAST(fma(u, 0.72033898305084743f, 96.525423728813564f));
+                //0.9732 = 255/(140+122), 136.259 = 140*255/(140+122)
                 dst[2] = SAT_CAST(fma(v, 0.9732824427480916f, 136.259541984732824f));
 
                 ++y;
@@ -2067,15 +2075,21 @@ __kernel void Luv2BGR(__global const uchar * srcptr, int src_step, int src_offse
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
 
-                float L = src[0], u = src[1], v = src[2], d, X, Y, Z;
-                Y = (L + 16.f) * (1.f/116.f);
-                Y = Y*Y*Y;
-                d = (1.f/13.f)/L;
-                u = fma(u, d, _un);
-                v = fma(v, d, _vn);
-                float iv = 1.f/v;
-                X = 2.25f * u * Y * iv;
-                Z = (12 - fma(3.0f, u, 20.0f * v)) * Y * 0.25f * iv;
+                float L = src[0], u = src[1], v = src[2], X, Y, Z;
+                if(L >= 8)
+                {
+                    Y = fma(L, 1.f/116.f, 16.f/116.f);
+                    Y = Y*Y*Y;
+                }
+                else
+                {
+                    Y = L * (1.0f/903.3f); // L*(3./29.)^3
+                }
+                float up = 3.f*fma(L, _un, u);
+                float vp = 0.25f/fma(L, _vn, v);
+                vp = clamp(vp, -0.25f, 0.25f);
+                X = 3.f*Y*up*vp;
+                Z = Y*fma(fma(12.f*13.f, L, -up), vp, -5.f);
 
                 float R = fma(X, coeffs[0], fma(Y, coeffs[1], Z * coeffs[2]));
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));
@@ -2127,16 +2141,27 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
             {
                 float d, X, Y, Z;
                 float L = src[0]*(100.f/255.f);
+                // 1.388235294117647 = (220+134)/255
                 float u = fma(convert_float(src[1]), 1.388235294117647f, -134.f);
+                // 1.027450980392157 = (140+122)/255
                 float v = fma(convert_float(src[2]), 1.027450980392157f, - 140.f);
-                Y = (L + 16.f) * (1.f/116.f);
-                Y = Y*Y*Y;
-                d = (1.f/13.f)/L;
-                u = fma(u, d, _un);
-                v = fma(v, d, _vn);
-                float iv = 1.f/v;
-                X = 2.25f * u * Y * iv ;
-                Z = (12 - fma(3.0f, u, 20.0f * v)) * Y * 0.25f * iv;
+                if(L >= 8)
+                {
+                    Y = fma(L, 1.f/116.f, 16.f/116.f);
+                    Y = Y*Y*Y;
+                }
+                else
+                {
+                    Y = L * (1.0f/903.3f); // L*(3./29.)^3
+                }
+                float up = 3.f*fma(L, _un, u);
+                float vp = 0.25f/fma(L, _vn, v);
+                vp = clamp(vp, -0.25f, 0.25f);
+                X = 3.f*Y*up*vp;
+                Z = Y*fma(fma(12.f*13.f, L, -up), vp, -5.f);
+
+                //limit X, Y, Z to [0, 2] to fit white point
+                X = clamp(X, 0.f, 2.f); Z = clamp(Z, 0.f, 2.f);
 
                 float R = fma(X, coeffs[0], fma(Y, coeffs[1], Z * coeffs[2]));
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));

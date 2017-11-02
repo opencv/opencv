@@ -91,6 +91,7 @@ public:
 
     String name() const;
     String extensions() const;
+    bool isExtensionSupported(const String& extensionName) const;
     String version() const;
     String vendorName() const;
     String OpenCL_C_Version() const;
@@ -160,6 +161,7 @@ public:
     uint imagePitchAlignment() const;
     uint imageBaseAddressAlignment() const;
 
+    /// deprecated, use isExtensionSupported() method (probably with "cl_khr_subgroups" value)
     bool intelSubgroupsSupport() const;
 
     size_t image2DMaxWidth() const;
@@ -248,6 +250,7 @@ public:
     const Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
+    void unloadProg(Program& prog);
 
     static Context& getDefault(bool initialize = true);
     void* ptr() const;
@@ -330,8 +333,12 @@ public:
     void* ptr() const;
     static Queue& getDefault();
 
+    /// @brief Returns OpenCL command queue with enable profiling mode support
+    const Queue& getProfilingQueue() const;
+
+    struct Impl; friend struct Impl;
+    inline Impl* getImpl() const { return p; }
 protected:
-    struct Impl;
     Impl* p;
 };
 
@@ -566,6 +573,12 @@ public:
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
 
+    /** @brief Similar to synchronized run() call with returning of kernel execution time
+     * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
+     * @return Execution time in nanoseconds or negative number on error
+     */
+    int64 runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q=Queue());
+
     size_t workGroupSize() const;
     size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;
@@ -584,7 +597,6 @@ public:
     Program();
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
-    explicit Program(const String& buf);
     Program(const Program& prog);
 
     Program& operator = (const Program& prog);
@@ -601,8 +613,10 @@ public:
     String getPrefix() const;
     static String getPrefix(const String& buildflags);
 
-protected:
+
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+protected:
     Impl* p;
 };
 
@@ -623,8 +637,9 @@ public:
     const String& source() const;
     hash_t hash() const; // deprecated
 
-protected:
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+protected:
     Impl* p;
 };
 
@@ -653,6 +668,7 @@ CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS const char* vecopTypeToStr(int t);
+CV_EXPORTS const char* getOpenCLErrorString(int errorCode);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
 
@@ -719,6 +735,24 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS Timer
+{
+public:
+    Timer(const Queue& q);
+    ~Timer();
+    void start();
+    void stop();
+
+    uint64 durationNS() const; //< duration in nanoseconds
+
+protected:
+    struct Impl;
+    Impl* const p;
+
+private:
+    Timer(const Timer&); // disabled
+    Timer& operator=(const Timer&); // disabled
+};
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 

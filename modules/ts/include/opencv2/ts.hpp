@@ -1,10 +1,33 @@
 #ifndef OPENCV_TS_HPP
 #define OPENCV_TS_HPP
 
-#include "opencv2/core/cvdef.h"
+#ifndef __OPENCV_TESTS
+#define __OPENCV_TESTS 1
+#endif
+
+#include "opencv2/opencv_modules.hpp"
+
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
+
+#include "opencv2/core/utility.hpp"
+
+#include "opencv2/core/utils/trace.hpp"
+
 #include <stdarg.h> // for va_list
 
 #include "cvconfig.h"
+
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iterator>
+#include <limits>
+#include <numeric>
 
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
@@ -35,25 +58,25 @@
 #  define GTEST_USES_POSIX_RE 0
 #endif
 
-#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-#define GET_PARAM(k) std::tr1::get< k >(GetParam())
-
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< testing::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) testing::get< k >(GetParam())
 
 namespace cvtest
 {
 
 using std::vector;
 using std::string;
-using cv::RNG;
-using cv::Mat;
-using cv::Scalar;
-using cv::Size;
-using cv::Point;
-using cv::Rect;
-using cv::InputArray;
-using cv::noArray;
+using namespace cv;
+using testing::Values;
+using testing::Combine;
+
+// Tuple stuff from Google Tests
+using testing::get;
+using testing::make_tuple;
+using testing::tuple;
+using testing::tuple_size;
+using testing::tuple_element;
+
 
 class SkipTestException: public cv::Exception
 {
@@ -376,14 +399,14 @@ public:
         FAIL_MEMORY_CORRUPTION_BEGIN=-7,
         FAIL_MEMORY_CORRUPTION_END=-8,
 
-        // the tested function (or test ifself) do not deallocate some memory
+        // the tested function (or test itself) do not deallocate some memory
         FAIL_MEMORY_LEAK=-9,
 
         // the tested function returned invalid object, e.g. matrix, containing NaNs,
         // structure with NULL or out-of-range fields (while it should not)
         FAIL_INVALID_OUTPUT=-10,
 
-        // the tested function returned valid object, but it does not match to
+        // the tested function returned valid object, but it does not match
         // the original (or produced by the test) object
         FAIL_MISMATCH=-11,
 
@@ -391,7 +414,7 @@ public:
         // but it differs too much from the original (or produced by the test) object
         FAIL_BAD_ACCURACY=-12,
 
-        // the tested function hung. Sometimes, can be determined by unexpectedly long
+        // the tested function hung. Sometimes, it can be determined by unexpectedly long
         // processing time (in this case there should be possibility to interrupt such a function
         FAIL_HANG=-13,
 
@@ -432,7 +455,7 @@ public:
     std::vector<std::string> data_search_subdir;
 protected:
 
-    // these are allocated within a test to try keep them valid in case of stack corruption
+    // these are allocated within a test to try to keep them valid in case of stack corruption
     RNG rng;
 
     // information about the current test
@@ -611,6 +634,8 @@ void parseCustomOptions(int argc, char **argv);
 #define CV_TEST_MAIN_EX(resourcesubdir, INIT0, ...) \
 int main(int argc, char **argv) \
 { \
+    CV_TRACE_FUNCTION(); \
+    { CV_TRACE_REGION("INIT"); \
     using namespace cvtest; \
     TS* ts = TS::ptr(); \
     ts->init(resourcesubdir); \
@@ -620,6 +645,7 @@ int main(int argc, char **argv) \
     TEST_DUMP_OCL_INFO \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     parseCustomOptions(argc, argv); \
+    } \
     return RUN_ALL_TESTS(); \
 }
 
@@ -632,9 +658,11 @@ int main(int argc, char **argv) \
 
 } //namespace cvtest
 
-#endif // OPENCV_TS_HPP
-
 #include "opencv2/ts/ts_perf.hpp"
+
+namespace cvtest {
+using perf::MatDepth;
+}
 
 #ifdef WINRT
 #ifndef __FSTREAM_EMULATED__
@@ -734,3 +762,5 @@ public:
 } // namespace std
 #endif // __FSTREAM_EMULATED__
 #endif // WINRT
+
+#endif // OPENCV_TS_HPP

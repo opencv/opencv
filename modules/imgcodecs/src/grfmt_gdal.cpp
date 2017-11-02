@@ -562,7 +562,6 @@ ImageDecoder GdalDecoder::newDecoder()const{
 */
 bool GdalDecoder::checkSignature( const String& signature )const{
 
-
     // look for NITF
     std::string str(signature);
     if( str.substr(0,4).find("NITF") != std::string::npos ){
@@ -570,7 +569,7 @@ bool GdalDecoder::checkSignature( const String& signature )const{
     }
 
     // look for DTED
-    if( str.substr(140,4) == "DTED" ){
+    if( str.size() > 144 && str.substr(140,4) == "DTED" ){
         return true;
     }
 

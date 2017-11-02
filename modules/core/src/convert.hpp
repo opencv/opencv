@@ -13,7 +13,7 @@ const unsigned int kBiasFp32Exponent    = 127;
 #endif
 
 #if CV_FP16_TYPE
-float convertFp16SW(short fp16)
+inline float convertFp16SW(short fp16)
 {
     // Fp16 -> Fp32
     Cv16suf a;
@@ -21,7 +21,7 @@ float convertFp16SW(short fp16)
     return (float)a.h;
 }
 #else
-float convertFp16SW(short fp16)
+inline float convertFp16SW(short fp16)
 {
     // Fp16 -> Fp32
     Cv16suf b;
@@ -75,7 +75,7 @@ float convertFp16SW(short fp16)
 #endif
 
 #if CV_FP16_TYPE
-short convertFp16SW(float fp32)
+inline short convertFp16SW(float fp32)
 {
     // Fp32 -> Fp16
     Cv16suf a;
@@ -83,7 +83,7 @@ short convertFp16SW(float fp32)
     return a.i;
 }
 #else
-short convertFp16SW(float fp32)
+inline short convertFp16SW(float fp32)
 {
     // Fp32 -> Fp16
     Cv32suf a;
@@ -169,5 +169,20 @@ namespace opt_FP16
 {
 void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size );
 void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t dstep, cv::Size size );
+}
+namespace opt_AVX2
+{
+void cvtScale_s16s32f32Line_AVX2(const short* src, int* dst, float scale, float shift, int width);
+}
+namespace opt_SSE4_1
+{
+    int cvtScale_SIMD_u8u16f32_SSE41(const uchar * src, ushort * dst, int width, float scale, float shift);
+    int cvtScale_SIMD_s8u16f32_SSE41(const schar * src, ushort * dst, int width, float scale, float shift);
+    int cvtScale_SIMD_u16u16f32_SSE41(const ushort * src, ushort * dst, int width, float scale, float shift);
+    int cvtScale_SIMD_s16u16f32_SSE41(const short * src, ushort * dst, int width, float scale, float shift);
+    int cvtScale_SIMD_s32u16f32_SSE41(const int * src, ushort * dst, int width, float scale, float shift);
+    int cvtScale_SIMD_f32u16f32_SSE41(const float * src, ushort * dst, int width, float scale, float shift);
+    int cvtScale_SIMD_f64u16f32_SSE41(const double * src, ushort * dst, int width, float scale, float shift);
+    int Cvt_SIMD_f64u16_SSE41(const double * src, ushort * dst, int width);
 }
 }

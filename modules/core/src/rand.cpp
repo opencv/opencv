@@ -48,14 +48,12 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
     #undef min
     #undef max
     #undef abs
-#else
-    #include <pthread.h>
 #endif
 
 #if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
@@ -677,7 +675,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
     const Mat* arrays[] = {&mat, 0};
     uchar* ptr;
-    NAryMatIterator it(arrays, &ptr);
+    NAryMatIterator it(arrays, &ptr, 1);
     int total = (int)it.size, blockSize = std::min((BLOCK_SIZE + cn - 1)/cn, total);
     size_t esz = mat.elemSize();
     AutoBuffer<double> buf;

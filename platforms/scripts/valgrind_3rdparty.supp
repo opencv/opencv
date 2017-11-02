@@ -1,0 +1,113 @@
+{
+   IPP static init
+   Memcheck:Cond
+   fun:ippicvGetCpuFeatures
+   fun:ippicvStaticInit
+}
+
+{
+   TBB - allocate_via_handler_v3 issue
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN3tbb8internal23allocate_via_handler_v3Em
+}
+
+{
+   GTest
+   Memcheck:Cond
+   fun:_ZN7testing8internal11CmpHelperLEIddEENS_15AssertionResultEPKcS4_RKT_RKT0_
+}
+
+{
+   OpenCL
+   Memcheck:Cond
+   ...
+   obj:**/libOpenCL.so*
+}
+
+{
+   OpenCL-Intel
+   Memcheck:Cond
+   ...
+   obj:**/libigdrcl.so
+}
+
+{
+   OpenCL-Intel
+   Memcheck:Leak
+   ...
+   obj:*/libigdrcl.so*
+}
+
+{
+   OpenCL
+   Memcheck:Param
+   ioctl(generic)
+   ...
+   fun:clGetPlatformIDs
+}
+
+{
+   OpenCL-Init
+   Memcheck:Leak
+   ...
+   fun:clGetPlatformIDs
+}
+
+{
+   glib
+   Memcheck:Leak
+   fun:*alloc
+   obj:*/libglib*
+}
+
+{
+   gcrypt
+   Memcheck:Leak
+   ...
+   obj:*/libgcrypt*
+}
+
+{
+   p11-kit
+   Memcheck:Leak
+   fun:*alloc
+   obj:*/libp11-kit*
+}
+
+{
+   gobject
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   obj:*/libgobject*
+}
+
+{
+   tasn
+   Memcheck:Leak
+   fun:*alloc
+   obj:*/libtasn*.so*
+}
+
+{
+   dl_init
+   Memcheck:Leak
+   ...
+   fun:_dl_init
+}
+
+{
+   dl_open
+   Memcheck:Leak
+   ...
+   fun:_dl_open
+}
+
+{
+   GDAL
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   obj:/usr/lib/libgdal.so.1.17.1
+}

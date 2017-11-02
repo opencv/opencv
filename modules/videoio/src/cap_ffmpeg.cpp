@@ -43,7 +43,7 @@
 
 #include <string>
 
-#if defined HAVE_FFMPEG && !defined WIN32
+#if defined HAVE_FFMPEG && !defined _WIN32
 #include "cap_ffmpeg_impl.hpp"
 #else
 #include "cap_ffmpeg_api.hpp"
@@ -61,7 +61,7 @@ static CvWriteFrame_Plugin icvWriteFrame_FFMPEG_p = 0;
 
 static cv::Mutex _icvInitFFMPEG_mutex;
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 static const HMODULE cv_GetCurrentModule()
 {
     HMODULE h = 0;
@@ -84,7 +84,7 @@ public:
     }
 
 private:
-    #if defined WIN32 || defined _WIN32
+    #if defined _WIN32
     HMODULE icvFFOpenCV;
 
     ~icvInitFFMPEG()
@@ -99,7 +99,7 @@ private:
 
     icvInitFFMPEG()
     {
-    #if defined WIN32 || defined _WIN32
+    #if defined _WIN32
         const wchar_t* module_name_ = L"opencv_ffmpeg"
             CVAUX_STRW(CV_MAJOR_VERSION) CVAUX_STRW(CV_MINOR_VERSION) CVAUX_STRW(CV_SUBMINOR_VERSION)
         #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)

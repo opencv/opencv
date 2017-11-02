@@ -50,7 +50,7 @@ CameraParams::CameraParams() : focal(1), aspect(1), ppx(0), ppy(0),
 
 CameraParams::CameraParams(const CameraParams &other) { *this = other; }
 
-const CameraParams& CameraParams::operator =(const CameraParams &other)
+CameraParams& CameraParams::operator =(const CameraParams &other)
 {
     focal = other.focal;
     ppx = other.ppx;

@@ -1,16 +1,18 @@
 Smoothing Images {#tutorial_gausian_median_blur_bilateral_filter}
 ================
 
+@next_tutorial{tutorial_erosion_dilatation}
+
 Goal
 ----
 
 In this tutorial you will learn how to apply diverse linear filters to smooth images using OpenCV
 functions such as:
 
--   @ref cv::blur
--   @ref cv::GaussianBlur
--   @ref cv::medianBlur
--   @ref cv::bilateralFilter
+-   **blur()**
+-   **GaussianBlur()**
+-   **medianBlur()**
+-   **bilateralFilter()**
 
 Theory
 ------
@@ -64,7 +66,7 @@ Applications](http://szeliski.org/Book/) by Richard Szeliski and to *LearningOpe
     @note
     Remember that a 2D Gaussian can be represented as :
     \f[G_{0}(x, y) = A  e^{ \dfrac{ -(x - \mu_{x})^{2} }{ 2\sigma^{2}_{x} } +  \dfrac{ -(y - \mu_{y})^{2} }{ 2\sigma^{2}_{y} } }\f]
-    where \f$\mu\f$ is the mean (the peak) and \f$\sigma\f$ represents the variance (per each of the
+    where \f$\mu\f$ is the mean (the peak) and \f$\sigma^{2}\f$ represents the variance (per each of the
     variables \f$x\f$ and \f$y\f$)
 
 ### Median Filter
@@ -92,38 +94,65 @@ Code
     -   Loads an image
     -   Applies 4 different kinds of filters (explained in Theory) and show the filtered images
         sequentially
+
+@add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+
 -   **Code at glance:**
-    @include samples/cpp/tutorial_code/ImgProc/Smoothing.cpp
+    @include samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/Smoothing/smoothing.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/imgProc/Smoothing/smoothing.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is
-    already known by now.
--#  **Normalized Block Filter:**
+Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is
+already known by now.
 
-    OpenCV offers the function @ref cv::blur to perform smoothing with this filter.
-    @snippet cpp/tutorial_code/ImgProc/Smoothing.cpp blur
+#### Normalized Block Filter:
 
+-   OpenCV offers the function **blur()** to perform smoothing with this filter.
     We specify 4 arguments (more details, check the Reference):
-
     -   *src*: Source image
     -   *dst*: Destination image
-    -   *Size( w,h )*: Defines the size of the kernel to be used ( of width *w* pixels and height
+    -   *Size( w, h )*: Defines the size of the kernel to be used ( of width *w* pixels and height
         *h* pixels)
     -   *Point(-1, -1)*: Indicates where the anchor point (the pixel evaluated) is located with
         respect to the neighborhood. If there is a negative value, then the center of the kernel is
         considered the anchor point.
 
--#  **Gaussian Filter:**
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp blur
+@end_toggle
 
-    It is performed by the function @ref cv::GaussianBlur :
-    @snippet cpp/tutorial_code/ImgProc/Smoothing.cpp gaussianblur
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java blur
+@end_toggle
 
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py blur
+@end_toggle
+
+#### Gaussian Filter:
+
+-   It is performed by the function **GaussianBlur()** :
     Here we use 4 arguments (more details, check the OpenCV reference):
-
     -   *src*: Source image
     -   *dst*: Destination image
     -   *Size(w, h)*: The size of the kernel to be used (the neighbors to be considered). \f$w\f$ and
@@ -134,35 +163,65 @@ Explanation
     -   \f$\sigma_{y}\f$: The standard deviation in y. Writing \f$0\f$ implies that \f$\sigma_{y}\f$ is
         calculated using kernel size.
 
--#  **Median Filter:**
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp gaussianblur
+@end_toggle
 
-    This filter is provided by the @ref cv::medianBlur function:
-    @snippet cpp/tutorial_code/ImgProc/Smoothing.cpp medianblur
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java gaussianblur
+@end_toggle
 
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py gaussianblur
+@end_toggle
+
+#### Median Filter:
+
+-   This filter is provided by the **medianBlur()** function:
     We use three arguments:
-
     -   *src*: Source image
     -   *dst*: Destination image, must be the same type as *src*
     -   *i*: Size of the kernel (only one because we use a square window). Must be odd.
 
--#  **Bilateral Filter**
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp medianblur
+@end_toggle
 
-    Provided by OpenCV function @ref cv::bilateralFilter
-    @snippet cpp/tutorial_code/ImgProc/Smoothing.cpp bilateralfilter
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java medianblur
+@end_toggle
 
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py medianblur
+@end_toggle
+
+#### Bilateral Filter
+
+-   Provided by OpenCV function **bilateralFilter()**
     We use 5 arguments:
-
     -   *src*: Source image
     -   *dst*: Destination image
     -   *d*: The diameter of each pixel neighborhood.
     -   \f$\sigma_{Color}\f$: Standard deviation in the color space.
     -   \f$\sigma_{Space}\f$: Standard deviation in the coordinate space (in pixel terms)
 
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp bilateralfilter
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java bilateralfilter
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py bilateralfilter
+@end_toggle
+
 Results
 -------
 
--   The code opens an image (in this case *lena.jpg*) and display it under the effects of the 4
-    filters explained.
+-   The code opens an image (in this case [lena.jpg](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/lena.jpg))
+    and display it under the effects of the 4 filters explained.
 -   Here is a snapshot of the image smoothed using *medianBlur*:
 
     ![](images/Smoothing_Tutorial_Result_Median_Filter.jpg)

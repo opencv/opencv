@@ -138,7 +138,7 @@ public:
                     fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
                     fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
                                tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
-                    fprintf(stderr, "Error: cannot create video file.");
+                    fprintf(stderr, "Error: cannot create video file.\n");
                     if (entries[j].required)
                         ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                 }
