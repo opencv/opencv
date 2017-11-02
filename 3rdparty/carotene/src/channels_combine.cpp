@@ -77,7 +77,7 @@ namespace CAROTENE_NS {
                  dstStride == src2Stride && \
                  dstStride == src3Stride &&
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 
 #define MERGE_ASM2(sgn, bits) __asm__ ( \
                                           "vld1." #bits " {d0-d1}, [%[in0]]             \n\t" \
@@ -128,7 +128,7 @@ namespace CAROTENE_NS {
                                      vst##n##q_##sgn##bits(dst + dj, v_dst); \
                                  }
 
-#endif // __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#endif
 
 #define COMBINE(sgn,bits,n) void combine##n(const Size2D &_size                                             \
                                         FILL_LINES##n(FARG, sgn##bits),                                     \
@@ -240,7 +240,7 @@ void combineYUYV(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -253,7 +253,7 @@ void combineYUYV(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t syj = 0u, sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; sj < roiw32; sj += 32, syj += 64, dj += 128)
         {
             internal::prefetch(srcy + syj);
@@ -317,7 +317,7 @@ void combineUYVY(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -330,7 +330,7 @@ void combineUYVY(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t syj = 0u, sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; sj < roiw32; sj += 32, syj += 64, dj += 128)
         {
             internal::prefetch(srcy + syj);

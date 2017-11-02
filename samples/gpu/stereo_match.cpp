@@ -76,7 +76,7 @@ private:
 
 static void printHelp()
 {
-    cout << "Usage: stereo_match_gpu\n"
+    cout << "Usage: stereo_match\n"
         << "\t--left <left_view> --right <right_view> # must be rectified\n"
         << "\t--method <stereo_match_method> # BM | BP | CSBP\n"
         << "\t--ndisp <number> # number of disparity levels\n";
@@ -212,7 +212,7 @@ void App::run()
         // Show results
         d_disp.download(disp);
         putText(disp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
-        imshow("disparity", disp);
+        imshow("disparity", (Mat_<uchar>)disp);
 
         handleKey((char)waitKey(3));
     }

@@ -151,8 +151,9 @@ namespace cv
 
             if( descriptors.needed() )
             {
-                Mat& desc = descriptors.getMatRef();
+                Mat desc;
                 impl.Feature_Description(keypoints, desc);
+                desc.copyTo(descriptors);
 
                 CV_Assert((!desc.rows || desc.cols == descriptorSize()));
                 CV_Assert((!desc.rows || (desc.type() == descriptorType())));
@@ -195,4 +196,10 @@ namespace cv
     {
         return makePtr<KAZE_Impl>(extended, upright, threshold, octaves, sublevels, diffusivity);
     }
+
+    String KAZE::getDefaultName() const
+    {
+        return (Feature2D::getDefaultName() + ".KAZE");
+    }
+
 }

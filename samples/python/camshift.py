@@ -41,7 +41,7 @@ from video import presets
 class App(object):
     def __init__(self, video_src):
         self.cam = video.create_capture(video_src, presets['cube'])
-        ret, self.frame = self.cam.read()
+        _ret, self.frame = self.cam.read()
         cv2.namedWindow('camshift')
         cv2.setMouseCallback('camshift', self.onmouse)
 
@@ -76,7 +76,7 @@ class App(object):
 
     def run(self):
         while True:
-            ret, self.frame = self.cam.read()
+            _ret, self.frame = self.cam.read()
             vis = self.frame.copy()
             hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
             mask = cv2.inRange(hsv, np.array((0., 60., 32.)), np.array((180., 255., 255.)))

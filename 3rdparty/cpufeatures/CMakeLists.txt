@@ -2,19 +2,21 @@ if(NOT ANDROID)
   message("cpufeatures is ANDROID project")
 endif()
 
+ocv_update(OPENCV_CPUFEATURES_TARGET_NAME libcpufeatures)
+
 set(CPUFEATURES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "Android cpufeatures project sources (for example, <android-ndk>/sources/android/cpufeatures)")
 
 set(CPUFEATURES_INCLUDE_DIRS ${CPUFEATURES_ROOT} CACHE INTERNAL "")
-set(CPUFEATURES_LIBRARIES cpufeatures CACHE INTERNAL "")
+set(CPUFEATURES_LIBRARIES "${OPENCV_CPUFEATURES_TARGET_NAME}" CACHE INTERNAL "")
 
 if(NOT DEFINED CPUFEATURES_SOURCES)
   set(CPUFEATURES_SOURCES ${CPUFEATURES_ROOT}/cpu-features.c ${CPUFEATURES_ROOT}/cpu-features.h)
 endif()
 
 include_directories(${CPUFEATURES_INCLUDE_DIRS})
-add_library(cpufeatures STATIC ${CPUFEATURES_SOURCES})
+add_library(${OPENCV_CPUFEATURES_TARGET_NAME} STATIC ${CPUFEATURES_SOURCES})
 
-set_target_properties(cpufeatures
+set_target_properties(${OPENCV_CPUFEATURES_TARGET_NAME}
   PROPERTIES OUTPUT_NAME cpufeatures
   DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
   COMPILE_PDB_NAME cpufeatures
@@ -23,9 +25,9 @@ set_target_properties(cpufeatures
 )
 
 if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(cpufeatures PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${OPENCV_CPUFEATURES_TARGET_NAME} PROPERTIES FOLDER "3rdparty")
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(cpufeatures EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${OPENCV_CPUFEATURES_TARGET_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()

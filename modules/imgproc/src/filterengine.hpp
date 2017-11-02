@@ -370,6 +370,18 @@ void crossCorr( const Mat& src, const Mat& templ, Mat& dst,
                Point anchor=Point(0,0), double delta=0,
                int borderType=BORDER_REFLECT_101 );
 
+
 }
+
+#ifdef HAVE_IPP_IW
+static inline bool ippiCheckAnchor(cv::Point anchor, cv::Size ksize)
+{
+    anchor = cv::normalizeAnchor(anchor, ksize);
+    if(anchor.x != ((ksize.width-1)/2) || anchor.y != ((ksize.height-1)/2))
+        return 0;
+    else
+        return 1;
+}
+#endif
 
 #endif

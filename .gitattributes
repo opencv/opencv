@@ -31,6 +31,8 @@
 *.py           text
 *.qrc          text
 *.qss          text
+*.rc           text
+*.rc.in        text
 *.S            text
 *.sbt          text
 *.scala        text

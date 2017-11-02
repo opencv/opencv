@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 
 /****************** Capturing video from camera via CMU lib *******************/
 
@@ -548,4 +548,4 @@ CvCapture * cvCreateCameraCapture_CMU (int index)
 }
 
 #endif // CMU
-#endif // WIN32
+#endif // _WIN32

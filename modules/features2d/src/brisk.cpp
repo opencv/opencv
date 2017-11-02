@@ -59,6 +59,10 @@ public:
     explicit BRISK_Impl(const std::vector<float> &radiusList, const std::vector<int> &numberList,
         float dMax=5.85f, float dMin=8.2f, const std::vector<int> indexChange=std::vector<int>());
 
+    explicit BRISK_Impl(int thresh, int octaves, const std::vector<float> &radiusList,
+        const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
+        const std::vector<int> indexChange=std::vector<int>());
+
     virtual ~BRISK_Impl();
 
     int descriptorSize() const
@@ -139,6 +143,10 @@ protected:
 
     // general
     static const float basicSize_;
+
+private:
+    BRISK_Impl(const BRISK_Impl &); // copy disabled
+    BRISK_Impl& operator=(const BRISK_Impl &); // assign disabled
 };
 
 
@@ -317,6 +325,18 @@ BRISK_Impl::BRISK_Impl(const std::vector<float> &radiusList,
   generateKernel(radiusList, numberList, dMax, dMin, indexChange);
   threshold = 20;
   octaves = 3;
+}
+
+BRISK_Impl::BRISK_Impl(int thresh,
+                       int octaves_in,
+                       const std::vector<float> &radiusList,
+                       const std::vector<int> &numberList,
+                       float dMax, float dMin,
+                       const std::vector<int> indexChange)
+{
+  generateKernel(radiusList, numberList, dMax, dMin, indexChange);
+  threshold = thresh;
+  octaves = octaves_in;
 }
 
 void
@@ -703,7 +723,6 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
   {
     cv::KeyPoint& kp = keypoints[k];
     const int& scale = kscales[k];
-    int* pvalues = _values;
     const float& x = kp.pt.x;
     const float& y = kp.pt.y;
 
@@ -712,7 +731,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
         // get the gray values in the unrotated pattern
         for (unsigned int i = 0; i < points_; i++)
         {
-          *(pvalues++) = smoothedIntensity(image, _integral, x, y, scale, 0, i);
+            _values[i] = smoothedIntensity(image, _integral, x, y, scale, 0, i);
         }
 
         int direction0 = 0;
@@ -721,6 +740,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
         const BriskLongPair* max = longPairs_ + noLongPairs_;
         for (BriskLongPair* iter = longPairs_; iter < max; ++iter)
         {
+          CV_Assert(iter->i < points_ && iter->j < points_);
           t1 = *(_values + iter->i);
           t2 = *(_values + iter->j);
           const int delta_t = (t1 - t2);
@@ -745,7 +765,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     int theta;
     if (kp.angle==-1)
     {
-        // don't compute the gradient direction, just assign a rotation of 0°
+        // don't compute the gradient direction, just assign a rotation of 0
         theta = 0;
     }
     else
@@ -765,11 +785,10 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     int shifter = 0;
 
     //unsigned int mean=0;
-    pvalues = _values;
     // get the gray values in the rotated pattern
     for (unsigned int i = 0; i < points_; i++)
     {
-      *(pvalues++) = smoothedIntensity(image, _integral, x, y, scale, theta, i);
+        _values[i] = smoothedIntensity(image, _integral, x, y, scale, theta, i);
     }
 
     // now iterate through all the pairings
@@ -777,6 +796,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     const BriskShortPair* max = shortPairs_ + noShortPairs_;
     for (BriskShortPair* iter = shortPairs_; iter < max; ++iter)
     {
+      CV_Assert(iter->i < points_ && iter->j < points_);
       t1 = *(_values + iter->i);
       t2 = *(_values + iter->j);
       if (t1 > t2)
@@ -2316,6 +2336,18 @@ Ptr<BRISK> BRISK::create(const std::vector<float> &radiusList, const std::vector
                          float dMax, float dMin, const std::vector<int>& indexChange)
 {
     return makePtr<BRISK_Impl>(radiusList, numberList, dMax, dMin, indexChange);
+}
+
+Ptr<BRISK> BRISK::create(int thresh, int octaves, const std::vector<float> &radiusList,
+                         const std::vector<int> &numberList, float dMax, float dMin,
+                         const std::vector<int>& indexChange)
+{
+    return makePtr<BRISK_Impl>(thresh, octaves, radiusList, numberList, dMax, dMin, indexChange);
+}
+
+String BRISK::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".BRISK");
 }
 
 }

@@ -47,14 +47,17 @@ namespace cv
 
 Algorithm::Algorithm()
 {
+    CV_TRACE_FUNCTION();
 }
 
 Algorithm::~Algorithm()
 {
+    CV_TRACE_FUNCTION();
 }
 
 void Algorithm::save(const String& filename) const
 {
+    CV_TRACE_FUNCTION();
     FileStorage fs(filename, FileStorage::WRITE);
     fs << getDefaultName() << "{";
     write(fs);
@@ -63,11 +66,13 @@ void Algorithm::save(const String& filename) const
 
 String Algorithm::getDefaultName() const
 {
+    CV_TRACE_FUNCTION();
     return String("my_object");
 }
 
 void Algorithm::writeFormat(FileStorage& fs) const
 {
+    CV_TRACE_FUNCTION();
     fs << "format" << (int)3;
 }
 

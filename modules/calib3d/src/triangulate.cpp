@@ -281,7 +281,7 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         c = cvGetReal2D(RTFTR,2,1);
         d = cvGetReal2D(RTFTR,2,2);
 
-        // Form the polynomial g(t) = k6*t⁶ + k5*t⁵ + k4*t⁴ + k3*t³ + k2*t² + k1*t + k0
+        // Form the polynomial g(t) = k6*t^6 + k5*t^5 + k4*t^4 + k3*t^3 + k2*t^2 + k1*t + k0
         // from f1, f2, a, b, c and d
         cvSetReal2D(polynomial,0,6,( +b*c*c*f1*f1*f1*f1*a-a*a*d*f1*f1*f1*f1*c ));
         cvSetReal2D(polynomial,0,5,( +f2*f2*f2*f2*c*c*c*c+2*a*a*f2*f2*c*c-a*a*d*d*f1*f1*f1*f1+b*b*c*c*f1*f1*f1*f1+a*a*a*a ));

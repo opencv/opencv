@@ -1,0 +1,22 @@
+{
+  "extends": "google",
+  "parserOptions": {
+    "ecmaVersion": 6
+  },
+  "rules": {
+    "max-len": ["error", 100, {"ignoreUrls": true}],
+    "quotes": ["error", "single"],
+    "indent": ["error", 4, {"ArrayExpression": "first",
+                            "ObjectExpression": "first",
+                            "CallExpression": {"arguments": "first"},
+                            "SwitchCase": 1}],
+    "require-jsdoc": "off",
+    "new-cap": "off"
+  },
+  "plugins": ["html"],
+  "settings": {
+    "html/javascript-mime-types": ["text/javascript", "text/code-snippet"],
+    "html/indent": "0",
+    "html/report-bad-indent": "error"
+  }
+}

@@ -63,7 +63,7 @@ int main(void)
 
     Mat res;
     drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
-    imwrite("res.png", res);
+    imwrite("akaze_result.png", res);
 
     double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
     cout << "A-KAZE Matching Results" << endl;
@@ -74,6 +74,9 @@ int main(void)
     cout << "# Inliers:                            \t" << inliers1.size() << endl;
     cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
     cout << endl;
+
+    imshow("result", res);
+    waitKey();
 
     return 0;
 }

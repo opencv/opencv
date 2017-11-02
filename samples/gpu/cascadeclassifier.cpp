@@ -20,7 +20,7 @@ using namespace cv::cuda;
 
 static void help()
 {
-    cout << "Usage: ./cascadeclassifier_gpu \n\t--cascade <cascade_file>\n\t(<image>|--video <video>|--camera <camera_id>)\n"
+    cout << "Usage: ./cascadeclassifier \n\t--cascade <cascade_file>\n\t(<image>|--video <video>|--camera <camera_id>)\n"
             "Using OpenCV version " << CV_VERSION << endl << endl;
 }
 

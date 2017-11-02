@@ -73,7 +73,7 @@ class camshift_test(NewOpenCVTests):
                 prob = cv2.calcBackProject([hsv], [0], self.hist, [0, 180], 1)
                 prob &= mask
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
-                track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
+                _track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
 
             trackingRect = np.array(self.track_window)
             trackingRect[2] += trackingRect[0]
@@ -90,3 +90,7 @@ class camshift_test(NewOpenCVTests):
     def test_camshift(self):
         self.prepareRender()
         self.runTracker()
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

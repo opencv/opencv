@@ -38,7 +38,7 @@ class peopledetect_test(NewOpenCVTests):
 
             img = self.get_sample(dirPath + sample, 0)
 
-            found, w = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
+            found, _w = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
             found_filtered = []
             for ri, r in enumerate(found):
                 for qi, q in enumerate(found):
@@ -60,3 +60,6 @@ class peopledetect_test(NewOpenCVTests):
                         matches += 1
 
             self.assertGreater(matches, 0)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

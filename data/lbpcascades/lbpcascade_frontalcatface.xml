@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!----------------------------------------------------------------------------
+<!--
  A frontal cat face detector using LBP features.
 
  Contributed by Joseph Howse (josephhowse@nummist.com).
@@ -72,7 +72,7 @@
  | SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  Back to
  | Top
  //////////////////////////////////////////////////////////////////////////
- ---------------------------------------------------------------------------->
+-->
 <opencv_storage>
 <cascade>
   <stageType>BOOST</stageType>

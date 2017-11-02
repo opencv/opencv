@@ -98,14 +98,23 @@ public:
     typedef _Tp          channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels) };
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
+    };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
+namespace traits {
+template<typename _Tp>
+struct Depth< Complex<_Tp> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp>
+struct Type< Complex<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 2) }; };
+} // namespace
 
 
 //////////////////////////////// Point_ ////////////////////////////////
@@ -190,15 +199,23 @@ public:
     typedef _Tp                                       channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
+namespace traits {
+template<typename _Tp>
+struct Depth< Point_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp>
+struct Type< Point_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 2) }; };
+} // namespace
 
 
 //////////////////////////////// Point3_ ////////////////////////////////
@@ -261,16 +278,23 @@ public:
     typedef _Tp                                        channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 3,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
-
+namespace traits {
+template<typename _Tp>
+struct Depth< Point3_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp>
+struct Type< Point3_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 3) }; };
+} // namespace
 
 //////////////////////////////// Size_ ////////////////////////////////
 
@@ -301,6 +325,8 @@ public:
     Size_& operator = (const Size_& sz);
     //! the area (width*height)
     _Tp area() const;
+    //! true if empty
+    bool empty() const;
 
     //! conversion of another data type.
     template<typename _Tp2> operator Size_<_Tp2>() const;
@@ -322,16 +348,23 @@ public:
     typedef _Tp                                      channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
-
+namespace traits {
+template<typename _Tp>
+struct Depth< Size_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp>
+struct Type< Size_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 2) }; };
+} // namespace
 
 //////////////////////////////// Rect_ ////////////////////////////////
 
@@ -400,6 +433,8 @@ public:
     Size_<_Tp> size() const;
     //! area (width*height) of the rectangle
     _Tp area() const;
+    //! true if empty
+    bool empty() const;
 
     //! conversion to another data type
     template<typename _Tp2> operator Rect_<_Tp2>() const;
@@ -423,16 +458,23 @@ public:
     typedef _Tp                                      channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 4,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
-
+namespace traits {
+template<typename _Tp>
+struct Depth< Rect_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp>
+struct Type< Rect_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 4) }; };
+} // namespace
 
 ///////////////////////////// RotatedRect /////////////////////////////
 
@@ -480,7 +522,7 @@ public:
     RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
     /** returns 4 vertices of the rectangle
-    @param pts The points array for storing rectangle vertices.
+    @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
     */
     void points(Point2f pts[]) const;
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
@@ -501,15 +543,23 @@ public:
     typedef float        channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = (int)sizeof(value_type)/sizeof(channel_type), // 5
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
+namespace traits {
+template<>
+struct Depth< RotatedRect > { enum { value = Depth<float>::value }; };
+template<>
+struct Type< RotatedRect > { enum { value = CV_MAKETYPE(Depth<float>::value, (int)sizeof(RotatedRect)/sizeof(float)) }; };
+} // namespace
 
 
 //////////////////////////////// Range /////////////////////////////////
@@ -557,15 +607,23 @@ public:
     typedef int        channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
+namespace traits {
+template<>
+struct Depth< Range > { enum { value = Depth<int>::value }; };
+template<>
+struct Type< Range > { enum { value = CV_MAKETYPE(Depth<int>::value, 2) }; };
+} // namespace
 
 
 //////////////////////////////// Scalar_ ///////////////////////////////
@@ -613,15 +671,23 @@ public:
     typedef _Tp                                        channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = 4,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
+namespace traits {
+template<typename _Tp>
+struct Depth< Scalar_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp>
+struct Type< Scalar_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 4) }; };
+} // namespace
 
 
 /////////////////////////////// KeyPoint ////////////////////////////////
@@ -708,6 +774,7 @@ public:
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
 };
 
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
 template<> class DataType<KeyPoint>
 {
 public:
@@ -724,7 +791,7 @@ public:
 
     typedef Vec<channel_type, channels> vec_type;
 };
-
+#endif
 
 
 //////////////////////////////// DMatch /////////////////////////////////
@@ -751,6 +818,7 @@ public:
     bool operator<(const DMatch &m) const;
 };
 
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
 template<> class DataType<DMatch>
 {
 public:
@@ -767,7 +835,7 @@ public:
 
     typedef Vec<channel_type, channels> vec_type;
 };
-
+#endif
 
 
 ///////////////////////////// TermCriteria //////////////////////////////
@@ -881,14 +949,23 @@ public:
     typedef double      channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 24
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
 };
+
+namespace traits {
+template<>
+struct Depth< Moments > { enum { value = Depth<double>::value }; };
+template<>
+struct Type< Moments > { enum { value = CV_MAKETYPE(Depth<double>::value, (int)(sizeof(Moments)/sizeof(double))) }; };
+} // namespace
 
 //! @} imgproc_shape
 
@@ -1599,6 +1676,13 @@ _Tp Size_<_Tp>::area() const
     return result;
 }
 
+template<typename _Tp> inline
+bool Size_<_Tp>::empty() const
+{
+    return width <= 0 || height <= 0;
+}
+
+
 template<typename _Tp> static inline
 Size_<_Tp>& operator *= (Size_<_Tp>& a, _Tp b)
 {
@@ -1741,6 +1825,12 @@ _Tp Rect_<_Tp>::area() const
     return result;
 }
 
+template<typename _Tp> inline
+bool Rect_<_Tp>::empty() const
+{
+    return width <= 0 || height <= 0;
+}
+
 template<typename _Tp> template<typename _Tp2> inline
 Rect_<_Tp>::operator Rect_<_Tp2>() const
 {
@@ -1803,12 +1893,17 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 template<typename _Tp> static inline
 Rect_<_Tp>& operator |= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 {
-    _Tp x1 = std::min(a.x, b.x);
-    _Tp y1 = std::min(a.y, b.y);
-    a.width = std::max(a.x + a.width, b.x + b.width) - x1;
-    a.height = std::max(a.y + a.height, b.y + b.height) - y1;
-    a.x = x1;
-    a.y = y1;
+    if (a.empty()) {
+        a = b;
+    }
+    else if (!b.empty()) {
+        _Tp x1 = std::min(a.x, b.x);
+        _Tp y1 = std::min(a.y, b.y);
+        a.width = std::max(a.x + a.width, b.x + b.width) - x1;
+        a.height = std::max(a.y + a.height, b.y + b.height) - y1;
+        a.x = x1;
+        a.y = y1;
+    }
     return a;
 }
 

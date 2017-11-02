@@ -312,7 +312,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
         ::ipp::IwiImage iwDstProc  = iwDst;
         ::ipp::IwiBorderSize  borderSize(maskSize);
         ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder.m_borderType)
+        if(!ippBorder)
             return false;
 
         if(srcType == ipp8u && dstType == ipp8u)
@@ -324,17 +324,17 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
         {
             iwSrc -= borderSize;
             iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwSrc, &iwSrcProc, 1, 0, ippAlgHintFast);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0, ::ipp::IwiScaleParams(ippAlgHintFast));
             iwSrcProc += borderSize;
         }
 
         if(useScharr)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterScharr, &iwSrcProc, &iwDstProc, derivType, maskSize, ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterScharr, iwSrcProc, iwDstProc, derivType, maskSize, ::ipp::IwDefault(), ippBorder);
         else
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterSobel, &iwSrcProc, &iwDstProc, derivType, maskSize, ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterSobel, iwSrcProc, iwDstProc, derivType, maskSize, ::ipp::IwDefault(), ippBorder);
 
         if(useScale)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwDstProc, &iwDst, scale, delta, ippAlgHintFast);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta, ::ipp::IwiScaleParams(ippAlgHintFast));
     }
     catch (::ipp::IwException)
     {
@@ -444,7 +444,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     if( scale != 1 )
     {
         // usually the smoothing part is the slowest to compute,
-        // so try to scale it instead of the faster differenciating part
+        // so try to scale it instead of the faster differentiating part
         if( dx == 0 )
             kx *= scale;
         else
@@ -732,7 +732,7 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
         ::ipp::IwiImage iwDstProc  = iwDst;
         ::ipp::IwiBorderSize  borderSize(maskSize);
         ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder.m_borderType)
+        if(!ippBorder)
             return false;
 
         if(srcType == ipp8u && dstType == ipp8u)
@@ -744,14 +744,14 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
         {
             iwSrc -= borderSize;
             iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwSrc, &iwSrcProc, 1, 0);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0);
             iwSrcProc += borderSize;
         }
 
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterLaplacian, &iwSrcProc, &iwDstProc, maskSize, ippBorder);
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterLaplacian, iwSrcProc, iwDstProc, maskSize, ::ipp::IwDefault(), ippBorder);
 
         if(useScale)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwDstProc, &iwDst, scale, delta);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta);
 
     }
     catch (::ipp::IwException ex)

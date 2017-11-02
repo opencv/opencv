@@ -99,7 +99,7 @@ class App:
         run_btn = tk.Button(right, command=self.on_run, text='Run', width=8)
 
         self.text = text = ScrolledText(right, font=('arial', 12, 'normal'), width = 30, wrap='word')
-        self.linker = linker = LinkManager(text, self.on_link)
+        self.linker = _linker = LinkManager(text, self.on_link)
         self.text.tag_config("header1", font=('arial', 14, 'bold'))
         self.text.tag_config("header2", font=('arial', 12, 'bold'))
         text.config(state='disabled')

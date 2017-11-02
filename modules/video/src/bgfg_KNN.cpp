@@ -89,6 +89,9 @@ public:
     nShadowDetection =  defaultnShadowDetection2;
     fTau = defaultfTau;// Tau - shadow threshold
     name_ = "BackgroundSubtractor.KNN";
+    nLongCounter = 0;
+    nMidCounter = 0;
+    nShortCounter = 0;
     }
     //! the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -113,6 +116,9 @@ public:
     nShadowDetection =  defaultnShadowDetection2;
     fTau = defaultfTau;
     name_ = "BackgroundSubtractor.KNN";
+    nLongCounter = 0;
+    nMidCounter = 0;
+    nShortCounter = 0;
     }
     //! the destructor
     ~BackgroundSubtractorKNNImpl() {}

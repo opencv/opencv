@@ -105,12 +105,12 @@ void flip3(const Size2D & size,
 {
     using namespace internal;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
     typedef typename VecTraits<T, 3>::vec128 vec128;
 #endif
     typedef typename VecTraits<T, 3>::vec64 vec64;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
     u32 step_base = 16 / sizeof(T), step_base3 = step_base * 3;
     size_t roiw_base = size.width >= (step_base - 1) ? size.width - step_base + 1 : 0;
 #endif
@@ -123,7 +123,7 @@ void flip3(const Size2D & size,
         T * dst = getRowPtr((T *)dstBase, dstStride, (flipMode & FLIP_VERTICAL_MODE) != 0 ? size.height - i - 1 : i);
         size_t j = 0, js = 0, jd = size.width * 3;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; j < roiw_base; j += step_base, js += step_base3, jd -= step_base3)
         {
             prefetch(src + js);
@@ -139,7 +139,7 @@ void flip3(const Size2D & size,
 
             vst3q(dst + jd - step_base3, v_dst);
         }
-#endif // ANDROID
+#endif // __ANDROID__
 
         for (; j < roiw_tail; j += step_tail, js += step_tail3, jd -= step_tail3)
         {

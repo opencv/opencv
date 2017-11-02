@@ -536,12 +536,14 @@ TEST( Features2d_DescriptorMatcher_BruteForce, regression )
     test.safe_run();
 }
 
+#ifdef HAVE_OPENCV_FLANN
 TEST( Features2d_DescriptorMatcher_FlannBased, regression )
 {
     CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based",
                                   DescriptorMatcher::create("FlannBased"), 0.04f );
     test.safe_run();
 }
+#endif
 
 TEST( Features2d_DMatch, read_write )
 {

@@ -308,6 +308,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #ifdef CV_DOXYGEN
 #   undef CV_SSE2
 #   undef CV_NEON
+#   undef CV_VSX
 #endif
 
 #if CV_SSE2
@@ -317,6 +318,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #elif CV_NEON
 
 #include "opencv2/core/hal/intrin_neon.hpp"
+
+#elif CV_VSX
+
+#include "opencv2/core/hal/intrin_vsx.hpp"
 
 #else
 
@@ -435,7 +440,7 @@ template <> struct V_RegTrait128<double> {
 
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700)
+#if (_MSC_VER < 1700) || defined(_M_ARM)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;

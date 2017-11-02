@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "fisheye.hpp"
+#include <limits>
 
 namespace cv { namespace
 {
@@ -378,9 +379,9 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 
         double theta_d = sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
 
-        // the current camera model is only valid up to 180° FOV
+        // the current camera model is only valid up to 180 FOV
         // for larger FOV the loop below does not converge
-        // clip values so we still get plausible results for super fisheye images > 180°
+        // clip values so we still get plausible results for super fisheye images > 180 grad
         theta_d = min(max(-CV_PI/2., theta_d), CV_PI/2.);
 
         if (theta_d > 1e-8)
@@ -474,17 +475,26 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
 
         for( int j = 0; j < size.width; ++j)
         {
-            double x = _x/_w, y = _y/_w;
+            double u, v;
+            if( _w <= 0)
+            {
+                u = (_x > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+                v = (_y > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+            }
+            else
+            {
+                double x = _x/_w, y = _y/_w;
 
-            double r = sqrt(x*x + y*y);
-            double theta = atan(r);
+                double r = sqrt(x*x + y*y);
+                double theta = atan(r);
 
-            double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;
-            double theta_d = theta * (1 + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8);
+                double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;
+                double theta_d = theta * (1 + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8);
 
-            double scale = (r == 0) ? 1.0 : theta_d / r;
-            double u = f[0]*x*scale + c[0];
-            double v = f[1]*y*scale + c[1];
+                double scale = (r == 0) ? 1.0 : theta_d / r;
+                u = f[0]*x*scale + c[0];
+                v = f[1]*y*scale + c[1];
+            }
 
             if( m1type == CV_16SC2 )
             {
@@ -760,7 +770,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
 
     //-------------------------------Optimization
-    for(int iter = 0; ; ++iter)
+    for(int iter = 0; iter <= std::numeric_limits<int>::max(); ++iter)
     {
         if ((criteria.type == 1 && iter >= criteria.maxCount)  ||
             (criteria.type == 2 && change <= criteria.epsilon) ||
@@ -918,7 +928,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     intrinsicRight_errors.isEstimate = intrinsicRight.isEstimate;
 
     std::vector<uchar> selectedParams;
-    std::vector<int> tmp(6 * (n_images + 1), 1);
+    std::vector<uchar> tmp(6 * (n_images + 1), 1);
     selectedParams.insert(selectedParams.end(), intrinsicLeft.isEstimate.begin(), intrinsicLeft.isEstimate.end());
     selectedParams.insert(selectedParams.end(), intrinsicRight.isEstimate.begin(), intrinsicRight.isEstimate.end());
     selectedParams.insert(selectedParams.end(), tmp.begin(), tmp.end());
@@ -1400,7 +1410,8 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
-            CV_Assert(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) < thresh_cond);
+            if(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) > thresh_cond )
+                CV_Error( cv::Error::StsInternal, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d",image_idx));
         }
         omckk.reshape(3,1).copyTo(omc.getMat().col(image_idx));
         Tckk.reshape(3,1).copyTo(Tc.getMat().col(image_idx));

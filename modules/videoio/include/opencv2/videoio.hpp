@@ -114,7 +114,9 @@ enum VideoCaptureAPIs {
        CAP_GSTREAMER    = 1800,         //!< GStreamer
        CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
        CAP_IMAGES       = 2000,         //!< OpenCV Image Sequence (e.g. img_%02d.jpg)
-       CAP_ARAVIS       = 2100          //!< Aravis SDK
+       CAP_ARAVIS       = 2100,         //!< Aravis SDK
+       CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
+       CAP_INTEL_MFX    = 2300          //!< Intel MediaSDK
      };
 
 /** @brief %VideoCapture generic properties identifier.
@@ -806,12 +808,12 @@ protected:
 
 class IVideoWriter;
 
+/** @example videowriter_basic.cpp
+An example using VideoCapture and VideoWriter class
+ */
 /** @brief Video writer class.
 
 The class provides C++ API for writing video files or image sequences.
-
-Here is how the class can be used:
-@include samples/cpp/videowriter_basic.cpp
  */
 class CV_EXPORTS_W VideoWriter
 {
@@ -849,6 +851,13 @@ public:
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
+    /** @overload
+    The `apiPreference` parameter allows to specify API backends to use. Can be used to enforce a specific reader implementation
+    if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_GSTREAMER.
+     */
+    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
+                Size frameSize, bool isColor = true);
+
     /** @brief Default destructor
 
     The method first calls VideoWriter::release to close the already opened file.
@@ -864,6 +873,11 @@ public:
     The method first calls VideoWriter::release to close the already opened file.
      */
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
+                      Size frameSize, bool isColor = true);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
 
     /** @brief Returns true if video writer has been successfully initialized.

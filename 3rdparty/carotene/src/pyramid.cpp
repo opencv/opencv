@@ -331,7 +331,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
             for (; x < roiw8; x += 8)
             {
                 internal::prefetch(lane + 2 * x);
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
                 __asm__ (
                     "vld2.16 {d0-d3}, [%[in0]]                               \n\t"
                     "vld2.16 {d4-d7}, [%[in4]]                               \n\t"
@@ -538,7 +538,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
             for (; x < roiw4; x += 4)
             {
                 internal::prefetch(lane + 2 * x);
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
                 __asm__ (
                     "vld2.32 {d0-d3}, [%[in0]]                              \n\t"
                     "vld2.32 {d4-d7}, [%[in4]]                              \n\t"
@@ -672,7 +672,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
     std::vector<f32> _buf(cn*(srcSize.width + 4) + 32/sizeof(f32));
     f32* lane = internal::alignPtr(&_buf[2*cn], 32);
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
     register float32x4_t vc6d4f32  asm ("q11") = vmovq_n_f32(1.5f);  // 6/4
     register float32x4_t vc1d4f32  asm ("q12") = vmovq_n_f32(0.25f); // 1/4
 
@@ -680,12 +680,12 @@ void gaussianPyramidDown(const Size2D &srcSize,
     register float32x4_t vc4d64f32 asm ("q14") = vmovq_n_f32(0.0625f);   //4/4/16
     register float32x4_t vc6d64f32 asm ("q15") = vmovq_n_f32(0.09375f);  //6/4/16
 #else
-    register float32x4_t vc6d4f32  = vmovq_n_f32(1.5f);  // 6/4
-    register float32x4_t vc1d4f32  = vmovq_n_f32(0.25f); // 1/4
+    float32x4_t vc6d4f32  = vmovq_n_f32(1.5f);  // 6/4
+    float32x4_t vc1d4f32  = vmovq_n_f32(0.25f); // 1/4
 
-    register float32x4_t vc1d64f32 = vmovq_n_f32(0.015625f); //1/4/16
-    register float32x4_t vc4d64f32 = vmovq_n_f32(0.0625f);   //4/4/16
-    register float32x4_t vc6d64f32 = vmovq_n_f32(0.09375f);  //6/4/16
+    float32x4_t vc1d64f32 = vmovq_n_f32(0.015625f); //1/4/16
+    float32x4_t vc4d64f32 = vmovq_n_f32(0.0625f);   //4/4/16
+    float32x4_t vc6d64f32 = vmovq_n_f32(0.09375f);  //6/4/16
 #endif
 
     for (size_t i = 0; i < dstSize.height; ++i)
@@ -739,7 +739,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
             for (; x < roiw4; x += 4)
             {
                 internal::prefetch(lane + 2 * x);
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
                 __asm__ __volatile__ (
                     "vld2.32 {d0-d3}, [%[in0]]                              \n\t"
                     "vld2.32 {d8-d11}, [%[in4]]                             \n\t"
@@ -932,7 +932,7 @@ pyrUp8uHorizontalConvolution:
             for (; x < lim; x += 8)
             {
                 internal::prefetch(lane + x);
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
                 __asm__ (
                     "vld1.16 {d0-d1}, [%[in0]]       /*q0 = v0*/            \n\t"
                     "vld1.16 {d2-d3}, [%[in2]]       /*q1 = v2*/            \n\t"
@@ -973,7 +973,7 @@ pyrUp8uHorizontalConvolution:
             for (; x < lim; x += 24)
             {
                 internal::prefetch(lane + x);
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
                 __asm__ (
                     "vmov.u16 q9, #6                                           \n\t"
                     "vld3.16 {d0, d2, d4}, [%[in0]]        /*v0*/              \n\t"
@@ -1064,7 +1064,7 @@ pyrUp8uHorizontalConvolution:
             for (; x < lim; x += 8)
             {
                 internal::prefetch(lane + x);
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
                 __asm__ (
                     "vld1.16 {d0-d1}, [%[in0]]       /*q0 = v0*/            \n\t"
                     "vld1.16 {d2-d3}, [%[in2]]       /*q1 = v2*/            \n\t"
@@ -1210,7 +1210,7 @@ pyrUp16sHorizontalConvolution:
             for (; x < lim; x += 4)
             {
                 internal::prefetch(lane + x);
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
                 __asm__ (
                     "vld1.32 {d0-d1}, [%[in0]]       /*q0 = v0*/            \n\t"
                     "vld1.32 {d2-d3}, [%[in2]]       /*q1 = v2*/            \n\t"
@@ -1251,7 +1251,7 @@ pyrUp16sHorizontalConvolution:
             for (; x < lim; x += 12)
             {
                 internal::prefetch(lane + x + 3);
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
                 __asm__ (
                     "vmov.s32 q9, #6                                           \n\t"
                     "vld3.32 {d0, d2, d4}, [%[in0]]        /*v0*/              \n\t"
@@ -1343,7 +1343,7 @@ pyrUp16sHorizontalConvolution:
             for (; x < lim; x += 4)
             {
                 internal::prefetch(lane + x);
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
                 __asm__ (
                     "vld1.32 {d0-d1}, [%[in0]]       /*q0 = v0*/            \n\t"
                     "vld1.32 {d2-d3}, [%[in2]]       /*q1 = v2*/            \n\t"

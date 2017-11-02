@@ -31,7 +31,7 @@
 
 #import "opencv2/videoio/cap_ios.h"
 #include "precomp.hpp"
-#import <AssetsLibrary/AssetsLibrary.h>
+#import <UIKit/UIKit.h>
 
 
 static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
@@ -626,11 +626,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         return;
     }
 
-    ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-    if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:[self videoFileURL]]) {
-        [library writeVideoAtPathToSavedPhotosAlbum:[self videoFileURL]
-                                    completionBlock:^(NSURL *assetURL, NSError *error){ (void)assetURL; (void)error; }];
-    }
+    UISaveVideoAtPathToSavedPhotosAlbum([self videoFileString], nil, nil, NULL);
 }
 
 

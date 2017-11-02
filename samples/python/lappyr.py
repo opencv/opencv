@@ -28,7 +28,7 @@ from common import nothing, getsize
 def build_lappyr(img, leveln=6, dtype=np.int16):
     img = dtype(img)
     levels = []
-    for i in xrange(leveln-1):
+    for _i in xrange(leveln-1):
         next_img = cv2.pyrDown(img)
         img1 = cv2.pyrUp(next_img, dstsize=getsize(img))
         levels.append(img-img1)

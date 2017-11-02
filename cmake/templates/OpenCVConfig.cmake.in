@@ -199,6 +199,14 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
       )
     endif()
   endif()
+  # OpenCV supports Debug and Release only.
+  # RelWithDebInfo and MinSizeRel are mapped to Release
+  if(TARGET ${__cvcomponent})
+      set_target_properties(${__cvcomponent} PROPERTIES
+          MAP_IMPORTED_CONFIG_MINSIZEREL "Release"
+          MAP_IMPORTED_CONFIG_RELWITHDEBINFO "Release"
+      )
+  endif()
 endforeach()
 
 # ==============================================================

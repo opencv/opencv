@@ -47,25 +47,12 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
-#if defined(HAVE_XINE)         || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_FFMPEG)       || \
-    defined(WIN32) /* assume that we have ffmpeg */
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
 DEF_PARAM_TEST_1(FileName, string);
 
 //////////////////////////////////////////////////////
 // VideoReader
 
-#if defined(HAVE_NVCUVID) && BUILD_WITH_VIDEO_INPUT_SUPPORT
+#if defined(HAVE_NVCUVID) && defined(HAVE_VIDEO_INPUT)
 
 PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
@@ -101,7 +88,7 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
 //////////////////////////////////////////////////////
 // VideoWriter
 
-#if defined(HAVE_NVCUVID) && defined(WIN32)
+#if defined(HAVE_NVCUVID) && defined(_WIN32)
 
 PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {

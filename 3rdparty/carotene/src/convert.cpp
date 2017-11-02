@@ -101,7 +101,7 @@ CVT_FUNC(u8, s8, 16,
      }
 })
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(u8, u16, 16,
      register uint8x16_t zero0 asm ("q1") = vmovq_n_u8(0);,
 {
@@ -135,7 +135,7 @@ CVT_FUNC(u8, u16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(u8, s32, 16,
      register uint8x16_t zero0 asm ("q1") = vmovq_n_u8(0);
      register uint8x16_t zero1 asm ("q2") = vmovq_n_u8(0);
@@ -173,7 +173,7 @@ CVT_FUNC(u8, s32, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(u8, f32, 16,
 ,
 {
@@ -248,7 +248,7 @@ CVT_FUNC(s8, u8, 16,
      }
 })
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(s8, u16, 16,
      register uint8x16_t zero0 asm ("q1") = vmovq_n_u8(0);,
 {
@@ -284,7 +284,7 @@ CVT_FUNC(s8, u16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s8, s16, 16,
 ,
 {
@@ -323,7 +323,7 @@ CVT_FUNC(s8, s16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(s8, s32, 16,
 ,
 {
@@ -377,7 +377,7 @@ CVT_FUNC(s8, s32, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s8, f32, 16,
 ,
 {
@@ -440,7 +440,7 @@ CVT_FUNC(s8, f32, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(u16, u8, 16,
 ,
 {
@@ -479,7 +479,7 @@ CVT_FUNC(u16, u8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(u16, s8, 16,
     register uint8x16_t v127 asm ("q4") = vmovq_n_u8(127);,
 {
@@ -522,7 +522,7 @@ CVT_FUNC(u16, s8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(u16, s16, 8,
      register uint16x8_t v32767 asm ("q4") = vmovq_n_u16(0x7FFF);,
 {
@@ -555,7 +555,7 @@ CVT_FUNC(u16, s16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(u16, s32, 8,
      register uint16x8_t zero0 asm ("q1") = vmovq_n_u16(0);,
 {
@@ -589,7 +589,7 @@ CVT_FUNC(u16, s32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(u16, f32, 8,
 ,
 {
@@ -633,7 +633,7 @@ CVT_FUNC(u16, f32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s16, u8, 16,
 ,
 {
@@ -672,7 +672,7 @@ CVT_FUNC(s16, u8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s16, s8, 16,
 ,
 {
@@ -711,7 +711,7 @@ CVT_FUNC(s16, s8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVT_FUNC(s16, u16, 8,
      register int16x8_t vZero asm ("q4") = vmovq_n_s16(0);,
 {
@@ -747,7 +747,7 @@ CVT_FUNC(s16, u16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s16, s32, 8,
 ,
 {
@@ -786,7 +786,7 @@ CVT_FUNC(s16, s32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s16, f32, 8,
 ,
 {
@@ -829,7 +829,7 @@ CVT_FUNC(s16, f32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s32, u8, 8,
 ,
 {
@@ -870,7 +870,7 @@ CVT_FUNC(s32, u8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s32, s8, 8,
 ,
 {
@@ -911,7 +911,7 @@ CVT_FUNC(s32, s8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s32, u16, 8,
 ,
 {
@@ -950,7 +950,7 @@ CVT_FUNC(s32, u16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s32, s16, 8,
 ,
 {
@@ -989,7 +989,7 @@ CVT_FUNC(s32, s16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(s32, f32, 8,
 ,
 {
@@ -1034,7 +1034,7 @@ CVT_FUNC(s32, f32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(f32, u8, 8,
     register float32x4_t vmult asm ("q0") = vdupq_n_f32((float)(1 << 16));
     register uint32x4_t  vmask asm ("q1") = vdupq_n_u32(1<<16);,
@@ -1101,7 +1101,7 @@ CVT_FUNC(f32, u8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(f32, s8, 8,
      register float32x4_t vhalf asm ("q0") = vdupq_n_f32(0.5f);,
 {
@@ -1153,7 +1153,7 @@ CVT_FUNC(f32, s8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(f32, u16, 8,
      register float32x4_t vhalf asm ("q0") = vdupq_n_f32(0.5f);,
 {
@@ -1212,7 +1212,7 @@ CVT_FUNC(f32, u16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(f32, s16, 8,
      register float32x4_t vhalf asm ("q0") = vdupq_n_f32(0.5f);,
 {
@@ -1271,7 +1271,7 @@ CVT_FUNC(f32, s16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 6
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 6 && !defined(__clang__)
 CVT_FUNC(f32, s32, 8,
      register float32x4_t vhalf asm ("q0") = vdupq_n_f32(0.5f);,
 {

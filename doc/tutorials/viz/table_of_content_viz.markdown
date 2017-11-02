@@ -32,3 +32,11 @@ OpenCV Viz {#tutorial_table_of_content_viz}
     *Author:* Ozan Tonkal
 
     You will learn how to create your own widgets.
+
+-   @subpage tutorial_histo3D
+
+    *Compatibility:* \> OpenCV 3.0.0
+
+    *Author:* Laurent Berger
+
+    You will learn how to plot a 3D histogram.

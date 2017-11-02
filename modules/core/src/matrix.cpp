@@ -60,7 +60,6 @@ void MatAllocator::unmap(UMatData* u) const
     if(u->urefcount == 0 && u->refcount == 0)
     {
         deallocate(u);
-        u = NULL;
     }
 }
 
@@ -461,8 +460,11 @@ void Mat::copySize(const Mat& m)
 void Mat::deallocate()
 {
     if(u)
-        (u->currAllocator ? u->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u);
-    u = NULL;
+    {
+        UMatData* u_ = u;
+        u = NULL;
+        (u_->currAllocator ? u_->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u_);
+    }
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
@@ -482,21 +484,31 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
+    try
     {
-        CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end && _rowRange.end <= m.rows );
-        rows = _rowRange.size();
-        data += step*_rowRange.start;
-        flags |= SUBMATRIX_FLAG;
-    }
+        if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
+        {
+            CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end
+                       && _rowRange.end <= m.rows );
+            rows = _rowRange.size();
+            data += step*_rowRange.start;
+            flags |= SUBMATRIX_FLAG;
+        }
 
-    if( _colRange != Range::all() && _colRange != Range(0,cols) )
+        if( _colRange != Range::all() && _colRange != Range(0,cols) )
+        {
+            CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end
+                       && _colRange.end <= m.cols );
+            cols = _colRange.size();
+            data += _colRange.start*elemSize();
+            flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
+            flags |= SUBMATRIX_FLAG;
+        }
+    }
+    catch(...)
     {
-        CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols );
-        cols = _colRange.size();
-        data += _colRange.start*elemSize();
-        flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
-        flags |= SUBMATRIX_FLAG;
+        release();
+        throw;
     }
 
     if( rows == 1 )
@@ -1129,7 +1141,7 @@ Mat Mat::diag(const Mat& d)
 
 int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
 {
-    return (depth() == _depth || _depth <= 0) &&
+    return data && (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
         ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||
@@ -1138,78 +1150,45 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
     ? (int)(total()*channels()/_elemChannels) : -1;
 }
 
+template <typename T> static inline
+void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
+{
+    int i = 0;
+    for(; i < cn; i++)
+        buf[i] = saturate_cast<T>(s.val[i]);
+    for(; i < unroll_to; i++)
+        buf[i] = buf[i-cn];
+}
 
 void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
     CV_INSTRUMENT_REGION()
 
-    int i, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);
     switch(depth)
     {
     case CV_8U:
-        {
-        uchar* buf = (uchar*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<uchar>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
         break;
     case CV_8S:
-        {
-        schar* buf = (schar*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<schar>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
         break;
     case CV_16U:
-        {
-        ushort* buf = (ushort*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<ushort>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
         break;
     case CV_16S:
-        {
-        short* buf = (short*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<short>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_32S:
-        {
-        int* buf = (int*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<int>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
         break;
     case CV_32F:
-        {
-        float* buf = (float*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<float>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
         break;
     case CV_64F:
-        {
-        double* buf = (double*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<double>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
+        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
         break;
-        }
     default:
         CV_Error(CV_StsUnsupportedFormat,"");
     }
@@ -2163,7 +2142,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        CV_Assert(i < sz.height);
+        CV_Assert(i > 0 && i < sz.height);
         return vv[i].isContinuous();
     }
 
@@ -3130,7 +3109,7 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION_SKIP_NESTED()
 
     if( nsrc == 0 || !src )
     {
@@ -3403,11 +3382,6 @@ static TransposeInplaceFunc transposeInplaceTab[] =
 };
 
 #ifdef HAVE_OPENCL
-
-static inline int divUp(int a, int b)
-{
-    return (a + b - 1) / b;
-}
 
 static bool ocl_transpose( InputArray _src, OutputArray _dst )
 {
@@ -4024,6 +3998,11 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
 
+    // Fake reference to source. Resolves issue 8693 in case of src == dst.
+    UMat srcUMat;
+    if (_src.isUMat())
+        srcUMat = _src.getUMat();
+
     Mat src = _src.getMat();
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
@@ -4359,7 +4338,6 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 }
 
 #ifdef HAVE_IPP
-#if !IPP_DISABLE_SORT_IDX
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
 static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
@@ -4384,11 +4362,10 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 {
     CV_INSTRUMENT_REGION_IPP()
 
-    bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
+    bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
+    bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
     int         depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
-    Ipp32s      elemSize        = (Ipp32s)src.elemSize1();
 
     IppSortIndexFunc ippsSortRadixIndex = getSortIndexFunc(depth, sortDescending);
     if(!ippsSortRadixIndex)
@@ -4405,7 +4382,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         for(int i = 0; i < src.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (void*)src.ptr(i), elemSize, (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
                 return false;
         }
     }
@@ -4422,13 +4399,13 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         buffer.allocate(bufferSize);
 
-        Ipp32s pixStride = elemSize*dst.cols;
+        Ipp32s srcStep = (Ipp32s)src.step[0];
         for(int i = 0; i < src.cols; i++)
         {
             subRect.x = i;
             dstSub = Mat(dst, subRect);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (void*)src.ptr(0, i), pixStride, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
                 return false;
 
             dstRow = dstRow.reshape(1, dstSub.rows);
@@ -4438,7 +4415,6 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
     return true;
 }
-#endif
 #endif
 
 typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
@@ -4476,9 +4452,8 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
         _dst.release();
     _dst.create( src.size(), CV_32S );
     dst = _dst.getMat();
-#if !IPP_DISABLE_SORT_IDX
+
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
-#endif
 
     static SortFunc tab[] =
     {
@@ -5700,13 +5675,20 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result = std::max(result, std::abs((double)it.value<float>()));
+            }
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result += std::abs(it.value<float>());
+            }
         else
             for( i = 0; i < N; i++, ++it )
             {
+                CV_Assert(it.ptr);
                 double v = it.value<float>();
                 result += v*v;
             }
@@ -5715,13 +5697,20 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result = std::max(result, std::abs(it.value<double>()));
+            }
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result += std::abs(it.value<double>());
+            }
         else
             for( i = 0; i < N; i++, ++it )
             {
+                CV_Assert(it.ptr);
                 double v = it.value<double>();
                 result += v*v;
             }
@@ -5748,6 +5737,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         float minval = FLT_MAX, maxval = -FLT_MAX;
         for( i = 0; i < N; i++, ++it )
         {
+            CV_Assert(it.ptr);
             float v = it.value<float>();
             if( v < minval )
             {
@@ -5770,6 +5760,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         double minval = DBL_MAX, maxval = -DBL_MAX;
         for( i = 0; i < N; i++, ++it )
         {
+            CV_Assert(it.ptr);
             double v = it.value<double>();
             if( v < minval )
             {

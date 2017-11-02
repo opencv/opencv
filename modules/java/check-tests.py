@@ -157,8 +157,8 @@ if __name__ == '__main__':
         parser.parse(x)
     funcs = parser.get_not_tested()
     if funcs:
-        print "NOT TESTED methods:\n\t", "\n\t".join(sorted(funcs))
-    print "Total methods found: %i (%i)" % parser.get_funcs_count()
-    print "Not tested methods found:", len(funcs)
-    print "Total tests found:", parser.get_tests_count()
-    print "Empty test stubs found:", parser.get_empty_stubs_count()
+        print ('{} {}'.format("NOT TESTED methods:\n\t", "\n\t".join(sorted(funcs))))
+    print ("Total methods found: %i (%i)" % parser.get_funcs_count())
+    print ('{} {}'.format("Not tested methods found:", len(funcs)))
+    print ('{} {}'.format("Total tests found:", parser.get_tests_count()))
+    print ('{} {}'.format("Empty test stubs found:", parser.get_empty_stubs_count()))

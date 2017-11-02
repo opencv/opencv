@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if (defined WIN32 || defined _WIN32) && defined HAVE_DSHOW
+#if defined _WIN32 && defined HAVE_DSHOW
 #include "cap_dshow.hpp"
 
 /*
@@ -108,55 +108,11 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
-#if defined _MSC_VER && _MSC_VER >= 1500
-#  include "DShow.h"
-#  include "strmif.h"
-#  include "Aviriff.h"
-#  include "dvdmedia.h"
-#  include "bdaiface.h"
-#else
-#  ifdef _MSC_VER
-#  define __extension__
-   typedef BOOL WINBOOL;
-#endif
-
-#include "dshow/dshow.h"
-#include "dshow/dvdmedia.h"
-#include "dshow/bdatypes.h"
-
-interface IEnumPIDMap : public IUnknown
-{
-public:
-    virtual HRESULT STDMETHODCALLTYPE Next(
-        /* [in] */ ULONG cRequest,
-        /* [size_is][out][in] */ PID_MAP *pPIDMap,
-        /* [out] */ ULONG *pcReceived) = 0;
-
-    virtual HRESULT STDMETHODCALLTYPE Skip(
-        /* [in] */ ULONG cRecords) = 0;
-
-    virtual HRESULT STDMETHODCALLTYPE Reset( void) = 0;
-
-    virtual HRESULT STDMETHODCALLTYPE Clone(
-        /* [out] */ IEnumPIDMap **ppIEnumPIDMap) = 0;
-};
-
-interface IMPEG2PIDMap : public IUnknown
-{
-    virtual HRESULT STDMETHODCALLTYPE MapPID(
-        /* [in] */ ULONG culPID,
-        /* [in] */ ULONG *pulPID,
-        /* [in] */ MEDIA_SAMPLE_CONTENT MediaSampleContent) = 0;
-
-    virtual HRESULT STDMETHODCALLTYPE UnmapPID(
-        /* [in] */ ULONG culPID,
-        /* [in] */ ULONG *pulPID) = 0;
-
-    virtual HRESULT STDMETHODCALLTYPE EnumPIDMap(
-        /* [out] */ IEnumPIDMap **pIEnumPIDMap) = 0;
-};
-
-#endif
+#include "DShow.h"
+#include "strmif.h"
+#include "Aviriff.h"
+#include "dvdmedia.h"
+#include "bdaiface.h"
 
 //for threading
 #include <process.h>
@@ -337,11 +293,17 @@ interface ISampleGrabber : public IUnknown
 #ifdef _DEBUG
 #include <strsafe.h>
 
-//change for verbose debug info
-static bool gs_verbose = true;
-
 static void DebugPrintOut(const char *format, ...)
 {
+    static int gs_verbose = -1;
+    if (gs_verbose < 0)
+    {
+        // Fetch initial debug state from environment - defaults to disabled
+        const char* s = getenv("OPENCV_DSHOW_DEBUG");
+        gs_verbose = s != NULL && atoi(s) != 0;
+    }
+
+
     if (gs_verbose)
     {
         va_list args;
@@ -487,9 +449,6 @@ class videoInput{
         videoInput();
         ~videoInput();
 
-        //turns off console messages - default is to print messages
-        static void setVerbose(bool _verbose);
-
         //Functions in rough order they should be used.
         static int listDevices(bool silent = false);
 
@@ -608,9 +567,9 @@ class videoInput{
         GUID CAPTURE_MODE;
 
         //Extra video subtypes
-        GUID MEDIASUBTYPE_Y800;
-        GUID MEDIASUBTYPE_Y8;
-        GUID MEDIASUBTYPE_GREY;
+        // GUID MEDIASUBTYPE_Y800;
+        // GUID MEDIASUBTYPE_Y8;
+        // GUID MEDIASUBTYPE_GREY;
 
         videoDevice * VDList[VI_MAX_CAMERAS];
         GUID mediaSubtypes[VI_NUM_TYPES];
@@ -665,6 +624,9 @@ public:
         latestBufferLength  = 0;
 
         hEvent = CreateEvent(NULL, true, false, NULL);
+        pixels = 0;
+        ptrBuffer = 0;
+        numBytes = 0;
     }
 
 
@@ -797,6 +759,10 @@ videoDevice::videoDevice(){
      specificFormat     = false;
      autoReconnect      = false;
      requestedFrameTime = -1;
+
+     pBuffer = 0;
+     pixels = 0;
+     formatType = 0;
 
      memset(wDeviceName, 0, sizeof(WCHAR) * 255);
      memset(nDeviceName, 0, sizeof(char) * 255);
@@ -1060,15 +1026,18 @@ videoInput::videoInput(){
     callbackSetCount     = 0;
     bCallback            = true;
 
+    connection = PhysConn_Video_Composite;
+    CAPTURE_MODE = PIN_CATEGORY_PREVIEW;
+
     //setup a max no of device objects
     for(int i=0; i<VI_MAX_CAMERAS; i++)  VDList[i] = new videoDevice();
 
     DebugPrintOut("\n***** VIDEOINPUT LIBRARY - %2.04f - TFW07 *****\n\n",VI_VERSION);
 
     //added for the pixelink firewire camera
-     //MEDIASUBTYPE_Y800 = (GUID)FOURCCMap(FCC('Y800'));
-     //MEDIASUBTYPE_Y8   = (GUID)FOURCCMap(FCC('Y8'));
-     //MEDIASUBTYPE_GREY = (GUID)FOURCCMap(FCC('GREY'));
+    // MEDIASUBTYPE_Y800 = (GUID)FOURCCMap(FCC('Y800'));
+    // MEDIASUBTYPE_Y8   = (GUID)FOURCCMap(FCC('Y8'));
+    // MEDIASUBTYPE_GREY = (GUID)FOURCCMap(FCC('GREY'));
 
     //The video types we support
     //in order of preference
@@ -1118,20 +1087,6 @@ videoInput::videoInput(){
     formatTypes[VI_SECAM_K1]    = AnalogVideo_SECAM_K1;
     formatTypes[VI_SECAM_L]     = AnalogVideo_SECAM_L;
 
-}
-
-
-// ----------------------------------------------------------------------
-// static - set whether messages get printed to console or not
-//
-// ----------------------------------------------------------------------
-
-void videoInput::setVerbose(bool _verbose){
-#ifdef _DEBUG
-    gs_verbose = _verbose;
-#else
-    (void)_verbose; // Suppress 'unreferenced parameter' warning
-#endif
 }
 
 // ----------------------------------------------------------------------

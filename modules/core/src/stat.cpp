@@ -53,16 +53,6 @@
 namespace cv
 {
 
-template<typename T> static inline Scalar rawToScalar(const T& v)
-{
-    Scalar s;
-    typedef typename DataType<T>::channel_type T1;
-    int i, n = DataType<T>::channels;
-    for( i = 0; i < n; i++ )
-        s.val[i] = ((T1*)&v)[i];
-    return s;
-}
-
 /****************************************************************************************\
 *                                        sum                                             *
 \****************************************************************************************/
@@ -1304,6 +1294,12 @@ static bool ipp_countNonZero( Mat &src, int &res )
 {
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201801
+    // Poor performance of SSE42
+    if(cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
+        return false;
+#endif
+
     Ipp32s  count = 0;
     int     depth = src.depth();
 
@@ -1557,7 +1553,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
-    Scalar mean, stddev;
+    Scalar mean(0), stddev(0);
     const int cn = _src.channels();
     if (cn > 4)
         return false;
@@ -1749,6 +1745,13 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
+
+#if IPP_VERSION_X100 < 201801
+    // IPP_DISABLE: C3C functions can read outside of allocated memory
+    if (cn > 1)
+        return false;
+#endif
+
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
@@ -2187,7 +2190,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 {
     const ocl::Device & dev = ocl::Device::getDefault();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (dev.isNVidia())
         return false;
 #endif
@@ -2534,6 +2537,19 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
 #if IPP_VERSION_X100 >= 700
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201800
+    // cv::minMaxIdx problem with NaN input
+    // Disable 32F processing only
+    if(src.depth() == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
+        return false;
+#endif
+
+#if IPP_VERSION_X100 < 201801
+    // cv::minMaxIdx problem with index positions on AVX
+    if(!mask.empty() && _maxIdx && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42)
+        return false;
+#endif
+
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(src.depth());
     float       minVal = 0;
@@ -2541,8 +2557,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
     IppiPoint   minIdx = {-1, -1};
     IppiPoint   maxIdx = {-1, -1};
 
-    float       *pMinVal = (_minVal)?&minVal:NULL;
-    float       *pMaxVal = (_maxVal)?&maxVal:NULL;
+    float       *pMinVal = (_minVal || _minIdx)?&minVal:NULL;
+    float       *pMaxVal = (_maxVal || _maxIdx)?&maxVal:NULL;
     IppiPoint   *pMinIdx = (_minIdx)?&minIdx:NULL;
     IppiPoint   *pMaxIdx = (_maxIdx)?&maxIdx:NULL;
 
@@ -2555,6 +2571,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
             ippMinMaxFun = ipp_minIdx_wrap;
         else if(_maxVal && !_maxIdx && _minVal && !_minIdx)
             ippMinMaxFun = ipp_minMax_wrap;
+        else if(!_maxVal && !_maxIdx && !_minVal && !_minIdx)
+            return false;
         else
             ippMinMaxFun = ipp_minMaxIndex_wrap;
     }
@@ -2565,7 +2583,7 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         size.width *= src.channels();
 
         status = ippMinMaxFun(src.ptr(), (int)src.step, size, dataType, pMinVal, pMaxVal, pMinIdx, pMaxIdx, (Ipp8u*)mask.ptr(), (int)mask.step);
-        if(status < 0 || status == ippStsNoOperation)
+        if(status < 0)
             return false;
         if(_minVal)
             *_minVal = minVal;
@@ -2573,7 +2591,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
             *_maxVal = maxVal;
         if(_minIdx)
         {
-            if(!mask.empty() && !minIdx.y && !minIdx.x)
+#if IPP_VERSION_X100 < 201801
+            // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
+            if(status == ippStsNoOperation && !mask.empty() && !pMinIdx->x && !pMinIdx->y)
+#else
+            if(status == ippStsNoOperation)
+#endif
             {
                 _minIdx[0] = -1;
                 _minIdx[1] = -1;
@@ -2586,7 +2609,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         }
         if(_maxIdx)
         {
-            if(!mask.empty() && !maxIdx.y && !maxIdx.x)
+#if IPP_VERSION_X100 < 201801
+            // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
+            if(status == ippStsNoOperation && !mask.empty() && !pMaxIdx->x && !pMaxIdx->y)
+#else
+            if(status == ippStsNoOperation)
+#endif
             {
                 _maxIdx[0] = -1;
                 _maxIdx[1] = -1;
@@ -2975,7 +3003,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (d.isNVidia())
         return false;
 #endif
@@ -3317,7 +3345,7 @@ namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (ocl::Device::getDefault().isNVidia())
         return false;
 #endif
@@ -4122,7 +4150,9 @@ double cv::PSNR(InputArray _src1, InputArray _src2)
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert( _src1.depth() == CV_8U );
+    //Input arrays must have depth CV_8U
+    CV_Assert( _src1.depth() == CV_8U && _src2.depth() == CV_8U );
+
     double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
     return 20*log10(255./(diff+DBL_EPSILON));
 }
@@ -4243,7 +4273,7 @@ cvNorm( const void* imgA, const void* imgB, int normType, const void* maskarr )
 
 namespace cv { namespace hal {
 
-static const uchar popCountTable[] =
+extern const uchar popCountTable[256] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -4279,154 +4309,6 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
-#if CV_AVX2
-static inline int _mm256_extract_epi32_(__m256i reg, const int i)
-{
-    CV_DECL_ALIGNED(32) int reg_data[8];
-    CV_DbgAssert(0 <= i && i < 8);
-    _mm256_store_si256((__m256i*)reg_data, reg);
-    return reg_data[i];
-}
-#endif
-
-int normHamming(const uchar* a, int n)
-{
-    int i = 0;
-    int result = 0;
-#if CV_AVX2
-    if(USE_AVX2)
-    {
-        __m256i _r0 = _mm256_setzero_si256();
-        __m256i _0 = _mm256_setzero_si256();
-        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
-        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
-
-        for(; i <= n - 32; i+= 32)
-        {
-            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
-
-            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_a0, _popcnt_mask));
-            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
-                             _mm256_and_si256(_mm256_srli_epi16(_a0, 4), _popcnt_mask));
-
-            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
-        }
-        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
-    }
-#endif // CV_AVX2
-
-#if CV_POPCNT
-    if(checkHardwareSupport(CV_CPU_POPCNT))
-    {
-#  if defined CV_POPCNT_U64
-        for(; i <= n - 8; i += 8)
-        {
-            result += (int)CV_POPCNT_U64(*(uint64*)(a + i));
-        }
-#  endif
-        for(; i <= n - 4; i += 4)
-        {
-            result += CV_POPCNT_U32(*(uint*)(a + i));
-        }
-    }
-#endif // CV_POPCNT
-
-#if CV_SIMD128
-    if(hasSIMD128())
-    {
-        v_uint32x4 t = v_setzero_u32();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i));
-        }
-        result += v_reduce_sum(t);
-    }
-#endif // CV_SIMD128
-
-    for(; i <= n - 4; i += 4)
-    {
-        result += popCountTable[a[i]] + popCountTable[a[i+1]] +
-        popCountTable[a[i+2]] + popCountTable[a[i+3]];
-    }
-    for(; i < n; i++)
-    {
-        result += popCountTable[a[i]];
-    }
-    return result;
-}
-
-int normHamming(const uchar* a, const uchar* b, int n)
-{
-    int i = 0;
-    int result = 0;
-#if CV_AVX2
-    if(USE_AVX2)
-    {
-        __m256i _r0 = _mm256_setzero_si256();
-        __m256i _0 = _mm256_setzero_si256();
-        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
-        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
-
-        for(; i <= n - 32; i+= 32)
-        {
-            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
-            __m256i _b0 = _mm256_loadu_si256((const __m256i*)(b + i));
-
-            __m256i _xor = _mm256_xor_si256(_a0, _b0);
-
-            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_xor, _popcnt_mask));
-            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
-                             _mm256_and_si256(_mm256_srli_epi16(_xor, 4), _popcnt_mask));
-
-            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
-        }
-        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
-    }
-#endif // CV_AVX2
-
-#if CV_POPCNT
-    if(checkHardwareSupport(CV_CPU_POPCNT))
-    {
-#  if defined CV_POPCNT_U64
-        for(; i <= n - 8; i += 8)
-        {
-            result += (int)CV_POPCNT_U64(*(uint64*)(a + i) ^ *(uint64*)(b + i));
-        }
-#  endif
-        for(; i <= n - 4; i += 4)
-        {
-            result += CV_POPCNT_U32(*(uint*)(a + i) ^ *(uint*)(b + i));
-        }
-    }
-#endif // CV_POPCNT
-
-#if CV_SIMD128
-    if(hasSIMD128())
-    {
-        v_uint32x4 t = v_setzero_u32();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i) ^ v_load(b + i));
-        }
-        result += v_reduce_sum(t);
-    }
-#endif // CV_SIMD128
-
-    for(; i <= n - 4; i += 4)
-    {
-        result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
-    }
-    for(; i < n; i++)
-    {
-        result += popCountTable[a[i] ^ b[i]];
-    }
-    return result;
-}
 
 int normHamming(const uchar* a, int n, int cellSize)
 {
@@ -4463,11 +4345,11 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-    #if CV_ENABLE_UNROLLED
+#if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
-    #endif
+#endif
     for( ; i < n; i++ )
         result += tab[a[i] ^ b[i]];
     return result;
@@ -4483,7 +4365,7 @@ float normL2Sqr_(const float* a, const float* b, int n)
     for( ; j <= n - 8; j += 8 )
     {
         __m256 t0 = _mm256_sub_ps(_mm256_loadu_ps(a + j), _mm256_loadu_ps(b + j));
-#ifdef CV_FMA3
+#if CV_FMA3
         d0 = _mm256_fmadd_ps(t0, t0, d0);
 #else
         d0 = _mm256_add_ps(d0, _mm256_mul_ps(t0, t0));

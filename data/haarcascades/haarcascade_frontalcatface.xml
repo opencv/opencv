@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!----------------------------------------------------------------------------
+<!--
  A frontal cat face detector using the basic set of Haar features, i.e.
  horizontal and vertical features but not diagonal features.
 
@@ -73,7 +73,7 @@
  | SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  Back to
  | Top
  //////////////////////////////////////////////////////////////////////////
- ---------------------------------------------------------------------------->
+ -->
 <opencv_storage>
 <cascade>
   <stageType>BOOST</stageType>

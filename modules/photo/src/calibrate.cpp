@@ -120,7 +120,7 @@ public:
                 LDR_SIZE + (int)points.size(), CV_32F);
             Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
-            // include the data−fitting equations
+            // include the data-fitting equations
             int k = 0;
             for(size_t i = 0; i < points.size(); i++) {
                 for(size_t j = 0; j < images.size(); j++) {
@@ -224,6 +224,7 @@ public:
 
         int channels = images[0].channels();
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+        CV_Assert(channels >= 1 && channels <= 3);
 
         dst.create(LDR_SIZE, 1, CV_32FCC);
         Mat response = dst.getMat();
