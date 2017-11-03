@@ -105,9 +105,7 @@
 
 namespace cv { namespace ocl {
 
-#ifdef _DEBUG
-#define CV_OclDbgAssert CV_DbgAssert
-#else
+#ifndef _DEBUG
 static bool isRaiseError()
 {
     static bool initialized = false;
@@ -119,7 +117,6 @@ static bool isRaiseError()
     }
     return value;
 }
-#define CV_OclDbgAssert(expr) do { if (isRaiseError()) { CV_Assert(expr); } else { (void)(expr); } } while ((void)0, 0)
 #endif
 
 #if CV_OPENCL_TRACE_CHECK
@@ -2717,7 +2714,7 @@ struct Program::Impl
 
         handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
         CV_OCL_DBG_CHECK_RESULT(retval, "clCreateProgramWithSource");
-        CV_OclDbgAssert(handle && retval == CL_SUCCESS);
+        CV_Assert(handle || retval != CL_SUCCESS);
         if (handle && retval == CL_SUCCESS)
         {
             int i, n = (int)ctx.ndevices();
