@@ -43,8 +43,23 @@ sudo apt-get install -y doxygen
 
 mkdir build
 cd build
-#cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DBUILD_EXAMPLES=ON -DENABLE_PRECOMPILED_HEADERS=OFF ..
-sudo cmake -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF -D BUILD_opencv_java=OFF -D CMAKE_INSTALL_PREFIX=/usr/local ..
+sudo cmake -DCMAKE_BUILD_TYPE=RELEASE \
+-DBUILD_PERF_TESTS=OFF \
+-DBUILD_TESTS=OFF \
+-DBUILD_opencv_java=OFF \
+-DCMAKE_INSTALL_PREFIX=/usr/local ..
+# Uncomment the lines below to use virtualenvs
+"""
+sudo cmake -DCMAKE_BUILD_TYPE=RELEASE \
+-DBUILD_PERF_TESTS=OFF \
+-DBUILD_TESTS=OFF \
+-DBUILD_opencv_java=OFF \
+-DPYTHON3_EXECUTABLE=$VIRTUAL_ENV/bin/python \
+-DPYTHON3_PACKAGES_PATH=$VIRTUAL_ENV/lib/python3.5/site-packages \
+-DPYTHON3_INCLUDE_DIR=$VIRTUAL_ENV/include/python3.5m \
+-DPYTHON3_LIBRARY=$VIRTUAL_ENV/lib/python3.5/config-3.5m-x86_64-linux-gnu/libpython3.5.so \
+-DCMAKE_INSTALL_PREFIX=/usr/local ..
+"""
 sudo make -j8
 sudo make install
 sudo ldconfig
