@@ -141,26 +141,34 @@ public:
         size_t bufSize = internals[0].total();
         size_t totalSize = src.total();
 
+        // adjust local/global size
+        size_t internal_localSize[1] = { (bufSize == 1) ? 1 : wgSize };
+        size_t internal_globalSize[1] = { divUp(bufSize, (unsigned int)internal_localSize[0]) * internal_localSize[0] };
+
+        // adjust local/global size (total)
+        size_t total_localSize[1] = { (totalSize == 1) ? 1 : wgSize };
+        size_t total_globalSize[1] = { divUp(totalSize, (unsigned int)total_localSize[0]) * total_localSize[0] };
+
         kmax.args((int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
-        if (!kmax.run(1, &bufSize, &wgSize, false))
+        if (!kmax.run(1, internal_globalSize, internal_localSize, false))
             return false;
 
         ksub.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
-        if (!ksub.run(1, &totalSize, &wgSize, false))
+        if (!ksub.run(1, total_globalSize, total_localSize, false))
             return false;
 
         cv::exp(dstMat, dstMat);
 
         ksum.args((int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
-        if (!ksum.run(1, &bufSize, &wgSize, false))
+        if (!ksum.run(1, internal_globalSize, internal_localSize, false))
             return false;
 
         kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
-        if (!kdiv.run(1, &totalSize, &wgSize, false))
+        if (!kdiv.run(1, total_globalSize, total_localSize, false))
             return false;
 
         return true;
