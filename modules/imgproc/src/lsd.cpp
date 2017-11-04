@@ -430,6 +430,9 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(w_needed) Mat(w).copyTo(_width);
     if(p_needed) Mat(p).copyTo(_prec);
     if(n_needed) Mat(n).copyTo(_nfa);
+
+    // Clear used structures
+    list.clear();
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
