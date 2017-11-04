@@ -808,20 +808,22 @@ class FuncInfo(object):
 
         cname = self.cname
         classinfo = None
-        #pprint(vars(self))
+        #dump = False
+        #if dump: pprint(vars(self))
+        #if dump: pprint(vars(self.variants[0]))
         if self.classname:
             classinfo = all_classes[self.classname]
-            #pprint(vars(classinfo))
+            #if dump: pprint(vars(classinfo))
             if self.isconstructor:
-                py_name = '.'.join([self.namespace, self.name])
+                py_name = 'cv.' + classinfo.wname
             elif self.isclassmethod:
-                py_name = '.'.join([self.namespace, classinfo.sname + '_' + self.name])
+                py_name = '.'.join([self.namespace, classinfo.sname + '_' + self.variants[0].wname])
             else:
                 cname = classinfo.cname + '::' + cname
-                py_name = '.'.join(['obj', self.name])
+                py_name = 'cv.' + classinfo.wname + '.' + self.variants[0].wname
         else:
-            py_name = '.'.join([self.namespace, self.name])
-        #print(cname + " => " + py_name)
+            py_name = '.'.join([self.namespace, self.variants[0].wname])
+        #if dump: print(cname + " => " + py_name)
         py_signatures = codegen.py_signatures.setdefault(cname, [])
         for v in self.variants:
             s = dict(name=py_name, arg=v.py_arg_str, ret=v.py_return_str)
@@ -873,10 +875,10 @@ class PythonWrapperGenerator(object):
         namespace = '.'.join(namespace)
         name = '_'.join(classes+[name])
 
-        py_name = '.'.join([namespace, name])
+        py_name = 'cv.' + classinfo.wname  # use wrapper name
         py_signatures = self.py_signatures.setdefault(classinfo.cname, [])
         py_signatures.append(dict(name=py_name))
-        #print(compat_name)
+        #print('class: ' + classinfo.cname + " => " + py_name)
 
     def split_decl_name(self, name):
         chunks = name.split('.')
