@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 namespace
 {
@@ -277,4 +277,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Warping, WarpAffineNPP, testing::Combine(
     DIRECT_INVERSE,
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC))));
 
+
+}} // namespace
 #endif // HAVE_CUDA

@@ -43,6 +43,8 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
 #ifndef DEBUG_IMAGES
 #define DEBUG_IMAGES 0
 #endif
@@ -81,7 +83,7 @@ static void highlightCircles(const string& imagePath, const vector<Vec3f>& circl
 }
 #endif
 
-typedef std::tr1::tuple<string, double, double, double, int, int> Image_MinDist_EdgeThreshold_AccumThreshold_MinRadius_MaxRadius_t;
+typedef tuple<string, double, double, double, int, int> Image_MinDist_EdgeThreshold_AccumThreshold_MinRadius_MaxRadius_t;
 class HoughCirclesTestFixture : public testing::TestWithParam<Image_MinDist_EdgeThreshold_AccumThreshold_MinRadius_MaxRadius_t>
 {
     string picture_name;
@@ -94,12 +96,12 @@ class HoughCirclesTestFixture : public testing::TestWithParam<Image_MinDist_Edge
 public:
     HoughCirclesTestFixture()
     {
-        picture_name = std::tr1::get<0>(GetParam());
-        minDist = std::tr1::get<1>(GetParam());
-        edgeThreshold = std::tr1::get<2>(GetParam());
-        accumThreshold = std::tr1::get<3>(GetParam());
-        minRadius = std::tr1::get<4>(GetParam());
-        maxRadius = std::tr1::get<5>(GetParam());
+        picture_name = get<0>(GetParam());
+        minDist = get<1>(GetParam());
+        edgeThreshold = get<2>(GetParam());
+        accumThreshold = get<3>(GetParam());
+        minRadius = get<4>(GetParam());
+        maxRadius = get<5>(GetParam());
     }
 
     HoughCirclesTestFixture(const string& picture, double minD, double edge, double accum, int minR, int maxR) :
@@ -257,3 +259,5 @@ TEST(HoughCirclesTest, ManySmallCircles)
 
     EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
 }
+
+}} // namespace

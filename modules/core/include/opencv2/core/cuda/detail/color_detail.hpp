@@ -1027,8 +1027,8 @@ namespace cv { namespace cuda { namespace device
             vmin = fmin(vmin, b);
 
             diff = v - vmin;
-            s = diff / (float)(::fabs(v) + numeric_limits<float>::epsilon());
-            diff = (float)(60. / (diff + numeric_limits<float>::epsilon()));
+            s = diff / (float)(::fabs(v) + std::numeric_limits<float>::epsilon());
+            diff = (float)(60. / (diff + std::numeric_limits<float>::epsilon()));
 
             h  = (v == r) * (g - b) * diff;
             h += (v != r && v == g) * ((b - r) * diff + 120.f);
@@ -1261,7 +1261,7 @@ namespace cv { namespace cuda { namespace device
             diff = vmax - vmin;
             l = (vmax + vmin) * 0.5f;
 
-            if (diff > numeric_limits<float>::epsilon())
+            if (diff > std::numeric_limits<float>::epsilon())
             {
                 s = (l < 0.5f) * diff / (vmax + vmin);
                 s += (l >= 0.5f) * diff / (2.0f - vmax - vmin);
@@ -1802,7 +1802,7 @@ namespace cv { namespace cuda { namespace device
             float L = splineInterpolate(Y * (LAB_CBRT_TAB_SIZE / 1.5f), c_LabCbrtTab, LAB_CBRT_TAB_SIZE);
             L = 116.f * L - 16.f;
 
-            const float d = (4 * 13) / ::fmaxf(X + 15 * Y + 3 * Z, numeric_limits<float>::epsilon());
+            const float d = (4 * 13) / ::fmaxf(X + 15 * Y + 3 * Z, std::numeric_limits<float>::epsilon());
             float u = L * (X * d - _un);
             float v = L * ((9 * 0.25f) * Y * d - _vn);
 

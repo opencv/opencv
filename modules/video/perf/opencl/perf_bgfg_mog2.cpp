@@ -9,7 +9,7 @@
 #ifdef HAVE_VIDEO_INPUT
 #include "../perf_bgfg_utils.hpp"
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////// Mog2//////////////////////////
@@ -89,7 +89,7 @@ OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
     SANITY_CHECK_NOTHING();
 }
 
-}}// namespace cvtest::ocl
+}}// namespace opencv_test::ocl
 
 #endif
 #endif

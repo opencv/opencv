@@ -47,7 +47,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ////////////////////////////////////////////////////////////////////////////
@@ -145,6 +145,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Core, Gemm, ::testing::Combine(
                             testing::Values(CV_32FC1, CV_32FC2, CV_64FC1, CV_64FC2),
                             Bool(), Bool(), Bool(), Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_POSITTest : public cvtest::BaseTest
 {
@@ -219,4 +218,5 @@ void CV_POSITTest::run( int start_from )
 
 TEST(Calib3d_POSIT, accuracy) { CV_POSITTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

@@ -39,9 +39,8 @@
 //
 //M*/
 #include "test_precomp.hpp"
-#include <cstdlib>
-#include <cmath>
-#include <algorithm>
+
+namespace opencv_test { namespace {
 
 static void mytest(cv::Ptr<cv::DownhillSolver> solver,cv::Ptr<cv::MinProblemSolver::Function> ptr_F,cv::Mat& x,cv::Mat& step,
         cv::Mat& etalon_x,double etalon_res){
@@ -103,3 +102,5 @@ TEST(Core_DownhillSolver, regression_basic){
     }
 #endif
 }
+
+}} // namespace

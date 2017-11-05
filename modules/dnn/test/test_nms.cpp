@@ -7,8 +7,7 @@
 
 #include "test_precomp.hpp"
 
-namespace cvtest
-{
+namespace opencv_test { namespace {
 
 TEST(NMS, Accuracy)
 {
@@ -38,4 +37,4 @@ TEST(NMS, Accuracy)
         ASSERT_EQ(indices[i], ref_indices[i]);
 }
 
-}//cvtest
+}} // namespace

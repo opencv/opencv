@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////////
 // StereoBM
@@ -211,6 +209,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Stereo, ReprojectImageTo3D, testing::Combine(
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16S)),
     WHOLE_SUBMAT));
 
-} // namespace
 
+}} // namespace
 #endif // HAVE_CUDA

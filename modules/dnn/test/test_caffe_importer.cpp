@@ -45,11 +45,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -525,4 +521,4 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
     }
 }
 
-}
+}} // namespace

@@ -42,8 +42,8 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/affine.hpp"
-#include "opencv2/calib3d.hpp"
-#include <iostream>
+
+namespace opencv_test { namespace {
 
 TEST(Calib3d_Affine3f, accuracy)
 {
@@ -106,3 +106,5 @@ TEST(Calib3d_Affine3f, accuracy_rvec)
         ASSERT_LT(cvtest::norm(va, vo, cv::NORM_L2), 1e-9);
     }
 }
+
+}} // namespace

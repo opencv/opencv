@@ -39,12 +39,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "test_precomp.hpp"
-#include <time.h>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #define sign(a) a > 0 ? 1 : a == 0 ? 0 : -1
 
@@ -374,7 +371,7 @@ bool Core_EigenTest::check_full(int type)
 {
     const int MAX_DEGREE = 7;
 
-    RNG rng = ::theRNG(); // fix the seed
+    RNG rng = cv::theRNG(); // fix the seed
 
     for (int i = 0; i < ntests; ++i)
     {
@@ -518,3 +515,5 @@ static void testEigen3x3()
 }
 TEST(Core_EigenNonSymmetric, float3x3) { testEigen3x3<float>(); }
 TEST(Core_EigenNonSymmetric, double3x3) { testEigen3x3<double>(); }
+
+}} // namespace

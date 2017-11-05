@@ -43,12 +43,8 @@
 
 #include "test_precomp.hpp"
 
-#include <algorithm>
-#include <vector>
-#include <iostream>
+namespace opencv_test { namespace {
 
-using namespace std;
-using namespace cv;
 #ifdef HAVE_OPENCV_FLANN
 using namespace cv::flann;
 #endif
@@ -337,3 +333,5 @@ TEST(Features2d_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.
 TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
 
 #endif
+
+}} // namespace
