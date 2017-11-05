@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 TEST(Features2D_ORB, _1996)
 {
@@ -123,3 +122,5 @@ TEST(Features2D_ORB, crash)
 
     ASSERT_NO_THROW(orb->compute(image, keypoints, descriptors));
 }
+
+}} // namespace

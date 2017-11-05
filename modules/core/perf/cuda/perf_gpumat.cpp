@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/ts/cuda_perf.hpp"
 
-using namespace std;
+namespace opencv_test { namespace {
 using namespace testing;
 using namespace perf;
 
@@ -193,4 +193,5 @@ PERF_TEST_P(Sz_2Depth, CUDA_GpuMat_ConvertTo,
     SANITY_CHECK_NOTHING();
 }
 
+}} // namespace
 #endif

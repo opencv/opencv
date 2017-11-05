@@ -8,7 +8,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 #define TEST_IMAGES testing::Values(\

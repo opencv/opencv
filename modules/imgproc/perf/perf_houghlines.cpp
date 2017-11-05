@@ -1,14 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-#include "cmath"
+namespace opencv_test {
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
-
-typedef std::tr1::tuple<string, double, double, double> Image_RhoStep_ThetaStep_Threshold_t;
+typedef tuple<string, double, double, double> Image_RhoStep_ThetaStep_Threshold_t;
 typedef perf::TestBaseWithParam<Image_RhoStep_ThetaStep_Threshold_t> Image_RhoStep_ThetaStep_Threshold;
 
 PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
@@ -38,9 +35,9 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
     vector<Vec2f> lines;
     declare.time(60);
 
-    int threshold = (int)(std::min(image.cols, image.rows) * threshold_ratio);
+    int hough_threshold = (int)(std::min(image.cols, image.rows) * threshold_ratio);
 
-    TEST_CYCLE() HoughLines(image, lines, rhoStep, thetaStep, threshold);
+    TEST_CYCLE() HoughLines(image, lines, rhoStep, thetaStep, hough_threshold);
 
     printf("%dx%d: %d lines\n", image.cols, image.rows, (int)lines.size());
 
@@ -71,3 +68,5 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
 
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

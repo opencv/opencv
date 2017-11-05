@@ -77,6 +77,10 @@
 
 #include "opencv_tests_config.hpp"
 
+namespace opencv_test {
+bool required_opencv_test_namespace = false;  // compilation check for non-refactored tests
+}
+
 namespace cvtest
 {
 

@@ -1,12 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef std::tr1::tuple<string, int, double, int, int, bool> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris_t;
+typedef tuple<string, int, double, int, int, bool> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris_t;
 typedef perf::TestBaseWithParam<Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris_t> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris;
 
 PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris, goodFeaturesToTrack,
@@ -41,3 +40,5 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_Use
 
     SANITY_CHECK(corners);
 }
+
+} // namespace

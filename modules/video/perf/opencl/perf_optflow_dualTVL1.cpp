@@ -47,11 +47,9 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-using std::tr1::make_tuple;
-
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// OpticalFlow Dual TVL1 ////////////////////////
@@ -107,6 +105,7 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
         SANITY_CHECK(uFlow, eps, ERROR_RELATIVE);
     }
 }
-} // namespace cvtest::ocl
+
+} // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

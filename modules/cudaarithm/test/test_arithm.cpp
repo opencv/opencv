@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////////////
 // GEMM
@@ -430,6 +428,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Convolve, testing::Combine(
 
 #endif // HAVE_CUBLAS
 
-} // namespace
+}} // namespace
 
 #endif // HAVE_CUDA

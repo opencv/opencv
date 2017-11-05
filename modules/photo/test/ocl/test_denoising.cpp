@@ -10,7 +10,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, int, bool, bool)
@@ -128,6 +128,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising_hsep,
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
                             Combine(Values(3, 4), Values((int)NORM_L2), Bool(), Values(false)));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

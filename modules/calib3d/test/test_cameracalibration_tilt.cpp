@@ -41,8 +41,9 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/ts/cuda_test.hpp>
-#include "opencv2/calib3d.hpp"
+#include "opencv2/ts/cuda_test.hpp" // EXPECT_MAT_NEAR
+
+namespace opencv_test { namespace {
 
 #define NUM_DIST_COEFF_TILT 14
 
@@ -664,24 +665,14 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
             // back projection error
             for (size_t i = 0; i < viewsNoisyImagePoints.size(); ++i)
             {
-                double dRvec = norm(
-                    m_pointTargetRvec[i] -
-                    cv::Vec3d(
-                    outRvecs[i].at<double>(0),
-                    outRvecs[i].at<double>(1),
-                    outRvecs[i].at<double>(2)));
-                // std::cout << dRvec << "  " << tolRvec << "\n";
-                EXPECT_LE(dRvec,
-                    tolRvec);
-                double dTvec = norm(
-                    m_pointTargetTvec[i] -
-                    cv::Vec3d(
-                    outTvecs[i].at<double>(0),
-                    outTvecs[i].at<double>(1),
-                    outTvecs[i].at<double>(2)));
-                // std::cout << dTvec << "  " << tolTvec << "\n";
-                EXPECT_LE(dTvec,
-                    tolTvec);
+                double dRvec = cv::norm(m_pointTargetRvec[i],
+                        cv::Vec3d(outRvecs[i].at<double>(0), outRvecs[i].at<double>(1), outRvecs[i].at<double>(2))
+                );
+                EXPECT_LE(dRvec, tolRvec);
+                double dTvec = cv::norm(m_pointTargetTvec[i],
+                        cv::Vec3d(outTvecs[i].at<double>(0), outTvecs[i].at<double>(1), outTvecs[i].at<double>(2))
+                );
+                EXPECT_LE(dTvec, tolTvec);
 
                 std::vector<cv::Point2f> backProjection;
                 cv::projectPoints(
@@ -698,3 +689,5 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
         pixelNoiseHalfWidth *= .25;
     }
 }
+
+}} // namespace

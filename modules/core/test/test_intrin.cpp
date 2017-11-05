@@ -1,5 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-#include <climits>
 
 #include "test_intrin_utils.hpp"
 
@@ -10,7 +12,7 @@
 
 using namespace cv;
 
-namespace cvtest { namespace hal {
+namespace opencv_test { namespace hal {
 using namespace CV_CPU_OPTIMIZATION_NAMESPACE;
 
 //=============  8-bit integer =====================================================================

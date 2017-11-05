@@ -58,11 +58,9 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace cv::ml;
+namespace opencv_test { namespace {
 
-static bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error)
+bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error)
 {
     CV_TRACE_FUNCTION();
     error = 0.0f;
@@ -226,3 +224,5 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 
 TEST(ML_LR, accuracy) { CV_LRTest test; test.safe_run(); }
 TEST(ML_LR, save_load) { CV_LRTest_SaveLoad test; test.safe_run(); }
+
+}} // namespace

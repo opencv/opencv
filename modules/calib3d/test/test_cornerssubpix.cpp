@@ -41,11 +41,9 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include <limits>
 #include "test_chessboardgenerator.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_ChessboardSubpixelTest : public cvtest::BaseTest
 {
@@ -78,7 +76,7 @@ int calcDistance(const vector<Point2f>& set1, const vector<Point2f>& set2, doubl
 
         for(int j = 0; j < (int)set2.size(); j++)
         {
-            double dist = norm(set1[i] - set2[j]);
+            double dist = cv::norm(set1[i] - set2[j]); // TODO cvtest
             if(dist < min_dist)
             {
                 min_idx = j;
@@ -256,4 +254,5 @@ TEST(Calib3d_CornerSubPix, regression_7204)
         cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
 }
 
+}} // namespace
 /* End of file. */
