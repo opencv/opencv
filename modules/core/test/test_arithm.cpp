@@ -806,6 +806,11 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
     {
         cvtest::add(src[0], alpha, Mat(), 0, Scalar::all(gamma[0]), dst, CV_8UC(src[0].channels()), true);
     }
+    int getRandomType(RNG& rng)
+    {
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1,
+            ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
+    }
     double getMaxErr(int)
     {
         return 1;
