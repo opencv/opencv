@@ -81,7 +81,7 @@ Gaussian Filter
 
       G_{0}(x, y) = A  e^{ \dfrac{ -(x - \mu_{x})^{2} }{ 2\sigma^{2}_{x} } +  \dfrac{ -(y - \mu_{y})^{2} }{ 2\sigma^{2}_{y} } }
 
-   where :math:`\mu` is the mean (the peak) and :math:`\sigma` represents the variance (per each of the variables :math:`x` and :math:`y`)
+   where :math:`\mu` is the mean (the peak) and :math:`\sigma` represents the standard deviation (per each of the variables :math:`x` and :math:`y`)
 
 
 Median Filter
