@@ -3173,7 +3173,7 @@ void resize(int src_type,
     short* ialpha = (short*)alpha;
     float* beta = alpha + width*ksize;
     short* ibeta = ialpha + width*ksize;
-    float cbuf[MAX_ESIZE];
+    float cbuf[MAX_ESIZE] = {0};
 
     for( dx = 0; dx < dsize.width; dx++ )
     {
