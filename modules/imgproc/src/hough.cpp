@@ -1079,7 +1079,7 @@ _next_step:
 private:
     const Mat &edges, &dx, &dy;
     Mat &accum;
-    std::vector<Point> &nz;
+    std::vector<Point>& nz;
     int minRadius, maxRadius;
     float idp;
 
@@ -1094,13 +1094,12 @@ private:
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
 {
 public:
-    HoughCirclesFindCentersInvoker(const Mat &_accum, Seq<int> &_centers, int _accThreshold, Mutex& _mutex) :
+    HoughCirclesFindCentersInvoker(const Mat &_accum, std::vector<int> &_centers, int _accThreshold, Mutex& _mutex) :
         accum(_accum), centers(_centers), accThreshold(_accThreshold), _lock(_mutex)
     {
         acols = accum.cols;
         arows = accum.rows;
         adata = accum.ptr<int>();
-        centers.clear();
     }
 
     ~HoughCirclesFindCentersInvoker() {}
@@ -1111,17 +1110,8 @@ public:
     {
         int startRow = boundaries.start;
         int endRow = boundaries.end;
-        MemStorage storage;
-        Seq<int> centersLocal;
+        std::vector<int> centersLocal;
         bool singleThread = (boundaries == Range(1, accum.rows - 1));
-
-        if (singleThread)
-            centersLocal = centers;
-        else
-        {
-            storage = MemStorage(cvCreateMemStorage(0));
-            centersLocal = Seq<int>(storage);
-        }
 
         startRow = max(1, startRow);
         endRow = min(arows - 1, endRow);
@@ -1141,19 +1131,21 @@ public:
             }
         }
 
-        if (!singleThread && !centersLocal.empty())
+        if(!centersLocal.empty())
         {
-            std::vector<int> tmp;
-            centersLocal.copyTo(tmp);
-
-            AutoLock alock(_lock);
-            centers.push_back(&tmp[0], tmp.size());
+            if(singleThread)
+                centers = centersLocal;
+            else
+            {
+                AutoLock alock(_lock);
+                centers.insert(centers.end(), centersLocal.begin(), centersLocal.end());
+            }
         }
     }
 
 private:
     const Mat &accum;
-    Seq<int> &centers;
+    std::vector<int> &centers;
     int accThreshold;
 
     int acols, arows;
@@ -1164,7 +1156,7 @@ private:
 class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
 {
 public:
-    HoughCircleEstimateRadiusInvoker(const std::vector<Point> &_nz, Seq<int> &_centers, Seq<Vec3f> &_circles,
+    HoughCircleEstimateRadiusInvoker(const std::vector<Point> &_nz, const std::vector<int> &_centers, Seq<Vec3f> &_circles,
                                      int _acols, int _circlesMax, int _accThreshold, int _minRadius, int _maxRadius,
                                      float _minDist, float _dp, Mutex& _mutex) :
         nz(_nz), centers(_centers), circles(_circles), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
@@ -1480,7 +1472,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     if(nz.empty())
         return;
 
-    Seq<int> centers(storage);
+    std::vector<int> centers;
 
     // 4 rows when multithreaded because there is a bit overhead
     // and on the other side there are some row ranges where centers are concentrated
@@ -1494,11 +1486,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     if(centerCnt == 0)
         return;
 
-    std::vector<int> sortBuffer;
-    centers.copyTo(sortBuffer);
-    std::sort(sortBuffer.begin(), sortBuffer.begin() + centers.size(), hough_cmp_gt(accum.ptr<int>()));
-    centers.clear();
-    centers.push_back((int*)&sortBuffer[0], sortBuffer.size());
+    std::sort(centers.begin(), centers.end(), hough_cmp_gt(accum.ptr<int>()));
 
     Seq<Vec3f> circles(storage);
 
