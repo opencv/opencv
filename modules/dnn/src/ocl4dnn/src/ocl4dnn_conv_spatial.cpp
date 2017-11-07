@@ -379,6 +379,8 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
 {
     num_ = numImages;
     prepareKernel(bottom, top, weight, bias, numImages);
+    if (bestKernelConfig.empty())
+        return false;
     return convolve(bottom, top, weight, bias, numImages, bestKernelConfig, cv::ocl::Queue::getDefault());
 }
 
