@@ -1062,6 +1062,28 @@ OCL_PERF_TEST_P(ScaleAddFixture, ScaleAdd,
     SANITY_CHECK(dst, 1e-6);
 }
 
+///////////// Transform ////////////////////////
+
+typedef Size_MatType TransformFixture;
+
+OCL_PERF_TEST_P(TransformFixture, Transform,
+                ::testing::Combine(OCL_TEST_SIZES,
+                ::testing::Values(CV_8UC3, CV_8SC3, CV_16UC3, CV_16SC3, CV_32SC3, CV_32FC3, CV_64FC3)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), mtx(Size(4, 3), CV_32FC3), dst(srcSize, type);
+    declare.in(src, mtx, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::transform(src, dst, mtx);
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+}
+
 ///////////// PSNR ////////////////////////
 
 typedef Size_MatType PSNRFixture;
