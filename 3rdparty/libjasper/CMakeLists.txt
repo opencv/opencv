@@ -25,7 +25,7 @@ endif(WIN32 AND NOT MINGW)
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-uninitialized -Wmissing-prototypes
                                    -Wno-unused-but-set-parameter -Wmissing-declarations -Wunused -Wshadow
-                                   -Wsign-compare -Wstrict-overflow)
+                                   -Wsign-compare -Wstrict-overflow -Wpointer-compare)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4018 /wd4101 /wd4244 /wd4267 /wd4715) # vs2005
 
