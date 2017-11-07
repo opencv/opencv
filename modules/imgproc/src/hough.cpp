@@ -932,8 +932,9 @@ class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
     HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, Mat &_accum, Seq<Point> &_nz,
-                             int _minRadius, int _maxRadius, float _idp) :
-        edges(_edges), dx(_dx), dy(_dy), accum(_accum), nz(_nz), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp)
+                             int _minRadius, int _maxRadius, float _idp, Mutex& _mutex) :
+        edges(_edges), dx(_dx), dy(_dy), accum(_accum), nz(_nz), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp),
+        _lock(_mutex)
     {
         acols = cvCeil(edges.cols * idp), arows = cvCeil(edges.rows * idp);
         astep = acols + 2;
@@ -1097,14 +1098,14 @@ private:
     bool haveSIMD;
 #endif
 
-    mutable Mutex _lock;
+    Mutex& _lock;
 };
 
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
 {
 public:
-    HoughCirclesFindCentersInvoker(const Mat &_accum, Seq<int> &_centers, int _accThreshold) :
-        accum(_accum), centers(_centers), accThreshold(_accThreshold)
+    HoughCirclesFindCentersInvoker(const Mat &_accum, Seq<int> &_centers, int _accThreshold, Mutex& _mutex) :
+        accum(_accum), centers(_centers), accThreshold(_accThreshold), _lock(_mutex)
     {
         acols = accum.cols;
         arows = accum.rows;
@@ -1167,7 +1168,7 @@ private:
 
     int acols, arows;
     const int *adata;
-    mutable Mutex _lock;
+    Mutex& _lock;
 };
 
 class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
@@ -1175,9 +1176,9 @@ class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
 public:
     HoughCircleEstimateRadiusInvoker(const Seq<Point> &_nz, Seq<int> &_centers, Seq<Vec3f> &_circles,
                                      int _acols, int _circlesMax, int _accThreshold, int _minRadius, int _maxRadius,
-                                     float _minDist, float _dp) :
+                                     float _minDist, float _dp, Mutex& _mutex) :
         nz(_nz), centers(_centers), circles(_circles), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
-        minRadius(_minRadius), maxRadius(_maxRadius), minDist(_minDist), dr(_dp)
+        minRadius(_minRadius), maxRadius(_maxRadius), minDist(_minDist), dr(_dp), _lock(_mutex)
     {
         minRadius2 = (float)minRadius * minRadius;
         maxRadius2 = (float)maxRadius * maxRadius;
@@ -1500,7 +1501,7 @@ private:
     mutable std::vector<markedCircle> mc;
     mutable volatile int iMax;
     mutable volatile bool isMaxCircles, isLastCenter;
-    mutable Mutex _lock;
+    Mutex& _lock;
 };
 
 static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float dp, float minDist,
@@ -1531,9 +1532,12 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     //                      HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ),
     //                                               accum, nz, minRadius, maxRadius, dp),
     //                      numberOfThreads);
+
+    Mutex mtx;
+
     parallel_for_(Range(0, edges.rows),
                   HoughCirclesAccumInvoker(edges, dx, dy,
-                                           accum, nz, minRadius, maxRadius, dp),
+                                           accum, nz, minRadius, maxRadius, dp, mtx),
                   numberOfThreads);
 
     if(nz.empty())
@@ -1546,7 +1550,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     numberOfThreads = (numThreads > 1) ? ((accum.rows - 2) / 4) : 1;
 
     parallel_for_(Range(1, accum.rows - 1),
-                  HoughCirclesFindCentersInvoker(accum, centers, accThreshold),
+                  HoughCirclesFindCentersInvoker(accum, centers, accThreshold, mtx),
                   numberOfThreads);
 
     int centerCnt = (int)centers.size();
@@ -1593,7 +1597,7 @@ _skip: ;
     // One loop iteration per thread if multithreaded.
     parallel_for_(Range(0, centerCnt),
                   HoughCircleEstimateRadiusInvoker(nz, centers, circles, accum.cols, maxCircles,
-                                                   accThreshold, minRadius, maxRadius, minDist, dp),
+                                                   accThreshold, minRadius, maxRadius, minDist, dp, mtx),
                   numberOfThreads);
 
     if (!circles.empty())
