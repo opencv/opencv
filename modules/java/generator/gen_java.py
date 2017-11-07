@@ -92,6 +92,7 @@ package org.opencv.$module;
 $imports
 
 $docs
+$annotation
 public class $jname extends $base {
 
     protected $jname(long addr) { super(addr); }
@@ -107,6 +108,7 @@ package org.opencv.$module;
 $imports
 
 $docs
+$annotation
 public class $jname {
 
     protected final long nativeObj;
@@ -124,6 +126,7 @@ package org.opencv.$module;
 $imports
 
 $docs
+$annotation
 public class $jname {
 """
 
@@ -186,13 +189,15 @@ class GeneralInfo():
 
         # parse doxygen comments
         self.params={}
+        self.annotation=[]
         if type == "class":
             docstring="// C++: class " + self.name + "\n//javadoc: " + self.name
         else:
             docstring=""
         if len(decl)>5 and decl[5]:
+            logging.info('docstring: %s', decl[5])
             if re.search("(@|\\\\)deprecated", decl[5]):
-                docstring += "\n@Deprecated"
+                self.annotation.append("@Deprecated")
 
         self.docstring = docstring
 
@@ -347,6 +352,7 @@ class ClassInfo(GeneralInfo):
                             jname = self.jname,
                             imports = "\n".join(self.getAllImports(M)),
                             docs = self.docstring,
+                            annotation = "\n".join(self.annotation),
                             base = self.base)
 
     def generateCppCode(self):
@@ -757,6 +763,8 @@ class JavaWrapperGenerator(object):
                 lines = StringIO(fi.docstring)
                 for line in lines:
                     j_code.write(" "*4 + line + "\n")
+            if fi.annotation:
+                j_code.write(" "*4 + "\n".join(fi.annotation) + "\n")
 
             # public java wrapper method impl (calling native one above)
             # e.g.
