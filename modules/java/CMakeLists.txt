@@ -291,7 +291,7 @@ foreach(java_file ${step3_input_files})
   endif()
   if(__configure)
     configure_file("${java_file}" "${java_src_dir}/${output_name}" @ONLY)
-  elseif(NOT "${java_file}" MATCHES "${OpenCV_BINARY_DIR}/")
+  elseif(EXISTS "${java_file}" AND NOT "${java_file}" MATCHES "${OpenCV_BINARY_DIR}/")
     configure_file("${java_file}" "${java_src_dir}/${output_name}" COPYONLY)
   else()
     add_custom_command(OUTPUT "${java_src_dir}/${output_name}"
