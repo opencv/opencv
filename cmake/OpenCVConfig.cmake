@@ -61,7 +61,9 @@ if(NOT DEFINED OpenCV_CUDA)
   endif()
 endif()
 
-if(MSVC)
+if(DEFINED OpenCV_ARCH AND DEFINED OpenCV_RUNTIME)
+  # custom overrided values
+elseif(MSVC)
   if(CMAKE_CL_64)
     set(OpenCV_ARCH x64)
     set(OpenCV_TBB_ARCH intel64)
