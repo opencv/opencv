@@ -9050,44 +9050,60 @@ inline void cvtYUV420p2RGBA(uchar * dst_data, size_t dst_step, int dst_width, in
 
 ///////////////////////////////////// RGB -> YUV420p /////////////////////////////////////
 
-template<int uIdx>
-inline void swapUV(uchar * &, uchar * &) {}
-template<>
-inline void swapUV<2>(uchar * & u, uchar * & v) { std::swap(u, v); }
-
-template<int bIdx, int uIdx>
 struct RGB888toYUV420pInvoker: public ParallelLoopBody
 {
-    RGB888toYUV420pInvoker(const uchar * _src_data, size_t _src_step, uchar * _dst_data, size_t _dst_step,
-                           int _src_width, int _src_height, int _scn)
+    RGB888toYUV420pInvoker(const uchar * _src_data, size_t _src_step,
+                           uchar * _y_data, uchar * _uv_data, size_t _dst_step,
+                           int _src_width, int _src_height, int _scn, bool swapBlue_, bool swapUV_, bool interleaved_)
         : src_data(_src_data), src_step(_src_step),
-          dst_data(_dst_data), dst_step(_dst_step),
+          y_data(_y_data), uv_data(_uv_data), dst_step(_dst_step),
           src_width(_src_width), src_height(_src_height),
-          scn(_scn) { }
+          scn(_scn), swapBlue(swapBlue_), swapUV(swapUV_), interleaved(interleaved_) { }
 
     void operator()(const Range& rowRange) const
     {
         const int w = src_width;
         const int h = src_height;
-
         const int cn = scn;
         for( int i = rowRange.start; i < rowRange.end; i++ )
         {
-            const uchar* row0 = src_data + src_step * (2 * i);
-            const uchar* row1 = src_data + src_step * (2 * i + 1);
+            const uchar* brow0 = src_data + src_step * (2 * i);
+            const uchar* grow0 = brow0 + 1;
+            const uchar* rrow0 = brow0 + 2;
+            const uchar* brow1 = src_data + src_step * (2 * i + 1);
+            const uchar* grow1 = brow1 + 1;
+            const uchar* rrow1 = brow1 + 2;
+            if (swapBlue)
+            {
+                std::swap(brow0, rrow0);
+                std::swap(brow1, rrow1);
+            }
 
-            uchar* y = dst_data + dst_step * (2*i);
-            uchar* u = dst_data + dst_step * (h + i/2) + (i % 2) * (w/2);
-            uchar* v = dst_data + dst_step * (h + (i + h/2)/2) + ((i + h/2) % 2) * (w/2);
+            uchar* y = y_data + dst_step * (2*i);
+            uchar* u;
+            uchar* v;
+            if (interleaved)
+            {
+                u = uv_data + dst_step * i;
+                v = uv_data + dst_step * i + 1;
+            }
+            else
+            {
+                u = uv_data + dst_step * (i/2) + (i % 2) * (w/2);
+                v = uv_data + dst_step * ((i + h/2)/2) + ((i + h/2) % 2) * (w/2);
+            }
 
-            swapUV<uIdx>(u, v);
+            if (swapUV)
+            {
+                std::swap(u, v);
+            }
 
             for( int j = 0, k = 0; j < w * cn; j += 2 * cn, k++ )
             {
-                int r00 = row0[2-bIdx + j];      int g00 = row0[1 + j];      int b00 = row0[bIdx + j];
-                int r01 = row0[2-bIdx + cn + j]; int g01 = row0[1 + cn + j]; int b01 = row0[bIdx + cn + j];
-                int r10 = row1[2-bIdx + j];      int g10 = row1[1 + j];      int b10 = row1[bIdx + j];
-                int r11 = row1[2-bIdx + cn + j]; int g11 = row1[1 + cn + j]; int b11 = row1[bIdx + cn + j];
+                int r00 = rrow0[j];      int g00 = grow0[j];      int b00 = brow0[j];
+                int r01 = rrow0[cn + j]; int g01 = grow0[cn + j]; int b01 = brow0[cn + j];
+                int r10 = rrow1[j];      int g10 = grow1[j];      int b10 = brow1[j];
+                int r11 = rrow1[cn + j]; int g11 = grow1[cn + j]; int b11 = brow1[cn + j];
 
                 const int shifted16 = (16 << ITUR_BT_601_SHIFT);
                 const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
@@ -9105,15 +9121,26 @@ struct RGB888toYUV420pInvoker: public ParallelLoopBody
                 int u00 = ITUR_BT_601_CRU * r00 + ITUR_BT_601_CGU * g00 + ITUR_BT_601_CBU * b00 + halfShift + shifted128;
                 int v00 = ITUR_BT_601_CBU * r00 + ITUR_BT_601_CGV * g00 + ITUR_BT_601_CBV * b00 + halfShift + shifted128;
 
-                u[k] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
-                v[k] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+                if (interleaved)
+                {
+                    u[k*2] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
+                    v[k*2] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+                }
+                else
+                {
+                    u[k] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
+                    v[k] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+                }
             }
         }
     }
 
-    static bool isFit( int src_width, int src_height )
+    void convert() const
     {
-        return (src_width * src_height >= 320*240);
+        if( src_width * src_height >= 320*240 )
+            parallel_for_(Range(0, src_height/2), *this);
+        else
+            operator()(Range(0, src_height/2));
     }
 
 private:
@@ -9121,24 +9148,16 @@ private:
 
     const uchar * src_data;
     size_t src_step;
-    uchar * dst_data;
+    uchar *y_data, *uv_data;
     size_t dst_step;
     int src_width;
     int src_height;
     const int scn;
+    bool swapBlue;
+    bool swapUV;
+    bool interleaved;
 };
 
-template<int bIdx, int uIdx>
-static void cvtRGBtoYUV420p(const uchar * src_data, size_t src_step,
-                            uchar * dst_data, size_t dst_step,
-                            int src_width, int src_height, int scn)
-{
-    RGB888toYUV420pInvoker<bIdx, uIdx> colorConverter(src_data, src_step, dst_data, dst_step, src_width, src_height, scn);
-    if( RGB888toYUV420pInvoker<bIdx, uIdx>::isFit(src_width, src_height) )
-        parallel_for_(Range(0, src_height/2), colorConverter);
-    else
-        colorConverter(Range(0, src_height/2));
-}
 
 ///////////////////////////////////// YUV422 -> RGB /////////////////////////////////////
 
@@ -10777,25 +10796,36 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
 }
 
 void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
-                                uchar * dst_data, size_t dst_step,
-                                int dst_width, int dst_height,
-                                int dcn, bool swapBlue, int uIdx)
+                         uchar * dst_data, size_t dst_step,
+                         int dst_width, int dst_height,
+                         int dcn, bool swapBlue, int uIdx)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
-    int blueIdx = swapBlue ? 2 : 0;
     const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
+    cvtTwoPlaneYUVtoBGR(src_data, uv, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+}
+
+void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int dst_width, int dst_height,
+                         int dcn, bool swapBlue, int uIdx)
+{
+    CV_INSTRUMENT_REGION();
+
+    // TODO: add hal replacement method
+    int blueIdx = swapBlue ? 2 : 0;
     switch(dcn*100 + blueIdx * 10 + uIdx)
     {
-    case 300: cvtYUV420sp2RGB<0, 0> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 301: cvtYUV420sp2RGB<0, 1> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 320: cvtYUV420sp2RGB<2, 0> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 321: cvtYUV420sp2RGB<2, 1> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 400: cvtYUV420sp2RGBA<0, 0>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 401: cvtYUV420sp2RGBA<0, 1>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 420: cvtYUV420sp2RGBA<2, 0>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
-    case 421: cvtYUV420sp2RGBA<2, 1>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 300: cvtYUV420sp2RGB<0, 0> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 301: cvtYUV420sp2RGB<0, 1> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 320: cvtYUV420sp2RGB<2, 0> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 321: cvtYUV420sp2RGB<2, 1> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 400: cvtYUV420sp2RGBA<0, 0>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 401: cvtYUV420sp2RGBA<0, 1>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 420: cvtYUV420sp2RGBA<2, 0>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 421: cvtYUV420sp2RGBA<2, 1>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
     default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 }
@@ -10835,15 +10865,19 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION()
 
     CALL_HAL(cvtBGRtoThreePlaneYUV, cv_hal_cvtBGRtoThreePlaneYUV, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx);
-    int blueIdx = swapBlue ? 2 : 0;
-    switch(blueIdx + uIdx*10)
-    {
-    case 10: cvtRGBtoYUV420p<0, 1>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
-    case 12: cvtRGBtoYUV420p<2, 1>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
-    case 20: cvtRGBtoYUV420p<0, 2>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
-    case 22: cvtRGBtoYUV420p<2, 2>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
-    };
+    uchar * uv_data = dst_data + dst_step * height;
+    RGB888toYUV420pInvoker(src_data, src_step, dst_data, uv_data, dst_step, width, height, scn, swapBlue, uIdx == 2, false).convert();
+}
+
+void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
+                         uchar * y_data, uchar * uv_data, size_t dst_step,
+                         int width, int height,
+                         int scn, bool swapBlue, int uIdx)
+{
+    CV_INSTRUMENT_REGION();
+
+    // TODO: add hal replacement method
+    RGB888toYUV420pInvoker(src_data, src_step, y_data, uv_data, dst_step, width, height, scn, swapBlue, uIdx == 2, true).convert();
 }
 
 void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
