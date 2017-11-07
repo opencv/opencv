@@ -1193,7 +1193,10 @@ public:
         if (isMaxCircles)
             return;
 
-        Mat distBuf, distSqrBuf;
+        Mat distBuf(1, nzSz, CV_32FC1), distSqrBuf(1, nzSz, CV_32FC1);
+        float *ddata = distBuf.ptr<float>();
+        float *dSqrData = distSqrBuf.ptr<float>();
+
         bool singleThread = (boundaries == Range(0, centerSz));
         int i = boundaries.start;
 
@@ -1213,9 +1216,8 @@ public:
 
             //Calculate circle's center in pixels
             Point2f curCenter = Point2f((x + 0.5f) * dr, (y + 0.5f) * dr);
-            float startDist, rBest = 0;
-            float *ddata = NULL, *dSqrData = NULL;
-            int maxCount = 0, j = 0, k = 0, nzCnt, startIdx;
+            float rBest = 0;
+            int j = 0, nzCount = 0, maxCount = 0;
 
             // Check distance with previously detected valid circles
             int curCircleSz = (int)circles.size();
@@ -1224,99 +1226,95 @@ public:
             if (isMaxCircles)
                 return;
 
-            if(!valid)
-                goto _next;
-
-            distBuf.create(1, nzSz, CV_32FC1);
-            ddata = distBuf.ptr<float>();
-
-#if CV_SIMD128
-            if(haveSIMD)
+            if(valid)
             {
-                v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
-                v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
-
-                float CV_DECL_ALIGNED(16) rbuf[4];
-                int   CV_DECL_ALIGNED(16) mbuf[4];
-                for(; j <= nzSz - 4; j += 4)
+#if CV_SIMD128
+                if(haveSIMD)
                 {
-                    v_float32x4 v_nzX, v_nzY;
-                    v_load_deinterleave((const float*)&nz[j], v_nzX, v_nzY);
+                    v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
+                    v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
 
-                    v_float32x4 v_x = v_cvt_f32(v_reinterpret_as_s32(v_nzX));
-                    v_float32x4 v_y = v_cvt_f32(v_reinterpret_as_s32(v_nzY));
-
-                    v_float32x4 v_dx = v_x - v_curCenterX;
-                    v_float32x4 v_dy = v_y - v_curCenterY;
-
-                    v_float32x4 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
-                    v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
-
-                    v_store_aligned(rbuf, v_r2);
-                    v_store_aligned(mbuf, v_reinterpret_as_s32(vmask));
-                    for(int p = 0; p < 4; p++)
+                    float CV_DECL_ALIGNED(16) rbuf[4];
+                    int   CV_DECL_ALIGNED(16) mbuf[4];
+                    for(; j <= nzSz - 4; j += 4)
                     {
-                        if(mbuf[p] < 0)
+                        v_float32x4 v_nzX, v_nzY;
+                        v_load_deinterleave((const float*)&nz[j], v_nzX, v_nzY);
+
+                        v_float32x4 v_x = v_cvt_f32(v_reinterpret_as_s32(v_nzX));
+                        v_float32x4 v_y = v_cvt_f32(v_reinterpret_as_s32(v_nzY));
+
+                        v_float32x4 v_dx = v_x - v_curCenterX;
+                        v_float32x4 v_dy = v_y - v_curCenterY;
+
+                        v_float32x4 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
+                        v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
+
+                        v_store_aligned(rbuf, v_r2);
+                        v_store_aligned(mbuf, v_reinterpret_as_s32(vmask));
+                        for(int p = 0; p < 4; p++)
                         {
-                            ddata[k] = rbuf[p]; k++;
+                            if(mbuf[p] < 0)
+                            {
+                                ddata[nzCount] = rbuf[p]; nzCount++;
+                            }
+                        }
+                    }
+                }
+#endif
+
+                // Estimate best radius
+                for(; j < nzSz; ++j)
+                {
+                    Point pt = nz[j];
+                    float _dx = curCenter.x - pt.x, _dy = curCenter.y - pt.y;
+                    float _r2 = _dx * _dx + _dy * _dy;
+
+                    if(minRadius2 <= _r2 && _r2 <= maxRadius2)
+                    {
+                        ddata[nzCount] = _r2;
+                        ++nzCount;
+                    }
+                }
+
+                if (isMaxCircles)
+                    return;
+
+                int startIdx = nzCount - 1;
+                if(nzCount)
+                {
+                    Mat bufRange = distSqrBuf.colRange(Range(0, nzCount));
+                    sqrt(distBuf.colRange(Range(0, nzCount)), bufRange);
+
+                    // Sort non-zero pixels according to their distance from the center.
+                    sort(bufRange, bufRange, SORT_DESCENDING);
+
+                    if (isMaxCircles)
+                        return;
+
+                    float startDist = dSqrData[startIdx];
+                    for(j = nzCount - 2; j >= 0; --j)
+                    {
+                        float d = dSqrData[j];
+
+                        if( d - startDist > dr )
+                        {
+                            float rCur = dSqrData[(j + startIdx) / 2];
+                            int curCount = startIdx - j;
+                            //Check that angular size of arc is bigger than before
+                            if( curCount * rBest >= maxCount * rCur ||
+                               (rBest < FLT_EPSILON && curCount >= maxCount) )
+                            {
+                                rBest = rCur;
+                                maxCount = curCount;
+                            }
+                            startDist = d;
+                            startIdx = j;
                         }
                     }
                 }
             }
-#endif
 
-            // Estimate best radius
-            for(; j < nzSz; ++j)
-            {
-                Point pt = nz[j];
-                float _dx = curCenter.x - pt.x, _dy = curCenter.y - pt.y;
-                float _r2 = _dx * _dx + _dy * _dy;
-
-                if(minRadius2 <= _r2 && _r2 <= maxRadius2)
-                {
-                    ddata[k] = _r2;
-                    ++k;
-                }
-            }
-
-            if (isMaxCircles)
-                return;
-
-            nzCnt = k, startIdx = k - 1;
-
-            if(!nzCnt)
-                goto _next;
-
-            pow(distBuf.colRange(Range(0, nzCnt)), 0.5, distSqrBuf);
-
-            // Sort non-zero pixels according to their distance from the center.
-            sort(distSqrBuf, distSqrBuf, SORT_ASCENDING | SORT_EVERY_ROW);
-            flip(distSqrBuf, distSqrBuf, 1);
-            dSqrData = distSqrBuf.ptr<float>();
-
-            if (isMaxCircles)
-                return;
-
-            startDist = dSqrData[startIdx];
-            for(j = nzCnt - 2; j >= 0; --j)
-            {
-                float d = dSqrData[j];
-
-                if( d - startDist > dr )
-                {
-                    float rCur = dSqrData[(j + startIdx) / 2];
-                    if( (startIdx - j) * rBest >= maxCount * rCur ||
-                            (rBest < FLT_EPSILON && startIdx - j >= maxCount) )
-                    {
-                        rBest = rCur;
-                        maxCount = startIdx - j;
-                    }
-                    startDist = d;
-                    startIdx = j;
-                }
-            }
-
-_next:
             if(singleThread)
             {
                 // Check if the circle has enough support
@@ -1351,7 +1349,7 @@ _next:
                     if(i <= iMax)
                     {
                         std::sort(mc.begin(), mc.end(), cmpCircleIndex);
-                        for(k = (int)mc.size() - 1; k >= 0; --k)
+                        for(int k = (int)mc.size() - 1; k >= 0; --k)
                         {
                             if(mc[k].idx <= iMax)
                             {
@@ -1382,7 +1380,7 @@ _next:
                     if(iMax == centerSz - 1)
                     {
                         std::sort(mc.begin(), mc.end(), cmpCircleIndex);
-                        for(k = (int)mc.size() - 1; k >= 0; --k)
+                        for(int k = (int)mc.size() - 1; k >= 0; --k)
                         {
                             if(checkDistance(Point2f(mc[k].c[0], mc[k].c[1]), mc[k].idxC, (int)circles.size()))
                             {
@@ -1444,10 +1442,8 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
 
     Mat accum;
-    //        UMat edges, dx, dy;
     Mat edges, dx, dy;
 
-    MemStorage storage(cvCreateMemStorage(0));
     std::vector<Point> nz;
     nz.reserve(1024);
     int numberOfThreads = 1;
