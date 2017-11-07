@@ -57,7 +57,9 @@ if(NOT DEFINED OpenCV_CUDA)
   endif()
 endif()
 
-if(MSVC)
+if(DEFINED OpenCV_ARCH AND DEFINED OpenCV_RUNTIME)
+  # custom overrided values
+elseif(MSVC)
   if(CMAKE_CL_64)
     set(OpenCV_ARCH x64)
   elseif((CMAKE_GENERATOR MATCHES "ARM") OR ("${arch_hint}" STREQUAL "ARM") OR (CMAKE_VS_EFFECTIVE_PLATFORMS MATCHES "ARM|arm"))
