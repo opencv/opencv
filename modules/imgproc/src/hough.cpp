@@ -952,19 +952,11 @@ public:
     {
         Mat accumLocal = Mat(arows + 2, acols + 2, CV_32SC1, Scalar::all(0));
         int *adataLocal = accumLocal.ptr<int>();
-        MemStorage storage;
-        Seq<Point> nzLocal;
+        std::vector<Point> nzLocal;
+        nzLocal.reserve(256);
         int endRow = boundaries.end;
         int numCols = edges.cols;
         bool singleThread = (boundaries == Range(0, edges.rows));
-
-        if (singleThread)
-            nzLocal = nz;
-        else
-        {
-            storage = MemStorage(cvCreateMemStorage(0));
-            nzLocal = Seq<Point>(storage);
-        }
 
         if(edges.isContinuous() && dx.isContinuous() && dy.isContinuous())
         {
@@ -1066,23 +1058,22 @@ _next_step:
         }
 
         if (singleThread)
+        {
             accum = accumLocal;
+            nz.push_back(&nzLocal[0], nzLocal.size());
+        }
         else
         {
-            std::vector<Point> tmp;
-            nzLocal.copyTo(tmp);
-
             AutoLock lock(_lock);
             if(accum.empty())
             {
                 accum = accumLocal;
-                nz.push_back(&tmp[0], tmp.size());
             }
             else
             {
                 add(accum, accumLocal, accum);
-                nz.push_back(&tmp[0], tmp.size());
             }
+            nz.push_back(&nzLocal[0], nzLocal.size());
         }
     }
 
