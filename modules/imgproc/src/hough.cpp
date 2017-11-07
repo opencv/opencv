@@ -1156,7 +1156,7 @@ private:
 class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
 {
 public:
-    HoughCircleEstimateRadiusInvoker(const std::vector<Point> &_nz, const std::vector<int> &_centers, Seq<Vec3f> &_circles,
+    HoughCircleEstimateRadiusInvoker(const std::vector<Point> &_nz, const std::vector<int> &_centers, std::vector<Vec3f> &_circles,
                                      int _acols, int _circlesMax, int _accThreshold, int _minRadius, int _maxRadius,
                                      float _minDist, float _dp, Mutex& _mutex) :
         nz(_nz), centers(_centers), circles(_circles), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
@@ -1419,7 +1419,7 @@ private:
 
     const std::vector<Point> &nz;
     const std::vector<int> &centers;
-    Seq<Vec3f> &circles;
+    std::vector<Vec3f> &circles;
     int acols, circlesMax, accThreshold, minRadius, maxRadius;
     float minDist, dr;
 
@@ -1488,7 +1488,8 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     std::sort(centers.begin(), centers.end(), hough_cmp_gt(accum.ptr<int>()));
 
-    Seq<Vec3f> circles(storage);
+    std::vector<Vec3f> circles;
+    circles.reserve(256);
 
     if(maxCircles == 0)
     {
@@ -1499,21 +1500,23 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
             int y = _centers / accum.cols;
             int x = _centers - y * accum.cols;
 
+            bool goodPoint = true;
             for(uint j = 0; j < circles.size(); ++j)
             {
                 Vec3f pt = circles[j];
                 float distX = x - pt[0], distY = y - pt[1];
                 if (distX * distX + distY * distY < minDist)
-                    goto _skip;
+                {
+                    goodPoint = false; break;
+                }
             }
 
-            circles.push_back(Vec3f((x + 0.5f) * dp, (y + 0.5f) * dp, 0));
-_skip: ;
+            if(goodPoint)
+                circles.push_back(Vec3f((x + 0.5f) * dp, (y + 0.5f) * dp, 0));
         }
 
-        _circles.create(1, (int)circles.size(), CV_32FC3, -1, true);
-        Mat circ = _circles.getMat();
-        cvCvtSeqToArray(circles.seq, circ.ptr());
+        _circles.create(1, (int)circles.size(), CV_32FC3);
+        Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
         return;
     }
 
@@ -1525,13 +1528,8 @@ _skip: ;
                                                    accThreshold, minRadius, maxRadius, minDist, dp, mtx),
                   numberOfThreads);
 
-    if (!circles.empty())
-    {
-        _circles.create(1, (int)circles.size(), CV_32FC3, -1, true);
-        Mat circ = _circles.getMat();
-        cvCvtSeqToArray(circles.seq, circ.ptr());
-    } else
-        _circles.release();
+    _circles.create(1, (int)circles.size(), CV_32FC3);
+    Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
 }
 
 static void HoughCircles( InputArray _image, OutputArray _circles,
