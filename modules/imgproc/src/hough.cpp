@@ -1182,14 +1182,12 @@ public:
         isLastCenter = false;
         mc.reserve(64);
         loopIdx = std::vector<bool>(centerSz + 1, false);
-#if CV_SSE2
-        haveSIMD = checkHardwareSupport(CPU_SSE2); // || checkHardwareSupport(CPU_NEON);
+#if CV_SIMD128
+        haveSIMD = hasSIMD128();
         if(haveSIMD)
         {
-            //                v_minRadius2 = v_setall_f32(minRadius2);
-            //                v_maxRadius2 = v_setall_f32(maxRadius2);
-            v_minRadius2 = _mm_load1_ps(&minRadius2);
-            v_maxRadius2 = _mm_load1_ps(&maxRadius2);
+            v_minRadius2 = v_setall_f32(minRadius2);
+            v_maxRadius2 = v_setall_f32(maxRadius2);
         }
 #endif
     }
@@ -1239,88 +1237,42 @@ public:
 
             distBuf.create(1, nzSz, CV_32FC1);
             ddata = distBuf.ptr<float>();
-#if CV_SSE2
+
+#if CV_SIMD128
             if(haveSIMD)
             {
-                //                    v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
-                //                    v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
-                __m128 v_curCenter = _mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)&curCenter));
-                v_curCenter = _mm_shuffle_ps(v_curCenter, v_curCenter, _MM_SHUFFLE(1, 0, 1, 0));
+                v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
+                v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
 
+                float CV_DECL_ALIGNED(16) rbuf[4];
+                int   CV_DECL_ALIGNED(16) mbuf[4];
                 for(; j <= nzSz - 4; j += 4)
                 {
-                    // nz storage block has to be a multiple of 8! not good...
-                    //                        v_float32x4 v_nzX, v_nzY;
-                    //                        v_load_deinterleave((const float*)&nz[j], v_nzX, v_nzY);
-                    // nz storage block has to be a multiple of 4
-                    __m128i v_nz1 = _mm_loadu_si128((const __m128i*)&nz[j]);
-                    __m128i v_nz2 = _mm_loadu_si128((const __m128i*)&nz[j + 2]);
+                    v_float32x4 v_nzX, v_nzY;
+                    v_load_deinterleave((const float*)&nz[j], v_nzX, v_nzY);
 
-                    //                        v_float32x4 v_x = v_cvt_f32(v_reinterpret_as_s32(v_nzX));
-                    //                        v_float32x4 v_y = v_cvt_f32(v_reinterpret_as_s32(v_nzY));
-                    __m128 v_tmp1 = _mm_cvtepi32_ps(v_nz1);
-                    __m128 v_tmp2 = _mm_cvtepi32_ps(v_nz2);
+                    v_float32x4 v_x = v_cvt_f32(v_reinterpret_as_s32(v_nzX));
+                    v_float32x4 v_y = v_cvt_f32(v_reinterpret_as_s32(v_nzY));
 
-                    //                        v_x = v_x - v_curCenterX;
-                    //                        v_y = v_y - v_curCenterY;
-                    v_tmp1 = _mm_sub_ps(v_tmp1, v_curCenter);
-                    v_tmp2 = _mm_sub_ps(v_tmp2, v_curCenter);
+                    v_float32x4 v_dx = v_x - v_curCenterX;
+                    v_float32x4 v_dy = v_y - v_curCenterY;
 
-                    // no shuffle found...
-                    __m128 v_x = _mm_shuffle_ps(v_tmp1, v_tmp2, _MM_SHUFFLE(2, 0, 2, 0));
-                    __m128 v_y = _mm_shuffle_ps(v_tmp1, v_tmp2, _MM_SHUFFLE(3, 1, 3, 1));
+                    v_float32x4 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
+                    v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
 
-                    //                        v_x = (v_x * v_x) + (v_y * v_y);
-                    v_tmp1 = _mm_add_ps(_mm_mul_ps(v_x, v_x), _mm_mul_ps(v_y, v_y));
-
-                    //                        v_y = (v_minRadius2 <= v_x) & (v_x <= v_maxRadius2);
-                    v_tmp2 = _mm_and_ps(_mm_cmple_ps(v_minRadius2, v_tmp1), _mm_cmple_ps(v_tmp1, v_maxRadius2));
-
-                    //                        unsigned int mask = v_signmask(v_y);
-                    unsigned int mask = _mm_movemask_epi8(_mm_castps_si128(v_tmp2));
-
-                    if(mask)
+                    v_store_aligned(rbuf, v_r2);
+                    v_store_aligned(mbuf, v_reinterpret_as_s32(vmask));
+                    for(int p = 0; p < 4; p++)
                     {
-                        if(mask == 0x0000ffff)
+                        if(mbuf[p] < 0)
                         {
-                            //                                v_store(ddata + k, v_x);
-                            _mm_storeu_ps((ddata + k), v_tmp1);
-                            k += 4;
-                            continue;
-                        }
-                        else if((mask & 0x000000ff) == 0x000000ff)
-                        {
-                            //                                v_store_low(ddata + k, v_x);
-                            //                                v_x = v_reinterpret_as_f32( v_reinterpret_as_u8(v_x) >> 8);
-                            _mm_storel_pd((double*)(ddata + k), _mm_castps_pd(v_tmp1));
-                            v_tmp1 = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_tmp1), 8));
-                            k += 2;
-                            mask >>= 8;
-                        }
-                        else if((mask & 0x0000ff00) == 0x0000ff00)
-                        {
-                            //                                v_store_high(ddata + k, v_x);
-                            _mm_storeh_pd((double*)(ddata + k), _mm_castps_pd(v_tmp1));
-                            k += 2;
-                            mask ^= 0x0000ff00;
-                        }
-
-                        while(mask)
-                        {
-                            if(mask & 0x00000001)
-                            {
-                                //                                    ddata[k] = v_x.get0();
-                                ddata[k] = _mm_cvtss_f32(v_tmp1);
-                                ++k;
-                            }
-                            //                                v_x = v_reinterpret_as_f32( v_reinterpret_as_s8(v_x) >> 4);
-                            v_tmp1 = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_tmp1), 4));
-                            mask >>= 4;
+                            ddata[k] = rbuf[p]; k++;
                         }
                     }
                 }
             }
 #endif
+
             // Estimate best radius
             for(; j < nzSz; ++j)
             {
@@ -1474,15 +1426,14 @@ private:
     }
 
     const std::vector<Point> &nz;
-    Seq<int> &centers;
+    const std::vector<int> &centers;
     Seq<Vec3f> &circles;
     int acols, circlesMax, accThreshold, minRadius, maxRadius;
     float minDist, dr;
 
-#if CV_SSE2
+#if CV_SIMD128
     bool haveSIMD;
-    //        v_float32x4 v_minRadius2, v_maxRadius2;
-    __m128 v_minRadius2, v_maxRadius2;
+    v_float32x4 v_minRadius2, v_maxRadius2;
 #endif
     int nzSz, centerSz;
     float minRadius2, maxRadius2;
