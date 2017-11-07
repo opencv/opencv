@@ -931,14 +931,13 @@ inline bool cmpCircleIndex(const markedCircle &left, const markedCircle &right)
 class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
-    HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, Mat &_accum, Seq<Point> &_nz,
+    HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, Mat &_accum, std::vector<Point> &_nz,
                              int _minRadius, int _maxRadius, float _idp, Mutex& _mutex) :
         edges(_edges), dx(_dx), dy(_dy), accum(_accum), nz(_nz), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp),
         _lock(_mutex)
     {
         acols = cvCeil(edges.cols * idp), arows = cvCeil(edges.rows * idp);
         astep = acols + 2;
-        nz.clear();
 #if CV_SIMD128
         haveSIMD = hasSIMD128();
 #endif
@@ -1060,7 +1059,7 @@ _next_step:
         if (singleThread)
         {
             accum = accumLocal;
-            nz.push_back(&nzLocal[0], nzLocal.size());
+            nz = nzLocal;
         }
         else
         {
@@ -1073,14 +1072,14 @@ _next_step:
             {
                 add(accum, accumLocal, accum);
             }
-            nz.push_back(&nzLocal[0], nzLocal.size());
+            nz.insert(nz.end(), nzLocal.begin(), nzLocal.end());
         }
     }
 
 private:
     const Mat &edges, &dx, &dy;
     Mat &accum;
-    Seq<Point> &nz;
+    std::vector<Point> &nz;
     int minRadius, maxRadius;
     float idp;
 
@@ -1165,7 +1164,7 @@ private:
 class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
 {
 public:
-    HoughCircleEstimateRadiusInvoker(const Seq<Point> &_nz, Seq<int> &_centers, Seq<Vec3f> &_circles,
+    HoughCircleEstimateRadiusInvoker(const std::vector<Point> &_nz, Seq<int> &_centers, Seq<Vec3f> &_circles,
                                      int _acols, int _circlesMax, int _accThreshold, int _minRadius, int _maxRadius,
                                      float _minDist, float _dp, Mutex& _mutex) :
         nz(_nz), centers(_centers), circles(_circles), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
@@ -1474,7 +1473,7 @@ private:
         return true;
     }
 
-    const Seq<Point> &nz;
+    const std::vector<Point> &nz;
     Seq<int> &centers;
     Seq<Vec3f> &circles;
     int acols, circlesMax, accThreshold, minRadius, maxRadius;
@@ -1506,7 +1505,8 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     Mat edges, dx, dy;
 
     MemStorage storage(cvCreateMemStorage(0));
-    Seq<Point> nz(storage);
+    std::vector<Point> nz;
+    nz.reserve(1024);
     int numberOfThreads = 1;
     int numThreads = std::max(1, std::min(getNumThreads(), getNumberOfCPUs()));
 
@@ -1518,11 +1518,6 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is large and cost is more than add accum
     if(maxRadius - minRadius > 32)
         numberOfThreads = std::max(1, std::min(numThreads, 2));
-
-    //        parallel_for_(Range(0, edges.rows),
-    //                      HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ),
-    //                                               accum, nz, minRadius, maxRadius, dp),
-    //                      numberOfThreads);
 
     Mutex mtx;
 
