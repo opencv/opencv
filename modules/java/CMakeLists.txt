@@ -485,13 +485,25 @@ if(ANDROID)
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java)
 else()
   if(NOT INSTALL_CREATE_DISTRIB)
-    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
-            RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java
-            LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
+      ocv_install_target(${the_module}
+              RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java
+              LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
+    else(${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
+      ocv_install_target(${the_module} EXPORT OpenCVModules
+              RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java
+              LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
+    endif()
   else()
-    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
-            RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java
-            LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java)
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
+      ocv_install_target(${the_module}
+              RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java
+              LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java)
+    else(${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
+      ocv_install_target(${the_module} EXPORT OpenCVModules
+              RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java
+              LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java)
+    endif()
   endif()
 endif()
 
