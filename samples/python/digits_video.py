@@ -55,7 +55,7 @@ def main():
             if not (16 <= h <= 64  and w <= 1.2*h):
                 continue
             pad = max(h-w, 0)
-            x, w = x-pad/2, w+pad
+            x, w = x - (pad // 2), w + pad
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0))
 
             bin_roi = bin[y:,x:][:h,:w]
@@ -98,3 +98,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    cv2.destroyAllWindows()
