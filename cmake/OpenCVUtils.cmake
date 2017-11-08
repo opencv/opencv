@@ -1001,7 +1001,10 @@ endfunction()
 
 macro(ocv_get_libname var_name)
   get_filename_component(__libname "${ARGN}" NAME)
-  string(REGEX REPLACE "^lib(.+).(a|so)(.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  # libopencv_core.so.3.3 -> opencv_core
+  string(REGEX REPLACE "^lib(.+)\\.(a|so)(\\.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  # MacOSX: libopencv_core.3.3.1.dylib -> opencv_core
+  string(REGEX REPLACE "^lib(.+[^.0-9])\\.([.0-9]+\\.)?dylib$" "\\1" __libname "${__libname}")
   set(${var_name} "${__libname}")
 endmacro()
 
