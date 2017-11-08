@@ -65,7 +65,7 @@ for (let i = 0; i < faces.size(); ++i) {
     for (let j = 0; j < eyes.size(); ++j) {
         let point1 = new cv.Point(eyes.get(j).x, eyes.get(j).y);
         let point2 = new cv.Point(eyes.get(j).x + eyes.get(j).width,
-                                  eyes.get(j).y + eyes.get(i).height);
+                                  eyes.get(j).y + eyes.get(j).height);
         cv.rectangle(roiSrc, point1, point2, [0, 0, 255, 255]);
     }
     roiGray.delete(); roiSrc.delete();
