@@ -288,7 +288,7 @@ private:
 @param from Source frame index.
 @param to Destination frame index.
 @param motions Pair-wise motions. motions[i] denotes motion from the frame i to the frame i+1
-@return Motion from the frame from to the frame to.
+@return Motion from the Source frame to the Destination frame.
  */
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 
