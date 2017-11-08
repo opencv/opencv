@@ -44,7 +44,7 @@ public class Mat {
     //
 
     // javadoc: Mat::Mat(rows, cols, type, data)
-    public Mat(int rows, int cols, int type, long data)
+    public Mat(int rows, int cols, int type, ByteBuffer data)
     {
 
         nativeObj = n_Mat(rows, cols, type, data);
@@ -1115,7 +1115,7 @@ public class Mat {
     private static native long n_Mat(int rows, int cols, int type);
 
     // C++: Mat::Mat(int rows, int cols, int type, void* data)
-    private static native long n_Mat(int rows, int cols, int type, long data);
+    private static native long n_Mat(int rows, int cols, int type, ByteBuffer data);
 
     // C++: Mat::Mat(Size size, int type)
     private static native long n_Mat(double size_width, double size_height, int type);
