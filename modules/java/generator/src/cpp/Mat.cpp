@@ -52,6 +52,31 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__
 
 
 //
+//   Mat::Mat(int rows, int cols, int type, void* data)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIIL
+  (JNIEnv* env, jclass, jint rows, jint cols, jint type, jlong data);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIIL
+  (JNIEnv* env, jclass, jint rows, jint cols, jint type, jlong data)
+{
+    static const char method_name[] = "Mat::n_1Mat__IIIL()";
+    try {
+        LOGD("%s", method_name);
+        return (jlong) new Mat( rows, cols, type, (void*) data );
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+
+
+//
 //   Mat::Mat(int rows, int cols, int type)
 //
 
