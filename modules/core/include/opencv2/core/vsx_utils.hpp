@@ -797,8 +797,8 @@ FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,          \
                                      const Tvec& c, const Tvec& d, Tp* ptr) \
 {                                                                           \
     st_func(vec_mergeh(a, b), 0, ptr);                                      \
-    st_func(vec_mergel(a, b), 2, ptr);                                      \
-    st_func(vec_mergeh(c, d), 4, ptr);                                      \
+    st_func(vec_mergeh(c, d), 2, ptr);                                      \
+    st_func(vec_mergel(a, b), 4, ptr);                                      \
     st_func(vec_mergel(c, d), 6, ptr);                                      \
 }                                                                           \
 FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)     \
@@ -813,12 +813,12 @@ FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,     \
 {                                                                           \
     Tvec v0 = ld_func(0, ptr);                                              \
     Tvec v1 = ld_func(2, ptr);                                              \
-    a = vec_mergeh(v0, v1);                                                 \
-    b = vec_mergel(v0, v1);                                                 \
-    v0 = ld_func(4, ptr);                                                   \
-    v1 = ld_func(6, ptr);                                                   \
-    c = vec_mergeh(v0, v1);                                                 \
-    d = vec_mergel(v0, v1);                                                 \
+    Tvec v2 = ld_func(4, ptr);                                              \
+    Tvec v3 = ld_func(6, ptr);                                              \
+    a = vec_mergeh(v0, v2);                                                 \
+    b = vec_mergel(v0, v2);                                                 \
+    c = vec_mergeh(v1, v3);                                                 \
+    d = vec_mergel(v1, v3);                                                 \
 }
 VSX_IMPL_ST_D_INTERLEAVE_64(int64, vec_dword2, vsx_ld2, vsx_st2)
 VSX_IMPL_ST_D_INTERLEAVE_64(uint64, vec_udword2, vsx_ld2, vsx_st2)
