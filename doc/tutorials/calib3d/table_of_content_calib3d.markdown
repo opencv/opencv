@@ -37,6 +37,6 @@ Although we get most of our images in a 2D format they do come from a 3D world. 
     *Author:* Vladislav Sovrasov
 
     Camera calibration by using either the chessboard, chAruco, asymmetrical circle or dual asymmetrical circle
-    pattern. Calibration process is continious, so you can see results after each new pattern shot.
+    pattern. Calibration process is continuous, so you can see results after each new pattern shot.
     As an output you get average reprojection error, intrinsic camera parameters, distortion coefficients and
      confidence intervals for all of evaluated variables.

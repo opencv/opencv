@@ -23,23 +23,25 @@ const char* classNames[] = {"background",
                             "motorbike", "person", "pottedplant",
                             "sheep", "sofa", "train", "tvmonitor"};
 
-const char* about = "This sample uses Single-Shot Detector "
-                    "(https://arxiv.org/abs/1512.02325)"
-                    "to detect objects on image.\n"
-                    ".caffemodel model's file is avaliable here: "
-                    "https://github.com/chuanqi305/MobileNet-SSD\n";
+const char* about = "This sample uses MobileNet Single-Shot Detector "
+                    "(https://arxiv.org/abs/1704.04861) "
+                    "to detect objects on camera/video/image.\n"
+                    ".caffemodel model's file is available here: "
+                    "https://github.com/chuanqi305/MobileNet-SSD\n"
+                    "Default network is 300x300 and 20-classes VOC.\n";
 
 const char* params
     = "{ help           | false | print usage         }"
       "{ proto          | MobileNetSSD_deploy.prototxt | model configuration }"
       "{ model          | MobileNetSSD_deploy.caffemodel | model weights }"
-      "{ video          |       | video for detection }"
+      "{ camera_device  | 0     | camera device number }"
+      "{ video          |       | video or image for detection}"
       "{ out            |       | path to output video file}"
       "{ min_confidence | 0.2   | min confidence      }";
 
 int main(int argc, char** argv)
 {
-    cv::CommandLineParser parser(argc, argv, params);
+    CommandLineParser parser(argc, argv, params);
 
     if (parser.get<bool>("help"))
     {
@@ -55,19 +57,40 @@ int main(int argc, char** argv)
     dnn::Net net = readNetFromCaffe(modelConfiguration, modelBinary);
     //! [Initialize network]
 
-    VideoCapture cap(parser.get<String>("video"));
-    if(!cap.isOpened()) // check if we succeeded
+    if (net.empty())
     {
-        cap = VideoCapture(0);
+        cerr << "Can't load network by using the following files: " << endl;
+        cerr << "prototxt:   " << modelConfiguration << endl;
+        cerr << "caffemodel: " << modelBinary << endl;
+        cerr << "Models can be downloaded here:" << endl;
+        cerr << "https://github.com/chuanqi305/MobileNet-SSD" << endl;
+        exit(-1);
+    }
+
+    VideoCapture cap;
+    if (parser.get<String>("video").empty())
+    {
+        int cameraDevice = parser.get<int>("camera_device");
+        cap = VideoCapture(cameraDevice);
         if(!cap.isOpened())
         {
-            cout << "Couldn't find camera" << endl;
+            cout << "Couldn't find camera: " << cameraDevice << endl;
+            return -1;
+        }
+    }
+    else
+    {
+        cap.open(parser.get<String>("video"));
+        if(!cap.isOpened())
+        {
+            cout << "Couldn't open image or video: " << parser.get<String>("video") << endl;
             return -1;
         }
     }
 
-    Size inVideoSize = Size((int) cap.get(CV_CAP_PROP_FRAME_WIDTH),    //Acquire input size
-                            (int) cap.get(CV_CAP_PROP_FRAME_HEIGHT));
+    Size inVideoSize;
+    inVideoSize = Size((int) cap.get(CV_CAP_PROP_FRAME_WIDTH),    //Acquire input size
+                       (int) cap.get(CV_CAP_PROP_FRAME_HEIGHT));
 
     Size cropSize;
     if (inVideoSize.width / (float)inVideoSize.height > WHRatio)
@@ -93,9 +116,18 @@ int main(int argc, char** argv)
     for(;;)
     {
         Mat frame;
-        cap >> frame; // get a new frame from camera
-        //! [Prepare blob]
+        cap >> frame; // get a new frame from camera/video or read image
 
+        if (frame.empty())
+        {
+            waitKey();
+            break;
+        }
+
+        if (frame.channels() == 4)
+            cvtColor(frame, frame, COLOR_BGRA2BGR);
+
+        //! [Prepare blob]
         Mat inputBlob = blobFromImage(frame, inScaleFactor,
                                       Size(inWidth, inHeight), meanVal, false); //Convert Mat to batch of images
         //! [Prepare blob]
@@ -108,14 +140,22 @@ int main(int argc, char** argv)
         Mat detection = net.forward("detection_out"); //compute output
         //! [Make forward pass]
 
-        std::vector<double> layersTimings;
+        vector<double> layersTimings;
         double freq = getTickFrequency() / 1000;
         double time = net.getPerfProfile(layersTimings) / freq;
-        cout << "Inference time, ms: " << time << endl;
 
         Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
 
         frame = frame(crop);
+
+        ostringstream ss;
+        if (!outputVideo.isOpened())
+        {
+            ss << "FPS: " << 1000/time << " ; time: " << time << " ms";
+            putText(frame, ss.str(), Point(20,20), 0, 0.5, Scalar(0,0,255));
+        }
+        else
+            cout << "Inference time, ms: " << time << endl;
 
         float confidenceThreshold = parser.get<float>("min_confidence");
         for(int i = 0; i < detectionMat.rows; i++)
@@ -131,7 +171,7 @@ int main(int argc, char** argv)
                 int xRightTop = static_cast<int>(detectionMat.at<float>(i, 5) * frame.cols);
                 int yRightTop = static_cast<int>(detectionMat.at<float>(i, 6) * frame.rows);
 
-                ostringstream ss;
+                ss.str("");
                 ss << confidence;
                 String conf(ss.str());
 

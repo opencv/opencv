@@ -1,70 +1,40 @@
 #include <opencv2/dnn.hpp>
-#include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+
 using namespace cv;
 using namespace cv::dnn;
 
-#include <fstream>
 #include <iostream>
 #include <cstdlib>
 using namespace std;
 
-const size_t width = 300;
-const size_t height = 300;
-
-static Mat getMean(const size_t& imageHeight, const size_t& imageWidth)
-{
-    Mat mean;
-
-    const int meanValues[3] = {104, 117, 123};
-    vector<Mat> meanChannels;
-    for(int i = 0; i < 3; i++)
-    {
-        Mat channel((int)imageHeight, (int)imageWidth, CV_32F, Scalar(meanValues[i]));
-        meanChannels.push_back(channel);
-    }
-    cv::merge(meanChannels, mean);
-    return mean;
-}
-
-static Mat preprocess(const Mat& frame)
-{
-    Mat preprocessed;
-    frame.convertTo(preprocessed, CV_32F);
-    resize(preprocessed, preprocessed, Size(width, height)); //SSD accepts 300x300 RGB-images
-
-    Mat mean = getMean(width, height);
-    cv::subtract(preprocessed, mean, preprocessed);
-
-    return preprocessed;
-}
-
-const char* classNames[] = {"background",
-                            "aeroplane", "bicycle", "bird", "boat",
-                            "bottle", "bus", "car", "cat", "chair",
-                            "cow", "diningtable", "dog", "horse",
-                            "motorbike", "person", "pottedplant",
-                            "sheep", "sofa", "train", "tvmonitor"};
+const size_t inWidth = 300;
+const size_t inHeight = 300;
+const double inScaleFactor = 1.0;
+const Scalar meanVal(104.0, 177.0, 123.0);
 
 const char* about = "This sample uses Single-Shot Detector "
                     "(https://arxiv.org/abs/1512.02325) "
-                    "to detect objects on camera/video/image.\n"
+                    "with ResNet-10 architecture to detect faces on camera/video/image.\n"
+                    "More information about the training is available here: "
+                    "<OPENCV_SRC_DIR>/samples/dnn/face_detector/how_to_train_face_detector.txt\n"
                     ".caffemodel model's file is available here: "
-                    "https://github.com/weiliu89/caffe/tree/ssd#models\n"
-                    "Default network is 300x300 and 20-classes VOC.\n";
+                    "<OPENCV_SRC_DIR>/samples/dnn/face_detector/res10_300x300_ssd_iter_140000.caffemodel\n"
+                    ".prototxt file is available here: "
+                    "<OPENCV_SRC_DIR>/samples/dnn/face_detector/deploy.prototxt\n";
 
 const char* params
-    = "{ help           | false | print usage         }"
-      "{ proto          |       | model configuration }"
-      "{ model          |       | model weights       }"
-      "{ camera_device  | 0     | camera device number}"
-      "{ video          |       | video or image for detection}"
-      "{ min_confidence | 0.5   | min confidence      }";
+    = "{ help           | false | print usage          }"
+      "{ proto          |       | model configuration (deploy.prototxt) }"
+      "{ model          |       | model weights (res10_300x300_ssd_iter_140000.caffemodel) }"
+      "{ camera_device  | 0     | camera device number }"
+      "{ video          |       | video or image for detection }"
+      "{ min_confidence | 0.5   | min confidence       }";
 
 int main(int argc, char** argv)
 {
-    cv::CommandLineParser parser(argc, argv, params);
+    CommandLineParser parser(argc, argv, params);
 
     if (parser.get<bool>("help"))
     {
@@ -85,8 +55,10 @@ int main(int argc, char** argv)
         cerr << "Can't load network by using the following files: " << endl;
         cerr << "prototxt:   " << modelConfiguration << endl;
         cerr << "caffemodel: " << modelBinary << endl;
-        cerr << "Models can be downloaded here:" << endl;
-        cerr << "https://github.com/weiliu89/caffe/tree/ssd#models" << endl;
+        cerr << "Models are available here:" << endl;
+        cerr << "<OPENCV_SRC_DIR>/samples/dnn/face_detector" << endl;
+        cerr << "or here:" << endl;
+        cerr << "https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector" << endl;
         exit(-1);
     }
 
@@ -111,9 +83,9 @@ int main(int argc, char** argv)
         }
     }
 
-    for (;;)
+    for(;;)
     {
-        cv::Mat frame;
+        Mat frame;
         cap >> frame; // get a new frame from camera/video or read image
 
         if (frame.empty())
@@ -126,9 +98,8 @@ int main(int argc, char** argv)
             cvtColor(frame, frame, COLOR_BGRA2BGR);
 
         //! [Prepare blob]
-        Mat preprocessedFrame = preprocess(frame);
-
-        Mat inputBlob = blobFromImage(preprocessedFrame, 1.0f, Size(), Scalar(), false); //Convert Mat to batch of images
+        Mat inputBlob = blobFromImage(frame, inScaleFactor,
+                                      Size(inWidth, inHeight), meanVal, false, false); //Convert Mat to batch of images
         //! [Prepare blob]
 
         //! [Set input blob]
@@ -142,11 +113,12 @@ int main(int argc, char** argv)
         vector<double> layersTimings;
         double freq = getTickFrequency() / 1000;
         double time = net.getPerfProfile(layersTimings) / freq;
+
+        Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
+
         ostringstream ss;
         ss << "FPS: " << 1000/time << " ; time: " << time << " ms";
         putText(frame, ss.str(), Point(20,20), 0, 0.5, Scalar(0,0,255));
-
-        Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
 
         float confidenceThreshold = parser.get<float>("min_confidence");
         for(int i = 0; i < detectionMat.rows; i++)
@@ -155,23 +127,21 @@ int main(int argc, char** argv)
 
             if(confidence > confidenceThreshold)
             {
-                size_t objectClass = (size_t)(detectionMat.at<float>(i, 1));
-
                 int xLeftBottom = static_cast<int>(detectionMat.at<float>(i, 3) * frame.cols);
                 int yLeftBottom = static_cast<int>(detectionMat.at<float>(i, 4) * frame.rows);
                 int xRightTop = static_cast<int>(detectionMat.at<float>(i, 5) * frame.cols);
                 int yRightTop = static_cast<int>(detectionMat.at<float>(i, 6) * frame.rows);
 
+                Rect object((int)xLeftBottom, (int)yLeftBottom,
+                            (int)(xRightTop - xLeftBottom),
+                            (int)(yRightTop - yLeftBottom));
+
+                rectangle(frame, object, Scalar(0, 255, 0));
+
                 ss.str("");
                 ss << confidence;
                 String conf(ss.str());
-
-                Rect object(xLeftBottom, yLeftBottom,
-                            xRightTop - xLeftBottom,
-                            yRightTop - yLeftBottom);
-
-                rectangle(frame, object, Scalar(0, 255, 0));
-                String label = String(classNames[objectClass]) + ": " + conf;
+                String label = "Face: " + conf;
                 int baseLine = 0;
                 Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
                 rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom - labelSize.height),

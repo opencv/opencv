@@ -2997,7 +2997,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
         eulerAngles->z = acos(_Qz[0][0]) * (_Qz[0][1] >= 0 ? 1 : -1) * (180.0 / CV_PI);
     }
 
-    /* Calulate orthogonal matrix. */
+    /* Calculate orthogonal matrix. */
     /*
     Q = QzT * QyT * QxT
     */

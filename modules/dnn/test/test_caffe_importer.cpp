@@ -139,6 +139,35 @@ TEST(Reproducibility_SSD, Accuracy)
     normAssert(ref, out);
 }
 
+TEST(Reproducibility_MobileNet_SSD, Accuracy)
+{
+    const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
+    const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
+    Net net = readNetFromCaffe(proto, model);
+
+    Mat sample = imread(_tf("street.png"));
+
+    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
+    normAssert(ref, out);
+
+    // Check that detections aren't preserved.
+    inp.setTo(0.0f);
+    net.setInput(inp);
+    out = net.forward();
+
+    const int numDetections = out.size[2];
+    ASSERT_NE(numDetections, 0);
+    for (int i = 0; i < numDetections; ++i)
+    {
+        float confidence = out.ptr<float>(0, 0, i)[2];
+        ASSERT_EQ(confidence, 0);
+    }
+}
+
 TEST(Reproducibility_ResNet50, Accuracy)
 {
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
@@ -232,6 +261,23 @@ TEST(Reproducibility_Colorization, Accuracy)
     Mat out = net.forward();
 
     normAssert(out, ref, "", l1, lInf);
+}
+
+TEST(Reproducibility_DenseNet_121, Accuracy)
+{
+    const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
+    const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
+
+    Mat inp = imread(_tf("dog416.png"));
+    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224));
+    Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
+
+    Net net = readNetFromCaffe(proto, model);
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    normAssert(out, ref);
 }
 
 }

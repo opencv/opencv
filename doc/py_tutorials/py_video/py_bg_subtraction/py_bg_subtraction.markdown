@@ -11,21 +11,21 @@ In this chapter,
 Basics
 ------
 
-Background subtraction is a major preprocessing steps in many vision based applications. For
-example, consider the cases like visitor counter where a static camera takes the number of visitors
+Background subtraction is a major preprocessing step in many vision-based applications. For
+example, consider the case of a visitor counter where a static camera takes the number of visitors
 entering or leaving the room, or a traffic camera extracting information about the vehicles etc. In
 all these cases, first you need to extract the person or vehicles alone. Technically, you need to
 extract the moving foreground from static background.
 
-If you have an image of background alone, like image of the room without visitors, image of the road
+If you have an image of background alone, like an image of the room without visitors, image of the road
 without vehicles etc, it is an easy job. Just subtract the new image from the background. You get
 the foreground objects alone. But in most of the cases, you may not have such an image, so we need
-to extract the background from whatever images we have. It become more complicated when there is
-shadow of the vehicles. Since shadow is also moving, simple subtraction will mark that also as
+to extract the background from whatever images we have. It become more complicated when there are
+shadows of the vehicles. Since shadows also move, simple subtraction will mark that also as
 foreground. It complicates things.
 
 Several algorithms were introduced for this purpose. OpenCV has implemented three such algorithms
-which is very easy to use. We will see them one-by-one.
+which are very easy to use. We will see them one-by-one.
 
 ### BackgroundSubtractorMOG
 
@@ -76,7 +76,7 @@ throughout the algorithm). It provides better adaptibility to varying scenes due
 changes etc.
 
 As in previous case, we have to create a background subtractor object. Here, you have an option of
-selecting whether shadow to be detected or not. If detectShadows = True (which is so by default), it
+detecting shadows or not. If detectShadows = True (which is so by default), it
 detects and marks shadows, but decreases the speed. Shadows will be marked in gray color.
 @code{.py}
 import numpy as np
@@ -104,7 +104,7 @@ cv2.destroyAllWindows()
 ### BackgroundSubtractorGMG
 
 This algorithm combines statistical background image estimation and per-pixel Bayesian segmentation.
-It was introduced by Andrew B. Godbehere, Akihiro Matsukawa, Ken Goldberg in their paper "Visual
+It was introduced by Andrew B. Godbehere, Akihiro Matsukawa, and Ken Goldberg in their paper "Visual
 Tracking of Human Visitors under Variable-Lighting Conditions for a Responsive Audio Art
 Installation" in 2012. As per the paper, the system ran a successful interactive audio art
 installation called “Are We There Yet?” from March 31 - July 31 2011 at the Contemporary Jewish

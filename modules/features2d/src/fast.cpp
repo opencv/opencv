@@ -42,6 +42,7 @@ The references are:
 */
 
 #include "precomp.hpp"
+#include "fast.hpp"
 #include "fast_score.hpp"
 #include "opencl_kernels_features2d.hpp"
 #include "opencv2/core/hal/intrin.hpp"
@@ -59,13 +60,20 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 {
     Mat img = _img.getMat();
     const int K = patternSize/2, N = patternSize + K + 1;
+    int i, j, k, pixel[25];
+    makeOffsets(pixel, (int)img.step, patternSize);
+
 #if CV_SIMD128
     const int quarterPatternSize = patternSize/4;
     v_uint8x16 delta = v_setall_u8(0x80), t = v_setall_u8((char)threshold), K16 = v_setall_u8((char)K);
     bool hasSimd = hasSIMD128();
+#if CV_TRY_AVX2
+    Ptr<opt_AVX2::FAST_t_patternSize16_AVX2> fast_t_impl_avx2;
+    if(CV_CPU_HAS_SUPPORT_AVX2)
+        fast_t_impl_avx2 = opt_AVX2::FAST_t_patternSize16_AVX2::getImpl(img.cols, threshold, nonmax_suppression, pixel);
 #endif
-    int i, j, k, pixel[25];
-    makeOffsets(pixel, (int)img.step, patternSize);
+
+#endif
 
     keypoints.clear();
 
@@ -100,65 +108,72 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
             {
                 if( patternSize == 16 )
                 {
-                    for(; j < img.cols - 16 - 3; j += 16, ptr += 16)
+#if CV_TRY_AVX2
+                    if (fast_t_impl_avx2)
+                        fast_t_impl_avx2->process(j, ptr, curr, cornerpos, ncorners);
+#endif
+                    //vz if (j <= (img.cols - 27)) //it doesn't make sense using vectors for less than 8 elements
                     {
-                        v_uint8x16 v = v_load(ptr);
-                        v_int8x16 v0 = v_reinterpret_as_s8((v + t) ^ delta);
-                        v_int8x16 v1 = v_reinterpret_as_s8((v - t) ^ delta);
-
-                        v_int8x16 x0 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[0]), delta));
-                        v_int8x16 x1 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[quarterPatternSize]), delta));
-                        v_int8x16 x2 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[2*quarterPatternSize]), delta));
-                        v_int8x16 x3 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[3*quarterPatternSize]), delta));
-
-                        v_int8x16 m0, m1;
-                        m0 = (v0 < x0) & (v0 < x1);
-                        m1 = (x0 < v1) & (x1 < v1);
-                        m0 = m0 | ((v0 < x1) & (v0 < x2));
-                        m1 = m1 | ((x1 < v1) & (x2 < v1));
-                        m0 = m0 | ((v0 < x2) & (v0 < x3));
-                        m1 = m1 | ((x2 < v1) & (x3 < v1));
-                        m0 = m0 | ((v0 < x3) & (v0 < x0));
-                        m1 = m1 | ((x3 < v1) & (x0 < v1));
-                        m0 = m0 | m1;
-
-                        int mask = v_signmask(m0);
-                        if( mask == 0 )
-                            continue;
-                        if( (mask & 255) == 0 )
+                        for (; j < img.cols - 16 - 3; j += 16, ptr += 16)
                         {
-                            j -= 8;
-                            ptr -= 8;
-                            continue;
-                        }
+                            v_uint8x16 v = v_load(ptr);
+                            v_int8x16 v0 = v_reinterpret_as_s8((v + t) ^ delta);
+                            v_int8x16 v1 = v_reinterpret_as_s8((v - t) ^ delta);
 
-                        v_int8x16 c0 = v_setzero_s8();
-                        v_int8x16 c1 = v_setzero_s8();
-                        v_uint8x16 max0 = v_setzero_u8();
-                        v_uint8x16 max1 = v_setzero_u8();
-                        for( k = 0; k < N; k++ )
-                        {
-                            v_int8x16 x = v_reinterpret_as_s8(v_load((ptr + pixel[k])) ^ delta);
-                            m0 = v0 < x;
-                            m1 = x < v1;
+                            v_int8x16 x0 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[0]), delta));
+                            v_int8x16 x1 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[quarterPatternSize]), delta));
+                            v_int8x16 x2 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[2*quarterPatternSize]), delta));
+                            v_int8x16 x3 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[3*quarterPatternSize]), delta));
 
-                            c0 = v_sub_wrap(c0, m0) & m0;
-                            c1 = v_sub_wrap(c1, m1) & m1;
+                            v_int8x16 m0, m1;
+                            m0 = (v0 < x0) & (v0 < x1);
+                            m1 = (x0 < v1) & (x1 < v1);
+                            m0 = m0 | ((v0 < x1) & (v0 < x2));
+                            m1 = m1 | ((x1 < v1) & (x2 < v1));
+                            m0 = m0 | ((v0 < x2) & (v0 < x3));
+                            m1 = m1 | ((x2 < v1) & (x3 < v1));
+                            m0 = m0 | ((v0 < x3) & (v0 < x0));
+                            m1 = m1 | ((x3 < v1) & (x0 < v1));
+                            m0 = m0 | m1;
 
-                            max0 = v_max(max0, v_reinterpret_as_u8(c0));
-                            max1 = v_max(max1, v_reinterpret_as_u8(c1));
-                        }
-
-                        max0 = v_max(max0, max1);
-                        int m = v_signmask(K16 < max0);
-
-                        for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
-                        {
-                            if(m & 1)
+                            int mask = v_signmask(m0);
+                            if( mask == 0 )
+                                continue;
+                            if( (mask & 255) == 0 )
                             {
-                                cornerpos[ncorners++] = j+k;
-                                if(nonmax_suppression)
-                                    curr[j+k] = (uchar)cornerScore<patternSize>(ptr+k, pixel, threshold);
+                                j -= 8;
+                                ptr -= 8;
+                                continue;
+                            }
+
+                            v_int8x16 c0 = v_setzero_s8();
+                            v_int8x16 c1 = v_setzero_s8();
+                            v_uint8x16 max0 = v_setzero_u8();
+                            v_uint8x16 max1 = v_setzero_u8();
+                            for( k = 0; k < N; k++ )
+                            {
+                                v_int8x16 x = v_reinterpret_as_s8(v_load((ptr + pixel[k])) ^ delta);
+                                m0 = v0 < x;
+                                m1 = x < v1;
+
+                                c0 = v_sub_wrap(c0, m0) & m0;
+                                c1 = v_sub_wrap(c1, m1) & m1;
+
+                                max0 = v_max(max0, v_reinterpret_as_u8(c0));
+                                max1 = v_max(max1, v_reinterpret_as_u8(c1));
+                            }
+
+                            max0 = v_max(max0, max1);
+                            int m = v_signmask(K16 < max0);
+
+                            for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
+                            {
+                                if(m & 1)
+                                {
+                                    cornerpos[ncorners++] = j+k;
+                                    if(nonmax_suppression)
+                                        curr[j+k] = (uchar)cornerScore<patternSize>(ptr+k, pixel, threshold);
+                                }
                             }
                         }
                     }

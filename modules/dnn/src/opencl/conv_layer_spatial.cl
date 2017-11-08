@@ -46,7 +46,19 @@
 #define BIAS_KERNEL_ARG
 #endif
 
-#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) do { (_dst_)[(_offset_)] = (_data_);} while(0)
+#if defined(FUSED_CONV_RELU)
+#define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope)))
+#define NEGATIVE_SLOPE_ARG Dtype negative_slope,
+#elif defined(FUSED_CONV_PRELU)
+#define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope[c])))
+#define NEGATIVE_SLOPE_ARG __global const Dtype *negative_slope,
+#else
+#define ACTIVATION_RELU_FUNCTION(x, c) (x)
+#define NEGATIVE_SLOPE_ARG
+#endif
+
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_data_, _channel_);} while(0)
+
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
@@ -87,6 +99,7 @@
 #ifdef KERNEL_BASIC
 
 __kernel void ConvolveBasic(
+    NEGATIVE_SLOPE_ARG
     __global Dtype* image_data,
     int image_offset,
     __global Dtype* kernel_data,
@@ -152,9 +165,9 @@ __kernel void ConvolveBasic(
             {
                 int offset = convolved_image_offset + (kernelNum+kern)*output_height*output_width + outputY*output_width + outputX;
 #if APPLY_BIAS
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + bias[biasIndex + kern]);
+                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + bias[biasIndex + kern], biasIndex + kern);
 #else
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern]);
+                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern], biasIndex + kern);
 #endif
             }
         }
@@ -180,6 +193,7 @@ __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 #endif
 __kernel void
 convolve_simd(
+    NEGATIVE_SLOPE_ARG
     __global Dtype* inputs_base,
     filter_qualifier Dtype* weights_base,
     BIAS_KERNEL_ARG
@@ -359,7 +373,7 @@ convolve_simd(
       for(unsigned int c = 0; c < OUT_BLOCK_WIDTH; c++) {
         if (c + oc >= output_width) break;
         // this does a scattered write to SIMD_SIZE different feature maps, so that data within one map is contiguous, thus ready for input to next layer.
-        ACTIVATION_FUNCTION(outputs, out_addr + r * output_width + c, bias + out[r * OUT_BLOCK_WIDTH + c]);
+        ACTIVATION_FUNCTION(outputs, out_addr + r * output_width + c, bias + out[r * OUT_BLOCK_WIDTH + c], fm);
 
       }
     }
@@ -399,6 +413,7 @@ typedef struct float0 { float s0; } float0; //never used but makes compiler happ
 #define ROW_PITCH input_width
 
 #define GEMM_LIKE_KERNEL_ARGS     \
+    NEGATIVE_SLOPE_ARG            \
     const __global Dtype *src0,   \
     const __global Dtype *src1,   \
     BIAS_KERNEL_ARG               \
@@ -592,34 +607,14 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         bias_vec = (Dtype4*)bias;
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
 #endif
-#ifdef FUSED_CONV_CHANNEL_RELU
-        Dtype slope[4];
-        Dtype4 *slope_vec;
-        slope_vec = (Dtype4*)slope;
-        *slope_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)negative_slope_base + group_x * TILE_N));
-        Dtype negative_slope;
-#endif
         if (global_y * TILE_M < output_width * output_height )
         {
             for (int i = 0; i < 8; i++)
             {
-#ifdef FUSED_CONV_CHANNEL_RELU
-            negative_slope = intel_sub_group_shuffle(slope[0], i);
-#endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 0 + i ) * out_pitch_y, blockC00[i] + SUBGROUP_GET_BIAS(0, i));
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-            negative_slope = intel_sub_group_shuffle(slope[1], i);
-#endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 8 + i ) * out_pitch_y, blockC10[i] + SUBGROUP_GET_BIAS(1, i));
-#ifdef FUSED_CONV_CHANNEL_RELU
-            negative_slope = intel_sub_group_shuffle(slope[2], i);
-#endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 16 + i ) * out_pitch_y, blockC20[i] + SUBGROUP_GET_BIAS(2, i));
-#ifdef FUSED_CONV_CHANNEL_RELU
-            negative_slope = intel_sub_group_shuffle(slope[3], i);
-#endif
-            ACTIVATION_FUNCTION(dst, out_offset + ( 24 + i ) * out_pitch_y, blockC30[i] + SUBGROUP_GET_BIAS(3, i));
+            ACTIVATION_FUNCTION(dst, out_offset + ( 0 + i ) * out_pitch_y, blockC00[i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i);
+            ACTIVATION_FUNCTION(dst, out_offset + ( 8 + i ) * out_pitch_y, blockC10[i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + 8 + i);
+            ACTIVATION_FUNCTION(dst, out_offset + ( 16 + i ) * out_pitch_y, blockC20[i] + SUBGROUP_GET_BIAS(2, i), group_x * TILE_N + 16 + i);
+            ACTIVATION_FUNCTION(dst, out_offset + ( 24 + i ) * out_pitch_y, blockC30[i] + SUBGROUP_GET_BIAS(3, i), group_x * TILE_N + 24 + i);
             }
         }
     }
@@ -773,46 +768,25 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
 #endif
 
-#ifdef FUSED_CONV_CHANNEL_RELU
-        Dtype slope[4];
-        Dtype4 *slope_vec;
-        slope_vec = (Dtype4*)slope;
-        *slope_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)negative_slope_base + group_x * TILE_N));
-        Dtype negative_slope;
-#endif
-
         if (global_y * TILE_M < output_width * output_height )
         {
             for (int i = 0; i < 8; i++)
             {
                 if ( TILE_N_LAST_DIV8 > 0 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                  negative_slope = intel_sub_group_shuffle(slope[0], i);
-#endif
-                  ACTIVATION_FUNCTION(dst, out_offset + ( 0+i) * out_pitch_y, blockC[0][i] + SUBGROUP_GET_BIAS(0, i));
+                  ACTIVATION_FUNCTION(dst, out_offset + ( 0+i) * out_pitch_y, blockC[0][i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i);
                 }
                 if ( TILE_N_LAST_DIV8 > 1 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                  negative_slope = intel_sub_group_shuffle(slope[1], i);
-#endif
-                  ACTIVATION_FUNCTION(dst, out_offset + ( 8+i) * out_pitch_y, blockC[1][i] + SUBGROUP_GET_BIAS(1, i));
+                  ACTIVATION_FUNCTION(dst, out_offset + ( 8+i) * out_pitch_y, blockC[1][i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 8);
                 }
                 if ( TILE_N_LAST_DIV8 > 2 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                  negative_slope = intel_sub_group_shuffle(slope[2], i);
-#endif
-                  ACTIVATION_FUNCTION(dst, out_offset + (16+i) * out_pitch_y, blockC[2][i] + SUBGROUP_GET_BIAS(2, i));
+                  ACTIVATION_FUNCTION(dst, out_offset + (16+i) * out_pitch_y, blockC[2][i] + SUBGROUP_GET_BIAS(2, i), group_x * TILE_N + i + 16);
                 }
                 if ( TILE_N_LAST_DIV8 > 3 )
                 {
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-                  negative_slope = intel_sub_group_shuffle(slope[3], i);
-#endif
-                  ACTIVATION_FUNCTION(dst, out_offset + (24+i) * out_pitch_y, blockC[3][i] + SUBGROUP_GET_BIAS(3, i));
+                  ACTIVATION_FUNCTION(dst, out_offset + (24+i) * out_pitch_y, blockC[3][i] + SUBGROUP_GET_BIAS(3, i), group_x * TILE_N + i + 24);
                 }
             }
         }
@@ -1038,60 +1012,24 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
 #endif
 
-#ifdef FUSED_CONV_CHANNEL_RELU
-        Dtype slope[4];
-        Dtype4 *slope_vec;
-        slope_vec = (Dtype4*)slope;
-        *slope_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)negative_slope_base + group_x * TILE_N));
-        Dtype negative_slope;
-#endif
-
         if( global_y * TILE_M < output_width * output_height )
         {
             for( int i = 0; i < 8; i++ )
             {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[0], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC00[i] + SUBGROUP_GET_BIAS(0, i));
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[1], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC10[i] + SUBGROUP_GET_BIAS(1, i));
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[2], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC20[i] + SUBGROUP_GET_BIAS(2, i));
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[3], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC30[i] + SUBGROUP_GET_BIAS(3, i));
+                ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC00[i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i);
+                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC10[i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 8);
+                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC20[i] + SUBGROUP_GET_BIAS(2, i), group_x * TILE_N + i + 16);
+                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC30[i] + SUBGROUP_GET_BIAS(3, i), group_x * TILE_N + i + 24);
             }
         }
         if( global_y * TILE_M + 1 < output_width * output_height )
         {
             for( int i = 0; i < 8; i++ )
             {
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[0], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC01[i] + SUBGROUP_GET_BIAS(0, i));
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[1], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC11[i] + SUBGROUP_GET_BIAS(1, i));
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[2], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC21[i] + SUBGROUP_GET_BIAS(2, i));
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[3], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC31[i] + SUBGROUP_GET_BIAS(3, i));
+                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC01[i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i);
+                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC11[i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 8);
+                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC21[i] + SUBGROUP_GET_BIAS(2, i), group_x * TILE_N + i + 16);
+                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC31[i] + SUBGROUP_GET_BIAS(3, i), group_x * TILE_N + i + 24);
             }
         }
     }
@@ -1282,45 +1220,25 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         bias_vec = (Dtype4*)bias;
         *bias_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)biases_base + group_x * TILE_N));
 #endif
-#ifdef FUSED_CONV_CHANNEL_RELU
-        Dtype slope[4];
-        Dtype4 *slope_vec;
-        slope_vec = (Dtype4*)slope;
-        *slope_vec = as_Dtype4(SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)negative_slope_base + group_x * TILE_N));
-        Dtype negative_slope;
-#endif
         if( global_y * TILE_M < output_width * output_height )
         {
             for( int i = 0; i < 8; i++ )
             {
                 if ( TILE_N_LAST_DIV8 > 0 )
                 {
-
-#ifdef FUSED_CONV_CHANNEL_RELU
-                  negative_slope = intel_sub_group_shuffle(slope[0], i);
-#endif
-                  ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC0[0][i] + SUBGROUP_GET_BIAS(0, i));
+                  ACTIVATION_FUNCTION(dst, out0_offset + ( 0+i) * out_pitch_y, blockC0[0][i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i);
                 }
                 if ( TILE_N_LAST_DIV8 > 1 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[1], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC0[1][i] + SUBGROUP_GET_BIAS(1, i));
+                  ACTIVATION_FUNCTION(dst, out0_offset + ( 8+i) * out_pitch_y, blockC0[1][i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 8);
                 }
                 if ( TILE_N_LAST_DIV8 > 2 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-               negative_slope = intel_sub_group_shuffle(slope[2], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC0[2][i] + SUBGROUP_GET_BIAS(2, i));
+                  ACTIVATION_FUNCTION(dst, out0_offset + (16+i) * out_pitch_y, blockC0[2][i] + SUBGROUP_GET_BIAS(2, i), group_x * TILE_N + i + 16);
                 }
                 if ( TILE_N_LAST_DIV8 > 3 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[3], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC0[3][i] + SUBGROUP_GET_BIAS(3, i));
+                  ACTIVATION_FUNCTION(dst, out0_offset + (24+i) * out_pitch_y, blockC0[3][i] + SUBGROUP_GET_BIAS(3, i), group_x * TILE_N + i + 24);
                 }
             }
         }
@@ -1330,31 +1248,19 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
             {
                 if ( TILE_N_LAST_DIV8 > 0 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[0], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC1[0][i] + SUBGROUP_GET_BIAS(0, i));
+                  ACTIVATION_FUNCTION(dst, out1_offset + ( 0+i) * out_pitch_y, blockC1[0][i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i);
                 }
                 if ( TILE_N_LAST_DIV8 > 1 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[1], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC1[1][i] + SUBGROUP_GET_BIAS(1, i));
+                  ACTIVATION_FUNCTION(dst, out1_offset + ( 8+i) * out_pitch_y, blockC1[1][i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 8);
                 }
                 if ( TILE_N_LAST_DIV8 > 2 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[2], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC1[2][i] + SUBGROUP_GET_BIAS(2, i));
+                  ACTIVATION_FUNCTION(dst, out1_offset + (16+i) * out_pitch_y, blockC1[2][i] + SUBGROUP_GET_BIAS(2, i), group_x * TILE_N + i + 16);
                 }
                 if ( TILE_N_LAST_DIV8 > 3 )
                 {
-#ifdef FUSED_CONV_CHANNEL_RELU
-                negative_slope = intel_sub_group_shuffle(slope[3], i);
-#endif
-                ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC1[3][i] + SUBGROUP_GET_BIAS(3, i));
+                  ACTIVATION_FUNCTION(dst, out1_offset + (24+i) * out_pitch_y, blockC1[3][i] + SUBGROUP_GET_BIAS(3, i), group_x * TILE_N + i + 24);
                 }
             }
         }
@@ -1364,34 +1270,28 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 #endif
 
 #if defined(GEMM_LIKE_CONV_32_2_SIMD16) || defined(GEMM_LIKE_CONV_32_1_SIMD16)
-#ifdef FUSED_CONV_CHANNEL_RELU
 #define INTERLEAVED_SIMD16_OUTPUT(_out_, _offset_,  _m_) do {\
     if (global_y * TILE_M < output_width * output_height ) \
     { \
       if ( ( OUT_DEPTH % TILE_N ) == 0 ) {\
         for (int i = 0; i < 16; i++) \
         { \
-          negative_slope = intel_sub_group_shuffle(slope[0], i); \
-          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
-          negative_slope = intel_sub_group_shuffle(slope[1], i); \
-          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
+          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i); \
+          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 16); \
         } \
       } \
       else if( ( OUT_DEPTH % 16 ) == 0 ) { \
         if ( ( global_x + 1 ) < get_global_size(0) ) { \
           for ( int i = 0; i < 16; i++ ) \
           { \
-            negative_slope = intel_sub_group_shuffle(slope[0], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
-            negative_slope = intel_sub_group_shuffle(slope[1], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 16); \
           } \
         } \
         else { \
           for (int i = 0; i < 16; i++) \
           { \
-          negative_slope = intel_sub_group_shuffle(slope[0], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i); \
           } \
         } \
       } \
@@ -1400,93 +1300,31 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         { \
           for ( int i = 0; i < 16; i++ ) \
           { \
-          negative_slope = intel_sub_group_shuffle(slope[0], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
-          negative_slope = intel_sub_group_shuffle(slope[1], i); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i); \
+            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 16); \
           } \
         } \
         else { \
           if ( (OUT_DEPTH % TILE_N) > 16 ) { \
             for (int i = 0; i < 16 ; i++) \
             { \
-          negative_slope = intel_sub_group_shuffle(slope[0], i); \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i); \
             } \
             for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
             { \
-          negative_slope = intel_sub_group_shuffle(slope[1], i); \
-              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i), group_x * TILE_N + i + 16); \
             } \
           } \
           else { \
             for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
             { \
-            negative_slope = intel_sub_group_shuffle(slope[0], i); \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
+              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i), group_x * TILE_N + i); \
             } \
           } \
         } \
       } \
     } \
  }while(0)
-#else
-#define INTERLEAVED_SIMD16_OUTPUT(_out_, _offset_,  _m_) do {\
-    if (global_y * TILE_M < output_width * output_height ) \
-    { \
-      if ( ( OUT_DEPTH % TILE_N ) == 0 ) {\
-        for (int i = 0; i < 16; i++) \
-        { \
-          ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
-          ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
-        } \
-      } \
-      else if( ( OUT_DEPTH % 16 ) == 0 ) { \
-        if ( ( global_x + 1 ) < get_global_size(0) ) { \
-          for ( int i = 0; i < 16; i++ ) \
-          { \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_ [i] + SUBGROUP_GET_BIAS(1, i)); \
-          } \
-        } \
-        else { \
-          for (int i = 0; i < 16; i++) \
-          { \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_ [i] + SUBGROUP_GET_BIAS(0, i)); \
-          } \
-        } \
-      } \
-      else { \
-        if ( ( global_x + 1 ) < get_global_size(0) ) \
-        { \
-          for ( int i = 0; i < 16; i++ ) \
-          { \
-            ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
-            ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
-          } \
-        } \
-        else { \
-          if ( (OUT_DEPTH % TILE_N) > 16 ) { \
-            for (int i = 0; i < 16 ; i++) \
-            { \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
-            } \
-            for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
-            { \
-              ACTIVATION_FUNCTION(_out_, _offset_ + (16+i) * out_pitch_y, blockC1 ##_m_[i] + SUBGROUP_GET_BIAS(1, i)); \
-            } \
-          } \
-          else { \
-            for (int i = 0; i < OUT_DEPTH % 16 ; i++) \
-            { \
-              ACTIVATION_FUNCTION(_out_, _offset_ + ( 0+i) * out_pitch_y, blockC0 ##_m_[i] + SUBGROUP_GET_BIAS(0, i)); \
-            } \
-          } \
-        } \
-      } \
-    } \
- }while(0)
-#endif
 #endif
 
 #ifdef GEMM_LIKE_CONV_32_1_SIMD16
@@ -1656,14 +1494,6 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     bias_vec = (Dtype2*)bias;
     *bias_vec = as_Dtype2(SUB_GROUP_BLOCK_READ2((__global INT_TYPE *)biases_base + group_x * TILE_N));
 #endif
-#ifdef FUSED_CONV_CHANNEL_RELU
-        Dtype slope[2];
-        Dtype2 *slope_vec;
-        slope_vec = (Dtype2*)slope;
-        *slope_vec = as_Dtype2(SUB_GROUP_BLOCK_READ2((__global INT_TYPE *)negative_slope_base + group_x * TILE_N));
-        Dtype negative_slope;
-#endif
-
     INTERLEAVED_SIMD16_OUTPUT(dst, out_offset, 0);
 }
 #endif

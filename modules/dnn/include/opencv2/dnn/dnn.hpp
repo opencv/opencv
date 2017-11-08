@@ -688,7 +688,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS_W Mat readTorchBlob(const String &filename, bool isBinary = true);
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
-     *  @param image input image (with 1- or 3-channels).
+     *  @param image input image (with 1-, 3- or 4-channels).
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
@@ -706,7 +706,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
      *  crops @p images from center, subtract @p mean values, scales values by @p scalefactor,
      *  swap Blue and Red channels.
-     *  @param images input images (all with 1- or 3-channels).
+     *  @param images input images (all with 1-, 3- or 4-channels).
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
@@ -726,13 +726,32 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * @param src Path to origin model from Caffe framework contains single
      *            precision floating point weights (usually has `.caffemodel` extension).
      * @param dst Path to destination model with updated weights.
+     * @param layersTypes Set of layers types which parameters will be converted.
+     *                    By default, converts only Convolutional and Fully-Connected layers'
+     *                    weights.
      *
      * @note Shrinked model has no origin float32 weights so it can't be used
      *       in origin Caffe framework anymore. However the structure of data
      *       is taken from NVidia's Caffe fork: https://github.com/NVIDIA/caffe.
      *       So the resulting model may be used there.
      */
-    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst);
+    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst,
+                                       const std::vector<String>& layersTypes = std::vector<String>());
+
+    /** @brief Performs non maximum suppression given boxes and corresponding scores.
+
+     * @param bboxes a set of bounding boxes to apply NMS.
+     * @param scores a set of corresponding confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
+     * @param top_k if `>0`, keep at most @p top_k picked indices.
+     */
+    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+                               const float score_threshold, const float nms_threshold,
+                               CV_OUT std::vector<int>& indices,
+                               const float eta = 1.f, const int top_k = 0);
 
 
 //! @}

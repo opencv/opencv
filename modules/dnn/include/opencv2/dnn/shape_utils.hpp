@@ -112,16 +112,12 @@ static inline Mat slice(const Mat &m, const _Range &r0, const _Range &r1, const 
 static inline Mat getPlane(const Mat &m, int n, int cn)
 {
     CV_Assert(m.dims > 2);
-    Range range[CV_MAX_DIM];
     int sz[CV_MAX_DIM];
     for(int i = 2; i < m.dims; i++)
     {
         sz[i-2] = m.size.p[i];
-        range[i] = Range::all();
     }
-    range[0] = Range(n, n+1);
-    range[1] = Range(cn, cn+1);
-    return m(range).reshape(1, m.dims-2, sz);
+    return Mat(m.dims - 2, sz, m.type(), (void*)m.ptr<float>(n, cn));
 }
 
 static inline MatShape shape(const int* dims, const int n = 4)
@@ -189,6 +185,14 @@ inline int clamp(int ax, int dims)
 inline int clamp(int ax, const MatShape& shape)
 {
     return clamp(ax, (int)shape.size());
+}
+
+inline Range clamp(const Range& r, int axisSize)
+{
+    Range clamped(std::max(r.start, 0),
+                  r.end > 0 ? std::min(r.end, axisSize) : axisSize + r.end + 1);
+    CV_Assert(clamped.start < clamped.end, clamped.end <= axisSize);
+    return clamped;
 }
 
 CV__DNN_EXPERIMENTAL_NS_END

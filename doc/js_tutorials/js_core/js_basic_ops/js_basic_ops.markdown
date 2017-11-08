@@ -22,7 +22,7 @@ Image properties include number of rows, columns and size, depth, channels, type
 let src = cv.imread("canvasInput");
 console.log('image width: ' + src.cols + '\n' +
             'image height: ' + src.rows + '\n' +
-            'image size: ' + src.size().width + '*' src.size().height + '\n' +
+            'image size: ' + src.size().width + '*' + src.size().height + '\n' +
             'image depth: ' + src.depth() + '\n' +
             'image channels ' + src.channels() + '\n' +
             'image type: ' + src.type() + '\n');
