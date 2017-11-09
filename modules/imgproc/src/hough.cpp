@@ -734,13 +734,13 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     CV_Assert(_src.type() == CV_8UC1);
 
     if (max_theta < 0 || max_theta > CV_PI ) {
-        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
+        CV_Error( Error::StsBadArg, "max_theta must fall between 0 and pi" );
     }
     if (min_theta < 0 || min_theta > max_theta ) {
-        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+        CV_Error( Error::StsBadArg, "min_theta must fall between 0 and max_theta" );
     }
     if (!(rho > 0 && theta > 0)) {
-        CV_Error( CV_StsBadArg, "rho and theta must be greater 0" );
+        CV_Error( Error::StsBadArg, "rho and theta must be greater 0" );
     }
 
     UMat src = _src.getUMat();
@@ -794,7 +794,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     CV_Assert(_src.type() == CV_8UC1);
 
     if (!(rho > 0 && theta > 0)) {
-        CV_Error( CV_StsBadArg, "rho and theta must be greater 0" );
+        CV_Error( Error::StsBadArg, "rho and theta must be greater 0" );
     }
 
     UMat src = _src.getUMat();
@@ -884,36 +884,6 @@ void HoughLinesP(InputArray _image, OutputArray _lines,
 /****************************************************************************************\
 *                                     Circle Detection                                   *
 \****************************************************************************************/
-template<> class DataType<Point>
-{
-public:
-    typedef int        value_type;
-    typedef int         work_type;
-    typedef value_type  channel_type;
-    typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_32S,
-           channels     = 2,
-           fmt          = (int)'i',
-           type         = CV_MAKETYPE(depth, channels)
-         };
-};
-
-template<> class DataType<Vec3f>
-{
-public:
-    typedef float      value_type;
-    typedef int         work_type;
-    typedef value_type  channel_type;
-    typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_32F,
-           channels     = 3,
-           fmt          = (int)'i',
-           type         = CV_MAKETYPE(depth, channels)
-         };
-};
-
 
 struct markedCircle
 {
@@ -930,7 +900,7 @@ inline bool cmpCircleIndex(const markedCircle &left, const markedCircle &right)
 
 struct AccumTLSData
 {
-    cv::Mat accum;
+    Mat accum;
     std::vector<Point> nz;
 };
 
@@ -949,7 +919,7 @@ public:
 
     ~HoughCirclesAccumInvoker() {}
 
-    void operator()(const cv::Range &boundaries) const
+    void operator()(const Range &boundaries) const
     {
         Mat accumLocal = Mat(arows + 2, acols + 2, CV_32SC1, Scalar::all(0));
         int *adataLocal = accumLocal.ptr<int>();
@@ -1047,7 +1017,7 @@ _next_step:
                     {
                         int x2 = x1 >> 10, y2 = y1 >> 10;
                         if( (unsigned)x2 >= (unsigned)acols ||
-                                (unsigned)y2 >= (unsigned)arows )
+                            (unsigned)y2 >= (unsigned)arows )
                             break;
 
                         adataLocal[y2*astep + x2]++;
@@ -1063,7 +1033,7 @@ _next_step:
         localData.nz = nzLocal;
     }
 
-    void gather(std::vector<cv::Mat>& accumVec, std::vector<Point>& nz)
+    void gather(std::vector<Mat>& accumVec, std::vector<Point>& nz)
     {
         std::vector<AccumTLSData*> localVec;
         tls.gather(localVec);
@@ -1100,9 +1070,7 @@ public:
 
     ~HoughCirclesFindCentersInvoker() {}
 
-    HoughCirclesFindCentersInvoker& operator=(const HoughCirclesFindCentersInvoker&) {return *this;}
-
-    void operator()(const cv::Range &boundaries) const
+    void operator()(const Range &boundaries) const
     {
         int startRow = boundaries.start;
         int endRow = boundaries.end;
@@ -1182,9 +1150,7 @@ public:
 
     ~HoughCircleEstimateRadiusInvoker() {_lock.unlock();}
 
-    HoughCircleEstimateRadiusInvoker& operator=(const HoughCircleEstimateRadiusInvoker&) {return *this;}
-
-    void operator()(const cv::Range &boundaries) const
+    void operator()(const Range &boundaries) const
     {
         if (isMaxCircles)
             return;
@@ -1537,7 +1503,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     CV_Assert(_circles.isMat() || _circles.isVector());
 
     if( dp <= 0 || minDist <= 0 || param1 <= 0 || param2 <= 0)
-        CV_Error( CV_StsOutOfRange, "dp, min_dist, canny_threshold and acc_threshold must be all positive numbers" );
+        CV_Error( Error::StsOutOfRange, "dp, min_dist, canny_threshold and acc_threshold must be all positive numbers" );
 
     int cannyThresh = cvRound(param1), accThresh = cvRound(param2), kernelSize = cvRound(param3);
 
@@ -1559,7 +1525,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
                              accThresh, maxCircles, kernelSize);
         break;
     default:
-        CV_Error( CV_StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
+        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
     }
 }
 
@@ -1594,10 +1560,10 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     int iparam1, iparam2;
 
     if( !lineStorage )
-        CV_Error( CV_StsNullPtr, "NULL destination" );
+        CV_Error(cv::Error::StsNullPtr, "NULL destination" );
 
     if( rho <= 0 || theta <= 0 || threshold <= 0 )
-        CV_Error( CV_StsOutOfRange, "rho, theta and threshold must be positive" );
+        CV_Error( cv::Error::StsOutOfRange, "rho, theta and threshold must be positive" );
 
     if( method != CV_HOUGH_PROBABILISTIC )
     {
