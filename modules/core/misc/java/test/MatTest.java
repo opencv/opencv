@@ -1002,7 +1002,7 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
-    public void testMatFromByteBuffer {
+    public void testMatFromByteBuffer() {
         ByteBuffer bbuf = ByteBuffer.allocateDirect(64*64);
         bbuf.putInt(0x01010101);
         Mat m = new Mat(64,64,CvType.CV_8UC1,bbuf);
