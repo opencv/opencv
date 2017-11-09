@@ -141,4 +141,4 @@ Now you build the files using make command and install it using make install com
 
 `sudo make install`
 <br>
-Thus OpenCV installation is finished. Open a terminal and try import cv2.<br>
+Thus OpenCV installation is finished. Open a terminal and try import cv2.
