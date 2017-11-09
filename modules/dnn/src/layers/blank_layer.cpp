@@ -62,6 +62,25 @@ public:
         return true;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
+    {
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();

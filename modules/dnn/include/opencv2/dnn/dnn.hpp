@@ -187,15 +187,25 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) = 0;
 
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @param[in]  inputs  the input blobs.
+         *  @param[out] outputs allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) = 0;
+
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @param[in]  inputs  the input blobs.
+         *  @param[out] outputs allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
+
         /** @brief @overload */
         CV_WRAP void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
 
         /** @brief @overload */
         CV_WRAP std::vector<Mat> finalize(const std::vector<Mat> &inputs);
-
-        /** @brief @overload */
-        CV_WRAP void forward(const std::vector<Mat> &inputs, CV_IN_OUT std::vector<Mat> &outputs,
-                             CV_IN_OUT std::vector<Mat> &internals);
 
         /** @brief Allocates layer and computes output. */
         CV_WRAP void run(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs,

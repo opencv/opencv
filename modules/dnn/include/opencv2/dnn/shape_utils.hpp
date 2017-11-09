@@ -132,6 +132,11 @@ static inline MatShape shape(const Mat& mat)
     return shape(mat.size.p, mat.dims);
 }
 
+static inline MatShape shape(const UMat& mat)
+{
+    return shape(mat.size.p, mat.dims);
+}
+
 namespace {inline bool is_neg(int i) { return i < 0; }}
 
 static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
@@ -151,7 +156,7 @@ static inline int total(const MatShape& shape, int start = -1, int end = -1)
         return 0;
 
     int elems = 1;
-    CV_Assert(start < (int)shape.size() && end <= (int)shape.size() &&
+    CV_Assert(start <= (int)shape.size() && end <= (int)shape.size() &&
               start <= end);
     for(int i = start; i < end; i++)
     {
