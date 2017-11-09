@@ -34,6 +34,7 @@ Install all packages with following command in terminal as root.<br>
 `$ sudo apt-get install libopencv-*`<br>
 `$ sudo apt-get install python-opencv`<br>
 
+
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 <br>
 >>> import cv2
