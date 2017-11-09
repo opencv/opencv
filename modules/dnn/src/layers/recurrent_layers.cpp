@@ -252,6 +252,14 @@ public:
         allocated = true;
     }
 
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -463,6 +471,14 @@ public:
             int sz1[] = { numTimestamps, numSamples, numH };
             output[1].create(3, sz1, dtype);
         }
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
