@@ -1007,7 +1007,7 @@ public class MatTest extends OpenCVTestCase {
         bbuf.putInt(0x01010101);
         Mat m = new Mat(64,64,CvType.CV_8UC1,bbuf);
         assertEquals(4, Core.countNonZero(m));
-        Core.add(m, 1, m);
+        Core.add(m, new Scalar(1), m);
         assertEquals(4096, Core.countNonZero(m));
         m.release();
         assertEquals(2, bbuf.get(0));
