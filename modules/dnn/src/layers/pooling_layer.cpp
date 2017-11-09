@@ -113,18 +113,24 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, InputArrayOfArrays internals)
     {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
         if (poolOp.empty())
         {
             OCL4DNNPoolConfig config;
 
-            config.in_shape = shape(*inputs[0]);
+            config.in_shape = shape(inputs[0]);
             config.out_shape = shape(outputs[0]);
             config.kernel = kernel;
             config.pad = pad;
             config.stride = stride;
-            config.channels = inputs[0]->size[1];
+            config.channels = inputs[0].size[1];
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
                                                LIBDNN_POOLING_METHOD_STO);
@@ -133,18 +139,10 @@ public:
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {
-            UMat inpMat, outMat, maskMat;
-
-            inpMat = inputs[ii]->getUMat(ACCESS_READ);
-
-            if (type == MAX)
-            {
-                outMat = outputs[2 * ii].getUMat(ACCESS_WRITE);
-                maskMat = outputs[2 * ii + 1].getUMat(ACCESS_WRITE);
-            } else {
-                outMat = outputs[ii].getUMat(ACCESS_WRITE);
-                maskMat = UMat();
-            }
+            UMat& inpMat = inputs[ii];
+            int out_index = (type == MAX) ? 2 : 1;
+            UMat& outMat = outputs[out_index * ii];
+            UMat maskMat = (type == MAX) ? outputs[2 * ii + 1] : UMat();
 
             CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
@@ -156,14 +154,22 @@ public:
     }
 #endif
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs, outputs, internals))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {
