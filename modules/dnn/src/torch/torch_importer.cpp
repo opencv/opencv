@@ -1198,6 +1198,16 @@ Mat readTorchBlob(const String &filename, bool isBinary)
     return importer->tensors.begin()->second;
 }
 
+Net readNetFromTorch(const String &model, bool isBinary)
+{
+    CV_TRACE_FUNCTION();
+
+    TorchImporter importer(model, isBinary);
+    Net net;
+    importer.populateNet(net);
+    return net;
+}
+
 #else
 
 Ptr<Importer> createTorchImporter(const String&, bool)
@@ -1212,17 +1222,13 @@ Mat readTorchBlob(const String&, bool)
     return Mat();
 }
 
-#endif //defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
-
 Net readNetFromTorch(const String &model, bool isBinary)
 {
-    CV_TRACE_FUNCTION();
-
-    TorchImporter importer(model, isBinary);
-    Net net;
-    importer.populateNet(net);
-    return net;
+    CV_Error(Error::StsNotImplemented, "Torch importer is disabled in current build");
+    return Net();
 }
+
+#endif //defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace
