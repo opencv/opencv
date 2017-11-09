@@ -928,13 +928,17 @@ inline bool cmpCircleIndex(const markedCircle &left, const markedCircle &right)
     return left.idx > right.idx;
 }
 
+struct AccumTLSData
+{
+    cv::Mat accum;
+    std::vector<Point> nz;
+};
+
 class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
-    HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, Mat &_accum, std::vector<Point> &_nz,
-                             int _minRadius, int _maxRadius, float _idp, Mutex& _mutex) :
-        edges(_edges), dx(_dx), dy(_dy), accum(_accum), nz(_nz), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp),
-        _lock(_mutex)
+    HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, int _minRadius, int _maxRadius, float _idp) :
+        edges(_edges), dx(_dx), dy(_dy), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp)
     {
         acols = cvCeil(edges.cols * idp), arows = cvCeil(edges.rows * idp);
         astep = acols + 2;
@@ -945,17 +949,15 @@ public:
 
     ~HoughCirclesAccumInvoker() {}
 
-    HoughCirclesAccumInvoker& operator=(const HoughCirclesAccumInvoker&) {return *this;}
-
     void operator()(const cv::Range &boundaries) const
     {
         Mat accumLocal = Mat(arows + 2, acols + 2, CV_32SC1, Scalar::all(0));
         int *adataLocal = accumLocal.ptr<int>();
         std::vector<Point> nzLocal;
         nzLocal.reserve(256);
+        int startRow = boundaries.start;
         int endRow = boundaries.end;
         int numCols = edges.cols;
-        bool singleThread = (boundaries == Range(0, edges.rows));
 
         if(edges.isContinuous() && dx.isContinuous() && dy.isContinuous())
         {
@@ -964,7 +966,7 @@ public:
         }
 
         // Accumulate circle evidence for each edge pixel
-        for(int y = boundaries.start; y < endRow; ++y )
+        for(int y = startRow; y < endRow; ++y )
         {
             const uchar* edgeData = edges.ptr<const uchar>(y);
             const short* dxData = dx.ptr<const short>(y);
@@ -1056,30 +1058,24 @@ _next_step:
             }
         }
 
-        if (singleThread)
+        AccumTLSData& localData = tls.getRef();
+        localData.accum = accumLocal;
+        localData.nz = nzLocal;
+    }
+
+    void gather(std::vector<cv::Mat>& accumVec, std::vector<Point>& nz)
+    {
+        std::vector<AccumTLSData*> localVec;
+        tls.gather(localVec);
+        for(size_t i = 0; i < localVec.size(); i++)
         {
-            accum = accumLocal;
-            nz = nzLocal;
-        }
-        else
-        {
-            AutoLock lock(_lock);
-            if(accum.empty())
-            {
-                accum = accumLocal;
-            }
-            else
-            {
-                add(accum, accumLocal, accum);
-            }
-            nz.insert(nz.end(), nzLocal.begin(), nzLocal.end());
+            accumVec.push_back(localVec[i]->accum);
+            nz.insert(nz.end(), localVec[i]->nz.begin(), localVec[i]->nz.end());
         }
     }
 
 private:
     const Mat &edges, &dx, &dy;
-    Mat &accum;
-    std::vector<Point>& nz;
     int minRadius, maxRadius;
     float idp;
 
@@ -1088,7 +1084,7 @@ private:
     bool haveSIMD;
 #endif
 
-    Mutex& _lock;
+    TLSData<AccumTLSData> tls;
 };
 
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
@@ -1441,32 +1437,32 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 {
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
 
-    Mat accum;
+
     Mat edges, dx, dy;
 
     std::vector<Point> nz;
-    nz.reserve(1024);
     int numberOfThreads = 1;
-    int numThreads = std::max(1, std::min(getNumThreads(), getNumberOfCPUs()));
+
+    int numThreads = std::max(1, getNumThreads());
 
     Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
     Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
     Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
-    // Max 2 threads as long as no thread safe container exists, otherwise adding accum at the end has a huge overhead
-    // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is large and cost is more than add accum
-    if(maxRadius - minRadius > 32)
-        numberOfThreads = std::max(1, std::min(numThreads, 2));
+    std::vector<Mat> accumVec;
+    HoughCirclesAccumInvoker accumBuildInvoker(edges, dx, dy, minRadius, maxRadius, dp);
+    parallel_for_(Range(0, edges.rows), accumBuildInvoker, numThreads);
 
-    Mutex mtx;
-
-    parallel_for_(Range(0, edges.rows),
-                  HoughCirclesAccumInvoker(edges, dx, dy,
-                                           accum, nz, minRadius, maxRadius, dp, mtx),
-                  numberOfThreads);
+    accumBuildInvoker.gather(accumVec, nz);
 
     if(nz.empty())
         return;
+
+    Mat accum = accumVec[0];
+    for(size_t i = 1; i < accumVec.size(); i++)
+    {
+        accum += accumVec[i];
+    }
 
     std::vector<int> centers;
 
@@ -1474,6 +1470,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     // and on the other side there are some row ranges where centers are concentrated
     numberOfThreads = (numThreads > 1) ? ((accum.rows - 2) / 4) : 1;
 
+    Mutex mtx;
     parallel_for_(Range(1, accum.rows - 1),
                   HoughCirclesFindCentersInvoker(accum, centers, accThreshold, mtx),
                   numberOfThreads);
