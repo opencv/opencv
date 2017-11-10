@@ -109,13 +109,13 @@ cd build
 <br>
 
 ### Configuring and Installing
-Now we have installed all the required dependencies, let's install OpenCV. Installation has to be configured with CMake. It specifies which modules are to be installed, installation path, which additional libraries to be used, whether documentation and examples to be compiled etc. 
+Now we have installed all the required dependencies, let's install OpenCV. Installation has to be configured with CMake. It specifies which modules are to be installed, installation path, which additional libraries to be used, whether documentation and examples to be compiled etc.
 Below command is normally used for configuration with OpenCV's default parameters (executed from build folder):
 ```
 $ cmake ../
 ```
 OpenCV defaults assume "Release" build type and installation path is "/usr/local".
-For additional information about CMake options refer to OpenCV [C++ compilation](): 
+For additional information about CMake options refer to OpenCV [C++ compilation]():
 Refer to the [OpenCV Python tutorials](http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_tutorials.html)
 **cmake output**
 ```
@@ -124,7 +124,7 @@ Refer to the [OpenCV Python tutorials](http://opencv-python-tutroals.readthedocs
  -- Libraries: /usr/lib/x86_64-linux-gnu/libpython2.7.so (ver 2.7.6)
  -- numpy: /usr/lib/python2.7/dist-packages/numpy/core/include (ver 1.8.2)
  -- packages path: lib/python2.7/dist-packages
- -- 
+ --
  -- Python 3:
  -- Interpreter: /usr/bin/python3.4 (ver 3.4.3)
  -- Libraries: /usr/lib/x86_64-linux-gnu/libpython3.4m.so (ver 3.4.3)
@@ -140,7 +140,7 @@ cmake -D BUILD_DOCS=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMP
 ```
 cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF
 ```
- 
+
 Now you build the files using make command and install it using make install command.
 
 ```
