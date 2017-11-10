@@ -119,17 +119,17 @@ For additional information about CMake options refer to OpenCV [C++ compilation]
 Refer to the [OpenCV Python tutorials](http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_tutorials.html)
 **cmake output**
 ```
- --   Python 2:
- --     Interpreter:                 /usr/bin/python2.7 (ver 2.7.6)
- --     Libraries:                   /usr/lib/x86_64-linux-gnu/libpython2.7.so (ver 2.7.6)
- --     numpy:                       /usr/lib/python2.7/dist-packages/numpy/core/include (ver 1.8.2)
- --     packages path:               lib/python2.7/dist-packages
+ -- Python 2:
+ -- Interpreter: /usr/bin/python2.7 (ver 2.7.6)
+ -- Libraries: /usr/lib/x86_64-linux-gnu/libpython2.7.so (ver 2.7.6)
+ -- numpy: /usr/lib/python2.7/dist-packages/numpy/core/include (ver 1.8.2)
+ -- packages path: lib/python2.7/dist-packages
  -- 
- --   Python 3:
- --     Interpreter:                 /usr/bin/python3.4 (ver 3.4.3)
- --     Libraries:                   /usr/lib/x86_64-linux-gnu/libpython3.4m.so (ver 3.4.3)
- --     numpy:                       /usr/lib/python3/dist-packages/numpy/core/include (ver 1.8.2)
- --     packages path:               lib/python3.4/dist-packages
+ -- Python 3:
+ -- Interpreter: /usr/bin/python3.4 (ver 3.4.3)
+ -- Libraries: /usr/lib/x86_64-linux-gnu/libpython3.4m.so (ver 3.4.3)
+ -- numpy: /usr/lib/python3/dist-packages/numpy/core/include (ver 1.8.2)
+ -- packages path: lib/python3.4/dist-packages
  ```
 - Enable documentation and disable tests and samples
 ```
@@ -140,7 +140,7 @@ cmake -D BUILD_DOCS=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMP
 ```
 cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF
 ```
-    
+ 
 Now you build the files using make command and install it using make install command.
 
 ```
