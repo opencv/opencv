@@ -161,8 +161,9 @@ void ThinPlateSplineShapeTransformerImpl::warpImage(InputArray transformingImage
         for (int col = 0; col < theinput.cols; col++)
         {
             Point2f pt = _applyTransformation(shapeReference, Point2f(float(col), float(row)), tpsParameters);
-            mapX.at<float>(row, col) = pt.x;
-            mapY.at<float>(row, col) = pt.y;
+
+            mapX.at<float>(row, col) = col - (pt.x - col);
+            mapY.at<float>(row, col) = row - (pt.y - row);
         }
     }
     remap(transformingImage, output, mapX, mapY, flags, borderMode, borderValue);
