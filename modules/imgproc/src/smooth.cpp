@@ -2102,9 +2102,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     CV_OVX_RUN(true,
                openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
     if(sigma1 == 0 && sigma2 == 0 && tegra::useTegra() && tegra::gaussian(src, dst, ksize, borderType))
         return;
 #endif
@@ -2113,9 +2114,6 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                (ksize.width == 5 && ksize.height == 5)) &&
                _src.rows() > ksize.height && _src.cols() > ksize.width);
     (void)useOpenCL;
-
-    Mat src = _src.getMat();
-    Mat dst = _dst.getMat();
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
@@ -2129,6 +2127,9 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
     CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, sdepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
              margin, (CvSize)(ksize), sigma1, sigma2, borderType);
+
+    src.release();
+    dst.release();
 
     CV_IPP_RUN(!useOpenCL, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
 
