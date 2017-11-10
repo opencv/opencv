@@ -72,49 +72,91 @@ bool StatModel::train( InputArray samples, int layout, InputArray responses )
     return train(TrainData::create(samples, layout, responses));
 }
 
-float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArray _resp ) const
+class ParallelCalcError : public ParallelLoopBody
+{
+private:
+    const Ptr<TrainData>& data;
+    bool &testerr;
+    Mat &resp;
+    const StatModel &s;
+    vector<double> &errStrip;
+public:
+    ParallelCalcError(const Ptr<TrainData>& d, bool &t, Mat &_r,const StatModel &w, vector<double> &e) :
+        data(d),
+        testerr(t),
+        resp(_r),
+        s(w),
+        errStrip(e)
+    {
+    }
+    virtual void operator()(const Range& range) const
+    {
+        int idxErr = range.start;
+        CV_TRACE_FUNCTION_SKIP_NESTED();
+        Mat samples = data->getSamples();
+        int layout = data->getLayout();
+        Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
+        const int* sidx_ptr = sidx.ptr<int>();
+        bool isclassifier = s.isClassifier();
+        Mat responses = data->getResponses();
+        int responses_type = responses.type();
+
+        double err = 0;
+
+        for (int i = range.start; i < range.end; i++)
+        {
+            int si = sidx_ptr ? sidx_ptr[i] : i;
+            Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
+            float val = s.predict(sample);
+            float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
+
+            if (isclassifier)
+                err += fabs(val - val0) > FLT_EPSILON;
+            else
+                err += (val - val0)*(val - val0);
+            if (!resp.empty())
+                resp.at<float>(i) = val;
+        }
+
+
+        errStrip[idxErr]=err ;
+
+    };
+    ParallelCalcError& operator=(const ParallelCalcError &) {
+        return *this;
+    };
+};
+
+
+float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray _resp) const
 {
     CV_TRACE_FUNCTION_SKIP_NESTED();
     Mat samples = data->getSamples();
-    int layout = data->getLayout();
     Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
-    const int* sidx_ptr = sidx.ptr<int>();
-    int i, n = (int)sidx.total();
+    int n = (int)sidx.total();
     bool isclassifier = isClassifier();
     Mat responses = data->getResponses();
-    int responses_type = responses.type();
 
-    if( n == 0 )
+    if (n == 0)
         n = data->getNSamples();
 
-    if( n == 0 )
+    if (n == 0)
         return -FLT_MAX;
 
     Mat resp;
-    if( _resp.needed() )
+    if (_resp.needed())
         resp.create(n, 1, CV_32F);
 
     double err = 0;
-    for( i = 0; i < n; i++ )
-    {
-        int si = sidx_ptr ? sidx_ptr[i] : i;
-        Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
-        float val = predict(sample);
-        float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
+    vector<double> errStrip(n,0.0);
+    ParallelCalcError x(data, testerr, resp, *this,errStrip);
 
-        if( isclassifier )
-            err += fabs(val - val0) > FLT_EPSILON;
-        else
-            err += (val - val0)*(val - val0);
-        if( !resp.empty() )
-            resp.at<float>(i) = val;
-        /*if( i < 100 )
-        {
-            printf("%d. ref %.1f vs pred %.1f\n", i, val0, val);
-        }*/
-    }
+    parallel_for_(Range(0,n),x);
 
-    if( _resp.needed() )
+    for (size_t i = 0; i < errStrip.size(); i++)
+        err += errStrip[i];
+
+    if (_resp.needed())
         resp.copyTo(_resp);
 
     return (float)(err / n * (isclassifier ? 100 : 1));
