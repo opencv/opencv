@@ -1402,7 +1402,9 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
                                  int accThreshold, int maxCircles, int kernelSize )
 {
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
-
+    if( dp < 1.f )
+            dp = 1.f;
+    float idp = 1.f/dp;
 
     Mat edges, dx, dy;
 
@@ -1416,7 +1418,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
     std::vector<Mat> accumVec;
-    HoughCirclesAccumInvoker accumBuildInvoker(edges, dx, dy, minRadius, maxRadius, dp);
+    HoughCirclesAccumInvoker accumBuildInvoker(edges, dx, dy, minRadius, maxRadius, idp);
     parallel_for_(Range(0, edges.rows), accumBuildInvoker, numThreads);
 
     accumBuildInvoker.gather(accumVec, nz);
@@ -1474,9 +1476,12 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
                 circles.push_back(Vec3f((x + 0.5f) * dp, (y + 0.5f) * dp, 0));
         }
 
-        _circles.create(1, (int)circles.size(), CV_32FC3);
-        Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
-        return;
+        if(circles.size() > 0)
+        {
+            _circles.create(1, (int)circles.size(), CV_32FC3);
+            Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
+            return;
+        }
     }
 
     numberOfThreads = (numThreads > 1) ? centerCnt : 1;
@@ -1487,8 +1492,11 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
                                                    accThreshold, minRadius, maxRadius, minDist, dp, mtx),
                   numberOfThreads);
 
-    _circles.create(1, (int)circles.size(), CV_32FC3);
-    Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
+    if(circles.size() > 0)
+    {
+        _circles.create(1, (int)circles.size(), CV_32FC3);
+        Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
+    }
 }
 
 static void HoughCircles( InputArray _image, OutputArray _circles,
