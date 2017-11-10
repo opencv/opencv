@@ -147,7 +147,6 @@ Now you build the files using make command and install it using make install com
 sudo make install
 ```
 Installation is over. All files are installed in /usr/local/ folder.Open a terminal and try import cv2.
-
 ```
 import cv2
 print( cv2.__version__ )
