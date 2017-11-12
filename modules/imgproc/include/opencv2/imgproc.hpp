@@ -1257,7 +1257,7 @@ to edit those, as to tailor it for their own application.
 @param _sigma_scale Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
 @param _quant Bound to the quantization error on the gradient norm.
 @param _ang_th Gradient angle tolerance in degrees.
-@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advancent refinement
+@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement
 is chosen.
 @param _density_th Minimal density of aligned region points in the enclosing rectangle.
 @param _n_bins Number of bins in pseudo-ordering of gradient modulus.
@@ -1699,7 +1699,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
-The function finds edges in the input image image and marks them in the output map edges using the
+The function finds edges in the input image and marks them in the output map edges using the
 Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
@@ -2352,7 +2352,7 @@ borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
 @note
-Due to current implementaion limitations the size of an input and output images should be less than 32767x32767.
+Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
@@ -2470,13 +2470,12 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
 The function getRectSubPix extracts pixels from src:
 
-\f[dst(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
+\f[patch(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
 
 where the values of the pixels at non-integer coordinates are retrieved using bilinear
-interpolation. Every channel of multi-channel images is processed independently. While the center of
-the rectangle must be inside the image, parts of the rectangle may be outside. In this case, the
-replication border mode (see cv::BorderTypes) is used to extrapolate the pixel values outside of
-the image.
+interpolation. Every channel of multi-channel images is processed independently. Also
+the image should be a single channel or three channel image. While the center of the
+rectangle must be inside the image, parts of the rectangle may be outside.
 
 @param image Source image.
 @param patchSize Size of the extracted patch.
@@ -2624,7 +2623,7 @@ CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
 //! @addtogroup imgproc_motion
 //! @{
 
-/** @brief Adds an image to the accumulator.
+/** @brief Adds an image to the accumulator image.
 
 The function adds src or some of its elements to dst :
 
@@ -2632,7 +2631,7 @@ The function adds src or some of its elements to dst :
 
 The function supports multi-channel images. Each channel is processed independently.
 
-The functions accumulate\* can be used, for example, to collect statistics of a scene background
+The function cv::accumulate can be used, for example, to collect statistics of a scene background
 viewed by a still camera and for the further foreground-background segmentation.
 
 @param src Input image of type CV_8UC(n), CV_16UC(n), CV_32FC(n) or CV_64FC(n), where n is a positive integer.
@@ -2644,7 +2643,7 @@ viewed by a still camera and for the further foreground-background segmentation.
 CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
                               InputArray mask = noArray() );
 
-/** @brief Adds the square of a source image to the accumulator.
+/** @brief Adds the square of a source image to the accumulator image.
 
 The function adds the input image src or its selected region, raised to a power of 2, to the
 accumulator dst :
@@ -2663,7 +2662,7 @@ floating-point.
 CV_EXPORTS_W void accumulateSquare( InputArray src, InputOutputArray dst,
                                     InputArray mask = noArray() );
 
-/** @brief Adds the per-element product of two input images to the accumulator.
+/** @brief Adds the per-element product of two input images to the accumulator image.
 
 The function adds the product of two images or their selected regions to the accumulator dst :
 
@@ -2673,7 +2672,7 @@ The function supports multi-channel images. Each channel is processed independen
 
 @param src1 First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 @param src2 Second input image of the same type and the same size as src1 .
-@param dst %Accumulator with the same number of channels as input images, 32-bit or 64-bit
+@param dst %Accumulator image with the same number of channels as input images, 32-bit or 64-bit
 floating-point.
 @param mask Optional operation mask.
 
@@ -3571,7 +3570,8 @@ taller than image. Since this is both an input and output parameter, you must ta
 of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
 mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
-as described below. It is therefore possible to use the same mask in multiple calls to the function
+as described below. Additionally, the function fills the border of the mask with ones to simplify
+internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
 @param seedPoint Starting point.
 @param newVal New value of the repainted domain pixels.
@@ -4224,7 +4224,7 @@ intersecting region and the red vertices are returned by the function.
 
 @param rect1 First rectangle
 @param rect2 Second rectangle
-@param intersectingRegion The output array of the verticies of the intersecting region. It returns
+@param intersectingRegion The output array of the vertices of the intersecting region. It returns
 at most 8 vertices. Stored as std::vector\<cv::Point2f\> or cv::Mat as Mx1 of type CV_32FC2.
 @returns One of cv::RectanglesIntersectTypes
  */

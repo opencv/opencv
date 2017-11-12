@@ -1,10 +1,11 @@
+# ignore dot files/directories
+.*
+!.gitignore
+
 *.autosave
 *.pyc
 *.user
 *~
-.*.swp
-.DS_Store
-.sw[a-z]
 Thumbs.db
 tags
 tegra/
@@ -21,4 +22,3 @@ bin/
 *.log
 *.tlog
 build
-.cache

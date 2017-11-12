@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v1 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v2 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_v1 { } using namespace experimental_dnn_v1; }}
+namespace cv { namespace dnn { namespace experimental_dnn_v2 { } using namespace experimental_dnn_v2; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -187,15 +187,25 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) = 0;
 
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @param[in]  inputs  the input blobs.
+         *  @param[out] outputs allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) = 0;
+
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @param[in]  inputs  the input blobs.
+         *  @param[out] outputs allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
+
         /** @brief @overload */
         CV_WRAP void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
 
         /** @brief @overload */
         CV_WRAP std::vector<Mat> finalize(const std::vector<Mat> &inputs);
-
-        /** @brief @overload */
-        CV_WRAP void forward(const std::vector<Mat> &inputs, CV_IN_OUT std::vector<Mat> &outputs,
-                             CV_IN_OUT std::vector<Mat> &internals);
 
         /** @brief Allocates layer and computes output. */
         CV_WRAP void run(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs,
@@ -688,7 +698,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS_W Mat readTorchBlob(const String &filename, bool isBinary = true);
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
-     *  @param image input image (with 1- or 3-channels).
+     *  @param image input image (with 1-, 3- or 4-channels).
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
@@ -706,7 +716,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
      *  crops @p images from center, subtract @p mean values, scales values by @p scalefactor,
      *  swap Blue and Red channels.
-     *  @param images input images (all with 1- or 3-channels).
+     *  @param images input images (all with 1-, 3- or 4-channels).
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
@@ -726,13 +736,32 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * @param src Path to origin model from Caffe framework contains single
      *            precision floating point weights (usually has `.caffemodel` extension).
      * @param dst Path to destination model with updated weights.
+     * @param layersTypes Set of layers types which parameters will be converted.
+     *                    By default, converts only Convolutional and Fully-Connected layers'
+     *                    weights.
      *
      * @note Shrinked model has no origin float32 weights so it can't be used
      *       in origin Caffe framework anymore. However the structure of data
      *       is taken from NVidia's Caffe fork: https://github.com/NVIDIA/caffe.
      *       So the resulting model may be used there.
      */
-    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst);
+    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst,
+                                       const std::vector<String>& layersTypes = std::vector<String>());
+
+    /** @brief Performs non maximum suppression given boxes and corresponding scores.
+
+     * @param bboxes a set of bounding boxes to apply NMS.
+     * @param scores a set of corresponding confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
+     * @param top_k if `>0`, keep at most @p top_k picked indices.
+     */
+    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+                               const float score_threshold, const float nms_threshold,
+                               CV_OUT std::vector<int>& indices,
+                               const float eta = 1.f, const int top_k = 0);
 
 
 //! @}

@@ -58,7 +58,7 @@ public:
         axis = params.get<int>("axis", 1);
         if (params.has("slice_point"))
         {
-            CV_Assert(!params.has("begin") && !params.has("size"));
+            CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
             const DictValue &indicesValue = params.get("slice_point");
             sliceRanges.resize(indicesValue.size() + 1,
                                std::vector<Range>(axis + 1, Range::all()));
@@ -71,24 +71,34 @@ public:
             }
             sliceRanges.back()[axis].start = prevSlice;
         }
-        else if (params.has("begin") && params.has("size"))
+        else if (params.has("begin"))
         {
+            CV_Assert(params.has("size") ^ params.has("end"));
             const DictValue &begins = params.get("begin");
-            const DictValue &sizes = params.get("size");
-            CV_Assert(begins.size() == sizes.size());
+            const DictValue &sizesOrEnds = params.has("size") ? params.get("size") : params.get("end");
+            CV_Assert(begins.size() == sizesOrEnds.size());
 
             sliceRanges.resize(1);
             sliceRanges[0].resize(begins.size(), Range::all());
             for (int i = 0; i < begins.size(); ++i)
             {
                 int start = begins.get<int>(i);
-                int size = sizes.get<int>(i);
+                int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
                 CV_Assert(start >= 0);
-                CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
 
                 sliceRanges[0][i].start = start;
-                if (size > 0)
-                    sliceRanges[0][i].end = start + size;
+                if (params.has("size"))
+                {
+                    int size = sizeOrEnd;
+                    CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
+                    sliceRanges[0][i].end = start > 0 ? start + size : -1;  // We'll finalize a negative value later.
+                }
+                else
+                {
+                    int end = sizeOrEnd;
+                    CV_Assert(end < 0 || end > start);  // End index is excluded.
+                    sliceRanges[0][i].end = end;  // We'll finalize a negative value later.
+                }
             }
         }
     }
@@ -109,8 +119,7 @@ public:
                 CV_Assert(sliceRanges[i].size() <= inpShape.size());
                 for (int j = 0; j < sliceRanges[i].size(); ++j)
                 {
-                    outputs[i][j] = std::min(sliceRanges[i][j].end, inpShape[j]) -
-                                    std::max(sliceRanges[i][j].start, 0);
+                    outputs[i][j] = clamp(sliceRanges[i][j], inpShape[j]).size();
                 }
             }
         }
@@ -152,8 +161,7 @@ public:
             // Clamp.
             for (int j = 0; j < sliceRanges[i].size(); ++j)
             {
-                sliceRanges[i][j].start = std::max(0, sliceRanges[i][j].start);
-                sliceRanges[i][j].end = std::min(sliceRanges[i][j].end, inpShape[j]);
+                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
             }
             // Fill the rest of ranges.
             for (int j = sliceRanges[i].size(); j < inpShape[-1]; ++j)
@@ -161,6 +169,14 @@ public:
                 sliceRanges[i].push_back(Range::all());
             }
         }
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)

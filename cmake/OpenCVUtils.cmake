@@ -949,9 +949,6 @@ endfunction()
 function(_ocv_append_target_includes target)
   if(DEFINED OCV_TARGET_INCLUDE_DIRS_${target})
     target_include_directories(${target} PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
-    if (TARGET ${target}_object)
-      target_include_directories(${target}_object PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
-    endif()
     if(OPENCV_DEPENDANT_TARGETS_${target})
       foreach(t ${OPENCV_DEPENDANT_TARGETS_${target}})
         target_include_directories(${t} PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
@@ -974,27 +971,6 @@ function(ocv_add_library target)
   endif()
 
   add_library(${target} ${ARGN} ${cuda_objs})
-
-  # Add OBJECT library (added in cmake 2.8.8) to use in compound modules
-  if (NOT CMAKE_VERSION VERSION_LESS "2.8.8" AND OPENCV_ENABLE_OBJECT_TARGETS
-      AND NOT OPENCV_MODULE_${target}_CHILDREN
-      AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
-      AND NOT ${target} STREQUAL "opencv_ts"
-      AND (NOT BUILD_opencv_world OR NOT HAVE_CUDA)
-    )
-    set(sources ${ARGN})
-    ocv_list_filterout(sources "\\\\.(cl|inc|cu)$")
-    add_library(${target}_object OBJECT ${sources})
-    set_target_properties(${target}_object PROPERTIES
-      EXCLUDE_FROM_ALL True
-      EXCLUDE_FROM_DEFAULT_BUILD True
-      POSITION_INDEPENDENT_CODE True
-      )
-    if (ENABLE_SOLUTION_FOLDERS)
-      set_target_properties(${target}_object PROPERTIES FOLDER "object_libraries")
-    endif()
-    unset(sources)
-  endif()
 
   if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
     message(STATUS "Setting Apple target properties for ${target}")
@@ -1025,7 +1001,10 @@ endfunction()
 
 macro(ocv_get_libname var_name)
   get_filename_component(__libname "${ARGN}" NAME)
-  string(REGEX REPLACE "^lib(.+).(a|so)(.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  # libopencv_core.so.3.3 -> opencv_core
+  string(REGEX REPLACE "^lib(.+)\\.(a|so)(\\.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  # MacOSX: libopencv_core.3.3.1.dylib -> opencv_core
+  string(REGEX REPLACE "^lib(.+[^.0-9])\\.([.0-9]+\\.)?dylib$" "\\1" __libname "${__libname}")
   set(${var_name} "${__libname}")
 endmacro()
 

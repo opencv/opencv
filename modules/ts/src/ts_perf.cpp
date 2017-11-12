@@ -1893,12 +1893,6 @@ void TestBase::TearDown()
         }
     }
 
-    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
-    const char* type_param = test_info->type_param();
-    const char* value_param = test_info->value_param();
-    if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
-    if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
-
 #ifdef CV_COLLECT_IMPL_DATA
     if(param_collect_impl)
     {

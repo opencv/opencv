@@ -519,7 +519,7 @@ private:
 
                 // Double QR step involving rows l:n and columns m:n
 
-                for (int k = m; k <= n1 - 1; k++) {
+                for (int k = m; k < n1; k++) {
                     bool notlast = (k != n1 - 1);
                     if (k != m) {
                         p = H[k][k - 1];
@@ -761,7 +761,7 @@ private:
         int low = 0;
         int high = n - 1;
 
-        for (int m = low + 1; m <= high - 1; m++) {
+        for (int m = low + 1; m < high; m++) {
 
             // Scale column.
 
@@ -822,7 +822,7 @@ private:
             }
         }
 
-        for (int m = high - 1; m >= low + 1; m--) {
+        for (int m = high - 1; m > low; m--) {
             if (H[m][m - 1] != 0.0) {
                 for (int i = m + 1; i <= high; i++) {
                     ort[i] = H[i][m - 1];
@@ -1083,7 +1083,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
                   << std::endl;
     }
     // clip number of components to be a valid number
-    if ((_num_components <= 0) || (_num_components > (C - 1))) {
+    if ((_num_components <= 0) || (_num_components >= C)) {
         _num_components = (C - 1);
     }
     // holds the mean over all classes

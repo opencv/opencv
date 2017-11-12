@@ -845,11 +845,11 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
         int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
         int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
 
-        opts += format(" -D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
+        opts += format(" -D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d%s%s%s",
                           ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)),
                           cn, kercn, block_size,
-                          (sizeA.width % block_size !=0) ? "-D NO_MULT" : "",
-                          haveC ? "-D HAVE_C" : "",
+                          (sizeA.width % block_size !=0) ? " -D NO_MULT" : "",
+                          haveC ? " -D HAVE_C" : "",
                           doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
         ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);

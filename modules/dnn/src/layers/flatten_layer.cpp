@@ -104,6 +104,43 @@ public:
         return true;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        std::vector<UMat> inpvec;
+        std::vector<UMat> outputs;
+
+        inputs_arr.getUMatVector(inpvec);
+        outputs_arr.getUMatVector(outputs);
+
+        std::vector<UMat*> inputs(inpvec.size());
+        for (int i = 0; i < inpvec.size(); i++)
+            inputs[i] = &inpvec[i];
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            MatShape outShape = shape(outputs[i]);
+            UMat& output = outputs_arr.getUMatRef(i);
+            output = inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]);
+        }
+
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   outputs_arr.isUMatVector() &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();

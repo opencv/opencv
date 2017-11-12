@@ -510,7 +510,8 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
     int ntiles = xtiles*ytiles;
     UMat umbuf(1, ntiles*K, CV_32S);
 
-    size_t globalsize[] = {(size_t)xtiles, (size_t)sz.height}, localsize[] = {1, TILE_SIZE};
+    size_t globalsize[] = {(size_t)xtiles, std::max((size_t)TILE_SIZE, (size_t)sz.height)};
+    size_t localsize[] = {1, TILE_SIZE};
     bool ok = k.args(ocl::KernelArg::ReadOnly(src),
                      ocl::KernelArg::PtrWriteOnly(umbuf),
                      xtiles).run(2, globalsize, localsize, true);

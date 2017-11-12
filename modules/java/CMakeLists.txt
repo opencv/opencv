@@ -485,11 +485,11 @@ if(ANDROID)
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java)
 else()
   if(NOT INSTALL_CREATE_DISTRIB)
-    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
+    ocv_install_target(${the_module} OPTIONAL
             RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java
             LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
   else()
-    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
+    ocv_install_target(${the_module} OPTIONAL
             RUNTIME DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java
             LIBRARY DESTINATION ${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH} COMPONENT java)
   endif()

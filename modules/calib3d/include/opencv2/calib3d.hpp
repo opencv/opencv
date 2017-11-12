@@ -396,7 +396,7 @@ and a rotation matrix.
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
 sequence of rotations about the three principal axes that results in the same orientation of an
-object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angules
+object, e.g. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angles
 are only one of the possible solutions.
  */
 CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ,
@@ -421,8 +421,8 @@ matrix and the position of a camera.
 
 It optionally returns three rotation matrices, one for each axis, and three Euler angles that could
 be used in OpenGL. Note, there is always more than one sequence of rotations about the three
-principal axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
-tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
+principal axes that results in the same orientation of an object, e.g. see @cite Slabaugh . Returned
+tree rotation matrices and corresponding three Euler angles are only one of the possible solutions.
 
 The function is based on RQDecomp3x3 .
  */
@@ -583,7 +583,7 @@ projections, as well as the camera matrix and the distortion coefficients.
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
    -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
-       unstable and sometimes give completly wrong results. If you pass one of these two
+       unstable and sometimes give completely wrong results. If you pass one of these two
        flags, **SOLVEPNP_EPNP** method will be used instead.
    -   The minimum number of points is 4. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
@@ -1205,7 +1205,7 @@ findFundamentalMat .
 @param threshold Optional threshold used to filter out the outliers. If the parameter is greater
 than zero, all the point pairs that do not comply with the epipolar geometry (that is, the points
 for which \f$|\texttt{points2[i]}^T*\texttt{F}*\texttt{points1[i]}|>\texttt{threshold}\f$ ) are
-rejected prior to computing the homographies. Otherwise,all the points are considered inliers.
+rejected prior to computing the homographies. Otherwise, all the points are considered inliers.
 
 The function computes the rectification transformations without knowing intrinsic parameters of the
 cameras and their relative position in the space, which explains the suffix "uncalibrated". Another
@@ -1249,7 +1249,7 @@ assumed.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
 valid) and 1 (when all the source image pixels are retained in the undistorted image). See
 stereoRectify for details.
-@param newImgSize Image size after rectification. By default,it is set to imageSize .
+@param newImgSize Image size after rectification. By default, it is set to imageSize .
 @param validPixROI Optional output rectangle that outlines all-good-pixels region in the
 undistorted image. See roi1, roi2 description in stereoRectify .
 @param centerPrincipalPoint Optional flag that indicates whether in the new camera matrix the
@@ -1260,7 +1260,7 @@ best fit a subset of the source image (determined by alpha) to the corrected ima
 The function computes and returns the optimal new camera matrix based on the free scaling parameter.
 By varying this parameter, you may retrieve only sensible pixels alpha=0 , keep all the original
 image pixels if there is valuable information in the corners alpha=1 , or get something in between.
-When alpha\>0 , the undistortion result is likely to have some black pixels corresponding to
+When alpha\>0 , the undistorted result is likely to have some black pixels corresponding to
 "virtual" pixels outside of the captured distorted image. The original camera matrix, distortion
 coefficients, the computed new camera matrix, and newImageSize should be passed to
 initUndistortRectifyMap to produce the maps for remap .
@@ -1371,9 +1371,9 @@ be floating-point (single or double precision).
 @param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
 same camera matrix.
-@param method Method for computing a fundamental matrix.
+@param method Method for computing an essential matrix.
 -   **RANSAC** for the RANSAC algorithm.
--   **MEDS** for the LMedS algorithm.
+-   **LMEDS** for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
@@ -1456,7 +1456,7 @@ floating-point (single or double precision).
 Note that this function assumes that points1 and points2 are feature points from cameras with the
 same camera matrix.
 @param R Recovered relative rotation.
-@param t Recoverd relative translation.
+@param t Recovered relative translation.
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
 matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
@@ -1499,7 +1499,7 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param R Recovered relative rotation.
-@param t Recoverd relative translation.
+@param t Recovered relative translation.
 @param focal Focal length of the camera. Note that this function assumes that points1 and points2
 are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
@@ -1532,7 +1532,7 @@ floating-point (single or double precision).
 Note that this function assumes that points1 and points2 are feature points from cameras with the
 same camera matrix.
 @param R Recovered relative rotation.
-@param t Recoverd relative translation.
+@param t Recovered relative translation.
 @param distanceThresh threshold distance which is used to filter out far away points (i.e. infinite points).
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
@@ -1655,7 +1655,7 @@ to 3D points with a very large Z value (currently set to 10000).
 depth. ddepth can also be set to CV_16S, CV_32S or CV_32F.
 
 The function transforms a single-channel disparity map to a 3-channel image representing a 3D
-surface. That is, for each pixel (x,y) andthe corresponding disparity d=disparity(x,y) , it
+surface. That is, for each pixel (x,y) and the corresponding disparity d=disparity(x,y) , it
 computes:
 
 \f[\begin{array}{l} [X \; Y \; Z \; W]^T =  \texttt{Q} *[x \; y \; \texttt{disparity} (x,y) \; 1]^T  \\ \texttt{\_3dImage} (x,y) = (X/W, \; Y/W, \; Z/W) \end{array}\f]
@@ -1704,7 +1704,7 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
 @param from First input 2D point set.
 @param to Second input 2D point set.
 @param inliers Output vector indicating which points are inliers.
-@param method Robust method used to compute tranformation. The following methods are possible:
+@param method Robust method used to compute transformation. The following methods are possible:
 -   cv::RANSAC - RANSAC-based robust method
 -   cv::LMEDS - Least-Median robust method
 RANSAC is the default method.
@@ -1744,7 +1744,7 @@ two 2D point sets.
 @param from First input 2D point set.
 @param to Second input 2D point set.
 @param inliers Output vector indicating which points are inliers.
-@param method Robust method used to compute tranformation. The following methods are possible:
+@param method Robust method used to compute transformation. The following methods are possible:
 -   cv::RANSAC - RANSAC-based robust method
 -   cv::LMEDS - Least-Median robust method
 RANSAC is the default method.
@@ -2043,7 +2043,7 @@ namespace fisheye
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
-    Note that the function assumes the camera matrix of the undistorted points to be indentity.
+    Note that the function assumes the camera matrix of the undistorted points to be identity.
     This means if you want to transform back points undistorted with undistortPoints() you have to
     multiply them with \f$P^{-1}\f$.
      */

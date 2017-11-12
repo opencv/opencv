@@ -80,20 +80,19 @@ public:
 
         void operator()(const Range &r) const
         {
-            int nstripes = nstripes_, nsamples, outCn;
-            size_t planeSize;
+            int nstripes = nstripes_, nsamples = 1, outCn = 1;
+            size_t planeSize = 1;
 
-            if( src_->dims == 4 )
+            if (src_->dims > 1)
             {
                 nsamples = src_->size[0];
                 outCn = src_->size[1];
-                planeSize = (size_t)src_->size[2]*src_->size[3];
             }
             else
-            {
-                nsamples = outCn = 1;
-                planeSize = (size_t)src_->total();
-            }
+                outCn = src_->size[0];
+
+            for (int i = 2; i < src_->dims; ++i)
+                planeSize *= src_->size[i];
 
             size_t stripeSize = (planeSize + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
@@ -157,13 +156,20 @@ public:
         return true;
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
 
         CV_OCL_RUN((this->preferableTarget == DNN_TARGET_OPENCL) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   func.applyOCL(inputs, outputs, internals))
+                   func.applyOCL(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        CV_TRACE_FUNCTION();
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -259,25 +265,29 @@ struct ReLUFunctor
         return true;
     }
 
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            UMat src, dst;
-            inputs[i]->copyTo(src);
-            dst = outputs[i].getUMat(ACCESS_WRITE);
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
             CV_Assert(src.isContinuous() && dst.isContinuous() && !src.offset && !dst.offset);
 
-            ocl::Kernel ker;
-            CV_Assert(initKernel(ker, src));
-            ker.set(0, (int)src.total());
-            ker.set(1, ocl::KernelArg::PtrReadOnly(src));
-            ker.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+            ocl::Kernel kernel;
+            CV_Assert(initKernel(kernel, src));
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(ker.run(1, &gSize, &wgSize, false));
+            CV_Assert(kernel.run(1, &gSize, &wgSize, false));
         }
 
         return true;
@@ -348,7 +358,7 @@ struct ReLU6Functor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -383,7 +393,7 @@ struct TanHFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -418,7 +428,7 @@ struct SigmoidFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -455,7 +465,7 @@ struct ELUFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -490,7 +500,7 @@ struct AbsValFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -525,7 +535,7 @@ struct BNLLFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -582,7 +592,7 @@ struct PowerFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;
@@ -657,7 +667,7 @@ struct ChannelsPReLUFunctor
     }
 
 #ifdef HAVE_OPENCL
-    bool applyOCL(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         // TODO: implement OCL version
         return false;

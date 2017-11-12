@@ -104,65 +104,38 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
 
         /// UInt8
         case GDT_Byte:
-            if( channels == 1 ){ return CV_8UC1; }
-            if( channels == 3 ){ return CV_8UC3; }
-            if( channels == 4 ){ return CV_8UC4; }
-            else { return CV_8UC(channels); }
-            return -1;
+            return CV_8UC(channels);
 
         /// UInt16
         case GDT_UInt16:
-            if( channels == 1 ){ return CV_16UC1; }
-            if( channels == 3 ){ return CV_16UC3; }
-            if( channels == 4 ){ return CV_16UC4; }
-            else { return CV_16UC(channels); }
-            return -1;
+            return CV_16UC(channels);
 
         /// Int16
         case GDT_Int16:
-            if( channels == 1 ){ return CV_16SC1; }
-            if( channels == 3 ){ return CV_16SC3; }
-            if( channels == 4 ){ return CV_16SC4; }
-            else { return CV_16SC(channels); }
-            return -1;
+            return CV_16SC(channels);
 
         /// UInt32
         case GDT_UInt32:
         case GDT_Int32:
-            if( channels == 1 ){ return CV_32SC1; }
-            if( channels == 3 ){ return CV_32SC3; }
-            if( channels == 4 ){ return CV_32SC4; }
-            else { return CV_32SC(channels); }
-            return -1;
+            return CV_32SC(channels);
 
         case GDT_Float32:
-            if( channels == 1 ){ return CV_32FC1; }
-            if( channels == 3 ){ return CV_32FC3; }
-            if( channels == 4 ){ return CV_32FC4; }
-            else { return CV_32FC(channels); }
-            return -1;
+            return CV_32FC(channels);
 
         case GDT_Float64:
-            if( channels == 1 ){ return CV_64FC1; }
-            if( channels == 3 ){ return CV_64FC3; }
-            if( channels == 4 ){ return CV_64FC4; }
-            else { return CV_64FC(channels); }
-            return -1;
+            return CV_64FC(channels);
 
         default:
             std::cout << "Unknown GDAL Data Type" << std::endl;
             std::cout << "Type: " << GDALGetDataTypeName(gdalType) << std::endl;
             return -1;
     }
-
-    return -1;
 }
 
 /**
  * GDAL Decoder Constructor
 */
 GdalDecoder::GdalDecoder(){
-
 
     // set a dummy signature
     m_signature="0";
@@ -181,7 +154,6 @@ GdalDecoder::GdalDecoder(){
  * GDAL Decoder Destructor
 */
 GdalDecoder::~GdalDecoder(){
-
 
     if( m_dataset != NULL ){
        close();
@@ -383,10 +355,7 @@ bool GdalDecoder::readData( Mat& img ){
 
 
     // make sure the image is the proper size
-    if( img.size().height != m_height ){
-        return false;
-    }
-    if( img.size().width != m_width ){
+    if( img.size() != Size(m_width, m_height) ){
         return false;
     }
 
@@ -397,7 +366,6 @@ bool GdalDecoder::readData( Mat& img ){
 
     // set the image to zero
     img = 0;
-
 
     // iterate over each raster band
     // note that OpenCV does bgr rather than rgb
@@ -452,8 +420,6 @@ bool GdalDecoder::readData( Mat& img ){
 
         // delete our temp pointer
         delete [] scanline;
-
-
     }
 
     return true;
@@ -562,7 +528,6 @@ ImageDecoder GdalDecoder::newDecoder()const{
 */
 bool GdalDecoder::checkSignature( const String& signature )const{
 
-
     // look for NITF
     std::string str(signature);
     if( str.substr(0,4).find("NITF") != std::string::npos ){
@@ -570,7 +535,7 @@ bool GdalDecoder::checkSignature( const String& signature )const{
     }
 
     // look for DTED
-    if( str.substr(140,4) == "DTED" ){
+    if( str.size() > 144 && str.substr(140,4) == "DTED" ){
         return true;
     }
 

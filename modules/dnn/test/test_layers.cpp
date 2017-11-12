@@ -282,6 +282,7 @@ TEST(Layer_Test_Eltwise, Accuracy)
 TEST(Layer_Test_PReLU, Accuracy)
 {
     testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_CPU, true);
+    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_CPU, true, false);
 }
 
 //template<typename XMat>

@@ -215,7 +215,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __HAIKU__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>

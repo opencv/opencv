@@ -117,7 +117,10 @@ public:
                          std::vector<MatShape> &internals) const
     {
         if(!_needsPermute)
+        {
+            Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
             return true;
+        }
 
         CV_Assert(inputs.size() > 0);
         CV_Assert((int)_numAxes == inputs[0].size());
@@ -244,6 +247,14 @@ public:
         }
     };
 
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -253,7 +264,11 @@ public:
         if(!_needsPermute)
         {
             for (k = 0; k < ninputs; k++)
-                outputs[k] = *inputs[k];
+            {
+                CV_Assert(outputs[k].total() == inputs[k]->total());
+                if (outputs[k].data != inputs[k]->data)
+                    inputs[k]->copyTo(outputs[k]);
+            }
         }
         else
         {

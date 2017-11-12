@@ -1,84 +1,37 @@
-#include <opencv2/opencv.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include <iostream>
 
 using namespace cv;
 using namespace std;
 
 enum MyShape{MyCIRCLE=0,MyRECTANGLE,MyELLIPSE};
 
-struct ParamColorMar {
+struct ParamColorMap {
     int iColormap;
     Mat img;
 };
 
-Ptr<Mat> lutRND;
 String winName="False color";
+static const String ColorMaps[] = { "Autumn", "Bone", "Jet", "Winter", "Rainbow", "Ocean", "Summer",
+                                    "Spring", "Cool", "HSV", "Pink", "Hot", "Parula", "User defined (random)"};
 
 static void TrackColorMap(int x, void *r)
 {
-    std::cout << "selected: " << x << std::endl;
-    ParamColorMar *p = (ParamColorMar*)r;
+    ParamColorMap *p = (ParamColorMap*)r;
     Mat dst;
     p->iColormap= x;
-    if (x == cv::COLORMAP_PARULA + 1)
+    if (x == COLORMAP_PARULA + 1)
     {
-        if (!lutRND)
-        {
-            RNG ra;
-            lutRND = makePtr<Mat>(256, 1, CV_8UC3);
-            ra.fill(*lutRND, RNG::UNIFORM, 0, 256);
-        }
-        applyColorMap(p->img, dst, *lutRND.get());
+        Mat lutRND(256, 1, CV_8UC3);
+        randu(lutRND, Scalar(0, 0, 0), Scalar(255, 255, 255));
+        applyColorMap(p->img, dst, lutRND);
     }
     else
         applyColorMap(p->img,dst,p->iColormap);
-    String colorMapName;
 
-    switch (p->iColormap) {
-    case COLORMAP_AUTUMN :
-        colorMapName = "Colormap : Autumn";
-        break;
-    case COLORMAP_BONE :
-        colorMapName = "Colormap : Bone";
-        break;
-    case COLORMAP_JET :
-        colorMapName = "Colormap : Jet";
-        break;
-    case COLORMAP_WINTER :
-        colorMapName = "Colormap : Winter";
-        break;
-    case COLORMAP_RAINBOW :
-        colorMapName = "Colormap : Rainbow";
-        break;
-    case COLORMAP_OCEAN :
-        colorMapName = "Colormap : Ocean";
-        break;
-    case COLORMAP_SUMMER :
-        colorMapName = "Colormap : Summer";
-        break;
-    case COLORMAP_SPRING :
-        colorMapName = "Colormap : Spring";
-        break;
-    case COLORMAP_COOL :
-        colorMapName = "Colormap : Cool";
-        break;
-    case COLORMAP_HSV :
-        colorMapName = "Colormap : HSV";
-        break;
-    case COLORMAP_PINK :
-        colorMapName = "Colormap : Pink";
-        break;
-    case COLORMAP_HOT :
-        colorMapName = "Colormap : Hot";
-        break;
-    case COLORMAP_PARULA :
-        colorMapName = "Colormap : Parula";
-        break;
-    default:
-        colorMapName = "User colormap : random";
-        break;
-    }
-    std::cout << "> " << colorMapName << std::endl;
-    putText(dst, colorMapName, Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255));
+    putText(dst, "Colormap : "+ColorMaps[p->iColormap], Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255),2);
     imshow(winName, dst);
 }
 
@@ -128,27 +81,29 @@ static Mat DrawMyImage(int thickness,int nbShape)
 
 int main(int argc, char** argv)
 {
-    ParamColorMar  p;
+    cout << "This program demonstrates the use of applyColorMap function.\n\n";
 
+    ParamColorMap  p;
     Mat img;
+
     if (argc > 1)
-        img = imread(argv[1], 0);
+        img = imread(argv[1], IMREAD_GRAYSCALE);
     else
         img = DrawMyImage(2,256);
+
     p.img=img;
     p.iColormap=0;
 
     imshow("Gray image",img);
     namedWindow(winName);
     createTrackbar("colormap", winName,&p.iColormap,1,TrackColorMap,(void*)&p);
-    setTrackbarMin("colormap", winName, cv::COLORMAP_AUTUMN);
-    setTrackbarMax("colormap", winName, cv::COLORMAP_PARULA+1);
+    setTrackbarMin("colormap", winName, COLORMAP_AUTUMN);
+    setTrackbarMax("colormap", winName, COLORMAP_PARULA+1);
     setTrackbarPos("colormap", winName, -1);
 
-    TrackColorMap((int)getTrackbarPos("colormap", winName),(void*)&p);
-    while (waitKey(0) != 27)
-    {
-        std::cout << "Press 'ESC' to exit" << std::endl;
-    }
+    TrackColorMap(0, (void*)&p);
+
+    cout << "Press a key to exit" << endl;
+    waitKey(0);
     return 0;
 }

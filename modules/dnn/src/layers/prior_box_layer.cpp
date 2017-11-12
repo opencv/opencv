@@ -177,7 +177,7 @@ public:
         : _boxWidth(0), _boxHeight(0)
     {
         setParamsFrom(params);
-        _minSize = getParameter<unsigned>(params, "min_size");
+        _minSize = getParameter<float>(params, "min_size");
         CV_Assert(_minSize > 0);
 
         _flip = getParameter<bool>(params, "flip");
@@ -247,6 +247,14 @@ public:
                                 layerHeight * layerWidth * _numPriors * 4));
 
         return false;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)

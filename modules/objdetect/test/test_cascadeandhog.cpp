@@ -209,7 +209,7 @@ void CV_DetectorTest::run( int )
         vector<string>::const_iterator it = imageFilenames.begin();
         for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
         {
-            char buf[10];
+            char buf[16] = {0};
             sprintf( buf, "%s%d", "img_", ii );
             //cvWriteComment( validationFS.fs, buf, 0 );
             validationFS << *it;
@@ -265,7 +265,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
         Mat image = images[ii];
         if( image.empty() )
         {
-            char msg[30];
+            char msg[50] = {0};
             sprintf( msg, "%s %d %s", "image ", ii, " can not be read" );
             ts->printf( cvtest::TS::LOG, msg );
             return cvtest::TS::FAIL_INVALID_TEST_DATA;
@@ -278,7 +278,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
 
         if( write_results )
         {
-            char buf[10];
+            char buf[16] = {0};
             sprintf( buf, "%s%d", "img_", ii );
             string imageIdxStr = buf;
             validationFS << imageIdxStr << "[:";
@@ -313,7 +313,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
         int noPair = 0;
 
         // read validation rectangles
-        char buf[10];
+        char buf[16] = {0};
         sprintf( buf, "%s%d", "img_", imageIdx );
         string imageIdxStr = buf;
         FileNode node = validationFS.getFirstTopLevelNode()[VALIDATION][detectorNames[detectorIdx]][imageIdxStr];
