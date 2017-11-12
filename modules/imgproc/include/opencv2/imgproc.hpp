@@ -4064,6 +4064,18 @@ border of the containing Mat element.
  */
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
 
+/** @brief Fits an ellipse around a set of 2D points and gives closeness of fit.
+
+The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of
+all. It returns the rotated rectangle in which the ellipse is inscribed. The first algorithm described by @cite Fitzgibbon95
+is used. Developer should keep in mind that it is possible that the returned
+ellipse/rotatedRect data contains negative indices, due to the data points being close to the
+border of the containing Mat element.
+
+@param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseWithError( InputArray points, CV_OUT double& error );
+
 /** @brief Fits an ellipse around a set of 2D points.
 
  The function calculates the ellipse that fits a set of 2D points.
