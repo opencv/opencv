@@ -1230,7 +1230,6 @@ public:
                 if (isMaxCircles)
                     return;
 
-                int startIdx = nzCount - 1;
                 if(nzCount)
                 {
                     Mat bufRange = distSqrBuf.colRange(Range(0, nzCount));
@@ -1242,6 +1241,7 @@ public:
                     if (isMaxCircles)
                         return;
 
+                    int startIdx = nzCount - 1;
                     float startDist = dSqrData[startIdx];
                     for(j = nzCount - 2; j >= 0; --j)
                     {
@@ -1395,17 +1395,14 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     Mat edges, dx, dy;
 
-    std::vector<Point> nz;
-    int numberOfThreads = 1;
-
-    int numThreads = std::max(1, getNumThreads());
-
     Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
     Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
     Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
     Mutex mtx;
+    int numThreads = std::max(1, getNumThreads());
     std::vector<Mat> accumVec;
+    std::vector<Point> nz;
     parallel_for_(Range(0, edges.rows),
                   HoughCirclesAccumInvoker(edges, dx, dy, minRadius, maxRadius, idp, accumVec, nz, mtx),
                   numThreads);
@@ -1423,11 +1420,9 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     // 4 rows when multithreaded because there is a bit overhead
     // and on the other side there are some row ranges where centers are concentrated
-    numberOfThreads = (numThreads > 1) ? ((accum.rows - 2) / 4) : 1;
-
     parallel_for_(Range(1, accum.rows - 1),
                   HoughCirclesFindCentersInvoker(accum, centers, accThreshold, mtx),
-                  numberOfThreads);
+                  (numThreads > 1) ? ((accum.rows - 2) / 4) : 1);
 
     int centerCnt = (int)centers.size();
     if(centerCnt == 0)
@@ -1470,13 +1465,11 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
         }
     }
 
-    numberOfThreads = (numThreads > 1) ? centerCnt : 1;
-
     // One loop iteration per thread if multithreaded.
     parallel_for_(Range(0, centerCnt),
                   HoughCircleEstimateRadiusInvoker(nz, centers, circles, accum.cols, maxCircles,
                                                    accThreshold, minRadius, maxRadius, minDist, dp, mtx),
-                  numberOfThreads);
+                  (numThreads > 1) ? centerCnt : 1);
 
     if(circles.size() > 0)
     {
