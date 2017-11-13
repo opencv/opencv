@@ -238,6 +238,7 @@ else()
     message(STATUS "[OpenCV for Android SDK]: A new OpenGL Camera Bridge (CameraGLSurfaceView, CameraGLRendererBase, CameraRenderer, Camera2Renderer) is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 21")
     ocv_list_filterout(handwritten_java_sources "android\\\\+CameraGL")
     ocv_list_filterout(handwritten_java_sources "android\\\\+Camera.?Renderer")
+    ocv_list_filterout(handwritten_java_sources "android\\\\+JavaCamera2View")
   endif()
 endif()
 
