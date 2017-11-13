@@ -185,6 +185,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
                     Image image = reader.acquireLatestImage();
+                    if (image == null) return;
                     ByteBuffer plane = image.getPlanes()[0].getBuffer();
                     Mat yuv = new Mat( h * 3/2, w, CvType.CV_8UC1, plane );
                     JavaCamera2Frame tempFrame = new JavaCamera2Frame(yuv,w,h);
@@ -305,6 +306,8 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             boolean needReconfig = cacPreviewSize(width, height);
             mFrameWidth  = mPreviewSize.getWidth();
             mFrameHeight = mPreviewSize.getHeight();
+
+            AllocateCache();
 
             if( !needReconfig ) {
                 mCameraOpenCloseLock.release();
