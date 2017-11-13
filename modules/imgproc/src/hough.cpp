@@ -907,8 +907,10 @@ struct AccumTLSData
 class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
-    HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, int _minRadius, int _maxRadius, float _idp) :
-        edges(_edges), dx(_dx), dy(_dy), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp)
+    HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, int _minRadius, int _maxRadius, float _idp,
+                             std::vector<Mat>& _accumVec, std::vector<Point>& _nz, Mutex& _mtx) :
+        edges(_edges), dx(_dx), dy(_dy), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp),
+        accumVec(_accumVec), nz(_nz), mutex(_mtx)
     {
         acols = cvCeil(edges.cols * idp), arows = cvCeil(edges.rows * idp);
         astep = acols + 2;
@@ -917,7 +919,7 @@ public:
 #endif
     }
 
-    ~HoughCirclesAccumInvoker() {}
+    ~HoughCirclesAccumInvoker() { }
 
     void operator()(const Range &boundaries) const
     {
@@ -946,7 +948,8 @@ public:
             for(; x < numCols; ++x )
             {
 #if CV_SIMD128
-                if(haveSIMD) {
+                if(haveSIMD)
+                {
                     v_uint8x16 v_zero = v_setzero_u8();
 
                     for(; x <= numCols - 32; x += 32) {
@@ -1028,33 +1031,24 @@ _next_step:
             }
         }
 
-        AccumTLSData& localData = tls.getRef();
-        localData.accum = accumLocal;
-        localData.nz = nzLocal;
-    }
-
-    void gather(std::vector<Mat>& accumVec, std::vector<Point>& nz)
-    {
-        std::vector<AccumTLSData*> localVec;
-        tls.gather(localVec);
-        for(size_t i = 0; i < localVec.size(); i++)
-        {
-            accumVec.push_back(localVec[i]->accum);
-            nz.insert(nz.end(), localVec[i]->nz.begin(), localVec[i]->nz.end());
-        }
+        AutoLock lock(mutex);
+        accumVec.push_back(accumLocal);
+        nz.insert(nz.end(), nzLocal.begin(), nzLocal.end());
     }
 
 private:
     const Mat &edges, &dx, &dy;
     int minRadius, maxRadius;
     float idp;
+    std::vector<Mat>& accumVec;
+    std::vector<Point>& nz;
 
     int acols, arows, astep;
 #if CV_SIMD128
     bool haveSIMD;
 #endif
 
-    TLSData<AccumTLSData> tls;
+    Mutex& mutex;
 };
 
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
@@ -1402,8 +1396,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
                                  int accThreshold, int maxCircles, int kernelSize )
 {
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
-    if( dp < 1.f )
-            dp = 1.f;
+    dp = max(dp, 1.f);
     float idp = 1.f/dp;
 
     Mat edges, dx, dy;
@@ -1417,16 +1410,16 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
     Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
+    Mutex mtx;
     std::vector<Mat> accumVec;
-    HoughCirclesAccumInvoker accumBuildInvoker(edges, dx, dy, minRadius, maxRadius, idp);
-    parallel_for_(Range(0, edges.rows), accumBuildInvoker, numThreads);
-
-    accumBuildInvoker.gather(accumVec, nz);
+    parallel_for_(Range(0, edges.rows),
+                  HoughCirclesAccumInvoker(edges, dx, dy, minRadius, maxRadius, idp, accumVec, nz, mtx),
+                  numThreads);
 
     if(nz.empty())
         return;
 
-    Mat accum = accumVec[0];
+    Mat accum = accumVec[0].clone();
     for(size_t i = 1; i < accumVec.size(); i++)
     {
         accum += accumVec[i];
@@ -1438,7 +1431,6 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     // and on the other side there are some row ranges where centers are concentrated
     numberOfThreads = (numThreads > 1) ? ((accum.rows - 2) / 4) : 1;
 
-    Mutex mtx;
     parallel_for_(Range(1, accum.rows - 1),
                   HoughCirclesFindCentersInvoker(accum, centers, accThreshold, mtx),
                   numberOfThreads);
