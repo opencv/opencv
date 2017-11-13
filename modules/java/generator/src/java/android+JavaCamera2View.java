@@ -48,7 +48,6 @@ import org.opencv.imgproc.Imgproc;
 @TargetApi(21)
 public class JavaCamera2View extends CameraBridgeViewBase {
 
-    private static final int MAGIC_TEXTURE_ID = 10;
     private static final String LOGTAG = "JavaCamera2View";
 
     private ImageReader mImageReader;
