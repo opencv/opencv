@@ -1144,7 +1144,7 @@ public:
             return;
 
         const int nBinsPerDr = 10;
-        int nBins = (maxRadius - minRadius)/dr*nBinsPerDr;
+        int nBins = cvRound((maxRadius - minRadius)/dr*nBinsPerDr);
         std::vector<int> bins(nBins, 0);
         Mat distBuf(1, nzSz, CV_32FC1), distSqrBuf(1, nzSz, CV_32FC1);
         float *ddata = distBuf.ptr<float>();
