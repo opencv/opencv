@@ -1143,6 +1143,9 @@ public:
         if (isMaxCircles)
             return;
 
+        const int nBinsPerDr = 10;
+        int nBins = (maxRadius - minRadius)/dr*nBinsPerDr;
+        std::vector<int> bins(nBins, 0);
         Mat distBuf(1, nzSz, CV_32FC1), distSqrBuf(1, nzSz, CV_32FC1);
         float *ddata = distBuf.ptr<float>();
         float *dSqrData = distSqrBuf.ptr<float>();
@@ -1235,31 +1238,33 @@ public:
                     Mat bufRange = distSqrBuf.colRange(Range(0, nzCount));
                     sqrt(distBuf.colRange(Range(0, nzCount)), bufRange);
 
-                    // Sort non-zero pixels according to their distance from the center.
-                    sort(bufRange, bufRange, SORT_DESCENDING);
+                    std::fill(bins.begin(), bins.end(), 0);
+                    for(int k = 0; k < nzCount; k++)
+                    {
+                        int bin = std::max(0, std::min(nBins-1, cvRound((dSqrData[k] - minRadius)/dr*nBinsPerDr)));
+                        bins[bin]++;
+                    }
 
                     if (isMaxCircles)
                         return;
 
-                    int startIdx = nzCount - 1;
-                    float startDist = dSqrData[startIdx];
-                    for(j = nzCount - 2; j >= 0; --j)
+                    for(j = nBins - 1; j > 0; j--)
                     {
-                        float d = dSqrData[j];
-
-                        if( d - startDist > dr )
+                        if(bins[j])
                         {
-                            float rCur = dSqrData[(j + startIdx) / 2];
-                            int curCount = startIdx - j;
-                            //Check that angular size of arc is bigger than before
-                            if( curCount * rBest >= maxCount * rCur ||
-                               (rBest < FLT_EPSILON && curCount >= maxCount) )
+                            int upbin = j;
+                            int curCount = 0;
+                            for(; j > upbin - nBinsPerDr && j >= 0; j--)
+                            {
+                                curCount += bins[j];
+                            }
+                            float rCur = (upbin + j)/2.f /nBinsPerDr * dr + minRadius;
+                            if((curCount * rBest >= maxCount * rCur) ||
+                               (rBest < FLT_EPSILON && curCount >= maxCount))
                             {
                                 rBest = rCur;
                                 maxCount = curCount;
                             }
-                            startDist = d;
-                            startIdx = j;
                         }
                     }
                 }
