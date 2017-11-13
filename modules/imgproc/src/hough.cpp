@@ -898,12 +898,6 @@ inline bool cmpCircleIndex(const markedCircle &left, const markedCircle &right)
     return left.idx > right.idx;
 }
 
-struct AccumTLSData
-{
-    Mat accum;
-    std::vector<Point> nz;
-};
-
 class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
