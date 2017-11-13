@@ -763,6 +763,8 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr0), vld1_##suffix(ptr1))); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \

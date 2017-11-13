@@ -99,7 +99,7 @@ block and to save contents of the register to memory block.
 @ref v_setall_s8, @ref v_setall_u8, ...,
 @ref v_setzero_u8, @ref v_setzero_s8, ...
 - Memory operations:
-@ref v_load, @ref v_load_aligned, @ref v_load_halves,
+@ref v_load, @ref v_load_aligned, @ref v_load_low, @ref v_load_halves,
 @ref v_store, @ref v_store_aligned,
 @ref v_store_high, @ref v_store_low
 
@@ -1078,6 +1078,26 @@ template<typename _Tp>
 inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_aligned(const _Tp* ptr)
 {
     return v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes>(ptr);
+}
+
+/** @brief Load 64-bits of data to lower part (high part is undefined).
+
+@param ptr memory block containing data for first half (0..n/2)
+
+@code{.cpp}
+int lo[2] = { 1, 2 };
+v_int32x4 r = v_load_low(lo);
+@endcode
+ */
+template<typename _Tp>
+inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_low(const _Tp* ptr)
+{
+    v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> c;
+    for( int i = 0; i < c.nlanes/2; i++ )
+    {
+        c.s[i] = ptr[i];
+    }
+    return c;
 }
 
 /** @brief Load register contents from two memory blocks

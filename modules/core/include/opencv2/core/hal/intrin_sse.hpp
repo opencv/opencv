@@ -1016,6 +1016,8 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(_mm_loadu_si128((const __m128i*)ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(_mm_load_si128((const __m128i*)ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(_mm_loadl_epi64((const __m128i*)ptr)); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { \
     return _Tpvec(_mm_unpacklo_epi64(_mm_loadl_epi64((const __m128i*)ptr0), \
@@ -1044,6 +1046,8 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(_mm_loadu_##suffix(ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(_mm_load_##suffix(ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(_mm_castsi128_##suffix(_mm_loadl_epi64((const __m128i*)ptr))); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { \
     return _Tpvec(_mm_castsi128_##suffix( \
