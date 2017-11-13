@@ -2121,6 +2121,7 @@ struct Kernel::Impl
             }
         nu = 0;
         haveTempDstUMats = false;
+        haveTempSrcUMats = false;
     }
 
     void addUMat(const UMat& m, bool dst)
@@ -2131,6 +2132,8 @@ struct Kernel::Impl
         nu++;
         if(dst && m.u->tempUMat())
             haveTempDstUMats = true;
+        if(!dst && m.u->tempUMat() && m.u->urefcount == 2)
+            haveTempSrcUMats = true;
     }
 
     void addImage(const Image2D& image)
@@ -2168,6 +2171,7 @@ struct Kernel::Impl
     int nu;
     std::list<Image2D> images;
     bool haveTempDstUMats;
+    bool haveTempSrcUMats;
 };
 
 }} // namespace cv::ocl
@@ -2474,9 +2478,17 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
     }
     else
     {
-        addref();
-        isInProgress = true;
-        CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
+        if (haveTempSrcUMats)
+        {
+            addref();
+            isInProgress = true;
+            CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
+        }
+        else
+        {
+            cleanupUMats();
+            images.clear();
+        }
     }
     if (asyncEvent)
         CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
