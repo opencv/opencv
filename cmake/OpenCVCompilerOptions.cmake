@@ -28,17 +28,6 @@ if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC OR CMAKE_COMPILER_IS
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 endif()
 
-if(MINGW OR (X86 AND UNIX AND NOT APPLE))
-  # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    foreach(flags
-            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
-      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
-    endforeach()
-  endif()
-endif()
-
 if(MSVC)
   string(STRIP "${CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
   string(STRIP "${CMAKE_CXX_FLAGS_INIT}" CMAKE_CXX_FLAGS_INIT)
