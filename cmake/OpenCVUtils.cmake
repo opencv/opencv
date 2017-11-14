@@ -600,6 +600,51 @@ endfunction()
 
 endif() # NOT DEFINED CMAKE_ARGC
 
+#
+# Generate a list of enabled features basing on conditions:
+#   IF <cond> THEN <title>: check condition and append title to the result if it is true
+#   ELSE <title>: return provided value instead of empty result
+#   EXCLUSIVE: break after first successful condition
+#
+# Usage:
+#   ocv_build_features_string(out [EXLUSIVE] [IF feature THEN title] ... [ELSE title])
+#
+function(ocv_build_features_string out)
+  set(result)
+  list(REMOVE_AT ARGV 0)
+  foreach(arg ${ARGV})
+    if(arg STREQUAL "EXCLUSIVE")
+      set(exclusive TRUE)
+    elseif(arg STREQUAL "IF")
+      set(then FALSE)
+      set(cond)
+    elseif(arg STREQUAL "THEN")
+      set(then TRUE)
+      set(title)
+    elseif(arg STREQUAL "ELSE")
+      set(then FALSE)
+      set(else TRUE)
+    else()
+      if(then)
+        if(${cond})
+          list(APPEND result "${arg}")
+          if(exclusive)
+            break()
+          endif()
+        endif()
+      elseif(else)
+        if(NOT result)
+          set(result "${arg}")
+        endif()
+      else()
+        list(APPEND cond ${arg})
+      endif()
+    endif()
+  endforeach()
+  set(${out} ${result} PARENT_SCOPE)
+endfunction()
+
+
 # remove all matching elements from the list
 macro(ocv_list_filterout lst regex)
   foreach(item ${${lst}})
