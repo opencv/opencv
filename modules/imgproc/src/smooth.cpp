@@ -47,6 +47,8 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
+#include "filter.hpp"
+
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -1536,9 +1538,6 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
-    CV_OVX_RUN(true,
-               openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
-
     Mat src = _src.getMat();
     int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( ddepth < 0 )
@@ -1557,18 +1556,17 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     Size wsz(src.cols, src.rows);
     if(!(borderType&BORDER_ISOLATED))
         src.locateROI( wsz, ofs );
-    borderType = (borderType&~BORDER_ISOLATED);
 
     CALL_HAL(boxFilter, cv_hal_boxFilter, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
-             anchor.x, anchor.y, normalize, borderType);
+             anchor.x, anchor.y, normalize, borderType&~BORDER_ISOLATED);
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if ( tegra::useTegra() && tegra::box(src, dst, ksize, anchor, normalize, borderType) )
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
 
     CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
+
+    borderType = (borderType&~BORDER_ISOLATED);
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );
@@ -2098,16 +2096,6 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
     }
 
-    CV_OVX_RUN(true,
-               openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
-
-    Mat src = _src.getMat();
-    Mat dst = _dst.getMat();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(sigma1 == 0 && sigma2 == 0 && tegra::useTegra() && tegra::gaussian(src, dst, ksize, borderType))
-        return;
-#endif
     bool useOpenCL = (ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 &&
                ((ksize.width == 3 && ksize.height == 3) ||
                (ksize.width == 5 && ksize.height == 5)) &&
@@ -2116,27 +2104,35 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    Point ofs;
-    Size wsz(src.cols, src.rows);
-    if(!(borderType & BORDER_ISOLATED))
-        src.locateROI( wsz, ofs );
-    borderType = (borderType&~BORDER_ISOLATED);
-
-    CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, sdepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
-             ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
-             sigma1, sigma2, borderType);
-
-    src.release();
-    dst.release();
-
-    CV_IPP_RUN(!useOpenCL, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
-
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
     CV_OCL_RUN(useOpenCL, ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType));
 
-    sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > kx.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter2D(_src, _dst, sdepth, kx, ky, Point(-1, -1), 0, borderType))
+
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    if(!(borderType & BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+
+    CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, sdepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+             ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
+             sigma1, sigma2, borderType&~BORDER_ISOLATED);
+
+    src.release();
+    dst.release();
+
+    CV_OVX_RUN(true,
+               openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
+
+    CV_IPP_RUN_FAST(ipp_GaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType));
+
+    sepFilter2D(_src, _dst, sdepth, kx, ky, Point(-1, -1), 0, borderType);
 }
 
 /****************************************************************************************\
