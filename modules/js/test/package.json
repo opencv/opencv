@@ -3,7 +3,7 @@
   "description": "Tests for opencv js bindings",
   "version": "1.0.0",
   "dependencies" : {
-    "qunit" : "latest"
+    "node-qunit" : "latest"
   },
   "devDependencies": {
     "eslint" : "latest",
@@ -18,7 +18,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "BSD-4-Clause",
+  "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/opencv/opencv/issues"
   },
