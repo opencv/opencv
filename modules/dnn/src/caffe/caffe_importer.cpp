@@ -42,8 +42,6 @@
 #include "../precomp.hpp"
 
 #ifdef HAVE_PROTOBUF
-#include "caffe.pb.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>

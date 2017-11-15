@@ -99,7 +99,6 @@
 #include <fstream>
 #include <vector>
 
-#include "caffe.pb.h"
 #include "caffe_io.hpp"
 #include "glog_emulator.hpp"
 
