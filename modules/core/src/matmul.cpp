@@ -1831,7 +1831,7 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
         {
             // load 4 pixels
             v_uint16x8 v0_16 = v_load(src + x);              // b0 g0 r0 b1 g1 r1 b2 g2
-            v_uint16x8 v2_16 = v_load(src + x + cWidth * 2); // r2 b3 g3 r3 0  0  0  0
+            v_uint16x8 v2_16 = v_load_low(src + x + cWidth * 2); // r2 b3 g3 r3 ?  ?  ?  ?
 
             // expand to 4 vectors
             v_uint32x4 v0_32, v1_32, v2_32, v3_32, dummy_32;
