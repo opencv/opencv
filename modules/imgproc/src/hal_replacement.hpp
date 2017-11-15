@@ -721,6 +721,22 @@ inline int hal_ni_sobel(int src_depth, int dst_depth, const uchar* src_data, siz
 #define cv_hal_sobel hal_ni_sobel
 //! @endcond
 
+/**
+   @brief Perform Gaussian Blur and downsampling for input tile.
+   @param depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param src_width,src_height Source image dimensions
+   @param dst_width,dst_height Destination image dimensions
+   @param cn Number of channels
+   @param border_type Border type
+*/
+inline int hal_ni_pyrdown(int depth, const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int cn, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_pyrdown hal_ni_pyrdown
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
