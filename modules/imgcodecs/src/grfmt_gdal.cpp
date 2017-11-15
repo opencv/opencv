@@ -392,7 +392,7 @@ bool GdalDecoder::readData( Mat& img ){
            blue, alpha bands to BGRA indexes. Note: ignoring HSL, CMY,
            CMYK, and YCbCr color spaces, rather than converting them
            to BGR. */
-        int color = -1;
+        int color = 0;
         switch (band->GetColorInterpretation()) {
         case GCI_PaletteIndex:
         case GCI_GrayIndex:
@@ -409,45 +409,41 @@ bool GdalDecoder::readData( Mat& img ){
             color = 3;
             break;
         default:
-            color = -1;
-            break;
+            CV_ErrorNoReturn(cv::Error::StsError, "Invalid/unsupported mode");
         }
 
-        if (color >= 0) {
+        // make sure the image band has the same dimensions as the image
+        if( band->GetXSize() != m_width || band->GetYSize() != m_height ){ return false; }
 
-            // make sure the image band has the same dimensions as the image
-            if( band->GetXSize() != m_width || band->GetYSize() != m_height ){ return false; }
+        // grab the raster size
+        nRows = band->GetYSize();
+        nCols = band->GetXSize();
 
-            // grab the raster size
-            nRows = band->GetYSize();
-            nCols = band->GetXSize();
+        // create a temporary scanline pointer to store data
+        double* scanline = new double[nCols];
 
-            // create a temporary scanline pointer to store data
-            double* scanline = new double[nCols];
+        // iterate over each row and column
+        for( int y=0; y<nRows; y++ ){
 
-            // iterate over each row and column
-            for( int y=0; y<nRows; y++ ){
+            // get the entire row
+            band->RasterIO( GF_Read, 0, y, nCols, 1, scanline, nCols, 1, GDT_Float64, 0, 0);
 
-                // get the entire row
-                band->RasterIO( GF_Read, 0, y, nCols, 1, scanline, nCols, 1, GDT_Float64, 0, 0);
+            // set inside the image
+            for( int x=0; x<nCols; x++ ){
 
-                // set inside the image
-                for( int x=0; x<nCols; x++ ){
-
-                    // set depending on image types
-                    //   given boost, I would use enable_if to speed up.  Avoid for now.
-                    if( hasColorTable == false ){
-                        write_pixel( scanline[x], gdalType, nChannels, img, y, x, color );
-                    }
-                    else{
-                        write_ctable_pixel( scanline[x], gdalType, gdalColorTable, img, y, x, color );
-                    }
+                // set depending on image types
+                //   given boost, I would use enable_if to speed up.  Avoid for now.
+                if( hasColorTable == false ){
+                    write_pixel( scanline[x], gdalType, nChannels, img, y, x, color );
+                }
+                else{
+                    write_ctable_pixel( scanline[x], gdalType, gdalColorTable, img, y, x, color );
                 }
             }
-
-            // delete our temp pointer
-            delete [] scanline;
         }
+
+        // delete our temp pointer
+        delete [] scanline;
     }
 
     return true;
