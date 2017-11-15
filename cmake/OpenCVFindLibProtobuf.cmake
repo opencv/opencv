@@ -7,7 +7,7 @@ OCV_OPTION(BUILD_PROTOBUF "Force to build libprotobuf from sources" ON)
 OCV_OPTION(PROTOBUF_UPDATE_FILES "Force to rebuild .proto files" OFF)
 
 if(PROTOBUF_UPDATE_FILES)
-  if(NOT DEFINED Protobuf_PROTOC_EXECUTABLE)
+  if(NOT COMMAND PROTOBUF_GENERATE_CPP)
     find_package(Protobuf QUIET)
   endif()
   if(DEFINED Protobuf_PROTOC_EXECUTABLE AND EXISTS ${Protobuf_PROTOC_EXECUTABLE})
@@ -21,7 +21,7 @@ if(NOT BUILD_PROTOBUF AND NOT (DEFINED Protobuf_INCLUDE_DIRS AND DEFINED Protobu
   find_package(Protobuf QUIET)
 endif()
 
-if(Protobuf_FOUND)
+if(Protobuf_FOUND AND NOT BUILD_PROTOBUF)
   # nothing
 else()
   set(Protobuf_LIBRARIES libprotobuf)
