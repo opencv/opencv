@@ -722,6 +722,25 @@ inline int hal_ni_sobel(int src_depth, int dst_depth, const uchar* src_data, siz
 //! @endcond
 
 /**
+   @brief Computes Scharr filter
+   @param src_depth,dst_depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param cn Number of channels
+   @param margin_left,margin_top,margin_right,margin_bottom Margins for source image
+   @param dx,dy orders of the derivative x and y respectively
+   @param scale Scale factor for the computed derivative values
+   @param delta Delta value that is added to the results prior to storing them in dst
+   @param border_type Border type
+*/
+inline int hal_ni_scharr(int src_depth, int dst_depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type)  { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_scharr hal_ni_scharr
+//! @endcond
+
+/**
    @brief Perform Gaussian Blur and downsampling for input tile.
    @param depth Depths of source and destination image
    @param src_data,src_step Source image
