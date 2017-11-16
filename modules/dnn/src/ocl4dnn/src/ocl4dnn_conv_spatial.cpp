@@ -381,7 +381,7 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
     prepareKernel(bottom, top, weight, bias, numImages);
     if (bestKernelConfig.empty())
         return false;
-    return convolve(bottom, top, weight, bias, numImages, bestKernelConfig, cv::ocl::Queue::getDefault());
+    return convolve(bottom, top, weight, bias, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
@@ -392,7 +392,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
     options_.str(""); options_.clear(); // clear contents and state flags
     createBasicKernel(1, 1, 1);
     kernel_index_ = kernelQueue.size() - 1;
-    convolve(bottom, verifyTop, weight, bias, numImages, kernelQueue[kernel_index_], cv::ocl::Queue::getDefault());
+    convolve(bottom, verifyTop, weight, bias, numImages, kernelQueue[kernel_index_]);
     CV_Assert(phash.find(kernelQueue[kernel_index_]->kernelName) != phash.end());
     //unloadProgram(kernelQueue[kernel_index_]->kernelName);
     kernelQueue.pop_back();
@@ -649,8 +649,7 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
 template<>
 bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                                          const UMat &weight, const UMat &bias,
-                                         int32_t numImages, kernelConfig* config,
-                                         const cv::ocl::Queue& queue)
+                                         int32_t numImages, kernelConfig* config)
 {
     ocl::Program program;
     phash_t::iterator it = phash.find(config->kernelName);
@@ -926,17 +925,17 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
                                                const UMat &weight, const UMat &bias,
                                                int32_t numImages, kernelConfig* config)
 {
-    cv::ocl::Queue profilingQueue;
+    cv::ocl::Queue queue;
     try
     {
-        profilingQueue = cv::ocl::Queue::getDefault().getProfilingQueue();
+        queue = cv::ocl::Queue::getDefault();
     }
     catch (const cv::Exception&)
     {
         static int warn_ = 0;
         if (!warn_)
         {
-            std::cout << "OpenCV(ocl4dnn): Can't create OpenCL profiling queue for auto-tuning." << std::endl;
+            std::cout << "OpenCV(ocl4dnn): Can't get OpenCL default queue for auto-tuning." << std::endl;
             warn_ = true;
         }
         return 1e6;
@@ -945,16 +944,16 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     // warm up.
     bool saved_tuned = tuned_;
     tuned_ = false;
-    convolve(bottom, top, weight, bias, numImages, config, profilingQueue);
+    convolve(bottom, top, weight, bias, numImages, config);
 
-    cv::ocl::Timer timer(profilingQueue);
+    cv::ocl::Timer timer(queue);
     timer.start();
     bool res = true;;
     dbgPrint(std::cout << "Benchmarking kernel: " << config->kernelName << std::endl);
     tuned_ = true;
     int loop_cnt = 4;
     for (int i = 0; i < loop_cnt; i++) {
-        res = convolve(bottom, top, weight, bias, numImages, config, profilingQueue);
+        res = convolve(bottom, top, weight, bias, numImages, config);
         if (!res)
             break;
     }
@@ -1009,7 +1008,7 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     top.zeros(4, sz, CV_32FC1);
     bool saved_tuned = tuned_;
     tuned_ = false;
-    convolve(bottom, top, weight, bias, numImages, config, cv::ocl::Queue::getDefault());
+    convolve(bottom, top, weight, bias, numImages, config);
     tuned_ = saved_tuned;
 
     float *data = (float *)top.getMat(ACCESS_READ).ptr<float>();
