@@ -254,12 +254,8 @@ FORCE_INLINE(rt) fnm(const rg& a, const rg& b) \
 
     FORCE_INLINE(vec_bdword2) vec_nor(const vec_bdword2& a, const vec_bdword2& b)
     { return vec_bdword2_c(__builtin_vec_nor(vec_dword2_c(a), vec_dword2_c(b))); }
-#endif // __GNUG__ < 6
 
-#if __GNUG__ < 5
-// vec_xxpermdi in gcc4 missing little-endian supports just like clang
-#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ ((c & 1) << 1 | c >> 1)))
-// vec_packs doesn't support double words in gcc4
+// vec_packs doesn't support double words in gcc4 and old versions of gcc5
 #   undef vec_packs
     VSX_REDIRECT_2RG(vec_char16,  vec_short8,  vec_packs, __builtin_vec_packs)
     VSX_REDIRECT_2RG(vec_uchar16, vec_ushort8, vec_packs, __builtin_vec_packs)
@@ -268,6 +264,11 @@ FORCE_INLINE(rt) fnm(const rg& a, const rg& b) \
 
     VSX_IMPL_2VRG_F(vec_int4,  vec_dword2,  "vpksdss %0,%2,%1", vec_packs)
     VSX_IMPL_2VRG_F(vec_uint4, vec_udword2, "vpkudus %0,%2,%1", vec_packs)
+#endif // __GNUG__ < 6
+
+#if __GNUG__ < 5
+// vec_xxpermdi in gcc4 missing little-endian supports just like clang
+#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ ((c & 1) << 1 | c >> 1)))
 #else
 #   define vec_permi vec_xxpermdi
 #endif // __GNUG__ < 5
