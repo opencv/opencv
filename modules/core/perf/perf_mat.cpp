@@ -111,11 +111,11 @@ PERF_TEST_P(Size_MatType, Mat_Transform,
     const float transform[] = { 0.5f,           0.f, 0.86602540378f, 128,
                                 0.f,            1.f, 0.f,            -64,
                                 0.86602540378f, 0.f, 0.5f,            32,};
+    Mat mtx(Size(4, 3), CV_32FC1, (void*)transform);
 
-    Mat src(srcSize, type), mtx(Size(4, 3), CV_32FC1, (void*)transform), dst(srcSize, type);
+    Mat src(srcSize, type), dst(srcSize, type);
     randu(src, 0, 30);
     declare.in(src).out(dst);
-    randu(mtx, 0, 1);
 
     TEST_CYCLE()
     {
