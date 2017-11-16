@@ -9,7 +9,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.dnn.DictValue;
 import org.opencv.dnn.Dnn;
-import org.opencv.dnn.Importer;
 import org.opencv.dnn.Layer;
 import org.opencv.dnn.Net;
 import org.opencv.imgcodecs.Imgcodecs;
