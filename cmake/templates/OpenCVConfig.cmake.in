@@ -343,6 +343,7 @@ endif()
 
 if("@Qt5Widgets_FOUND@")
   find_dependency(Qt5Widgets)
+  _qt_cmake_extra_helpers_add_interface(opencv_highgui Qt5::Widgets)
   if(NOT "@BUILD_SHARED_LIBS@")
     # function from Hunter's QtCMakeExtra project
     _qt_cmake_extra_helpers_add_source(
