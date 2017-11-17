@@ -205,7 +205,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     list(APPEND js_tutorials_assets_deps "${f}" "${opencv_tutorial_html_dir}/${fname}")
   endforeach()
 
-  set(doxygen_result "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/index.html")
+  set(doxygen_result "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/modules.html")
 
   add_custom_target(doxygen_cpp
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
@@ -220,7 +220,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
 
   if(BUILD_opencv_python2)
     add_custom_target(doxygen_python
-      COMMAND ${PYTHON2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/python_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON2_SIGNATURES_FILE}"
+      COMMAND ${PYTHON2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/add_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON2_SIGNATURES_FILE}" "python"
       DEPENDS "${doxygen_result}" gen_opencv_python2
     )
     add_custom_target(doxygen
@@ -228,7 +228,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     )
   elseif(BUILD_opencv_python3)
     add_custom_target(doxygen_python
-      COMMAND ${PYTHON3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/python_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON3_SIGNATURES_FILE}"
+      COMMAND ${PYTHON3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/add_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON3_SIGNATURES_FILE}" "python"
       DEPENDS "${doxygen_result}" gen_opencv_python3
     )
     add_custom_target(doxygen

@@ -1,7 +1,6 @@
 from __future__ import print_function
 import logging
 import os
-import codecs
 from pprint import pprint
 
 try:
@@ -12,180 +11,157 @@ except ImportError:
                       'Install BeautifulSoup (bs4) for adding'
                       ' Python & Java signatures documentation')
 
-
-def is_not_module_link(tmp_link):
-    """ Checks if a link belongs to a c++ method """
-    if tmp_link is None:
-        return True
-    if "group" not in tmp_link:
-        return True
-    if "#" in tmp_link:
-        return True
-    return False
-
-
-def get_links_list(tmp_soup, filter_links):
-    """ Get a list of links from a soup """
-    tmp_href_list = []
-    for tmp_link in tmp_soup.findAll('a'):
-        tmp_href = tmp_link.get('href')
-        if filter_links:
-            if is_not_module_link(tmp_href):
-                continue
-        tmp_href_list.append(tmp_href)
-    return tmp_href_list
-
-
 def load_html_file(file_dir):
     """ Uses BeautifulSoup to load an html """
     with open(file_dir) as fp:
-        tmp_soup = BeautifulSoup(fp, 'html.parser')
-    return tmp_soup
+        soup = BeautifulSoup(fp, 'html.parser')
+    return soup
 
-
-def add_item(tmp_soup, new_row, is_parameter, text):
+def add_item(soup, new_row, is_parameter, text):
     """ Adds a new html tag for the table with the signature """
-    new_item = tmp_soup.new_tag('td')
+    new_item = soup.new_tag('td')
     if is_parameter:
-        new_item = tmp_soup.new_tag('td', **{'class': 'paramname'})
+        new_item = soup.new_tag('td', **{'class': 'paramname'})
     new_item.append(text)
     new_row.append(new_item)
-    return new_row
+    return new_row, soup
 
-
-def get_text_between_substrings(sig, begin_char, end_char):
-    return sig.partition(begin_char)[-1].rpartition(end_char)[0]
-
-
-def add_signature_to_table(tmp_soup, new_row, signature, function_name, language, ident):
+def add_signature_to_table(soup, tmp_row, signature, language):
     """ Add a signature to an html table"""
-    if ident:
-        new_item = tmp_soup.new_tag('td', style="padding-left: 0.5cm;")
-    else:
-        new_item = tmp_soup.new_tag('td')
+    new_item = soup.new_tag('td', style="padding-left: 0.5cm;")
 
     if str(signature.get('ret', None)) != "None":
         new_item.append(signature.get('ret') + ' =')
-        new_row.append(new_item)
+        tmp_row.append(new_item)
 
-    if "Python" in language:
-        pass  # function_name = "cv2." + function_name
-    elif "Java" in language:
-        # get word before function_name (= output)
-        str_before_bracket = signature.split('(', 1)[0]
-        list_of_words = str_before_bracket.split()
-        output = list_of_words[len(list_of_words) - 2]
-        new_item.append(output + " ")
-        new_row.append(new_item)
-
-    new_row = add_item(tmp_soup, new_row, False, signature.get('name', function_name) + '(')
-    new_row = add_item(tmp_soup, new_row, True, signature['arg'])
-    new_row = add_item(tmp_soup, new_row, False, ')')
-    return new_row
+    tmp_row, soup = add_item(soup, tmp_row, False, "cv2." + signature.get('name', None) + '(')
+    tmp_row, soup = add_item(soup, tmp_row, True, signature['arg'])
+    tmp_row, soup = add_item(soup, tmp_row, False, ')')
+    return tmp_row, soup
 
 
-def new_line(tmp_soup, tmp_table, new_row):
+def new_line(soup, tmp_table, new_row):
     """ Adds a new line to the html table """
     tmp_table.append(new_row)
-    new_row = tmp_soup.new_tag('tr')
-    return new_row
+    new_row = soup.new_tag('tr')
+    return new_row, soup
 
 
-def add_bolded(tmp_soup, new_row, text):
+def add_bolded(soup, new_row, text):
     """ Adds bolded text to the table """
-    new_item = tmp_soup.new_tag('th', style="text-align:left")
+    new_item = soup.new_tag('th', style="text-align:left")
     new_item.append(text)
     new_row.append(new_item)
-    return new_row
+    return new_row, soup
 
 
-def create_description(tmp_soup, language, signatures, function_name):
+def create_description(soup, language, signatures):
     """ Insert the new Python / Java table after the current html c++ table """
     assert signatures
-    tmp_table = tmp_soup.new_tag('table')
-    new_row = tmp_soup.new_tag('tr')
-    new_row = add_bolded(tmp_soup, new_row, language)
-    ident = False
-
-    new_row = new_line(tmp_soup, tmp_table, new_row)
-    ident = True
-
+    tmp_table = soup.new_tag('table')
+    new_row = soup.new_tag('tr')
+    new_row, soup = add_bolded(soup, new_row, language)
+    new_row, soup = new_line(soup, tmp_table, new_row)
     for s in signatures:
-        new_row = new_line(tmp_soup, tmp_table, new_row)
-        new_row = add_signature_to_table(tmp_soup, new_row, s, function_name, language, ident)
-        new_row = new_line(tmp_soup, tmp_table, new_row)
+        new_row, soup = new_line(soup, tmp_table, new_row)
+        new_row, soup = add_signature_to_table(soup, new_row, s, language)
+        new_row, soup = new_line(soup, tmp_table, new_row)
+    return tmp_table, soup
 
-    return tmp_table
 
+def get_anchor_list(anchor, soup):
+    a_list = []
+    # go through all the links
+    for a in soup.find_all('a', href=True):
+        # find links with the same anchor
+        last_part_of_link = a['href'].rsplit('#', 1)[-1]
+        if last_part_of_link == anchor:
+            a_list.append(a)
+    return a_list
 
-def add_signatures(tmp_soup, tmp_dir, module_name, config):
-    """ Add signatures to the current soup and rewrite the html file"""
+def append_python_signatures_to_table(soup, signatures, table):
+    description, soup = create_description(soup, "Python:", signatures)
+    description['class'] = 'python_language'
+    old = table.next_sibling
+    if old.name != 'table':
+        old = None
+    elif not 'python_language' in old.get('class', []):
+        old = None
+    # if already existed replace with the new
+    if old is None:
+        table.insert_after(description)
+    else:
+        old.replace_with(description)
+    table.insert_after(description)
+    return soup
 
-    logging.debug(tmp_dir)
-    sign_counter = 0
-    python_sign_counter = 0
-    java_sign_counter = 0
+def get_heading_text(a):
+    str = ""
+    element = a.parent.parent
+    if element is not None:
+        if element.has_attr('class'):
+            tmp_class = element["class"][0]
+            if "memitem:" in tmp_class and "python" not in tmp_class:
+                str = element.parent.find("tr").text
+    return str
 
-    if config.ADD_JAVA:
-        functions_file = "java_doc_txts/" + module_name + "/functions.txt"
-        if os.path.exists(functions_file):
-            with open(functions_file, 'r') as f:
-                java_signatures = f.read().split("\n")
+def append_python_signatures_to_heading(soup, signatures, element, href):
+    for s in signatures:
+        attrs = {'class': 'memitem:python'}
+        new_tr = soup.new_tag('tr', **attrs)
+
+        attrs_left = {'class': 'memItemLeft', 'valign': 'top', 'align': 'right'}
+        new_td_left = soup.new_tag('td', **attrs_left)
+        new_td_left.append(str(s.get('ret', None)))
+        new_tr.append(new_td_left)
+
+        attrs_right = {'class': 'memItemRight', 'valign': 'bottom'}
+        new_td_right = soup.new_tag('td', **attrs_right)
+        attrs_a = {'class': 'el', 'href': href}
+        new_a = soup.new_tag('a', **attrs_a)
+        new_a.append('cv2.' + str(s.get('name', None)))
+        new_td_right.append(new_a)
+        new_td_right.append("(" + s['arg'] +")")
+
+        new_tr.append(new_td_right)
+
+        old = element.next_sibling
+        if old is not None:
+            if old.name != 'tr':
+                old = None
+            elif not 'memitem:python' in old.get('class', []):
+                old = None
+        # if already existed replace with the new
+        if old is None:
+            element.insert_after(new_tr)
         else:
-            config.ADD_JAVA = False # This C++ module (module_name) may not exist in Java
+            old.replace_with(new_tr)
+    return soup
 
-    # the HTML tag & class being used to find functions
-    for function in tmp_soup.findAll("h2", {"class": "memtitle"}):
-        function_name = None
-        for c in function.contents:
-             if isinstance(c, bs4.element.NavigableString):
-                 fn = str(c).encode("ascii","ignore").decode().strip()
-                 if not fn.endswith('()'): # all functions have () in it's name
-                     # enums, structures, etc
-                     continue
-                 function_name = fn[:-2]
+def append_python_signature(function_variants, anchor_list, soup):
+    type = anchor_list[0].type
+    if type == "fn":
+        if len(anchor_list) == 1:
+            tmp_anchor = anchor_list[0].anchor
+            a_list = get_anchor_list(tmp_anchor, soup)
+            for a in a_list:
+                if a['href'] == "#" + tmp_anchor:
+                    # Function Documentation (tables)
+                    table = a.findNext('table')
+                    if table is not None:
+                        soup = append_python_signatures_to_table(soup, function_variants, table)
+                    continue
+                str = get_heading_text(a)
+                if "Functions" in str:
+                    soup = append_python_signatures_to_heading(soup, function_variants, a.parent, a['href'])
+                    print("One more")
+    return soup
 
-        if not function_name:
-            continue
-
-        sign_counter += 1
-
-        cpp_table = function.findNext('table')
-
-        if config.ADD_PYTHON:
-            signatures = config.python_signatures.get("cv::" + str(function_name), None)
-            if signatures:
-                print(function_name)
-
-                description = create_description(tmp_soup, "Python:", signatures, function_name)
-                description['class'] = 'python_language'
-                old = cpp_table.next_sibling
-                if old.name != 'table':
-                    old = None
-                elif not 'python_language' in old.get('class', []):
-                    old = None
-                if old is None:
-                    cpp_table.insert_after(description)
-                else:
-                    old.replace_with(description)
-                python_sign_counter += 1
-
-        if config.ADD_JAVA:
-            for signature in java_signatures:
-                if function_name in signature:
-                    create_description(cpp_table, tmp_soup, "Java:", signature, function_name)
-                    java_sign_counter += 1
-                    break
-
-    tmp_str = str(tmp_soup)
+def update_html(file, soup):
+    tmp_str = str(soup)
     if os.name == 'nt': # if Windows
-        with open(tmp_dir, "wb") as tmp_file:
+        with open(file, "wb") as tmp_file:
             tmp_file.write(tmp_str.encode("ascii","ignore"))
     else:
-        with open(tmp_dir, "w") as tmp_file:
+        with open(file, "w") as tmp_file:
             tmp_file.write(tmp_str)
-
-    logging.debug("Added [" + str(python_sign_counter) + \
-                  "/" + str(sign_counter) + "] Python signatures")
-    logging.debug("Added [" + str(java_sign_counter) + \
-                  "/" + str(sign_counter) + "] Java signatures")
