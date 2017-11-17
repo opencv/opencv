@@ -3123,6 +3123,9 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
+    CALL_HAL(medianBlur, cv_hal_medianBlur, src0.depth(), src0.data, src0.step, dst.data, dst.step, src0.cols, src0.rows,
+             src0.channels(), ksize);
+
     CV_OVX_RUN(true,
                openvx_medianFilter(_src0, _dst, ksize))
 
