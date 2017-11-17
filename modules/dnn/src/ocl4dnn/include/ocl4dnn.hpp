@@ -302,7 +302,7 @@ class OCL4DNNConvSpatial
         std::stringstream options_;
         cv::ocl::ProgramSource src_;
         int32_t prev_kernel_type_;
-        bool negative_slope_;
+        float negative_slope_;
         UMat negative_slope_umat_;
         ocl4dnnFusedActiv_t fused_activ_;
 };
