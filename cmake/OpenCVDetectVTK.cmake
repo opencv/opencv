@@ -57,4 +57,4 @@ if(HAVE_QT AND ${VTK_VERSION} VERSION_GREATER "6.0.0" AND NOT ${VTK_QT_VERSION} 
 endif()
 
 set(HAVE_VTK ON)
-message(STATUS "Found VTK ver. ${VTK_VERSION} (usefile: ${VTK_USE_FILE})")
+message(STATUS "Found VTK ${VTK_VERSION} (${VTK_USE_FILE})")
