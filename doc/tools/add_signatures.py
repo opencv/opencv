@@ -71,14 +71,14 @@ classes = root.findall("./compound[@kind='class']")
 for c in classes:
     c_name = c.find("./name").text
     name = ns_name + '::' + c_name
-    file = c.find("./filename").text    
+    file = c.find("./filename").text
     #print('Class: {} => {}'.format(name, file))
     files_dict = doxygen_scan.scan_class_methods(c, c_name, files_dict)
 
 # test
 for file in files_dict:
     soup = html_functions.load_html_file(ROOT_DIR + file)
-    if file == "d4/d86/group__imgproc__filter.html":#"d4/d86/group__imgproc__filter.html":
+    if file == "dd/d9e/classcv_1_1VideoWriter.html":#"d4/d86/group__imgproc__filter.html":#"d4/d86/group__imgproc__filter.html":
         anchor_list = files_dict[file]
         counter = 0
         anchor_tmp_list = []
