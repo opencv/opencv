@@ -334,7 +334,7 @@ CV_SUPPRESS_DEPRECATED_END
 #include "opencv2/core/opencl/runtime/opencl_gl.hpp"
 #endif
 
-#else HAVE_OPENCL_STATIC
+#else // HAVE_OPENCL_STATIC
 
 #include "opencv2/core/opencl/runtime/opencl_gl.hpp"
 
