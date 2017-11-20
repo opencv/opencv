@@ -793,6 +793,30 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    template<int s>
+    TheTest & test_rotate()
+    {
+        Data<R> dataA, dataB;
+        dataB *= 10;
+        R a = dataA, b = dataB;
+
+        Data<R> resC = v_rotate_right<s>(a);
+        Data<R> resD = v_rotate_right<s>(a, b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            if (i + s >= R::nlanes)
+            {
+                EXPECT_EQ((LaneType)0, resC[i]);
+                EXPECT_EQ(dataB[i - R::nlanes + s], resD[i]);
+            }
+            else
+                EXPECT_EQ(dataA[i + s], resC[i]);
+        }
+
+        return *this;
+    }
+
     TheTest & test_float_math()
     {
         typedef typename V_RegTrait128<LaneType>::int_reg Ri;
@@ -881,6 +905,16 @@ template<typename R> struct TheTest
                                       + dataV[2] * dataC[i]
                                       + dataV[3] * dataD[i];
             EXPECT_DOUBLE_EQ(val, res[i]);
+        }
+
+        Data<R> resAdd = v_matmuladd(v, a, b, c, d);
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            LaneType val = dataV[0] * dataA[i]
+                                      + dataV[1] * dataB[i]
+                                      + dataV[2] * dataC[i]
+                                      + dataD[i];
+            EXPECT_DOUBLE_EQ(val, resAdd[i]);
         }
         return *this;
     }
