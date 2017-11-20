@@ -52,12 +52,21 @@
 #elif defined(FUSED_CONV_PRELU)
 #define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope[c])))
 #define NEGATIVE_SLOPE_ARG __global const Dtype *negative_slope,
+#elif defined(FUSED_CONV_POWER)
+#define ACTIVATION_RELU_FUNCTION(x, c) pow(x, power)
+#define NEGATIVE_SLOPE_ARG Dtype power,
 #else
 #define ACTIVATION_RELU_FUNCTION(x, c) (x)
 #define NEGATIVE_SLOPE_ARG
 #endif
 
+#ifdef FUSED_CONV_ELTWISE
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(eltwise_data[(_offset_)] + (_data_), _channel_);} while(0)
+#define ELTWISE_DATA_ARG __global Dtype* eltwise_data,
+#else
 #define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_data_, _channel_);} while(0)
+#define ELTWISE_DATA_ARG
+#endif
 
 
 #define __CAT(x, y) x##y
@@ -99,6 +108,7 @@
 #ifdef KERNEL_BASIC
 
 __kernel void ConvolveBasic(
+    ELTWISE_DATA_ARG
     NEGATIVE_SLOPE_ARG
     __global Dtype* image_data,
     int image_offset,
@@ -193,6 +203,7 @@ __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 #endif
 __kernel void
 convolve_simd(
+    ELTWISE_DATA_ARG
     NEGATIVE_SLOPE_ARG
     __global Dtype* inputs_base,
     filter_qualifier Dtype* weights_base,
@@ -413,6 +424,7 @@ typedef struct float0 { float s0; } float0; //never used but makes compiler happ
 #define ROW_PITCH input_width
 
 #define GEMM_LIKE_KERNEL_ARGS     \
+    ELTWISE_DATA_ARG              \
     NEGATIVE_SLOPE_ARG            \
     const __global Dtype *src0,   \
     const __global Dtype *src1,   \

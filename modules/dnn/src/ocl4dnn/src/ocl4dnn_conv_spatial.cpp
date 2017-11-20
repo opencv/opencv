@@ -79,6 +79,8 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     group_ = config.group;
 
     fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+    fused_eltwise_ = false;
+    power_ = 1.f;
     negative_slope_ = 0;
     prev_kernel_type_ = -1;
     tuned_ = false;
@@ -141,14 +143,20 @@ OCL4DNNConvSpatial<Dtype>::~OCL4DNNConvSpatial()
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::setFusionDefine(ocl4dnnFusedActiv_t fused_activ)
+void OCL4DNNConvSpatial<Dtype>::setFusionDefine(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise)
 {
+    if (fused_eltwise)
+        addDef("FUSED_CONV_ELTWISE", 1);
+
     switch (fused_activ) {
         case OCL4DNN_CONV_FUSED_ACTIV_RELU:
             addDef("FUSED_CONV_RELU", 1);
             break;
         case OCL4DNN_CONV_FUSED_ACTIV_PRELU:
             addDef("FUSED_CONV_PRELU", 1);
+            break;
+        case OCL4DNN_CONV_FUSED_ACTIV_POWER:
+            addDef("FUSED_CONV_POWER", 1);
             break;
         default:
             ;
@@ -157,14 +165,20 @@ void OCL4DNNConvSpatial<Dtype>::setFusionDefine(ocl4dnnFusedActiv_t fused_activ)
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, ocl::Kernel &kernel, cl_uint &argIdx)
+void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, ocl::Kernel &kernel, cl_uint &argIdx)
 {
+    if (fused_eltwise)
+        kernel.set(argIdx++, (cl_mem)bottom_data2_.handle(ACCESS_READ));
+
     switch (fused_activ) {
         case OCL4DNN_CONV_FUSED_ACTIV_RELU:
             kernel.set(argIdx++, (float)negative_slope_);
             break;
         case OCL4DNN_CONV_FUSED_ACTIV_PRELU:
             kernel.set(argIdx++, (cl_mem)negative_slope_umat_.handle(ACCESS_READ));
+            break;
+        case OCL4DNN_CONV_FUSED_ACTIV_POWER:
+            kernel.set(argIdx++, (float)power_);
             break;
         default:
             ;
@@ -255,7 +269,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("ALIGNED_NUM_FILTERS", (int)alignSize(M_, simd_size));
         addDef("OUT_BLOCK_SIZE", (output_block_width*output_block_height));
         addDef("APPLY_BIAS", bias_term_);
-        setFusionDefine(fused_activ_);
+        setFusionDefine(fused_activ_, fused_eltwise_);
 
         src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
     }
@@ -277,7 +291,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("APPLY_BIAS", bias_term_);
         addDef("OUTPUT_Z", M_);
         addDef("ZPAR", 1);
-        setFusionDefine(fused_activ_);
+        setFusionDefine(fused_activ_, fused_eltwise_);
 
         src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
     }
@@ -314,7 +328,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("TILE_N_LAST", M_ % 32);
         addDef("TILE_N_LAST_DIV8", (M_ % 32) / 8);
         addDef("APPLY_BIAS", bias_term_);
-        setFusionDefine(fused_activ_);
+        setFusionDefine(fused_activ_, fused_eltwise_);
         src_ = ocl::dnn::conv_layer_spatial_oclsrc;
     }
 }
@@ -371,13 +385,36 @@ void OCL4DNNConvSpatial<Dtype>::setActivPReLU(bool fuse_activ, std::vector<float
 }
 
 template<typename Dtype>
+void OCL4DNNConvSpatial<Dtype>::setActivPower(bool fuse_activ, float power)
+{
+    if ( fuse_activ )
+    {
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_POWER;
+        power_ = power;
+    }
+    else
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+}
+
+template<typename Dtype>
 bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
+                                        const UMat& bottom2,
                                         const UMat& weight,
                                         const UMat& bias,
                                         UMat& top,
                                         int32_t numImages)
 {
     num_ = numImages;
+    if (!bottom2.empty())
+    {
+        fused_eltwise_ = true;
+        bottom_data2_ = bottom2;
+    }
+    else
+    {
+        fused_eltwise_ = false;
+    }
+
     prepareKernel(bottom, top, weight, bias, numImages);
     if (bestKernelConfig.empty())
         return false;
@@ -428,7 +465,8 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
                << "p" << pad_w_ << "x" << pad_h_ << "_"
                << "num" << num_ << "_"
                << "M" << M_ << "_"
-               << "activ" << fused_activ_;
+               << "activ" << fused_activ_ << "_"
+               << "eltwise" << fused_eltwise_;
 
 
     key_ = ocl::Device::getDefault().vendorName() + "_EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
@@ -678,7 +716,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            setFusionArg(fused_activ_, kernel, argIdx);
+            setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
 
             UMat img_buffer;
             if (image_offset)
@@ -771,7 +809,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            setFusionArg(fused_activ_, kernel, argIdx);
+            setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
 
             UMat img_buffer;
             if (image_offset)
@@ -888,7 +926,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     return false;
 
                 cl_uint argIdx = 0;
-                setFusionArg(fused_activ_, kernel, argIdx);
+                setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
                 kernel.set(argIdx++, image_offset);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
@@ -1491,6 +1529,7 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
 
     if (loadCachedConfig()) // check in-memory cache
         return;
+
     if (loadTunedConfig()) // check external storage
         return;
 
