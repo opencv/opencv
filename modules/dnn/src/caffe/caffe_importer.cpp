@@ -94,6 +94,24 @@ public:
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
     }
 
+    CaffeImporter(const uchar* protobin, size_t protobin_size, const uchar* caffemodel, size_t caffemodel_size)
+    {
+        CV_TRACE_FUNCTION();
+
+        ReadNetParamsFromBufferOrDie(protobin, protobin_size, &net);
+
+        ReadNetParamsFromBufferOrDie(caffemodel, caffemodel_size, &netBinary);
+    }
+
+    CaffeImporter(const std::vector<uchar>& prototxt_binary, const std::vector<uchar>& caffemodel_binary)
+    {
+        CV_TRACE_FUNCTION();
+
+        ReadNetParamsFromBufferOrDie(prototxt_binary.data(), prototxt_binary.size(), &net);
+
+        ReadNetParamsFromBufferOrDie(caffemodel_binary.data(), caffemodel_binary.size(), &netBinary);
+    }
+
     void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
     {
         const Reflection *refl = msg.GetReflection();
@@ -395,6 +413,30 @@ Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeMod
 Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
 {
     CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
+}
+
+void convertPrototxtToBinary(const String & prototxt, std::vector<uchar>& prototxt_binary)
+{
+    caffe::NetParameter net;
+    ReadNetParamsFromTextFileOrDie(prototxt.c_str(), &net);
+    prototxt_binary.resize(net.ByteSize());
+    net.SerializePartialToArray(prototxt_binary.data(), prototxt_binary.size());
+}
+
+Net readNetFromCaffe(const uchar* protobin, size_t protobin_size, const uchar* caffemodel, size_t caffemodel_size)
+{
+    CaffeImporter caffeImporter(protobin, protobin_size, caffemodel, caffemodel_size);
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
+}
+
+Net readNetFromCaffe(const std::vector<uchar>& prototxt_binary, const std::vector<uchar>& caffemodel_binary)
+{
+    CaffeImporter caffeImporter(prototxt_binary, caffemodel_binary);
     Net net;
     caffeImporter.populateNet(net);
     return net;

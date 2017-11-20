@@ -634,6 +634,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
 
+    CV_EXPORTS_W void convertPrototxtToBinary(const String &prototxt, std::vector<uchar> &prototxt_binary);
+
+    CV_EXPORTS_W Net readNetFromCaffe(const uchar* protobin, size_t protobin_size, const uchar* caffemodel, size_t caffemodel_size);
+    CV_EXPORTS_W Net readNetFromCaffe(const std::vector<uchar> &prototxt_binary, const std::vector<uchar> &caffemodel_binary);
+
     /** @brief Reads a network model stored in Tensorflow model file.
       * @details This is shortcut consisting from createTensorflowImporter and Net::populateNet calls.
       */

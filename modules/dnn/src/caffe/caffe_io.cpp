@@ -1132,6 +1132,14 @@ bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
     return success;
 }
 
+bool ReadProtoFromBuffer(const uchar* buffer, size_t buffer_size, Message* proto) {
+    google::protobuf::io::CodedInputStream* coded_input = new google::protobuf::io::CodedInputStream(buffer, buffer_size);
+    coded_input->SetTotalBytesLimit(INT_MAX, 536870912);
+    bool success = proto->ParseFromCodedStream(coded_input);
+    delete coded_input;
+    return success;
+}
+
 void ReadNetParamsFromTextFileOrDie(const char* param_file,
                                     NetParameter* param) {
   CHECK(ReadProtoFromTextFile(param_file, param))
@@ -1144,6 +1152,13 @@ void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
   CHECK(ReadProtoFromBinaryFile(param_file, param))
       << "Failed to parse NetParameter file: " << param_file;
   UpgradeNetAsNeeded(param_file, param);
+}
+
+void ReadNetParamsFromBufferOrDie(const uchar* buffer, size_t buffer_size, 
+    NetParameter* param) {
+    CHECK(ReadProtoFromBuffer(buffer, buffer_size, param))
+        << "Failed to parse NetParameter buffer";
+    UpgradeNetAsNeeded("[BUFFER]", param);
 }
 
 }

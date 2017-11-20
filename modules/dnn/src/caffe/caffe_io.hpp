@@ -101,6 +101,8 @@ void ReadNetParamsFromTextFileOrDie(const char* param_file,
                                     caffe::NetParameter* param);
 void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
                                       caffe::NetParameter* param);
+void ReadNetParamsFromBufferOrDie(const uchar* buffer, size_t buffer_size,
+                                  caffe::NetParameter* param);
 
 }
 }
