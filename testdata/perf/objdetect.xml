@@ -203,18 +203,17 @@
     <min>39.</min>
     <max>1160.</max>
     <last>
-      <x>58</x>
+      <x>57</x>
       <y>0</y>
       <val>47.</val></last>
     <rng1>
-      <x>9</x>
+      <x>10</x>
       <y>0</y>
-      <val>267.</val></rng1>
+      <val>282.</val></rng1>
     <rng2>
-      <x>20</x>
+      <x>4</x>
       <y>0</y>
-      <cn>3</cn>
-      <val>47.</val></rng2></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-class57-png---30->
+      <val>188.</val></rng2></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-class57-png---30->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-class57-png---64->
   <faces>
     <kind>196608</kind>
