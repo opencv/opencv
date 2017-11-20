@@ -77,6 +77,7 @@ typedef enum {
     OCL4DNN_CONV_FUSED_ACTIV_NONE                 = 0,
     OCL4DNN_CONV_FUSED_ACTIV_RELU                 = 1,
     OCL4DNN_CONV_FUSED_ACTIV_PRELU                = 2,
+    OCL4DNN_CONV_FUSED_ACTIV_POWER                = 3
 } ocl4dnnFusedActiv_t;
 
 template<typename Dtype>
@@ -86,11 +87,13 @@ class OCL4DNNConvSpatial
         explicit OCL4DNNConvSpatial(OCL4DNNConvConfig config);
         ~OCL4DNNConvSpatial();
         bool Forward(const UMat& bottom_data,
+                     const UMat& bottom_data2,
                      const UMat& weight,
                      const UMat& bias,
                      UMat& top_data, int32_t batch_size);
         void setActivReLU(bool fuse_activ, float slope);
         void setActivPReLU(bool fuse_activ, std::vector<float> &slope);
+        void setActivPower(bool fuse_activ, float power);
         void setBias(bool bias_term);
 
     private:
@@ -252,8 +255,8 @@ class OCL4DNNConvSpatial
                                  int lx, int ly, int lz,
                                  bool swizzle, bool nullLocal);
         void generateTunerItems(std::vector< cv::Ptr<tunerParam> > &tunerItems);
-        void setFusionDefine(ocl4dnnFusedActiv_t fused_activ);
-        void setFusionArg(ocl4dnnFusedActiv_t fused_activ, ocl::Kernel &kernel, cl_uint &argIdx);
+        void setFusionDefine(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise);
+        void setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, ocl::Kernel &kernel, cl_uint &argIdx);
 
         int32_t group_;
         bool bias_term_;
@@ -305,6 +308,8 @@ class OCL4DNNConvSpatial
         float negative_slope_;
         UMat negative_slope_umat_;
         ocl4dnnFusedActiv_t fused_activ_;
+        float power_;
+        bool fused_eltwise_;
 };
 
 typedef enum {
