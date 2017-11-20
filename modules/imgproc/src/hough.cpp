@@ -1209,10 +1209,11 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         // Check if the circle has enough support
         if( max_count > acc_threshold )
         {
-            float c[3];
+            float c[4];
             c[0] = cx;
             c[1] = cy;
             c[2] = (float)r_best;
+            c[3] = (float)max_count;
             cvSeqPush( circles, c );
             if( circles->total > circles_max )
                 return;
@@ -1256,8 +1257,8 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
 
     if(isStorage)
     {
-        circles = cvCreateSeq( CV_32FC3, sizeof(CvSeq),
-            sizeof(float)*3, (CvMemStorage*)circle_storage );
+        circles = cvCreateSeq( CV_32FC4, sizeof(CvSeq),
+            sizeof(float)*4, (CvMemStorage*)circle_storage );
     }
     else
     {
@@ -1268,7 +1269,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
             CV_Error( CV_StsBadArg,
             "The destination matrix should be continuous and have a single row or a single column" );
 
-        circles = cvMakeSeqHeaderForArray( CV_32FC3, sizeof(CvSeq), sizeof(float)*3,
+        circles = cvMakeSeqHeaderForArray( CV_32FC4, sizeof(CvSeq), sizeof(float)*4,
                 mat->data.ptr, mat->rows + mat->cols - 1, &circles_header, &circles_block );
         circles_max = circles->total;
         cvClearSeq( circles );
