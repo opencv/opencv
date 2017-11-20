@@ -142,6 +142,9 @@ public:
     }
 };
 
+
+#define IS_POWER_LAYER(layer) \
+            (!layer.empty() && !layer->type.compare("Power"))
 //TODO: simultaneously convolution and bias addition for cache optimization
 class ConvolutionLayerImpl : public BaseConvolutionLayerImpl
 {
@@ -161,6 +164,7 @@ public:
     bool newWeightAndBias;
     bool newActiv;
     ocl4dnnFusedActiv_t activType;
+    float power;
 #endif
     ConvolutionLayerImpl()
     {
@@ -169,6 +173,7 @@ public:
         newWeightAndBias = false;
         newActiv = false;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+        power = 0.f;
 #endif
     }
 
@@ -225,6 +230,22 @@ public:
 #ifdef HAVE_OPENCL
         newActiv = true;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+
+        if (preferableTarget == DNN_TARGET_OPENCL)
+        {
+            Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+            if (!activ_power.empty())
+            {
+                if (activ_power->scale != 1.f || activ_power->shift != 0.f)
+                    newWeightAndBias = true;
+
+                if (activ_power->scale != 1.f)
+                    weightsMat.release();
+
+                power = activ_power->power;
+                activType = OCL4DNN_CONV_FUSED_ACTIV_POWER;
+            }
+        }
 #endif
         return !activ.empty();
     }
@@ -727,11 +748,12 @@ public:
                     biasvec[k] = biasMat.at<float>(k);
             }
 
-            if( !bnorm.empty() || !scaleLayer.empty() )
+            if( !bnorm.empty() || !scaleLayer.empty() || IS_POWER_LAYER(activ))
             {
                 Mat scale, shift, scale2, shift2;
                 const float *scaleptr = 0, *shiftptr = 0;
                 const float *scaleptr2 = 0, *shiftptr2 = 0;
+                float a = 1.f, b = 0.f;
 
                 if( !bnorm.empty() )
                 {
@@ -758,7 +780,14 @@ public:
                     }
                 }
 
-                if (shiftptr || shiftptr2)
+                if( IS_POWER_LAYER(activ) )
+                {
+                    Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+                    a = activ_power->scale;
+                    b = activ_power->shift;
+                }
+
+                if (shiftptr || shiftptr2 || b != 0.f)
                     fusedBias = true;
 
                 for( int i = 0; i < outCn; i++ )
@@ -771,9 +800,9 @@ public:
                     int j, wcols = weightsMat.cols;
 
                     for( j = 0; j < wcols; j++ )
-                        w_i[j] *= (s1*s2);
+                        w_i[j] *= (s1*s2*a);
 
-                    biasvec[i] = biasvec[i]*(s1*s2) + (delta1*s2 + delta2);
+                    biasvec[i] = biasvec[i]*(s1*s2*a) + (delta1*s2*a + delta2*a + b);
                 }
             }
             biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
@@ -827,10 +856,15 @@ public:
                 CV_Assert(!reluslope.empty());
                 convolutionOp->setActivPReLU(true, reluslope);
             }
+            else if ( activType == OCL4DNN_CONV_FUSED_ACTIV_POWER)
+            {
+                convolutionOp->setActivPower(true, power);
+            }
             else
             {
                 convolutionOp->setActivReLU(false, 0);
                 convolutionOp->setActivPReLU(false, reluslope);
+                convolutionOp->setActivPower(false, 1.f);
             }
             newActiv = false;
         }
@@ -840,6 +874,7 @@ public:
         int batch_size = inpMat.size[0];
 
         return convolutionOp->Forward(inpMat,
+                                      inputs.size() == 2 ? inputs[1] : UMat(),
                                       umat_blobs[0],
                                       (hasBias() || fusedBias) ? umat_blobs[1] : UMat(),
                                       outMat,
