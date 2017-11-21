@@ -50,6 +50,8 @@
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "caffe_io.hpp"
+#else
+#include "caffe_proto.hpp"
 #endif
 
 namespace cv {
@@ -64,16 +66,134 @@ using ::google::protobuf::Descriptor;
 using ::google::protobuf::FieldDescriptor;
 using ::google::protobuf::Reflection;
 
+#else
+
 namespace
 {
-
-template<typename T>
-static cv::String toString(const T &v)
+class NodeWrapper : public pb::ProtobufNode
 {
-    std::ostringstream ss;
-    ss << v;
-    return ss.str();
-}
+public:
+    NodeWrapper(const pb::ProtobufNode& node) : pb::ProtobufNode(node) {}
+
+    ProtobufNode get(const std::string& name) const
+    {
+        return operator[](name);
+    }
+};
+
+template <typename T>
+struct RepeatedField : public NodeWrapper
+{
+    RepeatedField(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    Mat getMat(int dtype) const
+    {
+        Mat m(1, size(), dtype);
+        copyTo(m.total() * m.elemSize1(), m.data);
+        return m;
+    }
+};
+}  // namespace
+
+// Fake namespace to switch between Google's protobuf and OpenCV's one smoother.
+namespace caffe
+{
+
+static const cv::String FLOAT16 = "FLOAT16";
+
+class BlobShape
+{
+public:
+    BlobShape(const pb::ProtobufNode& node) : pbNode(node) {}
+
+    int dim_size() const { return pbNode["dim"].size(); }
+    int dim(int idx) const { return (int)(int64_t)pbNode["dim"][idx]; }
+
+private:
+    pb::ProtobufNode pbNode;
+};
+
+class BlobProto
+{
+public:
+    BlobProto(const pb::ProtobufNode& node) : pbNode(node) {}
+
+    bool has_num() const { return pbNode.has("num"); }
+    bool has_width() const { return pbNode.has("width"); }
+    bool has_height() const { return pbNode.has("height"); }
+    bool has_channels() const { return pbNode.has("channels"); }
+    bool has_shape() const { return pbNode.has("shape"); }
+
+    int num() const { return pbNode["num"]; }
+    int width() const { return pbNode["width"]; }
+    int height() const { return pbNode["height"]; }
+    int channels() const { return pbNode["channels"]; }
+    int data_size() const { return pbNode["data"].size(); }
+    RepeatedField<float> data() const { return pbNode["data"]; }
+    std::string raw_data_type() const { return pbNode["raw_data_type"]; }
+    std::string raw_data() const { return pbNode["raw_data"]; }
+    BlobShape shape() const { CV_Assert(has_shape()); return pbNode["shape"]; }
+
+private:
+    pb::ProtobufNode pbNode;
+};
+
+class LayerParameter : public NodeWrapper
+{
+public:
+    LayerParameter(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    int top_size() const { return get("top").size(); }
+    int bottom_size() const { return get("bottom").size(); }
+    int blobs_size() const { return get("blobs").size(); }
+    std::string top(int idx) const { return get("top")[idx]; }
+    std::string bottom(int idx) const { return get("bottom")[idx]; }
+    BlobProto blobs(int idx) const { return get("blobs")[idx]; }
+
+    std::string type() const
+    {
+        return has("type") ? (std::string)get("type") : "";
+    }
+
+    std::string name() const
+    {
+        CV_Assert(has("name"));
+        return get("name");
+    }
+};
+
+class NetParameter : public pb::ProtobufParser
+{
+public:
+    NetParameter()
+        : pb::ProtobufParser(caffe_proto, sizeof(caffe_proto), ".caffe.NetParameter", true) {}
+
+    int layer_size() const
+    {
+        return has("layer") ? operator[]("layer").size() : operator[]("layers").size();
+    }
+
+    int input_size() const
+    {
+        return operator[]("input").size();
+    }
+
+    std::string input(int idx) const
+    {
+        return operator[]("input")[idx];
+    }
+
+    LayerParameter layer(int idx) const
+    {
+        return has("layer") ? operator[]("layer")[idx] : operator[]("layers")[idx];
+    }
+};
+
+}  // namespace caffe
+#endif  // HAVE_PROTOBUF
+
+namespace
+{
 
 class CaffeImporter : public Importer
 {
@@ -82,14 +202,19 @@ class CaffeImporter : public Importer
 
 public:
 
-    CaffeImporter(const char *pototxt, const char *caffeModel)
+    CaffeImporter(const char *prototxt, const char *caffeModel)
     {
         CV_TRACE_FUNCTION();
-
-        ReadNetParamsFromTextFileOrDie(pototxt, &net);
+#ifdef HAVE_PROTOBUF
+        ReadNetParamsFromTextFileOrDie(prototxt, &net);
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
+#else
+        net.parse(prototxt, true);
+        if (caffeModel && caffeModel[0])
+            netBinary.parse(caffeModel);
+#endif  // HAVE_PROTOBUF
     }
 
     CaffeImporter(const char *dataProto, size_t lenProto,
@@ -97,13 +222,20 @@ public:
     {
         CV_TRACE_FUNCTION();
 
+#ifdef HAVE_PROTOBUF
         ReadNetParamsFromTextBufferOrDie(dataProto, lenProto, &net);
 
         if (dataModel != NULL && lenModel > 0)
             ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
+#else
+        net.parse(dataProto, lenProto, true);
+        if (dataModel != NULL && lenModel > 0)
+            netBinary.parse(dataModel, lenModel);
+#endif  // HAVE_PROTOBUF
     }
 
-    void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
+#ifdef HAVE_PROTOBUF
+    static void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
     {
         const Reflection *refl = msg.GetReflection();
         int type = field->cpp_type();
@@ -169,12 +301,6 @@ public:
         }
     }
 
-    inline static bool ends_with_param(const std::string &str)
-    {
-        static const std::string _param("_param");
-        return (str.size() >= _param.size()) && str.compare(str.size() - _param.size(), _param.size(), _param) == 0;
-    }
-
     void extractLayerParams(const Message &msg, cv::dnn::LayerParams &params, bool isInternal = false)
     {
         const Descriptor *msgDesc = msg.GetDescriptor();
@@ -207,7 +333,111 @@ public:
         }
     }
 
-    void blobShapeFromProto(const caffe::BlobProto &pbBlob, MatShape& shape)
+#else  // HAVE_PROTOBUF
+
+    template <typename T>
+    static void addParamValues(const pb::ProtobufNode& field, const std::string& name, cv::dnn::LayerParams &params)
+    {
+        const int numValues = field.size();
+
+        std::vector<T> values(numValues);
+        for (int i = 0; i < numValues; ++i)
+        {
+            field[i] >> values[i];
+        }
+
+        if (numValues == 1)
+        {
+            params.set(name, values[0]);
+        }
+        else
+        {
+            DictValue dict;
+            if (std::numeric_limits<T>::is_integer)
+            {
+                dict = DictValue::arrayInt<T*>(&values[0], numValues);
+            }
+            else if (std::numeric_limits<T>::is_specialized)
+            {
+                dict = DictValue::arrayReal<T*>(&values[0], numValues);
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "");
+            params.set(name, dict);
+        }
+    }
+
+    static void addParam(const pb::ProtobufNode& msg, const std::string& paramName, cv::dnn::LayerParams &params)
+    {
+        CV_Assert(msg.type() == pb::PB_MESSAGE, msg.has(paramName));
+        pb::ProtobufNode field = msg[paramName];
+
+        switch (field.type())
+        {
+        case pb::PB_INT32:  addParamValues<int32_t>(field, paramName, params); break;
+        case pb::PB_UINT32: addParamValues<uint32_t>(field, paramName, params); break;
+        case pb::PB_INT64:  addParamValues<int64_t>(field, paramName, params); break;
+        case pb::PB_UINT64:
+        {
+            CV_Assert(field.size() == 1);
+            params.set(paramName, (int)(uint64_t)field);
+            break;
+        }
+        case pb::PB_FLOAT:  addParamValues<float>(field, paramName, params); break;
+        case pb::PB_DOUBLE: addParamValues<double>(field, paramName, params); break;
+        case pb::PB_BOOL:
+        {
+            CV_Assert(field.size() == 1);
+            params.set(paramName, (bool)field);
+            break;
+        }
+        case pb::PB_STRING:
+        {
+            CV_Assert(field.size() == 1);
+            params.set(paramName, (std::string)field);
+            break;
+        }
+        case pb::PB_MESSAGE:
+            CV_Error(Error::StsParseError, "Elementary type is expected got message");
+            break;
+        default:
+            CV_Error(Error::StsParseError, format("Unknown type id [%d]", field.type()));
+            break;
+        }
+    }
+
+    void extractLayerParams(const pb::ProtobufNode& msg, cv::dnn::LayerParams &params, bool isInternal = false)
+    {
+        std::vector<std::string> readFields = msg.readFields();
+        for (int i = 0; i < readFields.size(); ++i)
+        {
+            if (!isInternal && !ends_with_param(readFields[i]))
+                continue;
+
+            pb::ProtobufNode field = msg[readFields[i]];
+
+            if (field.empty())
+                continue;
+
+            if (field.type() == pb::PB_MESSAGE)
+            {
+                extractLayerParams(field[0], params, true);
+            }
+            else
+            {
+                addParam(msg, readFields[i], params);
+            }
+        }
+    }
+#endif  // HAVE_PROTOBUF
+
+    inline static bool ends_with_param(const std::string &str)
+    {
+        static const std::string _param("_param");
+        return (str.size() >= _param.size()) && str.compare(str.size() - _param.size(), _param.size(), _param) == 0;
+    }
+
+    static void blobShapeFromProto(const caffe::BlobProto &pbBlob, MatShape& shape)
     {
         shape.clear();
         if (pbBlob.has_num() || pbBlob.has_channels() || pbBlob.has_height() || pbBlob.has_width())
@@ -228,8 +458,10 @@ public:
             shape.resize(1, 1);  // Is a scalar.
     }
 
-    void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
+    static void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
     {
+        CV_TRACE_FUNCTION();
+
         MatShape shape;
         blobShapeFromProto(pbBlob, shape);
 
@@ -240,10 +472,19 @@ public:
             // Single precision floats.
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
+#ifdef HAVE_PROTOBUF
             CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+#endif
 
-            for (int i = 0; i < pbBlob.data_size(); i++)
-                dstData[i] = pbBlob.data(i);
+            const RepeatedField<float>& field = pbBlob.data();
+            CV_Assert(!field.empty(), field.size() == dstBlob.total());
+#ifdef HAVE_PROTOBUF
+            Mat srcBlob(1, dstBlob.total(), CV_32FC1, (void*)field.data());
+#else
+            Mat srcBlob = field.getMat(CV_32FC1);
+#endif  // HAVE_PROTOBUF
+            CV_Assert(srcBlob.total() == dstBlob.total());
+            memcpy(dstData, srcBlob.data, dstBlob.total() * dstBlob.elemSize1());
         }
         else
         {
@@ -323,7 +564,7 @@ public:
 
             int repetitions = layerCounter[name]++;
             if (repetitions)
-                name += String("_") + toString(repetitions);
+                name += format("_%d", repetitions);
 
             if (type == "Input")
             {
@@ -421,8 +662,6 @@ Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
     caffeImporter.populateNet(net);
     return net;
 }
-
-#endif //HAVE_PROTOBUF
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace

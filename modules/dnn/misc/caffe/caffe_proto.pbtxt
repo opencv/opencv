@@ -1,5 +1,5 @@
 file {
-  name: "caffe.proto"
+  name: "opencv-caffe.proto"
   package: "caffe"
   message_type {
     name: "BlobShape"

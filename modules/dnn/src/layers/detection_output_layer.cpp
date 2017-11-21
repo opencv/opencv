@@ -154,15 +154,11 @@ public:
 
     void getCodeType(const LayerParams &params)
     {
-#ifdef HAVE_PROTOBUF
         String codeTypeString = params.get<String>("code_type").toLowerCase();
         if (codeTypeString == "center_size")
             _codeType = "CENTER_SIZE";
         else
             _codeType = "CORNER";
-#else
-        _codeType = getParameter<String>(params, "code_type", 0, false, "CORNER");
-#endif  // HAVE_PROTOBUF
     }
 
     DetectionOutputLayerImpl(const LayerParams &params)
