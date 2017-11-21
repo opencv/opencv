@@ -5856,7 +5856,7 @@ static int16_t *RGB2LabLUT_s16;
 static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
-static int *abToXZ_b;
+static const int *abToXZ_b;
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
@@ -5903,9 +5903,9 @@ static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn
 {
     const softfloat oneof4 = softfloat::one()/softfloat(4);
     const softfloat f255(255);
-    int *LuToUp_b = new int[256*256];
-    int *LvToVp_b = new int[256*256];
-    long long int *LvToVpl_b = new long long int[256*256];
+    int *LuToUp_b = cv::allocSingleton<int>(256*256);
+    int *LvToVp_b = cv::allocSingleton<int>(256*256);
+    long long int *LvToVpl_b = cv::allocSingleton<long long int>(256*256);
     for(int LL = 0; LL < 256; LL++)
     {
         softfloat L = softfloat(LL*100)/f255;
@@ -5931,6 +5931,29 @@ static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn
     res.LuToUp_b = LuToUp_b;
     res.LvToVp_b = LvToVp_b;
     res.LvToVpl_b = LvToVpl_b;
+    return res;
+}
+
+static int * initLUTforABXZ(int BASE)
+{
+    int * res = cv::allocSingleton<int>(LAB_BASE*9/4);
+    for(int i = minABvalue; i < LAB_BASE*9/4+minABvalue; i++)
+    {
+        int v;
+        //6.f/29.f*BASE = 3389.730
+        if(i <= 3390)
+        {
+            //fxz[k] = (fxz[k] - 16.0f / 116.0f) / 7.787f;
+            // 7.787f = (29/3)^3/(29*4)
+            v = i*108/841 - BASE*16/116*108/841;
+        }
+        else
+        {
+            //fxz[k] = fxz[k] * fxz[k] * fxz[k];
+            v = i*i/BASE*i/BASE;
+        }
+        res[i-minABvalue] = v; // -1335 <= v <= 88231
+    }
     return res;
 }
 
@@ -6017,24 +6040,7 @@ static void initLabTabs()
         }
 
         //Lookup table for a,b to x,z conversion
-        abToXZ_b = new int[LAB_BASE*9/4];
-        for(i = minABvalue; i < LAB_BASE*9/4+minABvalue; i++)
-        {
-            int v;
-            //6.f/29.f*BASE = 3389.730
-            if(i <= 3390)
-            {
-                //fxz[k] = (fxz[k] - 16.0f / 116.0f) / 7.787f;
-                // 7.787f = (29/3)^3/(29*4)
-                v = i*108/841 - BASE*16/116*108/841;
-            }
-            else
-            {
-                //fxz[k] = fxz[k] * fxz[k] * fxz[k];
-                v = i*i/BASE*i/BASE;
-            }
-            abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
-        }
+        abToXZ_b = initLUTforABXZ(BASE);
 
         softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
         dd = softfloat::one()/max(dd, softfloat::eps());
