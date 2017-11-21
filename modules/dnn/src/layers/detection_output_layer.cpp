@@ -211,91 +211,10 @@ public:
         return false;
     }
 
-#ifdef HAVE_OPENCL
-    bool forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
-    {
-        std::vector<Mat> inpvec;
-        std::vector<Mat> outputs;
-
-        inputs_arr.getMatVector(inpvec);
-        outputs_arr.getMatVector(outputs);
-
-        std::vector<Mat*> inputs(inpvec.size());
-        for (size_t i = 0; i < inpvec.size(); i++)
-            inputs[i] = &inpvec[i];
-
-        std::vector<LabelBBox> allDecodedBBoxes;
-        std::vector<std::vector<std::vector<float> > > allConfidenceScores;
-
-        int num = inputs[0]->size[0];
-
-        // extract predictions from input layers
-        {
-            int numPriors = inputs[2]->size[2] / 4;
-
-            const float* locationData = inputs[0]->ptr<float>();
-            const float* confidenceData = inputs[1]->ptr<float>();
-            const float* priorData = inputs[2]->ptr<float>();
-
-            // Retrieve all location predictions
-            std::vector<LabelBBox> allLocationPredictions;
-            GetLocPredictions(locationData, num, numPriors, _numLocClasses,
-                              _shareLocation, _locPredTransposed, allLocationPredictions);
-
-            // Retrieve all confidences
-            GetConfidenceScores(confidenceData, num, numPriors, _numClasses, allConfidenceScores);
-
-            // Retrieve all prior bboxes
-            std::vector<util::NormalizedBBox> priorBBoxes;
-            std::vector<std::vector<float> > priorVariances;
-            GetPriorBBoxes(priorData, numPriors, priorBBoxes, priorVariances);
-
-            // Decode all loc predictions to bboxes
-            DecodeBBoxesAll(allLocationPredictions, priorBBoxes, priorVariances, num,
-                            _shareLocation, _numLocClasses, _backgroundLabelId,
-                            _codeType, _varianceEncodedInTarget, false, allDecodedBBoxes);
-        }
-
-        size_t numKept = 0;
-        std::vector<std::map<int, std::vector<int> > > allIndices;
-        for (int i = 0; i < num; ++i)
-        {
-            numKept += processDetections_(allDecodedBBoxes[i], allConfidenceScores[i], allIndices);
-        }
-
-        if (numKept == 0)
-        {
-            // Set confidences to zeros.
-            Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(2, 3)};
-            outputs[0](ranges).setTo(0);
-            return true;
-        }
-        int outputShape[] = {1, 1, (int)numKept, 7};
-        Mat mat(4, outputShape, CV_32F);
-        float* outputsData = mat.ptr<float>();
-
-        size_t count = 0;
-        for (int i = 0; i < num; ++i)
-        {
-            count += outputDetections_(i, &outputsData[count * 7],
-                                       allDecodedBBoxes[i], allConfidenceScores[i],
-                                       allIndices[i]);
-        }
-        UMat& output = outputs_arr.getUMatRef(0);
-        output = mat.getUMat(ACCESS_READ);
-        CV_Assert(count == numKept);
-        return true;
-    }
-#endif
-
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
