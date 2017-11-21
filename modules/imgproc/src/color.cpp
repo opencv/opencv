@@ -5852,7 +5852,6 @@ enum
     trilinear_shift = 8 - lab_lut_shift + 1,
     TRILINEAR_BASE = (1 << trilinear_shift)
 };
-static int16_t *RGB2LabLUT_s16;
 static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
@@ -5861,15 +5860,19 @@ static const int *abToXZ_b;
 static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
 static const bool enablePackedLuv2RGB = true;
-static int16_t *RGB2LuvLUT_s16;
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
+
+static struct LABLUVLUT_s16_t {
+    const int16_t *RGB2LabLUT_s16;
+    const int16_t *RGB2LuvLUT_s16;
+} LABLUVLUTs16 = {0, 0};
 
 static struct LUVLUT_T {
     const int *LuToUp_b;
     const int *LvToVp_b;
     const long long int *LvToVpl_b;
-} LUVLUT;
+} LUVLUT = {0, 0, 0};
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -5880,6 +5883,12 @@ static const softdouble gammaInvThreshold = softdouble(7827)/softdouble(2500000)
 static const softdouble gammaLowScale     = softdouble(323)/softdouble(25);       // 12.92
 static const softdouble gammaPower        = softdouble(12)/softdouble(5);         //  2.4
 static const softdouble gammaXshift       = softdouble(11)/softdouble(200);       // 0.055
+
+static const softfloat lthresh = softfloat(216) / softfloat(24389); // 0.008856f = (6/29)^3
+static const softfloat lscale  = softfloat(841) / softfloat(108); // 7.787f = (29/3)^3/(29*4)
+static const softfloat lbias = softfloat(16) / softfloat(116);
+static const softfloat f255(255);
+
 
 static inline softfloat applyGamma(softfloat x)
 {
@@ -5902,7 +5911,6 @@ static inline softfloat applyInvGamma(softfloat x)
 static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn)
 {
     const softfloat oneof4 = softfloat::one()/softfloat(4);
-    const softfloat f255(255);
     int *LuToUp_b = cv::allocSingleton<int>(256*256);
     int *LvToVp_b = cv::allocSingleton<int>(256*256);
     long long int *LvToVpl_b = cv::allocSingleton<long long int>(256*256);
@@ -5957,16 +5965,135 @@ static int * initLUTforABXZ(int BASE)
     return res;
 }
 
+inline void fill_one(int16_t *LAB, const int16_t *LAB_prev, int16_t *LUV, const int16_t *LUV_prev, int p, int q, int r, int _p, int _q, int _r)
+{
+    do {
+        int idxold = 0;
+        idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;
+        idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
+        idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
+        int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);
+        LAB[idxnew]    = LAB_prev[idxold];
+        LAB[idxnew+8]  = LAB_prev[idxold+1];
+        LAB[idxnew+16] = LAB_prev[idxold+2];
+        LUV[idxnew]    = LUV_prev[idxold];
+        LUV[idxnew+8]  = LUV_prev[idxold+1];
+        LUV[idxnew+16] = LUV_prev[idxold+2];
+    } while(0);
+}
+
+static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat & vn)
+{
+    int i;
+    softfloat scaledCoeffs[9], coeffs[9];
+
+    //RGB2Lab coeffs
+    softdouble scaleWhite[] = { softdouble::one()/D65[0],
+                                softdouble::one(),
+                                softdouble::one()/D65[2] };
+
+    for(i = 0; i < 3; i++ )
+    {
+        coeffs[i*3+2] = sRGB2XYZ_D65[i*3+0];
+        coeffs[i*3+1] = sRGB2XYZ_D65[i*3+1];
+        coeffs[i*3+0] = sRGB2XYZ_D65[i*3+2];
+        scaledCoeffs[i*3+0] = sRGB2XYZ_D65[i*3+2] * scaleWhite[i];
+        scaledCoeffs[i*3+1] = sRGB2XYZ_D65[i*3+1] * scaleWhite[i];
+        scaledCoeffs[i*3+2] = sRGB2XYZ_D65[i*3+0] * scaleWhite[i];
+    }
+
+    softfloat S0 = scaledCoeffs[0], S1 = scaledCoeffs[1], S2 = scaledCoeffs[2],
+              S3 = scaledCoeffs[3], S4 = scaledCoeffs[4], S5 = scaledCoeffs[5],
+              S6 = scaledCoeffs[6], S7 = scaledCoeffs[7], S8 = scaledCoeffs[8];
+    softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+    //u, v: [-134.0, 220.0], [-140.0, 122.0]
+    static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
+    static const softfloat f100(100), f128(128), f256(256), lbase((int)LAB_BASE);
+    //903.3f = (29/3)^3
+    static const softfloat f9033 = softfloat(29*29*29)/softfloat(27);
+    static const softfloat f9of4 = softfloat(9)/softfloat(4);
+    static const softfloat f15(15), f3(3);
+
+    AutoBuffer<int16_t> RGB2Labprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
+    AutoBuffer<int16_t> RGB2Luvprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
+    for(int p = 0; p < LAB_LUT_DIM; p++)
+    {
+        for(int q = 0; q < LAB_LUT_DIM; q++)
+        {
+            for(int r = 0; r < LAB_LUT_DIM; r++)
+            {
+                int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
+                softfloat R = softfloat(p)/lld;
+                softfloat G = softfloat(q)/lld;
+                softfloat B = softfloat(r)/lld;
+
+                R = applyGamma(R);
+                G = applyGamma(G);
+                B = applyGamma(B);
+
+                //RGB 2 Lab LUT building
+                {
+                    softfloat X = R*S0 + G*S1 + B*S2;
+                    softfloat Y = R*S3 + G*S4 + B*S5;
+                    softfloat Z = R*S6 + G*S7 + B*S8;
+
+                    softfloat FX = X > lthresh ? cbrt(X) : mulAdd(X, lscale, lbias);
+                    softfloat FY = Y > lthresh ? cbrt(Y) : mulAdd(Y, lscale, lbias);
+                    softfloat FZ = Z > lthresh ? cbrt(Z) : mulAdd(Z, lscale, lbias);
+
+                    softfloat L = Y > lthresh ? (f116*FY - f16) : (f9033*Y);
+                    softfloat a = f500 * (FX - FY);
+                    softfloat b = f200 * (FY - FZ);
+
+                    RGB2Labprev[idx]   = (int16_t)(cvRound(lbase*L/f100));
+                    RGB2Labprev[idx+1] = (int16_t)(cvRound(lbase*(a + f128)/f256));
+                    RGB2Labprev[idx+2] = (int16_t)(cvRound(lbase*(b + f128)/f256));
+                }
+
+                //RGB 2 Luv LUT building
+                {
+                    softfloat X = R*C0 + G*C1 + B*C2;
+                    softfloat Y = R*C3 + G*C4 + B*C5;
+                    softfloat Z = R*C6 + G*C7 + B*C8;
+
+                    softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
+                    L = L*f116 - f16;
+
+                    softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
+                    softfloat u = L*(X*d - un);
+                    softfloat v = L*(f9of4*Y*d - vn);
+
+                    RGB2Luvprev[idx  ] = (int16_t)cvRound(lbase*L/f100);
+                    RGB2Luvprev[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
+                    RGB2Luvprev[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
+                }
+            }
+        }
+    }
+
+    int16_t *RGB2LabLUT_s16 = cv::allocSingleton<int16_t>(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8);
+    int16_t *RGB2LuvLUT_s16 = cv::allocSingleton<int16_t>(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8);
+    for(int p = 0; p < LAB_LUT_DIM; p++)
+        for(int q = 0; q < LAB_LUT_DIM; q++)
+            for(int r = 0; r < LAB_LUT_DIM; r++)
+                for (int p_ = 0; p_ < 2; ++p_)
+                    for (int q_ = 0; q_ < 2; ++q_)
+                        for (int r_ = 0; r_ < 2; ++r_)
+                            fill_one(RGB2LabLUT_s16, RGB2Labprev, RGB2LuvLUT_s16, RGB2Luvprev, p, q, r, p_, q_, r_);
+    LABLUVLUT_s16_t res;
+    res.RGB2LabLUT_s16 = RGB2LabLUT_s16;
+    res.RGB2LuvLUT_s16 = RGB2LuvLUT_s16;
+    return res;
+}
+
 static void initLabTabs()
 {
     static bool initialized = false;
     if(!initialized)
     {
-        static const softfloat lthresh = softfloat(216) / softfloat(24389); // 0.008856f = (6/29)^3
-        static const softfloat lscale  = softfloat(841) / softfloat(108); // 7.787f = (29/3)^3/(29*4)
-        static const softfloat lbias = softfloat(16) / softfloat(116);
-        static const softfloat f255(255);
-
         softfloat f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE+1], ig[GAMMA_TAB_SIZE+1];
         softfloat scale = softfloat::one()/softfloat(LabCbrtTabScale);
         int i;
@@ -6062,125 +6189,8 @@ static void initLabTabs()
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
         if(calcLUT)
         {
-            softfloat scaledCoeffs[9], coeffs[9];
 
-            //RGB2Lab coeffs
-            softdouble scaleWhite[] = { softdouble::one()/D65[0],
-                                        softdouble::one(),
-                                        softdouble::one()/D65[2] };
-
-            for(i = 0; i < 3; i++ )
-            {
-                coeffs[i*3+2] = sRGB2XYZ_D65[i*3+0];
-                coeffs[i*3+1] = sRGB2XYZ_D65[i*3+1];
-                coeffs[i*3+0] = sRGB2XYZ_D65[i*3+2];
-                scaledCoeffs[i*3+0] = sRGB2XYZ_D65[i*3+2] * scaleWhite[i];
-                scaledCoeffs[i*3+1] = sRGB2XYZ_D65[i*3+1] * scaleWhite[i];
-                scaledCoeffs[i*3+2] = sRGB2XYZ_D65[i*3+0] * scaleWhite[i];
-            }
-
-            softfloat S0 = scaledCoeffs[0], S1 = scaledCoeffs[1], S2 = scaledCoeffs[2],
-                      S3 = scaledCoeffs[3], S4 = scaledCoeffs[4], S5 = scaledCoeffs[5],
-                      S6 = scaledCoeffs[6], S7 = scaledCoeffs[7], S8 = scaledCoeffs[8];
-            softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-                      C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-                      C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-
-            //u, v: [-134.0, 220.0], [-140.0, 122.0]
-            static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
-            static const softfloat f100(100), f128(128), f256(256), lbase((int)LAB_BASE);
-            //903.3f = (29/3)^3
-            static const softfloat f9033 = softfloat(29*29*29)/softfloat(27);
-            static const softfloat f9of4 = softfloat(9)/softfloat(4);
-            static const softfloat f15(15), f3(3);
-            AutoBuffer<int16_t> RGB2Labprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
-            AutoBuffer<int16_t> RGB2Luvprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
-            for(int p = 0; p < LAB_LUT_DIM; p++)
-            {
-                for(int q = 0; q < LAB_LUT_DIM; q++)
-                {
-                    for(int r = 0; r < LAB_LUT_DIM; r++)
-                    {
-                        int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
-                        softfloat R = softfloat(p)/lld;
-                        softfloat G = softfloat(q)/lld;
-                        softfloat B = softfloat(r)/lld;
-
-                        R = applyGamma(R);
-                        G = applyGamma(G);
-                        B = applyGamma(B);
-
-                        //RGB 2 Lab LUT building
-                        {
-                            softfloat X = R*S0 + G*S1 + B*S2;
-                            softfloat Y = R*S3 + G*S4 + B*S5;
-                            softfloat Z = R*S6 + G*S7 + B*S8;
-
-                            softfloat FX = X > lthresh ? cbrt(X) : mulAdd(X, lscale, lbias);
-                            softfloat FY = Y > lthresh ? cbrt(Y) : mulAdd(Y, lscale, lbias);
-                            softfloat FZ = Z > lthresh ? cbrt(Z) : mulAdd(Z, lscale, lbias);
-
-                            softfloat L = Y > lthresh ? (f116*FY - f16) : (f9033*Y);
-                            softfloat a = f500 * (FX - FY);
-                            softfloat b = f200 * (FY - FZ);
-
-                            RGB2Labprev[idx]   = (int16_t)(cvRound(lbase*L/f100));
-                            RGB2Labprev[idx+1] = (int16_t)(cvRound(lbase*(a + f128)/f256));
-                            RGB2Labprev[idx+2] = (int16_t)(cvRound(lbase*(b + f128)/f256));
-                        }
-
-                        //RGB 2 Luv LUT building
-                        {
-                            softfloat X = R*C0 + G*C1 + B*C2;
-                            softfloat Y = R*C3 + G*C4 + B*C5;
-                            softfloat Z = R*C6 + G*C7 + B*C8;
-
-                            softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
-                            L = L*f116 - f16;
-
-                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
-                            softfloat u = L*(X*d - un);
-                            softfloat v = L*(f9of4*Y*d - vn);
-
-                            RGB2Luvprev[idx  ] = (int16_t)cvRound(lbase*L/f100);
-                            RGB2Luvprev[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
-                            RGB2Luvprev[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
-                        }
-                    }
-                }
-            }
-            RGB2LabLUT_s16 = new int16_t[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
-            RGB2LuvLUT_s16 = new int16_t[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
-            for(int p = 0; p < LAB_LUT_DIM; p++)
-            {
-                for(int q = 0; q < LAB_LUT_DIM; q++)
-                {
-                    for(int r = 0; r < LAB_LUT_DIM; r++)
-                    {
-                        #define FILL(_p, _q, _r) \
-                            do {\
-                                int idxold = 0;\
-                                idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;\
-                                idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;\
-                                idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;\
-                                int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);\
-                                RGB2LabLUT_s16[idxnew]    = RGB2Labprev[idxold];\
-                                RGB2LabLUT_s16[idxnew+8]  = RGB2Labprev[idxold+1];\
-                                RGB2LabLUT_s16[idxnew+16] = RGB2Labprev[idxold+2];\
-                                RGB2LuvLUT_s16[idxnew]    = RGB2Luvprev[idxold];\
-                                RGB2LuvLUT_s16[idxnew+8]  = RGB2Luvprev[idxold+1];\
-                                RGB2LuvLUT_s16[idxnew+16] = RGB2Luvprev[idxold+2];\
-                            } while(0)
-
-                        FILL(0, 0, 0); FILL(0, 0, 1);
-                        FILL(0, 1, 0); FILL(0, 1, 1);
-                        FILL(1, 0, 0); FILL(1, 0, 1);
-                        FILL(1, 1, 0); FILL(1, 1, 1);
-
-                        #undef FILL
-                    }
-                }
-            }
+            LABLUVLUTs16 = initLUTforLABLUVs16(un, vn);
 
             for(int16_t p = 0; p < TRILINEAR_BASE; p++)
             {
@@ -6506,7 +6516,7 @@ struct RGB2Lab_f
                     v_uint16x8 uibvec = v_reinterpret_as_u16(ibvec);
 
                     v_uint16x8 ui_lvec, ui_avec, ui_bvec;
-                    trilinearPackedInterpolate(uirvec, uigvec, uibvec, RGB2LabLUT_s16, ui_lvec, ui_avec, ui_bvec);
+                    trilinearPackedInterpolate(uirvec, uigvec, uibvec, LABLUVLUTs16.RGB2LabLUT_s16, ui_lvec, ui_avec, ui_bvec);
                     v_int16x8 i_lvec = v_reinterpret_as_s16(ui_lvec);
                     v_int16x8 i_avec = v_reinterpret_as_s16(ui_avec);
                     v_int16x8 i_bvec = v_reinterpret_as_s16(ui_bvec);
@@ -6547,7 +6557,7 @@ struct RGB2Lab_f
 
                 int iR = cvRound(R*LAB_BASE), iG = cvRound(G*LAB_BASE), iB = cvRound(B*LAB_BASE);
                 int iL, ia, ib;
-                trilinearInterpolate(iR, iG, iB, RGB2LabLUT_s16, iL, ia, ib);
+                trilinearInterpolate(iR, iG, iB, LABLUVLUTs16.RGB2LabLUT_s16, iL, ia, ib);
                 float L = iL*1.0f/LAB_BASE, a = ia*1.0f/LAB_BASE, b = ib*1.0f/LAB_BASE;
 
                 dst[i] = L*100.0f;
@@ -8127,8 +8137,8 @@ struct RGB2Luvinterpolate
                     trilinearInterpolate(R, G, B, RGB2LuvLUT_s16, L, u, v);
                     */
                 v_uint16x8 l80, u80, v80, l81, u81, v81;
-                trilinearPackedInterpolate(r80, g80, b80, RGB2LuvLUT_s16, l80, u80, v80);
-                trilinearPackedInterpolate(r81, g81, b81, RGB2LuvLUT_s16, l81, u81, v81);
+                trilinearPackedInterpolate(r80, g80, b80, LABLUVLUTs16.RGB2LuvLUT_s16, l80, u80, v80);
+                trilinearPackedInterpolate(r81, g81, b81, LABLUVLUTs16.RGB2LuvLUT_s16, l81, u81, v81);
 
                 /*
                     dst[i] = saturate_cast<uchar>(L/baseDiv);
@@ -8154,7 +8164,7 @@ struct RGB2Luvinterpolate
             R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
 
             int L, u, v;
-            trilinearInterpolate(R, G, B, RGB2LuvLUT_s16, L, u, v);
+            trilinearInterpolate(R, G, B, LABLUVLUTs16.RGB2LuvLUT_s16, L, u, v);
 
             dst[i] = saturate_cast<uchar>(L/baseDiv);
             dst[i+1] = saturate_cast<uchar>(u/baseDiv);
@@ -8182,7 +8192,6 @@ struct RGB2Luv_b
                             && enableBitExactness
                             && enableRGB2LuvInterpolation);
 
-        static const softfloat f255(255);
         #if CV_NEON
         v_scale_inv = vdupq_n_f32(softfloat::one()/f255);
         v_scale = vdupq_n_f32(f255/softfloat(100));
@@ -8235,7 +8244,6 @@ struct RGB2Luv_b
         int i, j, scn = srccn;
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 
-        static const softfloat f255(255);
         #if CV_SSE2
         __m128 v_coeffs = _mm_set_ps(f255/softfloat(100), f255/vRange, f255/uRange, f255/softfloat(100));
         __m128 v_res = _mm_set_ps(0.f, -vLow*f255/vRange, -uLow*f255/uRange, 0.f);
@@ -8625,7 +8633,6 @@ struct Luv2RGB_b
         uchar alpha = ColorChannel<uchar>::max();
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 
-        static const softfloat f255(255);
         static const softfloat fl = softfloat(100)/f255;
         static const softfloat fu = uRange/f255;
         static const softfloat fv = vRange/f255;
