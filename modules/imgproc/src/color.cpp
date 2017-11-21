@@ -5864,9 +5864,12 @@ static const bool enablePackedLuv2RGB = true;
 static int16_t *RGB2LuvLUT_s16;
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
-static int *LuToUp_b;
-static int *LvToVp_b;
-static long long int *LvToVpl_b;
+
+static struct LUVLUT_T {
+    const int *LuToUp_b;
+    const int *LvToVp_b;
+    const long long int *LvToVpl_b;
+} LUVLUT;
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -5894,6 +5897,41 @@ static inline softfloat applyInvGamma(softfloat x)
     return (xd <= gammaInvThreshold ?
                 xd*gammaLowScale :
                 pow(xd, softdouble::one()/gammaPower)*(softdouble::one()+gammaXshift) - gammaXshift);
+}
+
+static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn)
+{
+    const softfloat oneof4 = softfloat::one()/softfloat(4);
+    const softfloat f255(255);
+    int *LuToUp_b = new int[256*256];
+    int *LvToVp_b = new int[256*256];
+    long long int *LvToVpl_b = new long long int[256*256];
+    for(int LL = 0; LL < 256; LL++)
+    {
+        softfloat L = softfloat(LL*100)/f255;
+        for(int uu = 0; uu < 256; uu++)
+        {
+            softfloat u = softfloat(uu)*uRange/f255 + uLow;
+            softfloat up = softfloat(9)*(u + L*un);
+            LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
+        }
+        for(int vv = 0; vv < 256; vv++)
+        {
+            softfloat v = softfloat(vv)*vRange/f255 + vLow;
+            softfloat vp = oneof4/(v + L*vn);
+            if(vp >  oneof4) vp =  oneof4;
+            if(vp < -oneof4) vp = -oneof4;
+            int ivp = cvRound(vp*softfloat(BASE*1024));
+            LvToVp_b[LL*256+vv] = ivp;
+            int vpl = ivp*LL;
+            LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
+        }
+    }
+    LUVLUT_T res;
+    res.LuToUp_b = LuToUp_b;
+    res.LvToVp_b = LvToVp_b;
+    res.LvToVpl_b = LvToVpl_b;
+    return res;
 }
 
 static void initLabTabs()
@@ -6002,7 +6040,6 @@ static void initLabTabs()
         dd = softfloat::one()/max(dd, softfloat::eps());
         softfloat un = dd*softfloat(13*4)*D65[0];
         softfloat vn = dd*softfloat(13*9)*D65[1];
-        softfloat oneof4 = softfloat::one()/softfloat(4);
 
         //when XYZ are limited to [0, 2]
         /*
@@ -6013,30 +6050,7 @@ static void initLabTabs()
         */
 
         //Luv LUT
-        LuToUp_b = new int[256*256];
-        LvToVp_b = new int[256*256];
-        LvToVpl_b = new long long int[256*256];
-        for(int LL = 0; LL < 256; LL++)
-        {
-            softfloat L = softfloat(LL*100)/f255;
-            for(int uu = 0; uu < 256; uu++)
-            {
-                softfloat u = softfloat(uu)*uRange/f255 + uLow;
-                softfloat up = softfloat(9)*(u + L*un);
-                LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
-            }
-            for(int vv = 0; vv < 256; vv++)
-            {
-                softfloat v = softfloat(vv)*vRange/f255 + vLow;
-                softfloat vp = oneof4/(v + L*vn);
-                if(vp >  oneof4) vp =  oneof4;
-                if(vp < -oneof4) vp = -oneof4;
-                int ivp = cvRound(vp*softfloat(BASE*1024));
-                LvToVp_b[LL*256+vv] = ivp;
-                int vpl = ivp*LL;
-                LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
-            }
-        }
+        LUVLUT = initLUTforLUV(BASE, un, vn);
 
         //try to suppress warning
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
@@ -8411,8 +8425,8 @@ struct Luv2RGBinteger
         // y : [0, BASE]
         // up: [-402, 1431.57]*(BASE/1024)
         // vp: +/- 0.25*BASE*1024
-        int up = LuToUp_b[LL*256+uu];
-        int vp = LvToVp_b[LL*256+vv];
+        int up = LUVLUT.LuToUp_b[LL*256+uu];
+        int vp = LUVLUT.LvToVp_b[LL*256+vv];
         //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
         //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
@@ -8420,7 +8434,7 @@ struct Luv2RGBinteger
         int x = (int)(xv/BASE);
         x = y*x/BASE;
 
-        long long int vpl = LvToVpl_b[LL*256+vv];
+        long long int vpl = LUVLUT.LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
         zp /= BASE;
         long long int zq = zp - (long long)(5*255*BASE);
@@ -8460,11 +8474,11 @@ struct Luv2RGBinteger
             int v = vvstore[i];
             int y = LabToYF_b[LL*2];
 
-            int up = LuToUp_b[LL*256+u];
-            int vp = LvToVp_b[LL*256+v];
+            int up = LUVLUT.LuToUp_b[LL*256+u];
+            int vp = LUVLUT.LvToVp_b[LL*256+v];
 
             long long int xv = up*(long long int)vp;
-            long long int vpl = LvToVpl_b[LL*256+v];
+            long long int vpl = LUVLUT.LvToVpl_b[LL*256+v];
             long long int zp = vpl - xv*(255/3);
             zp = zp >> base_shift;
             long long int zq = zp - (5*255*BASE);
@@ -9828,9 +9842,9 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             static UMat usRGBGammaTab, ucoeffs, uLabCbrtTab;
 
             if (srgb && usRGBGammaTab.empty())
-                Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, sRGBGammaTab).copyTo(usRGBGammaTab);
+                Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(sRGBGammaTab)).copyTo(usRGBGammaTab);
             if (!lab && uLabCbrtTab.empty())
-                Mat(1, LAB_CBRT_TAB_SIZE * 4, CV_32FC1, LabCbrtTab).copyTo(uLabCbrtTab);
+                Mat(1, LAB_CBRT_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(LabCbrtTab)).copyTo(uLabCbrtTab);
 
             {
                 float coeffs[9];
@@ -9916,7 +9930,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         static UMat ucoeffs, usRGBInvGammaTab;
 
         if (srgb && usRGBInvGammaTab.empty())
-            Mat(1, GAMMA_TAB_SIZE*4, CV_32FC1, sRGBInvGammaTab).copyTo(usRGBInvGammaTab);
+            Mat(1, GAMMA_TAB_SIZE*4, CV_32FC1, const_cast<float*>(sRGBInvGammaTab)).copyTo(usRGBInvGammaTab);
 
         {
             float coeffs[9];
