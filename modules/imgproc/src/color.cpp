@@ -140,23 +140,24 @@ const int CB2GI = -5636;
 const int CR2GI = -11698;
 const int CR2RI = 22987;
 
-static void splineBuild(const softfloat* f, int n, float* tab)
+static const float * splineBuild(const softfloat* f, size_t n)
 {
+    float* tab = cv::allocSingleton<float>(n * 4);
     const softfloat f2(2), f3(3), f4(4);
     softfloat cn(0);
     softfloat* sftab = reinterpret_cast<softfloat*>(tab);
-    int i;
     tab[0] = tab[1] = 0.0f;
 
-    for(i = 1; i <= n-1; i++)
+    for(size_t i = 1; i < n; i++)
     {
         softfloat t = (f[i+1] - f[i]*f2 + f[i-1])*f3;
         softfloat l = softfloat::one()/(f4 - sftab[(i-1)*4]);
         sftab[i*4] = l; sftab[i*4+1] = (t - sftab[(i-1)*4+1])*l;
     }
 
-    for(i = n-1; i >= 0; i--)
+    for(size_t j = 0; j < n; ++j)
     {
+        size_t i = n - j - 1;
         softfloat c = sftab[i*4+1] - sftab[i*4]*cn;
         softfloat b = f[i+1] - f[i] - (cn + c*f2)/f3;
         softfloat d = (cn - c)/f3;
@@ -164,7 +165,9 @@ static void splineBuild(const softfloat* f, int n, float* tab)
         sftab[i*4+2] = c; sftab[i*4+3] = d;
         cn = c;
     }
+    return tab;
 }
+
 
 // interpolates value of a function at x, 0 <= x <= n using a cubic spline.
 template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab, int n)
@@ -5820,11 +5823,11 @@ static const softdouble D65[] = {softdouble::fromRaw(0x3fee6a22b3892ee8),
                                  softdouble::fromRaw(0x3ff16b8950763a19)};
 
 enum { LAB_CBRT_TAB_SIZE = 1024, GAMMA_TAB_SIZE = 1024 };
-static float *LabCbrtTab;
+static const float *LabCbrtTab = 0;
 static const float LabCbrtTabScale = softfloat(LAB_CBRT_TAB_SIZE*2)/softfloat(3);
 
-static float *sRGBGammaTab;
-static float *sRGBInvGammaTab;
+static const float *sRGBGammaTab = 0;
+static const float *sRGBInvGammaTab = 0;
 static const float GammaTabScale((int)GAMMA_TAB_SIZE);
 
 static ushort sRGBGammaTab_b[256], linearGammaTab_b[256];
@@ -5911,8 +5914,7 @@ static void initLabTabs()
             softfloat x = scale*softfloat(i);
             f[i] = x < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
         }
-        LabCbrtTab = new float[LAB_CBRT_TAB_SIZE*4];
-        splineBuild(f, LAB_CBRT_TAB_SIZE, LabCbrtTab);
+        LabCbrtTab = splineBuild(f, LAB_CBRT_TAB_SIZE);
 
         scale = softfloat::one()/softfloat(GammaTabScale);
         for(i = 0; i <= GAMMA_TAB_SIZE; i++)
@@ -5922,10 +5924,8 @@ static void initLabTabs()
             ig[i] = applyInvGamma(x);
         }
 
-        sRGBGammaTab = new float[GAMMA_TAB_SIZE*4];
-        sRGBInvGammaTab = new float[GAMMA_TAB_SIZE*4];
-        splineBuild(g, GAMMA_TAB_SIZE, sRGBGammaTab);
-        splineBuild(ig, GAMMA_TAB_SIZE, sRGBInvGammaTab);
+        sRGBGammaTab = splineBuild(g, GAMMA_TAB_SIZE);
+        sRGBInvGammaTab = splineBuild(ig, GAMMA_TAB_SIZE);
 
         static const softfloat intScale(255*(1 << gamma_shift));
         for(i = 0; i < 256; i++)
