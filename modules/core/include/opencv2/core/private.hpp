@@ -162,7 +162,7 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 
 //! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
 template <typename T>
-CV_EXPORTS T* allocSingleton(size_t count) { return fastMalloc(sizeof(T) * count); }
+CV_EXPORTS T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * count)); }
 }
 
 // property implementation macros
