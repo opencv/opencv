@@ -407,6 +407,18 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
     return v_float32x4(res);
 }
 
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& a)
+{
+    float32x2_t vl = vget_low_f32(v.val), vh = vget_high_f32(v.val);
+    float32x4_t res = vmulq_lane_f32(m0.val, vl, 0);
+    res = vmlaq_lane_f32(res, m1.val, vl, 1);
+    res = vmlaq_lane_f32(res, m2.val, vh, 0);
+    res = vaddq_f32(res, a.val);
+    return v_float32x4(res);
+}
+
 #define OPENCV_HAL_IMPL_NEON_BIN_OP(bin_op, _Tpvec, intrin) \
 inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
 { \
@@ -747,7 +759,15 @@ template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
 { return _Tpvec(vshrq_n_##suffix(a.val, n)); } \
 template<int n> inline _Tpvec v_rshr(const _Tpvec& a) \
-{ return _Tpvec(vrshrq_n_##suffix(a.val, n)); }
+{ return _Tpvec(vrshrq_n_##suffix(a.val, n)); } \
+template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a) \
+{ return _Tpvec(vextq_##suffix(a.val, vdupq_n_##suffix(0), n)); } \
+template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a) \
+{ return _Tpvec(vextq_##suffix(vdupq_n_##suffix(0), a.val, _Tpvec::nlanes - n)); } \
+template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b) \
+{ return _Tpvec(vextq_##suffix(a.val, b.val, n)); } \
+template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b) \
+{ return _Tpvec(vextq_##suffix(b.val, a.val, _Tpvec::nlanes - n)); }
 
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint8x16, u8, schar, s8)
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int8x16, s8, schar, s8)
@@ -763,6 +783,8 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr0), vld1_##suffix(ptr1))); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \

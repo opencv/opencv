@@ -99,7 +99,7 @@ block and to save contents of the register to memory block.
 @ref v_setall_s8, @ref v_setall_u8, ...,
 @ref v_setzero_u8, @ref v_setzero_s8, ...
 - Memory operations:
-@ref v_load, @ref v_load_aligned, @ref v_load_halves,
+@ref v_load, @ref v_load_aligned, @ref v_load_low, @ref v_load_halves,
 @ref v_store, @ref v_store_aligned,
 @ref v_store_high, @ref v_store_low
 
@@ -885,12 +885,59 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator shift_op(const v_reg
 /** @brief Bitwise shift left
 
 For 16-, 32- and 64-bit integer values. */
-OPENCV_HAL_IMPL_SHIFT_OP(<<)
+OPENCV_HAL_IMPL_SHIFT_OP(<< )
 
 /** @brief Bitwise shift right
 
 For 16-, 32- and 64-bit integer values. */
-OPENCV_HAL_IMPL_SHIFT_OP(>>)
+OPENCV_HAL_IMPL_SHIFT_OP(>> )
+
+/** @brief Element shift left among vector
+
+For all type */
+#define OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(suffix,opA,opB) \
+template<int imm, typename _Tp, int n> inline v_reg<_Tp, n> v_rotate_##suffix(const v_reg<_Tp, n>& a) \
+{ \
+    v_reg<_Tp, n> b; \
+    for (int i = 0; i < n; i++) \
+    { \
+        int sIndex = i opA imm; \
+        if (0 <= sIndex && sIndex < n) \
+        { \
+            b.s[i] = a.s[sIndex]; \
+        } \
+        else \
+        { \
+            b.s[i] = 0; \
+        } \
+    } \
+    return b; \
+} \
+template<int imm, typename _Tp, int n> inline v_reg<_Tp, n> v_rotate_##suffix(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+{ \
+    v_reg<_Tp, n> c; \
+    for (int i = 0; i < n; i++) \
+    { \
+        int aIndex = i opA imm; \
+        int bIndex = i opA imm opB n; \
+        if (0 <= bIndex && bIndex < n) \
+        { \
+            c.s[i] = b.s[bIndex]; \
+        } \
+        else if (0 <= aIndex && aIndex < n) \
+        { \
+            c.s[i] = a.s[aIndex]; \
+        } \
+        else \
+        { \
+            c.s[i] = 0; \
+        } \
+    } \
+    return c; \
+}
+
+OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(left,  -, +)
+OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(right, +, -)
 
 /** @brief Sum packed values
 
@@ -1078,6 +1125,26 @@ template<typename _Tp>
 inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_aligned(const _Tp* ptr)
 {
     return v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes>(ptr);
+}
+
+/** @brief Load 64-bits of data to lower part (high part is undefined).
+
+@param ptr memory block containing data for first half (0..n/2)
+
+@code{.cpp}
+int lo[2] = { 1, 2 };
+v_int32x4 r = v_load_low(lo);
+@endcode
+ */
+template<typename _Tp>
+inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_low(const _Tp* ptr)
+{
+    v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> c;
+    for( int i = 0; i < c.nlanes/2; i++ )
+    {
+        c.s[i] = ptr[i];
+    }
+    return c;
 }
 
 /** @brief Load register contents from two memory blocks
@@ -1838,6 +1905,30 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[1] + v.s[1]*m1.s[1] + v.s[2]*m2.s[1] + v.s[3]*m3.s[1],
                        v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + v.s[3]*m3.s[2],
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + v.s[3]*m3.s[3]);
+}
+
+/** @brief Matrix multiplication and add
+
+Scheme:
+@code
+{A0 A1 A2   }   |V0|   |D0|
+{B0 B1 B2   }   |V1|   |D1|
+{C0 C1 C2   } x |V2| + |D2|
+====================
+{R0 R1 R2 R3}, where:
+R0 = A0V0 + A1V1 + A2V2 + D0,
+R1 = B0V0 + B1V1 + B2V2 + D1
+...
+@endcode
+*/
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& m3)
+{
+    return v_float32x4(v.s[0]*m0.s[0] + v.s[1]*m1.s[0] + v.s[2]*m2.s[0] + m3.s[0],
+                       v.s[0]*m0.s[1] + v.s[1]*m1.s[1] + v.s[2]*m2.s[1] + m3.s[1],
+                       v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + m3.s[2],
+                       v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
 
 //! @}

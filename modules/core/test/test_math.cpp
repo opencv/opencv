@@ -904,6 +904,60 @@ void Core_TransformTest::prepare_to_validation( int )
     cvtest::transform( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], transmat, shift );
 }
 
+class Core_TransformLargeTest : public Core_TransformTest
+{
+public:
+    typedef Core_MatrixTest Base;
+protected:
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types);
+};
+
+void Core_TransformLargeTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
+{
+    RNG& rng = ts->get_rng();
+    int bits = cvtest::randInt(rng);
+    int depth, dst_cn, mat_cols, mattype;
+    Base::get_test_array_types_and_sizes(test_case_idx, sizes, types);
+    for (unsigned int j = 0; j < sizes.size(); j++)
+    {
+        for (unsigned int i = 0; i < sizes[j].size(); i++)
+        {
+            sizes[j][i].width *= 4;
+        }
+    }
+
+    mat_cols = CV_MAT_CN(types[INPUT][0]);
+    depth = CV_MAT_DEPTH(types[INPUT][0]);
+    dst_cn = cvtest::randInt(rng) % 4 + 1;
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, dst_cn);
+
+    mattype = depth < CV_32S ? CV_32F : depth == CV_64F ? CV_64F : bits & 1 ? CV_32F : CV_64F;
+    types[INPUT][1] = mattype;
+    types[INPUT][2] = CV_MAKETYPE(mattype, dst_cn);
+
+    scale = 1. / ((cvtest::randInt(rng) % 4) * 50 + 1);
+
+    if (bits & 2)
+    {
+        sizes[INPUT][2] = Size(0, 0);
+        mat_cols += (bits & 4) != 0;
+    }
+    else if (bits & 4)
+        sizes[INPUT][2] = Size(1, 1);
+    else
+    {
+        if (bits & 8)
+            sizes[INPUT][2] = Size(dst_cn, 1);
+        else
+            sizes[INPUT][2] = Size(1, dst_cn);
+        types[INPUT][2] &= ~CV_MAT_CN_MASK;
+    }
+    diagMtx = (bits & 16) != 0;
+
+    sizes[INPUT][1] = Size(mat_cols, dst_cn);
+}
+
+
 
 ///////////////// PerspectiveTransform /////////////////////
 
@@ -2691,6 +2745,7 @@ TEST(Core_Invert, accuracy) { Core_InvertTest test; test.safe_run(); }
 TEST(Core_Mahalanobis, accuracy) { Core_MahalanobisTest test; test.safe_run(); }
 TEST(Core_MulTransposed, accuracy) { Core_MulTransposedTest test; test.safe_run(); }
 TEST(Core_Transform, accuracy) { Core_TransformTest test; test.safe_run(); }
+TEST(Core_TransformLarge, accuracy) { Core_TransformLargeTest test; test.safe_run(); }
 TEST(Core_PerspectiveTransform, accuracy) { Core_PerspectiveTransformTest test; test.safe_run(); }
 TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }

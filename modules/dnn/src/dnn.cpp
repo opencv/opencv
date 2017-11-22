@@ -1233,12 +1233,13 @@ struct Net::Impl
                     }
                 }
 
-                // For now,  OpenCL target only support fusion with activation of ReLU/ChannelsPReLU
+                // For now,  OpenCL target only support fusion with activation of ReLU/ChannelsPReLU/Power
                 if ( preferableTarget != DNN_TARGET_OPENCL ||
                         (preferableTarget == DNN_TARGET_OPENCL &&
                          nextData &&
                         (!nextData->type.compare("ReLU") ||
-                         !nextData->type.compare("ChannelsPReLU"))) )
+                         !nextData->type.compare("ChannelsPReLU") ||
+                         !nextData->type.compare("Power"))) )
                 {
 
                     Ptr<ActivationLayer> nextActivLayer;
@@ -1253,6 +1254,78 @@ struct Net::Impl
                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
                         activData->skipFlags[DNN_BACKEND_DEFAULT] = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+
+                        if ( preferableTarget == DNN_TARGET_OPENCL )
+                        {
+                            nextData = &layers[activData->consumers[0].lid];
+                            lpNext = LayerPin(activData->consumers[0].lid, 0);
+                        }
+                    }
+                }
+
+                // fuse convlution layer followed by eltwise + relu
+                if ( preferableTarget == DNN_TARGET_OPENCL )
+                {
+                    Ptr<EltwiseLayer> nextEltwiseLayer;
+                    if( nextData )
+                        nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+
+                    if( !nextEltwiseLayer.empty() && pinsToKeep.count(lpNext) == 0 )
+                    {
+                        LayerData *eltwiseData = nextData;
+                        // go down from the second input and find the first non-skipped layer.
+                        LayerData *downLayerData = &layers[eltwiseData->inputBlobsId[1].lid];
+                        while (downLayerData->skipFlags[DNN_BACKEND_DEFAULT])
+                        {
+                            downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
+                        }
+
+                        // second input layer is current layer.
+                        if ( ld.id == downLayerData->id )
+                        {
+                            // go down from the first input and find the first non-skipped layer
+                            downLayerData = &layers[eltwiseData->inputBlobsId[0].lid];
+                            while (downLayerData->skipFlags[DNN_BACKEND_DEFAULT])
+                            {
+                                if ( !downLayerData->type.compare("Eltwise") )
+                                    downLayerData = &layers[downLayerData->inputBlobsId[1].lid];
+                                else
+                                    downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
+                            }
+
+                            Ptr<ConvolutionLayer> convLayer;
+                            if( downLayerData )
+                                convLayer = downLayerData->layerInstance.dynamicCast<ConvolutionLayer>();
+
+                            //  first input layer is convolution layer
+                            if( !convLayer.empty() )
+                            {
+                                // fuse eltwise + activation layer
+                                LayerData *firstConvLayerData = downLayerData;
+                                {
+                                    nextData = &layers[eltwiseData->consumers[0].lid];
+                                    lpNext = LayerPin(eltwiseData->consumers[0].lid, 0);
+                                    Ptr<ActivationLayer> nextActivLayer;
+                                    if( nextData )
+                                        nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
+
+                                    if( !nextActivLayer.empty() && pinsToKeep.count(lpNext) == 0 &&
+                                            (!nextData->type.compare("ReLU") ||
+                                             !nextData->type.compare("ChannelsPReLU") ||
+                                             !nextData->type.compare("Power")) &&
+                                            currLayer->setActivation(nextActivLayer) )
+                                    {
+                                        CV_Assert(firstConvLayerData->outputBlobs.size() == 1 && ld.inputBlobs.size() == 1);
+                                        ld.inputBlobs.push_back(&firstConvLayerData->outputBlobs[0]);
+                                        printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+                                        printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
+                                        eltwiseData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                                        nextData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

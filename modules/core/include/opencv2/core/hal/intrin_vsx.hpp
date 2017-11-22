@@ -281,6 +281,8 @@ inline _Tpvec v_load(const _Tp* ptr)                                        \
 { return _Tpvec(ld_func(0, ptr)); }                                         \
 inline _Tpvec v_load_aligned(const _Tp* ptr)                                \
 { return _Tpvec(ld_func(0, ptr)); }                                         \
+inline _Tpvec v_load_low(const _Tp* ptr)                                    \
+{ return _Tpvec(vec_ld_l8(ptr)); }                                          \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1)               \
 { return _Tpvec(vec_mergesqh(vec_ld_l8(ptr0), vec_ld_l8(ptr1))); }          \
 inline void v_store(_Tp* ptr, const _Tpvec& a)                              \
@@ -521,24 +523,25 @@ OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_add_wrap, vec_add)
 OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_sub_wrap, vec_sub)
 
 /** Bitwise shifts **/
-#define OPENCV_HAL_IMPL_VSX_SHIFT_OP(_Tpuvec, splfunc)   \
-inline _Tpuvec operator << (const _Tpuvec& a, int imm)   \
-{ return _Tpuvec(vec_sl(a.val, splfunc(imm))); }         \
-inline _Tpuvec operator >> (const _Tpuvec& a, int imm)   \
-{ return _Tpuvec(vec_sr(a.val, splfunc(imm))); }         \
-template<int imm> inline _Tpuvec v_shl(const _Tpuvec& a) \
-{ return _Tpuvec(vec_sl(a.val, splfunc(imm))); }         \
-template<int imm> inline _Tpuvec v_shr(const _Tpuvec& a) \
-{ return _Tpuvec(vec_sr(a.val, splfunc(imm))); }
+#define OPENCV_HAL_IMPL_VSX_SHIFT_OP(_Tpvec, shr, splfunc)   \
+inline _Tpvec operator << (const _Tpvec& a, int imm)         \
+{ return _Tpvec(vec_sl(a.val, splfunc(imm))); }              \
+inline _Tpvec operator >> (const _Tpvec& a, int imm)         \
+{ return _Tpvec(shr(a.val, splfunc(imm))); }                 \
+template<int imm> inline _Tpvec v_shl(const _Tpvec& a)       \
+{ return _Tpvec(vec_sl(a.val, splfunc(imm))); }              \
+template<int imm> inline _Tpvec v_shr(const _Tpvec& a)       \
+{ return _Tpvec(shr(a.val, splfunc(imm))); }
 
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint8x16, vec_uchar16_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int8x16, vec_uchar16_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint16x8, vec_ushort8_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int16x8, vec_ushort8_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint32x4, vec_uint4_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int32x4, vec_uint4_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint64x2, vec_udword2_sp)
-OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int64x2, vec_udword2_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint8x16, vec_sr, vec_uchar16_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint16x8, vec_sr, vec_ushort8_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint32x4, vec_sr, vec_uint4_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_uint64x2, vec_sr, vec_udword2_sp)
+// algebraic right shift
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int8x16, vec_sra, vec_uchar16_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int16x8, vec_sra, vec_ushort8_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int32x4, vec_sra, vec_uint4_sp)
+OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int64x2, vec_sra, vec_udword2_sp)
 
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_VSX_LOGIC_OP(_Tpvec)    \
@@ -602,6 +605,64 @@ OPENCV_HAL_IMPL_VSX_INT_CMP_OP(v_int64x2)
 /** min/max **/
 OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_min, vec_min)
 OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_max, vec_max)
+
+/** Rotate **/
+#define OPENCV_IMPL_VSX_ROTATE(_Tpvec, suffix, shf, cast)                       \
+template<int imm>                                                               \
+inline _Tpvec v_rotate_##suffix(const _Tpvec& a)                                \
+{                                                                               \
+    const int wd = imm * sizeof(typename _Tpvec::lane_type);                    \
+    if (wd > 15)                                                                \
+        return _Tpvec();                                                        \
+    return _Tpvec((cast)shf(vec_uchar16_c(a.val), vec_uchar16_sp(wd << 3)));    \
+}
+
+#define OPENCV_IMPL_VSX_ROTATE_LR(_Tpvec, cast)     \
+OPENCV_IMPL_VSX_ROTATE(_Tpvec, left, vec_slo, cast) \
+OPENCV_IMPL_VSX_ROTATE(_Tpvec, right, vec_sro, cast)
+
+OPENCV_IMPL_VSX_ROTATE_LR(v_uint8x16, vec_uchar16)
+OPENCV_IMPL_VSX_ROTATE_LR(v_int8x16,  vec_char16)
+OPENCV_IMPL_VSX_ROTATE_LR(v_uint16x8, vec_ushort8)
+OPENCV_IMPL_VSX_ROTATE_LR(v_int16x8,  vec_short8)
+OPENCV_IMPL_VSX_ROTATE_LR(v_uint32x4, vec_uint4)
+OPENCV_IMPL_VSX_ROTATE_LR(v_int32x4,  vec_int4)
+OPENCV_IMPL_VSX_ROTATE_LR(v_uint64x2, vec_udword2)
+OPENCV_IMPL_VSX_ROTATE_LR(v_int64x2,  vec_dword2)
+
+
+template<int imm, typename _Tpvec>
+inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)
+{
+    const int wd = imm * sizeof(typename _Tpvec::lane_type);
+    if (wd == 0)
+        return a;
+    return _Tpvec(vec_sld(b.val, a.val, 16 - wd));
+}
+
+template<int imm, typename _Tpvec>
+inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)
+{
+    const int wd = imm * sizeof(typename _Tpvec::lane_type);
+    if (wd == 16)
+        return b;
+    return _Tpvec(vec_sld(a.val, b.val, wd));
+}
+
+#define OPENCV_IMPL_VSX_ROTATE_64(_Tpvec, suffix, rg1, rg2)       \
+template<int imm>                                                 \
+inline _Tpvec v_rotate_##suffix(const _Tpvec& a, const _Tpvec& b) \
+{                                                                 \
+    if (imm == 1)                                                 \
+        return _Tpvec(vec_permi(rg1.val, rg2.val, 2));            \
+    return imm ? b : a;                                           \
+}
+
+OPENCV_IMPL_VSX_ROTATE_64(v_int64x2,  right, a, b)
+OPENCV_IMPL_VSX_ROTATE_64(v_uint64x2, right, a, b)
+
+OPENCV_IMPL_VSX_ROTATE_64(v_int64x2,  left, b, a)
+OPENCV_IMPL_VSX_ROTATE_64(v_uint64x2, left, b, a)
 
 ////////// Reduce and mask /////////
 
@@ -724,7 +785,7 @@ inline int v_signmask(const v_float32x4& a)
 
 inline int v_signmask(const v_int64x2& a)
 {
-    const vec_dword2 sv = vec_sr(a.val, vec_udword2_sp(63));
+    VSX_UNUSED(const vec_dword2) sv = vec_sr(a.val, vec_udword2_sp(63));
     return (int)vec_extract(sv, 0) | (int)vec_extract(sv, 1) << 1;
 }
 inline int v_signmask(const v_uint64x2& a)
@@ -810,66 +871,47 @@ OPENCV_HAL_IMPL_VSX_BIN_FUNC2(v_int64x2, v_uint64x2, vec_udword2_c, v_absdiff, v
 
 /** Rounding **/
 inline v_int32x4 v_round(const v_float32x4& a)
-{ return v_int32x4(vec_cts(vec_round(a.val), 0)); }
+{ return v_int32x4(vec_cts(vec_round(a.val))); }
 
 inline v_int32x4 v_round(const v_float64x2& a)
-{
-    static const vec_uchar16 perm = {16, 17, 18, 19, 24, 25, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0};
-    return v_int32x4(vec_perm(vec_int4_z, vec_ctsw(vec_round(a.val)), perm));
-}
+{ return v_int32x4(vec_mergesqo(vec_cts(vec_round(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
-{ return v_int32x4(vec_cts(vec_floor(a.val), 0)); }
+{ return v_int32x4(vec_cts(vec_floor(a.val))); }
 
 inline v_int32x4 v_floor(const v_float64x2& a)
-{
-    static const vec_uchar16 perm = {16, 17, 18, 19, 24, 25, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0};
-    return v_int32x4(vec_perm(vec_int4_z, vec_ctsw(vec_floor(a.val)), perm));
-}
+{ return v_int32x4(vec_mergesqo(vec_cts(vec_floor(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
-{ return v_int32x4(vec_cts(vec_ceil(a.val), 0)); }
+{ return v_int32x4(vec_cts(vec_ceil(a.val))); }
 
 inline v_int32x4 v_ceil(const v_float64x2& a)
-{
-    static const vec_uchar16 perm = {16, 17, 18, 19, 24, 25, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0};
-    return v_int32x4(vec_perm(vec_int4_z, vec_ctsw(vec_ceil(a.val)), perm));
-}
+{ return v_int32x4(vec_mergesqo(vec_cts(vec_ceil(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
-{ return v_int32x4(vec_cts(a.val, 0)); }
+{ return v_int32x4(vec_cts(a.val)); }
 
 inline v_int32x4 v_trunc(const v_float64x2& a)
-{
-    static const vec_uchar16 perm = {16, 17, 18, 19, 24, 25, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0};
-    return v_int32x4(vec_perm(vec_int4_z, vec_ctsw(a.val), perm));
-}
+{ return v_int32x4(vec_mergesqo(vec_cts(a.val), vec_int4_z)); }
 
 /** To float **/
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
-{ return v_float32x4(vec_ctf(a.val, 0)); }
+{ return v_float32x4(vec_ctf(a.val)); }
 
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
-{
-    static const vec_uchar16 perm = {16, 17, 18, 19, 24, 25, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0};
-    return v_float32x4(vec_perm(vec_float4_z, vec_cvf(a.val), perm));
-}
+{ return v_float32x4(vec_mergesqo(vec_cvf(a.val), vec_float4_z)); }
+
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
-{
-    return v_float64x2(vec_ctd(vec_mergeh(a.val, a.val), 0));
-}
+{ return v_float64x2(vec_ctdo(vec_mergeh(a.val, a.val))); }
+
 inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
-{
-    return v_float64x2(vec_ctd(vec_mergel(a.val, a.val), 0));
-}
+{ return v_float64x2(vec_ctdo(vec_mergel(a.val, a.val))); }
+
 inline v_float64x2 v_cvt_f64(const v_float32x4& a)
-{
-    return v_float64x2(vec_cvf(vec_mergeh(a.val, a.val)));
-}
+{ return v_float64x2(vec_cvfo(vec_mergeh(a.val, a.val))); }
+
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
-{
-    return v_float64x2(vec_cvf(vec_mergel(a.val, a.val)));
-}
+{ return v_float64x2(vec_cvfo(vec_mergel(a.val, a.val))); }
 
 /** Reinterpret **/
 /** its up there with load and store operations **/
@@ -886,8 +928,18 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
     const vec_float4 v0 = vec_splat(v.val, 0);
     const vec_float4 v1 = vec_splat(v.val, 1);
     const vec_float4 v2 = vec_splat(v.val, 2);
-    const vec_float4 v3 = vec_splat(v.val, 3);
+    VSX_UNUSED(const vec_float4) v3 = vec_splat(v.val, 3);
     return v_float32x4(vec_madd(v0, m0.val, vec_madd(v1, m1.val, vec_madd(v2, m2.val, vec_mul(v3, m3.val)))));
+}
+
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& a)
+{
+    const vec_float4 v0 = vec_splat(v.val, 0);
+    const vec_float4 v1 = vec_splat(v.val, 1);
+    const vec_float4 v2 = vec_splat(v.val, 2);
+    return v_float32x4(vec_madd(v0, m0.val, vec_madd(v1, m1.val, vec_madd(v2, m2.val, a.val))));
 }
 
 #define OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(_Tpvec, _Tpvec2)                        \
