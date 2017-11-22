@@ -1503,14 +1503,18 @@ public:
     enum ActivationFunctions {
         /** Identity function: \f$f(x)=x\f$ */
         IDENTITY = 0,
-        /** Symmetrical sigmoid: \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}\f$
+        /** Symmetrical sigmoid: \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x})\f$
         @note
         If you are using the default sigmoid activation function with the default parameter values
         fparam1=0 and fparam2=0 then the function used is y = 1.7159\*tanh(2/3 \* x), so the output
         will range from [-1.7159, 1.7159], instead of [0,1].*/
         SIGMOID_SYM = 1,
         /** Gaussian function: \f$f(x)=\beta e^{-\alpha x*x}\f$ */
-        GAUSSIAN = 2
+        GAUSSIAN = 2,
+        /** ReLU function: \f$f(x)=max(0,x)\f$ */
+        RELU = 3,
+        /** Leaky ReLU function: for x>0 \f$f(x)=x \f$ and x<=0 \f$f(x)=\alpha x \f$*/
+        LEAKYRELU= 4
     };
 
     /** Train options */
