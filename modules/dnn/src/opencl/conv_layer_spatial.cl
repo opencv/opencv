@@ -91,7 +91,6 @@
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
 #if defined(convolve_simd) || defined(Conv_Interleaved)
-#if Dtype_SIZE == 4
 #define INT_TYPE uint
 #define INT_TYPE2 uint2
 #define INT_TYPE4 uint4
@@ -100,9 +99,6 @@
 #define SUB_GROUP_BLOCK_READ4 intel_sub_group_block_read4
 #define SUB_GROUP_BLOCK_READ8 intel_sub_group_block_read8
 #define SUB_GROUP_BLOCK_READ intel_sub_group_block_read
-#else
-#error "Unsupported type"
-#endif
 #endif
 
 #ifdef KERNEL_BASIC
@@ -186,11 +182,7 @@ __kernel void ConvolveBasic(
 
 #elif defined KERNEL_IDLF
 
-#if TYPE == TYPE_HALF
-#define VLOAD4(_v, _p) do { (_v).s0 = *(_p); (_v).s1 = *(_p + 1); (_v).s2 = *(_p + 2); (_v).s3 = *(_p + 3); } while(0)
-#else
 #define VLOAD4(_v, _p) do { _v = vload4(0, _p); } while(0)
-#endif
 
 // Each work-item computes a OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT region of one output map.
 // Each work-group (which will be mapped to 1 SIMD16/SIMD8 EU thread) will compute 16/8 different feature maps, but each feature map is for the same region of the imput image.
