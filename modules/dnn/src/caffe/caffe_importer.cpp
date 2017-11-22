@@ -77,8 +77,8 @@ static cv::String toString(const T &v)
 
 class CaffeImporter : public Importer
 {
-    caffe::NetParameter net;
-    caffe::NetParameter netBinary;
+    opencvcaffe::NetParameter net;
+    opencvcaffe::NetParameter netBinary;
 
 public:
 
@@ -196,7 +196,7 @@ public:
         }
     }
 
-    void blobShapeFromProto(const caffe::BlobProto &pbBlob, MatShape& shape)
+    void blobShapeFromProto(const opencvcaffe::BlobProto &pbBlob, MatShape& shape)
     {
         shape.clear();
         if (pbBlob.has_num() || pbBlob.has_channels() || pbBlob.has_height() || pbBlob.has_width())
@@ -208,7 +208,7 @@ public:
         }
         else if (pbBlob.has_shape())
         {
-            const caffe::BlobShape &_shape = pbBlob.shape();
+            const opencvcaffe::BlobShape &_shape = pbBlob.shape();
 
             for (int i = 0; i < _shape.dim_size(); i++)
                 shape.push_back((int)_shape.dim(i));
@@ -217,7 +217,7 @@ public:
             shape.resize(1, 1);  // Is a scalar.
     }
 
-    void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
+    void blobFromProto(const opencvcaffe::BlobProto &pbBlob, cv::Mat &dstBlob)
     {
         MatShape shape;
         blobShapeFromProto(pbBlob, shape);
@@ -237,7 +237,7 @@ public:
         else
         {
             // Half precision floats.
-            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
+            CV_Assert(pbBlob.raw_data_type() == opencvcaffe::FLOAT16);
             std::string raw_data = pbBlob.raw_data();
 
             CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
@@ -247,7 +247,7 @@ public:
         }
     }
 
-    void extractBinaryLayerParms(const caffe::LayerParameter& layer, LayerParams& layerParams)
+    void extractBinaryLayerParms(const opencvcaffe::LayerParameter& layer, LayerParams& layerParams)
     {
         const std::string &name = layer.name();
 
@@ -261,7 +261,7 @@ public:
         if (li == netBinary.layer_size() || netBinary.layer(li).blobs_size() == 0)
             return;
 
-        const caffe::LayerParameter &binLayer = netBinary.layer(li);
+        const opencvcaffe::LayerParameter &binLayer = netBinary.layer(li);
         layerParams.blobs.resize(binLayer.blobs_size());
         for (int bi = 0; bi < binLayer.blobs_size(); bi++)
         {
@@ -302,7 +302,7 @@ public:
 
         for (int li = 0; li < layersSize; li++)
         {
-            const caffe::LayerParameter &layer = net.layer(li);
+            const opencvcaffe::LayerParameter &layer = net.layer(li);
             String name = layer.name();
             String type = layer.type();
             LayerParams layerParams;
@@ -334,7 +334,7 @@ public:
         addedBlobs.clear();
     }
 
-    void addOutput(const caffe::LayerParameter &layer, int layerId, int outNum)
+    void addOutput(const opencvcaffe::LayerParameter &layer, int layerId, int outNum)
     {
         const std::string &name = layer.top(outNum);
 

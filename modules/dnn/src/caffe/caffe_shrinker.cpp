@@ -28,19 +28,19 @@ void shrinkCaffeModel(const String& src, const String& dst, const std::vector<St
         types.push_back("InnerProduct");
     }
 
-    caffe::NetParameter net;
+    opencvcaffe::NetParameter net;
     ReadNetParamsFromBinaryFileOrDie(src.c_str(), &net);
 
     for (int i = 0; i < net.layer_size(); ++i)
     {
-        caffe::LayerParameter* lp = net.mutable_layer(i);
+        opencvcaffe::LayerParameter* lp = net.mutable_layer(i);
         if (std::find(types.begin(), types.end(), lp->type()) == types.end())
         {
             continue;
         }
         for (int j = 0; j < lp->blobs_size(); ++j)
         {
-            caffe::BlobProto* blob = lp->mutable_blobs(j);
+            opencvcaffe::BlobProto* blob = lp->mutable_blobs(j);
             CV_Assert(blob->data_size() != 0);  // float32 array.
 
             Mat floats(1, blob->data_size(), CV_32FC1, (void*)blob->data().data());
@@ -51,7 +51,7 @@ void shrinkCaffeModel(const String& src, const String& dst, const std::vector<St
 
             // Set float16 data.
             blob->set_raw_data(halfs.data, halfs.total() * halfs.elemSize());
-            blob->set_raw_data_type(caffe::FLOAT16);
+            blob->set_raw_data_type(opencvcaffe::FLOAT16);
         }
     }
     size_t msgSize = net.ByteSizeLong();

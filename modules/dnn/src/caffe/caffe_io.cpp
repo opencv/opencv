@@ -107,7 +107,7 @@ namespace dnn {
 
 using std::string;
 using std::map;
-using namespace caffe;
+using namespace opencvcaffe;
 using namespace ::google::protobuf;
 using namespace ::google::protobuf::io;
 
