@@ -91,7 +91,7 @@
 #define __OPENCV_DNN_CAFFE_IO_HPP__
 #ifdef HAVE_PROTOBUF
 
-#include "caffe.pb.h"
+#include "opencv-caffe.pb.h"
 
 namespace cv {
 namespace dnn {
