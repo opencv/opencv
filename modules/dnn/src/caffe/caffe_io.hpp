@@ -98,9 +98,9 @@ namespace dnn {
 
 // Read parameters from a file into a NetParameter proto message.
 void ReadNetParamsFromTextFileOrDie(const char* param_file,
-                                    caffe::NetParameter* param);
+                                    opencvcaffe::NetParameter* param);
 void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
-                                      caffe::NetParameter* param);
+                                      opencvcaffe::NetParameter* param);
 
 }
 }

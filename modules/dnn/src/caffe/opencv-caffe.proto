@@ -48,7 +48,7 @@
 
 syntax = "proto2";
 
-package caffe;
+package opencvcaffe;
 
 // NVidia's Caffe feature is used to store fp16 weights, https://github.com/NVIDIA/caffe:
 // Math and storage types
