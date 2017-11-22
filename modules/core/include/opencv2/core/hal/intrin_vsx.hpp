@@ -634,19 +634,19 @@ OPENCV_IMPL_VSX_ROTATE_LR(v_int64x2,  vec_dword2)
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)
 {
-    const int wd = imm * sizeof(typename _Tpvec::lane_type);
-    if (wd == 0)
+    enum { CV_SHIFT = 16 - imm * (sizeof(typename _Tpvec::lane_type)) };
+    if (CV_SHIFT == 16)
         return a;
-    return _Tpvec(vec_sld(b.val, a.val, 16 - wd));
+    return _Tpvec(vec_sld(b.val, a.val, CV_SHIFT));
 }
 
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)
 {
-    const int wd = imm * sizeof(typename _Tpvec::lane_type);
-    if (wd == 16)
+    enum { CV_SHIFT = imm * (sizeof(typename _Tpvec::lane_type)) };
+    if (CV_SHIFT == 16)
         return b;
-    return _Tpvec(vec_sld(a.val, b.val, wd));
+    return _Tpvec(vec_sld(a.val, b.val, CV_SHIFT));
 }
 
 #define OPENCV_IMPL_VSX_ROTATE_64(_Tpvec, suffix, rg1, rg2)       \
