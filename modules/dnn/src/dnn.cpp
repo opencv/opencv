@@ -2381,6 +2381,10 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
         inputs[i] = &inpvec[i];
 
     this->forward(inputs, outputs, internals);
+
+    // sync results back
+    outputs_arr.assign(outputs);
+    internals_arr.assign(internals);
 }
 
 void Layer::run(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)

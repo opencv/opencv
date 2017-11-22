@@ -37,7 +37,9 @@ const char* params
       "{ camera_device  | 0     | camera device number }"
       "{ video          |       | video or image for detection}"
       "{ out            |       | path to output video file}"
-      "{ min_confidence | 0.2   | min confidence      }";
+      "{ min_confidence | 0.2   | min confidence      }"
+      "{ opencl         | false | enable OpenCL }"
+;
 
 int main(int argc, char** argv)
 {
@@ -56,6 +58,11 @@ int main(int argc, char** argv)
     //! [Initialize network]
     dnn::Net net = readNetFromCaffe(modelConfiguration, modelBinary);
     //! [Initialize network]
+
+    if (parser.get<bool>("opencl"))
+    {
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
+    }
 
     if (net.empty())
     {
