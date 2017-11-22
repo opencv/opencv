@@ -357,6 +357,9 @@ public:
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
+
+    void assign(const std::vector<UMat>& v) const;
+    void assign(const std::vector<Mat>& v) const;
 };
 
 
