@@ -313,4 +313,31 @@ TEST(Reproducibility_DenseNet_121, Accuracy)
     normAssert(out, ref);
 }
 
+TEST(Test_Caffe, multiple_inputs)
+{
+    const string proto = findDataFile("dnn/layers/net_input.prototxt", false);
+    Net net = readNetFromCaffe(proto);
+
+    Mat first_image(10, 11, CV_32FC3);
+    Mat second_image(10, 11, CV_32FC3);
+    randu(first_image, -1, 1);
+    randu(second_image, -1, 1);
+
+    first_image = blobFromImage(first_image);
+    second_image = blobFromImage(second_image);
+
+    Mat first_image_blue_green = slice(first_image, Range::all(), Range(0, 2), Range::all(), Range::all());
+    Mat first_image_red = slice(first_image, Range::all(), Range(2, 3), Range::all(), Range::all());
+    Mat second_image_blue_green = slice(second_image, Range::all(), Range(0, 2), Range::all(), Range::all());
+    Mat second_image_red = slice(second_image, Range::all(), Range(2, 3), Range::all(), Range::all());
+
+    net.setInput(first_image_blue_green, "old_style_input_blue_green");
+    net.setInput(first_image_red, "different_name_for_red");
+    net.setInput(second_image_blue_green, "input_layer_blue_green");
+    net.setInput(second_image_red, "old_style_input_red");
+    Mat out = net.forward();
+
+    normAssert(out, first_image + second_image);
+}
+
 }

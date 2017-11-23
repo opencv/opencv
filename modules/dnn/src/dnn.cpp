@@ -279,6 +279,16 @@ struct DataLayer : public Layer
         outNames.assign(names.begin(), names.end());
     }
 
+    bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int requiredOutputs,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const
+    {
+        CV_Assert(inputs.size() == requiredOutputs);
+        outputs.assign(inputs.begin(), inputs.end());
+        return false;
+    }
+
 private:
     std::vector<String> outNames;
 };
@@ -1385,7 +1395,7 @@ struct Net::Impl
                                layers[ld.inputBlobsId[i].lid].getLayerInstance()->name.c_str(),
                                inp_i_data->getLayerInstance()->name.c_str()));
 
-                        if(inp_i_data->skipFlags[DNN_BACKEND_DEFAULT])
+                        if(inp_i_data->skipFlags[DNN_BACKEND_DEFAULT] || inp_i_data->consumers.size() != 1)
                             break;
                         realinputs[i] = pin;
                     }
@@ -1407,6 +1417,14 @@ struct Net::Impl
                             Mat& curr_output = inp_i_data->outputBlobs[pin.oid];
                             CV_Assert(output_slice.isContinuous() && output_slice.size == curr_output.size);
                             curr_output = output_slice;
+
+                            pin = ld.inputBlobsId[i];
+                            inp_i_data = &layers[pin.lid];
+                            for (int j = 0; j < inp_i_data->consumers.size(); ++j)
+                            {
+                                LayerPin consumer = inp_i_data->consumers[j];
+                                layers[consumer.lid].inputBlobs[consumer.oid] = &curr_output;
+                            }
                         }
                         ld.skipFlags[DNN_BACKEND_DEFAULT] = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
@@ -1438,7 +1456,9 @@ struct Net::Impl
         blobManager.setPreferableTarget(preferableTarget);
         blobManager.setPreferableBackend(preferableBackend);
         backendWrappers.clear();
-        blobManager.addReference(LayerPin(0, 0));
+        // Fake references to input blobs.
+        for (int i = 0; i < layers[0].outputBlobs.size(); ++i)
+            blobManager.addReference(LayerPin(0, i));
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             const LayerData& ld = it->second;
