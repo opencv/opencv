@@ -1317,6 +1317,7 @@ struct CvVideoWriter_FFMPEG
     AVStream        * video_st;
     int               input_pix_fmt;
     unsigned char   * aligned_input;
+    size_t            aligned_input_size;
     int               frame_width, frame_height;
     int               frame_idx;
     bool              ok;
@@ -1394,6 +1395,7 @@ void CvVideoWriter_FFMPEG::init()
     video_st = 0;
     input_pix_fmt = 0;
     aligned_input = NULL;
+    aligned_input_size = 0;
     img_convert_ctx = 0;
     frame_width = frame_height = 0;
     frame_idx = 0;
@@ -1702,17 +1704,28 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 #endif
 
     // FFmpeg contains SIMD optimizations which can sometimes read data past
-    // the supplied input buffer. To ensure that doesn't happen, we pad the
-    // step to a multiple of 32 (that's the minimal alignment for which Valgrind
-    // doesn't raise any warnings).
-    const int STEP_ALIGNMENT = 32;
-    if( step % STEP_ALIGNMENT != 0 )
+    // the supplied input buffer.
+    // Related info: https://trac.ffmpeg.org/ticket/6763
+    // 1. To ensure that doesn't happen, we pad the step to a multiple of 32
+    // (that's the minimal alignment for which Valgrind doesn't raise any warnings).
+    // 2. (dataend - SIMD_SIZE) and (dataend + SIMD_SIZE) is from the same 4k page
+    const int CV_STEP_ALIGNMENT = 32;
+    const size_t CV_SIMD_SIZE = 32;
+    const size_t CV_PAGE_MASK = ~(4096 - 1);
+    const uchar* dataend = data + ((size_t)height * step);
+    if (step % CV_STEP_ALIGNMENT != 0 ||
+        (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
     {
-        int aligned_step = (step + STEP_ALIGNMENT - 1) & -STEP_ALIGNMENT;
+        int aligned_step = (step + CV_STEP_ALIGNMENT - 1) & ~(CV_STEP_ALIGNMENT - 1);
 
-        if( !aligned_input )
+        size_t new_size = (aligned_step * height + CV_SIMD_SIZE);
+
+        if (!aligned_input || aligned_input_size < new_size)
         {
-            aligned_input = (unsigned char*)av_mallocz(aligned_step * height);
+            if (aligned_input)
+                av_freep(&aligned_input);
+            aligned_input_size = new_size;
+            aligned_input = (unsigned char*)av_mallocz(aligned_input_size);
         }
 
         if (origin == 1)
