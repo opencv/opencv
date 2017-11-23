@@ -87,20 +87,18 @@ public:
             // TODO: fix this backend
             std::cout << "SKIP test: AVFoundation backend returns invalid frame count" << std::endl;
             return;
-        } else if (apiPref == CAP_VFW) {
+        }
+        else if (apiPref == CAP_VFW)
+        {
             // TODO: fix this backend
             std::cout << "SKIP test: Video for Windows backend not open files" << std::endl;
-            return;
-        } else if (apiPref == CAP_GSTREAMER) {
-            // TODO: fix this backend
-            std::cout << "SKIP test: Gstreamer failed with read critical error" << std::endl;
             return;
         }
 
         VideoCapture cap(video_file, apiPref);
         if (!cap.isOpened())
         {
-            std::cout << "SKIP test: Can't open video: " << video_file << std::endl;
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
             return;
         }
         int n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT);
@@ -171,20 +169,18 @@ public:
             // TODO: fix this backend
             std::cout << "SKIP test: AVFoundation backend returns invalid frame count" << std::endl;
             return;
-        } else if (apiPref == CAP_VFW) {
+        }
+        else if (apiPref == CAP_VFW)
+        {
             // TODO: fix this backend
             std::cout << "SKIP test: Video for Windows backend not open files" << std::endl;
-            return;
-        } else if (apiPref == CAP_GSTREAMER) {
-            // TODO: fix this backend
-            std::cout << "SKIP test: Gstreamer failed with read critical error" << std::endl;
             return;
         }
 
         VideoCapture cap(video_file, apiPref);
         if (!cap.isOpened())
         {
-            std::cout << "SKIP test: Can't open video: " << video_file << std::endl;
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
             return;
         }
 
@@ -266,13 +262,11 @@ public:
             // TODO: fix this backend
             std::cout << "SKIP test: AVFoundation backend can not write video" << std::endl;
             return;
-        } else if (apiPref == CAP_VFW) {
+        }
+        else if (apiPref == CAP_VFW)
+        {
             // TODO: fix this backend
             std::cout << "SKIP test: Video for Windows backend not open files" << std::endl;
-            return;
-        } else if (apiPref == CAP_GSTREAMER) {
-            // TODO: fix this backend
-            std::cout << "SKIP test: Gstreamer failed with write critical error" << std::endl;
             return;
         }
         Mat img(frame_size, CV_8UC3);
@@ -308,11 +302,6 @@ public:
         // how to do either, so this is a workaround for now.
         if (fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && ext == "mkv")
             expected_frame_count.end += 1;
-
-        // Hack! Some GStreamer encoding pipelines drop last frame in the video
-        // #ifdef HAVE_GSTREAMER
-        //         expected_frame_count.start -= 1;
-        // #endif
 
         ASSERT_LE(expected_frame_count.start, actual);
         ASSERT_GE(expected_frame_count.end, actual);
@@ -439,13 +428,13 @@ Ext_Fourcc_PSNR synthetic_params[] = {
 #endif
 
 #ifdef HAVE_GSTREAMER
-    makeParam("avi", "XVID", 30.f, CAP_GSTREAMER),
+    // makeParam("avi", "XVID", 30.f, CAP_GSTREAMER), - corrupted frames, broken indexes
     makeParam("avi", "MPEG", 30.f, CAP_GSTREAMER),
     makeParam("avi", "IYUV", 30.f, CAP_GSTREAMER),
     makeParam("avi", "MJPG", 30.f, CAP_GSTREAMER),
     makeParam("avi", "H264", 30.f, CAP_GSTREAMER),
 
-    makeParam("mkv", "XVID", 30.f, CAP_GSTREAMER),
+    // makeParam("mkv", "XVID", 30.f, CAP_GSTREAMER),
     makeParam("mkv", "MPEG", 30.f, CAP_GSTREAMER),
     makeParam("mkv", "MJPG", 30.f, CAP_GSTREAMER),
 
