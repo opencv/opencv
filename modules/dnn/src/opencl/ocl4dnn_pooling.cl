@@ -53,7 +53,7 @@ __kernel void
     TEMPLATE(max_pool_forward, Dtype)
 #endif
 (
-    const int nthreads, __global const Dtype* bottom_data, const int num,
+    const int nthreads, __global const Dtype* bottom_data,
     const int channels, const int height, const int width,
     const int pooled_height, const int pooled_width,
     __global Dtype* top_data
@@ -97,7 +97,7 @@ __kernel void
 #elif defined KERNEL_AVE_POOL
 
 __kernel void TEMPLATE(ave_pool_forward, Dtype)(
-    const int nthreads, __global const Dtype* const bottom_data, const int num,
+    const int nthreads, __global const Dtype* const bottom_data,
     const int channels, const int height, const int width,
     const int pooled_height, const int pooled_width,
     __global Dtype* top_data)
@@ -135,7 +135,7 @@ __kernel void TEMPLATE(ave_pool_forward, Dtype)(
 #elif defined KERNEL_STO_POOL
 
 __kernel void TEMPLATE(sto_pool_forward_test,Dtype)(
-    const int nthreads, __global const Dtype* const bottom_data, const int num,
+    const int nthreads, __global const Dtype* const bottom_data,
     const int channels, const int height, const int width,
     const int pooled_height, const int pooled_width,
     __global Dtype* top_data)
