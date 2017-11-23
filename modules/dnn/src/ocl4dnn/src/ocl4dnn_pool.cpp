@@ -54,7 +54,6 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     int dims = config.in_shape.size();
     int spatial_dims = 2;
 
-    batch_size_ = config.in_shape[0];
     channels_ = config.channels;
     pool_method_ = config.pool_method;
 
@@ -124,7 +123,6 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_max_pool_forward.args(
                 count_,
                 ocl::KernelArg::PtrReadOnly(bottom),
-                batch_size_,
                 channels_,
                 height_,
                 width_,
@@ -157,7 +155,6 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_ave_pool_forward.args(
                 count_,
                 ocl::KernelArg::PtrReadOnly(bottom),
-                batch_size_,
                 channels_,
                 height_,
                 width_,
@@ -188,7 +185,6 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             oclk_sto_pool_forward.args(
                 count_,
                 ocl::KernelArg::PtrReadOnly(bottom),
-                batch_size_,
                 channels_,
                 height_,
                 width_,

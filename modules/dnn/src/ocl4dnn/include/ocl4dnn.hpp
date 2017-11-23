@@ -360,7 +360,6 @@ class OCL4DNNPool
 
         ocl4dnnPoolingMethod_t pool_method_;
         int32_t count_;
-        int32_t batch_size_;
         int32_t channels_;
         int32_t kernel_h_;
         int32_t kernel_w_;
