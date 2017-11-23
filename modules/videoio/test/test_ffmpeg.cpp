@@ -131,7 +131,7 @@ public:
                     fps = 25;
                 }
 
-                VideoWriter writer(filename, tag, fps, frame_s);
+                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
 
                 if (writer.isOpened() == false)
                 {
@@ -194,7 +194,7 @@ public:
         try
         {
             string filename = ts->get_data_path() + "readwrite/ordinary.bmp";
-            VideoCapture cap(filename);
+            VideoCapture cap(filename, CAP_FFMPEG);
             Mat img0 = imread(filename, 1);
             Mat img, img_next;
             cap >> img;
@@ -242,7 +242,7 @@ public:
             std::string fileName = tempfile(stream.str().c_str());
 
             files->operator[](i) = fileName;
-            writers->operator[](i) = new VideoWriter(fileName, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
+            writers->operator[](i) = new VideoWriter(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
 
             CV_Assert(writers->operator[](i)->isOpened());
         }
@@ -325,7 +325,7 @@ public:
     {
         for (int i = range.start; i != range.end; ++i)
         {
-            readers->operator[](i) = new VideoCapture(files->operator[](i));
+            readers->operator[](i) = new VideoCapture(files->operator[](i), CAP_FFMPEG);
             CV_Assert(readers->operator[](i)->isOpened());
         }
     }
