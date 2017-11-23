@@ -111,3 +111,12 @@
    ...
    obj:/usr/lib/libgdal.so.1.17.1
 }
+
+{
+   FFMPEG-sws_scale
+   Memcheck:Addr16
+   ...
+   fun:sws_scale
+   ...
+   fun:cvWriteFrame_FFMPEG
+}
