@@ -2,6 +2,9 @@
 
 from __future__ import print_function
 
+import sys
+sys.dont_write_bytecode = True  # Don't generate .pyc files / __pycache__ directories
+
 import os
 import unittest
 
