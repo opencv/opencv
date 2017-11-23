@@ -267,7 +267,6 @@ struct ReLUFunctor
 
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -287,7 +286,7 @@ struct ReLUFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, &wgSize, false));
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
         }
 
         return true;
@@ -395,8 +394,28 @@ struct TanHFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("TanHForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -594,8 +613,31 @@ struct PowerFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("PowForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+            kernel.set(3, (float)power);
+            kernel.set(4, (float)scale);
+            kernel.set(5, (float)shift);
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -624,9 +666,11 @@ struct ChannelsPReLUFunctor
 {
     typedef ChannelsPReLULayer Layer;
     Mat scale;
+    UMat scale_umat;
 
     explicit ChannelsPReLUFunctor(const Mat& scale_=Mat()) : scale(scale_)
     {
+        scale_umat = scale.getUMat(ACCESS_READ);
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -669,8 +713,31 @@ struct ChannelsPReLUFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("PReLUForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, (int)src.size[1]);
+            kernel.set(2, (int)total(shape(src), 2));
+            kernel.set(3, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(4, ocl::KernelArg::PtrWriteOnly(dst));
+            kernel.set(5, ocl::KernelArg::PtrReadOnly(scale_umat));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 

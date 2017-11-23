@@ -331,6 +331,12 @@ TEST(Layer_Test_PReLU, Accuracy)
     testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_CPU, true, false);
 }
 
+OCL_TEST(Layer_Test_PReLU, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_OPENCL, true);
+    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_OPENCL, true, false);
+}
+
 //template<typename XMat>
 //static void test_Layer_Concat()
 //{
