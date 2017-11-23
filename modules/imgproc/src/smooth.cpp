@@ -1557,7 +1557,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     if(!(borderType&BORDER_ISOLATED))
         src.locateROI( wsz, ofs );
 
-    CALL_HAL(boxFilter, cv_hal_boxFilter, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+    CALL_HAL(boxFilter, cv_hal_boxFilter, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              anchor.x, anchor.y, normalize, borderType&~BORDER_ISOLATED);
 
@@ -2120,7 +2120,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     if(!(borderType & BORDER_ISOLATED))
         src.locateROI( wsz, ofs );
 
-    CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, sdepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+    CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              sigma1, sigma2, borderType&~BORDER_ISOLATED);
 
