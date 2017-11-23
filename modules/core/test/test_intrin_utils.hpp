@@ -167,6 +167,14 @@ template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b
     EXPECT_DOUBLE_EQ( a, b );
 }
 
+// pack functions do not do saturation when converting from 64-bit types
+template<typename T, typename W>
+inline T pack_saturate_cast(W a) { return saturate_cast<T>(a); }
+template<>
+inline int pack_saturate_cast<int, int64>(int64 a) { return static_cast<int>(a); }
+template<>
+inline unsigned pack_saturate_cast<unsigned, uint64>(uint64 a) { return static_cast<unsigned>(a); }
+
 template<typename R> struct TheTest
 {
     typedef typename R::lane_type LaneType;
@@ -464,16 +472,19 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_shift()
     {
+        SCOPED_TRACE(s);
         Data<R> dataA;
+        dataA[0] = static_cast<LaneType>(std::numeric_limits<LaneType>::max());
         R a = dataA;
 
         Data<R> resB = a << s, resC = v_shl<s>(a), resD = a >> s, resE = v_shr<s>(a);
+
         for (int i = 0; i < R::nlanes; ++i)
         {
-            EXPECT_EQ(dataA[i] << s, resB[i]);
-            EXPECT_EQ(dataA[i] << s, resC[i]);
-            EXPECT_EQ(dataA[i] >> s, resD[i]);
-            EXPECT_EQ(dataA[i] >> s, resE[i]);
+            EXPECT_EQ(static_cast<LaneType>(dataA[i] << s), resB[i]);
+            EXPECT_EQ(static_cast<LaneType>(dataA[i] << s), resC[i]);
+            EXPECT_EQ(static_cast<LaneType>(dataA[i] >> s), resD[i]);
+            EXPECT_EQ(static_cast<LaneType>(dataA[i] >> s), resE[i]);
         }
         return *this;
     }
@@ -668,11 +679,13 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_pack()
     {
+        SCOPED_TRACE(s);
         typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         typedef typename Rx2::lane_type w_type;
         Data<Rx2> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::is_signed ? -10 : 10;
         dataB *= 10;
+        dataB[0] = static_cast<w_type>(std::numeric_limits<LaneType>::max()) + 17; // to check saturation
         Rx2 a = dataA, b = dataB;
 
         Data<R> resC = v_pack(a, b);
@@ -688,13 +701,13 @@ template<typename R> struct TheTest
         const w_type add = (w_type)1 << (s - 1);
         for (int i = 0; i < n; ++i)
         {
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i]), resC[i]);
-            EXPECT_EQ(saturate_cast<LaneType>(dataB[i]), resC[i + n]);
-            EXPECT_EQ(saturate_cast<LaneType>((dataA[i] + add) >> s), resD[i]);
-            EXPECT_EQ(saturate_cast<LaneType>((dataB[i] + add) >> s), resD[i + n]);
-            EXPECT_EQ(saturate_cast<LaneType>(dataB[i]), resE[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>(dataA[i]), resC[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>(dataB[i]), resC[i + n]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>((dataA[i] + add) >> s), resD[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>((dataB[i] + add) >> s), resD[i + n]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>(dataB[i]), resE[i]);
             EXPECT_EQ((LaneType)0, resE[i + n]);
-            EXPECT_EQ(saturate_cast<LaneType>((dataB[i] + add) >> s), resF[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>((dataB[i] + add) >> s), resF[i]);
             EXPECT_EQ((LaneType)0, resF[i + n]);
         }
         return *this;
@@ -703,6 +716,7 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_pack_u()
     {
+        SCOPED_TRACE(s);
         typedef typename V_TypeTraits<LaneType>::w_type LaneType_w;
         typedef typename V_RegTrait128<LaneType_w>::int_reg Ri2;
         typedef typename Ri2::lane_type w_type;
@@ -710,6 +724,7 @@ template<typename R> struct TheTest
         Data<Ri2> dataA, dataB;
         dataA += -10;
         dataB *= 10;
+        dataB[0] = static_cast<w_type>(std::numeric_limits<LaneType>::max()) + 17; // to check saturation
         Ri2 a = dataA, b = dataB;
 
         Data<R> resC = v_pack_u(a, b);
@@ -725,13 +740,13 @@ template<typename R> struct TheTest
         const w_type add = (w_type)1 << (s - 1);
         for (int i = 0; i < n; ++i)
         {
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i]), resC[i]);
-            EXPECT_EQ(saturate_cast<LaneType>(dataB[i]), resC[i + n]);
-            EXPECT_EQ(saturate_cast<LaneType>((dataA[i] + add) >> s), resD[i]);
-            EXPECT_EQ(saturate_cast<LaneType>((dataB[i] + add) >> s), resD[i + n]);
-            EXPECT_EQ(saturate_cast<LaneType>(dataB[i]), resE[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>(dataA[i]), resC[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>(dataB[i]), resC[i + n]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>((dataA[i] + add) >> s), resD[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>((dataB[i] + add) >> s), resD[i + n]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>(dataB[i]), resE[i]);
             EXPECT_EQ((LaneType)0, resE[i + n]);
-            EXPECT_EQ(saturate_cast<LaneType>((dataB[i] + add) >> s), resF[i]);
+            EXPECT_EQ(pack_saturate_cast<LaneType>((dataB[i] + add) >> s), resF[i]);
             EXPECT_EQ((LaneType)0, resF[i + n]);
         }
         return *this;
@@ -776,6 +791,7 @@ template<typename R> struct TheTest
     template<int s>
     TheTest & test_extract()
     {
+        SCOPED_TRACE(s);
         Data<R> dataA, dataB;
         dataB *= 10;
         R a = dataA, b = dataB;
@@ -796,6 +812,7 @@ template<typename R> struct TheTest
     template<int s>
     TheTest & test_rotate()
     {
+        SCOPED_TRACE(s);
         Data<R> dataA, dataB;
         dataB *= 10;
         R a = dataA, b = dataB;
