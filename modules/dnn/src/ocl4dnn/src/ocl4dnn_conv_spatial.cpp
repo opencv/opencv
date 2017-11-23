@@ -198,8 +198,6 @@ void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
     addDef("as_Dtype2", "as_float2");
     addDef("as_Dtype4", "as_float4");
     addDef("as_Dtype8", "as_float8");
-    addDef("Dtype_ID", (int)CV_32F);
-    addDef("Dtype_SIZE", (int)sizeof(Dtype));
 }
 
 typedef enum {

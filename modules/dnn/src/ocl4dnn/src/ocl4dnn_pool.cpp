@@ -97,7 +97,6 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                                  UMat& top_mask)
 {
     bool ret = true;
-    ocl::Queue queue = ocl::Queue::getDefault();
     size_t global[] = { 128 * 128 };
     size_t local[] = { 128 };
     cl_uint argIdx = 0;
