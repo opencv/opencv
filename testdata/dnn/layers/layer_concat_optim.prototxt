@@ -1,0 +1,60 @@
+name: "test_Concat_optimization"
+
+input: "input"
+input_dim: 1
+input_dim: 2
+input_dim: 3
+input_dim: 4
+
+layer {
+  type: "Convolution"
+  convolution_param
+  {
+    num_output: 6
+  	pad: 0
+  	kernel_size: 1
+  	stride: 1
+    weight_filler{ type: 'uniform' min: -1 max: 1 }
+    bias_filler { type: 'uniform' min: -1 max: 1 }
+  }
+  name: "conv"
+  bottom: "input"
+  top: "conv"
+}
+layer {
+  type: "ReLU"
+  name: "relu"
+  bottom: "conv"
+  top: "relu"
+}
+layer {
+  type: "Concat"
+  name: "concat"
+  bottom: "relu"
+  top: "concat"
+}
+layer {
+  type: "Convolution"
+  convolution_param
+  {
+    num_output: 6
+  	pad: 0
+  	kernel_size: 1
+  	stride: 1
+    weight_filler{ type: 'uniform' min: -1 max: 1 }
+    bias_filler { type: 'uniform' min: -1 max: 1 }
+  }
+  name: "consumer"
+  bottom: "relu"
+  top: "consumer"
+}
+layer {
+  name: "output"
+  type: "Eltwise"
+  bottom: "concat"
+  bottom: "consumer"
+  top: "output"
+  eltwise_param {
+    operation: SUM
+  }
+}
