@@ -715,7 +715,7 @@ inline int hal_ni_gaussianBlur(const uchar* src_data, size_t src_step, uchar* ds
    @param delta Delta value that is added to the results prior to storing them in dst
    @param border_type Border type
 */
-inline int hal_ni_sobel(int src_depth, int dst_depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, int ksize, double scale, double delta, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_sobel(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, int ksize, double scale, double delta, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_sobel hal_ni_sobel
@@ -734,7 +734,7 @@ inline int hal_ni_sobel(int src_depth, int dst_depth, const uchar* src_data, siz
    @param delta Delta value that is added to the results prior to storing them in dst
    @param border_type Border type
 */
-inline int hal_ni_scharr(int src_depth, int dst_depth, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type)  { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type)  { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_scharr hal_ni_scharr
@@ -750,7 +750,7 @@ inline int hal_ni_scharr(int src_depth, int dst_depth, const uchar* src_data, si
    @param cn Number of channels
    @param border_type Border type
 */
-inline int hal_ni_pyrdown(int depth, const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int cn, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_pyrdown(const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int depth, int cn, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_pyrdown hal_ni_pyrdown

@@ -451,7 +451,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     if(!(borderType & BORDER_ISOLATED))
         src.locateROI( wsz, ofs );
 
-    CALL_HAL(sobel, cv_hal_sobel, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+    CALL_HAL(sobel, cv_hal_sobel, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, ksize, scale, delta, borderType&~BORDER_ISOLATED);
 
     src.release();
@@ -521,7 +521,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     if(!(borderType & BORDER_ISOLATED))
         src.locateROI( wsz, ofs );
 
-    CALL_HAL(scharr, cv_hal_scharr, sdepth, ddepth, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, cn,
+    CALL_HAL(scharr, cv_hal_scharr, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, scale, delta, borderType&~BORDER_ISOLATED);
 
     src.release();
