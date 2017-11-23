@@ -1530,6 +1530,9 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         return;
     }
 
+    CALL_HAL(adaptiveThreshold, cv_hal_adaptiveThreshold, src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+             maxValue, method, type, blockSize, delta);
+
     Mat mean;
 
     if( src.data != dst.data )
@@ -1537,7 +1540,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
 
     if (method == ADAPTIVE_THRESH_MEAN_C)
         boxFilter( src, mean, src.type(), Size(blockSize, blockSize),
-                   Point(-1,-1), true, BORDER_REPLICATE );
+                   Point(-1,-1), true, BORDER_REPLICATE|BORDER_ISOLATED );
     else if (method == ADAPTIVE_THRESH_GAUSSIAN_C)
     {
         Mat srcfloat,meanfloat;
