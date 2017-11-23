@@ -92,6 +92,7 @@
 #ifdef HAVE_PROTOBUF
 
 #include "opencv-caffe.pb.h"
+namespace caffe { using namespace opencv_caffe; } // avoid massive renames from caffe proto package
 
 namespace cv {
 namespace dnn {
