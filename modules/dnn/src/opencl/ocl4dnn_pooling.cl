@@ -44,14 +44,23 @@
 #define TEMPLATE(name,type) CONCAT(name,type)
 #define Dtype float
 
-void TEMPLATE(max_pool_forward_impl, Dtype)(
-    const int nthreads, __global const Dtype* bottom_data, const int num,
+#if defined KERNEL_MAX_POOL
+
+__kernel void
+#ifdef HAVE_MASK
+    TEMPLATE(max_pool_forward_mask, Dtype)
+#else
+    TEMPLATE(max_pool_forward, Dtype)
+#endif
+(
+    const int nthreads, __global const Dtype* bottom_data,
     const int channels, const int height, const int width,
-    const int pooled_height, const int pooled_width, const int kernel_h,
-    const int kernel_w, const int stride_h, const int stride_w, const int pad_h,
-    const int pad_w,
-    __global Dtype* top_data,
-    const int use_mask, __global int* mask, __global Dtype* top_mask, bool no_mask)
+    const int pooled_height, const int pooled_width,
+    __global Dtype* top_data
+#ifdef HAVE_MASK
+    , __global Dtype* mask
+#endif
+)
 {
   for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0))
@@ -60,10 +69,10 @@ void TEMPLATE(max_pool_forward_impl, Dtype)(
     const int ph = (index / pooled_width) % pooled_height;
     const int c = (index / pooled_width / pooled_height) % channels;
     const int n = index / pooled_width / pooled_height / channels;
-    int hstart = ph * stride_h - pad_h;
-    int wstart = pw * stride_w - pad_w;
-    const int hend = min(hstart + kernel_h, height);
-    const int wend = min(wstart + kernel_w, width);
+    int hstart = ph * STRIDE_H - PAD_H;
+    int wstart = pw * STRIDE_W - PAD_W;
+    const int hend = min(hstart + KERNEL_H, height);
+    const int wend = min(wstart + KERNEL_W, width);
     hstart = max(hstart, (int)0);
     wstart = max(wstart, (int)0);
     Dtype maxval = -FLT_MAX;
@@ -79,38 +88,19 @@ void TEMPLATE(max_pool_forward_impl, Dtype)(
       }
     }
     top_data[index] = maxval;
-    if (!no_mask) {
-      if (use_mask == 1) {
-        mask[index] = maxidx;
-      } else {
-        top_mask[index] = maxidx;
-      }
-    }
+#ifdef HAVE_MASK
+    mask[index] = maxidx;
+#endif
   }
 }
 
-__kernel void TEMPLATE(max_pool_forward, Dtype)(
-    const int nthreads, __global const Dtype* bottom_data, const int num,
-    const int channels, const int height, const int width,
-    const int pooled_height, const int pooled_width, const int kernel_h,
-    const int kernel_w, const int stride_h, const int stride_w, const int pad_h,
-    const int pad_w,
-    __global Dtype* top_data,
-    const int use_mask, __global int* mask, __global Dtype* top_mask)
-{
-    TEMPLATE(max_pool_forward_impl, Dtype)(
-      nthreads, bottom_data, num, channels, height, width,
-      pooled_height, pooled_width, kernel_h,
-      kernel_w, stride_h, stride_w, pad_h, pad_w, top_data, use_mask, mask, top_mask, false
-    );
-}
+#elif defined KERNEL_AVE_POOL
 
 __kernel void TEMPLATE(ave_pool_forward, Dtype)(
-    const int nthreads, __global const Dtype* const bottom_data, const int num,
+    const int nthreads, __global const Dtype* const bottom_data,
     const int channels, const int height, const int width,
-    const int pooled_height, const int pooled_width, const int kernel_h,
-    const int kernel_w, const int stride_h, const int stride_w, const int pad_h,
-    const int pad_w, __global Dtype* top_data)
+    const int pooled_height, const int pooled_width,
+    __global Dtype* top_data)
 {
   for (int index = get_global_id(0); index < nthreads;
       index += get_global_size(0))
@@ -120,10 +110,10 @@ __kernel void TEMPLATE(ave_pool_forward, Dtype)(
       const int ph = (index / pooled_width) % pooled_height;
       const int c = (index / pooled_width / pooled_height) % channels;
       const int n = index / pooled_width / pooled_height / channels;
-      int hstart = ph * stride_h - pad_h;
-      int wstart = pw * stride_w - pad_w;
-      int hend = min(hstart + kernel_h, height + pad_h);
-      int wend = min(wstart + kernel_w, width + pad_w);
+      int hstart = ph * STRIDE_H - PAD_H;
+      int wstart = pw * STRIDE_W - PAD_W;
+      int hend = min(hstart + KERNEL_H, height + PAD_H);
+      int wend = min(wstart + KERNEL_W, width + PAD_W);
       const int pool_size = (hend - hstart) * (wend - wstart);
       hstart = max(hstart, (int)0);
       wstart = max(wstart, (int)0);
@@ -142,11 +132,12 @@ __kernel void TEMPLATE(ave_pool_forward, Dtype)(
   }
 }
 
+#elif defined KERNEL_STO_POOL
+
 __kernel void TEMPLATE(sto_pool_forward_test,Dtype)(
-    const int nthreads, __global const Dtype* const bottom_data, const int num,
+    const int nthreads, __global const Dtype* const bottom_data,
     const int channels, const int height, const int width,
-    const int pooled_height, const int pooled_width, const int kernel_h,
-    const int kernel_w, const int stride_h, const int stride_w,
+    const int pooled_height, const int pooled_width,
     __global Dtype* top_data)
 {
   for (int index = get_global_id(0); index < nthreads;
@@ -156,10 +147,10 @@ __kernel void TEMPLATE(sto_pool_forward_test,Dtype)(
     const int ph = (index / pooled_width) % pooled_height;
     const int c = (index / pooled_width / pooled_height) % channels;
     const int n = index / pooled_width / pooled_height / channels;
-    const int hstart = ph * stride_h;
-    const int hend = min(hstart + kernel_h, height);
-    const int wstart = pw * stride_w;
-    const int wend = min(wstart + kernel_w, width);
+    const int hstart = ph * STRIDE_H;
+    const int hend = min(hstart + KERNEL_H, height);
+    const int wstart = pw * STRIDE_W;
+    const int wend = min(wstart + KERNEL_W, width);
     // We set cumsum to be 0 to avoid divide-by-zero problems
     Dtype cumsum = FLT_MIN;
     Dtype cumvalues = 0.;
@@ -168,10 +159,13 @@ __kernel void TEMPLATE(sto_pool_forward_test,Dtype)(
     // First pass: get sum
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
-        cumsum += bottom_slice[h * width + w];
-        cumvalues += bottom_slice[h * width + w] * bottom_slice[h * width + w];
+        Dtype v = bottom_slice[h * width + w];
+        cumsum += v;
+        cumvalues += v * v;
       }
     }
     top_data[index] = cumvalues / cumsum;
   }
 }
+
+#endif // KERNEL_*

@@ -351,8 +351,6 @@ class OCL4DNNPool
                      UMat& top_data,
                      UMat& top_mask);
     private:
-        UMat mask_idx_;
-
         // Pooling parameters
         std::vector<int32_t> pad_;
         std::vector<int32_t> stride_;
@@ -362,7 +360,6 @@ class OCL4DNNPool
 
         ocl4dnnPoolingMethod_t pool_method_;
         int32_t count_;
-        int32_t batch_size_;
         int32_t channels_;
         int32_t kernel_h_;
         int32_t kernel_w_;
