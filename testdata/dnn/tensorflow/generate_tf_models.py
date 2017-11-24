@@ -258,8 +258,8 @@ flatten = tf.contrib.layers.flatten(inp)
 save(inp, flatten, 'flatten')
 ################################################################################
 # Generate test data for MobileNet-SSD object detection model from TensorFlow
-# model zoo, https://github.com/tensorflow/models/tree/master/research/object_detection
-# 1. Download and extract ssd_mobilenet_v1_coco.tar.gz
+# model zoo, http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz
+# 1. Download and extract an archive
 # 2. Place frozen_inference_graph.pb as a ssd_mobilenet_v1_coco.pb nearby this script
 with tf.gfile.FastGFile('../ssd_mobilenet_v1_coco.pb') as f:
     # Load the model

@@ -2189,26 +2189,6 @@ node {
 }
 ################################################################################
 node {
-  name: "shape"
-  op: "Const"
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_INT32
-        tensor_shape {
-          dim {
-            size: 2
-          }
-        }
-        int_val: -1
-        int_val: 1917
-        int_val: 91  # Number of classes + 1.
-      }
-    }
-  }
-}
-node {
   name: "concat_1_sigmoid"
   op: "Sigmoid"
   input: "concat_1"
