@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
                 'COCO evaluation framework is required: http://cocodataset.org')
 parser.add_argument('--weights', required=True,
                     help='Path to frozen_inference_graph.pb of MobileNet-SSD model. '
-                         'Download it at https://github.com/tensorflow/models/tree/master/research/object_detection')
+                         'Download it from http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz')
 parser.add_argument('--prototxt', help='Path to ssd_mobilenet_v1_coco.pbtxt from opencv_extra.', required=True)
 parser.add_argument('--images', help='Path to COCO validation images directory.', required=True)
 parser.add_argument('--annotations', help='Path to COCO annotations file.', required=True)
