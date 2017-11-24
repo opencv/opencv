@@ -31,6 +31,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <io.h>
+#include <stdio.h>
 #elif defined __linux__ || defined __APPLE__
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -41,10 +43,41 @@
 
 namespace cv { namespace utils { namespace fs {
 
+#ifdef _WIN32
+static const char native_separator = '\\';
+#else
+static const char native_separator = '/';
+#endif
+
 static inline
 bool isPathSeparator(char c)
 {
     return c == '/' || c == '\\';
+}
+
+cv::String join(const cv::String& base, const cv::String& path)
+{
+    if (base.empty())
+        return path;
+    if (path.empty())
+        return base;
+
+    bool baseSep = isPathSeparator(base[base.size() - 1]);
+    bool pathSep = isPathSeparator(path[0]);
+    String result;
+    if (baseSep && pathSep)
+    {
+        result = base + path.substr(1);
+    }
+    else if (!baseSep && !pathSep)
+    {
+        result = base + native_separator + path;
+    }
+    else
+    {
+        result = base + path;
+    }
+    return result;
 }
 
 bool exists(const cv::String& path)
@@ -71,6 +104,44 @@ bool exists(const cv::String& path)
     return (0 == stat(path.c_str(), &stat_buf));
 #endif
 }
+
+CV_EXPORTS void remove_all(const cv::String& path)
+{
+    if (!exists(path))
+        return;
+    if (isDirectory(path))
+    {
+        std::vector<String> entries;
+        utils::fs::glob(path, cv::String(), entries, false, true);
+        for (size_t i = 0; i < entries.size(); i++)
+        {
+            const String& e = entries[i];
+            remove_all(e);
+        }
+#ifdef _MSC_VER
+        bool result = _rmdir(path.c_str()) == 0;
+#else
+        bool result = rmdir(path.c_str()) == 0;
+#endif
+        if (!result)
+        {
+            CV_LOG_ERROR(NULL, "Can't remove directory: " << path);
+        }
+    }
+    else
+    {
+#ifdef _MSC_VER
+        bool result = _unlink(path.c_str()) == 0;
+#else
+        bool result = unlink(path.c_str()) == 0;
+#endif
+        if (!result)
+        {
+            CV_LOG_ERROR(NULL, "Can't remove file: " << path);
+        }
+    }
+}
+
 
 cv::String getcwd()
 {
@@ -138,7 +209,7 @@ bool createDirectories(const cv::String& path_)
     for (;;)
     {
         char last_char = path.empty() ? 0 : path[path.length() - 1];
-        if (last_char == '/' || last_char == '\\')
+        if (isPathSeparator(last_char))
         {
             path = path.substr(0, path.length() - 1);
             continue;
@@ -364,7 +435,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             if (home_env && home_env[0] && utils::fs::isDirectory(home_env))
             {
                 cv::String home_path = home_env;
-                cv::String home_cache_path = home_path + "/.cache/";
+                cv::String home_cache_path = utils::fs::join(home_path, ".cache/");
                 if (utils::fs::isDirectory(home_cache_path))
                 {
                     default_cache_path = home_cache_path;
@@ -393,9 +464,9 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         {
             if (utils::fs::isDirectory(default_cache_path))
             {
-                default_cache_path += "/opencv/" CV_VERSION "/";
+                default_cache_path = utils::fs::join(default_cache_path, utils::fs::join("opencv", CV_VERSION));
                 if (sub_directory_name && sub_directory_name[0] != '\0')
-                    default_cache_path += cv::String(sub_directory_name) + "/";
+                    default_cache_path = utils::fs::join(default_cache_path, cv::String(sub_directory_name) + native_separator);
                 if (!utils::fs::createDirectories(default_cache_path))
                 {
                     CV_LOG_DEBUG(NULL, "Can't create OpenCV cache sub-directory: " << default_cache_path);
@@ -434,7 +505,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
     {
         if (!isPathSeparator(cache_path[cache_path.size() - 1]))
         {
-            cache_path += '/';
+            cache_path += native_separator;
         }
     }
     return cache_path;
