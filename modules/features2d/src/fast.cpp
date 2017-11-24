@@ -422,33 +422,27 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     CV_INSTRUMENT_REGION()
 
-#ifdef HAVE_OPENCL
-  if( ocl::useOpenCL() && _img.isUMat() && type == FastFeatureDetector::TYPE_9_16 &&
-      ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
-  {
-    CV_IMPL_ADD(CV_IMPL_OCL);
-    return;
-  }
-#endif
+    CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
+               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
 
     CV_OVX_RUN(true,
                openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
 
-  switch(type) {
+    switch(type) {
     case FastFeatureDetector::TYPE_5_8:
-      FAST_t<8>(_img, keypoints, threshold, nonmax_suppression);
-      break;
+        FAST_t<8>(_img, keypoints, threshold, nonmax_suppression);
+        break;
     case FastFeatureDetector::TYPE_7_12:
-      FAST_t<12>(_img, keypoints, threshold, nonmax_suppression);
-      break;
+        FAST_t<12>(_img, keypoints, threshold, nonmax_suppression);
+        break;
     case FastFeatureDetector::TYPE_9_16:
 #ifdef HAVE_TEGRA_OPTIMIZATION
-      if(tegra::useTegra() && tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
-        break;
+        if(tegra::useTegra() && tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
+          break;
 #endif
-      FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
-      break;
-  }
+        FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
+        break;
+    }
 }
 
 

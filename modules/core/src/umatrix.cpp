@@ -141,7 +141,7 @@ void UMatData::unlock()
 MatAllocator* UMat::getStdAllocator()
 {
 #ifdef HAVE_OPENCL
-    if( ocl::haveOpenCL() && ocl::useOpenCL() )
+    if (ocl::useOpenCL())
         return ocl::getOpenCLAllocator();
 #endif
     return Mat::getDefaultAllocator();
