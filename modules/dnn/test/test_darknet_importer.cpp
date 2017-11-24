@@ -184,6 +184,68 @@ TEST(Reproducibility_TinyYoloVoc, Accuracy)
     normAssert(ref, detection);
 }
 
+OCL_TEST(Reproducibility_YoloVoc, Accuracy)
+{
+    Net net;
+    {
+        const string cfg = findDataFile("dnn/yolo-voc.cfg", false);
+        const string model = findDataFile("dnn/yolo-voc.weights", false);
+        net = readNetFromDarknet(cfg, model);
+        ASSERT_FALSE(net.empty());
+    }
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    // dog416.png is dog.jpg that resized to 416x416 in the lossless PNG format
+    Mat sample = imread(_tf("dog416.png"));
+    ASSERT_TRUE(!sample.empty());
+
+    Size inputSize(416, 416);
+
+    if (sample.size() != inputSize)
+        resize(sample, sample, inputSize);
+
+    net.setInput(blobFromImage(sample, 1 / 255.F), "data");
+    Mat out = net.forward("detection_out");
+
+    Mat detection;
+    const float confidenceThreshold = 0.24;
+
+    for (int i = 0; i < out.rows; i++) {
+        const int probability_index = 5;
+        const int probability_size = out.cols - probability_index;
+        float *prob_array_ptr = &out.at<float>(i, probability_index);
+        size_t objectClass = std::max_element(prob_array_ptr, prob_array_ptr + probability_size) - prob_array_ptr;
+        float confidence = out.at<float>(i, (int)objectClass + probability_index);
+
+        if (confidence > confidenceThreshold)
+            detection.push_back(out.row(i));
+    }
+
+    // obtained by: ./darknet detector test ./cfg/voc.data  ./cfg/yolo-voc.cfg ./yolo-voc.weights -thresh 0.24 ./dog416.png
+    // There are 3 objects (6-car, 1-bicycle, 11-dog) with 25 values for each:
+    // { relative_center_x, relative_center_y, relative_width, relative_height, unused_t0, probability_for_each_class[20] }
+    float ref_array[] = {
+        0.740161F, 0.214100F, 0.325575F, 0.173418F, 0.750769F, 0.000000F, 0.000000F, 0.000000F, 0.000000F,
+        0.000000F, 0.000000F, 0.750469F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F,
+        0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F,
+
+        0.501618F, 0.504757F, 0.461713F, 0.481310F, 0.783550F, 0.000000F, 0.780879F, 0.000000F, 0.000000F,
+        0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F,
+        0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F,
+
+        0.279968F, 0.638651F, 0.282737F, 0.600284F, 0.901864F, 0.000000F, 0.000000F, 0.000000F, 0.000000F,
+        0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.901615F,
+        0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F, 0.000000F
+    };
+
+    const int number_of_objects = 3;
+    Mat ref(number_of_objects, sizeof(ref_array) / (number_of_objects * sizeof(float)), CV_32FC1, &ref_array);
+
+    normAssert(ref, detection);
+}
+
 TEST(Reproducibility_YoloVoc, Accuracy)
 {
     Net net;
