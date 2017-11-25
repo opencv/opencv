@@ -704,7 +704,7 @@ keypoint neighborhood is then analyzed by another algorithm that builds a descri
 represented as a feature vector). The keypoints representing the same object in different images
 can then be matched using cv::KDTree or another method.
 */
-class CV_EXPORTS_W_SIMPLE KeyPoint
+class CV_EXPORTS_W_MAP KeyPoint
 {
 public:
     //! the default constructor
@@ -801,7 +801,7 @@ public:
 query descriptor index, train descriptor index, train image index, and distance between
 descriptors.
 */
-class CV_EXPORTS_W_SIMPLE DMatch
+class CV_EXPORTS_W_MAP DMatch
 {
 public:
     CV_WRAP DMatch();
