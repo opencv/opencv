@@ -103,7 +103,7 @@ class PlaneTracker:
         raw_points, raw_descrs = self.detect_features(image)
         points, descs = [], []
         for kp, desc in zip(raw_points, raw_descrs):
-            x, y = kp.pt
+            x, y = kp['pt']
             if x0 <= x <= x1 and y0 <= y <= y1:
                 points.append(kp)
                 descs.append(desc)
@@ -123,19 +123,19 @@ class PlaneTracker:
         if len(self.frame_points) < MIN_MATCH_COUNT:
             return []
         matches = self.matcher.knnMatch(frame_descrs, k = 2)
-        matches = [m[0] for m in matches if len(m) == 2 and m[0].distance < m[1].distance * 0.75]
+        matches = [m[0] for m in matches if len(m) == 2 and m[0]['distance'] < m[1]['distance'] * 0.75]
         if len(matches) < MIN_MATCH_COUNT:
             return []
         matches_by_id = [[] for _ in xrange(len(self.targets))]
         for m in matches:
-            matches_by_id[m.imgIdx].append(m)
+            matches_by_id[m['imgIdx']].append(m)
         tracked = []
         for imgIdx, matches in enumerate(matches_by_id):
             if len(matches) < MIN_MATCH_COUNT:
                 continue
             target = self.targets[imgIdx]
-            p0 = [target.keypoints[m.trainIdx].pt for m in matches]
-            p1 = [self.frame_points[m.queryIdx].pt for m in matches]
+            p0 = [target.keypoints[m['trainIdx']]['pt'] for m in matches]
+            p1 = [self.frame_points[m['queryIdx']]['pt'] for m in matches]
             p0, p1 = np.float32((p0, p1))
             H, status = cv2.findHomography(p0, p1, cv2.RANSAC, 3.0)
             status = status.ravel() != 0
