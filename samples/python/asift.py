@@ -86,8 +86,8 @@ def affine_detect(detector, img, mask=None, pool=None):
         timg, tmask, Ai = affine_skew(t, phi, img)
         keypoints, descrs = detector.detectAndCompute(timg, tmask)
         for kp in keypoints:
-            x, y = kp.pt
-            kp.pt = tuple( np.dot(Ai, (x, y, 1)) )
+            x, y = kp['pt']
+            kp['pt'] = tuple( np.dot(Ai, (x, y, 1)) )
         if descrs is None:
             descrs = []
         return keypoints, descrs

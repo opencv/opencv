@@ -51,7 +51,7 @@ class Hackathon244Tests(NewOpenCVTests):
         keypoints = fd.detect(img)
         self.assertTrue(600 <= len(keypoints) <= 700)
         for kpt in keypoints:
-            self.assertNotEqual(kpt.response, 0)
+            self.assertNotEqual(kpt['response'], 0)
 
     def check_close_angles(self, a, b, angle_delta):
         self.assertTrue(abs(a - b) <= angle_delta or

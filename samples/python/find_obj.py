@@ -61,12 +61,12 @@ def init_feature(name):
 def filter_matches(kp1, kp2, matches, ratio = 0.75):
     mkp1, mkp2 = [], []
     for m in matches:
-        if len(m) == 2 and m[0].distance < m[1].distance * ratio:
+        if len(m) == 2 and m[0]['distance'] < m[1]['distance'] * ratio:
             m = m[0]
-            mkp1.append( kp1[m.queryIdx] )
-            mkp2.append( kp2[m.trainIdx] )
-    p1 = np.float32([kp.pt for kp in mkp1])
-    p2 = np.float32([kp.pt for kp in mkp2])
+            mkp1.append( kp1[m['queryIdx']] )
+            mkp2.append( kp2[m['trainIdx']] )
+    p1 = np.float32([kp['pt'] for kp in mkp1])
+    p2 = np.float32([kp['pt'] for kp in mkp2])
     kp_pairs = zip(mkp1, mkp2)
     return p1, p2, list(kp_pairs)
 
@@ -87,8 +87,8 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
         status = np.ones(len(kp_pairs), np.bool_)
     p1, p2 = [], []  # python 2 / python 3 change of zip unpacking
     for kpp in kp_pairs:
-        p1.append(np.int32(kpp[0].pt))
-        p2.append(np.int32(np.array(kpp[1].pt) + [w1, 0]))
+        p1.append(np.int32(kpp[0]['pt']))
+        p2.append(np.int32(np.array(kpp[1]['pt']) + [w1, 0]))
 
     green = (0, 255, 0)
     red = (0, 0, 255)

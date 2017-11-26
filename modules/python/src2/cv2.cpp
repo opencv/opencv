@@ -1511,6 +1511,30 @@ PyObject* pyopencv_from(const RotatedRect& src)
 }
 
 template<>
+PyObject* pyopencv_from(const KeyPoint& kp)
+{
+    return Py_BuildValue("{s:O,s:f,s:f,s:f,s:i,s:i}",
+        "pt", pyopencv_from(kp.pt),
+        "size", kp.size,
+        "angle", kp.angle,
+        "response", kp.response,
+        "octave", kp.octave,
+        "class_id", kp.class_id
+    );
+}
+
+template<>
+PyObject* pyopencv_from(const DMatch& m)
+{
+    return Py_BuildValue("{s:i,s:i,s:i,s:f}",
+        "queryIdx", m.queryIdx,
+        "trainIdx", m.trainIdx,
+        "imgIdx", m.imgIdx,
+        "distance", m.distance
+    );
+}
+
+template<>
 PyObject* pyopencv_from(const Moments& m)
 {
     return Py_BuildValue("{s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d}",
