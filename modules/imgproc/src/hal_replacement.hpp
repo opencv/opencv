@@ -647,6 +647,21 @@ inline int hal_ni_adaptiveThreshold(const uchar* src_data, size_t src_step, ucha
 #define cv_hal_adaptiveThreshold  hal_ni_adaptiveThreshold
 //! @endcond
 
+/**
+   @brief Calculates fixed-level threshold to each array element
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param thresh Threshold value
+   @param maxValue Value assigned to the pixels for which the condition is satisfied
+   @param thresholdType Thresholding type
+*/
+inline int hal_ni_thresholdBin8u(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, double thresh, double maxValue, int thresholdType) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_thresholdBin8u hal_ni_thresholdBin8u
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
