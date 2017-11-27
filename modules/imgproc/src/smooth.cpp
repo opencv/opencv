@@ -3123,6 +3123,9 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
+    CALL_HAL(medianBlur, cv_hal_medianBlur, src0.data, src0.step, dst.data, dst.step, src0.cols, src0.rows, src0.depth(),
+             src0.channels(), ksize);
+
     CV_OVX_RUN(true,
                openvx_medianFilter(_src0, _dst, ksize))
 
@@ -3162,7 +3165,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     }
     else
     {
-        cv::copyMakeBorder( src0, src, 0, 0, ksize/2, ksize/2, BORDER_REPLICATE );
+        cv::copyMakeBorder( src0, src, 0, 0, ksize/2, ksize/2, BORDER_REPLICATE|BORDER_ISOLATED);
 
         int cn = src0.channels();
         CV_Assert( src.depth() == CV_8U && (cn == 1 || cn == 3 || cn == 4) );
