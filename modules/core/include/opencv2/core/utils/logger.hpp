@@ -58,9 +58,9 @@ enum LogLevel {
 #endif
 
 
-#define CV_LOG_FATAL(tag, ...)   for(;;) { std::stringstream ss; ss << "[FATAL:" << cv::utils::getThreadID() << "] " << __VA_ARGS__ << std::endl; std::cerr << ss.str(); break; }
-#define CV_LOG_ERROR(tag, ...)   for(;;) { std::stringstream ss; ss << "[ERROR:" << cv::utils::getThreadID() << "] " << __VA_ARGS__ << std::endl; std::cerr << ss.str(); break; }
-#define CV_LOG_WARNING(tag, ...) for(;;) { std::stringstream ss; ss << "[ WARN:" << cv::utils::getThreadID() << "] " << __VA_ARGS__ << std::endl; std::cout << ss.str(); break; }
+#define CV_LOG_FATAL(tag, ...)   for(;;) { std::stringstream ss; ss << "[FATAL:" << cv::utils::getThreadID() << "] " << __VA_ARGS__ << std::endl; std::cerr << ss.str() << std::flush; break; }
+#define CV_LOG_ERROR(tag, ...)   for(;;) { std::stringstream ss; ss << "[ERROR:" << cv::utils::getThreadID() << "] " << __VA_ARGS__ << std::endl; std::cerr << ss.str() << std::flush; break; }
+#define CV_LOG_WARNING(tag, ...) for(;;) { std::stringstream ss; ss << "[ WARN:" << cv::utils::getThreadID() << "] " << __VA_ARGS__ << std::endl; std::cout << ss.str() << std::flush; break; }
 #if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_INFO
 #define CV_LOG_INFO(tag, ...)
 #else

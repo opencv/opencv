@@ -180,6 +180,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
 static const bool CV_OPENCL_CACHE_ENABLE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_ENABLE", true);
 static const bool CV_OPENCL_CACHE_WRITE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_WRITE", true);
 static const bool CV_OPENCL_CACHE_LOCK_ENABLE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_LOCK_ENABLE", true);
+static const bool CV_OPENCL_CACHE_CLEANUP = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_CLEANUP", true);
 
 #if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
 static const bool CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE = utils::getConfigurationParameterBool("OPENCV_OPENCL_VALIDATE_BINARY_PROGRAMS", false);
@@ -254,6 +255,7 @@ struct OpenCLBinaryCacheConfigurator
 
     typedef std::map<std::string, std::string> ContextCacheType;
     ContextCacheType prepared_contexts_;
+    Mutex mutex_prepared_contexts_;
 
     OpenCLBinaryCacheConfigurator()
     {
@@ -355,14 +357,17 @@ struct OpenCLBinaryCacheConfigurator
         cache_lock_.release();
     }
 
-    std::string prepareCacheDirectoryForContext(const std::string& ctx_prefix)
+    std::string prepareCacheDirectoryForContext(const std::string& ctx_prefix,
+            const std::string& cleanup_prefix)
     {
         if (cache_path_.empty())
             return std::string();
 
-        ContextCacheType::iterator i = prepared_contexts_.find(ctx_prefix);
-        if (i != prepared_contexts_.end())
-            return i->second;
+        AutoLock lock(mutex_prepared_contexts_);
+
+        ContextCacheType::iterator found_it = prepared_contexts_.find(ctx_prefix);
+        if (found_it != prepared_contexts_.end())
+            return found_it->second;
 
         CV_LOG_INFO(NULL, "Preparing OpenCL cache configuration for context: " << ctx_prefix);
 
@@ -390,8 +395,59 @@ struct OpenCLBinaryCacheConfigurator
         target_directory = result ? target_directory : std::string();
         prepared_contexts_.insert(std::pair<std::string, std::string>(ctx_prefix, target_directory));
 
-        CV_LOG_VERBOSE(NULL, 1, "  Result: " << (target_directory.empty() ? std::string("Failed") : target_directory));
+        if (result && CV_OPENCL_CACHE_CLEANUP && CV_OPENCL_CACHE_WRITE && !cleanup_prefix.empty())
+        {
+            try
+            {
+                std::vector<String> entries;
+                utils::fs::glob_relative(cache_path_, cleanup_prefix + "*", entries, false, true);
+                std::vector<String> remove_entries;
+                for (size_t i = 0; i < entries.size(); i++)
+                {
+                    const String& name = entries[i];
+                    if (0 == name.find(cleanup_prefix))
+                    {
+                        if (0 == name.find(ctx_prefix))
+                            continue; // skip current
+                        remove_entries.push_back(name);
+                    }
+                }
+                if (!remove_entries.empty())
+                {
+                    CV_LOG_WARNING(NULL, (remove_entries.size() == 1
+                            ? "Detected OpenCL cache directory for other version of OpenCL device."
+                            : "Detected OpenCL cache directories for other versions of OpenCL device.")
+                            << " We assume that these directories are obsolete after OpenCL runtime/drivers upgrade.");
+                    CV_LOG_WARNING(NULL, "Trying to remove these directories...");
+                    for (size_t i = 0; i < remove_entries.size(); i++)
+                    {
+                        CV_LOG_WARNING(NULL, "- " << remove_entries[i]);
+                    }
+                    CV_LOG_WARNING(NULL,"Note: You can disable this behavior via this option: CV_OPENCL_CACHE_CLEANUP=0");
 
+                    for (size_t i = 0; i < remove_entries.size(); i++)
+                    {
+                        const String& name = remove_entries[i];
+                        cv::String path = utils::fs::join(cache_path_, name);
+                        try
+                        {
+                            utils::fs::remove_all(path);
+                            CV_LOG_WARNING(NULL, "Removed: " << path);
+                        }
+                        catch (const cv::Exception& e)
+                        {
+                            CV_LOG_ERROR(NULL, "Exception during removal of obsolete OpenCL cache directory: " << path << std::endl << e.what());
+                        }
+                    }
+                }
+            }
+            catch (...)
+            {
+                CV_LOG_WARNING(NULL, "Can't check for obsolete OpenCL cache directories");
+            }
+        }
+
+        CV_LOG_VERBOSE(NULL, 1, "  Result: " << (target_directory.empty() ? std::string("Failed") : target_directory));
         return target_directory;
     }
 
@@ -1969,7 +2025,7 @@ struct Context::Impl
         }
     }
 
-    std::string getPrefixString()
+    std::string& getPrefixString()
     {
         if (prefix.empty())
         {
@@ -1988,12 +2044,32 @@ struct Context::Impl
         return prefix;
     }
 
+    std::string& getPrefixBase()
+    {
+        if (prefix_base.empty())
+        {
+            const Device& d = devices[0];
+            prefix_base = d.vendorName() + "--" + d.name() + "--";
+            // sanitize chars
+            for (size_t i = 0; i < prefix_base.size(); i++)
+            {
+                char c = prefix_base[i];
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                {
+                    prefix_base[i] = '_';
+                }
+            }
+        }
+        return prefix_base;
+    }
+
     IMPLEMENT_REFCOUNTABLE();
 
     cl_context handle;
     std::vector<Device> devices;
 
     std::string prefix;
+    std::string prefix_base;
 
     cv::Mutex program_cache_mutex;
     typedef std::map<std::string, Program> phash_t;
@@ -3233,7 +3309,10 @@ struct Program::Impl
     {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
         OpenCLBinaryCacheConfigurator& config = OpenCLBinaryCacheConfigurator::getSingletonInstance();
-        const std::string base_dir = config.prepareCacheDirectoryForContext(ctx.getImpl()->getPrefixString());
+        const std::string base_dir = config.prepareCacheDirectoryForContext(
+                ctx.getImpl()->getPrefixString(),
+                ctx.getImpl()->getPrefixBase()
+        );
         const std::string fname = base_dir.empty() ? std::string() :
                 std::string(base_dir + src.getImpl()->module_.c_str() + "--" + src.getImpl()->name_ + "_" + src.getImpl()->codeHash_ + ".bin");
         const cv::Ptr<utils::fs::FileLock> fileLock = config.cache_lock_; // can be empty
