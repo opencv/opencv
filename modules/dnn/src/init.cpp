@@ -113,6 +113,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Permute,        PermuteLayer);
     CV_DNN_REGISTER_LAYER_CLASS(PriorBox,       PriorBoxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(PriorBoxClustered, PriorBoxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reorg,          ReorgLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Region,         RegionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DetectionOutput, DetectionOutputLayer);
