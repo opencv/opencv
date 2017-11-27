@@ -1537,12 +1537,53 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   float offset() const;
   void set_offset(float value);
 
-  // optional bool additional_y_offset = 14 [default = false];
-  bool has_additional_y_offset() const;
-  void clear_additional_y_offset();
-  static const int kAdditionalYOffsetFieldNumber = 14;
-  bool additional_y_offset() const;
-  void set_additional_y_offset(bool value);
+  // repeated float offset_h = 14;
+  int offset_h_size() const;
+  void clear_offset_h();
+  static const int kOffsetHFieldNumber = 14;
+  float offset_h(int index) const;
+  void set_offset_h(int index, float value);
+  void add_offset_h(float value);
+  const ::google::protobuf::RepeatedField< float >&
+      offset_h() const;
+  ::google::protobuf::RepeatedField< float >*
+      mutable_offset_h();
+
+  // repeated float offset_w = 15;
+  int offset_w_size() const;
+  void clear_offset_w();
+  static const int kOffsetWFieldNumber = 15;
+  float offset_w(int index) const;
+  void set_offset_w(int index, float value);
+  void add_offset_w(float value);
+  const ::google::protobuf::RepeatedField< float >&
+      offset_w() const;
+  ::google::protobuf::RepeatedField< float >*
+      mutable_offset_w();
+
+  // repeated float width = 16;
+  int width_size() const;
+  void clear_width();
+  static const int kWidthFieldNumber = 16;
+  float width(int index) const;
+  void set_width(int index, float value);
+  void add_width(float value);
+  const ::google::protobuf::RepeatedField< float >&
+      width() const;
+  ::google::protobuf::RepeatedField< float >*
+      mutable_width();
+
+  // repeated float height = 17;
+  int height_size() const;
+  void clear_height();
+  static const int kHeightFieldNumber = 17;
+  float height(int index) const;
+  void set_height(int index, float value);
+  void add_height(float value);
+  const ::google::protobuf::RepeatedField< float >&
+      height() const;
+  ::google::protobuf::RepeatedField< float >*
+      mutable_height();
 
   // @@protoc_insertion_point(class_scope:opencv_caffe.PriorBoxParameter)
  private:
@@ -1568,14 +1609,16 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   inline void clear_has_step_w();
   inline void set_has_offset();
   inline void clear_has_offset();
-  inline void set_has_additional_y_offset();
-  inline void clear_has_additional_y_offset();
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
   ::google::protobuf::RepeatedField< float > aspect_ratio_;
   ::google::protobuf::RepeatedField< float > variance_;
+  ::google::protobuf::RepeatedField< float > offset_h_;
+  ::google::protobuf::RepeatedField< float > offset_w_;
+  ::google::protobuf::RepeatedField< float > width_;
+  ::google::protobuf::RepeatedField< float > height_;
   float min_size_;
   float max_size_;
   ::google::protobuf::uint32 img_size_;
@@ -1584,7 +1627,6 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   float step_;
   float step_h_;
   float step_w_;
-  bool additional_y_offset_;
   bool flip_;
   bool clip_;
   float offset_;
@@ -13655,28 +13697,124 @@ inline void PriorBoxParameter::set_offset(float value) {
   // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.offset)
 }
 
-// optional bool additional_y_offset = 14 [default = false];
-inline bool PriorBoxParameter::has_additional_y_offset() const {
-  return (_has_bits_[0] & 0x00002000u) != 0;
+// repeated float offset_h = 14;
+inline int PriorBoxParameter::offset_h_size() const {
+  return offset_h_.size();
 }
-inline void PriorBoxParameter::set_has_additional_y_offset() {
-  _has_bits_[0] |= 0x00002000u;
+inline void PriorBoxParameter::clear_offset_h() {
+  offset_h_.Clear();
 }
-inline void PriorBoxParameter::clear_has_additional_y_offset() {
-  _has_bits_[0] &= ~0x00002000u;
+inline float PriorBoxParameter::offset_h(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.offset_h)
+  return offset_h_.Get(index);
 }
-inline void PriorBoxParameter::clear_additional_y_offset() {
-  additional_y_offset_ = false;
-  clear_has_additional_y_offset();
+inline void PriorBoxParameter::set_offset_h(int index, float value) {
+  offset_h_.Set(index, value);
+  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.offset_h)
 }
-inline bool PriorBoxParameter::additional_y_offset() const {
-  // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.additional_y_offset)
-  return additional_y_offset_;
+inline void PriorBoxParameter::add_offset_h(float value) {
+  offset_h_.Add(value);
+  // @@protoc_insertion_point(field_add:opencv_caffe.PriorBoxParameter.offset_h)
 }
-inline void PriorBoxParameter::set_additional_y_offset(bool value) {
-  set_has_additional_y_offset();
-  additional_y_offset_ = value;
-  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.additional_y_offset)
+inline const ::google::protobuf::RepeatedField< float >&
+PriorBoxParameter::offset_h() const {
+  // @@protoc_insertion_point(field_list:opencv_caffe.PriorBoxParameter.offset_h)
+  return offset_h_;
+}
+inline ::google::protobuf::RepeatedField< float >*
+PriorBoxParameter::mutable_offset_h() {
+  // @@protoc_insertion_point(field_mutable_list:opencv_caffe.PriorBoxParameter.offset_h)
+  return &offset_h_;
+}
+
+// repeated float offset_w = 15;
+inline int PriorBoxParameter::offset_w_size() const {
+  return offset_w_.size();
+}
+inline void PriorBoxParameter::clear_offset_w() {
+  offset_w_.Clear();
+}
+inline float PriorBoxParameter::offset_w(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.offset_w)
+  return offset_w_.Get(index);
+}
+inline void PriorBoxParameter::set_offset_w(int index, float value) {
+  offset_w_.Set(index, value);
+  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.offset_w)
+}
+inline void PriorBoxParameter::add_offset_w(float value) {
+  offset_w_.Add(value);
+  // @@protoc_insertion_point(field_add:opencv_caffe.PriorBoxParameter.offset_w)
+}
+inline const ::google::protobuf::RepeatedField< float >&
+PriorBoxParameter::offset_w() const {
+  // @@protoc_insertion_point(field_list:opencv_caffe.PriorBoxParameter.offset_w)
+  return offset_w_;
+}
+inline ::google::protobuf::RepeatedField< float >*
+PriorBoxParameter::mutable_offset_w() {
+  // @@protoc_insertion_point(field_mutable_list:opencv_caffe.PriorBoxParameter.offset_w)
+  return &offset_w_;
+}
+
+// repeated float width = 16;
+inline int PriorBoxParameter::width_size() const {
+  return width_.size();
+}
+inline void PriorBoxParameter::clear_width() {
+  width_.Clear();
+}
+inline float PriorBoxParameter::width(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.width)
+  return width_.Get(index);
+}
+inline void PriorBoxParameter::set_width(int index, float value) {
+  width_.Set(index, value);
+  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.width)
+}
+inline void PriorBoxParameter::add_width(float value) {
+  width_.Add(value);
+  // @@protoc_insertion_point(field_add:opencv_caffe.PriorBoxParameter.width)
+}
+inline const ::google::protobuf::RepeatedField< float >&
+PriorBoxParameter::width() const {
+  // @@protoc_insertion_point(field_list:opencv_caffe.PriorBoxParameter.width)
+  return width_;
+}
+inline ::google::protobuf::RepeatedField< float >*
+PriorBoxParameter::mutable_width() {
+  // @@protoc_insertion_point(field_mutable_list:opencv_caffe.PriorBoxParameter.width)
+  return &width_;
+}
+
+// repeated float height = 17;
+inline int PriorBoxParameter::height_size() const {
+  return height_.size();
+}
+inline void PriorBoxParameter::clear_height() {
+  height_.Clear();
+}
+inline float PriorBoxParameter::height(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.height)
+  return height_.Get(index);
+}
+inline void PriorBoxParameter::set_height(int index, float value) {
+  height_.Set(index, value);
+  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.height)
+}
+inline void PriorBoxParameter::add_height(float value) {
+  height_.Add(value);
+  // @@protoc_insertion_point(field_add:opencv_caffe.PriorBoxParameter.height)
+}
+inline const ::google::protobuf::RepeatedField< float >&
+PriorBoxParameter::height() const {
+  // @@protoc_insertion_point(field_list:opencv_caffe.PriorBoxParameter.height)
+  return height_;
+}
+inline ::google::protobuf::RepeatedField< float >*
+PriorBoxParameter::mutable_height() {
+  // @@protoc_insertion_point(field_mutable_list:opencv_caffe.PriorBoxParameter.height)
+  return &height_;
 }
 
 inline const PriorBoxParameter* PriorBoxParameter::internal_default_instance() {
