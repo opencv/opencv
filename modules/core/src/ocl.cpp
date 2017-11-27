@@ -2029,6 +2029,7 @@ struct Context::Impl
     {
         if (prefix.empty())
         {
+            CV_Assert(!devices.empty());
             const Device& d = devices[0];
             prefix = d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
             // sanitize chars
@@ -3298,6 +3299,8 @@ struct Program::Impl
         refcount = 1;
         const Context ctx = Context::getDefault();
         Device device = ctx.device(0);
+        if (ctx.ptr() == NULL || device.ptr() == NULL)
+            return;
         if (device.isAMD())
             buildflags += " -D AMD_DEVICE";
         else if (device.isIntel())
@@ -3308,6 +3311,7 @@ struct Program::Impl
     bool compile(const Context& ctx, String& errmsg)
     {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
+        CV_Assert(ctx.getImpl());
         OpenCLBinaryCacheConfigurator& config = OpenCLBinaryCacheConfigurator::getSingletonInstance();
         const std::string base_dir = config.prepareCacheDirectoryForContext(
                 ctx.getImpl()->getPrefixString(),
