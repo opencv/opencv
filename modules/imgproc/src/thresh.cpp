@@ -141,6 +141,9 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         return;
 #endif
 
+    CALL_HAL(thresholdBin, cv_hal_thresholdBin8u, _src.data, src_step, _dst.data, dst_step, roi.width, roi.height,
+             thresh, maxval, type);
+
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
     {
