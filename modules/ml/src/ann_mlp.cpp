@@ -1329,7 +1329,7 @@ Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
 {
     FileStorage fs;
     fs.open(filepath, FileStorage::READ);
-
+    CV_Assert(fs.isOpened());
     Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
 
     ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());
