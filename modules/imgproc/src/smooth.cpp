@@ -1562,7 +1562,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
              anchor.x, anchor.y, normalize, borderType&~BORDER_ISOLATED);
 
     CV_OVX_RUN(true,
-               openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
+               openvx_boxfilter(src, dst, ddepth, ksize, anchor, normalize, borderType))
 
     CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
@@ -2124,15 +2124,12 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              sigma1, sigma2, borderType&~BORDER_ISOLATED);
 
-    src.release();
-    dst.release();
-
     CV_OVX_RUN(true,
-               openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
+               openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
-    CV_IPP_RUN_FAST(ipp_GaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType));
+    CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
 
-    sepFilter2D(_src, _dst, sdepth, kx, ky, Point(-1, -1), 0, borderType);
+    sepFilter2D(src, dst, sdepth, kx, ky, Point(-1, -1), 0, borderType);
 }
 
 /****************************************************************************************\
