@@ -141,9 +141,6 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         return;
 #endif
 
-    CALL_HAL(thresholdBin, cv_hal_thresholdBin8u, _src.data, src_step, _dst.data, dst_step, roi.width, roi.height,
-             thresh, maxval, type);
-
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
     {
@@ -1216,6 +1213,10 @@ public:
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
+
+        CALL_HAL(threshold, cv_hal_threshold, srcStripe.data, srcStripe.step, dstStripe.data, dstStripe.step,
+                 srcStripe.cols, srcStripe.rows, srcStripe.depth(), srcStripe.channels(),
+                 thresh, maxval, thresholdType);
 
         if (srcStripe.depth() == CV_8U)
         {
