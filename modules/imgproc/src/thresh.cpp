@@ -1549,7 +1549,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         Mat srcfloat,meanfloat;
         src.convertTo(srcfloat,CV_32F);
         meanfloat=srcfloat;
-        GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE);
+        GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE|BORDER_ISOLATED);
         meanfloat.convertTo(mean, src.type());
     }
     else
