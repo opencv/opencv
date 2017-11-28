@@ -2,7 +2,10 @@ message (STATUS "Setting up iPhoneSimulator toolchain")
 set (IPHONESIMULATOR TRUE)
 
 # Standard settings
-set (CMAKE_SYSTEM_NAME iOS)
+set(CMAKE_SYSTEM_NAME iOS)
+set(CMAKE_SYSTEM_VERSION 6.0)
+set(CMAKE_SYSTEM_PROCESSOR "${IOS_ARCH}")
+
 # Include extra modules for the iOS platform files
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platforms/ios/cmake/Modules")
 

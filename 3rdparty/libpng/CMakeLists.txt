@@ -3,7 +3,7 @@
 #
 # ----------------------------------------------------------------------------
 
-if(ARM AND ENABLE_NEON AND NOT AARCH64)
+if(ARM AND ENABLE_NEON AND NOT AARCH64 AND NOT IOS)
   project(${PNG_LIBRARY} ASM)
 else()
   project(${PNG_LIBRARY})
@@ -14,7 +14,7 @@ ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIR})
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
-if(ARM AND ENABLE_NEON AND NOT AARCH64)
+if(ARM AND ENABLE_NEON AND NOT AARCH64 AND NOT IOS)
   list(APPEND lib_srcs arm/filter_neon.S arm/arm_init.c)
   add_definitions(-DPNG_ARM_NEON_OPT=2)
 else()
