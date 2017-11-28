@@ -4584,6 +4584,11 @@ draws the contours, all the nested contours, all the nested-to-nested contours, 
 parameter is only taken into account when there is hierarchy available.
 @param offset Optional contour shift parameter. Shift all the drawn contours by the specified
 \f$\texttt{offset}=(dx,dy)\f$ .
+@note When thickness=CV_FILLED, the function is designed to handle connected components with holes correctly
+even when no hierarchy date is provided. This is done by analyzing all the outlines together
+using even-odd rule. This may give incorrect results if you have a joint collection of separately retrieved
+contours. In order to solve this problem, you need to call drawContours separately for each sub-group
+of contours, or iterate over the collection using contourIdx parameter.
  */
 CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,
