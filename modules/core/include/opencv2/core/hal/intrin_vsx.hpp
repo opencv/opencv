@@ -394,16 +394,17 @@ OPENCV_HAL_IMPL_VSX_PACK(v_int16x8, short, v_int32x4, unsigned int, int,
                          vec_sra, vec_packs, vec_add, pack)
 
 OPENCV_HAL_IMPL_VSX_PACK(v_uint32x4, uint, v_uint64x2, unsigned long long, unsigned long long,
-                         vec_sr, vec_packs, vec_add, pack)
+                         vec_sr, vec_pack, vec_add, pack)
 OPENCV_HAL_IMPL_VSX_PACK(v_int32x4, int, v_int64x2, unsigned long long, long long,
-                         vec_sra, vec_packs, vec_add, pack)
+                         vec_sra, vec_pack, vec_add, pack)
 
 OPENCV_HAL_IMPL_VSX_PACK(v_uint8x16, uchar, v_int16x8, unsigned short, short,
                          vec_sra, vec_packsu, vec_adds, pack_u)
 OPENCV_HAL_IMPL_VSX_PACK(v_uint16x8, ushort, v_int32x4, unsigned int, int,
                          vec_sra, vec_packsu, vec_add, pack_u)
-OPENCV_HAL_IMPL_VSX_PACK(v_uint32x4, uint, v_int64x2, unsigned long long, long long,
-                         vec_sra, vec_packsu, vec_add, pack_u)
+// Following variant is not implemented on other platforms:
+//OPENCV_HAL_IMPL_VSX_PACK(v_uint32x4, uint, v_int64x2, unsigned long long, long long,
+//                         vec_sra, vec_packsu, vec_add, pack_u)
 
 /* Recombine */
 template <typename _Tpvec>
