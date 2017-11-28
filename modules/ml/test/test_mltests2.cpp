@@ -79,8 +79,10 @@ int str_to_ann_train_method( String& str )
 {
     if( !str.compare("BACKPROP") )
         return ANN_MLP::BACKPROP;
-    if( !str.compare("RPROP") )
+    if (!str.compare("RPROP"))
         return ANN_MLP::RPROP;
+    if (!str.compare("ANNEAL"))
+        return ANN_MLP::ANNEAL;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
     return -1;
 }
@@ -241,10 +243,62 @@ TEST(ML_ANN, ActivationFunction)
         Mat rx, ry, dst;
         x->predict(testSamples, rx);
         y->predict(testSamples, ry);
-        absdiff(rx, ry, dst);
-        double minVal, maxVal;
-        minMaxLoc(dst, &minVal, &maxVal);
-        ASSERT_TRUE(maxVal<FLT_EPSILON) << "Predict are not equal for " << dataname + activationName[i] + ".yml and " << activationName[i];
+        double n = cvtest::norm(rx, ry, NORM_INF);
+        ASSERT_TRUE(n<FLT_EPSILON) << "Predict are not equal for " << dataname + activationName[i] + ".yml and " << activationName[i];
+#endif
+    }
+}
+
+TEST(ML_ANN, Method)
+{
+    String folder = string(cvtest::TS::ptr()->get_data_path());
+    String original_path = folder + "waveform.data";
+    String dataname = folder + "waveform";
+
+    Ptr<TrainData> tdata2 = TrainData::loadFromCSV(original_path, 0);
+    Mat responses(tdata2->getResponses().rows, 3, CV_32FC1, Scalar(0));
+    for (int i = 0; i<tdata2->getResponses().rows; i++)
+        responses.at<float>(i, static_cast<int>(tdata2->getResponses().at<float>(i, 0))) = 1;
+    Ptr<TrainData> tdata = TrainData::create(tdata2->getSamples(), ml::ROW_SAMPLE, responses);
+
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 1027401484159173092;
+    tdata->setTrainTestSplitRatio(0.8);
+
+    vector<int> methodType;
+    methodType.push_back(ml::ANN_MLP::BACKPROP);
+    methodType.push_back(ml::ANN_MLP::RPROP);
+    methodType.push_back(ml::ANN_MLP::ANNEAL);
+    vector<String> methodName;
+    methodName.push_back("_backprop");
+    methodName.push_back("_rprop");
+    methodName.push_back("_anneal");
+    for (size_t i = 0; i < methodType.size(); i++)
+    {
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
+        Mat_<int> layerSizes(1, 4);
+        layerSizes(0, 0) = tdata->getNVars();
+        layerSizes(0, 1) = 100;
+        layerSizes(0, 2) = 100;
+        layerSizes(0, 3) = tdata->getResponses().cols;
+        x->setLayerSizes(layerSizes);
+        x->setActivationFunction(ml::ANN_MLP::SIGMOID_SYM);
+        x->setTrainMethod(methodType[i]);
+        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 10, 0.01));
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << methodName[i];
+#ifdef GENERATE_TESTDATA
+        x->save(dataname + methodName[i] + ".yml");
+#else
+        Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(dataname + methodName[i] + ".yml");
+        ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + methodName[i] + ".yml";
+        Mat testSamples = tdata->getTestSamples();
+        Mat rx, ry, dst;
+        x->predict(testSamples, rx);
+        y->predict(testSamples, ry);
+        double n = cvtest::norm(rx, ry, NORM_INF);
+        ASSERT_TRUE(n<FLT_EPSILON) << "Predict are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i];
 #endif
     }
 }

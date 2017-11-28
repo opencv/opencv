@@ -1406,15 +1406,18 @@ public:
     /** Available training methods */
     enum TrainingMethods {
         BACKPROP=0, //!< The back-propagation algorithm.
-        RPROP=1 //!< The RPROP algorithm. See @cite RPROP93 for details.
+        RPROP = 1, //!< The RPROP algorithm. See @cite RPROP93 for details.
+        ANNEAL = 2 //!< The simulated annealing algorithm. See @cite Kirkpatrick83 for details.
     };
 
     /** Sets training method and common parameters.
     @param method Default value is ANN_MLP::RPROP. See ANN_MLP::TrainingMethods.
-    @param param1 passed to setRpropDW0 for ANN_MLP::RPROP and to setBackpropWeightScale for ANN_MLP::BACKPROP
-    @param param2 passed to setRpropDWMin for ANN_MLP::RPROP and to setBackpropMomentumScale for ANN_MLP::BACKPROP.
+    @param param1 passed to setRpropDW0 for ANN_MLP::RPROP and to setBackpropWeightScale for ANN_MLP::BACKPROP and to initialT for ANN_MLP::ANNEAL.
+    @param param2 passed to setRpropDWMin for ANN_MLP::RPROP and to setBackpropMomentumScale for ANN_MLP::BACKPROP and to finalT for ANN_MLP::ANNEAL.
+    @param param3 passed to coolingRatio for ANN_MLP::ANNEAL.
+    @param param4 passed for ite for ANN_MLP::ANNEAL.
     */
-    CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0) = 0;
+    CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0, double param3 = 0, int param4 = 0) = 0;
 
     /** Returns current training method */
     CV_WRAP virtual int getTrainMethod() const = 0;
@@ -1498,6 +1501,34 @@ public:
     CV_WRAP virtual double getRpropDWMax() const = 0;
     /** @copybrief getRpropDWMax @see getRpropDWMax */
     CV_WRAP virtual void setRpropDWMax(double val) = 0;
+
+    /** ANNEAL: Update initial temperature.
+    It must be \>=0. Default value is 10.*/
+    /** @see setAnnealInitialT */
+    CV_WRAP virtual double getAnnealInitialT() const = 0;
+    /** @copybrief getAnnealInitialT @see getAnnealInitialT */
+    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
+
+    /** ANNEAL: Update final temperature.
+    It must be \>=0 and less than initialT. Default value is 0.1.*/
+    /** @see setAnnealFinalT */
+    CV_WRAP virtual double getAnnealFinalT() const = 0;
+    /** @copybrief getAnnealFinalT @see getAnnealFinalT */
+    CV_WRAP virtual void setAnnealFinalT(double val) = 0;
+
+    /** ANNEAL: Update cooling ratio.
+    It must be \>0 and less than 1. Default value is 0.95.*/
+    /** @see setAnnealCoolingRatio */
+    CV_WRAP virtual double getAnnealCoolingRatio() const = 0;
+    /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
+    CV_WRAP virtual void setAnnealCoolingRatio(double val) = 0;
+
+    /** ANNEAL: Update iteration per step.
+    It must be \>0 . Default value is 10.*/
+    /** @see setAnnealItePerStep */
+    CV_WRAP virtual int getAnnealItePerStep() const = 0;
+    /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
+    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
 
     /** possible activation functions */
     enum ActivationFunctions {
@@ -1837,6 +1868,105 @@ CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, Out
 /** @brief Creates test set */
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
+
+/****************************************************************************************\
+*                                   Simulated annealing solver                             *
+\****************************************************************************************/
+
+/** @brief The class implements simulated annealing for optimization.
+@cite Kirkpatrick83 for details
+*/
+class CV_EXPORTS SimulatedAnnealingSolver : public Algorithm
+{
+public:
+    SimulatedAnnealingSolver() { init(); };
+    /** Give energy value for  a state of system.*/
+    virtual double energy() = 0;
+    /** Function which change the state of system (random pertubation).*/
+    virtual void changedState() = 0;
+    /** Function to reverse to the previous state.*/
+    virtual void reverseChangedState() = 0;
+
+    /** Simulated annealing procedure.  */
+    int run()
+    {
+        CV_Assert(initialT>finalT);
+        double Ti = initialT;
+        double previousEnergy = energy();
+        int exchange = 0;
+        while (Ti > finalT)
+        {
+            for (int i = 0; i < iterPerStep; i++)
+            {
+                changedState();
+                double newEnergy = energy();
+                if (newEnergy < previousEnergy)
+                {
+                    previousEnergy = newEnergy;
+                }
+                else
+                {
+                    double r = rEnergy.uniform(double(0.0), double(1.0));
+                    if (r < exp(-(newEnergy - previousEnergy) / Ti))
+                    {
+                        previousEnergy = newEnergy;
+                        exchange++;
+                    }
+                    else
+                        reverseChangedState();
+                }
+
+            }
+            Ti *= coolingRatio;
+        }
+        return exchange;
+    }
+    /** Set intial temperature of simulated annealing procedure.
+    *@param x new initial temperature. x\>0
+    */
+    void setInitialTemperature(double x)
+    {
+        CV_Assert(x>0);
+        initialT = x;
+    };
+    /** Set final temperature of simulated annealing procedure.
+    *@param x new final temperature value. 0\<x\<initial temperature
+    */
+    void setFinalTemperature(double x)
+    {
+        CV_Assert(x>0);
+        finalT = x;
+    };
+    /** Set setCoolingRatio of simulated annealing procedure : T(t) = coolingRatio * T(t-1).
+    * @param x new cooling ratio value. 0\<x\<1
+    */
+    void setCoolingRatio(double x)
+    {
+        CV_Assert(x>0 && x<1);
+        coolingRatio = x;
+    };
+    /** Set number iteration per temperature step.
+    * @param ite number of iteration per temperature step ite \> 0
+    */
+    void setIterPerStep(int ite)
+    {
+        CV_Assert(ite>0);
+        iterPerStep = ite;
+    }
+protected :
+    void init()
+    {
+        initialT = 2;
+        finalT = 0.1;
+        coolingRatio = 0.95;
+        iterPerStep = 100;
+    }
+    RNG rEnergy;
+    double coolingRatio;
+    double initialT;
+    double finalT;
+    int iterPerStep;
+};
 
 //! @} ml
 
