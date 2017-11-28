@@ -85,6 +85,22 @@ int str_to_ann_train_method( String& str )
     return -1;
 }
 
+int str_to_ann_activation_function(String& str)
+{
+    if (!str.compare("IDENTITY"))
+        return ANN_MLP::IDENTITY;
+    if (!str.compare("SIGMOID_SYM"))
+        return ANN_MLP::SIGMOID_SYM;
+    if (!str.compare("GAUSSIAN"))
+        return ANN_MLP::GAUSSIAN;
+    if (!str.compare("RELU"))
+        return ANN_MLP::RELU;
+    if (!str.compare("LEAKYRELU"))
+        return ANN_MLP::LEAKYRELU;
+    CV_Error(CV_StsBadArg, "incorrect ann activation function string");
+    return -1;
+}
+
 void ann_check_data( Ptr<TrainData> _data )
 {
     CV_TRACE_FUNCTION();
@@ -175,6 +191,62 @@ float ann_calc_error( Ptr<StatModel> ann, Ptr<TrainData> _data, map<int, int>& c
     }
     err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
     return err;
+}
+
+TEST(ML_ANN, ActivationFunction)
+{
+    String folder = string(cvtest::TS::ptr()->get_data_path());
+    String original_path = folder + "waveform.data";
+    String dataname = folder + "waveform";
+
+    Ptr<TrainData> tdata = TrainData::loadFromCSV(original_path, 0);
+
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 1027401484159173092;
+    tdata->setTrainTestSplit(500);
+
+    vector<int> activationType;
+    activationType.push_back(ml::ANN_MLP::IDENTITY);
+    activationType.push_back(ml::ANN_MLP::SIGMOID_SYM);
+    activationType.push_back(ml::ANN_MLP::GAUSSIAN);
+    activationType.push_back(ml::ANN_MLP::RELU);
+    activationType.push_back(ml::ANN_MLP::LEAKYRELU);
+    vector<String> activationName;
+    activationName.push_back("_identity");
+    activationName.push_back("_sigmoid_sym");
+    activationName.push_back("_gaussian");
+    activationName.push_back("_relu");
+    activationName.push_back("_leakyrelu");
+    for (size_t i = 0; i < activationType.size(); i++)
+    {
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
+        Mat_<int> layerSizes(1, 4);
+        layerSizes(0, 0) = tdata->getNVars();
+        layerSizes(0, 1) = 100;
+        layerSizes(0, 2) = 100;
+        layerSizes(0, 3) = tdata->getResponses().cols;
+        x->setLayerSizes(layerSizes);
+        x->setActivationFunction(activationType[i]);
+        x->setTrainMethod(ml::ANN_MLP::RPROP, 0.01, 0.1);
+        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 300, 0.01));
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << activationName[i];
+#ifdef GENERATE_TESTDATA
+        x->save(dataname + activationName[i] + ".yml");
+#else
+        Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(dataname + activationName[i] + ".yml");
+        ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + activationName[i] + ".yml";
+        Mat testSamples = tdata->getTestSamples();
+        Mat rx, ry, dst;
+        x->predict(testSamples, rx);
+        y->predict(testSamples, ry);
+        absdiff(rx, ry, dst);
+        double minVal, maxVal;
+        minMaxLoc(dst, &minVal, &maxVal);
+        ASSERT_TRUE(maxVal<FLT_EPSILON) << "Predict are not equal for " << dataname + activationName[i] + ".yml and " << activationName[i];
+#endif
+    }
 }
 
 // 6. dtree
