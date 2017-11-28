@@ -160,7 +160,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fomit-frame-pointer)
-  else()
+  elseif(DEFINED ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fno-omit-frame-pointer)
   endif()
   if(ENABLE_FAST_MATH)
