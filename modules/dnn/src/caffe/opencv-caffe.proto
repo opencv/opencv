@@ -145,8 +145,14 @@ message PriorBoxParameter {
   optional float step_w = 12;
   // Offset to the top left corner of each cell.
   optional float offset = 13 [default = 0.5];
-  // If true, two additional boxes for each center will be generated. Their centers will be shifted by y coordinate.
-  optional bool additional_y_offset = 14 [default = false];
+  // Offset to the top corner of each cell.
+  repeated float offset_h = 14;
+  // Offset to the left corner of each cell.
+  repeated float offset_w = 15;
+  // Priox boxes width (in pixels).
+  repeated float width = 16;
+  // Priox boxes height (in pixels).
+  repeated float height = 17;
 }
 
 // Message that store parameters used by DetectionOutputLayer
