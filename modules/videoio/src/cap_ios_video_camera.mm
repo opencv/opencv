@@ -353,7 +353,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     // create a custom preview layer
     self.customPreviewLayer = [CALayer layer];
     self.customPreviewLayer.bounds = CGRectMake(0, 0, self.parentView.frame.size.width, self.parentView.frame.size.height);
-    [self layoutPreviewLayer];
+    self.customPreviewLayer.position = CGPointMake(self.parentView.frame.size.width/2., self.parentView.frame.size.height/2.);
+    [self updateOrientation];
 
     // create a serial dispatch queue used for the sample buffer delegate as well as when a still image is captured
     // a serial dispatch queue must be used to guarantee that video frames will be delivered in order
