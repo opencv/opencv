@@ -563,7 +563,7 @@ Estimation" (@cite penate2013exhaustive). In this case the function also estimat
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
 -   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
-"An Efficient Algebraic Solution to the Perspective-Three-Point Problem". In this case the
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17). In this case the
 function requires exactly four object and image points.
 
 The function estimates the object pose given a set of object points, their corresponding image
@@ -585,9 +585,12 @@ projections, as well as the camera matrix and the distortion coefficients.
    -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
        unstable and sometimes give completely wrong results. If you pass one of these two
        flags, **SOLVEPNP_EPNP** method will be used instead.
-   -   The minimum number of points is 4. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
+   -   The minimum number of points is 4 in the general case. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
+   -   With **SOLVEPNP_ITERATIVE** method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
+       are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
+       global solution to converge.
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -658,9 +661,9 @@ the model coordinate system to the camera coordinate system. A P3P problem has u
 @param tvecs Output translation vectors.
 @param flags Method for solving a P3P problem:
 -   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem".
+"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
 -   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
-"An Efficient Algebraic Solution to the Perspective-Three-Point Problem".
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 
 The function estimates the object pose given 3 object points, their corresponding image
 projections, as well as the camera matrix and the distortion coefficients.
