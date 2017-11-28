@@ -961,7 +961,7 @@ void error( const Exception& exc )
         *p = 0;
     }
 
-    throw exc;
+    CV_THROW(exc);
 }
 
 void error(int _code, const String& _err, const char* _func, const char* _file, int _line)

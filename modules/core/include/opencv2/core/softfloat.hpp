@@ -122,6 +122,12 @@ public:
     explicit softfloat( const uint64_t );
     explicit softfloat( const int32_t );
     explicit softfloat( const int64_t );
+
+#ifdef CV_INT32_T_IS_LONG_INT
+    // for platforms with int32_t = long int
+    explicit softfloat( const int a ) { *this = softfloat(static_cast<int32_t>(a)); }
+#endif
+
     /** @brief Construct from float */
     explicit softfloat( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
@@ -253,6 +259,12 @@ public:
     explicit softdouble( const uint64_t );
     explicit softdouble( const  int32_t );
     explicit softdouble( const  int64_t );
+
+#ifdef CV_INT32_T_IS_LONG_INT
+    // for platforms with int32_t = long int
+    explicit softdouble( const int a ) { *this = softdouble(static_cast<int32_t>(a)); }
+#endif
+
     /** @brief Construct from double */
     explicit softdouble( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 

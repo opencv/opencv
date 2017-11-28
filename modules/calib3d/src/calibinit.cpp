@@ -431,7 +431,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     cv::Ptr<CvMemStorage> storage;
 
-    try
+    CV_TRY
     {
     int k = 0;
     const int min_dilations = 0;
@@ -617,11 +617,11 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                             cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
     }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
         cvFree(&quads);
         cvFree(&corners);
-        throw;
+        CV_RETHROW();
     }
     cvFree(&quads);
     cvFree(&corners);
@@ -2151,13 +2151,13 @@ bool cv::findCirclesGrid2( InputArray _image, Size patternSize,
       void* oldCbkData;
       ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData);
 #endif
-      try
+      CV_TRY
       {
         isFound = boxFinder.findHoles();
       }
-      catch (const cv::Exception &)
+      CV_CATCH(Exception, e)
       {
-
+          CV_UNUSED(e);
       }
 #if BE_QUIET
       redirectError(oldCbk, oldCbkData);
