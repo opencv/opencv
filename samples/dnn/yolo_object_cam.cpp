@@ -11,25 +11,21 @@ http://assuntonerd.com.br
  RUN:
  yolo_object_cam -cam=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
 */
-
-
-#include <opencv2/dnn.hpp>
-#include <opencv2/dnn/shape_utils.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <iostream>
-
-#include "opencv2/opencv_modules.hpp"
-
-using namespace cv;
-using namespace cv::dnn;
-
 #include <fstream>
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
 #include <list>
 
+#include <opencv2/dnn.hpp>
+#include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
+#include "opencv2/opencv_modules.hpp"
+
+using namespace cv;
+using namespace cv::dnn;
 using namespace std;
 
 const int network_width = 416;
