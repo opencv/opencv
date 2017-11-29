@@ -8,7 +8,6 @@ Author: Alessandro de Oliveira Faria cabelo@opensuse.org
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/cudacodec.hpp>
 #include <iostream>
 
 #include "opencv2/opencv_modules.hpp"
