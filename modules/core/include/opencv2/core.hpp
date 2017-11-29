@@ -3139,6 +3139,7 @@ public:
     template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
     {
         FileStorage fs(filename, FileStorage::READ);
+        CV_Assert(fs.isOpened());
         FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
         if (fn.empty()) return Ptr<_Tp>();
         Ptr<_Tp> obj = _Tp::create();
