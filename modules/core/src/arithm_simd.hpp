@@ -1724,8 +1724,8 @@ struct Div_SIMD<double>
             v_float64x2 res0 = f0 * v_scale / f2;
             v_float64x2 res1 = f1 * v_scale / f3;
 
-            res0 = v_select(f0 == v_zero, v_zero, res0);
-            res1 = v_select(f1 == v_zero, v_zero, res1);
+            res0 = v_select(f2 == v_zero, v_zero, res0);
+            res1 = v_select(f3 == v_zero, v_zero, res1);
 
             v_store(dst + x, res0);
             v_store(dst + x + 2, res1);
