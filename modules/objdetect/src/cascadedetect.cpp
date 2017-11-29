@@ -607,7 +607,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     normrect = Rect(1, 1, origWinSize.width - 2, origWinSize.height - 2);
 
     localSize = lbufSize = Size(0, 0);
-    if (ocl::haveOpenCL())
+    if (ocl::isOpenCLActivated())
     {
         if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel() || ocl::Device::getDefault().isNVidia())
         {
@@ -802,7 +802,7 @@ bool LBPEvaluator::read( const FileNode& node, Size _origWinSize )
     }
     nchannels = 1;
     localSize = lbufSize = Size(0, 0);
-    if (ocl::haveOpenCL())
+    if (ocl::isOpenCLActivated())
         localSize = Size(8, 8);
 
     return true;
@@ -1306,7 +1306,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     levelWeights.clear();
 
 #ifdef HAVE_OPENCL
-    bool use_ocl = tryOpenCL && ocl::useOpenCL() &&
+    bool use_ocl = tryOpenCL && ocl::isOpenCLActivated() &&
          OCL_FORCE_CHECK(_image.isUMat()) &&
          featureEvaluator->getLocalSize().area() > 0 &&
          (data.minNodesPerTree == data.maxNodesPerTree) &&

@@ -423,7 +423,7 @@ struct OpenCLBinaryCacheConfigurator
                     {
                         CV_LOG_WARNING(NULL, "- " << remove_entries[i]);
                     }
-                    CV_LOG_WARNING(NULL,"Note: You can disable this behavior via this option: CV_OPENCL_CACHE_CLEANUP=0");
+                    CV_LOG_WARNING(NULL, "Note: You can disable this behavior via this option: OPENCV_OPENCL_CACHE_CLEANUP=0");
 
                     for (size_t i = 0; i < remove_entries.size(); i++)
                     {
@@ -781,18 +781,34 @@ public:
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 
+// true if we have initialized OpenCL subsystem with available platforms
+static bool g_isOpenCVActivated = false;
+
 bool haveOpenCL()
 {
+    CV_TRACE_FUNCTION();
 #ifdef HAVE_OPENCL
     static bool g_isOpenCLInitialized = false;
     static bool g_isOpenCLAvailable = false;
 
     if (!g_isOpenCLInitialized)
     {
+        CV_TRACE_REGION("Init_OpenCL_Runtime");
+        const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
+        if (envPath)
+        {
+            if (cv::String(envPath) == "disabled")
+            {
+                g_isOpenCLAvailable = false;
+                g_isOpenCLInitialized = true;
+            }
+        }
+        CV_LOG_INFO(NULL, "Initialize OpenCL runtime...");
         try
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
+            g_isOpenCVActivated = n > 0;
         }
         catch (...)
         {
@@ -813,7 +829,7 @@ bool useOpenCL()
     {
         try
         {
-            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available();
+            data->useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
         }
         catch (...)
         {
@@ -823,12 +839,27 @@ bool useOpenCL()
     return data->useOpenCL > 0;
 }
 
+#ifdef HAVE_OPENCL
+bool isOpenCLActivated()
+{
+    if (!g_isOpenCVActivated)
+        return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
+    return useOpenCL();
+}
+#endif
+
 void setUseOpenCL(bool flag)
 {
-    if( haveOpenCL() )
+    CV_TRACE_FUNCTION();
+
+    CoreTLSData* data = getCoreTlsData().get();
+    if (!flag)
     {
-        CoreTLSData* data = getCoreTlsData().get();
-        data->useOpenCL = (flag && Device::getDefault().ptr() != NULL) ? 1 : 0;
+        data->useOpenCL = 0;
+    }
+    else if( haveOpenCL() )
+    {
+        data->useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -5289,9 +5320,15 @@ public:
     }
 };
 
+static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
+{
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destrutor call (using of this object is too wide)
+    g_isOpenCVActivated = true;
+    return g_allocator;
+}
 MatAllocator* getOpenCLAllocator()
 {
-    CV_SINGLETON_LAZY_INIT(MatAllocator, new OpenCLAllocator())
+    CV_SINGLETON_LAZY_INIT(MatAllocator, getOpenCLAllocator_())
 }
 
 }} // namespace cv::ocl
