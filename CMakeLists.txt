@@ -197,7 +197,7 @@ OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"            
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" ON IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               ON IF (NOT IOS AND NOT APPLE) )
-OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON   IF (NOT WINRT) )
+OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON   IF (NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
 OCV_OPTION(WITH_VFW            "Include Video for Windows support"           ON   IF WIN32 )
 OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GSTREAMER      "Include Gstreamer support"                   ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
