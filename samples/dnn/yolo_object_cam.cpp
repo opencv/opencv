@@ -1,6 +1,13 @@
 /*
 Sample of using OpenCV dnn module in real time with device capture (based in yolo_object_detection.cpp)
 Author: Alessandro de Oliveira Faria cabelo@opensuse.org
+http://assuntonerd.com.br
+
+ COMPILE:
+ g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_detection.cpp -o yolo_object_detection
+
+ RUN:
+ yolo_object_cam -cam=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
 */
 
 
@@ -23,11 +30,10 @@ using namespace cv::dnn;
 
 using namespace std;
 
-// COMPILE:
-// g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_detection.cpp -o yolo_object_detection
+void assetRoi( Rect &_roi, Mat &_frame  );
+void addLabels(cv::String filename,std::list<std::string> &_mylist);
+std::string returnLabel(int index, std::list<std::string> &_mylist);
 
-// RUN:
-// yolo_object_cam -cam=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
 const size_t network_width = 416;
 const size_t network_height = 416;
 
@@ -107,10 +113,6 @@ int main(int argc, char** argv)
 	VideoCapture cap(cam);
 	if (!cap.isOpened()) return -1;
 
-	int frame_width=  416;
-	int frame_height=  416;
-
-	
 	bool grabFrame = true;
 	while (grabFrame) 
 	{
