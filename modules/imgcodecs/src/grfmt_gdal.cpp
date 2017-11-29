@@ -426,7 +426,8 @@ bool GdalDecoder::readData( Mat& img ){
         for( int y=0; y<nRows; y++ ){
 
             // get the entire row
-            band->RasterIO( GF_Read, 0, y, nCols, 1, scanline, nCols, 1, GDT_Float64, 0, 0);
+            CPLErr err = band->RasterIO( GF_Read, 0, y, nCols, 1, scanline, nCols, 1, GDT_Float64, 0, 0);
+            CV_Assert(err == CE_None);
 
             // set inside the image
             for( int x=0; x<nCols; x++ ){

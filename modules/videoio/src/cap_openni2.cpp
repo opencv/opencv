@@ -609,7 +609,7 @@ bool CvCapture_OpenNI2::setDepthGeneratorProperty( int propIdx, double propValue
                 if ( streams[CV_COLOR_STREAM].isValid() )
                 {
                     openni::ImageRegistrationMode mode = propValue != 0.0 ? openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR : openni::IMAGE_REGISTRATION_OFF;
-                    if( !device.getImageRegistrationMode() == mode )
+                    if( device.getImageRegistrationMode() != mode )
                     {
                         if (device.isImageRegistrationModeSupported(mode))
                         {
