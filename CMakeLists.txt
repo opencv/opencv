@@ -514,7 +514,9 @@ if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL 
 endif()
 
 # --- Python Support ---
-include(cmake/OpenCVDetectPython.cmake)
+if(NOT IOS)
+  include(cmake/OpenCVDetectPython.cmake)
+endif()
 
 include(cmake/OpenCVCompilerOptions.cmake)
 
