@@ -5,6 +5,7 @@
 #include "cap_mfx_reader.hpp"
 #include "opencv2/core/base.hpp"
 #include "cap_mfx_common.hpp"
+#include "opencv2/imgproc/hal/hal.hpp"
 
 using namespace cv;
 using namespace std;
@@ -38,8 +39,7 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
     mfxStatus res = MFX_ERR_NONE;
 
     // Init device and session
-
-    deviceHandler = new VAHandle();
+    deviceHandler = createDeviceHandler();
     session = new MFXVideoSession();
     if (!deviceHandler->init(*session))
     {
@@ -227,7 +227,6 @@ bool VideoCapture_IntelMFX::grabFrame()
             MSG(cerr << "MFX: Bad status: " << res << endl);
             return false;
         }
-        return false;
     }
 }
 
@@ -245,17 +244,11 @@ bool VideoCapture_IntelMFX::retrieveFrame(int, OutputArray out)
 
     const int cols = info.CropW;
     const int rows = info.CropH;
-    Mat nv12(rows * 3 / 2, cols, CV_8UC1);
 
-    Mat Y(rows, cols, CV_8UC1, data.Y, data.Pitch);
-    Mat UV(rows / 2, cols, CV_8UC1, data.UV, data.Pitch);
+    out.create(rows, cols, CV_8UC3);
+    Mat res = out.getMat();
 
-    Y.copyTo(Mat(nv12, Rect(0, 0, cols, rows)));
-    UV.copyTo(Mat(nv12, Rect(0, rows, cols, rows / 2)));
-
-    Mat u_and_v[2];
-    split(UV.reshape(2), u_and_v);
-    cvtColor(nv12, out, COLOR_YUV2BGR_NV12);
+    hal::cvtTwoPlaneYUVtoBGR(data.Y, data.UV, data.Pitch, res.data, res.step, cols, rows, 3, false, 0);
 
     return true;
 }

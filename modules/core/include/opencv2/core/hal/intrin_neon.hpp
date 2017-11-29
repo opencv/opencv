@@ -226,7 +226,7 @@ struct v_uint64x2
 
     v_uint64x2() {}
     explicit v_uint64x2(uint64x2_t v) : val(v) {}
-    v_uint64x2(unsigned v0, unsigned v1)
+    v_uint64x2(uint64 v0, uint64 v1)
     {
         uint64 v[] = {v0, v1};
         val = vld1q_u64(v);
@@ -245,7 +245,7 @@ struct v_int64x2
 
     v_int64x2() {}
     explicit v_int64x2(int64x2_t v) : val(v) {}
-    v_int64x2(int v0, int v1)
+    v_int64x2(int64 v0, int64 v1)
     {
         int64 v[] = {v0, v1};
         val = vld1q_s64(v);
@@ -360,40 +360,40 @@ OPENCV_HAL_IMPL_NEON_INIT_64(float32x4, f32)
 OPENCV_HAL_IMPL_NEON_INIT_64(float64x2, f64)
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_PACK(_Tpvec, _Tp, hreg, suffix, _Tpwvec, wsuffix, pack, op) \
+#define OPENCV_HAL_IMPL_NEON_PACK(_Tpvec, _Tp, hreg, suffix, _Tpwvec, pack, mov, rshr) \
 inline _Tpvec v_##pack(const _Tpwvec& a, const _Tpwvec& b) \
 { \
-    hreg a1 = vqmov##op##_##wsuffix(a.val), b1 = vqmov##op##_##wsuffix(b.val); \
+    hreg a1 = mov(a.val), b1 = mov(b.val); \
     return _Tpvec(vcombine_##suffix(a1, b1)); \
 } \
 inline void v_##pack##_store(_Tp* ptr, const _Tpwvec& a) \
 { \
-    hreg a1 = vqmov##op##_##wsuffix(a.val); \
+    hreg a1 = mov(a.val); \
     vst1_##suffix(ptr, a1); \
 } \
 template<int n> inline \
 _Tpvec v_rshr_##pack(const _Tpwvec& a, const _Tpwvec& b) \
 { \
-    hreg a1 = vqrshr##op##_n_##wsuffix(a.val, n); \
-    hreg b1 = vqrshr##op##_n_##wsuffix(b.val, n); \
+    hreg a1 = rshr(a.val, n); \
+    hreg b1 = rshr(b.val, n); \
     return _Tpvec(vcombine_##suffix(a1, b1)); \
 } \
 template<int n> inline \
 void v_rshr_##pack##_store(_Tp* ptr, const _Tpwvec& a) \
 { \
-    hreg a1 = vqrshr##op##_n_##wsuffix(a.val, n); \
+    hreg a1 = rshr(a.val, n); \
     vst1_##suffix(ptr, a1); \
 }
 
-OPENCV_HAL_IMPL_NEON_PACK(v_uint8x16, uchar, uint8x8_t, u8, v_uint16x8, u16, pack, n)
-OPENCV_HAL_IMPL_NEON_PACK(v_int8x16, schar, int8x8_t, s8, v_int16x8, s16, pack, n)
-OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_uint32x4, u32, pack, n)
-OPENCV_HAL_IMPL_NEON_PACK(v_int16x8, short, int16x4_t, s16, v_int32x4, s32, pack, n)
-OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_uint64x2, u64, pack, n)
-OPENCV_HAL_IMPL_NEON_PACK(v_int32x4, int, int32x2_t, s32, v_int64x2, s64, pack, n)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint8x16, uchar, uint8x8_t, u8, v_uint16x8, pack, vqmovn_u16, vqrshrn_n_u16)
+OPENCV_HAL_IMPL_NEON_PACK(v_int8x16, schar, int8x8_t, s8, v_int16x8, pack, vqmovn_s16, vqrshrn_n_s16)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_uint32x4, pack, vqmovn_u32, vqrshrn_n_u32)
+OPENCV_HAL_IMPL_NEON_PACK(v_int16x8, short, int16x4_t, s16, v_int32x4, pack, vqmovn_s32, vqrshrn_n_s32)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_uint64x2, pack, vmovn_u64, vrshrn_n_u64)
+OPENCV_HAL_IMPL_NEON_PACK(v_int32x4, int, int32x2_t, s32, v_int64x2, pack, vmovn_s64, vrshrn_n_s64)
 
-OPENCV_HAL_IMPL_NEON_PACK(v_uint8x16, uchar, uint8x8_t, u8, v_int16x8, s16, pack_u, un)
-OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_int32x4, s32, pack_u, un)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint8x16, uchar, uint8x8_t, u8, v_int16x8, pack_u, vqmovun_s16, vqrshrun_n_s16)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_int32x4, pack_u, vqmovun_s32, vqrshrun_n_s32)
 
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                             const v_float32x4& m1, const v_float32x4& m2,
@@ -404,6 +404,18 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
     res = vmlaq_lane_f32(res, m1.val, vl, 1);
     res = vmlaq_lane_f32(res, m2.val, vh, 0);
     res = vmlaq_lane_f32(res, m3.val, vh, 1);
+    return v_float32x4(res);
+}
+
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& a)
+{
+    float32x2_t vl = vget_low_f32(v.val), vh = vget_high_f32(v.val);
+    float32x4_t res = vmulq_lane_f32(m0.val, vl, 0);
+    res = vmlaq_lane_f32(res, m1.val, vl, 1);
+    res = vmlaq_lane_f32(res, m2.val, vh, 0);
+    res = vaddq_f32(res, a.val);
     return v_float32x4(res);
 }
 
@@ -747,7 +759,15 @@ template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
 { return _Tpvec(vshrq_n_##suffix(a.val, n)); } \
 template<int n> inline _Tpvec v_rshr(const _Tpvec& a) \
-{ return _Tpvec(vrshrq_n_##suffix(a.val, n)); }
+{ return _Tpvec(vrshrq_n_##suffix(a.val, n)); } \
+template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a) \
+{ return _Tpvec(vextq_##suffix(a.val, vdupq_n_##suffix(0), n)); } \
+template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a) \
+{ return _Tpvec(vextq_##suffix(vdupq_n_##suffix(0), a.val, _Tpvec::nlanes - n)); } \
+template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b) \
+{ return _Tpvec(vextq_##suffix(a.val, b.val, n)); } \
+template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b) \
+{ return _Tpvec(vextq_##suffix(b.val, a.val, _Tpvec::nlanes - n)); }
 
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint8x16, u8, schar, s8)
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int8x16, s8, schar, s8)
@@ -763,6 +783,8 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr0), vld1_##suffix(ptr1))); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \

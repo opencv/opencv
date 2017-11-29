@@ -91,8 +91,8 @@ package org.opencv.$module;
 
 $imports
 
-// C++: class $name
-//javadoc: $name
+$docs
+$annotation
 public class $jname extends $base {
 
     protected $jname(long addr) { super(addr); }
@@ -107,8 +107,8 @@ package org.opencv.$module;
 
 $imports
 
-// C++: class $name
-//javadoc: $name
+$docs
+$annotation
 public class $jname {
 
     protected final long nativeObj;
@@ -125,6 +125,8 @@ package org.opencv.$module;
 
 $imports
 
+$docs
+$annotation
 public class $jname {
 """
 
@@ -182,8 +184,22 @@ $code
 """
 
 class GeneralInfo():
-    def __init__(self, name, namespaces):
-        self.namespace, self.classpath, self.classname, self.name = self.parseName(name, namespaces)
+    def __init__(self, type, decl, namespaces):
+        self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
+
+        # parse doxygen comments
+        self.params={}
+        self.annotation=[]
+        if type == "class":
+            docstring="// C++: class " + self.name + "\n//javadoc: " + self.name
+        else:
+            docstring=""
+        if len(decl)>5 and decl[5]:
+            logging.info('docstring: %s', decl[5])
+            if re.search("(@|\\\\)deprecated", decl[5]):
+                self.annotation.append("@Deprecated")
+
+        self.docstring = docstring
 
     def parseName(self, name, namespaces):
         '''
@@ -218,7 +234,7 @@ class GeneralInfo():
 
 class ConstInfo(GeneralInfo):
     def __init__(self, decl, addedManually=False, namespaces=[]):
-        GeneralInfo.__init__(self, decl[0], namespaces)
+        GeneralInfo.__init__(self, "const", decl, namespaces)
         self.cname = self.name.replace(".", "::")
         self.value = decl[1]
         self.addedManually = addedManually
@@ -245,7 +261,7 @@ class ClassPropInfo():
 
 class ClassInfo(GeneralInfo):
     def __init__(self, decl, namespaces=[]): # [ 'class/struct cname', ': base', [modlist] ]
-        GeneralInfo.__init__(self, decl[0], namespaces)
+        GeneralInfo.__init__(self, "class", decl, namespaces)
         self.cname = self.name.replace(".", "::")
         self.methods = []
         self.methods_suffixes = {}
@@ -335,6 +351,8 @@ class ClassInfo(GeneralInfo):
                             name = self.name,
                             jname = self.jname,
                             imports = "\n".join(self.getAllImports(M)),
+                            docs = self.docstring,
+                            annotation = "\n".join(self.annotation),
                             base = self.base)
 
     def generateCppCode(self):
@@ -364,7 +382,7 @@ class ArgInfo():
 
 class FuncInfo(GeneralInfo):
     def __init__(self, decl, namespaces=[]): # [ funcname, return_ctype, [modifiers], [args] ]
-        GeneralInfo.__init__(self, decl[0], namespaces)
+        GeneralInfo.__init__(self, "func", decl, namespaces)
         self.cname = self.name.replace(".", "::")
         self.jname = self.name
         self.isconstructor = self.name == self.classname
@@ -740,6 +758,13 @@ class JavaWrapperGenerator(object):
                 f_name = fi.classname + "::" + fi.name
             java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in args if a.ctype])
             j_code.write(" "*4 + java_doc + "\n")
+
+            if fi.docstring:
+                lines = StringIO(fi.docstring)
+                for line in lines:
+                    j_code.write(" "*4 + line + "\n")
+            if fi.annotation:
+                j_code.write(" "*4 + "\n".join(fi.annotation) + "\n")
 
             # public java wrapper method impl (calling native one above)
             # e.g.

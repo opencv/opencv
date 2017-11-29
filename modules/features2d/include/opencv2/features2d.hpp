@@ -43,8 +43,12 @@
 #ifndef OPENCV_FEATURES_2D_HPP
 #define OPENCV_FEATURES_2D_HPP
 
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
+
+#ifdef HAVE_OPENCV_FLANN
 #include "opencv2/flann/miniflann.hpp"
+#endif
 
 /**
   @defgroup features2d 2D Features Framework
@@ -206,11 +210,15 @@ public:
 
     virtual void write( FileStorage&) const;
 
-    virtual void read( const FileNode&);
+    // see corresponding cv::Algorithm method
+    CV_WRAP virtual void read( const FileNode&);
 
     //! Return true if detector object is empty
     CV_WRAP virtual bool empty() const;
     CV_WRAP virtual String getDefaultName() const;
+
+    // see corresponding cv::Algorithm method
+    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
 };
 
 /** Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
@@ -527,6 +535,8 @@ class CV_EXPORTS_W GFTTDetector : public Feature2D
 public:
     CV_WRAP static Ptr<GFTTDetector> create( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
                                              int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+    CV_WRAP static Ptr<GFTTDetector> create( int maxCorners, double qualityLevel, double minDistance,
+                                             int blockSize, int gradiantSize, bool useHarrisDetector=false, double k=0.04 );
     CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
     CV_WRAP virtual int getMaxFeatures() const = 0;
 
@@ -979,7 +989,8 @@ public:
         read(fs.root());
     }
     // Reads matcher object from a file node
-    virtual void read( const FileNode& );
+    // see corresponding cv::Algorithm method
+    CV_WRAP virtual void read( const FileNode& );
     // Writes matcher object to a file storage
     virtual void write( FileStorage& ) const;
 
@@ -1005,6 +1016,10 @@ public:
     CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
     CV_WRAP static Ptr<DescriptorMatcher> create( int matcherType );
+
+
+    // see corresponding cv::Algorithm method
+    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
 
 protected:
     /**
@@ -1097,6 +1112,7 @@ protected:
     bool crossCheck;
 };
 
+#if defined(HAVE_OPENCV_FLANN) || defined(CV_DOXYGEN)
 
 /** @brief Flann-based descriptor matcher.
 
@@ -1142,6 +1158,8 @@ protected:
     DescriptorCollection mergedDescriptors;
     int addedDescCount;
 };
+
+#endif
 
 //! @} features2d_match
 

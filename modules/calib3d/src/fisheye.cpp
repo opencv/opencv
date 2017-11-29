@@ -928,7 +928,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     intrinsicRight_errors.isEstimate = intrinsicRight.isEstimate;
 
     std::vector<uchar> selectedParams;
-    std::vector<int> tmp(6 * (n_images + 1), 1);
+    std::vector<uchar> tmp(6 * (n_images + 1), 1);
     selectedParams.insert(selectedParams.end(), intrinsicLeft.isEstimate.begin(), intrinsicLeft.isEstimate.end());
     selectedParams.insert(selectedParams.end(), intrinsicRight.isEstimate.begin(), intrinsicRight.isEstimate.end());
     selectedParams.insert(selectedParams.end(), tmp.begin(), tmp.end());

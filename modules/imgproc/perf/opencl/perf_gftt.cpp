@@ -77,7 +77,7 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
     declare.in(src, WARMUP_READ).out(dst);
 
     OCL_TEST_CYCLE() cv::goodFeaturesToTrack(src, dst, maxCorners, qualityLevel,
-                                             minDistance, noArray(), 3, harrisDetector, 0.04);
+                                             minDistance, noArray(), 3, 3, harrisDetector, 0.04);
 
     SANITY_CHECK(dst);
 }

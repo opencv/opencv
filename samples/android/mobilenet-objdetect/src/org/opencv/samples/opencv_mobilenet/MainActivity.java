@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         // Forward image through network.
         Mat blob = Dnn.blobFromImage(frame, IN_SCALE_FACTOR,
                 new Size(IN_WIDTH, IN_HEIGHT),
-                new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), true);
+                new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), false);
         net.setInput(blob);
         Mat detections = net.forward();
 

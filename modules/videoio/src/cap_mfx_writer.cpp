@@ -5,6 +5,7 @@
 #include "cap_mfx_writer.hpp"
 #include "opencv2/core/base.hpp"
 #include "cap_mfx_common.hpp"
+#include "opencv2/imgproc/hal/hal.hpp"
 
 using namespace std;
 using namespace cv;
@@ -40,8 +41,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     }
 
     // Init device and session
-
-    deviceHandler = new VAHandle();
+    deviceHandler = createDeviceHandler();
     session = new MFXVideoSession();
     if (!deviceHandler->init(*session))
     {
@@ -71,7 +71,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     memset(&params, 0, sizeof(params));
     params.mfx.CodecId = codecId;
     params.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-    params.mfx.TargetKbps = frameSize.area() * fps / 500; // TODO: set in options
+    params.mfx.TargetKbps = (mfxU16)cvRound(frameSize.area() * fps / 500); // TODO: set in options
     params.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
     params.mfx.FrameInfo.FrameRateExtN = cvRound(fps * 1000);
     params.mfx.FrameInfo.FrameRateExtD = 1000;
@@ -80,10 +80,10 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     params.mfx.FrameInfo.PicStruct = MFX_PICSTRUCT_PROGRESSIVE;
     params.mfx.FrameInfo.CropX = 0;
     params.mfx.FrameInfo.CropY = 0;
-    params.mfx.FrameInfo.CropW = frameSize.width;
-    params.mfx.FrameInfo.CropH = frameSize.height;
-    params.mfx.FrameInfo.Width = alignSize(frameSize.width, 32);
-    params.mfx.FrameInfo.Height = alignSize(frameSize.height, 32);
+    params.mfx.FrameInfo.CropW = (mfxU16)frameSize.width;
+    params.mfx.FrameInfo.CropH = (mfxU16)frameSize.height;
+    params.mfx.FrameInfo.Width = (mfxU16)alignSize(frameSize.width, 32);
+    params.mfx.FrameInfo.Height = (mfxU16)alignSize(frameSize.height, 32);
     params.IOPattern = MFX_IOPATTERN_IN_SYSTEM_MEMORY;
     res = encoder->Query(&params, &params);
     DBG(cout << "MFX Query: " << res << endl << params.mfx << params.mfx.FrameInfo);
@@ -167,26 +167,6 @@ void VideoWriter_IntelMFX::write(cv::InputArray input)
     write_one(input);
 }
 
-inline static void to_nv12(cv::InputArray bgr, cv::Mat & Y, cv::Mat & UV)
-{
-    const int height = bgr.rows();
-    const int width = bgr.cols();
-    Mat yuv;
-    cvtColor(bgr, yuv, CV_BGR2YUV_I420);
-    CV_Assert(yuv.isContinuous());
-    Mat Y_(Y, Rect(0, 0, width, height));
-    yuv.rowRange(0, height).copyTo(Y_);
-    Mat UV_planar(height, width / 2, CV_8UC1, yuv.ptr(height));
-    Mat u_and_v[2] = {
-        UV_planar.rowRange(0, height / 2),
-        UV_planar.rowRange(height / 2, height),
-    };
-    Mat uv;
-    cv::merge(u_and_v, 2, uv);
-    Mat UV_(UV, Rect(0, 0, width, height / 2));
-    uv.reshape(1).copyTo(UV_);
-}
-
 bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
 {
     mfxStatus res;
@@ -210,13 +190,11 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
             MSG(cerr << "MFX: Failed to get free surface" << endl);
             return false;
         }
-        const int rows = workSurface->Info.Height;
-        const int cols = workSurface->Info.Width;
-        Mat Y(rows, cols, CV_8UC1, workSurface->Data.Y, workSurface->Data.Pitch);
-        Mat UV(rows / 2, cols, CV_8UC1, workSurface->Data.UV, workSurface->Data.Pitch);
-        to_nv12(bgr, Y, UV);
-        CV_Assert(Y.ptr() == workSurface->Data.Y);
-        CV_Assert(UV.ptr() == workSurface->Data.UV);
+        Mat src = bgr.getMat();
+        hal::cvtBGRtoTwoPlaneYUV(src.data, src.step,
+                                 workSurface->Data.Y, workSurface->Data.UV, workSurface->Data.Pitch,
+                                 workSurface->Info.CropW, workSurface->Info.CropH,
+                                 3, false, 1);
     }
 
     while (true)
@@ -263,7 +241,6 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
             MSG(cerr << "MFX: Bad status: " << res << endl);
             return false;
         }
-        return true;
     }
 }
 

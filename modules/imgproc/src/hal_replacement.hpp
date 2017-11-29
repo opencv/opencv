@@ -615,6 +615,21 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 #define cv_hal_integral hal_ni_integral
 //! @endcond
 
+/**
+   @brief Calculate medianBlur filter
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param depth Depths of source and destination image
+   @param cn Number of channels
+   @param ksize Size of kernel
+*/
+inline int hal_ni_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, int ksize) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_medianBlur hal_ni_medianBlur
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
@@ -627,7 +642,7 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 
 //! @cond IGNORED
 #define CALL_HAL_RET(name, fun, retval, ...) \
-    int res = fun(__VA_ARGS__, &retval); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__, &retval)); \
     if (res == CV_HAL_ERROR_OK) \
         return retval; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
@@ -636,7 +651,7 @@ inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src
 
 
 #define CALL_HAL(name, fun, ...) \
-    int res = fun(__VA_ARGS__); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__)); \
     if (res == CV_HAL_ERROR_OK) \
         return; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \

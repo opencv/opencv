@@ -28,17 +28,6 @@ if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC OR CMAKE_COMPILER_IS
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 endif()
 
-if(MINGW OR (X86 AND UNIX AND NOT APPLE))
-  # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    foreach(flags
-            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
-      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
-    endforeach()
-  endif()
-endif()
-
 if(MSVC)
   string(STRIP "${CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
   string(STRIP "${CMAKE_CXX_FLAGS_INIT}" CMAKE_CXX_FLAGS_INIT)
@@ -139,6 +128,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
     add_extra_compiler_option(-Wno-comment)
     add_extra_compiler_option(-Wno-implicit-fallthrough)
+    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7.2.0)
+      add_extra_compiler_option(-Wno-strict-overflow) # Issue is fixed in GCC 7.2.1
+    endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
@@ -171,7 +163,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fomit-frame-pointer)
-  else()
+  elseif(DEFINED ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fno-omit-frame-pointer)
   endif()
   if(ENABLE_FAST_MATH)
@@ -280,7 +272,7 @@ set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEA
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG   "${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}"   CACHE INTERNAL "Extra linker flags for Debug build")
 
 # set default visibility to hidden
-if((CMAKE_COMPILER_ID STREQUAL "GNU" OR CMAKE_COMPILER_ID STREQUAL "Clang")
+if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT CMAKE_CXX_FLAGS MATCHES "-fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)

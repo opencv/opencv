@@ -568,7 +568,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
             result = fp2;
             nr = m;
         }
-        else if( pointPolygonTest(_InputArray(fp2, n), fp1[0], false) >= 0 )
+        else if( pointPolygonTest(_InputArray(fp2, m), fp1[0], false) >= 0 )
         {
             result = fp1;
             nr = n;

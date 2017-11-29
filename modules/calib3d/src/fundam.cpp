@@ -171,7 +171,7 @@ public:
             float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + 1.f);
             float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
             float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
-            err[i] = (float)(dx*dx + dy*dy);
+            err[i] = dx*dx + dy*dy;
         }
     }
 };

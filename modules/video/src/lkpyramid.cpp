@@ -1226,7 +1226,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
 {
     CV_INSTRUMENT_REGION()
 
-    CV_OCL_RUN(ocl::useOpenCL() &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() &&
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
@@ -1610,7 +1610,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         Point2f a[RANSAC_SIZE0];
         Point2f b[RANSAC_SIZE0];
 
-        // choose random 3 non-complanar points from A & B
+        // choose random 3 non-coplanar points from A & B
         for( i = 0; i < RANSAC_SIZE0; i++ )
         {
             for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )

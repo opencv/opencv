@@ -63,6 +63,20 @@ CV_SUPPRESS_DEPRECATED_END
 #define ERROR_MSG_CANT_LOAD "Failed to load OpenCL runtime\n"
 #define ERROR_MSG_INVALID_VERSION "Failed to load OpenCL runtime (expected version 1.1+)\n"
 
+static const char* getRuntimePath(const char* defaultPath)
+{
+    const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
+    if (envPath)
+    {
+        static const char disabled_str[] = "disabled";
+        if ((strlen(envPath) == sizeof(disabled_str) - 1) &&
+                (memcmp(envPath, disabled_str, sizeof(disabled_str) - 1) == 0))
+            return NULL;
+        return envPath;
+    }
+    return defaultPath;
+}
+
 #if defined(__APPLE__)
 #include <dlfcn.h>
 
@@ -75,14 +89,13 @@ static void* AppleCLGetProcAddress(const char* name)
         cv::AutoLock lock(cv::getInitializationMutex());
         if (!initialized)
         {
-            const char* path = "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
-            const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
-            if (envPath)
-                path = envPath;
-            handle = dlopen(oclpath, RTLD_LAZY | RTLD_GLOBAL);
+            const char* defaultPath = "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
+            const char* path = getRuntimePath(defaultPath);
+            if (path)
+                handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
             if (handle == NULL)
             {
-                if (envPath)
+                if (path != NULL && path != defaultPath)
                     fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
             else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
@@ -115,14 +128,13 @@ static void* WinGetProcAddress(const char* name)
             handle = GetModuleHandleA("OpenCL.dll");
             if (!handle)
             {
-                const char* path = "OpenCL.dll";
-                const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
-                if (envPath)
-                    path = envPath;
-                handle = LoadLibraryA(path);
+                const char* defaultPath = "OpenCL.dll";
+                const char* path = getRuntimePath(defaultPath);
+                if (path)
+                    handle = LoadLibraryA(path);
                 if (!handle)
                 {
-                    if (envPath)
+                    if (path != NULL && path != defaultPath)
                         fprintf(stderr, ERROR_MSG_CANT_LOAD);
                 }
                 else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
@@ -173,18 +185,18 @@ static void* GetProcAddress(const char* name)
         cv::AutoLock lock(cv::getInitializationMutex());
         if (!initialized)
         {
-            const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
-            if (envPath)
+            const char* defaultPath = "libOpenCL.so";
+            const char* path = getRuntimePath(defaultPath);
+            if (path)
             {
-                handle = GetHandle(envPath);
+                handle = GetHandle(path);
                 if (!handle)
-                    fprintf(stderr, ERROR_MSG_CANT_LOAD);
-            }
-            else
-            {
-                handle = GetHandle("libOpenCL.so");
-                if (!handle)
-                    handle = GetHandle("libOpenCL.so.1");
+                {
+                    if (path == defaultPath)
+                        handle = GetHandle("libOpenCL.so.1");
+                    else
+                        fprintf(stderr, ERROR_MSG_CANT_LOAD);
+                }
             }
             initialized = true;
         }
@@ -334,7 +346,7 @@ CV_SUPPRESS_DEPRECATED_END
 #include "opencv2/core/opencl/runtime/opencl_gl.hpp"
 #endif
 
-#else HAVE_OPENCL_STATIC
+#else // HAVE_OPENCL_STATIC
 
 #include "opencv2/core/opencl/runtime/opencl_gl.hpp"
 

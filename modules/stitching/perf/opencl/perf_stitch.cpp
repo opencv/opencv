@@ -93,8 +93,8 @@ OCL_PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stopTimer();
     }
 
-    EXPECT_NEAR(pano.size().width, 1124, 50);
-    EXPECT_NEAR(pano.size().height, 644, 30);
+    EXPECT_NEAR(pano.size().width, 1124, GetParam() == "surf" ? 100 : 50);
+    EXPECT_NEAR(pano.size().height, 644, GetParam() == "surf" ? 60 : 30);
 
     SANITY_CHECK_NOTHING();
 }

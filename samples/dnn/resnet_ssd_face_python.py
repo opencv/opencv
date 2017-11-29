@@ -1,8 +1,5 @@
 import numpy as np
 import argparse
-import os
-import sys
-sys.path.append('/home/arrybn/build/opencv/lib')
 import cv2 as cv
 try:
     import cv2 as cv
@@ -27,8 +24,7 @@ if __name__ == '__main__':
         cols = frame.shape[1]
         rows = frame.shape[0]
 
-        net.setInput(dnn.blobFromImage(cv.resize(frame, (inWidth, inHeight)),
-                                       1.0, (inWidth, inHeight), (104., 177., 123.)))
+        net.setInput(dnn.blobFromImage(frame, 1.0, (inWidth, inHeight), (104.0, 177.0, 123.0), False, False))
         detections = net.forward()
 
         perf_stats = net.getPerfProfile()

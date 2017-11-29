@@ -135,7 +135,7 @@ public:
 
     void setActivationFunction(int _activ_func, double _f_param1, double _f_param2 )
     {
-        if( _activ_func < 0 || _activ_func > GAUSSIAN )
+        if( _activ_func < 0 || _activ_func > LEAKYRELU)
             CV_Error( CV_StsOutOfRange, "Unknown activation function" );
 
         activ_func = _activ_func;
@@ -153,10 +153,22 @@ public:
         case GAUSSIAN:
             max_val = 1.; min_val = 0.05;
             max_val1 = 1.; min_val1 = 0.02;
-            if( fabs(_f_param1) < FLT_EPSILON )
+            if (fabs(_f_param1) < FLT_EPSILON)
                 _f_param1 = 1.;
-            if( fabs(_f_param2) < FLT_EPSILON )
+            if (fabs(_f_param2) < FLT_EPSILON)
                 _f_param2 = 1.;
+            break;
+        case RELU:
+            if (fabs(_f_param1) < FLT_EPSILON)
+                _f_param1 = 1;
+            min_val = max_val = min_val1 = max_val1 = 0.;
+            _f_param2 = 0.;
+            break;
+        case LEAKYRELU:
+            if (fabs(_f_param1) < FLT_EPSILON)
+                _f_param1 = 0.01;
+            min_val = max_val = min_val1 = max_val1 = 0.;
+            _f_param2 = 0.;
             break;
         default:
             min_val = max_val = min_val1 = max_val1 = 0.;
@@ -368,47 +380,61 @@ public:
         }
     }
 
-    void calc_activ_func( Mat& sums, const Mat& w ) const
+    void calc_activ_func(Mat& sums, const Mat& w) const
     {
-        const double* bias = w.ptr<double>(w.rows-1);
+        const double* bias = w.ptr<double>(w.rows - 1);
         int i, j, n = sums.rows, cols = sums.cols;
         double scale = 0, scale2 = f_param2;
 
-        switch( activ_func )
+        switch (activ_func)
         {
-            case IDENTITY:
-                scale = 1.;
-                break;
-            case SIGMOID_SYM:
-                scale = -f_param1;
-                break;
-            case GAUSSIAN:
-                scale = -f_param1*f_param1;
-                break;
-            default:
-                ;
+        case IDENTITY:
+            scale = 1.;
+            break;
+        case SIGMOID_SYM:
+            scale = -f_param1;
+            break;
+        case GAUSSIAN:
+            scale = -f_param1*f_param1;
+            break;
+        case RELU:
+            scale = 1;
+            break;
+        case LEAKYRELU:
+            scale = 1;
+            break;
+        default:
+            ;
         }
 
-        CV_Assert( sums.isContinuous() );
+        CV_Assert(sums.isContinuous());
 
-        if( activ_func != GAUSSIAN )
+        if (activ_func != GAUSSIAN)
         {
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* data = sums.ptr<double>(i);
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
+                {
                     data[j] = (data[j] + bias[j])*scale;
+                    if (activ_func == RELU)
+                        if (data[j] < 0)
+                            data[j] = 0;
+                    if (activ_func == LEAKYRELU)
+                        if (data[j] < 0)
+                            data[j] *= f_param1;
+                }
             }
 
-            if( activ_func == IDENTITY )
+            if (activ_func == IDENTITY || activ_func == RELU || activ_func == LEAKYRELU)
                 return;
         }
         else
         {
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* data = sums.ptr<double>(i);
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     double t = data[j] + bias[j];
                     data[j] = t*t*scale;
@@ -416,92 +442,132 @@ public:
             }
         }
 
-        exp( sums, sums );
+        exp(sums, sums);
 
-        if( sums.isContinuous() )
+        if (sums.isContinuous())
         {
             cols *= n;
             n = 1;
         }
 
-        switch( activ_func )
+        switch (activ_func)
         {
-            case SIGMOID_SYM:
-                for( i = 0; i < n; i++ )
+        case SIGMOID_SYM:
+            for (i = 0; i < n; i++)
+            {
+                double* data = sums.ptr<double>(i);
+                for (j = 0; j < cols; j++)
                 {
-                    double* data = sums.ptr<double>(i);
-                    for( j = 0; j < cols; j++ )
+                    if (!cvIsInf(data[j]))
                     {
-                        if(!cvIsInf(data[j]))
-                        {
-                            double t = scale2*(1. - data[j])/(1. + data[j]);
-                            data[j] = t;
-                        }
-                        else
-                        {
-                            data[j] = -scale2;
-                        }
+                        double t = scale2*(1. - data[j]) / (1. + data[j]);
+                        data[j] = t;
+                    }
+                    else
+                    {
+                        data[j] = -scale2;
                     }
                 }
-                break;
+            }
+            break;
 
-            case GAUSSIAN:
-                for( i = 0; i < n; i++ )
-                {
-                    double* data = sums.ptr<double>(i);
-                    for( j = 0; j < cols; j++ )
-                        data[j] = scale2*data[j];
-                }
-                break;
+        case GAUSSIAN:
+            for (i = 0; i < n; i++)
+            {
+                double* data = sums.ptr<double>(i);
+                for (j = 0; j < cols; j++)
+                    data[j] = scale2*data[j];
+            }
+            break;
 
-            default:
-                ;
+        default:
+            ;
         }
     }
 
-    void calc_activ_func_deriv( Mat& _xf, Mat& _df, const Mat& w ) const
+    void calc_activ_func_deriv(Mat& _xf, Mat& _df, const Mat& w) const
     {
-        const double* bias = w.ptr<double>(w.rows-1);
+        const double* bias = w.ptr<double>(w.rows - 1);
         int i, j, n = _xf.rows, cols = _xf.cols;
 
-        if( activ_func == IDENTITY )
+        if (activ_func == IDENTITY)
         {
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     xf[j] += bias[j];
                     df[j] = 1;
                 }
             }
         }
-        else if( activ_func == GAUSSIAN )
+        else if (activ_func == RELU)
+        {
+            for (i = 0; i < n; i++)
+            {
+                double* xf = _xf.ptr<double>(i);
+                double* df = _df.ptr<double>(i);
+
+                for (j = 0; j < cols; j++)
+                {
+                    xf[j] += bias[j];
+                    if (xf[j] < 0)
+                    {
+                        xf[j] = 0;
+                        df[j] = 0;
+                    }
+                    else
+                        df[j] = 1;
+                }
+            }
+        }
+        else if (activ_func == LEAKYRELU)
+        {
+            for (i = 0; i < n; i++)
+            {
+                double* xf = _xf.ptr<double>(i);
+                double* df = _df.ptr<double>(i);
+
+                for (j = 0; j < cols; j++)
+                {
+                    xf[j] += bias[j];
+                    if (xf[j] < 0)
+                    {
+                        xf[j] = f_param1*xf[j];
+                        df[j] = f_param1;
+                    }
+                    else
+                        df[j] = 1;
+                }
+            }
+        }
+        else if (activ_func == GAUSSIAN)
         {
             double scale = -f_param1*f_param1;
             double scale2 = scale*f_param2;
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     double t = xf[j] + bias[j];
-                    df[j] = t*2*scale2;
+                    df[j] = t * 2 * scale2;
                     xf[j] = t*t*scale;
                 }
             }
-            exp( _xf, _xf );
+            exp(_xf, _xf);
 
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                     df[j] *= xf[j];
             }
         }
@@ -510,34 +576,34 @@ public:
             double scale = f_param1;
             double scale2 = f_param2;
 
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     xf[j] = (xf[j] + bias[j])*scale;
                     df[j] = -fabs(xf[j]);
                 }
             }
 
-            exp( _df, _df );
+            exp(_df, _df);
 
             // ((1+exp(-ax))^-1)'=a*((1+exp(-ax))^-2)*exp(-ax);
             // ((1-exp(-ax))/(1+exp(-ax)))'=(a*exp(-ax)*(1+exp(-ax)) + a*exp(-ax)*(1-exp(-ax)))/(1+exp(-ax))^2=
             // 2*a*exp(-ax)/(1+exp(-ax))^2
-            scale *= 2*f_param2;
-            for( i = 0; i < n; i++ )
+            scale *= 2 * f_param2;
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     int s0 = xf[j] > 0 ? 1 : -1;
-                    double t0 = 1./(1. + df[j]);
-                    double t1 = scale*df[j]*t0*t0;
+                    double t0 = 1. / (1. + df[j]);
+                    double t1 = scale*df[j] * t0*t0;
                     t0 *= scale2*(1. - df[j])*s0;
                     df[j] = t1;
                     xf[j] = t0;
@@ -1110,7 +1176,9 @@ public:
     {
         const char* activ_func_name = activ_func == IDENTITY ? "IDENTITY" :
                                       activ_func == SIGMOID_SYM ? "SIGMOID_SYM" :
-                                      activ_func == GAUSSIAN ? "GAUSSIAN" : 0;
+                                      activ_func == GAUSSIAN ? "GAUSSIAN" :
+                                      activ_func == RELU ? "RELU" :
+                                      activ_func == LEAKYRELU ? "LEAKYRELU" : 0;
 
         if( activ_func_name )
             fs << "activation_function" << activ_func_name;
@@ -1191,6 +1259,8 @@ public:
         {
             activ_func = activ_func_name == "SIGMOID_SYM" ? SIGMOID_SYM :
                          activ_func_name == "IDENTITY" ? IDENTITY :
+                         activ_func_name == "RELU" ? RELU :
+                         activ_func_name == "LEAKYRELU" ? LEAKYRELU :
                          activ_func_name == "GAUSSIAN" ? GAUSSIAN : -1;
             CV_Assert( activ_func >= 0 );
         }
@@ -1329,7 +1399,7 @@ Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
 {
     FileStorage fs;
     fs.open(filepath, FileStorage::READ);
-
+    CV_Assert(fs.isOpened());
     Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
 
     ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());

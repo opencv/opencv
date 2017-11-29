@@ -85,7 +85,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/sse_utils.hpp"
 #include "opencv2/core/neon_utils.hpp"
-
+#include "opencv2/core/vsx_utils.hpp"
 #include "arithm_core.hpp"
 #include "hal_replacement.hpp"
 
@@ -296,12 +296,6 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #else
 #define CL_RUNTIME_EXPORT
 #endif
-
-namespace utils {
-bool getConfigurationParameterBool(const char* name, bool defaultValue);
-size_t getConfigurationParameterSizeT(const char* name, size_t defaultValue);
-cv::String getConfigurationParameterString(const char* name, const char* defaultValue);
-}
 
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)

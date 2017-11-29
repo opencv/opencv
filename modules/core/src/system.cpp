@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include <iostream>
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
 namespace cv {
@@ -77,6 +78,18 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
 #if defined __ANDROID__ && defined HAVE_CPUFEATURES
 #  include <cpu-features.h>
+#endif
+
+#ifndef __VSX__
+# if defined __PPC64__ && defined __linux__
+#   include "sys/auxv.h"
+#   ifndef AT_HWCAP2
+#     define AT_HWCAP2 26
+#   endif
+#   ifndef PPC_FEATURE2_ARCH_2_07
+#     define PPC_FEATURE2_ARCH_2_07 0x80000000
+#   endif
+# endif
 #endif
 
 #if defined _WIN32 || defined WINCE
@@ -202,7 +215,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __HAIKU__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -294,6 +307,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
+
+        g_hwFeatureNames[CPU_VSX] = "VSX";
     }
 
     void initialize(void)
@@ -501,6 +516,16 @@ struct HWFeatures
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
         have[CV_CPU_FP16] = true;
     #endif
+    #endif
+
+    #ifdef __VSX__
+        have[CV_CPU_VSX] = true;
+    #elif (defined __PPC64__ && defined __linux__)
+        uint64 hwcaps = getauxval(AT_HWCAP);
+        uint64 hwcap2 = getauxval(AT_HWCAP2);
+        have[CV_CPU_VSX] = (hwcaps & PPC_FEATURE_PPC_LE && hwcaps & PPC_FEATURE_HAS_VSX && hwcap2 & PPC_FEATURE2_ARCH_2_07);
+    #else
+        have[CV_CPU_VSX] = false;
     #endif
 
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };

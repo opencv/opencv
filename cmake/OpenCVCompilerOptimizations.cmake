@@ -24,10 +24,11 @@
 # CPU_BASELINE_FINAL=<list> - final list of enabled compiler optimizations
 # CPU_DISPATCH_FINAL=<list> - final list of dispatched optimizations
 #
-# CPU_DISPATCH_FLAGS_${opt} - flags for source files compiled separately (_opt_avx2.cpp)
+# CPU_DISPATCH_FLAGS_${opt} - flags for source files compiled separately (<name>.avx2.cpp)
 
 set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3") # without AVX512
 list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16)
+list(APPEND CPU_ALL_OPTIMIZATIONS VSX)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
 
 ocv_update(CPU_VFPV3_FEATURE_ALIAS "")
@@ -79,6 +80,7 @@ ocv_optimization_process_obsolete_option(ENABLE_FMA3 FMA3 ON)
 ocv_optimization_process_obsolete_option(ENABLE_VFPV3 VFPV3 OFF)
 ocv_optimization_process_obsolete_option(ENABLE_NEON NEON OFF)
 
+ocv_optimization_process_obsolete_option(ENABLE_VSX VSX OFF)
 
 macro(ocv_is_optimization_in_list resultvar check_opt)
   set(__checked "")
@@ -254,17 +256,28 @@ elseif(ARM OR AARCH64)
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
   if(NOT AARCH64)
     ocv_update(CPU_KNOWN_OPTIMIZATIONS "VFPV3;NEON;FP16")
-    ocv_update(CPU_VFPV3_FLAGS_ON "-mfpu=vfpv3")
-    ocv_update(CPU_NEON_FLAGS_ON "-mfpu=neon")
-    ocv_update(CPU_NEON_FLAGS_CONFLICT "-mfpu=[^ ]*")
-    ocv_update(CPU_FP16_FLAGS_ON "-mfpu=neon-fp16")
+    if(NOT MSVC)
+      ocv_update(CPU_VFPV3_FLAGS_ON "-mfpu=vfpv3")
+      ocv_update(CPU_NEON_FLAGS_ON "-mfpu=neon")
+      ocv_update(CPU_NEON_FLAGS_CONFLICT "-mfpu=[^ ]*")
+      ocv_update(CPU_FP16_FLAGS_ON "-mfpu=neon-fp16")
+      ocv_update(CPU_FP16_FLAGS_CONFLICT "-mfpu=[^ ]*")
+    endif()
     ocv_update(CPU_FP16_IMPLIES "NEON")
-    ocv_update(CPU_FP16_FLAGS_CONFLICT "-mfpu=[^ ]*")
   else()
     ocv_update(CPU_KNOWN_OPTIMIZATIONS "NEON;FP16")
     ocv_update(CPU_NEON_FLAGS_ON "")
     ocv_update(CPU_FP16_IMPLIES "NEON")
     set(CPU_BASELINE "NEON;FP16" CACHE STRING "${HELP_CPU_BASELINE}")
+  endif()
+elseif(PPC64LE)
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "VSX")
+  ocv_update(CPU_VSX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx.cpp")
+
+  if(CMAKE_COMPILER_IS_CLANGCXX AND (NOT ${CMAKE_CXX_COMPILER} MATCHES "xlc"))
+    ocv_update(CPU_VSX_FLAGS_ON "-mvsx -maltivec")
+  else()
+    ocv_update(CPU_VSX_FLAGS_ON "-mcpu=power8")
   endif()
 endif()
 
@@ -524,7 +537,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
   foreach(fname ${${SOURCES_VAR_NAME}})
     string(TOLOWER "${fname}" fname_LOWER)
     get_filename_component(fname_LOWER "${fname_LOWER}" NAME)
-    if(fname_LOWER MATCHES "\\.(.*)\\.cpp$")
+    if(fname_LOWER MATCHES ".+\\.([^\\.]*)\\.cpp$")
       string(TOUPPER "${CMAKE_MATCH_1}" OPT_)
       if(OPT_ MATCHES "(CUDA.*|DISPATCH.*|OCL)") # don't touch files like filename.cuda.cpp
         list(APPEND __result "${fname}")
@@ -593,6 +606,9 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
         target_include_directories(${TARGET_BASE_NAME}_${OPT} PRIVATE $<TARGET_PROPERTY:${TARGET_BASE_NAME},INCLUDE_DIRECTORIES>)
         #list(APPEND __result_libs ${TARGET_BASE_NAME}_${OPT})
         list(APPEND __result "$<TARGET_OBJECTS:${TARGET_BASE_NAME}_${OPT}>")
+        if(ENABLE_SOLUTION_FOLDERS)
+          set_target_properties(${TARGET_BASE_NAME}_${OPT} PROPERTIES FOLDER "dispatched")
+        endif()
       else()
         foreach(fname ${__result_${OPT}})
           get_source_file_property(__definitions "${fname}" COMPILE_DEFINITIONS)

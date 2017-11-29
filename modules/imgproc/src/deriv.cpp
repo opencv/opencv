@@ -435,7 +435,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     CV_OVX_RUN(true,
                openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
 
-    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, ksize, scale, delta, borderType));
+    CV_IPP_RUN(!(ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, ksize, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -479,7 +479,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, 0, scale, delta, borderType));
+    CV_IPP_RUN(!(ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, 0, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -795,7 +795,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                    ocl_Laplacian3_8UC1(_src, _dst, ddepth, kernel, delta, borderType));
     }
 
-    CV_IPP_RUN(!(cv::ocl::useOpenCL() && _dst.isUMat()), ipp_Laplacian(_src, _dst, ksize, scale, delta, borderType));
+    CV_IPP_RUN(!(cv::ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Laplacian(_src, _dst, ksize, scale, delta, borderType));
 
 
 #ifdef HAVE_TEGRA_OPTIMIZATION

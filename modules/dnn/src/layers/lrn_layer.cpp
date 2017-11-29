@@ -46,7 +46,12 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
 #include "opencv2/core/hal/hal.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
+
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -78,10 +83,67 @@ public:
         normBySize = params.get<bool>("norm_by_size", true);
     }
 
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNLRN<float> > lrnOp;
+#endif
+
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide();
+    }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        if (lrnOp.empty())
+        {
+            OCL4DNNLRNConfig config;
+            config.lrn_type = type == CHANNEL_NRM ?
+                              LRNParameter_NormRegion_ACROSS_CHANNELS :
+                              LRNParameter_NormRegion_WITHIN_CHANNEL;
+
+            CHECK_EQ(size % 2, 1)<< "LRN only supports odd values for local_size";
+            config.local_size = size;
+            config.alpha = alpha;
+            config.beta = beta;
+            config.k = bias;
+            CHECK_EQ(4, inputs[0].dims) << "Input must have 4 axes, "
+                     << "corresponding to (num, channels, height, width)";
+            config.batch_size = inputs[0].size[0];
+            config.channels = inputs[0].size[1];
+            config.height = inputs[0].size[2];
+            config.width = inputs[0].size[3];
+            config.norm_by_size = normBySize;
+
+            lrnOp = Ptr<OCL4DNNLRN<float> >(new OCL4DNNLRN<float>(config));
+        }
+
+        if (!lrnOp->Forward(inputs[0], outputs[0]))
+            return false;
+
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_Assert(inputs_arr.total() == outputs_arr.total());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -90,6 +152,7 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_Assert(inputs.size() == outputs.size());
+
         for (int i = 0; i < inputs.size(); i++)
         {
             CV_Assert(inputs[i]->dims == 4);

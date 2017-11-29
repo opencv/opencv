@@ -43,7 +43,12 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -54,6 +59,11 @@ class FullyConnectedLayerImpl : public InnerProductLayer
 {
 public:
     enum { VEC_ALIGN = 8 };
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNInnerProduct<float> > innerProductOp;
+    std::vector<UMat> umat_blobs;
+#endif
 
     FullyConnectedLayerImpl(const LayerParams& params)
     {
@@ -84,6 +94,12 @@ public:
             biasMat = blobs[1] = blobs[1].reshape(1, 1);
         else
             biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+
+#ifdef HAVE_OPENCL
+        size_t n = blobs.size();
+        umat_blobs.resize(n);
+        for (int i = 0; i < n; i++) umat_blobs[i] = blobs[i].getUMat(ACCESS_READ);
+#endif
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -91,14 +107,18 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &) const
     {
-        CV_Assert(inputs.size() > 0);
+        CV_Assert(inputs.size() == 1);
         CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
         CV_Assert(blobs[0].dims == 2);
 
         int cAxis = clamp(axis, inputs[0]);
-        int outerSize = total(inputs[0], 0, cAxis);
         int numOutput = blobs[0].size[0];
-        outputs.resize(inputs.size(), shape(outerSize, numOutput));
+        MatShape outShape(cAxis + 1);
+        for (int i = 0; i < cAxis; ++i)
+            outShape[i] = inputs[0][i];
+        outShape.back() = numOutput;
+
+        outputs.resize(inputs.size(), outShape);
 
         CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
         return false;
@@ -222,9 +242,8 @@ public:
                     }
                 }
 
-                // TODO: check whether this is correct in the case of ChannelsPReLU.
                 if(activ)
-                    activ->forwardSlice(dptr, dptr, nw, 0, 0, 1);
+                    activ->forwardSlice(dptr, dptr, 1, 1, delta, delta + nw);
 
                 ofs += nw;
             }
@@ -237,6 +256,95 @@ public:
         bool useAVX;
         bool useAVX2;
     };
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, InputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        int axisCan = clamp(axis, inputs[0].dims);
+        int numOutput = umat_blobs[0].size[0];
+        int innerSize = umat_blobs[0].size[1];
+        int outerSize = total(shape(inputs[0]), 0, axisCan);
+        bool ret = true;
+
+        if (innerProductOp.empty())
+        {
+            OCL4DNNInnerProductConfig config;
+            config.num_output = numOutput;
+            config.bias_term = bias;
+            config.M = outerSize;
+            config.K = innerSize;
+
+            innerProductOp = Ptr<OCL4DNNInnerProduct<float> >(new OCL4DNNInnerProduct<float>(config));
+        }
+
+        UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            MatShape inshape, outshape;
+            inshape = shape(outerSize, innerSize);
+            outshape = shape(outerSize, numOutput);
+
+            UMat srcMat, dstMat;
+            srcMat = inputs[i].reshape(1, inshape.size(), &inshape[0]);
+            dstMat = outputs[i].reshape(1, outshape.size(), &outshape[0]);
+            dstMat.setTo(0.0f);
+
+            if (!innerProductOp->Forward(srcMat, umat_blobs[0], (bias) ? umat_blobs[1] : UMat(), dstMat))
+            {
+                ret = false;
+                break;
+            }
+
+            if (bias && (outerSize > 1))
+            {
+                UMat& biases = umat_blobs[1];
+                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
+            }
+        }
+
+        if (ret) return true;
+
+        UMat& weights = umat_blobs[0];
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            MatShape inshape, outshape;
+            inshape = shape(outerSize, innerSize);
+            outshape = shape(outerSize, numOutput);
+
+            UMat srcMat, dstMat;
+            srcMat = inputs[i].reshape(1, inshape.size(), &inshape[0]);
+            dstMat = outputs[i].reshape(1, outshape.size(), &outshape[0]);
+
+            cv::gemm(srcMat, weights, 1, noArray(), 0, dstMat, GEMM_2_T);
+
+            if (bias)
+            {
+                UMat& biases = umat_blobs[1];
+                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
+            }
+        }
+
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &)
     {

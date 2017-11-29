@@ -35,6 +35,28 @@ static void test(LayerParams& params, Mat& input)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Padding
+////////////////////////////////////////////////////////////////////////////////
+TEST(Padding_Halide, Accuracy)
+{
+    static const int kNumRuns = 10;
+    std::vector<int> paddings(8);
+    for (int t = 0; t < kNumRuns; ++t)
+    {
+        for (int i = 0; i < paddings.size(); ++i)
+            paddings[i] = rand() % 5;
+
+        LayerParams lp;
+        lp.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+        lp.type = "Padding";
+        lp.name = "testLayer";
+
+        Mat input({1 + rand() % 10, 1 + rand() % 10, 1 + rand() % 10, 1 + rand() % 10}, CV_32F);
+        test(lp, input);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Convolution
 ////////////////////////////////////////////////////////////////////////////////
 typedef TestWithParam<tuple<Vec3i, Size, Size, Size, Size, Size, bool> > Convolution;
@@ -107,7 +129,7 @@ TEST_P(Deconvolution, Accuracy)
     Size adjPad = Size(get<5>(GetParam())[2], get<5>(GetParam())[3]);
     bool hasBias = get<6>(GetParam());
 
-    Mat weights({outChannels, inChannels / group, kernel.height, kernel.width}, CV_32F);
+    Mat weights({inChannels, outChannels / group, kernel.height, kernel.width}, CV_32F);
     randu(weights, -1.0f, 1.0f);
 
     LayerParams lp;
@@ -139,7 +161,7 @@ TEST_P(Deconvolution, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Deconvolution, Combine(
 /*in channels, out channels, group*/
-             Values(Vec3i(6, 4, 1), Vec3i(6, 9, 1)),
+             Values(Vec3i(6, 4, 1), Vec3i(6, 9, 3)),
 /*in size*/  Values(Size(5, 6)),
 /*kernel*/   Values(Size(3, 1), Size(1, 3)),
 /*pad*/      Values(Size(1, 0), Size(0, 1)),

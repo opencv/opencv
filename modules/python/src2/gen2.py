@@ -3,6 +3,7 @@
 from __future__ import print_function
 import hdr_parser, sys, re, os
 from string import Template
+from pprint import pprint
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -806,12 +807,26 @@ class FuncInfo(object):
         code += "\n    return %s;\n}\n\n" % def_ret
 
         cname = self.cname
+        classinfo = None
+        #dump = False
+        #if dump: pprint(vars(self))
+        #if dump: pprint(vars(self.variants[0]))
         if self.classname:
             classinfo = all_classes[self.classname]
-            cname = classinfo.cname + '::' + cname
+            #if dump: pprint(vars(classinfo))
+            if self.isconstructor:
+                py_name = 'cv.' + classinfo.wname
+            elif self.isclassmethod:
+                py_name = '.'.join([self.namespace, classinfo.sname + '_' + self.variants[0].wname])
+            else:
+                cname = classinfo.cname + '::' + cname
+                py_name = 'cv.' + classinfo.wname + '.' + self.variants[0].wname
+        else:
+            py_name = '.'.join([self.namespace, self.variants[0].wname])
+        #if dump: print(cname + " => " + py_name)
         py_signatures = codegen.py_signatures.setdefault(cname, [])
         for v in self.variants:
-            s = dict(name=v.name, arg=v.py_arg_str, ret=v.py_return_str)
+            s = dict(name=py_name, arg=v.py_arg_str, ret=v.py_return_str)
             for old in py_signatures:
                 if s == old:
                     break
@@ -855,6 +870,16 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
 
+        # Add Class to json file.
+        namespace, classes, name = self.split_decl_name(name)
+        namespace = '.'.join(namespace)
+        name = '_'.join(classes+[name])
+
+        py_name = 'cv.' + classinfo.wname  # use wrapper name
+        py_signatures = self.py_signatures.setdefault(classinfo.cname, [])
+        py_signatures.append(dict(name=py_name))
+        #print('class: ' + classinfo.cname + " => " + py_name)
+
     def split_decl_name(self, name):
         chunks = name.split('.')
         namespace = chunks[:-1]
@@ -875,6 +900,12 @@ class PythonWrapperGenerator(object):
                 % (name, cname))
             sys.exit(-1)
         ns.consts[name] = cname
+
+        value = decl[1]
+        py_name = '.'.join([namespace, name])
+        py_signatures = self.py_signatures.setdefault(cname, [])
+        py_signatures.append(dict(name=py_name, value=value))
+        #print(cname + ' => ' + str(py_name) + ' (value=' + value + ')')
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
@@ -996,9 +1027,27 @@ class PythonWrapperGenerator(object):
                     print("Generator error: unable to resolve base %s for %s"
                         % (classinfo.base, classinfo.name))
                     sys.exit(-1)
+                base_instance = self.classes[base]
                 classinfo.base = base
-                classinfo.isalgorithm |= self.classes[base].isalgorithm
+                classinfo.isalgorithm |= base_instance.isalgorithm  # wrong processing of 'isalgorithm' flag:
+                                                                    # doesn't work for trees(graphs) with depth > 2
                 self.classes[name] = classinfo
+
+        # tree-based propagation of 'isalgorithm'
+        processed = dict()
+        def process_isalgorithm(classinfo):
+            if classinfo.isalgorithm or classinfo in processed:
+                return classinfo.isalgorithm
+            res = False
+            if classinfo.base:
+                res = process_isalgorithm(self.classes[classinfo.base])
+                #assert not (res == True or classinfo.isalgorithm is False), "Internal error: " + classinfo.name + " => " + classinfo.base
+                classinfo.isalgorithm |= res
+                res = classinfo.isalgorithm
+            processed[classinfo] = True
+            return res
+        for name, classinfo in self.classes.items():
+            process_isalgorithm(classinfo)
 
         # step 2: generate code for the classes and their methods
         classlist = list(self.classes.items())

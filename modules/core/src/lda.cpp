@@ -519,7 +519,7 @@ private:
 
                 // Double QR step involving rows l:n and columns m:n
 
-                for (int k = m; k <= n1 - 1; k++) {
+                for (int k = m; k < n1; k++) {
                     bool notlast = (k != n1 - 1);
                     if (k != m) {
                         p = H[k][k - 1];
@@ -761,7 +761,7 @@ private:
         int low = 0;
         int high = n - 1;
 
-        for (int m = low + 1; m <= high - 1; m++) {
+        for (int m = low + 1; m < high; m++) {
 
             // Scale column.
 
@@ -822,7 +822,7 @@ private:
             }
         }
 
-        for (int m = high - 1; m >= low + 1; m--) {
+        for (int m = high - 1; m > low; m--) {
             if (H[m][m - 1] != 0.0) {
                 for (int i = m + 1; i <= high; i++) {
                     ort[i] = H[i][m - 1];
@@ -863,45 +863,49 @@ private:
         d = alloc_1d<double> (n);
         e = alloc_1d<double> (n);
         ort = alloc_1d<double> (n);
-        // Reduce to Hessenberg form.
-        orthes();
-        // Reduce Hessenberg to real Schur form.
-        hqr2();
-        // Copy eigenvalues to OpenCV Matrix.
-        _eigenvalues.create(1, n, CV_64FC1);
-        for (int i = 0; i < n; i++) {
-            _eigenvalues.at<double> (0, i) = d[i];
+        try {
+            // Reduce to Hessenberg form.
+            orthes();
+            // Reduce Hessenberg to real Schur form.
+            hqr2();
+            // Copy eigenvalues to OpenCV Matrix.
+            _eigenvalues.create(1, n, CV_64FC1);
+            for (int i = 0; i < n; i++) {
+                _eigenvalues.at<double> (0, i) = d[i];
+            }
+            // Copy eigenvectors to OpenCV Matrix.
+            _eigenvectors.create(n, n, CV_64FC1);
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < n; j++)
+                    _eigenvectors.at<double> (i, j) = V[i][j];
+            // Deallocate the memory by releasing all internal working data.
+            release();
         }
-        // Copy eigenvectors to OpenCV Matrix.
-        _eigenvectors.create(n, n, CV_64FC1);
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++)
-                _eigenvectors.at<double> (i, j) = V[i][j];
-        // Deallocate the memory by releasing all internal working data.
-        release();
+        catch (...)
+        {
+            release();
+            throw;
+        }
     }
 
 public:
-    EigenvalueDecomposition()
-        : n(0), cdivr(0), cdivi(0), d(0), e(0), ort(0), V(0), H(0) {}
-
     // Initializes & computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    EigenvalueDecomposition(InputArray src) {
-        compute(src);
+    EigenvalueDecomposition(InputArray src, bool fallbackSymmetric = true) {
+        compute(src, fallbackSymmetric);
     }
 
     // This function computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    void compute(InputArray src)
+    void compute(InputArray src, bool fallbackSymmetric)
     {
         CV_INSTRUMENT_REGION()
 
-        if(isSymmetric(src)) {
+        if(fallbackSymmetric && isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
             cv::eigen(src, _eigenvalues, _eigenvectors);
         } else {
@@ -930,10 +934,59 @@ public:
     ~EigenvalueDecomposition() {}
 
     // Returns the eigenvalues of the Eigenvalue Decomposition.
-    Mat eigenvalues() {    return _eigenvalues; }
+    Mat eigenvalues() const { return _eigenvalues; }
     // Returns the eigenvectors of the Eigenvalue Decomposition.
-    Mat eigenvectors() { return _eigenvectors; }
+    Mat eigenvectors() const { return _eigenvectors; }
 };
+
+void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
+{
+    CV_INSTRUMENT_REGION()
+
+    Mat src = _src.getMat();
+    int type = src.type();
+    size_t n = (size_t)src.rows;
+
+    CV_Assert(src.rows == src.cols);
+    CV_Assert(type == CV_32F || type == CV_64F);
+
+    Mat src64f;
+    if (type == CV_32F)
+        src.convertTo(src64f, CV_32FC1);
+    else
+        src64f = src;
+
+    EigenvalueDecomposition eigensystem(src64f, false);
+
+    // EigenvalueDecomposition returns transposed and non-sorted eigenvalues
+    std::vector<double> eigenvalues64f;
+    eigensystem.eigenvalues().copyTo(eigenvalues64f);
+    CV_Assert(eigenvalues64f.size() == n);
+
+    std::vector<int> sort_indexes(n);
+    cv::sortIdx(eigenvalues64f, sort_indexes, SORT_EVERY_ROW | SORT_DESCENDING);
+
+    std::vector<double> sorted_eigenvalues64f(n);
+    for (size_t i = 0; i < n; i++) sorted_eigenvalues64f[i] = eigenvalues64f[sort_indexes[i]];
+
+    Mat(sorted_eigenvalues64f).convertTo(_evals, type);
+
+    if( _evects.needed() )
+    {
+        Mat eigenvectors64f = eigensystem.eigenvectors().t(); // transpose
+        CV_Assert((size_t)eigenvectors64f.rows == n);
+        CV_Assert((size_t)eigenvectors64f.cols == n);
+        Mat_<double> sorted_eigenvectors64f((int)n, (int)n, CV_64FC1);
+        for (size_t i = 0; i < n; i++)
+        {
+            double* pDst = sorted_eigenvectors64f.ptr<double>((int)i);
+            double* pSrc = eigenvectors64f.ptr<double>(sort_indexes[(int)i]);
+            CV_Assert(pSrc != NULL);
+            memcpy(pDst, pSrc, n * sizeof(double));
+        }
+        sorted_eigenvectors64f.convertTo(_evects, type);
+    }
+}
 
 
 //------------------------------------------------------------------------------
@@ -1030,7 +1083,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
                   << std::endl;
     }
     // clip number of components to be a valid number
-    if ((_num_components <= 0) || (_num_components > (C - 1))) {
+    if ((_num_components <= 0) || (_num_components >= C)) {
         _num_components = (C - 1);
     }
     // holds the mean over all classes

@@ -5,10 +5,11 @@
 #include "cap_mfx_common.hpp"
 
 // Linux specific
-#include <unistd.h>
+#ifdef __linux__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#endif
 
 using namespace std;
 using namespace cv;
@@ -35,6 +36,8 @@ bool DeviceHandler::init(MFXVideoSession &session)
 }
 
 //==================================================================================================
+
+#ifdef __linux__
 
 VAHandle::VAHandle() {
     // TODO: provide a way of modifying this path
@@ -68,6 +71,19 @@ bool VAHandle::initDeviceSession(MFXVideoSession &session) {
     return false;
 }
 
+#endif // __linux__
+
+DeviceHandler * createDeviceHandler()
+{
+#if defined __linux__
+    return new VAHandle();
+#elif defined _WIN32
+    return new DXHandle();
+#else
+    return 0;
+#endif
+}
+
 //==================================================================================================
 
 SurfacePool::SurfacePool(ushort width_, ushort height_, ushort count, const mfxFrameInfo &frameInfo, uchar bpp)
@@ -85,7 +101,8 @@ SurfacePool::SurfacePool(ushort width_, ushort height_, ushort count, const mfxF
         surface.Info = frameInfo;
         surface.Data.Y = dataPtr;
         surface.Data.UV = dataPtr + width * height;
-        surface.Data.Pitch = width;
+        surface.Data.PitchLow = width & 0xFFFF;
+        surface.Data.PitchHigh = (width >> 16) & 0xFFFF;
         DBG(cout << "allocate surface " << (void*)&surface << ", Y = " << (void*)dataPtr << " (" << width << "x" << height << ")" << endl);
     }
     DBG(cout << "Allocated: " << endl
@@ -112,7 +129,7 @@ ReadBitstream::ReadBitstream(const char *filename, size_t maxSize) : drain(false
     input.open(filename, std::ios::in | std::ios::binary);
     DBG(cout << "Open " << filename << " -> " << input.is_open() << std::endl);
     memset(&stream, 0, sizeof(stream));
-    stream.MaxLength = maxSize;
+    stream.MaxLength = (mfxU32)maxSize;
     stream.Data = new mfxU8[stream.MaxLength];
     CV_Assert(stream.Data);
 }
@@ -139,7 +156,7 @@ bool ReadBitstream::read()
     input.read((char*)(stream.Data + stream.DataLength), stream.MaxLength - stream.DataLength);
     if (input.eof() || input.good())
     {
-        mfxU32 bytesRead = input.gcount();
+        mfxU32 bytesRead = (mfxU32)input.gcount();
         if (bytesRead > 0)
         {
             stream.DataLength += bytesRead;
@@ -157,7 +174,7 @@ WriteBitstream::WriteBitstream(const char * filename, size_t maxSize)
     output.open(filename, std::ios::out | std::ios::binary);
     DBG(cout << "BS Open " << filename << " -> " << output.is_open() << std::endl);
     memset(&stream, 0, sizeof(stream));
-    stream.MaxLength = maxSize;
+    stream.MaxLength = (mfxU32)maxSize;
     stream.Data = new mfxU8[stream.MaxLength];
     DBG(cout << "BS Allocate " << maxSize << " bytes (" << ((float)maxSize / (1 << 20)) << " Mb)" << endl);
     CV_Assert(stream.Data);

@@ -42,8 +42,6 @@
 #include "../precomp.hpp"
 
 #ifdef HAVE_PROTOBUF
-#include "caffe.pb.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -92,6 +90,17 @@ public:
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
+    }
+
+    CaffeImporter(const char *dataProto, size_t lenProto,
+                  const char *dataModel, size_t lenModel)
+    {
+        CV_TRACE_FUNCTION();
+
+        ReadNetParamsFromTextBufferOrDie(dataProto, lenProto, &net);
+
+        if (dataModel != NULL && lenModel > 0)
+            ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
     }
 
     void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
@@ -216,7 +225,7 @@ public:
                 shape.push_back((int)_shape.dim(i));
         }
         else
-            CV_Error(Error::StsError, "Unknown shape of input blob");
+            shape.resize(1, 1);  // Is a scalar.
     }
 
     void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
@@ -274,9 +283,9 @@ public:
     struct BlobNote
     {
         BlobNote(const std::string &_name, int _layerId, int _outNum) :
-            name(_name.c_str()), layerId(_layerId), outNum(_outNum) {}
+            name(_name), layerId(_layerId), outNum(_outNum) {}
 
-        const char *name;
+        std::string name;
         int layerId, outNum;
     };
 
@@ -293,14 +302,13 @@ public:
         addedBlobs.reserve(layersSize + 1);
 
         //setup input layer names
+        std::vector<String> netInputs(net.input_size());
         {
-            std::vector<String> netInputs(net.input_size());
             for (int inNum = 0; inNum < net.input_size(); inNum++)
             {
                 addedBlobs.push_back(BlobNote(net.input(inNum), 0, inNum));
                 netInputs[inNum] = net.input(inNum);
             }
-            dstNet.setInputsNames(netInputs);
         }
 
         for (int li = 0; li < layersSize; li++)
@@ -317,6 +325,17 @@ public:
             if (repetitions)
                 name += String("_") + toString(repetitions);
 
+            if (type == "Input")
+            {
+                for (int outNum = 0; outNum < layer.top_size(); outNum++)
+                {
+                    addOutput(layer, 0, outNum);
+                    addedBlobs.back().outNum = netInputs.size();
+                    netInputs.push_back(addedBlobs.back().name);
+                }
+                continue;
+            }
+
             int id = dstNet.addLayer(name, type, layerParams);
 
             for (int inNum = 0; inNum < layer.bottom_size(); inNum++)
@@ -325,6 +344,7 @@ public:
             for (int outNum = 0; outNum < layer.top_size(); outNum++)
                 addOutput(layer, id, outNum);
         }
+        dstNet.setInputsNames(netInputs);
 
         addedBlobs.clear();
     }
@@ -388,6 +408,15 @@ Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeMod
 Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
 {
     CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
+}
+
+Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
+                     const char *bufferModel, size_t lenModel)
+{
+    CaffeImporter caffeImporter(bufferProto, lenProto, bufferModel, lenModel);
     Net net;
     caffeImporter.populateNet(net);
     return net;

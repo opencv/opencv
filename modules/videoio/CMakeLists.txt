@@ -222,10 +222,7 @@ if(IOS)
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
 
-  list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
-  if(APPLE_FRAMEWORK)
-    list(APPEND VIDEOIO_LIBRARIES "-framework UIKit")
-  endif()
+  list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
 endif()
 
 if(WIN32)

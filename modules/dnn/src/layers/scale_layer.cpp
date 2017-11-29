@@ -33,6 +33,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
+        CV_Assert(blobs.size() == 1 + hasBias);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
@@ -43,12 +44,18 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide();
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_Assert(blobs.size() == 1 + hasBias);
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {

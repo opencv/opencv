@@ -1017,6 +1017,62 @@ _exit_:
     return code;
 }
 
+/****************************************************************************************\
+*                                 MinEnclosingCircle Test 2                              *
+\****************************************************************************************/
+
+class CV_MinCircleTest2 : public CV_BaseShapeDescrTest
+{
+public:
+    CV_MinCircleTest2();
+protected:
+    RNG rng;
+    void run_func(void);
+    int validate_test_results( int test_case_idx );
+    float delta;
+};
+
+
+CV_MinCircleTest2::CV_MinCircleTest2()
+{
+    rng = ts->get_rng();
+}
+
+
+void CV_MinCircleTest2::run_func()
+{
+    Point2f center = Point2f(rng.uniform(0.0f, 1000.0f), rng.uniform(0.0f, 1000.0f));;
+    float radius = rng.uniform(0.0f, 500.0f);
+    float angle = (float)rng.uniform(0.0f, (float)(CV_2PI));
+    vector<Point2f> pts;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    angle += (float)CV_PI;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    float radius2 = radius * radius;
+    float x = rng.uniform(center.x - radius, center.x + radius);
+    float deltaX = x - center.x;
+    float upperBoundY = sqrt(radius2 - deltaX * deltaX);
+    float y = rng.uniform(center.y - upperBoundY, center.y + upperBoundY);
+    pts.push_back(Point2f(x, y));
+    // Find the minimum area enclosing circle
+    Point2f calcCenter;
+    float calcRadius;
+    minEnclosingCircle(pts, calcCenter, calcRadius);
+    delta = (float)norm(calcCenter - center) + abs(calcRadius - radius);
+}
+
+int CV_MinCircleTest2::validate_test_results( int test_case_idx )
+{
+    float eps = 1.0F;
+    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
+    if (delta > eps)
+    {
+        ts->printf( cvtest::TS::LOG, "Delta center and calcCenter > %f\n", eps );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+        ts->set_failed_test_info( code );
+    }
+    return code;
+}
 
 /****************************************************************************************\
 *                                   Perimeter Test                                     *
@@ -1905,6 +1961,7 @@ TEST(Imgproc_ConvexHull, accuracy) { CV_ConvHullTest test; test.safe_run(); }
 TEST(Imgproc_MinAreaRect, accuracy) { CV_MinAreaRectTest test; test.safe_run(); }
 TEST(Imgproc_MinTriangle, accuracy) { CV_MinTriangleTest test; test.safe_run(); }
 TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
+TEST(Imgproc_MinCircle2, accuracy) { CV_MinCircleTest2 test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeter, accuracy) { CV_PerimeterTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, parallel) { CV_FitEllipseParallelTest test; test.safe_run(); }

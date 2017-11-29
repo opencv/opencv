@@ -56,14 +56,50 @@ public:
     {
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
-
         if (params.has("slice_point"))
         {
+            CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
             const DictValue &indicesValue = params.get("slice_point");
-            int i, n = indicesValue.size();
-            sliceIndices.resize(n);
-            for (i = 0; i < n; i++)
-                sliceIndices[i] = indicesValue.get<int>(i);
+            sliceRanges.resize(indicesValue.size() + 1,
+                               std::vector<Range>(axis + 1, Range::all()));
+            int prevSlice = 0;
+            for (int i = 0; i < indicesValue.size(); ++i)
+            {
+                sliceRanges[i][axis].start = prevSlice;
+                sliceRanges[i][axis].end = indicesValue.get<int>(i);
+                prevSlice = sliceRanges[i][axis].end;
+            }
+            sliceRanges.back()[axis].start = prevSlice;
+        }
+        else if (params.has("begin"))
+        {
+            CV_Assert(params.has("size") ^ params.has("end"));
+            const DictValue &begins = params.get("begin");
+            const DictValue &sizesOrEnds = params.has("size") ? params.get("size") : params.get("end");
+            CV_Assert(begins.size() == sizesOrEnds.size());
+
+            sliceRanges.resize(1);
+            sliceRanges[0].resize(begins.size(), Range::all());
+            for (int i = 0; i < begins.size(); ++i)
+            {
+                int start = begins.get<int>(i);
+                int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
+                CV_Assert(start >= 0);
+
+                sliceRanges[0][i].start = start;
+                if (params.has("size"))
+                {
+                    int size = sizeOrEnd;
+                    CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
+                    sliceRanges[0][i].end = start > 0 ? start + size : -1;  // We'll finalize a negative value later.
+                }
+                else
+                {
+                    int end = sizeOrEnd;
+                    CV_Assert(end < 0 || end > start);  // End index is excluded.
+                    sliceRanges[0][i].end = end;  // We'll finalize a negative value later.
+                }
+            }
         }
     }
 
@@ -73,47 +109,74 @@ public:
                             std::vector<MatShape> &internals) const
     {
         CV_Assert(inputs.size() == 1);
-
-        outputs.clear();
-
         MatShape inpShape = inputs[0];
-        int cAxis = clamp(axis, inpShape.size());
-        int axisSize = inpShape[cAxis];
 
-        if (sliceIndices.size()) //divide blob with respect to passed parameters
+        if (!sliceRanges.empty())
         {
-           std::vector<int> outAxisSize;
-           int prevSlice = 0;
-
-           for (size_t i = 0; i < sliceIndices.size(); i++)
-           {
-               if (!(prevSlice < sliceIndices[i] && sliceIndices[i] < axisSize))
-                   CV_Error(Error::StsBadArg, "Slice indices should be positive, increased and don't exceed size of sliced dimension");
-
-               outAxisSize.push_back(sliceIndices[i] - prevSlice);
-               prevSlice = sliceIndices[i];
-            }
-            outAxisSize.push_back(axisSize - prevSlice);
-
-            for (size_t i = 0; i < outAxisSize.size(); i++)
+            outputs.resize(sliceRanges.size(), inpShape);
+            for (int i = 0; i < outputs.size(); ++i)
             {
-               inpShape[cAxis] = outAxisSize[i];
-              outputs.push_back(inpShape);
+                CV_Assert(sliceRanges[i].size() <= inpShape.size());
+                for (int j = 0; j < sliceRanges[i].size(); ++j)
+                {
+                    outputs[i][j] = clamp(sliceRanges[i][j], inpShape[j]).size();
+                }
             }
         }
-        else //divide blob with respect to count of output blobs
+        else  // Divide input blob on equal parts by axis.
         {
-           CV_Assert(requiredOutputs > 0 && axisSize % requiredOutputs == 0);
-           int outAxisSize = axisSize / (int)requiredOutputs;
-
-           for (size_t i = 0; i < requiredOutputs; i++)
-            {
-               inpShape[cAxis] = outAxisSize;
-               outputs.push_back(inpShape);
-            }
+            CV_Assert(0 <= axis && axis < inpShape.size());
+            CV_Assert(requiredOutputs > 0 && inpShape[axis] % requiredOutputs == 0);
+            inpShape[axis] /= requiredOutputs;
+            outputs.resize(requiredOutputs, inpShape);
         }
-
         return false;
+    }
+
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    {
+        CV_Assert(inputs.size() == 1);
+        const MatSize& inpShape = inputs[0]->size;
+
+        if (sliceRanges.empty())
+        {
+            // Divide input blob on equal parts by axis.
+            int outAxisSize = inpShape[axis] / outputs.size();
+            sliceRanges.resize(outputs.size(),
+                               std::vector<Range>(axis + 1, Range::all()));
+            int prevSlice = 0;
+            for (int i = 0; i < outputs.size(); ++i)
+            {
+                sliceRanges[i][axis].start = prevSlice;
+                sliceRanges[i][axis].end = sliceRanges[i][axis].start + outAxisSize;
+                prevSlice = sliceRanges[i][axis].end;
+            }
+        }
+        else
+            CV_Assert(outputs.size() == sliceRanges.size());
+
+        for (int i = 0; i < outputs.size(); ++i)
+        {
+            CV_Assert(sliceRanges[i].size() <= inpShape[-1]);
+            // Clamp.
+            for (int j = 0; j < sliceRanges[i].size(); ++j)
+            {
+                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
+            }
+            // Fill the rest of ranges.
+            for (int j = sliceRanges[i].size(); j < inpShape[-1]; ++j)
+            {
+                sliceRanges[i].push_back(Range::all());
+            }
+        }
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -122,15 +185,10 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         const Mat& inpMat = *inputs[0];
-        std::vector<Range> ranges(inpMat.dims, Range::all());
-        int cAxis = clamp(axis, inpMat.dims);
-
-        ranges[cAxis].start = 0;
+        CV_Assert(outputs.size() == sliceRanges.size());
         for (size_t i = 0; i < outputs.size(); i++)
         {
-            ranges[cAxis].end = ranges[cAxis].start + outputs[i].size[cAxis];
-            inpMat(&ranges[0]).copyTo(outputs[i]);
-            ranges[cAxis].start = ranges[cAxis].end;
+            inpMat(sliceRanges[i]).copyTo(outputs[i]);
         }
     }
 };

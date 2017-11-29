@@ -99,6 +99,14 @@
 #  include <arm_neon.h>
 #endif
 
+#if defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#  include <altivec.h>
+#  undef vector
+#  undef pixel
+#  undef bool
+#  define CV_VSX 1
+#endif
+
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
@@ -135,6 +143,12 @@ struct VZeroUpperGuard {
 #elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
 #  include <arm_neon.h>
 #  define CV_NEON 1
+#elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#  include <altivec.h>
+#  undef vector
+#  undef pixel
+#  undef bool
+#  define CV_VSX 1
 #endif
 
 #endif // !__OPENCV_BUILD && !__CUDACC (Compatibility code)
@@ -207,4 +221,8 @@ struct VZeroUpperGuard {
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_VSX
+#  define CV_VSX 0
 #endif

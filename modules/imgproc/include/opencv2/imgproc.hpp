@@ -1257,7 +1257,7 @@ to edit those, as to tailor it for their own application.
 @param _sigma_scale Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
 @param _quant Bound to the quantization error on the gradient norm.
 @param _ang_th Gradient angle tolerance in degrees.
-@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advancent refinement
+@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement
 is chosen.
 @param _density_th Minimal density of aligned region points in the enclosing rectangle.
 @param _n_bins Number of bins in pseudo-ordering of gradient modulus.
@@ -1699,7 +1699,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
-The function finds edges in the input image image and marks them in the output map edges using the
+The function finds edges in the input image and marks them in the output map edges using the
 Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
@@ -1914,11 +1914,17 @@ or cornerMinEigenVal.
 
 @sa  cornerMinEigenVal, cornerHarris, calcOpticalFlowPyrLK, estimateRigidTransform,
  */
+
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      InputArray mask = noArray(), int blockSize = 3,
                                      bool useHarrisDetector = false, double k = 0.04 );
 
+CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
+                                     int maxCorners, double qualityLevel, double minDistance,
+                                     InputArray mask, int blockSize,
+                                     int gradientSize, bool useHarrisDetector = false,
+                                     double k = 0.04 );
 /** @example houghlines.cpp
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
@@ -2084,7 +2090,7 @@ Example: :
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
-you know it. Or, you may ignore the returned radius, use only the center, and find the correct
+you know it. Or, you may set maxRadius to 0 to return centers only without radius search, and find the correct
 radius using an additional procedure.
 
 @param image 8-bit, single-channel, grayscale input image.
@@ -2346,7 +2352,7 @@ borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
 @note
-Due to current implementaion limitations the size of an input and output images should be less than 32767x32767.
+Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
@@ -2464,13 +2470,12 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
 The function getRectSubPix extracts pixels from src:
 
-\f[dst(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
+\f[patch(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
 
 where the values of the pixels at non-integer coordinates are retrieved using bilinear
-interpolation. Every channel of multi-channel images is processed independently. While the center of
-the rectangle must be inside the image, parts of the rectangle may be outside. In this case, the
-replication border mode (see cv::BorderTypes) is used to extrapolate the pixel values outside of
-the image.
+interpolation. Every channel of multi-channel images is processed independently. Also
+the image should be a single channel or three channel image. While the center of the
+rectangle must be inside the image, parts of the rectangle may be outside.
 
 @param image Source image.
 @param patchSize Size of the extracted patch.
@@ -2618,7 +2623,7 @@ CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
 //! @addtogroup imgproc_motion
 //! @{
 
-/** @brief Adds an image to the accumulator.
+/** @brief Adds an image to the accumulator image.
 
 The function adds src or some of its elements to dst :
 
@@ -2626,7 +2631,7 @@ The function adds src or some of its elements to dst :
 
 The function supports multi-channel images. Each channel is processed independently.
 
-The functions accumulate\* can be used, for example, to collect statistics of a scene background
+The function cv::accumulate can be used, for example, to collect statistics of a scene background
 viewed by a still camera and for the further foreground-background segmentation.
 
 @param src Input image of type CV_8UC(n), CV_16UC(n), CV_32FC(n) or CV_64FC(n), where n is a positive integer.
@@ -2638,7 +2643,7 @@ viewed by a still camera and for the further foreground-background segmentation.
 CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
                               InputArray mask = noArray() );
 
-/** @brief Adds the square of a source image to the accumulator.
+/** @brief Adds the square of a source image to the accumulator image.
 
 The function adds the input image src or its selected region, raised to a power of 2, to the
 accumulator dst :
@@ -2657,7 +2662,7 @@ floating-point.
 CV_EXPORTS_W void accumulateSquare( InputArray src, InputOutputArray dst,
                                     InputArray mask = noArray() );
 
-/** @brief Adds the per-element product of two input images to the accumulator.
+/** @brief Adds the per-element product of two input images to the accumulator image.
 
 The function adds the product of two images or their selected regions to the accumulator dst :
 
@@ -2667,7 +2672,7 @@ The function supports multi-channel images. Each channel is processed independen
 
 @param src1 First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 @param src2 Second input image of the same type and the same size as src1 .
-@param dst %Accumulator with the same number of channels as input images, 32-bit or 64-bit
+@param dst %Accumulator image with the same number of channels as input images, 32-bit or 64-bit
 floating-point.
 @param mask Optional operation mask.
 
@@ -3565,7 +3570,8 @@ taller than image. Since this is both an input and output parameter, you must ta
 of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
 mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
-as described below. It is therefore possible to use the same mask in multiple calls to the function
+as described below. Additionally, the function fills the border of the mask with ones to simplify
+internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
 @param seedPoint Starting point.
 @param newVal New value of the repainted domain pixels.
@@ -3914,9 +3920,8 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 /** @brief Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
-specified point set. See the OpenCV sample minarea.cpp . Developer should keep in mind that the
-returned rotatedRect can contain negative indices when data is close to the containing Mat element
-boundary.
+specified point set. Developer should keep in mind that the returned RotatedRect can contain negative
+indices when data is close to the containing Mat element boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
  */
@@ -3937,8 +3942,7 @@ CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
 
 /** @brief Finds a circle of the minimum area enclosing a 2D point set.
 
-The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm. See
-the OpenCV sample minarea.cpp .
+The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
 @param center Output center of the circle.
@@ -4060,6 +4064,88 @@ border of the containing Mat element.
  */
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
 
+/** @brief Fits an ellipse around a set of 2D points.
+
+ The function calculates the ellipse that fits a set of 2D points.
+ It returns the rotated rectangle in which the ellipse is inscribed.
+ The Approximate Mean Square (AMS) proposed by @cite Taubin1991 is used.
+
+ For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
+ which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
+ However, to specify an ellipse, all that is needed is five numbers; the major and minor axes lengths \f$ (a,b) \f$,
+ the position \f$ (x_0,y_0) \f$, and the orientation \f$ \theta \f$. This is because the basis set includes lines,
+ quadratics, parabolic and hyperbolic functions as well as elliptical functions as possible fits.
+ If the fit is found to be a parabolic or hyperbolic function then the standard fitEllipse method is used.
+ The AMS method restricts the fit to parabolic, hyperbolic and elliptical curves
+ by imposing the condition that \f$ A^T ( D_x^T D_x  +   D_y^T D_y) A = 1 \f$ where
+ the matrices \f$ Dx \f$ and \f$ Dy \f$ are the partial derivatives of the design matrix \f$ D \f$ with
+ respect to x and y. The matrices are formed row by row applying the following to
+ each of the points in the set:
+ \f{align*}{
+ D(i,:)&=\left\{x_i^2, x_i y_i, y_i^2, x_i, y_i, 1\right\} &
+ D_x(i,:)&=\left\{2 x_i,y_i,0,1,0,0\right\} &
+ D_y(i,:)&=\left\{0,x_i,2 y_i,0,1,0\right\}
+ \f}
+ The AMS method minimizes the cost function
+ \f{equation*}{
+ \epsilon ^2=\frac{ A^T D^T D A }{ A^T (D_x^T D_x +  D_y^T D_y) A^T }
+ \f}
+
+ The minimum cost is found by solving the generalized eigenvalue problem.
+
+ \f{equation*}{
+ D^T D A = \lambda  \left( D_x^T D_x +  D_y^T D_y\right) A
+ \f}
+
+ @param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
+
+
+/** @brief Fits an ellipse around a set of 2D points.
+
+ The function calculates the ellipse that fits a set of 2D points.
+ It returns the rotated rectangle in which the ellipse is inscribed.
+ The Direct least square (Direct) method by @cite Fitzgibbon1999 is used.
+
+ For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
+ which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
+ However, to specify an ellipse, all that is needed is five numbers; the major and minor axes lengths \f$ (a,b) \f$,
+ the position \f$ (x_0,y_0) \f$, and the orientation \f$ \theta \f$. This is because the basis set includes lines,
+ quadratics, parabolic and hyperbolic functions as well as elliptical functions as possible fits.
+ The Direct method confines the fit to ellipses by ensuring that \f$ 4 A_{xx} A_{yy}- A_{xy}^2 > 0 \f$.
+ The condition imposed is that \f$ 4 A_{xx} A_{yy}- A_{xy}^2=1 \f$ which satisfies the inequality
+ and as the coefficients can be arbitrarily scaled is not overly restrictive.
+
+ \f{equation*}{
+ \epsilon ^2= A^T D^T D A \quad \text{with} \quad A^T C A =1 \quad \text{and} \quad C=\left(\begin{matrix}
+ 0 & 0  & 2  & 0  & 0  &  0  \\
+ 0 & -1  & 0  & 0  & 0  &  0 \\
+ 2 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0
+ \end{matrix} \right)
+ \f}
+
+ The minimum cost is found by solving the generalized eigenvalue problem.
+
+ \f{equation*}{
+ D^T D A = \lambda  \left( C\right) A
+ \f}
+
+ The system produces only one positive eigenvalue \f$ \lambda\f$ which is chosen as the solution
+ with its eigenvector \f$\mathbf{u}\f$. These are used to find the coefficients
+
+ \f{equation*}{
+ A = \sqrt{\frac{1}{\mathbf{u}^T C \mathbf{u}}}  \mathbf{u}
+ \f}
+ The scaling factor guarantees that  \f$A^T C A =1\f$.
+
+ @param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
 /** @brief Fits a line to a 2D or 3D point set.
 
 The function fitLine fits a line to a 2D or 3D point set by minimizing \f$\sum_i \rho(r_i)\f$ where
@@ -4126,7 +4212,7 @@ intersecting region and the red vertices are returned by the function.
 
 @param rect1 First rectangle
 @param rect2 Second rectangle
-@param intersectingRegion The output array of the verticies of the intersecting region. It returns
+@param intersectingRegion The output array of the vertices of the intersecting region. It returns
 at most 8 vertices. Stored as std::vector\<cv::Point2f\> or cv::Mat as Mx1 of type CV_32FC2.
 @returns One of cv::RectanglesIntersectTypes
  */
@@ -4498,6 +4584,11 @@ draws the contours, all the nested contours, all the nested-to-nested contours, 
 parameter is only taken into account when there is hierarchy available.
 @param offset Optional contour shift parameter. Shift all the drawn contours by the specified
 \f$\texttt{offset}=(dx,dy)\f$ .
+@note When thickness=CV_FILLED, the function is designed to handle connected components with holes correctly
+even when no hierarchy date is provided. This is done by analyzing all the outlines together
+using even-odd rule. This may give incorrect results if you have a joint collection of separately retrieved
+contours. In order to solve this problem, you need to call drawContours separately for each sub-group
+of contours, or iterate over the collection using contourIdx parameter.
  */
 CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,

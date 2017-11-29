@@ -2160,6 +2160,9 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
                 X = 3.f*Y*up*vp;
                 Z = Y*fma(fma(12.f*13.f, L, -up), vp, -5.f);
 
+                //limit X, Y, Z to [0, 2] to fit white point
+                X = clamp(X, 0.f, 2.f); Z = clamp(Z, 0.f, 2.f);
+
                 float R = fma(X, coeffs[0], fma(Y, coeffs[1], Z * coeffs[2]));
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));
                 float B = fma(X, coeffs[6], fma(Y, coeffs[7], Z * coeffs[8]));

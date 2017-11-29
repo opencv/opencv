@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v1 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v2 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_v1 { } using namespace experimental_dnn_v1; }}
+namespace cv { namespace dnn { namespace experimental_dnn_v2 { } using namespace experimental_dnn_v2; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -187,15 +187,25 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) = 0;
 
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @param[in]  inputs  the input blobs.
+         *  @param[out] outputs allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) = 0;
+
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @param[in]  inputs  the input blobs.
+         *  @param[out] outputs allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
+
         /** @brief @overload */
         CV_WRAP void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
 
         /** @brief @overload */
         CV_WRAP std::vector<Mat> finalize(const std::vector<Mat> &inputs);
-
-        /** @brief @overload */
-        CV_WRAP void forward(const std::vector<Mat> &inputs, CV_IN_OUT std::vector<Mat> &outputs,
-                             CV_IN_OUT std::vector<Mat> &internals);
 
         /** @brief Allocates layer and computes output. */
         CV_WRAP void run(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs,
@@ -297,6 +307,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         CV_PROP String name; //!< Name of the layer instance, can be used for logging or other internal purposes.
         CV_PROP String type; //!< Type name which was used for creating layer by layer factory.
+        CV_PROP int preferableTarget; //!< prefer target for layer forwarding
 
         Layer();
         explicit Layer(const LayerParams &params);      //!< Initializes only #name, #type and #blobs fields.
@@ -399,13 +410,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
          */
-        CV_WRAP void forward(std::vector<Mat>& outputBlobs, const String& outputName = String());
+        CV_WRAP void forward(OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains blobs for first outputs of specified layers.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
-        CV_WRAP void forward(std::vector<Mat>& outputBlobs,
+        CV_WRAP void forward(OutputArrayOfArrays outputBlobs,
                              const std::vector<String>& outBlobNames);
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
@@ -611,6 +622,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual ~Importer();
     };
 
+    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
+    *  @param cfgFile      path to the .cfg file with text description of the network architecture.
+    *  @param darknetModel path to the .weights file with learned network.
+    *  @returns Network object that ready to do forward, throw an exception in failure cases.
+    * @details This is shortcut consisting from DarknetImporter and Net::populateNet calls.
+    */
+    CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
+
     /**
      *  @deprecated Use @ref readNetFromCaffe instead.
      *  @brief Creates the importer of <a href="http://caffe.berkeleyvision.org">Caffe</a> framework network.
@@ -625,10 +644,32 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
 
+    /** @brief Reads a network model stored in Caffe model in memory.
+      * @details This is an overloaded member function, provided for convenience.
+      * It differs from the above function only in what argument(s) it accepts.
+      * @param bufferProto buffer containing the content of the .prototxt file
+      * @param lenProto length of bufferProto
+      * @param bufferModel buffer containing the content of the .caffemodel file
+      * @param lenModel length of bufferModel
+      */
+    CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
+                                    const char *bufferModel = NULL, size_t lenModel = 0);
+
     /** @brief Reads a network model stored in Tensorflow model file.
       * @details This is shortcut consisting from createTensorflowImporter and Net::populateNet calls.
       */
-    CV_EXPORTS_W Net readNetFromTensorflow(const String &model);
+    CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
+
+    /** @brief Reads a network model stored in Tensorflow model in memory.
+      * @details This is an overloaded member function, provided for convenience.
+      * It differs from the above function only in what argument(s) it accepts.
+      * @param bufferModel buffer containing the content of the pb file
+      * @param lenModel length of bufferModel
+      * @param bufferConfig buffer containing the content of the pbtxt file
+      * @param lenConfig length of bufferConfig
+      */
+    CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
+                                         const char *bufferConfig = NULL, size_t lenConfig = 0);
 
     /** @brief Reads a network model stored in Torch model file.
       * @details This is shortcut consisting from createTorchImporter and Net::populateNet calls.
@@ -679,47 +720,70 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS_W Mat readTorchBlob(const String &filename, bool isBinary = true);
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
-     *  @param image input image (with 1- or 3-channels).
+     *  @param image input image (with 1-, 3- or 4-channels).
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
      *  @param scalefactor multiplier for @p image values.
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
-     *  @details input image is resized so one side after resize is equal to corresponing
+     *  @param crop flag which indicates whether image will be cropped after resize or not
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
+     *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImage(const Mat& image, double scalefactor=1.0, const Size& size = Size(),
-                                   const Scalar& mean = Scalar(), bool swapRB=true);
+                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
      *  crops @p images from center, subtract @p mean values, scales values by @p scalefactor,
      *  swap Blue and Red channels.
-     *  @param images input images (all with 1- or 3-channels).
+     *  @param images input images (all with 1-, 3- or 4-channels).
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
      *  @param scalefactor multiplier for @p images values.
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
-     *  @details input image is resized so one side after resize is equal to corresponing
+     *  @param crop flag which indicates whether image will be cropped after resize or not
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
+     *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImages(const std::vector<Mat>& images, double scalefactor=1.0,
-                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true);
+                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single
      *            precision floating point weights (usually has `.caffemodel` extension).
      * @param dst Path to destination model with updated weights.
+     * @param layersTypes Set of layers types which parameters will be converted.
+     *                    By default, converts only Convolutional and Fully-Connected layers'
+     *                    weights.
      *
      * @note Shrinked model has no origin float32 weights so it can't be used
      *       in origin Caffe framework anymore. However the structure of data
      *       is taken from NVidia's Caffe fork: https://github.com/NVIDIA/caffe.
      *       So the resulting model may be used there.
      */
-    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst);
+    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst,
+                                       const std::vector<String>& layersTypes = std::vector<String>());
+
+    /** @brief Performs non maximum suppression given boxes and corresponding scores.
+
+     * @param bboxes a set of bounding boxes to apply NMS.
+     * @param scores a set of corresponding confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
+     * @param top_k if `>0`, keep at most @p top_k picked indices.
+     */
+    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+                               const float score_threshold, const float nms_threshold,
+                               CV_OUT std::vector<int>& indices,
+                               const float eta = 1.f, const int top_k = 0);
 
 
 //! @}

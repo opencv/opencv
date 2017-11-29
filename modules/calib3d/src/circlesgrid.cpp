@@ -392,6 +392,12 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
 
 void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
 {
+#ifndef HAVE_OPENCV_FLANN
+  (void)patternPoints;
+  (void)rectifiedPatternPoints;
+  (void)centers;
+  CV_Error(Error::StsNotImplemented, "The desired functionality requires flann module, which was disabled.");
+#else
   flann::LinearIndexParams flannIndexParams;
   flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1), flannIndexParams);
 
@@ -425,6 +431,7 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
       }
     }
   }
+#endif
 }
 
 Graph::Graph(size_t n)
@@ -557,6 +564,13 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
+}
+
+CirclesGridFinderParameters2::CirclesGridFinderParameters2()
+: CirclesGridFinderParameters()
+{
+    squareSize = 1.0f;
+    maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,

@@ -129,8 +129,6 @@ static bool areOnTheSameSideOfLine(const cv::Point2f &p1, const cv::Point2f &p2,
 
 static double areaOfTriangle(const cv::Point2f &a, const cv::Point2f &b, const cv::Point2f &c);
 
-static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle, cv::OutputArray triangle);
-
 static void createConvexHull(cv::InputArray points, std::vector<cv::Point2f> &polygon);
 
 static double distanceBtwPoints(const cv::Point2f &a, const cv::Point2f &b);
@@ -324,7 +322,7 @@ static void findMinEnclosingTriangle(cv::InputArray points,
 
     createConvexHull(points, polygon);
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
-    copyResultingTriangle(resultingTriangle, triangle);
+    cv::Mat(resultingTriangle).copyTo(triangle);
 }
 
 //! Create the convex hull of the given set of points
@@ -362,16 +360,6 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
     } else {
         returnMinimumAreaEnclosingTriangle(polygon, triangle, area);
     }
-}
-
-//! Copy resultingTriangle to the OutputArray triangle
-/*!
-* @param resultingTriangle  Minimum area triangle enclosing the given polygon found by the algorithm
-* @param triangle           Minimum area triangle enclosing the given polygon returned to the user
-*/
-static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle,
-                                  cv::OutputArray triangle) {
-    cv::Mat(resultingTriangle).copyTo(triangle);
 }
 
 //! Initialisation function

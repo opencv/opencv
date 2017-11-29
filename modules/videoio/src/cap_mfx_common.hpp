@@ -168,7 +168,7 @@ inline void cleanup(T * &ptr)
 
 //==================================================================================================
 
-struct Plugin
+class Plugin
 {
 public:
     static Plugin * loadEncoderPlugin(MFXVideoSession &session, mfxU32 codecId)
@@ -206,7 +206,7 @@ private:
 
 //==================================================================================================
 
-struct ReadBitstream
+class ReadBitstream
 {
 public:
     ReadBitstream(const char * filename, size_t maxSize = 10 * 1024 * 1024);
@@ -225,7 +225,7 @@ public:
 
 //==================================================================================================
 
-struct WriteBitstream
+class WriteBitstream
 {
 public:
     WriteBitstream(const char * filename, size_t maxSize);
@@ -268,7 +268,7 @@ private:
     SurfacePool(const SurfacePool &);
     SurfacePool &operator=(const SurfacePool &);
 public:
-    ushort width, height;
+    size_t width, height;
     size_t oneSize;
     cv::AutoBuffer<uchar, 0> buffers;
     std::vector<mfxFrameSurface1> surfaces;
@@ -286,7 +286,9 @@ protected:
 
 
 // Linux specific
+#ifdef __linux__
 
+#include <unistd.h>
 #include <va/va_drm.h>
 
 class VAHandle : public DeviceHandler {
@@ -302,7 +304,26 @@ private:
     int file;
 };
 
-// TODO: Windows specific
+#endif // __linux__
 
+// Windows specific
+#ifdef _WIN32
+
+#include <Windows.h>
+inline void sleep(unsigned long sec) { Sleep(1000 * sec); }
+
+class DXHandle : public DeviceHandler {
+public:
+    DXHandle() {}
+    ~DXHandle() {}
+private:
+    DXHandle(const DXHandle &);
+    DXHandle &operator=(const DXHandle &);
+    virtual bool initDeviceSession(MFXVideoSession &) { return true; }
+};
+
+#endif // _WIN32
+
+DeviceHandler * createDeviceHandler();
 
 #endif // MFXHELPER_H

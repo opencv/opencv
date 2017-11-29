@@ -47,6 +47,10 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
 
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -138,6 +142,9 @@ public:
     }
 };
 
+
+#define IS_POWER_LAYER(layer) \
+            (!layer.empty() && !layer->type.compare("Power"))
 //TODO: simultaneously convolution and bias addition for cache optimization
 class ConvolutionLayerImpl : public BaseConvolutionLayerImpl
 {
@@ -149,6 +156,26 @@ public:
     Ptr<ActivationLayer> activ;
     Ptr<BatchNormLayer> bnorm;
     Ptr<ScaleLayer> scaleLayer;
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
+    std::vector<UMat> umat_blobs;
+    bool fusedBias;
+    bool newWeightAndBias;
+    bool newActiv;
+    ocl4dnnFusedActiv_t activType;
+    float power;
+#endif
+    ConvolutionLayerImpl()
+    {
+#ifdef HAVE_OPENCL
+        fusedBias = false;
+        newWeightAndBias = false;
+        newActiv = false;
+        activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+        power = 0.f;
+#endif
+    }
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
     {
@@ -200,6 +227,26 @@ public:
         activ = layer;
         if (activ.empty())
             reluslope.clear();
+#ifdef HAVE_OPENCL
+        newActiv = true;
+        activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+
+        if (preferableTarget == DNN_TARGET_OPENCL)
+        {
+            Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+            if (!activ_power.empty())
+            {
+                if (activ_power->scale != 1.f || activ_power->shift != 0.f)
+                    newWeightAndBias = true;
+
+                if (activ_power->scale != 1.f)
+                    weightsMat.release();
+
+                power = activ_power->power;
+                activType = OCL4DNN_CONV_FUSED_ACTIV_POWER;
+            }
+        }
+#endif
         return !activ.empty();
     }
 
@@ -212,6 +259,10 @@ public:
         // we will need to re-compute the weights with the batch
         // norm coefficients taken into account
         weightsMat.release();
+#ifdef HAVE_OPENCL
+        newWeightAndBias = true;
+        fusedBias = false;
+#endif
         return !bnorm.empty();
     }
 
@@ -221,6 +272,10 @@ public:
         // we will need to re-compute the weights with the scaling
         // coefficients taken into account
         weightsMat.release();
+#ifdef HAVE_OPENCL
+        newWeightAndBias = true;
+        fusedBias = false;
+#endif
         return !scaleLayer.empty();
     }
 
@@ -252,24 +307,13 @@ public:
         }
 
         Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inpGroupCn);
-
-        Halide::Expr kc = r.z;
-        if (group > 1)
-        {
-            int outCnBound = outGroupCn;
-            int inpChBound = inpGroupCn;
-            Halide::Expr shift = select(c < outCnBound, 0, inpChBound);
-            for (int i = 2; i < group; ++i)
-            {
-                outCnBound += outGroupCn;
-                inpChBound += inpGroupCn;
-                shift = select(c < outCnBound, shift, inpChBound);
-            }
-            kc += shift;
-        }
-
         Halide::Expr kx = x * stride.width - pad.width + r.x * dilation.width;
         Halide::Expr ky = y * stride.height - pad.height + r.y * dilation.height;
+        Halide::Expr kc = r.z;
+        for (int i = 1; i < group; ++i)
+        {
+            kc = select(c < outGroupCn * i, kc, inpGroupCn * i + r.z);
+        }
         Halide::Expr topExpr = sum(padded_input(kx, ky, kc, n) *
                                    weights(r.x, r.y, r.z, c));
         if (hasBias())
@@ -278,7 +322,6 @@ public:
             topExpr += bias(c);
         }
         top(x, y, c, n) = topExpr;
-        Ptr<BackendNode> pp(new HalideBackendNode({ padded_input, top }));
         return Ptr<BackendNode>(new HalideBackendNode({ padded_input, top }));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
@@ -314,15 +357,15 @@ public:
                          Size kernel, Size pad, Size stride, Size dilation,
                          const ActivationLayer* activ, int ngroups, int nstripes )
         {
-            CV_Assert( input.dims == 4 && output.dims == 4 &&
-                       input.size[0] == output.size[0] &&
-                       weights.rows == output.size[1] &&
-                       weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height &&
-                       input.type() == output.type() &&
-                       input.type() == weights.type() &&
-                       input.type() == CV_32F &&
-                       input.isContinuous() &&
-                       output.isContinuous() &&
+            CV_Assert( input.dims == 4 && output.dims == 4,
+                       input.size[0] == output.size[0],
+                       weights.rows == output.size[1],
+                       weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height,
+                       input.type() == output.type(),
+                       input.type() == weights.type(),
+                       input.type() == CV_32F,
+                       input.isContinuous(),
+                       output.isContinuous(),
                        biasvec.size() == (size_t)output.size[1]+2);
             ParallelConv p;
 
@@ -648,6 +691,209 @@ public:
         }
     };
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        int group = inputs[0].size[1] / umat_blobs[0].size[1];
+
+        if (convolutionOp.empty())
+        {
+            OCL4DNNConvConfig config;
+            config.in_shape = shape(inputs[0]);
+            config.out_shape = shape(outputs[0]);
+            config.kernel = kernel;
+            config.pad = pad;
+            config.stride = stride;
+            config.dilation = dilation;
+            config.group = group;
+            config.bias_term = (hasBias()) ? true : false;
+
+            convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
+        }
+
+        int k, outCn = umat_blobs[0].size[0];
+        if( weightsMat.empty() )
+        {
+            // prepare weightsMat where each row is aligned and has enough zero padding on the right to
+            // use vectorized (i.e. with intrinsics) loops without tail processing
+            Mat wm = blobs[0].reshape(1, outCn).clone();
+            if( wm.step1() % VEC_ALIGN != 0 )
+            {
+                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
+                Mat wm_buffer = Mat(outCn, newcols, wm.type());
+                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
+                wm_padding.setTo(Scalar::all(0.));
+                Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
+                wm.copyTo(wm_aligned);
+                wm = wm_aligned;
+            }
+            weightsMat = wm;
+
+            Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
+            biasvec.resize(outCn+2);
+            if( biasMat.empty() )
+            {
+                for( k = 0; k < outCn; k++ )
+                    biasvec[k] = 0.f;
+            }
+            else
+            {
+                for( k = 0; k < outCn; k++ )
+                    biasvec[k] = biasMat.at<float>(k);
+            }
+
+            if( !bnorm.empty() || !scaleLayer.empty() || IS_POWER_LAYER(activ))
+            {
+                Mat scale, shift, scale2, shift2;
+                const float *scaleptr = 0, *shiftptr = 0;
+                const float *scaleptr2 = 0, *shiftptr2 = 0;
+                float a = 1.f, b = 0.f;
+
+                if( !bnorm.empty() )
+                {
+                    bnorm->getScaleShift(scale, shift);
+                    CV_Assert( scale.isContinuous() && shift.isContinuous() &&
+                               scale.type() == CV_32F && shift.type() == CV_32F &&
+                               scale.total() == (size_t)outCn &&
+                               shift.total() == (size_t)outCn );
+                    scaleptr = scale.ptr<float>();
+                    shiftptr = shift.ptr<float>();
+                }
+                if( !scaleLayer.empty() )
+                {
+                    scale2 = scaleLayer->blobs[0];
+                    CV_Assert( scale2.isContinuous() && scale2.type() == CV_32F &&
+                               scale2.total() == (size_t)outCn );
+                    scaleptr2 = scale2.ptr<float>();
+                    if( scaleLayer->hasBias )
+                    {
+                        shift2 = scaleLayer->blobs[1];
+                        CV_Assert( shift2.isContinuous() && shift2.type() == CV_32F &&
+                                   shift2.total() == (size_t)outCn );
+                        shiftptr2 = shift2.ptr<float>();
+                    }
+                }
+
+                if( IS_POWER_LAYER(activ) )
+                {
+                    Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+                    a = activ_power->scale;
+                    b = activ_power->shift;
+                }
+
+                if (shiftptr || shiftptr2 || b != 0.f)
+                    fusedBias = true;
+
+                for( int i = 0; i < outCn; i++ )
+                {
+                    float s1 = scaleptr ? scaleptr[i] : 1.f;
+                    float delta1 = shiftptr ? shiftptr[i] : 0.f;
+                    float s2 = scaleptr2 ? scaleptr2[i] : 1.f;
+                    float delta2 = shiftptr2 ? shiftptr2[i] : 0.f;
+                    float* w_i = weightsMat.ptr<float>(i);
+                    int j, wcols = weightsMat.cols;
+
+                    for( j = 0; j < wcols; j++ )
+                        w_i[j] *= (s1*s2*a);
+
+                    biasvec[i] = biasvec[i]*(s1*s2*a) + (delta1*s2*a + delta2*a + b);
+                }
+            }
+            biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
+        }
+
+        reluslope.clear();
+        if( activ )
+        {
+            Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
+            if( !activ_relu.empty() )
+            {
+                reluslope.assign(outCn+2, activ_relu->negativeSlope);
+                activType = OCL4DNN_CONV_FUSED_ACTIV_RELU;
+            }
+
+            Ptr<ChannelsPReLULayer> activ_chprelu = activ.dynamicCast<ChannelsPReLULayer>();
+            if( !activ_chprelu.empty() )
+            {
+                const Mat& m = activ_chprelu->blobs[0];
+                CV_Assert(m.isContinuous() && m.type() == CV_32F && (int)m.total() == outCn);
+                const float* mdata = m.ptr<float>();
+                reluslope.resize(outCn+2);
+                std::copy(mdata, mdata + outCn, reluslope.begin());
+                reluslope[outCn] = reluslope[outCn+1] = reluslope[outCn-1];
+                activType = OCL4DNN_CONV_FUSED_ACTIV_PRELU;
+            }
+        }
+
+        if ( newWeightAndBias )
+        {
+            weightsMat.copyTo(umat_blobs[0]);
+            if ( fusedBias )
+            {
+                if ( umat_blobs.size() < 2 )
+                    umat_blobs.resize(2);
+                umat_blobs[1] = UMat(biasvec, true);
+            }
+            convolutionOp->setBias(fusedBias || hasBias());
+            newWeightAndBias = false;
+        }
+
+        if ( newActiv )
+        {
+            if ( activType == OCL4DNN_CONV_FUSED_ACTIV_RELU )
+            {
+                CV_Assert(!reluslope.empty());
+                convolutionOp->setActivReLU(true, reluslope[0]);
+            }
+            else if ( activType == OCL4DNN_CONV_FUSED_ACTIV_PRELU)
+            {
+                CV_Assert(!reluslope.empty());
+                convolutionOp->setActivPReLU(true, reluslope);
+            }
+            else if ( activType == OCL4DNN_CONV_FUSED_ACTIV_POWER)
+            {
+                convolutionOp->setActivPower(true, power);
+            }
+            else
+            {
+                convolutionOp->setActivReLU(false, 0);
+                convolutionOp->setActivPReLU(false, reluslope);
+                convolutionOp->setActivPower(false, 1.f);
+            }
+            newActiv = false;
+        }
+
+        UMat& inpMat = inputs[0];
+        UMat& outMat = outputs[0];
+        int batch_size = inpMat.size[0];
+
+        return convolutionOp->Forward(inpMat,
+                                      inputs.size() == 2 ? inputs[1] : UMat(),
+                                      umat_blobs[0],
+                                      (hasBias() || fusedBias) ? umat_blobs[1] : UMat(),
+                                      outMat,
+                                      batch_size);
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -660,7 +906,6 @@ public:
         CV_Assert(inputs.size() == (size_t)1 && inputs[0]->size[1] % blobs[0].size[1] == 0);
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
-
         int k, outCn = blobs[0].size[0];
 
         if( weightsMat.empty() )
@@ -747,7 +992,9 @@ public:
         {
             Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
             if( !activ_relu.empty() )
+            {
                 reluslope.assign(outCn+2, activ_relu->negativeSlope);
+            }
 
             Ptr<ChannelsPReLULayer> activ_chprelu = activ.dynamicCast<ChannelsPReLULayer>();
             if( !activ_chprelu.empty() )
@@ -793,7 +1040,7 @@ public:
         int inpH = inpShape[2];
         int inpW = inpShape[3];
         int outCn = outShape[1];
-        int ngroups = inpCn / blobs[0].size[1];
+        int ngroups = inpCn / blobs[0].size[0];
         int outGroupCn = outCn / ngroups;
         int ksize = outGroupCn * kernel.height * kernel.width;
         return shape(ksize, inpH * inpW);
@@ -804,7 +1051,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(!hasBias() || blobs[1].total() == (size_t)blobs[0].size[0]);
+        CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
         CV_Assert(inputs.size() != 0);
 
         int inpCn = inputs[0][1];
@@ -813,12 +1060,13 @@ public:
 
         int outH = stride.height * (inpH - 1) + kernel.height - 2 * pad.height + adjustPad.height;
         int outW = stride.width * (inpW - 1) + kernel.width - 2 * pad.width + adjustPad.width;
-        int outCn = blobs[0].size[0];
+        int outCn = numOutput;
 
-        int ngroups = inpCn / blobs[0].size[1];
+        CV_Assert(outCn % blobs[0].size[1] == 0);
+        int ngroups = outCn / blobs[0].size[1];
 
         CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
-        CV_Assert(blobs[0].size[0] == outCn && blobs[0].size[1] == inpCn / ngroups);
+        CV_Assert(blobs[0].size[0] == inpCn);
 
         int dims[] = {inputs[0][0], outCn, outH, outW};
         outputs.resize(inputs.size(), shape(dims));
@@ -1068,12 +1316,20 @@ public:
         }
     };
 
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        int outCn = blobs[0].size[0];
+        int outCn = numOutput;
         int inpCn = inputs[0]->size[1];
         bool is1x1flag = is1x1();
         int nstripes = getNumThreads();
@@ -1086,9 +1342,9 @@ public:
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
-            int ngroups = inpCn / blobs[0].size[1];
-            int inpGroupCn = blobs[0].size[1];
-            int outGroupCn = outCn / ngroups;
+            int ngroups = outCn / blobs[0].size[1];
+            int inpGroupCn = inpCn / ngroups;
+            int outGroupCn = blobs[0].size[1];
             const Mat& inp = *inputs[ii];
             Mat& out = outputs[ii];
             int numImg = inp.size[0];
@@ -1126,18 +1382,16 @@ public:
 #ifdef HAVE_HALIDE
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
-        int inW, inH, inC, inN, outC = blobs[0].size[0];
+        int inW, inH, inC, inN;
         getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-
-        if (inC / blobs[0].size[1] != 1)
-            CV_Error(cv::Error::StsNotImplemented,
-                     "Halide backend for Deconvolution with group > 1 is not implemented");
+        const int outGroupCn = blobs[0].size[1];
+        const int group = numOutput / outGroupCn;
+        const int inpGroupCn = blobs[0].size[0] / group;
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
         Halide::Func padded_input(name + "_constant_exterior");
-        auto weights = wrapToHalideBuffer(blobs[0], {kernel.width,
-                                                     kernel.height, outC, inC});
+        auto weights = wrapToHalideBuffer(blobs[0]);
 
         Halide::Func dilated_input("dilated_input");
         dilated_input(x, y, c, n) = 0.0f;
@@ -1153,13 +1407,21 @@ public:
                                                           0, inC, 0, inN);
         padded_input(x, y, c, n) = bounded(x, y, c, n);
 
-        Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inC);
-        Halide::Expr topExpr = sum(
-            padded_input(x + pad.width - r.x, y + pad.height - r.y, r.z, n) *
-            weights(r.x, r.y, c, r.z));
+        Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inpGroupCn);
+        Halide::Expr kx = x + pad.width - r.x;
+        Halide::Expr ky = y + pad.height - r.y;
+        Halide::Expr kInC = r.z;
+        Halide::Expr kOutC = c;
+        for (int i = 1; i < group; ++i)
+        {
+            kInC = select(c < outGroupCn * i, kInC, inpGroupCn * i + r.z);
+            kOutC = select(c < outGroupCn * i, kOutC, c - outGroupCn * i);
+        }
+        Halide::Expr topExpr = sum(padded_input(kx, ky, kInC, n) *
+                                   weights(r.x, r.y, kOutC, kInC));
         if (hasBias())
         {
-            auto bias = wrapToHalideBuffer(blobs[1], {outC});
+            auto bias = wrapToHalideBuffer(blobs[1], {numOutput});
             topExpr += bias(c);
         }
         top(x, y, c, n) = topExpr;
@@ -1193,23 +1455,30 @@ static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const Laye
                                l->pad.width, l->stride.height, l->stride.width, l->dilation.height,
                                l->dilation.width, l->padMode);
 
-    bool bias = params.get<bool>("bias_term", true);
-    int numOutput = params.get<int>("num_output");
+    l->numOutput = params.get<int>("num_output");
     int ngroups = params.get<int>("group", 1);
 
     l->adjustPad.height = params.get<int>("adj_h", 0);
     l->adjustPad.width = params.get<int>("adj_w", 0);
 
-    CV_Assert(numOutput % ngroups == 0);
-    CV_Assert((bias && l->blobs.size() == 2) || (!bias && l->blobs.size() == 1));
+    CV_Assert(l->numOutput % ngroups == 0);
     CV_Assert(l->adjustPad.width < l->stride.width &&
               l->adjustPad.height < l->stride.height);
 }
 
 Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 {
-    Ptr<BaseConvolutionLayer> l(new ConvolutionLayerImpl);
+    ConvolutionLayerImpl* conv_ptr = new ConvolutionLayerImpl;
+    Ptr<BaseConvolutionLayer> l(conv_ptr);
     initConvDeconvLayerFromCaffe(l, params);
+
+#ifdef HAVE_OPENCL
+    size_t n = params.blobs.size();
+    conv_ptr->umat_blobs.resize(n);
+    for (int i = 0; i < n; i++)
+        conv_ptr->umat_blobs[i] = params.blobs[i].getUMat(ACCESS_READ);
+#endif
+
     return l;
 }
 

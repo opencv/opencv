@@ -59,7 +59,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   vector<Point2f> corners;
   double qualityLevel = 0.01;
   double minDistance = 10;
-  int blockSize = 3;
+  int blockSize = 3, gradiantSize = 3;
   bool useHarrisDetector = false;
   double k = 0.04;
 
@@ -75,6 +75,7 @@ void goodFeaturesToTrack_Demo( int, void* )
                minDistance,
                Mat(),
                blockSize,
+               gradiantSize,
                useHarrisDetector,
                k );
 

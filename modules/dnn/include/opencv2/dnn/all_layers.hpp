@@ -84,7 +84,9 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         /** Creates instance of LSTM layer */
         static Ptr<LSTMLayer> create(const LayerParams& params);
 
-        /** Set trained weights for LSTM layer.
+        /** @deprecated Use LayerParams::blobs instead.
+        @brief Set trained weights for LSTM layer.
+
         LSTM behavior on each step is defined by current input, previous output, previous cell state and learned weights.
 
         Let @f$x_t@f$ be current input, @f$h_t@f$ be current output, @f$c_t@f$ be current state.
@@ -114,7 +116,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         @param Wx is matrix defining how current input is transformed to internal gates (i.e. according to abovemtioned notation is @f$ W_x @f$)
         @param b  is bias vector (i.e. according to abovemtioned notation is @f$ b @f$)
         */
-        virtual void setWeights(const Mat &Wh, const Mat &Wx, const Mat &b) = 0;
+        CV_DEPRECATED virtual void setWeights(const Mat &Wh, const Mat &Wx, const Mat &b) = 0;
 
         /** @brief Specifies shape of output blob which will be [[`T`], `N`] + @p outTailShape.
           * @details If this parameter is empty or unset then @p outTailShape = [`Wh`.size(0)] will be used,
@@ -122,7 +124,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
           */
         virtual void setOutShape(const MatShape &outTailShape = MatShape()) = 0;
 
-        /** @brief Specifies either interpet first dimension of input blob as timestamp dimenion either as sample.
+        /** @deprecated Use flag `produce_cell_output` in LayerParams.
+          * @brief Specifies either interpet first dimension of input blob as timestamp dimenion either as sample.
           *
           * If flag is set to true then shape of input blob will be interpeted as [`T`, `N`, `[data dims]`] where `T` specifies number of timpestamps, `N` is number of independent streams.
           * In this case each forward() call will iterate through `T` timestamps and update layer's state `T` times.
@@ -130,12 +133,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
           * If flag is set to false then shape of input blob will be interpeted as [`N`, `[data dims]`].
           * In this case each forward() call will make one iteration and produce one timestamp with shape [`N`, `[out dims]`].
           */
-        virtual void setUseTimstampsDim(bool use = true) = 0;
+        CV_DEPRECATED virtual void setUseTimstampsDim(bool use = true) = 0;
 
-        /** @brief If this flag is set to true then layer will produce @f$ c_t @f$ as second output.
+        /** @deprecated Use flag `use_timestamp_dim` in LayerParams.
+         * @brief If this flag is set to true then layer will produce @f$ c_t @f$ as second output.
          * @details Shape of the second output is the same as first output.
          */
-        virtual void setProduceCellOutput(bool produce = false) = 0;
+        CV_DEPRECATED virtual void setProduceCellOutput(bool produce = false) = 0;
 
         /* In common case it use single input with @f$x_t@f$ values to compute output(s) @f$h_t@f$ (and @f$c_t@f$).
          * @param input should contain packed values @f$x_t@f$
@@ -199,6 +203,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     public:
         Size kernel, stride, pad, dilation, adjustPad;
         String padMode;
+        int numOutput;
     };
 
     class CV_EXPORTS ConvolutionLayer : public BaseConvolutionLayer
@@ -258,14 +263,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<SoftmaxLayer> create(const LayerParams& params);
     };
 
-    class CV_EXPORTS LPNormalizeLayer : public Layer
-    {
-    public:
-        float pnorm, epsilon;
-
-        static Ptr<LPNormalizeLayer> create(const LayerParams& params);
-    };
-
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
@@ -322,11 +319,41 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<SplitLayer> create(const LayerParams &params);
     };
 
+    /**
+     * Slice layer has several modes:
+     * 1. Caffe mode
+     * @param[in] axis Axis of split operation
+     * @param[in] slice_point Array of split points
+     *
+     * Number of output blobs equals to number of split points plus one. The
+     * first blob is a slice on input from 0 to @p slice_point[0] - 1 by @p axis,
+     * the second output blob is a slice of input from @p slice_point[0] to
+     * @p slice_point[1] - 1 by @p axis and the last output blob is a slice of
+     * input from @p slice_point[-1] up to the end of @p axis size.
+     *
+     * 2. TensorFlow mode
+     * @param begin Vector of start indices
+     * @param size Vector of sizes
+     *
+     * More convinient numpy-like slice. One and only output blob
+     * is a slice `input[begin[0]:begin[0]+size[0], begin[1]:begin[1]+size[1], ...]`
+     *
+     * 3. Torch mode
+     * @param axis Axis of split operation
+     *
+     * Split input blob on the equal parts by @p axis.
+     */
     class CV_EXPORTS SliceLayer : public Layer
     {
     public:
+        /**
+         * @brief Vector of slice ranges.
+         *
+         * The first dimension equals number of output blobs.
+         * Inner vector has slice ranges for the first number of input dimensions.
+         */
+        std::vector<std::vector<Range> > sliceRanges;
         int axis;
-        std::vector<int> sliceIndices;
 
         static Ptr<SliceLayer> create(const LayerParams &params);
     };
@@ -337,6 +364,26 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PermuteLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief Adds extra values for specific axes.
+     * @param paddings Vector of paddings in format
+     *                 @code
+     *                 [ pad_before, pad_after,  // [0]th dimension
+     *                   pad_before, pad_after,  // [1]st dimension
+     *                   ...
+     *                   pad_before, pad_after ] // [n]th dimension
+     *                 @endcode
+     *                 that represents number of padded values at every dimension
+     *                 starting from the first one. The rest of dimensions won't
+     *                 be padded.
+     * @param value Value to be padded. Defaults to zero.
+     * @param type Padding type: 'constant', 'reflect'
+     * @param input_dims Torch's parameter. If @p input_dims is not equal to the
+     *                   actual input dimensionality then the `[0]th` dimension
+     *                   is considered as a batch dimension and @p paddings are shifted
+     *                   to a one dimension. Defaults to `-1` that means padding
+     *                   corresponding to @p paddings.
+     */
     class CV_EXPORTS PaddingLayer : public Layer
     {
     public:
@@ -368,7 +415,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ChannelsPReLULayer : public ActivationLayer
     {
     public:
-        static Ptr<ChannelsPReLULayer> create(const LayerParams& params);
+        static Ptr<Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS ELULayer : public ActivationLayer
@@ -473,16 +520,67 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PriorBoxLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ReorgLayer : public Layer
+    {
+    public:
+        static Ptr<ReorgLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS RegionLayer : public Layer
+    {
+    public:
+        static Ptr<RegionLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
     public:
         static Ptr<DetectionOutputLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief \f$ L_p \f$ - normalization layer.
+     * @param p Normalization factor. The most common `p = 1` for \f$ L_1 \f$ -
+     *          normalization or `p = 2` for \f$ L_2 \f$ - normalization or a custom one.
+     * @param eps Parameter \f$ \epsilon \f$ to prevent a division by zero.
+     * @param across_spatial If true, normalize an input across all non-batch dimensions.
+     *                       Otherwise normalize an every channel separately.
+     *
+     * Across spatial:
+     * @f[
+     * norm = \sqrt[p]{\epsilon + \sum_{x, y, c} |src(x, y, c)|^p } \\
+     * dst(x, y, c) = \frac{ src(x, y, c) }{norm}
+     * @f]
+     *
+     * Channel wise normalization:
+     * @f[
+     * norm(c) = \sqrt[p]{\epsilon + \sum_{x, y} |src(x, y, c)|^p } \\
+     * dst(x, y, c) = \frac{ src(x, y, c) }{norm(c)}
+     * @f]
+     *
+     * Where `x, y` - spatial cooridnates, `c` - channel.
+     *
+     * An every sample in the batch is normalized separately. Optionally,
+     * output is scaled by the trained parameters.
+     */
     class NormalizeBBoxLayer : public Layer
     {
     public:
+        float pnorm, epsilon;
+        bool acrossSpatial;
+
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
+    };
+
+    /**
+     * @brief Resize input 4-dimensional blob by nearest neghbor strategy.
+     *
+     * Layer is used to support TensorFlow's resize_nearest_neighbor op.
+     */
+    class CV_EXPORTS ResizeNearestNeighborLayer : public Layer
+    {
+    public:
+        static Ptr<ResizeNearestNeighborLayer> create(const LayerParams& params);
     };
 
 //! @}

@@ -600,6 +600,51 @@ endfunction()
 
 endif() # NOT DEFINED CMAKE_ARGC
 
+#
+# Generate a list of enabled features basing on conditions:
+#   IF <cond> THEN <title>: check condition and append title to the result if it is true
+#   ELSE <title>: return provided value instead of empty result
+#   EXCLUSIVE: break after first successful condition
+#
+# Usage:
+#   ocv_build_features_string(out [EXLUSIVE] [IF feature THEN title] ... [ELSE title])
+#
+function(ocv_build_features_string out)
+  set(result)
+  list(REMOVE_AT ARGV 0)
+  foreach(arg ${ARGV})
+    if(arg STREQUAL "EXCLUSIVE")
+      set(exclusive TRUE)
+    elseif(arg STREQUAL "IF")
+      set(then FALSE)
+      set(cond)
+    elseif(arg STREQUAL "THEN")
+      set(then TRUE)
+      set(title)
+    elseif(arg STREQUAL "ELSE")
+      set(then FALSE)
+      set(else TRUE)
+    else()
+      if(then)
+        if(${cond})
+          list(APPEND result "${arg}")
+          if(exclusive)
+            break()
+          endif()
+        endif()
+      elseif(else)
+        if(NOT result)
+          set(result "${arg}")
+        endif()
+      else()
+        list(APPEND cond ${arg})
+      endif()
+    endif()
+  endforeach()
+  set(${out} ${result} PARENT_SCOPE)
+endfunction()
+
+
 # remove all matching elements from the list
 macro(ocv_list_filterout lst regex)
   foreach(item ${${lst}})
@@ -949,9 +994,6 @@ endfunction()
 function(_ocv_append_target_includes target)
   if(DEFINED OCV_TARGET_INCLUDE_DIRS_${target})
     target_include_directories(${target} PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
-    if (TARGET ${target}_object)
-      target_include_directories(${target}_object PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
-    endif()
     if(OPENCV_DEPENDANT_TARGETS_${target})
       foreach(t ${OPENCV_DEPENDANT_TARGETS_${target}})
         target_include_directories(${t} PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
@@ -974,27 +1016,6 @@ function(ocv_add_library target)
   endif()
 
   add_library(${target} ${ARGN} ${cuda_objs})
-
-  # Add OBJECT library (added in cmake 2.8.8) to use in compound modules
-  if (NOT CMAKE_VERSION VERSION_LESS "2.8.8" AND OPENCV_ENABLE_OBJECT_TARGETS
-      AND NOT OPENCV_MODULE_${target}_CHILDREN
-      AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
-      AND NOT ${target} STREQUAL "opencv_ts"
-      AND (NOT BUILD_opencv_world OR NOT HAVE_CUDA)
-    )
-    set(sources ${ARGN})
-    ocv_list_filterout(sources "\\\\.(cl|inc|cu)$")
-    add_library(${target}_object OBJECT ${sources})
-    set_target_properties(${target}_object PROPERTIES
-      EXCLUDE_FROM_ALL True
-      EXCLUDE_FROM_DEFAULT_BUILD True
-      POSITION_INDEPENDENT_CODE True
-      )
-    if (ENABLE_SOLUTION_FOLDERS)
-      set_target_properties(${target}_object PROPERTIES FOLDER "object_libraries")
-    endif()
-    unset(sources)
-  endif()
 
   if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
     message(STATUS "Setting Apple target properties for ${target}")
@@ -1025,7 +1046,10 @@ endfunction()
 
 macro(ocv_get_libname var_name)
   get_filename_component(__libname "${ARGN}" NAME)
-  string(REGEX REPLACE "^lib(.+).(a|so)(.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  # libopencv_core.so.3.3 -> opencv_core
+  string(REGEX REPLACE "^lib(.+)\\.(a|so|dll)(\\.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  # MacOSX: libopencv_core.3.3.1.dylib -> opencv_core
+  string(REGEX REPLACE "^lib(.+[^.0-9])\\.([.0-9]+\\.)?dylib$" "\\1" __libname "${__libname}")
   set(${var_name} "${__libname}")
 endmacro()
 
