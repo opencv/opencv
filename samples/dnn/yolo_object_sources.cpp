@@ -6,16 +6,16 @@ http://assuntonerd.com.br
  https://www.youtube.com/watch?v=NHtRlndE2cg
 
  COMPILE:
- g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_cam.cpp -o yolo_object_cam
+ g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_sources.cpp -o yolo_object_sources
 
  RUN in webcam:
- yolo_object_cam -source=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+ yolo_object_sources -source=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
 
  RUN with image:
- yolo_object_cam -source=../data/objects_dnn_example.png  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+ yolo_object_sources -source=../data/objects_dnn_example.png  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
 
  RUN in video:
- yolo_object_cam -source=[PATH-TO-VIDEO] -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+ yolo_object_sources -source=[PATH-TO-VIDEO] -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
 
 */
 #include <fstream>
