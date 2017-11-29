@@ -1991,7 +1991,6 @@ TEST(Imgproc_GaussianBlur, borderTypes)
     src_roi_16.setTo(cv::Scalar::all(3));
 
     cv::GaussianBlur(src_roi_16, dst_16, kernelSize, 0, 0, BORDER_REPLICATE);
-
     EXPECT_EQ(20, dst_16.at<uchar>(0, 0));
 
     Mat src(3, 12, CV_8UC1, cv::Scalar::all(42)), dst;
@@ -1999,8 +1998,19 @@ TEST(Imgproc_GaussianBlur, borderTypes)
     src_roi.setTo(cv::Scalar::all(2));
 
     cv::GaussianBlur(src_roi, dst, kernelSize, 0, 0, BORDER_REPLICATE);
-
     EXPECT_EQ(27, dst.at<uchar>(0, 0));
+
+    // Test BORDER_WRAP
+    Mat src_wrap = (Mat_< uchar >( 3, 4 ) << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+    Mat src_wrap_buf, dst_wrap_buf, dst_wrap;
+    copyMakeBorder(src_wrap, src_wrap_buf, 1, 1, 1, 1, BORDER_WRAP);
+    GaussianBlur(src_wrap_buf, dst_wrap_buf, kernelSize, 0, 0, BORDER_CONSTANT);
+    GaussianBlur(src_wrap, dst_wrap, kernelSize, 0, 0, BORDER_WRAP);
+    for( size_t i=0; i < src_wrap.rows; i++ )
+        for( size_t j=0; j < src_wrap.cols; j++ )
+        {
+            EXPECT_EQ(dst_wrap.at<uchar>(i,j), dst_wrap_buf.at<uchar>(i+1,j+1));
+        }
 }
 
 TEST(Imgproc_Morphology, iterated)
@@ -2057,6 +2067,14 @@ TEST(Imgproc_Sobel, borderTypes)
     EXPECT_EQ(0, dst.at<short>(0, 0));
     Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
     EXPECT_EQ(0, dst.at<short>(0, 0));
+
+    // Test BORDER_WRAP
+    Mat src_wrap = (Mat_< uchar >( 3, 4 ) << 1,  2,  3,  4,
+                                             5,  6,  7,  8,
+                                             9, 10, 11, 12);
+    Sobel(src_wrap, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_WRAP);
+    EXPECT_EQ(-8, dst.at<short>(0,0));
+    EXPECT_EQ( 8, dst.at<short>(0,1));
 
     /// ksize <= src_roi.size()
     src = Mat(5, 5, CV_8UC1, cv::Scalar(5));
