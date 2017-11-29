@@ -33,8 +33,8 @@ const int network_height = 416;
 
 const char* about = "This sample uses You only look once (YOLO)-Detector "
                     "(https://arxiv.org/abs/1612.08242)"
-                    "to detect objects on capture device\n"; 
-                    
+                    "to detect objects on capture device\n";
+
 const char* params = "{ help           | false | print usage         }"
                      "{ cam            |       | device index        }"
                      "{ cfg            |       | model configuration }"
@@ -170,8 +170,7 @@ int main(int argc, char** argv)
         imshow("YOLO",frame);
         if (cv::waitKey(30) >= 0)
         break;
-          
     }
     cap.release();
     return 0;
-} 
+}
