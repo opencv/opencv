@@ -656,7 +656,9 @@ if(WITH_MATLAB)
   include(cmake/OpenCVFindMatlab.cmake)
 endif()
 
-include(cmake/OpenCVDetectVTK.cmake)
+if(WITH_VTK)
+  include(cmake/OpenCVDetectVTK.cmake)
+endif()
 
 if(WITH_OPENVX)
   include(cmake/FindOpenVX.cmake)
