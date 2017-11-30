@@ -2006,8 +2006,8 @@ TEST(Imgproc_GaussianBlur, borderTypes)
     copyMakeBorder(src_wrap, src_wrap_buf, 1, 1, 1, 1, BORDER_WRAP);
     GaussianBlur(src_wrap_buf, dst_wrap_buf, kernelSize, 0, 0, BORDER_CONSTANT);
     GaussianBlur(src_wrap, dst_wrap, kernelSize, 0, 0, BORDER_WRAP);
-    for( size_t i=0; i < src_wrap.rows; i++ )
-        for( size_t j=0; j < src_wrap.cols; j++ )
+    for( int i=0; i < src_wrap.rows; i++ )
+        for( int j=0; j < src_wrap.cols; j++ )
         {
             EXPECT_EQ(dst_wrap.at<uchar>(i,j), dst_wrap_buf.at<uchar>(i+1,j+1));
         }
