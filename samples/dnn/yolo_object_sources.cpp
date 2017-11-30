@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     {
         int camera = (src.empty() ? 0 : atoi(src.c_str()));
         if(!cap.open(camera))*/
-        if(!cap.open(camera))
+        if(!cap.open(0))
         {
             cout << "Capture from camera #" <<  camera << " didn't work" << endl;
             return 0;
