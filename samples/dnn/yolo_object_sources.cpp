@@ -111,17 +111,16 @@ int main(int argc, char** argv)
     bool grabFrame = true;
     VideoCapture cap;
     Mat frame;
-/*
+
     if( src.empty() || (isdigit(src[0]) && src.size() == 1) )
     {
         int camera = (src.empty() ? 0 : atoi(src.c_str()));
-        if(!cap.open(camera))*/
-        if(!cap.open(0))
+        if(!cap.open(camera))
         {
             cout << "Capture from camera #" <<  camera << " didn't work" << endl;
             return 0;
         }
-/*    }
+    }
     else if( src.size() )
     {
         frame = imread( src, 1 );
@@ -138,7 +137,7 @@ int main(int argc, char** argv)
             grabFrame = false;
         }
     }
-*/
+
     while (true)
     {
         if(grabFrame)
