@@ -477,20 +477,6 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     int dtype = CV_MAKETYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-<<<<<<< c8a4de63bd9b2ee27c2341d41daf7f044c262e95
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && scale == 1.0 && delta == 0)
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        if (tegra::scharr(src, dst, dx, dy, borderType))
-            return;
-    }
-#endif
-
-    CV_IPP_RUN(!(ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, 0, scale, delta, borderType));
-
-=======
->>>>>>> add HAL for Scharr
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
@@ -505,11 +491,11 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
             ky *= scale;
     }
 
-    CV_OCL_RUN(ocl::useOpenCL() && _dst.isUMat() && _src.dims() <= 2 &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 &&
                (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
                ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
 
-    CV_OCL_RUN(ocl::useOpenCL() && _dst.isUMat() && _src.dims() <= 2 &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 &&
                (size_t)_src.rows() > kx.total() && (size_t)_src.cols() > kx.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), 0, borderType))
 
