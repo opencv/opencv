@@ -15,7 +15,7 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
 
     *Author:* Dmitry Kurtaev
 
-    This tutorial guidelines how to run your models in OpenCV deep learning module using Halide language backend
+    This tutorial guidelines how to run your models in OpenCV deep learning module using Halide language backend.
 
 -   @subpage tutorial_dnn_halide_scheduling
 
@@ -24,3 +24,11 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
     *Author:* Dmitry Kurtaev
 
     In this tutorial we describe the ways to schedule your networks using Halide backend in OpenCV deep learning module.
+
+-   @subpage tutorial_dnn_yolo
+
+    *Compatibility:* \> OpenCV 3.3.1
+
+    *Author:* Alessandro de Oliveira Faria
+
+    In this tutorial you will learn how to use opencv_dnn module using yolo_object_detection with device capture, video file or image.
