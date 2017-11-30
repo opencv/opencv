@@ -1214,6 +1214,10 @@ public:
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
 
+        CALL_HAL(threshold, cv_hal_threshold, srcStripe.data, srcStripe.step, dstStripe.data, dstStripe.step,
+                 srcStripe.cols, srcStripe.rows, srcStripe.depth(), srcStripe.channels(),
+                 thresh, maxval, thresholdType);
+
         if (srcStripe.depth() == CV_8U)
         {
             thresh_8u( srcStripe, dstStripe, (uchar)thresh, (uchar)maxval, thresholdType );
@@ -1530,6 +1534,9 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         return;
     }
 
+    CALL_HAL(adaptiveThreshold, cv_hal_adaptiveThreshold, src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+             maxValue, method, type, blockSize, delta);
+
     Mat mean;
 
     if( src.data != dst.data )
@@ -1537,13 +1544,13 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
 
     if (method == ADAPTIVE_THRESH_MEAN_C)
         boxFilter( src, mean, src.type(), Size(blockSize, blockSize),
-                   Point(-1,-1), true, BORDER_REPLICATE );
+                   Point(-1,-1), true, BORDER_REPLICATE|BORDER_ISOLATED );
     else if (method == ADAPTIVE_THRESH_GAUSSIAN_C)
     {
         Mat srcfloat,meanfloat;
         src.convertTo(srcfloat,CV_32F);
         meanfloat=srcfloat;
-        GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE);
+        GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE|BORDER_ISOLATED);
         meanfloat.convertTo(mean, src.type());
     }
     else
