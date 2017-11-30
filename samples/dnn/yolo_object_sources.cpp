@@ -204,7 +204,7 @@ int main(int argc, char** argv)
         }
 
         imshow("YOLO",frame);
-        if(cv::waitKey((grabFrame?30:0)) >= 0) 
+        if(cv::waitKey((grabFrame?30:0)) >= 0)
         break;
     }
     cap.release();
