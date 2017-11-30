@@ -43,7 +43,7 @@ const char* about = "This sample uses You only look once (YOLO)-Detector "
                     "to detect objects on capture device, video or image file\n";
 
 const char* params = "{ help           | false | print usage          }"
-                     "{ source         |../data/objects_dnn_example.png| device, video or img }"
+                     "{ source         |       | device, video or img }"
                      "{ cfg            |       | model configuration  }"
                      "{ model          |       | model weights        }"
                      "{ labels         |       | label of the object  }"
@@ -112,11 +112,9 @@ int main(int argc, char** argv)
     VideoCapture cap;
     Mat frame;
 
-        cout<< "Camera "<<src<<" "<<src<<endl;
     if( src.empty() || (isdigit(src[0]) && src.size() == 1) )
     {
         int camera = (src.empty() ? 0 : atoi(src.c_str()));
-        cout<< "Camera "<<camera<<" "<<src<<endl;
         if(!cap.open(camera))
         {
             cout << "Capture from camera #" <<  camera << " didn't work" << endl;
