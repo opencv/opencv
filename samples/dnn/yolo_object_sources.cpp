@@ -6,10 +6,17 @@ http://assuntonerd.com.br
  https://www.youtube.com/watch?v=NHtRlndE2cg
 
  COMPILE:
- g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_cam.cpp -o yolo_object_cam
+ g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_sources.cpp -o yolo_object_sources
 
- RUN:
- yolo_object_cam -cam=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+ RUN in webcam:
+ yolo_object_sources -source=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+
+ RUN with image:
+ yolo_object_sources -source=../data/objects_dnn_example.png  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+
+ RUN in video:
+ yolo_object_sources -source=[PATH-TO-VIDEO] -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -labels=[PATH-TO-DARKNET]/data/coco.names
+
 */
 #include <fstream>
 #include <iostream>
@@ -33,14 +40,14 @@ const int network_height = 416;
 
 const char* about = "This sample uses You only look once (YOLO)-Detector "
                     "(https://arxiv.org/abs/1612.08242)"
-                    "to detect objects on capture device\n";
+                    "to detect objects on capture device, video or image file\n";
 
-const char* params = "{ help           | false | print usage         }"
-                     "{ cam            |       | device index        }"
-                     "{ cfg            |       | model configuration }"
-                     "{ model          |       | model weights       }"
-                     "{ labels         |       | label of the object }"
-                     "{ min_confidence | 0.24  | min confidence      }";
+const char* params = "{ help           | false | print usage          }"
+                     "{ source         |       | device, video or img }"
+                     "{ cfg            |       | model configuration  }"
+                     "{ model          |       | model weights        }"
+                     "{ labels         |       | label of the object  }"
+                     "{ min_confidence | 0.24  | min confidence       }";
 
 
 
@@ -83,7 +90,7 @@ int main(int argc, char** argv)
     String modelConfiguration = parser.get<string>("cfg");
     String modelBinary = parser.get<string>("model");
     String labels = parser.get<string>("labels");
-    int cam = parser.get<int>("cam");
+    String src = parser.get<string>("source");
     std::list<std::string> mylist;
     addLabels(labels,mylist);
 
@@ -101,12 +108,40 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
+    bool grabFrame = true;
+    VideoCapture cap;
     Mat frame;
-    VideoCapture cap(cam);
-    if (!cap.isOpened()) return -1;
-
+/*
+    if( src.empty() || (isdigit(src[0]) && src.size() == 1) )
+    {
+        int camera = (src.empty() ? 0 : atoi(src.c_str()));
+        if(!cap.open(camera))*/
+        if(!cap.open(camera))
+        {
+            cout << "Capture from camera #" <<  camera << " didn't work" << endl;
+            return 0;
+        }
+/*    }
+    else if( src.size() )
+    {
+        frame = imread( src, 1 );
+        if( frame.empty() )
+        {
+            if(!cap.open( src ))
+            {
+                cout << "Could not read " << src << endl;
+                return 0;
+            }
+        }
+        else
+        {
+            grabFrame = false;
+        }
+    }
+*/
     while (true)
     {
+        if(grabFrame)
         cap >> frame;
 
         //! [Resizing without keeping aspect ratio]
@@ -168,7 +203,7 @@ int main(int argc, char** argv)
         }
 
         imshow("YOLO",frame);
-        if (cv::waitKey(30) >= 0)
+        if(cv::waitKey((grabFrame?30:0)) >= 0)
         break;
     }
     cap.release();
