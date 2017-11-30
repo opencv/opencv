@@ -638,7 +638,11 @@ inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)
     enum { CV_SHIFT = 16 - imm * (sizeof(typename _Tpvec::lane_type)) };
     if (CV_SHIFT == 16)
         return a;
+#ifdef __IBMCPP__
+    return _Tpvec(vec_sld(b.val, a.val, CV_SHIFT & 15));
+#else
     return _Tpvec(vec_sld(b.val, a.val, CV_SHIFT));
+#endif
 }
 
 template<int imm, typename _Tpvec>

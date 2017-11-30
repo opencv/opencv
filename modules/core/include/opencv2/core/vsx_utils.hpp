@@ -420,6 +420,21 @@ FORCE_INLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
     { return vec_div(vec_double2_sp(1), vec_sqrt(a)); }
 #endif
 
+// vec_promote missing support for doubleword
+FORCE_INLINE(vec_dword2) vec_promote(long long a, int b)
+{
+    vec_dword2 ret = vec_dword2_z;
+    ret[b & 1] = a;
+    return ret;
+}
+
+FORCE_INLINE(vec_udword2) vec_promote(unsigned long long a, int b)
+{
+    vec_udword2 ret = vec_udword2_z;
+    ret[b & 1] = a;
+    return ret;
+}
+
 // vec_popcnt should return unsigned but clang has different thought just like gcc in vec_vpopcnt
 #define VSX_IMPL_POPCNTU(Tvec, Tvec2, ucast)   \
 FORCE_INLINE(Tvec) vec_popcntu(const Tvec2& a) \
@@ -569,6 +584,12 @@ VSX_IMPL_DIRTY_ODD(vec_udword2, vec_float4, vec_ctulo, vec_ctul)
 
     FORCE_INLINE(vec_dword2) vec_splats(int64 v)
     { return vec_splats((long long) v); }
+
+    FORCE_INLINE(vec_udword2) vec_promote(uint64 a, int b)
+    { return vec_promote((unsigned long long) a, b); }
+
+    FORCE_INLINE(vec_dword2) vec_promote(int64 a, int b)
+    { return vec_promote((long long) a, b); }
 #endif
 
 /*
