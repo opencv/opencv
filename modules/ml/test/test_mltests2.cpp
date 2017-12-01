@@ -264,7 +264,7 @@ TEST(ML_ANN, Method)
     ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
     RNG& rng = theRNG();
     rng.state = 1027401484159173092;
-    tdata->setTrainTestSplitRatio(0.8);
+    tdata->setTrainTestSplitRatio(0.7);
 
     vector<int> methodType;
     methodType.push_back(ml::ANN_MLP::BACKPROP);
