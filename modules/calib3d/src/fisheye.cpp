@@ -547,16 +547,12 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     int w = image_size.width, h = image_size.height;
     balance = std::min(std::max(balance, 0.0), 1.0);
 
-    cv::Mat points(1, 8, CV_64FC2);
+    cv::Mat points(1, 4, CV_64FC2);
     Vec2d* pptr = points.ptr<Vec2d>();
-    pptr[0] = Vec2d(0, 0);
-    pptr[1] = Vec2d(w/2, 0);
-    pptr[2] = Vec2d(w, 0);
-    pptr[3] = Vec2d(w, h/2);
-    pptr[4] = Vec2d(w, h);
-    pptr[5] = Vec2d(w/2, h);
-    pptr[6] = Vec2d(0, h);
-    pptr[7] = Vec2d(0, h/2);
+    pptr[0] = Vec2d(w/2, 0);
+    pptr[1] = Vec2d(w, h/2);
+    pptr[2] = Vec2d(w/2, h);
+    pptr[3] = Vec2d(0, h/2);
 
     fisheye::undistortPoints(points, points, K, D, R);
     cv::Scalar center_mass = mean(points);
@@ -573,23 +569,19 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     double minx = DBL_MAX, miny = DBL_MAX, maxx = -DBL_MAX, maxy = -DBL_MAX;
     for(size_t i = 0; i < points.total(); ++i)
     {
-        if(i!=1 && i!=5){
-            minx = std::min(minx, std::abs(pptr[i][0]-cn[0]));
-        }
-        if(i!=3 && i!=7){
-            miny = std::min(miny, std::abs(pptr[i][1]-cn[1]));
-        }
-        maxy = std::max(maxy, std::abs(pptr[i][1]-cn[1]));
-        maxx = std::max(maxx, std::abs(pptr[i][0]-cn[0]));
+        miny = std::min(miny, pptr[i][1]);
+        maxy = std::max(maxy, pptr[i][1]);
+        minx = std::min(minx, pptr[i][0]);
+        maxx = std::max(maxx, pptr[i][0]);
     }
 
-    double f1 = w * 0.5/(minx);
-    double f2 = w * 0.5/(maxx);
-    double f3 = h * 0.5 * aspect_ratio/(miny);
-    double f4 = h * 0.5 * aspect_ratio/(maxy);
+    double f1 = w * 0.5/(cn[0] - minx);
+    double f2 = w * 0.5/(maxx - cn[0]);
+    double f3 = h * 0.5 * aspect_ratio/(cn[1] - miny);
+    double f4 = h * 0.5 * aspect_ratio/(maxy - cn[1]);
 
-    double fmax = std::max(f1, f3);
-    double fmin = std::min(f2, f4);
+    double fmin = std::min(f1, std::min(f2, std::min(f3, f4)));
+    double fmax = std::max(f1, std::max(f2, std::max(f3, f4)));
 
     double f = balance * fmin + (1.0 - balance) * fmax;
     f *= fov_scale > 0 ? 1.0/fov_scale : 1.0;
