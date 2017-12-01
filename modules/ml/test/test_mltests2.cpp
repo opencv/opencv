@@ -261,7 +261,7 @@ TEST(ML_ANN, Method)
     Ptr<TrainData> tdata = TrainData::create(tdata2->getSamples(), ml::ROW_SAMPLE, responses);
 
     ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
-    tdata->setTrainTestSplitRatio(0.7);
+    tdata->setTrainTestSplitRatio(0.8);
 
     vector<int> methodType;
     methodType.push_back(ml::ANN_MLP::BACKPROP);
