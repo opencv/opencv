@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include <iterator>
 
 namespace cv
 {
@@ -898,6 +899,24 @@ inline bool cmpCircleIndex(const markedCircle &left, const markedCircle &right)
     return left.idx > right.idx;
 }
 
+struct EstimatedCircle
+{
+    EstimatedCircle(Vec3f _c, int _accum) :
+        c(_c), accum(_accum) {}
+    Vec3f c;
+    int accum;
+};
+
+inline bool cmpAccum(const EstimatedCircle& left, const EstimatedCircle& right)
+{
+    return left.accum > right.accum;
+}
+
+inline Vec3f GetCircle(const EstimatedCircle& est)
+{
+    return est.c;
+}
+
 class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
@@ -1106,26 +1125,67 @@ private:
     Mutex& _lock;
 };
 
+bool CheckDistance(const std::vector<Vec3f> &circles, size_t endIdx, const Vec3f& circle, float minDist2)
+{
+    bool goodPoint = true;
+    for (uint j = 0; j < endIdx; ++j)
+    {
+        Vec3f pt = circles[j];
+        float distX = circle[0] - pt[0], distY = circle[1] - pt[1];
+        if (distX * distX + distY * distY < minDist2)
+        {
+            goodPoint = false;
+            break;
+        }
+    }
+    return goodPoint;
+}
+
+void GetCircleCenters(const std::vector<int> &centers, std::vector<Vec3f> &circles, int acols, float minDist, float dr)
+{
+    size_t centerCnt = centers.size();
+    float minDist2 = minDist * minDist;
+    for (int i = 0; i < centerCnt; ++i)
+    {
+        int center = centers[i];
+        int y = center / acols;
+        int x = center - y * acols;
+        Vec3f circle = Vec3f((x + 0.5f) * dr, (y + 0.5f) * dr, 0);
+
+        bool goodPoint = CheckDistance(circles, circles.size(), circle, minDist2);
+        if (goodPoint)
+            circles.push_back(circle);
+    }
+}
+
+void RemoveOverlaps(std::vector<Vec3f>& circles, float minDist)
+{
+    float minDist2 = minDist * minDist;
+    size_t endIdx = 1;
+    for (size_t i = 1; i < circles.size(); ++i)
+    {
+        Vec3f circle = circles[i];
+        if (CheckDistance(circles, endIdx, circle, minDist2))
+        {
+            circles[endIdx] = circle;
+            ++endIdx;
+        }
+    }
+    circles.resize(endIdx);
+}
+
 class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
 {
 public:
-    HoughCircleEstimateRadiusInvoker(const Mat &_mz, int _nzSz, const std::vector<int> &_centers, std::vector<Vec3f> &_circles,
-                                     int _acols, int _circlesMax, int _accThreshold, int _minRadius, int _maxRadius,
-                                     float _minDist, float _dp, Mutex& _mutex) :
-        mz(_mz), nzSz(_nzSz), centers(_centers), circles(_circles), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
-        minRadius(_minRadius), maxRadius(_maxRadius), minDist(_minDist), dr(_dp), _lock(_mutex)
+    HoughCircleEstimateRadiusInvoker(const Mat &_mz, int _nzSz, const std::vector<int> &_centers, std::vector<EstimatedCircle> &_circlesEst,
+                                     int _acols, int _accThreshold, int _minRadius, int _maxRadius,
+                                     float _dp, Mutex& _mutex) :
+        mz(_mz), nzSz(_nzSz), centers(_centers), circlesEst(_circlesEst), acols(_acols), accThreshold(_accThreshold),
+        minRadius(_minRadius), maxRadius(_maxRadius), dr(_dp), _lock(_mutex)
     {
         minRadius2 = (float)minRadius * minRadius;
         maxRadius2 = (float)maxRadius * maxRadius;
-        minDist = std::max(dr, minDist);
-        minDist *= minDist;
         centerSz = (int)centers.size();
-
-        iMax = -1;
-        isMaxCircles = false;
-        isLastCenter = false;
-        mc.reserve(64);
-        loopIdx = std::vector<bool>(centerSz + 1, false);
 #if CV_SIMD128
         haveSIMD = hasSIMD128();
         if(haveSIMD)
@@ -1140,9 +1200,7 @@ public:
 
     void operator()(const Range &boundaries) const
     {
-        if (isMaxCircles)
-            return;
-
+        std::vector<EstimatedCircle> circlesLocal;
         const int nBinsPerDr = 10;
         int nBins = cvRound((maxRadius - minRadius)/dr*nBinsPerDr);
         std::vector<int> bins(nBins, 0);
@@ -1153,16 +1211,10 @@ public:
         bool singleThread = (boundaries == Range(0, centerSz));
         int i = boundaries.start;
 
-        if(boundaries.end == centerSz)
-            isLastCenter = true;
-
         // For each found possible center
         // Estimate radius and check support
         for(; i < boundaries.end; ++i)
         {
-            if (isMaxCircles)
-                return;
-
             int ofs = centers[i];
             int y = ofs / acols;
             int x = ofs - y * acols;
@@ -1172,269 +1224,168 @@ public:
             float rBest = 0;
             int j = 0, nzCount = 0, maxCount = 0;
 
-            // Check distance with previously detected valid circles
-            int curCircleSz = (int)circles.size();
-            bool valid = checkDistance(curCenter, 0, curCircleSz);
-
-            if (isMaxCircles)
-                return;
-
-            if(valid)
-            {
 #if CV_SIMD128
-                if(haveSIMD)
-                {
-                    v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
-                    v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
-
-                    float CV_DECL_ALIGNED(16) rbuf[4];
-                    int   CV_DECL_ALIGNED(16) mbuf[4];
-
-                    int CV_DECL_ALIGNED(16) nzx[4];
-                    int CV_DECL_ALIGNED(16) nzy[4];
-                    int nnz = 0;
-                    const int mr = maxRadius + 1;
-                    int xbegin = std::max(int(curCenter.x - mr), 0);
-                    int ybegin = std::max(int(curCenter.y - mr), 0);
-                    int xend = std::min(int(curCenter.x + mr), mz.cols);
-                    int yend = std::min(int(curCenter.y + mr), mz.rows);
-                    for(int iy = ybegin; iy < yend; ++iy)
-                    {
-                        const uchar* mi = mz.ptr<uchar>(iy);
-                        for(int ix = xbegin; ix < xend; ++ix)
-                        {
-                            if(mi[ix])
-                            {
-                                nzx[nnz] = ix;
-                                nzy[nnz] = iy;
-                                ++nnz;
-                                if(nnz == 4)
-                                {
-                                    v_int32x4 v_nzX = v_load_aligned(nzx);
-                                    v_int32x4 v_nzY = v_load_aligned(nzy);
-
-                                    v_float32x4 v_x = v_cvt_f32(v_nzX);
-                                    v_float32x4 v_y = v_cvt_f32(v_nzY);
-
-                                    v_float32x4 v_dx = v_x - v_curCenterX;
-                                    v_float32x4 v_dy = v_y - v_curCenterY;
-
-                                    v_float32x4 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
-                                    v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
-
-                                    v_store_aligned(rbuf, v_r2);
-                                    v_store_aligned(mbuf, v_reinterpret_as_s32(vmask));
-                                    for(int p = 0; p < 4; p++)
-                                    {
-                                        if(mbuf[p] < 0)
-                                        {
-                                            ddata[nzCount] = rbuf[p]; nzCount++;
-                                        }
-                                    }
-
-                                    nnz = 0;
-                                }
-                            }
-                        }
-                    }
-
-                    for(int iz = 0; iz < nnz; ++iz)
-                    {
-                        float _dx = curCenter.x - nzx[iz], _dy = curCenter.y - nzy[iz];
-                        float _r2 = _dx * _dx + _dy * _dy;
-
-                        if(minRadius2 <= _r2 && _r2 <= maxRadius2)
-                        {
-                            ddata[nzCount] = _r2;
-                            ++nzCount;
-                        }
-                    }
-                }
-                else
-#endif
-                {
-                    const int mr = maxRadius + 1;
-                    int xbegin = std::max(int(curCenter.x - mr), 0);
-                    int ybegin = std::max(int(curCenter.y - mr), 0);
-                    int xend = std::min(int(curCenter.x + mr), mz.cols);
-                    int yend = std::min(int(curCenter.y + mr), mz.rows);
-                    for(int iy = ybegin; iy < yend; ++iy)
-                    {
-                        const uchar* mi = mz.ptr<uchar>(iy);
-                        for(int ix = xbegin; ix < xend; ++ix)
-                        {
-                            if(mi[ix])
-                            {
-                                float _dx = curCenter.x - ix, _dy = curCenter.y - iy;
-                                float _r2 = _dx * _dx + _dy * _dy;
-
-                                if(minRadius2 <= _r2 && _r2 <= maxRadius2)
-                                {
-                                    ddata[nzCount] = _r2;
-                                    ++nzCount;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (isMaxCircles)
-                    return;
-
-                if(nzCount)
-                {
-                    Mat bufRange = distSqrBuf.colRange(Range(0, nzCount));
-                    sqrt(distBuf.colRange(Range(0, nzCount)), bufRange);
-
-                    std::fill(bins.begin(), bins.end(), 0);
-                    for(int k = 0; k < nzCount; k++)
-                    {
-                        int bin = std::max(0, std::min(nBins-1, cvRound((dSqrData[k] - minRadius)/dr*nBinsPerDr)));
-                        bins[bin]++;
-                    }
-
-                    if (isMaxCircles)
-                        return;
-
-                    for(j = nBins - 1; j > 0; j--)
-                    {
-                        if(bins[j])
-                        {
-                            int upbin = j;
-                            int curCount = 0;
-                            for(; j > upbin - nBinsPerDr && j >= 0; j--)
-                            {
-                                curCount += bins[j];
-                            }
-                            float rCur = (upbin + j)/2.f /nBinsPerDr * dr + minRadius;
-                            if((curCount * rBest >= maxCount * rCur) ||
-                               (rBest < FLT_EPSILON && curCount >= maxCount))
-                            {
-                                rBest = rCur;
-                                maxCount = curCount;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if(singleThread)
+            if(haveSIMD)
             {
-                // Check if the circle has enough support
-                if(maxCount > accThreshold)
-                {
-                    circles.push_back(Vec3f(curCenter.x, curCenter.y, rBest));
+                v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
+                v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
 
-                    if( circles.size() >= (unsigned int)circlesMax )
-                        return;
+                float CV_DECL_ALIGNED(16) rbuf[4];
+                int   CV_DECL_ALIGNED(16) mbuf[4];
+
+                int CV_DECL_ALIGNED(16) nzx[4];
+                int CV_DECL_ALIGNED(16) nzy[4];
+                int nnz = 0;
+                const int mr = maxRadius + 1;
+                int xbegin = std::max(int(curCenter.x - mr), 0);
+                int ybegin = std::max(int(curCenter.y - mr), 0);
+                int xend = std::min(int(curCenter.x + mr), mz.cols);
+                int yend = std::min(int(curCenter.y + mr), mz.rows);
+                for(int iy = ybegin; iy < yend; ++iy)
+                {
+                    const uchar* mi = mz.ptr<uchar>(iy);
+                    for(int ix = xbegin; ix < xend; ++ix)
+                    {
+                        if(mi[ix])
+                        {
+                            nzx[nnz] = ix;
+                            nzy[nnz] = iy;
+                            ++nnz;
+                            if(nnz == 4)
+                            {
+                                v_int32x4 v_nzX = v_load_aligned(nzx);
+                                v_int32x4 v_nzY = v_load_aligned(nzy);
+
+                                v_float32x4 v_x = v_cvt_f32(v_nzX);
+                                v_float32x4 v_y = v_cvt_f32(v_nzY);
+
+                                v_float32x4 v_dx = v_x - v_curCenterX;
+                                v_float32x4 v_dy = v_y - v_curCenterY;
+
+                                v_float32x4 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
+                                v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
+
+                                v_store_aligned(rbuf, v_r2);
+                                v_store_aligned(mbuf, v_reinterpret_as_s32(vmask));
+                                for(int p = 0; p < 4; p++)
+                                {
+                                    if(mbuf[p] < 0)
+                                    {
+                                        ddata[nzCount] = rbuf[p]; nzCount++;
+                                    }
+                                }
+
+                                nnz = 0;
+                            }
+                        }
+                    }
+                }
+
+                for(int iz = 0; iz < nnz; ++iz)
+                {
+                    float _dx = curCenter.x - nzx[iz], _dy = curCenter.y - nzy[iz];
+                    float _r2 = _dx * _dx + _dy * _dy;
+
+                    if(minRadius2 <= _r2 && _r2 <= maxRadius2)
+                    {
+                        ddata[nzCount] = _r2;
+                        ++nzCount;
+                    }
                 }
             }
             else
+#endif
             {
-                _lock.lock();
-                if(isMaxCircles)
+                const int mr = maxRadius + 1;
+                int xbegin = std::max(int(curCenter.x - mr), 0);
+                int ybegin = std::max(int(curCenter.y - mr), 0);
+                int xend = std::min(int(curCenter.x + mr), mz.cols);
+                int yend = std::min(int(curCenter.y + mr), mz.rows);
+                for(int iy = ybegin; iy < yend; ++iy)
                 {
-                    _lock.unlock();
-                    return;
-                }
-
-                loopIdx[i] = true;
-
-                if( maxCount > accThreshold )
-                {
-                    while(loopIdx[iMax + 1])
-                        ++iMax;
-
-                    // Temporary store circle, index and already checked index for block wise testing
-                    mc.push_back(markedCircle(Vec3f(curCenter.x, curCenter.y, rBest),
-                                              i, curCircleSz));
-
-                    if(i <= iMax)
+                    const uchar* mi = mz.ptr<uchar>(iy);
+                    for(int ix = xbegin; ix < xend; ++ix)
                     {
-                        std::sort(mc.begin(), mc.end(), cmpCircleIndex);
-                        for(int k = (int)mc.size() - 1; k >= 0; --k)
+                        if(mi[ix])
                         {
-                            if(mc[k].idx <= iMax)
-                            {
-                                if(checkDistance(Point2f(mc[k].c[0], mc[k].c[1]),
-                                                 mc[k].idxC, (int)circles.size()))
-                                {
-                                    circles.push_back(mc[k].c);
-                                    if(circles.size() >= (unsigned int)circlesMax)
-                                    {
-                                        isMaxCircles = true;
-                                        _lock.unlock();
-                                        return;
-                                    }
-                                }
-                                mc.pop_back();
-                            }
-                            else
-                                break;
-                        }
-                    }
-                }
+                            float _dx = curCenter.x - ix, _dy = curCenter.y - iy;
+                            float _r2 = _dx * _dx + _dy * _dy;
 
-                if(isLastCenter && !mc.empty())
-                {
-                    while(loopIdx[iMax + 1])
-                        ++iMax;
-
-                    if(iMax == centerSz - 1)
-                    {
-                        std::sort(mc.begin(), mc.end(), cmpCircleIndex);
-                        for(int k = (int)mc.size() - 1; k >= 0; --k)
-                        {
-                            if(checkDistance(Point2f(mc[k].c[0], mc[k].c[1]), mc[k].idxC, (int)circles.size()))
+                            if(minRadius2 <= _r2 && _r2 <= maxRadius2)
                             {
-                                circles.push_back(mc[k].c);
-                                if(circles.size() >= (unsigned int)circlesMax)
-                                {
-                                    isMaxCircles = true;
-                                    _lock.unlock();
-                                    return;
-                                }
+                                ddata[nzCount] = _r2;
+                                ++nzCount;
                             }
                         }
                     }
                 }
-                _lock.unlock();
+            }
+
+            if(nzCount)
+            {
+                Mat bufRange = distSqrBuf.colRange(Range(0, nzCount));
+                sqrt(distBuf.colRange(Range(0, nzCount)), bufRange);
+
+                std::fill(bins.begin(), bins.end(), 0);
+                for(int k = 0; k < nzCount; k++)
+                {
+                    int bin = std::max(0, std::min(nBins-1, cvRound((dSqrData[k] - minRadius)/dr*nBinsPerDr)));
+                    bins[bin]++;
+                }
+
+                for(j = nBins - 1; j > 0; j--)
+                {
+                    if(bins[j])
+                    {
+                        int upbin = j;
+                        int curCount = 0;
+                        for(; j > upbin - nBinsPerDr && j >= 0; j--)
+                        {
+                            curCount += bins[j];
+                        }
+                        float rCur = (upbin + j)/2.f /nBinsPerDr * dr + minRadius;
+                        if((curCount * rBest >= maxCount * rCur) ||
+                            (rBest < FLT_EPSILON && curCount >= maxCount))
+                        {
+                            rBest = rCur;
+                            maxCount = curCount;
+                        }
+                    }
+                }
+            }
+
+            // Check if the circle has enough support
+            if(maxCount > accThreshold)
+            {
+                circlesLocal.push_back(EstimatedCircle(Vec3f(curCenter.x, curCenter.y, rBest), maxCount));
+            }
+        }
+
+        if(!circlesLocal.empty())
+        {
+            std::sort(circlesLocal.begin(), circlesLocal.end(), cmpAccum);
+            if(singleThread)
+                circlesEst = circlesLocal;
+            else
+            {
+                AutoLock alock(_lock);
+                circlesEst.insert(circlesEst.end(), circlesLocal.begin(), circlesLocal.end());
             }
         }
     }
 
 private:
-    bool checkDistance(Point2f curCenter, int startIdx, int endIdx) const
-    {
-        // Check distance with previously detected circles
-        for(int j = startIdx; j < endIdx; ++j )
-        {
-            float dx = circles[j][0] - curCenter.x;
-            float dy = circles[j][1] - curCenter.y;
-
-            if( dx * dx + dy * dy < minDist )
-                return false;
-        }
-        return true;
-    }
-
     const Mat &mz;
     const std::vector<int> &centers;
-    std::vector<Vec3f> &circles;
-    int acols, circlesMax, accThreshold, minRadius, maxRadius;
-    float minDist, dr;
-
+    std::vector<EstimatedCircle> &circlesEst;
+    int acols, accThreshold, minRadius, maxRadius;
+    float dr;
 #if CV_SIMD128
     bool haveSIMD;
     v_float32x4 v_minRadius2, v_maxRadius2;
 #endif
     int nzSz, centerSz;
     float minRadius2, maxRadius2;
-
-    mutable std::vector<bool> loopIdx;
-    mutable std::vector<markedCircle> mc;
-    mutable volatile int iMax;
-    mutable volatile bool isMaxCircles, isLastCenter;
     Mutex& _lock;
 };
 
@@ -1487,48 +1438,32 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     std::vector<Vec3f> circles;
     circles.reserve(256);
 
-    if(maxCircles == 0) // TODO: Is this supposed to test `maxRadius`?
+    if(maxRadius == 0)
     {
-        minDist *= minDist;
-        for(int i = 0; i < centerCnt; ++i)
-        {
-            int _centers = centers[i];
-            int y = _centers / accum.cols;
-            int x = _centers - y * accum.cols;
-
-            bool goodPoint = true;
-            for(uint j = 0; j < circles.size(); ++j)
-            {
-                Vec3f pt = circles[j];
-                float distX = x - pt[0], distY = y - pt[1];
-                if (distX * distX + distY * distY < minDist)
-                {
-                    goodPoint = false; break;
-                }
-            }
-
-            if(goodPoint)
-                circles.push_back(Vec3f((x + 0.5f) * dp, (y + 0.5f) * dp, 0));
-        }
-
-        if(circles.size() > 0)
-        {
-            _circles.create(1, (int)circles.size(), CV_32FC3);
-            Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
-            return;
-        }
+        // Just get the circle centers
+        GetCircleCenters(centers, circles, accum.cols, minDist, dp);
     }
+    else
+    {
+        std::vector<EstimatedCircle> circlesEst;
+        // One loop iteration per thread if multithreaded.
+        parallel_for_(Range(0, centerCnt),
+            HoughCircleEstimateRadiusInvoker(mz, nzSz, centers, circlesEst, accum.cols, 
+                accThreshold, minRadius, maxRadius, dp, mtx),
+            numThreads);
 
-    // One loop iteration per thread if multithreaded.
-    parallel_for_(Range(0, centerCnt),
-                  HoughCircleEstimateRadiusInvoker(mz, nzSz, centers, circles, accum.cols, maxCircles,
-                                                   accThreshold, minRadius, maxRadius, minDist, dp, mtx),
-                  (numThreads > 1) ? centerCnt : 1);
+        // Sort by accumulator value
+        std::sort(circlesEst.begin(), circlesEst.end(), cmpAccum);
+        std::transform(circlesEst.begin(), circlesEst.end(), std::back_inserter(circles), GetCircle);
+        RemoveOverlaps(circles, minDist);
+    }
 
     if(circles.size() > 0)
     {
-        _circles.create(1, (int)circles.size(), CV_32FC3);
-        Mat(1, (int)circles.size(), CV_32FC3, &circles[0]).copyTo(_circles.getMat());
+        int numCircles = std::min(maxCircles, int(circles.size()));
+        _circles.create(1, numCircles, CV_32FC3);
+        Mat(1, numCircles, CV_32FC3, &circles[0]).copyTo(_circles.getMat());
+        return;
     }
 }
 
