@@ -1163,6 +1163,7 @@ struct Device::Impl
         maxWorkGroupSize_ = getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE);
         type_ = getProp<cl_device_type, int>(CL_DEVICE_TYPE);
         driverVersion_ = getStrProp(CL_DRIVER_VERSION);
+        addressBits_ = getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS);
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
@@ -1240,6 +1241,7 @@ struct Device::Impl
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
     int type_;
+    int addressBits_;
     int deviceVersionMajor_;
     int deviceVersionMinor_;
     String driverVersion_;
@@ -1335,7 +1337,7 @@ int Device::type() const
 { return p ? p->type_ : 0; }
 
 int Device::addressBits() const
-{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS) : 0; }
+{ return p ? p->addressBits_ : 0; }
 
 bool Device::available() const
 { return p ? p->getBoolProp(CL_DEVICE_AVAILABLE) : false; }
@@ -2062,7 +2064,10 @@ struct Context::Impl
         {
             CV_Assert(!devices.empty());
             const Device& d = devices[0];
-            prefix = d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
+            int bits = d.addressBits();
+            if (bits > 0 && bits != 64)
+                prefix = cv::format("%d-bit--", bits);
+            prefix += d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
             // sanitize chars
             for (size_t i = 0; i < prefix.size(); i++)
             {
@@ -2081,7 +2086,10 @@ struct Context::Impl
         if (prefix_base.empty())
         {
             const Device& d = devices[0];
-            prefix_base = d.vendorName() + "--" + d.name() + "--";
+            int bits = d.addressBits();
+            if (bits > 0 && bits != 64)
+                prefix_base = cv::format("%d-bit--", bits);
+            prefix_base += d.vendorName() + "--" + d.name() + "--";
             // sanitize chars
             for (size_t i = 0; i < prefix_base.size(); i++)
             {
