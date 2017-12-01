@@ -162,7 +162,8 @@ static const float SIFT_DESCR_MAG_THR = 0.2f;
 // factor used to convert floating-point descriptor to unsigned char
 static const float SIFT_INT_DESCR_FCTR = 512.f;
 
-#if 0
+#define DoG_TYPE_SHORT 0
+#if DoG_TYPE_SHORT
 // intermediate type used for DoG pyramids
 typedef short sift_wt;
 static const int SIFT_FIXPT_SCALE = 48;
@@ -198,7 +199,11 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
     {
         sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
         Mat dbl;
+#if DoG_TYPE_SHORT
+        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR_EXACT);
+#else
         resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
+#endif
         GaussianBlur(dbl, dbl, Size(), sig_diff, sig_diff);
         return dbl;
     }
