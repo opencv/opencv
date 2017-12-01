@@ -909,7 +909,30 @@ struct EstimatedCircle
 
 inline bool cmpAccum(const EstimatedCircle& left, const EstimatedCircle& right)
 {
-    return left.accum > right.accum;
+    // Compare everything so the order is completely deterministic
+    // Larger accum first
+    if (left.accum > right.accum)
+        return true;
+    else if (left.accum < right.accum)
+        return false;
+    // Larger radius first
+    else if (left.c[2] > right.c[2])
+        return true;
+    else if (left.c[2] < right.c[2])
+        return false;
+    // Smaller X
+    else if (left.c[0] < right.c[0])
+        return true;
+    else if (left.c[0] > right.c[0])
+        return false;
+    // Smaller Y
+    else if (left.c[1] < right.c[1])
+        return true;
+    else if (left.c[1] > right.c[1])
+        return false;
+    // Identical
+    else
+        return true;
 }
 
 inline Vec3f GetCircle(const EstimatedCircle& est)
