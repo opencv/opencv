@@ -248,7 +248,6 @@ TEST(ML_ANN, ActivationFunction)
 #endif
     }
 }
-
 TEST(ML_ANN, Method)
 {
     String folder = string(cvtest::TS::ptr()->get_data_path());
@@ -262,8 +261,6 @@ TEST(ML_ANN, Method)
     Ptr<TrainData> tdata = TrainData::create(tdata2->getSamples(), ml::ROW_SAMPLE, responses);
 
     ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
-    RNG& rng = theRNG();
-    rng.state = 1027401484159173092;
     tdata->setTrainTestSplitRatio(0.7);
 
     vector<int> methodType;
@@ -276,6 +273,8 @@ TEST(ML_ANN, Method)
     methodName.push_back("_anneal");
     for (size_t i = 0; i < methodType.size(); i++)
     {
+        RNG& rng = theRNG();
+        rng.state = 1027401484159173092;
         Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
         Mat_<int> layerSizes(1, 4);
         layerSizes(0, 0) = tdata->getNVars();
