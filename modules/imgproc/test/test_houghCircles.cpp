@@ -194,3 +194,28 @@ TEST(HoughCirclesTest, MaxRadiusZeroCentersOnly)
         EXPECT_EQ(0, circles[0][2]) << "Circles should have radius == 0";
     }
 }
+
+TEST(HoughCirclesTest, Beads)
+{
+    string picture_name = "imgproc/beads.png";
+    const double dp = 1.0;
+    double minDist = 10;
+    double edgeThreshold = 90;
+    double accumThreshold = 11;
+    int minRadius = 7;
+    int maxRadius = 18;
+
+    string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
+
+    vector<Vec3f> circles;
+    HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+
+    string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
+    // Debug
+    string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    highlightCircles(filename, circles, imgProc + test_case_name + ".png");
+
+    EXPECT_GT(circles.size(), 0) << "Should find at least some circles";
+}
