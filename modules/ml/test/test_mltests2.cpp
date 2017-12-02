@@ -286,7 +286,7 @@ TEST(ML_ANN, Method)
         x->setTrainMethod(methodType[i]);
         x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 10, 0.01));
         x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
-        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << methodName[i];
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with " << methodName[i];
 #ifdef GENERATE_TESTDATA
         x->save(dataname + methodName[i] + ".yml");
 #else
