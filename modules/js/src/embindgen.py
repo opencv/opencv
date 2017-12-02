@@ -125,6 +125,9 @@ video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'c
          'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
          'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
 
+dnn = {'dnn_Net': ['setInput', 'forward'],
+       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet', 'blobFromImage']}
+
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
@@ -135,7 +138,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc, objdetect, video])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn])
 
 # Features to be exported
 export_enums = False

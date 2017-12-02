@@ -63,7 +63,7 @@ class PoolingLayerImpl : public PoolingLayer
 public:
     PoolingLayerImpl(const LayerParams& params)
     {
-        type = PoolingLayer::MAX;
+        type = MAX;
         computeMaxIdx = true;
         globalPooling = false;
 
@@ -71,11 +71,11 @@ public:
         {
             String pool = params.get<String>("pool").toLowerCase();
             if (pool == "max")
-                type = PoolingLayer::MAX;
+                type = MAX;
             else if (pool == "ave")
-                type = PoolingLayer::AVE;
+                type = AVE;
             else if (pool == "stochastic")
-                type = PoolingLayer::STOCHASTIC;
+                type = STOCHASTIC;
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
             getPoolingKernelParams(params, kernel.height, kernel.width, globalPooling,
@@ -83,7 +83,7 @@ public:
         }
         else if (params.has("pooled_w") || params.has("pooled_h") || params.has("spatial_scale"))
         {
-            type = PoolingLayer::ROI;
+            type = ROI;
         }
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
@@ -115,8 +115,7 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == PoolingLayer::MAX ||
-                type == PoolingLayer::AVE && !pad.width && !pad.height);
+               (type == MAX || type == AVE && !pad.width && !pad.height);
     }
 
 #ifdef HAVE_OPENCL
@@ -200,9 +199,9 @@ public:
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
     {
-        if (type == PoolingLayer::MAX)
+        if (type == MAX)
             return initMaxPoolingHalide(inputs);
-        else if (type == PoolingLayer::AVE)
+        else if (type == AVE)
             return initAvePoolingHalide(inputs);
         else
             return Ptr<BackendNode>();
@@ -221,7 +220,7 @@ public:
         float spatialScale;
 
         PoolingInvoker() : src(0), rois(0), dst(0), mask(0), nstripes(0),
-                           computeMaxIdx(0), poolingType(PoolingLayer::MAX), spatialScale(0) {}
+                           computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask, Size kernel,
                         Size stride, Size pad, int poolingType, float spatialScale,
@@ -698,7 +697,7 @@ public:
             out.height = 1;
             out.width = 1;
         }
-        else if (type == PoolingLayer::ROI)
+        else if (type == ROI)
         {
             out.height = pooledSize.height;
             out.width = pooledSize.width;
@@ -757,6 +756,14 @@ public:
         }
         return flops;
     }
+private:
+    enum Type
+    {
+        MAX,
+        AVE,
+        STOCHASTIC,
+        ROI
+    };
 };
 
 Ptr<PoolingLayer> PoolingLayer::create(const LayerParams& params)
