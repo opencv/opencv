@@ -1688,9 +1688,9 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
 }
 
 static void 
-cvCreateHoughPlane( const CvHoughPoints_t *points, 
-                    const CvHoughParam_t *param,
-                    short *plane )
+CreateHoughPlane( const CvHoughPoints_t *points, 
+                  const CvHoughParam_t *param,
+                  short *plane )
 {
 #define CONVERT_DEG_TO_RAD(deg)  (deg * CV_PI / 180.0f)
 
@@ -1731,9 +1731,9 @@ cvCreateHoughPlane( const CvHoughPoints_t *points,
 }
 
 static void 
-cvSelectHoughPeak( const short   *plane, 
-                   int rho_size, int tha_size,
-                   CvHoughData_t *data )
+SelectHoughPeak( const short   *plane, 
+                 int rho_size, int tha_size,
+                 CvHoughData_t *data )
 {
     int rho, tha;
     short votes = 0, max_votes = 0;
@@ -1766,7 +1766,7 @@ cvSelectHoughPeak( const short   *plane,
 }
 
 static bool 
-cvCheckHoughParam( const CvHoughParam_t *param )
+CheckHoughParam( const CvHoughParam_t *param )
 {
     bool ret = false;
     if ( ((param->m_max_tha - param->m_min_tha) > 0) &&
@@ -1785,7 +1785,7 @@ cvCheckHoughParam( const CvHoughParam_t *param )
 }
 
 static void
-cvInitHoughPeak( CvHoughData_t *data )
+InitHoughPeak( CvHoughData_t *data )
 {
     CvHoughPeak_t *peak = data->m_p_peak;
     for(long cnt = 0; cnt < data->m_peak_cnt; cnt++)
@@ -1799,7 +1799,7 @@ cvInitHoughPeak( CvHoughData_t *data )
 }
 
 static bool
-cvCheckHoughData( const CvHoughData_t *data )
+CheckHoughData( const CvHoughData_t *data )
 {
     bool ret = false;
     if( data->m_peak_cnt > 0 )
@@ -1819,11 +1819,11 @@ cvHoughUsingSetOfPoints( const CvHoughPoints_t  *points,
                          const CvHoughParam_t   *param,
                          CvHoughData_t          *data )
 {
-    if (cvCheckHoughData(data))
+    if (CheckHoughData(data))
     {
-        cvInitHoughPeak(data);
+        InitHoughPeak(data);
         
-        if (cvCheckHoughParam(param))
+        if (CheckHoughParam(param))
         {
             int rho_size = (param->m_max_rho - param->m_min_rho) / param->m_rho_step;
             int tha_size = (param->m_max_tha - param->m_min_tha) / param->m_tha_step;
@@ -1832,10 +1832,10 @@ cvHoughUsingSetOfPoints( const CvHoughPoints_t  *points,
             short *plane = (short*)malloc(sizeof(short) * rho_size * tha_size);
 
             /* Create hough plane */
-            cvCreateHoughPlane(points, param, plane);
+            CreateHoughPlane(points, param, plane);
         
             /* Select hough peak */
-            cvSelectHoughPeak(plane, rho_size, tha_size, data);
+            SelectHoughPeak(plane, rho_size, tha_size, data);
         
             /* free */
             free(plane);
