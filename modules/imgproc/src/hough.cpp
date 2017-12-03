@@ -1687,4 +1687,168 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
     return circles;
 }
 
+static void 
+cvCreateHoughPlane( const CvHoughPoints_t *points, 
+                    const CvHoughParam_t *param,
+                    short *plane )
+{
+#define CONVERT_DEG_TO_RAD(deg)  (deg * CV_PI / 180.0f)
+
+    CvPoint *point = points->m_p_points;
+    long points_cnt = points->m_points_cnt;
+    double rad = 0.0f, rho = 0.0f;
+    int rho_index = 0, tha_index = 0;
+     
+    int tha_size = (param->m_max_tha - param->m_min_tha) / param->m_tha_step;
+    int rho_size = (param->m_max_rho - param->m_min_rho) / param->m_rho_step;
+ 
+    /* Create hough plane */
+    for (long cnt = 0; cnt < points_cnt; cnt++)
+    {
+        for (int tha = param->m_min_tha; tha < param->m_max_tha; tha+=param->m_tha_step)
+        {
+            /* deg -> rad */
+            rad = CONVERT_DEG_TO_RAD(tha);
+            /* Calc rho */
+			rho = point->x * cos(rad) + point->y * sin(rad);
+            /* Rho index */
+            rho_index = (int)((rho - (double)param->m_min_rho) / (double)param->m_rho_step);
+            /* Theta index */
+            tha_index = (int)((tha - (double)param->m_min_tha) / (double)param->m_tha_step);
+
+            if (((0 <= rho_index) && (rho_index < rho_size)) &&
+                ((0 <= tha_index) && (tha_index < tha_size)))
+            {
+                *(plane + (rho_index * tha_size) + tha_index) += 1;
+            }
+            else
+            {
+            }
+        }
+        /* Pointer increment */
+        point++;
+    }
+}
+
+static void 
+cvSelectHoughPeak( const short   *plane, 
+                   int rho_size, int tha_size,
+                   CvHoughData_t *data )
+{
+    int rho, tha;
+    short votes = 0, max_votes = 0;
+    long  cnt = 0;
+    CvHoughPeak_t *peak_addr = data->m_p_peak;
+
+    for(rho = 0; rho < rho_size; rho++)
+    {
+        for(tha= 0; tha < tha_size; tha++)
+        {
+            votes = *(plane + (rho * tha_size) + tha);
+
+            if(votes > max_votes)
+            {
+                /* Update hough peak */
+                (peak_addr + cnt)->m_votes   = votes;
+                (peak_addr + cnt)->m_tha_deg = tha;
+                (peak_addr + cnt)->m_rho     = rho;
+                /* Update max votes */
+                max_votes = votes;
+                cnt++;
+                if (cnt >= data->m_peak_cnt){ cnt = 0; }
+            }
+            else
+            {
+                /* Do nothing... */
+            }
+        }
+    }
+}
+
+static bool 
+cvCheckHoughParam( const CvHoughParam_t *param )
+{
+    bool ret = false;
+    if ( ((param->m_max_tha - param->m_min_tha) > 0) &&
+         ((param->m_max_rho - param->m_min_rho) > 0) &&
+         ((param->m_tha_step > 0))                   &&
+         ((param->m_rho_step > 0)) )
+    {
+        ret = true;
+    }
+    else
+    {
+        ret = false;
+    }
+
+    return ret;
+}
+
+static void
+cvInitHoughPeak( CvHoughData_t *data )
+{
+    CvHoughPeak_t *peak = data->m_p_peak;
+    for(long cnt = 0; cnt < data->m_peak_cnt; cnt++)
+    {
+        peak->m_votes = 0;
+        peak->m_tha_deg = 0;
+        peak->m_rho = 0;
+        /* Pointer increment */
+        peak++;
+    }
+}
+
+static bool
+cvCheckHoughData( const CvHoughData_t *data )
+{
+    bool ret = false;
+    if( data->m_peak_cnt > 0 )
+    {
+        ret = true;
+    }
+    else
+    {
+        ret = false;
+    }
+
+    return ret;
+}
+
+CV_IMPL void
+cvHoughUsingSetOfPoints( const CvHoughPoints_t  *points,
+                         const CvHoughParam_t   *param,
+                         CvHoughData_t          *data )
+{
+    if (cvCheckHoughData(data))
+    {
+        cvInitHoughPeak(data);
+        
+        if (cvCheckHoughParam(param))
+        {
+            int rho_size = (param->m_max_rho - param->m_min_rho) / param->m_rho_step;
+            int tha_size = (param->m_max_tha - param->m_min_tha) / param->m_tha_step;
+        
+            /* malloc */
+            short *plane = (short*)malloc(sizeof(short) * rho_size * tha_size);
+
+            /* Create hough plane */
+            cvCreateHoughPlane(points, param, plane);
+        
+            /* Select hough peak */
+            cvSelectHoughPeak(plane, rho_size, tha_size, data);
+        
+            /* free */
+            free(plane);
+        }
+        else
+        {
+            /* Do nothing... */
+        }
+    }
+    else
+    {
+        /* Do nothing... */
+    }
+}
+
 /* End of file. */
