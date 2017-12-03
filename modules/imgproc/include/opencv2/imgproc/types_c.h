@@ -613,6 +613,36 @@ enum
     CV_HOUGH_MULTI_SCALE =2,
     CV_HOUGH_GRADIENT =3
 };
+  
+/* Hough transform param */
+typedef struct {
+    /* Theta parameter */
+    int m_min_tha;
+    int m_max_tha;
+    int m_tha_step;
+    /* Rho parameter */
+    int m_min_rho;
+    int m_max_rho;
+    int m_rho_step;
+} CvHoughParam_t;
+
+/* Hough transform input */
+typedef struct {
+    CvPoint *m_p_points;
+    long    m_points_cnt;
+} CvHoughPoints_t;
+
+/* Hough peak */
+typedef struct {
+	int   m_votes;		
+	int   m_tha_deg;    
+	int   m_rho;
+} CvHoughPeak_t;
+
+typedef struct {
+    CvHoughPeak_t   *m_p_peak;
+    long             m_peak_cnt;
+}CvHoughData_t;
 
 
 /* Fast search data structures  */
