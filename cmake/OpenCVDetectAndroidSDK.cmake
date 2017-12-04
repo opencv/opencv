@@ -13,6 +13,15 @@ else()
   set(ANDROID_SDK_OS linux)
 endif()
 
+find_host_program(AVDMANAGER_EXECUTABLE
+  NAMES avdmanager
+  PATH_SUFFIXES tools/bin
+    PATHS
+      ENV ANDROID_SDK
+    DOC "Android AVD Manager location"
+    NO_DEFAULT_PATH
+    )
+
 #find android SDK: search in ANDROID_SDK first
 find_host_program(ANDROID_EXECUTABLE
   NAMES android.bat android
@@ -37,12 +46,16 @@ find_host_program(ANDROID_EXECUTABLE
   DOC "Android SDK location"
   )
 
-if(ANDROID_EXECUTABLE)
+if(ANDROID_EXECUTABLE OR AVDMANAGER_EXECUTABLE)
   if(NOT ANDROID_SDK_DETECT_QUIET)
     message(STATUS "Found android tool: ${ANDROID_EXECUTABLE}")
+    message(STATUS "Found avdmanager: ${AVDMANAGER_EXECUTABLE}")
   endif()
 
   get_filename_component(ANDROID_SDK_TOOLS_PATH "${ANDROID_EXECUTABLE}" PATH)
+  if (AVDMANAGER_EXECUTABLE)
+    set(ANDROID_EXECUTABLE "ANDROID_EXECUTABLE-NOTFOUND")
+  endif()
 
   #read source.properties
   if(EXISTS "${ANDROID_SDK_TOOLS_PATH}/source.properties")
@@ -88,7 +101,24 @@ if(ANDROID_EXECUTABLE)
   set(ANDROID_PROJECT_FILES ${ANDROID_LIB_PROJECT_FILES})
 
   #get installed targets
-  if(ANDROID_TOOLS_Pkg_Revision GREATER 11)
+  if(AVDMANAGER_EXECUTABLE)
+    #Compact list doesn't work prints "Fetch remote repository..." before the actual contents.
+    execute_process(COMMAND ${AVDMANAGER_EXECUTABLE} list target
+      RESULT_VARIABLE ANDROID_PROCESS
+      OUTPUT_VARIABLE ANDROID_SDK_TARGETS_FULL
+      ERROR_VARIABLE ANDROID_PROCESS_ERRORS
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+    string(REGEX MATCHALL "(^|\n)id: [0-9]+ or \"([^\n]+[0-9+])\"(\n|$)" ANDROID_SDK_TARGETS_FULL "${ANDROID_SDK_TARGETS_FULL}")
+
+    SET(ANDROID_SDK_TARGETS "")
+    if(ANDROID_PROCESS EQUAL 0)
+      foreach(line ${ANDROID_SDK_TARGETS_FULL})
+        string(REGEX REPLACE "(^|\n)id: [0-9]+ or \"([^\n]+[0-9+])\"(\n|$)" "\\2" line "${line}")
+        list(APPEND ANDROID_SDK_TARGETS "${line}")
+      endforeach()
+    endif()
+  elseif(ANDROID_TOOLS_Pkg_Revision GREATER 11)
     execute_process(COMMAND ${ANDROID_EXECUTABLE} list target -c
       RESULT_VARIABLE ANDROID_PROCESS
       OUTPUT_VARIABLE ANDROID_SDK_TARGETS
@@ -127,7 +157,11 @@ if(ANDROID_EXECUTABLE)
   if(ANDROID_SDK_TARGETS)
     set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
   endif()
-endif(ANDROID_EXECUTABLE)
+
+  if(NOT ANDROID_SDK_DETECT_QUIET)
+    message(STATUS "Detected Android SDK targets: ${ANDROID_SDK_TARGETS}")
+  endif()
+endif(ANDROID_EXECUTABLE OR AVDMANAGER_EXECUTABLE)
 
 # finds minimal installed SDK target compatible with provided names or API levels
 # usage:
