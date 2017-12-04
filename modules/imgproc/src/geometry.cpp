@@ -132,8 +132,8 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
                 continue;
             }
 
-            long long dist = static_cast<long long>(ip.y - v0.y)*(v.x - v0.x)
-                           - static_cast<long long>(ip.x - v0.x)*(v.y - v0.y);
+            int64 dist = static_cast<int64>(ip.y - v0.y)*(v.x - v0.x)
+                       - static_cast<int64>(ip.x - v0.x)*(v.y - v0.y);
             if( dist == 0 )
                 return 0;
             if( v.y < v0.y )
