@@ -173,3 +173,11 @@ save(net_spatial_zero_padding, torch.rand(4, 2, 3), 'net_spatial_zero_padding')
 local net_spatial_reflection_padding = nn.Sequential()
 net_spatial_reflection_padding:add(nn.SpatialReflectionPadding(5, 5, 5, 5));
 save(net_spatial_reflection_padding, torch.rand(1, 3, 7, 8), 'net_spatial_reflection_padding')
+
+local net_non_spatial = nn.Sequential()
+net_non_spatial:add(nn.Dropout(0.3))           -- Dropout that replaces to an identity
+net_non_spatial:add(nn.Linear(6, 5))
+net_non_spatial:add(nn.Dropout(0.6, true))     -- Dropout that replaces to scale
+net_non_spatial:add(nn.BatchNormalization(5))  -- 2D batch normalization
+net_non_spatial:evaluate()
+save(net_non_spatial, torch.rand(1, 6), 'net_non_spatial')
