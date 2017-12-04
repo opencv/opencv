@@ -898,6 +898,7 @@ public:
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )
     {
+        rng.state = 0; // JUST FOR TEST
         int i, j, k;
         double prev_E = DBL_MAX*0.5, E = 0;
         int itype = inputs.type(), otype = outputs.type();
