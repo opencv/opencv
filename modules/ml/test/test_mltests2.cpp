@@ -297,7 +297,7 @@ TEST(ML_ANN, Method)
         x->predict(testSamples, rx);
         y->predict(testSamples, ry);
         double n = cvtest::norm(rx, ry, NORM_INF);
-        EXPECT_LT(n,FLT_EPSILON) << "Predict are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i];
+        EXPECT_LT(n,FLT_EPSILON) << "Predict are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i]<< " " << cvtest::norm(rx, ry, NORM_L1);;
 #endif
     }
 }
