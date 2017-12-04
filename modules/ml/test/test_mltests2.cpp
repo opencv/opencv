@@ -248,6 +248,7 @@ TEST(ML_ANN, ActivationFunction)
 #endif
     }
 }
+//#define GENERATE_TESTDATA
 TEST(ML_ANN, Method)
 {
     String folder = string(cvtest::TS::ptr()->get_data_path());
@@ -261,32 +262,42 @@ TEST(ML_ANN, Method)
     Ptr<TrainData> tdata = TrainData::create(tdata2->getSamples(), ml::ROW_SAMPLE, responses);
 
     ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 1027401484159173092;
     tdata->setTrainTestSplitRatio(0.8);
 
     vector<int> methodType;
+    methodType.push_back(ml::ANN_MLP::BACKPROP);
     methodType.push_back(ml::ANN_MLP::RPROP);
     methodType.push_back(ml::ANN_MLP::ANNEAL);
-    methodType.push_back(ml::ANN_MLP::BACKPROP);
     vector<String> methodName;
+    methodName.push_back("_backprop");
     methodName.push_back("_rprop");
     methodName.push_back("_anneal");
-    methodName.push_back("_backprop");
+#ifdef GENERATE_TESTDATA
+    rng.state = 1027401484159173092;
+    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP::create();
+    Mat_<int> layerSizesXX(1, 4);
+    layerSizesXX(0, 0) = tdata->getNVars();
+    layerSizesXX(0, 1) = 100;
+    layerSizesXX(0, 2) = 100;
+    layerSizesXX(0, 3) = tdata->getResponses().cols;
+    xx->setLayerSizes(layerSizesXX);
+    xx->setActivationFunction(ml::ANN_MLP::SIGMOID_SYM);
+    xx->setTrainMethod(ml::ANN_MLP::RPROP);
+    xx->setTermCriteria(TermCriteria(TermCriteria::COUNT, 1, 0.01));
+    xx->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
+    xx->save(dataname + "_init_weight.yml");
+#endif
     for (size_t i = 0; i < methodType.size(); i++)
     {
-        RNG& rng = theRNG();
         rng.state = 1027401484159173092;
-        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
-        Mat_<int> layerSizes(1, 4);
-        layerSizes(0, 0) = tdata->getNVars();
-        layerSizes(0, 1) = 100;
-        layerSizes(0, 2) = 100;
-        layerSizes(0, 3) = tdata->getResponses().cols;
-        x->setLayerSizes(layerSizes);
-        x->setActivationFunction(ml::ANN_MLP::SIGMOID_SYM);
+        Ptr<ml::ANN_MLP> x = Algorithm::load<ANN_MLP>(dataname + "_init_weight.yml");
+        //        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
         x->setTrainMethod(methodType[i]);
         x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 10, 0.01));
-        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
-        ASSERT_TRUE(x->isTrained()) << "Could not train networks with " << methodName[i];
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE + ml::ANN_MLP::UPDATE_WEIGHTS);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << methodName[i];
 #ifdef GENERATE_TESTDATA
         x->save(dataname + methodName[i] + ".yml");
 #else
@@ -300,13 +311,13 @@ TEST(ML_ANN, Method)
             ry = y->getWeights(j);
             double n = cvtest::norm(rx, ry, NORM_INF);
             EXPECT_LT(n, FLT_EPSILON) << "Weights are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i] << " layer : " << j;
-        }
+    }
         x->predict(testSamples, rx);
         y->predict(testSamples, ry);
         double n = cvtest::norm(rx, ry, NORM_INF);
-        EXPECT_LT(n,FLT_EPSILON) << "Predict are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i]<< " " << cvtest::norm(rx, ry, NORM_L1);;
+        EXPECT_LT(n, FLT_EPSILON) << "Predict are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i];
 #endif
-    }
+}
 }
 
 // 6. dtree
