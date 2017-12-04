@@ -264,13 +264,13 @@ TEST(ML_ANN, Method)
     tdata->setTrainTestSplitRatio(0.8);
 
     vector<int> methodType;
-    methodType.push_back(ml::ANN_MLP::BACKPROP);
     methodType.push_back(ml::ANN_MLP::RPROP);
     methodType.push_back(ml::ANN_MLP::ANNEAL);
+    methodType.push_back(ml::ANN_MLP::BACKPROP);
     vector<String> methodName;
-    methodName.push_back("_backprop");
     methodName.push_back("_rprop");
     methodName.push_back("_anneal");
+    methodName.push_back("_backprop");
     for (size_t i = 0; i < methodType.size(); i++)
     {
         RNG& rng = theRNG();
@@ -294,6 +294,13 @@ TEST(ML_ANN, Method)
         ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + methodName[i] + ".yml";
         Mat testSamples = tdata->getTestSamples();
         Mat rx, ry, dst;
+        for (int j = 0; j < 4; j++)
+        {
+            rx = x->getWeights(j);
+            ry = y->getWeights(j);
+            double n = cvtest::norm(rx, ry, NORM_INF);
+            EXPECT_LT(n, FLT_EPSILON) << "Weights are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i] << " layer : " << j;
+        }
         x->predict(testSamples, rx);
         y->predict(testSamples, ry);
         double n = cvtest::norm(rx, ry, NORM_INF);
