@@ -4939,7 +4939,7 @@ public:
                 CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
                     srcrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0));
             }
-#if __APPLE__
+#ifdef __APPLE__
             else
             {
                 const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
