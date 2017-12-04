@@ -488,11 +488,11 @@ TEST(Imgproc_FindContours, border)
 TEST(Imgproc_PointPolygonTest, regression_10222)
 {
     vector<Point> contour;
-    contour.emplace_back(0, 0);
-    contour.emplace_back(0, 100000);
-    contour.emplace_back(100000, 100000);
-    contour.emplace_back(100000, 50000);
-    contour.emplace_back(100000, 0);
+    contour.push_back(Point(0, 0));
+    contour.push_back(Point(0, 100000));
+    contour.push_back(Point(100000, 100000));
+    contour.push_back(Point(100000, 50000));
+    contour.push_back(Point(100000, 0));
 
     const Point2f point(40000, 40000);
     const double result = cv::pointPolygonTest(contour, point, false);
