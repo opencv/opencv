@@ -1403,6 +1403,7 @@ void morph(int op, int src_type, int dst_type,
 
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
+#ifndef __APPLE__
 static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor,
                                int op, int actual_op = -1, InputArray _extraMat = noArray())
 {
@@ -1628,16 +1629,15 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
     }
 
     return kernel.run(2, globalsize, NULL, false);
-
 }
+#endif
 
 static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                         Point anchor, int iterations, int op, int borderType,
                         const Scalar &, int actual_op = -1, InputArray _extraMat = noArray())
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type),
-            cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3, 3), ssize = _src.size();
 
@@ -1665,6 +1665,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     }
 
 #ifndef __APPLE__
+    int esz = CV_ELEM_SIZE(type);
     // try to use OpenCL kernel adopted for small morph kernel
     if (dev.isIntel() &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
