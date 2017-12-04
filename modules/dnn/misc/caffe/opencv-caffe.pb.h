@@ -87,6 +87,7 @@ class PoolingParameter;
 class PowerParameter;
 class PriorBoxParameter;
 class PythonParameter;
+class ROIPoolingParameter;
 class ReLUParameter;
 class RecurrentParameter;
 class ReductionParameter;
@@ -4182,6 +4183,15 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   ::opencv_caffe::ReshapeParameter* release_reshape_param();
   void set_allocated_reshape_param(::opencv_caffe::ReshapeParameter* reshape_param);
 
+  // optional .opencv_caffe.ROIPoolingParameter roi_pooling_param = 8266711;
+  bool has_roi_pooling_param() const;
+  void clear_roi_pooling_param();
+  static const int kRoiPoolingParamFieldNumber = 8266711;
+  const ::opencv_caffe::ROIPoolingParameter& roi_pooling_param() const;
+  ::opencv_caffe::ROIPoolingParameter* mutable_roi_pooling_param();
+  ::opencv_caffe::ROIPoolingParameter* release_roi_pooling_param();
+  void set_allocated_roi_pooling_param(::opencv_caffe::ROIPoolingParameter* roi_pooling_param);
+
   // optional .opencv_caffe.ScaleParameter scale_param = 142;
   bool has_scale_param() const;
   void clear_scale_param();
@@ -4355,6 +4365,8 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   inline void clear_has_relu_param();
   inline void set_has_reshape_param();
   inline void clear_has_reshape_param();
+  inline void set_has_roi_pooling_param();
+  inline void clear_has_roi_pooling_param();
   inline void set_has_scale_param();
   inline void clear_has_scale_param();
   inline void set_has_sigmoid_param();
@@ -4428,6 +4440,7 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   ::opencv_caffe::ReductionParameter* reduction_param_;
   ::opencv_caffe::ReLUParameter* relu_param_;
   ::opencv_caffe::ReshapeParameter* reshape_param_;
+  ::opencv_caffe::ROIPoolingParameter* roi_pooling_param_;
   ::opencv_caffe::ScaleParameter* scale_param_;
   ::opencv_caffe::SigmoidParameter* sigmoid_param_;
   ::opencv_caffe::SoftmaxParameter* softmax_param_;
@@ -12783,6 +12796,124 @@ class NormalizedBBox : public ::google::protobuf::Message /* @@protoc_insertion_
 };
 extern ::google::protobuf::internal::ExplicitlyConstructed<NormalizedBBox> NormalizedBBox_default_instance_;
 
+// -------------------------------------------------------------------
+
+class ROIPoolingParameter : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_caffe.ROIPoolingParameter) */ {
+ public:
+  ROIPoolingParameter();
+  virtual ~ROIPoolingParameter();
+
+  ROIPoolingParameter(const ROIPoolingParameter& from);
+
+  inline ROIPoolingParameter& operator=(const ROIPoolingParameter& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _internal_metadata_.unknown_fields();
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return _internal_metadata_.mutable_unknown_fields();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ROIPoolingParameter& default_instance();
+
+  static const ROIPoolingParameter* internal_default_instance();
+
+  void Swap(ROIPoolingParameter* other);
+
+  // implements Message ----------------------------------------------
+
+  inline ROIPoolingParameter* New() const { return New(NULL); }
+
+  ROIPoolingParameter* New(::google::protobuf::Arena* arena) const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const ROIPoolingParameter& from);
+  void MergeFrom(const ROIPoolingParameter& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  size_t ByteSizeLong() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
+      bool deterministic, ::google::protobuf::uint8* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
+    return InternalSerializeWithCachedSizesToArray(false, output);
+  }
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(ROIPoolingParameter* other);
+  void UnsafeMergeFrom(const ROIPoolingParameter& from);
+  private:
+  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
+    return _internal_metadata_.arena();
+  }
+  inline void* MaybeArenaPtr() const {
+    return _internal_metadata_.raw_arena_ptr();
+  }
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // optional uint32 pooled_h = 1 [default = 0];
+  bool has_pooled_h() const;
+  void clear_pooled_h();
+  static const int kPooledHFieldNumber = 1;
+  ::google::protobuf::uint32 pooled_h() const;
+  void set_pooled_h(::google::protobuf::uint32 value);
+
+  // optional uint32 pooled_w = 2 [default = 0];
+  bool has_pooled_w() const;
+  void clear_pooled_w();
+  static const int kPooledWFieldNumber = 2;
+  ::google::protobuf::uint32 pooled_w() const;
+  void set_pooled_w(::google::protobuf::uint32 value);
+
+  // optional float spatial_scale = 3 [default = 1];
+  bool has_spatial_scale() const;
+  void clear_spatial_scale();
+  static const int kSpatialScaleFieldNumber = 3;
+  float spatial_scale() const;
+  void set_spatial_scale(float value);
+
+  // @@protoc_insertion_point(class_scope:opencv_caffe.ROIPoolingParameter)
+ private:
+  inline void set_has_pooled_h();
+  inline void clear_has_pooled_h();
+  inline void set_has_pooled_w();
+  inline void clear_has_pooled_w();
+  inline void set_has_spatial_scale();
+  inline void clear_has_spatial_scale();
+
+  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
+  ::google::protobuf::internal::HasBits<1> _has_bits_;
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 pooled_h_;
+  ::google::protobuf::uint32 pooled_w_;
+  float spatial_scale_;
+  friend void  protobuf_InitDefaults_opencv_2dcaffe_2eproto_impl();
+  friend void  protobuf_AddDesc_opencv_2dcaffe_2eproto_impl();
+  friend void protobuf_AssignDesc_opencv_2dcaffe_2eproto();
+  friend void protobuf_ShutdownFile_opencv_2dcaffe_2eproto();
+
+  void InitAsDefaultInstance();
+};
+extern ::google::protobuf::internal::ExplicitlyConstructed<ROIPoolingParameter> ROIPoolingParameter_default_instance_;
+
 // ===================================================================
 
 
@@ -19015,15 +19146,60 @@ inline void LayerParameter::set_allocated_reshape_param(::opencv_caffe::ReshapeP
   // @@protoc_insertion_point(field_set_allocated:opencv_caffe.LayerParameter.reshape_param)
 }
 
-// optional .opencv_caffe.ScaleParameter scale_param = 142;
-inline bool LayerParameter::has_scale_param() const {
+// optional .opencv_caffe.ROIPoolingParameter roi_pooling_param = 8266711;
+inline bool LayerParameter::has_roi_pooling_param() const {
   return (_has_bits_[1] & 0x00200000u) != 0;
 }
-inline void LayerParameter::set_has_scale_param() {
+inline void LayerParameter::set_has_roi_pooling_param() {
   _has_bits_[1] |= 0x00200000u;
 }
-inline void LayerParameter::clear_has_scale_param() {
+inline void LayerParameter::clear_has_roi_pooling_param() {
   _has_bits_[1] &= ~0x00200000u;
+}
+inline void LayerParameter::clear_roi_pooling_param() {
+  if (roi_pooling_param_ != NULL) roi_pooling_param_->::opencv_caffe::ROIPoolingParameter::Clear();
+  clear_has_roi_pooling_param();
+}
+inline const ::opencv_caffe::ROIPoolingParameter& LayerParameter::roi_pooling_param() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.LayerParameter.roi_pooling_param)
+  return roi_pooling_param_ != NULL ? *roi_pooling_param_
+                         : *::opencv_caffe::ROIPoolingParameter::internal_default_instance();
+}
+inline ::opencv_caffe::ROIPoolingParameter* LayerParameter::mutable_roi_pooling_param() {
+  set_has_roi_pooling_param();
+  if (roi_pooling_param_ == NULL) {
+    roi_pooling_param_ = new ::opencv_caffe::ROIPoolingParameter;
+  }
+  // @@protoc_insertion_point(field_mutable:opencv_caffe.LayerParameter.roi_pooling_param)
+  return roi_pooling_param_;
+}
+inline ::opencv_caffe::ROIPoolingParameter* LayerParameter::release_roi_pooling_param() {
+  // @@protoc_insertion_point(field_release:opencv_caffe.LayerParameter.roi_pooling_param)
+  clear_has_roi_pooling_param();
+  ::opencv_caffe::ROIPoolingParameter* temp = roi_pooling_param_;
+  roi_pooling_param_ = NULL;
+  return temp;
+}
+inline void LayerParameter::set_allocated_roi_pooling_param(::opencv_caffe::ROIPoolingParameter* roi_pooling_param) {
+  delete roi_pooling_param_;
+  roi_pooling_param_ = roi_pooling_param;
+  if (roi_pooling_param) {
+    set_has_roi_pooling_param();
+  } else {
+    clear_has_roi_pooling_param();
+  }
+  // @@protoc_insertion_point(field_set_allocated:opencv_caffe.LayerParameter.roi_pooling_param)
+}
+
+// optional .opencv_caffe.ScaleParameter scale_param = 142;
+inline bool LayerParameter::has_scale_param() const {
+  return (_has_bits_[1] & 0x00400000u) != 0;
+}
+inline void LayerParameter::set_has_scale_param() {
+  _has_bits_[1] |= 0x00400000u;
+}
+inline void LayerParameter::clear_has_scale_param() {
+  _has_bits_[1] &= ~0x00400000u;
 }
 inline void LayerParameter::clear_scale_param() {
   if (scale_param_ != NULL) scale_param_->::opencv_caffe::ScaleParameter::Clear();
@@ -19062,13 +19238,13 @@ inline void LayerParameter::set_allocated_scale_param(::opencv_caffe::ScaleParam
 
 // optional .opencv_caffe.SigmoidParameter sigmoid_param = 124;
 inline bool LayerParameter::has_sigmoid_param() const {
-  return (_has_bits_[1] & 0x00400000u) != 0;
+  return (_has_bits_[1] & 0x00800000u) != 0;
 }
 inline void LayerParameter::set_has_sigmoid_param() {
-  _has_bits_[1] |= 0x00400000u;
+  _has_bits_[1] |= 0x00800000u;
 }
 inline void LayerParameter::clear_has_sigmoid_param() {
-  _has_bits_[1] &= ~0x00400000u;
+  _has_bits_[1] &= ~0x00800000u;
 }
 inline void LayerParameter::clear_sigmoid_param() {
   if (sigmoid_param_ != NULL) sigmoid_param_->::opencv_caffe::SigmoidParameter::Clear();
@@ -19107,13 +19283,13 @@ inline void LayerParameter::set_allocated_sigmoid_param(::opencv_caffe::SigmoidP
 
 // optional .opencv_caffe.SoftmaxParameter softmax_param = 125;
 inline bool LayerParameter::has_softmax_param() const {
-  return (_has_bits_[1] & 0x00800000u) != 0;
+  return (_has_bits_[1] & 0x01000000u) != 0;
 }
 inline void LayerParameter::set_has_softmax_param() {
-  _has_bits_[1] |= 0x00800000u;
+  _has_bits_[1] |= 0x01000000u;
 }
 inline void LayerParameter::clear_has_softmax_param() {
-  _has_bits_[1] &= ~0x00800000u;
+  _has_bits_[1] &= ~0x01000000u;
 }
 inline void LayerParameter::clear_softmax_param() {
   if (softmax_param_ != NULL) softmax_param_->::opencv_caffe::SoftmaxParameter::Clear();
@@ -19152,13 +19328,13 @@ inline void LayerParameter::set_allocated_softmax_param(::opencv_caffe::SoftmaxP
 
 // optional .opencv_caffe.SPPParameter spp_param = 132;
 inline bool LayerParameter::has_spp_param() const {
-  return (_has_bits_[1] & 0x01000000u) != 0;
+  return (_has_bits_[1] & 0x02000000u) != 0;
 }
 inline void LayerParameter::set_has_spp_param() {
-  _has_bits_[1] |= 0x01000000u;
+  _has_bits_[1] |= 0x02000000u;
 }
 inline void LayerParameter::clear_has_spp_param() {
-  _has_bits_[1] &= ~0x01000000u;
+  _has_bits_[1] &= ~0x02000000u;
 }
 inline void LayerParameter::clear_spp_param() {
   if (spp_param_ != NULL) spp_param_->::opencv_caffe::SPPParameter::Clear();
@@ -19197,13 +19373,13 @@ inline void LayerParameter::set_allocated_spp_param(::opencv_caffe::SPPParameter
 
 // optional .opencv_caffe.SliceParameter slice_param = 126;
 inline bool LayerParameter::has_slice_param() const {
-  return (_has_bits_[1] & 0x02000000u) != 0;
+  return (_has_bits_[1] & 0x04000000u) != 0;
 }
 inline void LayerParameter::set_has_slice_param() {
-  _has_bits_[1] |= 0x02000000u;
+  _has_bits_[1] |= 0x04000000u;
 }
 inline void LayerParameter::clear_has_slice_param() {
-  _has_bits_[1] &= ~0x02000000u;
+  _has_bits_[1] &= ~0x04000000u;
 }
 inline void LayerParameter::clear_slice_param() {
   if (slice_param_ != NULL) slice_param_->::opencv_caffe::SliceParameter::Clear();
@@ -19242,13 +19418,13 @@ inline void LayerParameter::set_allocated_slice_param(::opencv_caffe::SliceParam
 
 // optional .opencv_caffe.TanHParameter tanh_param = 127;
 inline bool LayerParameter::has_tanh_param() const {
-  return (_has_bits_[1] & 0x04000000u) != 0;
+  return (_has_bits_[1] & 0x08000000u) != 0;
 }
 inline void LayerParameter::set_has_tanh_param() {
-  _has_bits_[1] |= 0x04000000u;
+  _has_bits_[1] |= 0x08000000u;
 }
 inline void LayerParameter::clear_has_tanh_param() {
-  _has_bits_[1] &= ~0x04000000u;
+  _has_bits_[1] &= ~0x08000000u;
 }
 inline void LayerParameter::clear_tanh_param() {
   if (tanh_param_ != NULL) tanh_param_->::opencv_caffe::TanHParameter::Clear();
@@ -19287,13 +19463,13 @@ inline void LayerParameter::set_allocated_tanh_param(::opencv_caffe::TanHParamet
 
 // optional .opencv_caffe.ThresholdParameter threshold_param = 128;
 inline bool LayerParameter::has_threshold_param() const {
-  return (_has_bits_[1] & 0x08000000u) != 0;
+  return (_has_bits_[1] & 0x10000000u) != 0;
 }
 inline void LayerParameter::set_has_threshold_param() {
-  _has_bits_[1] |= 0x08000000u;
+  _has_bits_[1] |= 0x10000000u;
 }
 inline void LayerParameter::clear_has_threshold_param() {
-  _has_bits_[1] &= ~0x08000000u;
+  _has_bits_[1] &= ~0x10000000u;
 }
 inline void LayerParameter::clear_threshold_param() {
   if (threshold_param_ != NULL) threshold_param_->::opencv_caffe::ThresholdParameter::Clear();
@@ -19332,13 +19508,13 @@ inline void LayerParameter::set_allocated_threshold_param(::opencv_caffe::Thresh
 
 // optional .opencv_caffe.TileParameter tile_param = 138;
 inline bool LayerParameter::has_tile_param() const {
-  return (_has_bits_[1] & 0x10000000u) != 0;
+  return (_has_bits_[1] & 0x20000000u) != 0;
 }
 inline void LayerParameter::set_has_tile_param() {
-  _has_bits_[1] |= 0x10000000u;
+  _has_bits_[1] |= 0x20000000u;
 }
 inline void LayerParameter::clear_has_tile_param() {
-  _has_bits_[1] &= ~0x10000000u;
+  _has_bits_[1] &= ~0x20000000u;
 }
 inline void LayerParameter::clear_tile_param() {
   if (tile_param_ != NULL) tile_param_->::opencv_caffe::TileParameter::Clear();
@@ -19377,13 +19553,13 @@ inline void LayerParameter::set_allocated_tile_param(::opencv_caffe::TileParamet
 
 // optional .opencv_caffe.WindowDataParameter window_data_param = 129;
 inline bool LayerParameter::has_window_data_param() const {
-  return (_has_bits_[1] & 0x20000000u) != 0;
+  return (_has_bits_[1] & 0x40000000u) != 0;
 }
 inline void LayerParameter::set_has_window_data_param() {
-  _has_bits_[1] |= 0x20000000u;
+  _has_bits_[1] |= 0x40000000u;
 }
 inline void LayerParameter::clear_has_window_data_param() {
-  _has_bits_[1] &= ~0x20000000u;
+  _has_bits_[1] &= ~0x40000000u;
 }
 inline void LayerParameter::clear_window_data_param() {
   if (window_data_param_ != NULL) window_data_param_->::opencv_caffe::WindowDataParameter::Clear();
@@ -28660,7 +28836,88 @@ inline void NormalizedBBox::set_size(float value) {
 inline const NormalizedBBox* NormalizedBBox::internal_default_instance() {
   return &NormalizedBBox_default_instance_.get();
 }
+// -------------------------------------------------------------------
+
+// ROIPoolingParameter
+
+// optional uint32 pooled_h = 1 [default = 0];
+inline bool ROIPoolingParameter::has_pooled_h() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void ROIPoolingParameter::set_has_pooled_h() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void ROIPoolingParameter::clear_has_pooled_h() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void ROIPoolingParameter::clear_pooled_h() {
+  pooled_h_ = 0u;
+  clear_has_pooled_h();
+}
+inline ::google::protobuf::uint32 ROIPoolingParameter::pooled_h() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.ROIPoolingParameter.pooled_h)
+  return pooled_h_;
+}
+inline void ROIPoolingParameter::set_pooled_h(::google::protobuf::uint32 value) {
+  set_has_pooled_h();
+  pooled_h_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.ROIPoolingParameter.pooled_h)
+}
+
+// optional uint32 pooled_w = 2 [default = 0];
+inline bool ROIPoolingParameter::has_pooled_w() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void ROIPoolingParameter::set_has_pooled_w() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void ROIPoolingParameter::clear_has_pooled_w() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void ROIPoolingParameter::clear_pooled_w() {
+  pooled_w_ = 0u;
+  clear_has_pooled_w();
+}
+inline ::google::protobuf::uint32 ROIPoolingParameter::pooled_w() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.ROIPoolingParameter.pooled_w)
+  return pooled_w_;
+}
+inline void ROIPoolingParameter::set_pooled_w(::google::protobuf::uint32 value) {
+  set_has_pooled_w();
+  pooled_w_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.ROIPoolingParameter.pooled_w)
+}
+
+// optional float spatial_scale = 3 [default = 1];
+inline bool ROIPoolingParameter::has_spatial_scale() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void ROIPoolingParameter::set_has_spatial_scale() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void ROIPoolingParameter::clear_has_spatial_scale() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void ROIPoolingParameter::clear_spatial_scale() {
+  spatial_scale_ = 1;
+  clear_has_spatial_scale();
+}
+inline float ROIPoolingParameter::spatial_scale() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.ROIPoolingParameter.spatial_scale)
+  return spatial_scale_;
+}
+inline void ROIPoolingParameter::set_spatial_scale(float value) {
+  set_has_spatial_scale();
+  spatial_scale_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.ROIPoolingParameter.spatial_scale)
+}
+
+inline const ROIPoolingParameter* ROIPoolingParameter::internal_default_instance() {
+  return &ROIPoolingParameter_default_instance_.get();
+}
 #endif  // !PROTOBUF_INLINE_NOT_IN_HEADERS
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
