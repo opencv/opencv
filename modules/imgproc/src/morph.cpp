@@ -1664,14 +1664,12 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         iterations = 1;
     }
 
+#ifndef __APPLE__
     // try to use OpenCL kernel adopted for small morph kernel
-    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+    if (dev.isIntel() &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
          (iterations == 1)
-#if defined __APPLE__
-         && cn == 1
-#endif
          )
     {
         if (ocl_morph3x3_8UC1(_src, _dst, kernel, anchor, op, actual_op, _extraMat))
@@ -1680,6 +1678,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
     }
+#endif
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
