@@ -4172,13 +4172,13 @@ protected:
     size_t step_;
 
 public:
-    AlignedDataPtr2D(uchar* ptr, size_t rows, size_t cols, size_t step, size_t alignment)
+    AlignedDataPtr2D(uchar* ptr, size_t rows, size_t cols, size_t step, size_t alignment, size_t extrabytes=0)
         : size_(rows*step), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL), rows_(rows), cols_(cols), step_(step)
     {
         CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
-        if (((size_t)ptr_ & (alignment - 1)) != 0)
+        if (ptr == 0 || ((size_t)ptr_ & (alignment - 1)) != 0)
         {
-            allocatedPtr_ = new uchar[size_ + alignment - 1];
+            allocatedPtr_ = new uchar[size_ + extrabytes + alignment - 1];
             ptr_ = (uchar*)(((uintptr_t)allocatedPtr_ + (alignment - 1)) & ~(alignment - 1));
             if (readAccess)
             {
@@ -4978,6 +4978,25 @@ public:
                 CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
                     srcrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0));
             }
+#ifdef __APPLE__
+            else
+            {
+                const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
+                size_t new_srcrawofs = srcrawofs & ~(padding-1);
+                size_t membuf_ofs = srcrawofs - new_srcrawofs;
+                AlignedDataPtr2D<false, false> alignedPtr(0, new_sz[1], new_srcstep[0], new_srcstep[0],
+                                                          CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
+                CV_Assert(new_srcstep[0] >= new_sz[0]);
+                total = alignSize(new_srcstep[0]*new_sz[1] + membuf_ofs, padding);
+                total = std::min(total, u->size - new_srcrawofs);
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                 new_srcrawofs, total, ptr, 0, 0, 0));
+                for( size_t i = 0; i < new_sz[1]; i++ )
+                    memcpy( (uchar*)dstptr + i*new_dststep[0], ptr + i*new_srcstep[0] + membuf_ofs, new_sz[0]);
+            }
+#else
             else
             {
                 AlignedDataPtr2D<false, true> alignedPtr((uchar*)dstptr, new_sz[1], new_sz[0], new_dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
@@ -4989,6 +5008,7 @@ public:
                     new_dststep[0], 0,
                     ptr, 0, 0, 0));
             }
+#endif
         }
     }
 
@@ -5095,6 +5115,30 @@ public:
                 CV_OCL_CHECK(clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
                     dstrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0));
             }
+#ifdef __APPLE__
+            else
+            {
+                const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
+                size_t new_dstrawofs = dstrawofs & ~(padding-1);
+                size_t membuf_ofs = dstrawofs - new_dstrawofs;
+                AlignedDataPtr2D<false, false> alignedPtr(0, new_sz[1], new_dststep[0], new_dststep[0],
+                                                          CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
+                CV_Assert(new_dststep[0] >= new_sz[0] && new_srcstep[0] >= new_sz[0]);
+                total = alignSize(new_dststep[0]*new_sz[1] + membuf_ofs, padding);
+                total = std::min(total, u->size - new_dstrawofs);
+                /*printf("new_sz0=%d, new_sz1=%d, membuf_ofs=%d, total=%d (%08x), new_dstrawofs=%d (%08x)\n",
+                       (int)new_sz[0], (int)new_sz[1], (int)membuf_ofs,
+                       (int)total, (int)total, (int)new_dstrawofs, (int)new_dstrawofs);*/
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                 new_dstrawofs, total, ptr, 0, 0, 0));
+                for( size_t i = 0; i < new_sz[1]; i++ )
+                    memcpy( ptr + i*new_dststep[0] + membuf_ofs, (uchar*)srcptr + i*new_srcstep[0], new_sz[0]);
+                CV_OCL_CHECK(clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                 new_dstrawofs, total, ptr, 0, 0, 0));
+            }
+#else
             else
             {
                 AlignedDataPtr2D<true, false> alignedPtr((uchar*)srcptr, new_sz[1], new_sz[0], new_srcstep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
@@ -5106,6 +5150,7 @@ public:
                     new_srcstep[0], 0,
                     ptr, 0, 0, 0));
             }
+#endif
         }
         u->markHostCopyObsolete(true);
 #ifdef HAVE_OPENCL_SVM
@@ -5247,6 +5292,41 @@ public:
                 CV_OCL_CHECK(retval = clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                srcrawofs, dstrawofs, total, 0, 0, 0));
             }
+#ifdef __APPLE__
+            else
+            {
+                const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
+                size_t new_srcrawofs = srcrawofs & ~(padding-1);
+                size_t srcmembuf_ofs = srcrawofs - new_srcrawofs;
+                size_t new_dstrawofs = dstrawofs & ~(padding-1);
+                size_t dstmembuf_ofs = dstrawofs - new_dstrawofs;
+
+                AlignedDataPtr2D<false, false> srcBuf(0, new_sz[1], new_srcstep[0], new_srcstep[0],
+                                                      CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                AlignedDataPtr2D<false, false> dstBuf(0, new_sz[1], new_dststep[0], new_dststep[0],
+                                                      CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                uchar* srcptr = srcBuf.getAlignedPtr();
+                uchar* dstptr = dstBuf.getAlignedPtr();
+
+                CV_Assert(new_dststep[0] >= new_sz[0] && new_srcstep[0] >= new_sz[0]);
+
+                size_t src_total = alignSize(new_srcstep[0]*new_sz[1] + srcmembuf_ofs, padding);
+                src_total = std::min(src_total, src->size - new_srcrawofs);
+                size_t dst_total = alignSize(new_dststep[0]*new_sz[1] + dstmembuf_ofs, padding);
+                dst_total = std::min(dst_total, dst->size - new_dstrawofs);
+
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)src->handle, CL_TRUE,
+                                                 new_srcrawofs, src_total, srcptr, 0, 0, 0));
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)dst->handle, CL_TRUE,
+                                                 new_dstrawofs, dst_total, dstptr, 0, 0, 0));
+
+                for( size_t i = 0; i < new_sz[1]; i++ )
+                    memcpy( dstptr + dstmembuf_ofs + i*new_dststep[0],
+                            srcptr + srcmembuf_ofs + i*new_srcstep[0], new_sz[0]);
+                CV_OCL_CHECK(clEnqueueWriteBuffer(q, (cl_mem)dst->handle, CL_TRUE,
+                                                  new_dstrawofs, dst_total, dstptr, 0, 0, 0));
+            }
+#else
             else
             {
                 CV_OCL_CHECK(retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
@@ -5255,6 +5335,7 @@ public:
                                                    new_dststep[0], 0,
                                                    0, 0, 0));
             }
+#endif
         }
         if (retval == CL_SUCCESS)
         {
