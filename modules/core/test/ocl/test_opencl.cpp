@@ -4,8 +4,28 @@
 #include "../test_precomp.hpp"
 
 #include <opencv2/core/ocl.hpp>
+#include <fstream>
 
 namespace opencv_test { namespace {
+
+static void testOpenCLKernel(cv::ocl::Kernel& k)
+{
+    ASSERT_FALSE(k.empty());
+    cv::UMat src(cv::Size(4096, 2048), CV_8UC1, cv::Scalar::all(100));
+    cv::UMat dst(src.size(), CV_8UC1);
+    size_t globalSize[2] = {(size_t)src.cols, (size_t)src.rows};
+    size_t localSize[2] = {8, 8};
+    int64 kernel_time = k.args(
+            cv::ocl::KernelArg::ReadOnlyNoSize(src), // size is not used (similar to 'dst' size)
+            cv::ocl::KernelArg::WriteOnly(dst),
+            (int)5
+        ).runProfiling(2, globalSize, localSize);
+    ASSERT_GE(kernel_time, (int64)0);
+    std::cout << "Kernel time: " << (kernel_time * 1e-6) << " ms" << std::endl;
+    cv::Mat res, reference(src.size(), CV_8UC1, cv::Scalar::all(105));
+    dst.copyTo(res);
+    EXPECT_EQ(0, cvtest::norm(reference, res, cv::NORM_INF));
+}
 
 TEST(OpenCL, support_binary_programs)
 {
@@ -59,23 +79,53 @@ TEST(OpenCL, support_binary_programs)
         k.create("test_kernel", program);
     }
 
-    { // Run kernel
-        ASSERT_FALSE(k.empty());
-        cv::UMat src(cv::Size(4096, 2048), CV_8UC1, cv::Scalar::all(100));
-        cv::UMat dst(src.size(), CV_8UC1);
-        size_t globalSize[2] = {(size_t)src.cols, (size_t)src.rows};
-        size_t localSize[2] = {8, 8};
-        int64 kernel_time = k.args(
-                cv::ocl::KernelArg::ReadOnlyNoSize(src), // size is not used (similar to 'dst' size)
-                cv::ocl::KernelArg::WriteOnly(dst),
-                (int)5
-            ).runProfiling(2, globalSize, localSize);
-        ASSERT_GE(kernel_time, (int64)0);
-        std::cout << "Kernel time: " << (kernel_time * 1e-6) << " ms" << std::endl;
-        cv::Mat res, reference(src.size(), CV_8UC1, cv::Scalar::all(105));
-        dst.copyTo(res);
-        EXPECT_EQ(0, cvtest::norm(reference, res, cv::NORM_INF));
+    testOpenCLKernel(k);
+}
+
+
+TEST(OpenCL, support_SPIR_programs)
+{
+    cv::ocl::Context ctx = cv::ocl::Context::getDefault();
+    if (!ctx.ptr())
+    {
+        throw cvtest::SkipTestException("OpenCL is not available");
     }
+    cv::ocl::Device device = cv::ocl::Device::getDefault();
+    if (!device.isExtensionSupported("cl_khr_spir"))
+    {
+        throw cvtest::SkipTestException("'cl_khr_spir' extension is not supported by OpenCL device");
+    }
+    std::vector<char> program_binary_code;
+    cv::String fname = cv::format("test_kernel.spir%d", device.addressBits());
+    std::string full_path = cvtest::findDataFile(std::string("opencl/") + fname);
+
+    {
+        std::fstream f(full_path.c_str(), std::ios::in|std::ios::binary);
+        ASSERT_TRUE(f.is_open());
+        size_t pos = (size_t)f.tellg();
+        f.seekg(0, std::fstream::end);
+        size_t fileSize = (size_t)f.tellg();
+        std::cout << "Program SPIR size: " << fileSize << " bytes" << std::endl;
+        f.seekg(pos, std::fstream::beg);
+        program_binary_code.resize(fileSize);
+        f.read(&program_binary_code[0], fileSize);
+        ASSERT_FALSE(f.fail());
+    }
+
+    cv::String module_name; // empty to disable OpenCL cache
+
+    cv::ocl::Kernel k;
+
+    { // Load program from SPIR format
+        ASSERT_FALSE(program_binary_code.empty());
+        cv::ocl::ProgramSource src = cv::ocl::ProgramSource::fromSPIR(module_name, "simple_spir", (uchar*)&program_binary_code[0], program_binary_code.size(), "");
+        cv::String errmsg;
+        cv::ocl::Program program(src, "", errmsg);
+        ASSERT_TRUE(program.ptr() != NULL);
+        k.create("test_kernel", program);
+    }
+
+    testOpenCLKernel(k);
 }
 
 }} // namespace
