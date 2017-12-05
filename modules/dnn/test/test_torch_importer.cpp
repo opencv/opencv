@@ -234,6 +234,11 @@ TEST(Torch_Importer, net_padding)
     runTorchNet("net_spatial_reflection_padding", DNN_TARGET_CPU, "", false, true);
 }
 
+TEST(Torch_Importer, net_non_spatial)
+{
+    runTorchNet("net_non_spatial", DNN_TARGET_CPU, "", false, true);
+}
+
 TEST(Torch_Importer, ENet_accuracy)
 {
     Net net;
