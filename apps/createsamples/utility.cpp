@@ -995,12 +995,12 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         {
             round = data->round;
 
+            data->last = rand() % data->count;
+
 #ifdef CV_VERBOSE
             printf( "Open background image: %s\n", data->filename[data->last] );
 #endif /* CV_VERBOSE */
 
-            data->last = rand() % data->count;
-            data->last %= data->count;
             img = cvLoadImage( data->filename[data->last], 0 );
             if( !img )
                 continue;
