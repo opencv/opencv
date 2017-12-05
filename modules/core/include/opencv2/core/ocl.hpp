@@ -606,18 +606,13 @@ public:
 
     bool create(const ProgramSource& src,
                 const String& buildflags, String& errmsg);
-    bool read(const String& buf, const String& buildflags); // deprecated
-    bool write(String& buf) const; // deprecated
 
-    const ProgramSource& source() const; // deprecated
     void* ptr() const;
-
-    String getPrefix() const; // deprecated
-    static String getPrefix(const String& buildflags); // deprecated
-
 
     /**
      * @brief Query device-specific program binary.
+     *
+     * Returns RAW OpenCL executable binary without additional attachments.
      *
      * @sa ProgramSource::fromBinary
      *
@@ -629,6 +624,15 @@ public:
     inline Impl* getImpl() const { return (Impl*)p; }
 protected:
     Impl* p;
+public:
+#ifndef OPENCV_REMOVE_DEPRECATED_API
+    // TODO Remove this
+    CV_DEPRECATED bool read(const String& buf, const String& buildflags); // removed, use ProgramSource instead
+    CV_DEPRECATED bool write(String& buf) const; // removed, use getBinary() method instead (RAW OpenCL binary)
+    CV_DEPRECATED const ProgramSource& source() const; // implementation removed
+    CV_DEPRECATED String getPrefix() const; // deprecated, implementation replaced
+    CV_DEPRECATED static String getPrefix(const String& buildflags); // deprecated, implementation replaced
+#endif
 };
 
 
