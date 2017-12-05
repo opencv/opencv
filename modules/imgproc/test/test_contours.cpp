@@ -485,4 +485,18 @@ TEST(Imgproc_FindContours, border)
     ASSERT_TRUE(norm(img - img_draw_contours, NORM_INF) == 0.0);
 }
 
+TEST(Imgproc_PointPolygonTest, regression_10222)
+{
+    vector<Point> contour;
+    contour.push_back(Point(0, 0));
+    contour.push_back(Point(0, 100000));
+    contour.push_back(Point(100000, 100000));
+    contour.push_back(Point(100000, 50000));
+    contour.push_back(Point(100000, 0));
+
+    const Point2f point(40000, 40000);
+    const double result = cv::pointPolygonTest(contour, point, false);
+    EXPECT_GT(result, 0) << "Desired result: point is inside polygon - actual result: point is not inside polygon";
+}
+
 /* End of file. */
