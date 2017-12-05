@@ -886,19 +886,6 @@ void HoughLinesP(InputArray _image, OutputArray _lines,
 *                                     Circle Detection                                   *
 \****************************************************************************************/
 
-struct markedCircle
-{
-    markedCircle(Vec3f _c, int _idx, int _idxC) :
-        c(_c), idx(_idx), idxC(_idxC) {}
-    Vec3f c;
-    int idx, idxC;
-};
-
-inline bool cmpCircleIndex(const markedCircle &left, const markedCircle &right)
-{
-    return left.idx > right.idx;
-}
-
 struct EstimatedCircle
 {
     EstimatedCircle(Vec3f _c, int _accum) :
@@ -1361,23 +1348,6 @@ bool CheckDistance(const std::vector<Vec3f> &circles, size_t endIdx, const Vec3f
     return goodPoint;
 }
 
-void GetCircleCenters(const std::vector<int> &centers, std::vector<Vec3f> &circles, int acols, float minDist, float dr)
-{
-    size_t centerCnt = centers.size();
-    float minDist2 = minDist * minDist;
-    for (int i = 0; i < centerCnt; ++i)
-    {
-        int center = centers[i];
-        int y = center / acols;
-        int x = center - y * acols;
-        Vec3f circle = Vec3f((x + 0.5f) * dr, (y + 0.5f) * dr, 0);
-
-        bool goodPoint = CheckDistance(circles, circles.size(), circle, minDist2);
-        if (goodPoint)
-            circles.push_back(circle);
-    }
-}
-
 void RemoveOverlaps(std::vector<Vec3f>& circles, float minDist)
 {
     float minDist2 = minDist * minDist;
@@ -1631,28 +1601,21 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     std::sort(centers.begin(), centers.end(), hough_cmp_gt(accum.ptr<int>()));
 
+    std::vector<EstimatedCircle> circlesEst;
+    // One loop iteration per thread if multithreaded.
+    parallel_for_(Range(0, centerCnt),
+        HoughCircleEstimateRadiusInvoker(nz, centers, circlesEst, accum.cols,
+            accThreshold, minRadius, maxRadius, dp, mtx),
+        numThreads);
+
+    // Sort by accumulator value
+    std::sort(circlesEst.begin(), circlesEst.end(), cmpAccum);
+
     std::vector<Vec3f> circles;
     circles.reserve(256);
+    std::transform(circlesEst.begin(), circlesEst.end(), std::back_inserter(circles), GetCircle);
 
-    if(maxRadius == 0)
-    {
-        // Just get the circle centers
-        GetCircleCenters(centers, circles, accum.cols, minDist, dp);
-    }
-    else
-    {
-        std::vector<EstimatedCircle> circlesEst;
-        // One loop iteration per thread if multithreaded.
-        parallel_for_(Range(0, centerCnt),
-            HoughCircleEstimateRadiusInvoker(nz, centers, circlesEst, accum.cols,
-                accThreshold, minRadius, maxRadius, dp, mtx),
-            numThreads);
-
-        // Sort by accumulator value
-        std::sort(circlesEst.begin(), circlesEst.end(), cmpAccum);
-        std::transform(circlesEst.begin(), circlesEst.end(), std::back_inserter(circles), GetCircle);
-        RemoveOverlaps(circles, minDist);
-    }
+    RemoveOverlaps(circles, minDist);
 
     if(circles.size() > 0)
     {

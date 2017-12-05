@@ -43,6 +43,10 @@
 
 #include "test_precomp.hpp"
 
+#ifndef DEBUG_IMAGES
+#define DEBUG_IMAGES 0
+#endif
+
 using namespace cv;
 using namespace std;
 
@@ -89,8 +93,9 @@ public:
         HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
         string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
-        // Debug
+#if DEBUG_IMAGES
         highlightCircles(filename, circles, imgProc + test_case_name + ".png");
+#endif
 
         string xml = imgProc + "HoughCircles.xml";
         FileStorage fs(xml, FileStorage::READ);
@@ -163,7 +168,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, HoughCirclesTestFixture, testing::Combine(
     testing::Values(200)
     ));
 
-TEST(HoughCirclesTest, MaxRadiusZeroCentersOnly)
+TEST(HoughCirclesTest, DefaultMaxRadius)
 {
     string picture_name = "imgproc/stuff.jpg";
     const double dp = 1.0;
@@ -182,20 +187,22 @@ TEST(HoughCirclesTest, MaxRadiusZeroCentersOnly)
     vector<Vec3f> circles;
     HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
+#if DEBUG_IMAGES
     string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
-    // Debug
-    string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-    highlightCircles(filename, circles, imgProc + test_case_name + ".png");
+    highlightCircles(filename, circles, imgProc + "HoughCirclesTest_DefaultMaxRadius.png");
+#endif
 
-    // "you may set maxRadius to 0 to return centers only without radius search"
+    int maxDimension = std::max(src.rows, src.cols);
+
     EXPECT_GT(circles.size(), 0) << "Should find at least some circles";
     for (size_t i = 0; i < circles.size(); ++i)
     {
-        EXPECT_EQ(0, circles[0][2]) << "Circles should have radius == 0";
+        EXPECT_GE(circles[0][2], minRadius) << "Radius should be >= minRadius";
+        EXPECT_LE(circles[0][2], maxDimension) << "Radius should be <= max image dimension";
     }
 }
 
-TEST(HoughCirclesTest, Beads)
+TEST(HoughCirclesTest, ManySmallCircles)
 {
     string picture_name = "imgproc/beads.png";
     const double dp = 1.0;
@@ -212,10 +219,11 @@ TEST(HoughCirclesTest, Beads)
     vector<Vec3f> circles;
     HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
+#if DEBUG_IMAGES
     string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
-    // Debug
     string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     highlightCircles(filename, circles, imgProc + test_case_name + ".png");
+#endif
 
-    EXPECT_GT(circles.size(), 0) << "Should find at least some circles";
+    EXPECT_GT(circles.size(), 3000) << "Should find a lot of circles";
 }

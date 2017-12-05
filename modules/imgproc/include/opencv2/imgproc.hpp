@@ -2090,8 +2090,7 @@ Example: :
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
-you know it. Or, you may set maxRadius to 0 to return centers only without radius search, and find the correct
-radius using an additional procedure.
+you know it. 
 
 @param image 8-bit, single-channel, grayscale input image.
 @param circles Output vector of found circles. Each vector is encoded as a 3-element
@@ -2110,7 +2109,7 @@ accumulator threshold for the circle centers at the detection stage. The smaller
 false circles may be detected. Circles, corresponding to the larger accumulator values, will be
 returned first.
 @param minRadius Minimum circle radius.
-@param maxRadius Maximum circle radius.
+@param maxRadius Maximum circle radius. If <= 0, uses the maximum image dimension. 
 
 @sa fitEllipse, minEnclosingCircle
  */
