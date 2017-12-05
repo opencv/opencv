@@ -2252,6 +2252,8 @@ struct Context::Impl
         return;
     }
 #endif
+
+    friend class Program;
 };
 
 
@@ -3463,19 +3465,20 @@ struct Program::Impl
 {
     IMPLEMENT_REFCOUNTABLE();
 
-    Impl(const ProgramSource& _src,
+    Impl(const ProgramSource& src,
          const String& _buildflags, String& errmsg) :
-         src(_src),
-         buildflags(_buildflags),
-         handle(NULL)
+         refcount(1),
+         handle(NULL),
+         buildflags(_buildflags)
     {
-        refcount = 1;
+        const ProgramSource::Impl* src_ = src.getImpl();
+        CV_Assert(src_);
+        sourceModule_ = src_->module_;
+        sourceName_ = src_->name_;
         const Context ctx = Context::getDefault();
         Device device = ctx.device(0);
         if (ctx.ptr() == NULL || device.ptr() == NULL)
             return;
-        const ProgramSource::Impl* src_ = src.getImpl();
-        CV_Assert(src_);
         buildflags = joinBuildOptions(buildflags, src_->buildOptions_);
         if (src.getImpl()->kind_ == ProgramSource::Impl::PROGRAM_SOURCE_CODE)
         {
@@ -3484,13 +3487,12 @@ struct Program::Impl
             else if (device.isIntel())
                 buildflags = joinBuildOptions(buildflags, " -D INTEL_DEVICE");
         }
-        compile(ctx, errmsg);
+        compile(ctx, src_, errmsg);
     }
 
-    bool compile(const Context& ctx, String& errmsg)
+    bool compile(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
     {
         CV_Assert(ctx.getImpl());
-        const ProgramSource::Impl* src_ = src.getImpl();
         CV_Assert(src_);
 
         // We don't cache OpenCL binaries
@@ -3499,13 +3501,12 @@ struct Program::Impl
             bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
             return isLoaded;
         }
-        return compileWithCache(ctx, errmsg);
+        return compileWithCache(ctx, src_, errmsg);
     }
 
-    bool compileWithCache(const Context& ctx, String& errmsg)
+    bool compileWithCache(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
     {
         CV_Assert(ctx.getImpl());
-        const ProgramSource::Impl* src_ = src.getImpl();
         CV_Assert(src_);
         CV_Assert(src_->kind_ != ProgramSource::Impl::PROGRAM_BINARIES);
 
@@ -3557,7 +3558,7 @@ struct Program::Impl
         CV_Assert(handle == NULL);
         if (src_->kind_ == ProgramSource::Impl::PROGRAM_SOURCE_CODE)
         {
-            if (!buildFromSources(ctx, errmsg))
+            if (!buildFromSources(ctx, src_, errmsg))
             {
                 return false;
             }
@@ -3648,23 +3649,22 @@ struct Program::Impl
 
         errmsg = String(buffer);
         printf("OpenCL program build log: %s/%s\nStatus %d: %s\n%s\n%s\n",
-                src.getImpl()->module_.c_str(), src.getImpl()->name_.c_str(),
+                sourceModule_.c_str(), sourceName_.c_str(),
                 result, getOpenCLErrorString(result),
                 buildflags.c_str(), errmsg.c_str());
         fflush(stdout);
     }
 
-    bool buildFromSources(const Context& ctx, String& errmsg)
+    bool buildFromSources(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
     {
-        const ProgramSource::Impl* src_ = src.getImpl();
         CV_Assert(src_);
         CV_Assert(src_->kind_ == ProgramSource::Impl::PROGRAM_SOURCE_CODE);
         CV_Assert(handle == NULL);
         CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Build OpenCL program: %s/%s %" PRIx64 " options: %s",
-                src_->module_.c_str(), src_->name_.c_str(),
+                sourceModule_.c_str(), sourceName_.c_str(),
                 src.hash(), buildflags.c_str()).c_str());
 
-        CV_LOG_VERBOSE(NULL, 0, "Compile... " << src_->module_.c_str() << "/" << src_->name_.c_str());
+        CV_LOG_VERBOSE(NULL, 0, "Compile... " << sourceModule_.c_str() << "/" << sourceName_.c_str());
 
         const char* srcptr = src_->sourceAddr_ ? ((const char*)src_->sourceAddr_) : src_->codeStr_.c_str();
         size_t srclen = src_->sourceAddr_ ? src_->sourceSize_ : src_->codeStr_.size();
@@ -3719,58 +3719,6 @@ struct Program::Impl
 
         }
         return handle != NULL;
-    }
-
-    Impl(const String& _buf, const String& _buildflags)
-    {
-        refcount = 1;
-        handle = 0;
-        buildflags = _buildflags;
-        if(_buf.empty())
-            return;
-        String prefix0 = Program::getPrefix(buildflags);
-        const Context& ctx = Context::getDefault();
-        const Device& dev = Device::getDefault();
-        const char* pos0 = _buf.c_str();
-        const char* pos1 = strchr(pos0, '\n');
-        if(!pos1)
-            return;
-        const char* pos2 = strchr(pos1+1, '\n');
-        if(!pos2)
-            return;
-        const char* pos3 = strchr(pos2+1, '\n');
-        if(!pos3)
-            return;
-        size_t prefixlen = (pos3 - pos0)+1;
-        String prefix(pos0, prefixlen);
-        if( prefix != prefix0 )
-            return;
-        const uchar* bin = (uchar*)(pos3+1);
-        void* devid = dev.ptr();
-        size_t codelen = _buf.length() - prefixlen;
-        cl_int binstatus = 0, retval = 0;
-        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), 1, (cl_device_id*)&devid,
-                                           &codelen, &bin, &binstatus, &retval);
-        CV_OCL_DBG_CHECK_RESULT(retval, "clCreateProgramWithBinary");
-    }
-
-    String store()
-    {
-        if(!handle)
-            return String();
-        size_t progsz = 0, retsz = 0;
-        String prefix = Program::getPrefix(buildflags);
-        size_t prefixlen = prefix.length();
-        if(clGetProgramInfo(handle, CL_PROGRAM_BINARY_SIZES, sizeof(progsz), &progsz, &retsz) != CL_SUCCESS)
-            return String();
-        AutoBuffer<uchar> bufbuf(prefixlen + progsz + 16);
-        uchar* buf = bufbuf;
-        memcpy(buf, prefix.c_str(), prefixlen);
-        buf += prefixlen;
-        if(clGetProgramInfo(handle, CL_PROGRAM_BINARIES, sizeof(buf), &buf, &retsz) != CL_SUCCESS)
-            return String();
-        buf[progsz] = (uchar)'\0';
-        return String((const char*)(uchar*)bufbuf, prefixlen + progsz);
     }
 
     void getProgramBinary(std::vector<char>& buf)
@@ -3836,7 +3784,7 @@ struct Program::Impl
         else
         {
             result = clBuildProgram(handle, (cl_uint)ndevices, (cl_device_id*)devices_, buildflags.c_str(), 0, 0);
-            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clBuildProgram(binary: %s/%s)", src.getImpl()->module_.c_str(), src.getImpl()->name_.c_str()).c_str());
+            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clBuildProgram(binary: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
             if (result != CL_SUCCESS)
             {
                 dumpBuildLog_(result, devices, errmsg);
@@ -3905,9 +3853,11 @@ struct Program::Impl
         }
     }
 
-    ProgramSource src;
-    String buildflags;
     cl_program handle;
+
+    String buildflags;
+    String sourceModule_;
+    String sourceName_;
 };
 
 #else // HAVE_OPENCL
@@ -3969,16 +3919,6 @@ bool Program::create(const ProgramSource& src,
 #endif
 }
 
-const ProgramSource& Program::source() const
-{
-#ifdef HAVE_OPENCL
-    static ProgramSource dummy;
-    return p ? p->src : dummy;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
-}
-
 void* Program::ptr() const
 {
 #ifdef HAVE_OPENCL
@@ -3988,28 +3928,22 @@ void* Program::ptr() const
 #endif
 }
 
+#ifndef OPENCV_REMOVE_DEPRECATED_API
+const ProgramSource& Program::source() const
+{
+    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed API");
+}
+
 bool Program::read(const String& bin, const String& buildflags)
 {
-#ifdef HAVE_OPENCL
-    if(p)
-        p->release();
-    p = new Impl(bin, buildflags);
-    return p->handle != 0;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
+    CV_UNUSED(bin); CV_UNUSED(buildflags);
+    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed API");
 }
 
 bool Program::write(String& bin) const
 {
-#ifdef HAVE_OPENCL
-    if(!p)
-        return false;
-    bin = p->store();
-    return !bin.empty();
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
+    CV_UNUSED(bin);
+    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed API");
 }
 
 String Program::getPrefix() const
@@ -4017,7 +3951,9 @@ String Program::getPrefix() const
 #ifdef HAVE_OPENCL
     if(!p)
         return String();
-    return getPrefix(p->buildflags);
+    Context::Impl* ctx_ = Context::getDefault().getImpl();
+    CV_Assert(ctx_);
+    return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), p->buildflags.c_str());
 #else
     CV_OPENCL_NO_SUPPORT();
 #endif
@@ -4026,20 +3962,19 @@ String Program::getPrefix() const
 String Program::getPrefix(const String& buildflags)
 {
 #ifdef HAVE_OPENCL
-    const Context& ctx = Context::getDefault();
-    const Device& dev = ctx.device(0);
-    return format("name=%s\ndriver=%s\nbuildflags=%s\n",
-                  dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
+        Context::Impl* ctx_ = Context::getDefault().getImpl();
+        CV_Assert(ctx_);
+        return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), buildflags.c_str());
 #else
-    CV_UNUSED(buildflags);
     CV_OPENCL_NO_SUPPORT();
 #endif
 }
+#endif
 
 void Program::getBinary(std::vector<char>& binary) const
 {
 #ifdef HAVE_OPENCL
-    CV_Assert(p);
+    CV_Assert(p && "Empty program");
     p->getProgramBinary(binary);
 #else
     binary.clear();
@@ -4054,7 +3989,10 @@ Program Context::Impl::getProg(const ProgramSource& src,
     size_t limit = getProgramCountLimit();
     const ProgramSource::Impl* src_ = src.getImpl();
     CV_Assert(src_);
-    String key = cv::format("module=%s name=%s codehash=%s ", src_->module_.c_str(), src_->name_.c_str(), src_->sourceHash_.c_str()) + Program::getPrefix(buildflags);
+    String key = cv::format("module=%s name=%s codehash=%s\nopencl=%s\nbuildflags=%s",
+            src_->module_.c_str(), src_->name_.c_str(), src_->sourceHash_.c_str(),
+            getPrefixString().c_str(),
+            buildflags.c_str());
     {
         cv::AutoLock lock(program_cache_mutex);
         phash_t::iterator it = phash.find(key);
