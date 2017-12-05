@@ -664,6 +664,43 @@ inline int hal_ni_threshold(const uchar* src_data, size_t src_step, uchar* dst_d
 #define cv_hal_threshold hal_ni_threshold
 //! @endcond
 
+/**
+   @brief Calculate box filter
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param src_depth,dst_depth Depths of source and destination image
+   @param cn Number of channels
+   @param margin_left,margin_top,margin_right,margin_bottom Margins for source image
+   @param ksize_width,ksize_height Size of kernel
+   @param anchor_x,anchor_y Anchor point
+   @param normalize If true then result is normalized
+   @param border_type Border type
+*/
+inline int hal_ni_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, size_t ksize_width, size_t ksize_height, int anchor_x, int anchor_y, bool normalize, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_boxFilter hal_ni_boxFilter
+//! @endcond
+
+/**
+   @brief Blurs an image using a Gaussian filter.
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param depth Depth of source and destination image
+   @param cn Number of channels
+   @param margin_left,margin_top,margin_right,margin_bottom Margins for source image
+   @param ksize_width,ksize_height Size of kernel
+   @param sigmaX,sigmaY Gaussian kernel standard deviation.
+   @param border_type Border type
+*/
+inline int hal_ni_gaussianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize_width, size_t ksize_height, double sigmaX, double sigmaY, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_gaussianBlur hal_ni_gaussianBlur
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__

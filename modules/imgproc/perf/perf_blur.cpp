@@ -43,6 +43,9 @@ typedef perf::TestBaseWithParam<Size_MatType_BorderType3x3_t> Size_MatType_Borde
 typedef std::tr1::tuple<Size, MatType, BorderType> Size_MatType_BorderType_t;
 typedef perf::TestBaseWithParam<Size_MatType_BorderType_t> Size_MatType_BorderType;
 
+typedef std::tr1::tuple<Size, int, BorderType3x3> Size_ksize_BorderType_t;
+typedef perf::TestBaseWithParam<Size_ksize_BorderType_t> Size_ksize_BorderType;
+
 PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
@@ -130,6 +133,28 @@ PERF_TEST_P(Size_MatType_BorderType3x3, box3x3,
     declare.in(src, WARMUP_RNG).out(dst);
 
     TEST_CYCLE() boxFilter(src, dst, -1, Size(3,3), Point(-1,-1), false, btype);
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+}
+
+PERF_TEST_P(Size_ksize_BorderType, box_CV8U_CV16U,
+            testing::Combine(
+                    testing::Values(szODD, szQVGA, szVGA, sz720p),
+                    testing::Values(3, 5, 15),
+                    BorderType3x3::all()
+                    )
+            )
+{
+    Size size = get<0>(GetParam());
+    int ksize = get<1>(GetParam());
+    BorderType3x3 btype = get<2>(GetParam());
+
+    Mat src(size, CV_8UC1);
+    Mat dst(size, CV_16UC1);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() boxFilter(src, dst, CV_16UC1, Size(ksize, ksize), Point(-1,-1), false, btype);
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
