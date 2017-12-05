@@ -50,6 +50,12 @@ namespace cv
     int SymmColumnVec_32f_Symm_AVX(const float** src, const float* ky, float* dst, float delta, int width, int ksize2);
     int SymmColumnVec_32f_Unsymm_AVX(const float** src, const float* ky, float* dst, float delta, int width, int ksize2);
 #endif
+
+#ifdef HAVE_OPENCL
+    bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
+                          InputArray _kernelX, InputArray _kernelY, Point anchor,
+                          double delta, int borderType );
+#endif
 }
 
 #endif
