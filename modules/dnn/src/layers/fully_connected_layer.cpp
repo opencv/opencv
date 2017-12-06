@@ -397,7 +397,7 @@ public:
         int innerSize = blobs[0].size[1];
         for(int i = 0; i < outputs.size(); i++)
         {
-            flops += 3*innerSize*total(outputs[i]);
+            flops += CV_BIG_INT(3)*innerSize*total(outputs[i]);
         }
 
         return flops;

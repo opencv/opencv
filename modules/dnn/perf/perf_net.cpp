@@ -87,6 +87,7 @@ public:
         size_t weightsMemory = 0, blobsMemory = 0;
         net.getMemoryConsumption(netInputShape, weightsMemory, blobsMemory);
         int64 flops = net.getFLOPS(netInputShape);
+        CV_Assert(flops > 0);
 
         net.forward(outputLayer); // warmup
 

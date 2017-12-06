@@ -1022,7 +1022,7 @@ public:
         int64 flops = 0;
         for (int i = 0; i < inputs.size(); i++)
         {
-            flops += total(outputs[i])*(2*kernel.area()*inputs[i][1] + 1);
+            flops += total(outputs[i])*(CV_BIG_INT(2)*kernel.area()*inputs[i][1] + 1);
         }
 
         return flops;
@@ -1440,7 +1440,7 @@ public:
 
         for (int i = 0; i < inputs.size(); i++)
         {
-            flops += 2*outChannels*kernel.area()*total(inputs[i]);
+            flops += CV_BIG_INT(2)*outChannels*kernel.area()*total(inputs[i]);
         }
 
         return flops;
