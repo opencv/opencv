@@ -44,6 +44,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <iostream>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -86,10 +87,53 @@ public:
         return backendId == DNN_BACKEND_DEFAULT;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = String("-DDtype=") + ocl::typeToStr(inputs[0].type()) + String(" ");
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            ocl::Kernel kernel("reorg", ocl::dnn::reorg_oclsrc, buildopt);
+            if (kernel.empty())
+                return false;
+
+            UMat& srcBlob = inputs[i];
+            UMat& dstBlob = outputs[0];
+            int channels = srcBlob.size[1];
+            int height = srcBlob.size[2];
+            int width = srcBlob.size[3];
+            size_t nthreads = channels * height * width;
+
+            kernel.set(0, (int)nthreads);
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(srcBlob));
+            kernel.set(2, (int)channels);
+            kernel.set(3, (int)height);
+            kernel.set(4, (int)width);
+            kernel.set(5, (int)reorgStride);
+            kernel.set(6, ocl::KernelArg::PtrWriteOnly(dstBlob));
+
+            if (!kernel.run(1, &nthreads, NULL, false))
+                return false;
+        }
+
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
