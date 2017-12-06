@@ -1040,12 +1040,12 @@ public:
             }
             else
             {
-                mi = nullptr;
+                mi = NULL;
             }
         }
 
         const_iterator(const Mat& _positions) :
-            positions(_positions), mi(nullptr)
+            positions(_positions), mi(NULL)
         {
         }
 
@@ -1075,7 +1075,7 @@ public:
                         }
                         else
                         {
-                            mi = nullptr;
+                            mi = NULL;
                         }
                     }
                 } while (mi && !*mi);
