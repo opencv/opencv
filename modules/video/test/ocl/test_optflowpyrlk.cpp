@@ -87,6 +87,15 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
     ASSERT_FALSE(frame1.empty());
     UMat umatFrame1; frame1.copyTo(umatFrame1);
 
+    // SKIP unstable tests
+#ifdef __linux__
+    if (cvtest::skipUnstableTests && ocl::useOpenCL())
+    {
+         if (ocl::Device::getDefault().isIntel())
+             throw cvtest::SkipTestException("Skip unstable test");
+    }
+#endif
+
     std::vector<cv::Point2f> pts;
     cv::goodFeaturesToTrack(frame0, pts, npoints, 0.01, 0.0);
 
