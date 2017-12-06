@@ -6,7 +6,7 @@ using namespace std;
 using namespace cv;
 using namespace perf;
 
-PERF_TEST(Basic, PerfHoughCircles)
+PERF_TEST(PerfHoughCircles, Basic)
 {
     string filename = getDataPath("cv/imgproc/stuff.jpg");
     const double dp = 1.0;
@@ -33,7 +33,7 @@ PERF_TEST(Basic, PerfHoughCircles)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(ManySmallCircles, PerfHoughCircles)
+PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 {
     string filename = getDataPath("cv/imgproc/beads.png");
     const double dp = 1.0;
