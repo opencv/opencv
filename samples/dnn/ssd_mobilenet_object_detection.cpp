@@ -115,10 +115,12 @@ int main(int argc, char** argv)
                     (inVideoSize.height - cropSize.height) / 2),
               cropSize);
 
+    double fps = cap.get(CV_CAP_PROP_FPS);
+    int fourcc = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
     VideoWriter outputVideo;
     outputVideo.open(parser.get<String>("out") ,
-                     static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)),
-                     cap.get(CV_CAP_PROP_FPS), cropSize, true);
+                     (fourcc != 0 ? fourcc : VideoWriter::fourcc('M','J','P','G')),
+                     (fps != 0 ? fps : 10.0), cropSize, true);
 
     for(;;)
     {
