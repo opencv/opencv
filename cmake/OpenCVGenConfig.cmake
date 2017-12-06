@@ -25,6 +25,7 @@ if(ANDROID)
 endif()
 
 set(OPENCV_MODULES_CONFIGCMAKE ${OPENCV_MODULES_PUBLIC})
+set(OPENCV_TEST_MODULES_CONFIGCMAKE opencv_ts)
 
 if(BUILD_FAT_JAVA_LIB AND HAVE_opencv_java)
   list(APPEND OPENCV_MODULES_CONFIGCMAKE opencv_java)
@@ -41,7 +42,14 @@ foreach(m ${OPENCV_MODULES_BUILD})
   endif()
 endforeach()
 
+if(OPENCV_EXPORT_TS)
+  set(OpenCVTest_INCLUDE_DIRS_CONFIGCMAKE "${OpenCV_INCLUDE_DIRS_CONFIGCMAKE} \"${OPENCV_MODULE_opencv_ts_LOCATION}/include\"")
+endif()
+
 export(TARGETS ${OpenCVModules_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+if(OPENCV_EXPORT_TS)
+  export(TARGETS ${OpenCVTest_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVTestModules.cmake")
+endif()
 
 if(TARGET ippicv AND NOT BUILD_SHARED_LIBS)
   set(USE_IPPICV TRUE)
@@ -60,14 +68,21 @@ else()
 endif()
 
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" @ONLY)
-#support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig-version.cmake" @ONLY)
+if(OPENCV_EXPORT_TS)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVTestConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVTestConfig.cmake" @ONLY)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVTestConfig-version.cmake" @ONLY)
+endif()
 
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
 file(RELATIVE_PATH OpenCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/${OPENCV_CONFIG_INSTALL_PATH}/" ${CMAKE_INSTALL_PREFIX})
 set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}\" \"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}/opencv\"")
+
+if(OPENCV_EXPORT_TS)
+  set(OpenCVTest_INCLUDE_DIRS_CONFIGCMAKE "${OpenCV_INCLUDE_DIRS_CONFIGCMAKE}")
+endif()
 
 if(USE_IPPICV)
   file(RELATIVE_PATH IPPICV_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}" "${IPPICV_INSTALL_PATH}")
@@ -100,6 +115,26 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
         "${TMP_DIR}/OpenCVConfig-version.cmake"
         "${TMP_DIR}/OpenCVConfig.cmake"
         DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT dev)
+  endif()
+
+  if(OPENCV_EXPORT_TS)
+    if(NOT OPENCV_TEST_CONFIG_INSTALL_PATH)
+      string(REGEX REPLACE "OpenCV$" "OpenCVTest" OPENCV_TEST_CONFIG_INSTALL_PATH "${OPENCV_CONFIG_INSTALL_PATH}")
+      if(OPENCV_TEST_CONFIG_INSTALL_PATH STREQUAL OPENCV_CONFIG_INSTALL_PATH)
+        string(REGEX REPLACE "opencv$" "opencvtest" OPENCV_TEST_CONFIG_INSTALL_PATH "${OPENCV_CONFIG_INSTALL_PATH}")
+      endif()
+    endif()
+    ocv_path_join(__install_nested "${OPENCV_TEST_CONFIG_INSTALL_PATH}" "${NESTED_PATH}")
+
+    install(EXPORT OpenCVTest DESTINATION "${__install_nested}" FILE OpenCVTestModules.cmake COMPONENT dev)
+    configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${TMP_DIR}/OpenCVTestConfig-version.cmake" @ONLY)
+
+    configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVTestConfig.cmake.in" "${__tmp_nested}/OpenCVTestConfig.cmake" @ONLY)
+    install(EXPORT OpenCVTest DESTINATION "${__install_nested}" FILE OpenCVTestModules.cmake COMPONENT dev)
+    install(FILES
+        "${TMP_DIR}/OpenCVTestConfig-version.cmake"
+        "${__tmp_nested}/OpenCVTestConfig.cmake"
+        DESTINATION "${__install_nested}" COMPONENT dev)
   endif()
 endfunction()
 

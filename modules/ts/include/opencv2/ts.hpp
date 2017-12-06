@@ -562,7 +562,7 @@ protected:
     }
 };
 
-extern uint64 param_seed;
+extern CV_EXPORTS uint64 param_seed;
 
 struct CV_EXPORTS DefaultRngAuto
 {
@@ -618,14 +618,14 @@ CV_EXPORTS std::string findDataFile(const std::string& relative_path, bool requi
 
 #ifdef HAVE_OPENCL
 namespace ocl {
-void dumpOpenCLDevice();
+CV_EXPORTS void dumpOpenCLDevice();
 }
 #define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
 #else
 #define TEST_DUMP_OCL_INFO
 #endif
 
-void parseCustomOptions(int argc, char **argv);
+CV_EXPORTS void parseCustomOptions(int argc, char **argv);
 
 #define CV_TEST_INIT0_NOOP (void)0
 
