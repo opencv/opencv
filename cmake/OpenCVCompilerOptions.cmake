@@ -178,10 +178,15 @@ if(CMAKE_COMPILER_IS_GNUCXX)
                   OPENCV_EXTRA_FLAGS_RELEASE OPENCV_EXTRA_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS OPENCV_EXTRA_CXX_FLAGS)
       string(REPLACE "-fomit-frame-pointer" "" ${flags} "${${flags}}")
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
+      string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
   elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS))
     # Remove unreferenced functions: function level linking
     add_extra_compiler_option(-ffunction-sections)
+    add_extra_compiler_option(-fdata-sections)
+    if(NOT APPLE AND NOT OPENCV_SKIP_GC_SECTIONS)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+    endif()
   endif()
 
   if(ENABLE_COVERAGE)
@@ -193,6 +198,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(ENABLE_INSTRUMENTATION)
     set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --std=c++11")
     set(WITH_VTK OFF) # There are issues with VTK 6.0
+  endif()
+
+  if(ENABLE_LTO)
+    add_extra_compiler_option(-flto)
   endif()
 
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
@@ -229,6 +238,12 @@ if(MSVC)
   if(OPENCV_WARNINGS_ARE_ERRORS)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /WX")
   endif()
+
+  if(ENABLE_LTO)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /GL")
+    set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} /LTCG")
+  endif()
+
 endif()
 
 if(MSVC12 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -239,15 +254,6 @@ endif()
 # Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
 if(WINRT_PHONE AND WINRT_8_0)
   set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /AI\$(WindowsSDK_MetadataPath)")
-endif()
-
-# Extra link libs if the user selects building static libs:
-if(NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID)
-  # Android does not need these settings because they are already set by toolchain file
-  if(NOT MINGW)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
-  endif()
-  set(OPENCV_EXTRA_FLAGS "-fPIC ${OPENCV_EXTRA_FLAGS}")
 endif()
 
 include(cmake/OpenCVCompilerOptimizations.cmake)

@@ -747,12 +747,12 @@ static bool isDirectory(const std::string& path)
 #endif
 }
 
-CV_EXPORTS void addDataSearchPath(const std::string& path)
+void addDataSearchPath(const std::string& path)
 {
     if (isDirectory(path))
         TS::ptr()->data_search_path.push_back(path);
 }
-CV_EXPORTS void addDataSearchSubDirectory(const std::string& subdir)
+void addDataSearchSubDirectory(const std::string& subdir)
 {
     TS::ptr()->data_search_subdir.push_back(subdir);
 }

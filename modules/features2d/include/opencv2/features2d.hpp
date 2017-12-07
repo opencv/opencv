@@ -786,7 +786,7 @@ struct CV_EXPORTS SL2
  * Euclidean distance functor
  */
 template<class T>
-struct CV_EXPORTS L2
+struct L2
 {
     enum { normType = NORM_L2 };
     typedef T ValueType;
@@ -802,7 +802,7 @@ struct CV_EXPORTS L2
  * Manhattan distance (city block distance) functor
  */
 template<class T>
-struct CV_EXPORTS L1
+struct L1
 {
     enum { normType = NORM_L1 };
     typedef T ValueType;
