@@ -248,12 +248,22 @@ Cv64suf;
 #  define DISABLE_OPENCV_24_COMPATIBILITY
 #endif
 
-#if (defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined CVAPI_EXPORTS
-#  define CV_EXPORTS __declspec(dllexport)
-#elif defined __GNUC__ && __GNUC__ >= 4
-#  define CV_EXPORTS __attribute__ ((visibility ("default")))
+#ifdef CVAPI_EXPORTS
+# if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#   define CV_EXPORTS __declspec(dllexport)
+# elif defined __GNUC__ && __GNUC__ >= 4
+#   define CV_EXPORTS __attribute__ ((visibility ("default")))
+# endif
+#endif
+
+#ifndef CV_EXPORTS
+# define CV_EXPORTS
+#endif
+
+#ifdef _MSC_VER
+#   define CV_EXPORTS_TEMPLATE
 #else
-#  define CV_EXPORTS
+#   define CV_EXPORTS_TEMPLATE CV_EXPORTS
 #endif
 
 #ifndef CV_DEPRECATED
