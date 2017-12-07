@@ -85,7 +85,6 @@ typedef std::tr1::tuple<string, double, double, double, int, int> Image_MinDist_
 class HoughCirclesTestFixture : public testing::TestWithParam<Image_MinDist_EdgeThreshold_AccumThreshold_MinRadius_MaxRadius_t>
 {
     string picture_name;
-    const double dp = 1.0;
     double minDist;
     double edgeThreshold;
     double accumThreshold;
@@ -118,6 +117,7 @@ public:
         GaussianBlur(src, src, Size(9, 9), 2, 2);
 
         vector<Vec3f> circles;
+        const double dp = 1.0;
         HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
         string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";

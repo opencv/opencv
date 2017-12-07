@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include <algorithm>
 #include <iterator>
 #include <stdexcept>
 
@@ -936,6 +937,7 @@ class NZPointList
     NZPointList(const NZPointList& other); // non-copyable
 
 public:
+    typedef Point value_type;
     typedef std::vector<Point>::const_iterator const_iterator;
 
     NZPointList(int _rows, int _cols) :
@@ -944,7 +946,7 @@ public:
         points.reserve(256);
     }
 
-    void insert(Point pt)
+    void insert(const Point& pt)
     {
         points.push_back(pt);
     }
@@ -952,6 +954,11 @@ public:
     void insert(const NZPointList& from)
     {
         points.insert(points.end(), from.points.begin(), from.points.end());
+    }
+
+    void push_back(const Point& pt)
+    {
+        points.push_back(pt);
     }
 
     int rows() const { return nrows; }
@@ -962,7 +969,12 @@ public:
         return points.size();
     }
 
-    const_iterator begin(Point2f /*curCenter*/, int /*maxRadius*/) const
+    const_iterator begin() const
+    {
+        return points.begin();
+    }
+
+    const_iterator begin(const Point2f& /*curCenter*/, int /*minRadius*/, int /*maxRadius*/) const
     {
         return points.begin();
     }
@@ -979,6 +991,7 @@ class NZPointSet
     NZPointSet(const NZPointSet& other); // non-copyable
 
 public:
+    typedef Point value_type;
     class const_iterator;
 
     NZPointSet(int _rows, int _cols) :
@@ -986,7 +999,7 @@ public:
     {
     }
 
-    void insert(Point pt)
+    void insert(const Point& pt)
     {
         positions.at<uchar>(pt) = 1;
     }
@@ -1004,9 +1017,15 @@ public:
         return cv::countNonZero(positions);
     }
 
-    const_iterator begin(Point2f curCenter, int maxRadius) const
+    const_iterator begin() const
     {
-        return const_iterator(positions, curCenter, maxRadius);
+        int maxDimension = std::max(positions.rows, positions.cols);
+        return const_iterator(positions, Point2f(0, 0), 0, maxDimension);
+    }
+
+    const_iterator begin(const Point2f& curCenter, int minRadius, int maxRadius) const
+    {
+        return const_iterator(positions, curCenter, minRadius, maxRadius);
     }
 
     const_iterator end() const
@@ -1014,24 +1033,45 @@ public:
         return const_iterator(positions);
     }
 
+    static int complexity(int minRadius, int maxRadius)
+    {
+        return maxRadius * maxRadius - minRadius * minRadius / 2;
+    }
+
     class const_iterator
     {
         const Mat& positions;
-        Range xrange;
-        Range yrange;
+        Range xOuter;
+        Range yOuter;
+        Range xInner;
+        Range yInner;
         Point current;
         const uchar* mi;
 
     public:
-        const_iterator(const Mat& _positions, Point2f _curCenter, int _maxRadius)
+        typedef std::forward_iterator_tag iterator_category;
+        typedef Point value_type;
+        typedef ptrdiff_t difference_type;
+        typedef Point* pointer;
+        typedef Point& reference;
+
+        const_iterator(const Mat& _positions, const Point2f& _curCenter, int _minRadius, int _maxRadius)
             : positions(_positions)
         {
-            const int mr = _maxRadius + 1;
-            xrange = Range(std::max(int(_curCenter.x - mr), 0), std::min(int(_curCenter.x + mr), positions.cols));
-            yrange = Range(std::max(int(_curCenter.y - mr), 0), std::min(int(_curCenter.y + mr), positions.rows));
-            current.x = xrange.start;
-            current.y = yrange.start;
-            if (current.x < xrange.end && current.y < yrange.end)
+            const int rOuter = _maxRadius + 1;
+            xOuter = Range(std::max(int(_curCenter.x - rOuter), 0), std::min(int(_curCenter.x + rOuter), positions.cols));
+            yOuter = Range(std::max(int(_curCenter.y - rOuter), 0), std::min(int(_curCenter.y + rOuter), positions.rows));
+            const int rInner = int(_minRadius / std::sqrt(2));
+            xInner = Range(std::max(int(_curCenter.x - rInner), 0), std::min(int(_curCenter.x + rInner), positions.cols));
+            yInner = Range(std::max(int(_curCenter.y - rInner), 0), std::min(int(_curCenter.y + rInner), positions.rows));
+            current.x = xOuter.start;
+            current.y = yOuter.start;
+            if ((current.y >= yInner.start && current.y < yInner.end) &&
+                (current.x >= xInner.start && current.x < xInner.end))
+            {
+                current.x = xInner.end;
+            }
+            if (current.x < xOuter.end && current.y < yOuter.end)
             {
                 mi = positions.ptr<uchar>(current.y) + current.x;
                 if (!*mi)
@@ -1051,7 +1091,7 @@ public:
         }
 
         const_iterator(const const_iterator& other) :
-            positions(other.positions), xrange(other.xrange), yrange(other.yrange), current(other.current), mi(other.mi)
+            positions(other.positions), xOuter(other.xOuter), yOuter(other.yOuter), current(other.current), mi(other.mi)
         {
         }
 
@@ -1062,16 +1102,26 @@ public:
                 do
                 {
                     ++current.x;
-                    if (current.x < xrange.end)
+                    if ((current.y >= yInner.start && current.y < yInner.end) &&
+                        (current.x >= xInner.start && current.x < xInner.end))
+                    {
+                        current.x = xInner.end;
+                    }
+                    if (current.x < xOuter.end)
                     {
                         ++mi;
                     }
                     else
                     {
                         ++current.y;
-                        if (current.y < yrange.end)
+                        if (current.y < yOuter.end)
                         {
-                            current.x = xrange.start;
+                            current.x = xOuter.start;
+                            if ((current.y >= yInner.start && current.y < yInner.end) &&
+                                (current.x >= xInner.start && current.x < xInner.end))
+                            {
+                                current.x = xInner.end;
+                            }
                             mi = positions.ptr<uchar>(current.y) + current.x;
                         }
                         else
@@ -1125,8 +1175,7 @@ public:
     };
 };
 
-typedef NZPointSet NZPoints;
-
+template<class NZPoints>
 class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
@@ -1353,7 +1402,7 @@ static void GetCircleCenters(const std::vector<int> &centers, std::vector<Vec3f>
 {
     size_t centerCnt = centers.size();
     float minDist2 = minDist * minDist;
-    for (int i = 0; i < centerCnt; ++i)
+    for (size_t i = 0; i < centerCnt; ++i)
     {
         int center = centers[i];
         int y = center / acols;
@@ -1382,13 +1431,14 @@ static void RemoveOverlaps(std::vector<Vec3f>& circles, float minDist)
     circles.resize(endIdx);
 }
 
+template<class NZPoints>
 class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
 {
 public:
-    HoughCircleEstimateRadiusInvoker(const NZPoints &_nz, const std::vector<int> &_centers, std::vector<EstimatedCircle> &_circlesEst,
+    HoughCircleEstimateRadiusInvoker(const NZPoints &_nz, int _nzSz, const std::vector<int> &_centers, std::vector<EstimatedCircle> &_circlesEst,
                                      int _acols, int _accThreshold, int _minRadius, int _maxRadius,
                                      float _dp, Mutex& _mutex) :
-        nz(_nz), centers(_centers), circlesEst(_circlesEst), acols(_acols), accThreshold(_accThreshold),
+        nz(_nz), nzSz(_nzSz), centers(_centers), circlesEst(_circlesEst), acols(_acols), accThreshold(_accThreshold),
         minRadius(_minRadius), maxRadius(_maxRadius), dr(_dp), _lock(_mutex)
     {
         minRadius2 = (float)minRadius * minRadius;
@@ -1412,7 +1462,6 @@ public:
         const int nBinsPerDr = 10;
         int nBins = cvRound((maxRadius - minRadius)/dr*nBinsPerDr);
         std::vector<int> bins(nBins, 0);
-        int nzSz = int(nz.size());
         Mat distBuf(1, nzSz, CV_32FC1), distSqrBuf(1, nzSz, CV_32FC1);
         float *ddata = distBuf.ptr<float>();
         float *dSqrData = distSqrBuf.ptr<float>();
@@ -1445,7 +1494,7 @@ public:
                 int CV_DECL_ALIGNED(16) nzx[4];
                 int CV_DECL_ALIGNED(16) nzy[4];
                 int nnz = 0;
-                for(NZPoints::const_iterator pt = nz.begin(curCenter, maxRadius); pt != nz.end(); ++pt)
+                for(NZPoints::const_iterator pt = nz.begin(curCenter, minRadius, maxRadius); pt != nz.end(); ++pt)
                 {
                     nzx[nnz] = pt->x;
                     nzy[nnz] = pt->y;
@@ -1493,7 +1542,7 @@ public:
             else
 #endif
             {
-                for (NZPoints::const_iterator pt = nz.begin(curCenter, maxRadius); pt != nz.end(); ++pt)
+                for (NZPoints::const_iterator pt = nz.begin(curCenter, minRadius, maxRadius); pt != nz.end(); ++pt)
                 {
                     float _dx = curCenter.x - pt->x, _dy = curCenter.y - pt->y;
                     float _r2 = _dx * _dx + _dy * _dy;
@@ -1561,6 +1610,7 @@ public:
 
 private:
     const NZPoints &nz;
+    int nzSz;
     const std::vector<int> &centers;
     std::vector<EstimatedCircle> &circlesEst;
     int acols, accThreshold, minRadius, maxRadius;
@@ -1591,11 +1641,12 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     Mutex mtx;
     int numThreads = std::max(1, getNumThreads());
     std::vector<Mat> accumVec;
-    NZPoints nz(_image.rows(), _image.cols());
+    NZPointSet nz(_image.rows(), _image.cols());
     parallel_for_(Range(0, edges.rows),
-                  HoughCirclesAccumInvoker(edges, dx, dy, minRadius, maxRadius, idp, accumVec, nz, mtx),
+                  HoughCirclesAccumInvoker<NZPointSet>(edges, dx, dy, minRadius, maxRadius, idp, accumVec, nz, mtx),
                   numThreads);
-    if(nz.size() <= 0)
+    int nzSz = int(nz.size());
+    if(nzSz <= 0)
         return;
 
     Mat accum = accumVec[0].clone();
@@ -1628,11 +1679,26 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     else
     {
         std::vector<EstimatedCircle> circlesEst;
-        // One loop iteration per thread if multithreaded.
-        parallel_for_(Range(0, centerCnt),
-            HoughCircleEstimateRadiusInvoker(nz, centers, circlesEst, accum.cols,
-                accThreshold, minRadius, maxRadius, dp, mtx),
-            numThreads);
+        if (nzSz < NZPointSet::complexity(minRadius, maxRadius))
+        {
+            // Faster to use a list
+            NZPointList nzList(nz.rows(), nz.cols());
+            std::copy(nz.begin(), nz.end(), std::back_inserter(nzList));
+            // One loop iteration per thread if multithreaded.
+            parallel_for_(Range(0, centerCnt),
+                HoughCircleEstimateRadiusInvoker<NZPointList>(nzList, nzSz, centers, circlesEst, accum.cols,
+                    accThreshold, minRadius, maxRadius, dp, mtx),
+                numThreads);
+        }
+        else
+        {
+            // Faster to use a matrix
+            // One loop iteration per thread if multithreaded.
+            parallel_for_(Range(0, centerCnt),
+                HoughCircleEstimateRadiusInvoker<NZPointSet>(nz, nzSz, centers, circlesEst, accum.cols,
+                    accThreshold, minRadius, maxRadius, dp, mtx),
+                numThreads);
+        }
 
         // Sort by accumulator value
         std::sort(circlesEst.begin(), circlesEst.end(), cmpAccum);
