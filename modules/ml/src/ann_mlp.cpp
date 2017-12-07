@@ -42,6 +42,10 @@
 
 namespace cv { namespace ml {
 
+    double SimulatedAnnealingSolver::energy() { return impl->energy(); };
+    void SimulatedAnnealingSolver::changedState() { impl->changedState(); };
+    void SimulatedAnnealingSolver::reverseChangedState() { impl->reverseChangedState(); };
+
 struct AnnParams
 {
     AnnParams()
@@ -898,7 +902,6 @@ public:
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )
     {
-        rng.state = 0; // JUST FOR TEST
         int i, j, k;
         double prev_E = DBL_MAX*0.5, E = 0;
         int itype = inputs.type(), otype = outputs.type();
@@ -959,7 +962,7 @@ public:
                 E = 0;
 
                 // shuffle indices
-                for( i = 0; i < count; i++ )
+                for( i = 0; i <count; i++ )
                 {
                     j = rng.uniform(0, count);
                     k = rng.uniform(0, count);

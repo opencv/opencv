@@ -1881,12 +1881,11 @@ class CV_EXPORTS SimulatedAnnealingSolver : public Algorithm
 public:
     SimulatedAnnealingSolver() { init(); };
     /** Give energy value for  a state of system.*/
-    virtual double energy() = 0;
+    double energy();
     /** Function which change the state of system (random pertubation).*/
-    virtual void changedState() = 0;
+    void changedState();
     /** Function to reverse to the previous state.*/
-    virtual void reverseChangedState() = 0;
-
+    void reverseChangedState();
     /** Simulated annealing procedure.  */
     int run()
     {
@@ -1953,6 +1952,7 @@ public:
         CV_Assert(ite>0);
         iterPerStep = ite;
     }
+    struct Impl;
 protected :
     void init()
     {
@@ -1966,7 +1966,23 @@ protected :
     double initialT;
     double finalT;
     int iterPerStep;
+    Impl* impl;
 };
+struct SimulatedAnnealingSolver::Impl
+{
+    Impl()
+    {
+        refcount = 1;
+    }
+    ~Impl() {  }
+
+    double energy() {return 0;};
+    void changedState(){};
+    void reverseChangedState(){};
+
+    int refcount;
+};
+
 
 //! @} ml
 
