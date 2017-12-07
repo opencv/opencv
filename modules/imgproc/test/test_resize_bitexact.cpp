@@ -26,18 +26,59 @@ TEST(Resize_Bitexact, Linear8U)
 {
     static const int64_t fixedOne = (1L << fixedShiftU8);
 
-    int types[] = { CV_8UC1, CV_8UC4 };
-    // NOTICE: 2x downscaling ommitted since it use different rounding
-    //                      1/2   1           1   1/2        1/2  1/2        1/4  1/4   1/256 1/256      1/3  1/2        1/3  1/3        1/2  1/3        1/7  1/7
-    Size dstsizes[] = {Size(512, 768), Size(1024, 384), Size(512, 384), Size(256, 192), Size(4, 3), Size(342, 384), Size(342, 256), Size(512, 256), Size(146, 110),
-    //                    10/11 10/11     10/12 10/12         251/256          2    2           3    3           7    7
-                       Size(931, 698), Size(853, 640), Size(1004, 753), Size(2048,1536), Size(3072,2304), Size(7168,5376) };
+    struct testmode
+    {
+        int type;
+        Size sz;
+    } modes[] = {
+        { CV_8UC1, Size( 512, 768) }, //   1/2       1
+        { CV_8UC3, Size( 512, 768) },
+        { CV_8UC1, Size(1024, 384) }, //    1       1/2
+        { CV_8UC4, Size(1024, 384) },
+        { CV_8UC1, Size( 512, 384) }, //   1/2      1/2
+        { CV_8UC2, Size( 512, 384) },
+        { CV_8UC3, Size( 512, 384) },
+        { CV_8UC4, Size( 512, 384) },
+        { CV_8UC1, Size( 256, 192) }, //   1/4      1/4
+        { CV_8UC2, Size( 256, 192) },
+        { CV_8UC3, Size( 256, 192) },
+        { CV_8UC4, Size( 256, 192) },
+        { CV_8UC1, Size(   4,   3) }, //   1/256    1/256
+        { CV_8UC2, Size(   4,   3) },
+        { CV_8UC3, Size(   4,   3) },
+        { CV_8UC4, Size(   4,   3) },
+        { CV_8UC1, Size( 342, 384) }, //   1/3      1/2
+        { CV_8UC1, Size( 342, 256) }, //   1/3      1/3
+        { CV_8UC1, Size( 342, 256) },
+        { CV_8UC1, Size( 342, 256) },
+        { CV_8UC1, Size( 342, 256) },
+        { CV_8UC1, Size( 512, 256) }, //   1/2      1/3
+        { CV_8UC1, Size( 146, 110) }, //   1/7      1/7
+        { CV_8UC3, Size( 146, 110) },
+        { CV_8UC4, Size( 146, 110) },
+        { CV_8UC1, Size( 931, 698) }, //  10/11    10/11
+        { CV_8UC2, Size( 931, 698) },
+        { CV_8UC3, Size( 931, 698) },
+        { CV_8UC4, Size( 931, 698) },
+        { CV_8UC1, Size( 853, 640) }, //  10/12    10/12
+        { CV_8UC3, Size( 853, 640) },
+        { CV_8UC4, Size( 853, 640) },
+        { CV_8UC1, Size(1004, 753) }, // 251/256  251/256
+        { CV_8UC2, Size(1004, 753) },
+        { CV_8UC3, Size(1004, 753) },
+        { CV_8UC4, Size(1004, 753) },
+        { CV_8UC1, Size(2048,1536) }, //    2        2
+        { CV_8UC2, Size(2048,1536) },
+        { CV_8UC4, Size(2048,1536) },
+        { CV_8UC1, Size(3072,2304) }, //    3        3
+        { CV_8UC3, Size(3072,2304) },
+        { CV_8UC1, Size(7168,5376) }  //    7        7
+    };
 
-    for (int dsizeind = 0, _dsizecnt = sizeof(dstsizes) / sizeof(dstsizes[0]); dsizeind < _dsizecnt; ++dsizeind)
-        for (int typeind = 0, _typecnt = sizeof(types) / sizeof(types[0]); typeind < _typecnt; ++typeind)
+    for (int modeind = 0, _modecnt = sizeof(modes) / sizeof(modes[0]); modeind < _modecnt; ++modeind)
         {
-            int type = types[typeind], depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-            int dcols = dstsizes[dsizeind].width, drows = dstsizes[dsizeind].height;
+            int type = modes[modeind].type, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+            int dcols = modes[modeind].sz.width, drows = modes[modeind].sz.height;
             int cols = 1024, rows = 768;
 
             double inv_scale_x = (double)dcols / cols;
@@ -111,7 +152,7 @@ TEST(Resize_Bitexact, Linear8U)
 
             cv::resize(src, dst, Size(dcols, drows), 0, 0, cv::INTER_LINEAR_EXACT);
             EXPECT_GE(0, cvtest::norm(refdst, dst, cv::NORM_L1))
-                << "Resize from " << cols << "x" << rows << " to " << dcols << "x" << drows << " failed with max diff " << cvtest::norm(refdst, dst, cv::NORM_INF);
+                << "Resize " << cn << "-chan mat from " << cols << "x" << rows << " to " << dcols << "x" << drows << " failed with max diff " << cvtest::norm(refdst, dst, cv::NORM_INF);
         }
 }
 
