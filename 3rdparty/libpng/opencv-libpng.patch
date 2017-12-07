@@ -1,0 +1,38 @@
+--- a/3rdparty/libpng/pngpriv.h
++++ b/3rdparty/libpng/pngpriv.h
+@@ -214,7 +214,7 @@
+ #   endif
+ #endif
+ 
+-#if PNG_INTEL_SSE_OPT > 0
++#if defined(PNG_INTEL_SSE_OPT) && PNG_INTEL_SSE_OPT > 0
+ #   ifndef PNG_INTEL_SSE_IMPLEMENTATION
+ #      if defined(__SSE4_1__) || defined(__AVX__)
+           /* We are not actually using AVX, but checking for AVX is the best
+@@ -547,7 +547,7 @@
+ 
+ /* Memory model/platform independent fns */
+ #ifndef PNG_ABORT
+-#  ifdef _WINDOWS_
++#  if defined(_WINDOWS_) && !defined(WINRT)
+ #    define PNG_ABORT() ExitProcess(0)
+ #  else
+ #    define PNG_ABORT() abort()
+@@ -1340,7 +1340,7 @@ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_vsx,(png_row_infop
+     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+ #endif
+ 
+-#if PNG_INTEL_SSE_IMPLEMENTATION > 0
++#if defined(PNG_INTEL_SSE_IMPLEMENTATION) && PNG_INTEL_SSE_IMPLEMENTATION > 0
+ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub3_sse2,(png_row_infop
+     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub4_sse2,(png_row_infop
+@@ -2099,7 +2099,7 @@ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_msa,
+    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+ #endif
+ 
+-#  if PNG_INTEL_SSE_IMPLEMENTATION > 0
++#  if defined(PNG_INTEL_SSE_IMPLEMENTATION) && PNG_INTEL_SSE_IMPLEMENTATION > 0
+ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_sse2,
+    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+ #  endif
