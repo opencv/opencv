@@ -356,7 +356,7 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
     }
     for (; i < dst_max - 7 && ofst[i + 7] + 15 <= ofst[dst_width - 1]; i += 8, m += 16, dst += 8)
     {
-        v_uint32x4 v_src01 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + ofst[i])), v_reinterpret_as_u32(v_load_expand(src + ofst[i + 1])));
+        v_uint32x4 v_src01 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + ofst[i    ])), v_reinterpret_as_u32(v_load_expand(src + ofst[i + 1])));
         v_uint32x4 v_src23 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + ofst[i + 2])), v_reinterpret_as_u32(v_load_expand(src + ofst[i + 3])));
         v_uint32x4 v_src45 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + ofst[i + 4])), v_reinterpret_as_u32(v_load_expand(src + ofst[i + 5])));
         v_uint32x4 v_src67 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + ofst[i + 6])), v_reinterpret_as_u32(v_load_expand(src + ofst[i + 7])));
@@ -390,18 +390,221 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
         *(dst++) = src_0;
     }
 }
+template <>
+void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
+{
+    int i = 0;
+    ufixedpoint16 srccn[8] = { src[0], src[1], src[0], src[1], src[0], src[1], src[0], src[1] };
+    v_uint16x8 v_srccn = v_load((uint16_t*)srccn);
+    for (; i < dst_min - 3; i += 4, m += 8, dst += 8) // Points that fall left from src image so became equal to leftmost src point
+    {
+        v_store((uint16_t*)dst, v_srccn);
+    }
+    for (; i < dst_min; i++, m += 2)
+    {
+        *(dst++) = srccn[0];
+        *(dst++) = srccn[1];
+    }
+    for (; i < dst_max - 3 && ofst[i + 3] + 7 <= ofst[dst_width - 1]; i += 4, m += 8, dst += 8)
+    {
+        v_uint32x4 v_src0 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + 2 * ofst[i    ])), v_reinterpret_as_u32(v_load_expand(src + 2 * ofst[i + 1])));
+        v_uint32x4 v_src1 = v_combine_low(v_reinterpret_as_u32(v_load_expand(src + 2 * ofst[i + 2])), v_reinterpret_as_u32(v_load_expand(src + 2 * ofst[i + 3])));
 
+        v_uint32x4 v_zip0, v_zip1;
+        v_zip(v_src0, v_src1, v_zip0, v_zip1);
+        v_zip(v_zip0, v_zip1, v_src0, v_src1);
+
+        v_int16x8 v_src0123, v_src4567;
+        v_zip(v_reinterpret_as_s16(v_src0), v_reinterpret_as_s16(v_src1), v_src0123, v_src4567);
+
+        v_uint32x4 v_mul = v_load((uint32_t*)m);//AaBbCcDd
+        v_zip(v_mul, v_mul, v_zip0, v_zip1);//AaAaBbBb CcCcDdDd
+        v_uint32x4 v_res0 = v_reinterpret_as_u32(v_dotprod(v_src0123, v_reinterpret_as_s16(v_zip0)));
+        v_uint32x4 v_res1 = v_reinterpret_as_u32(v_dotprod(v_src4567, v_reinterpret_as_s16(v_zip1)));
+        v_store((uint16_t*)dst, v_pack(v_res0, v_res1));//AB1AB2CD1CD2
+    }
+    for (; i < dst_max; i += 1, m += 2)
+    {
+        uint8_t* px = src + 2 * ofst[i];
+        *(dst++) = m[0] * px[0] + m[1] * px[2];
+        *(dst++) = m[0] * px[1] + m[1] * px[3];
+    }
+    srccn[0] = (src + 2 * ofst[dst_width - 1])[0]; srccn[1] = (src + 2 * ofst[dst_width - 1])[1]; srccn[2] = (src + 2 * ofst[dst_width - 1])[0]; srccn[3] = (src + 2 * ofst[dst_width - 1])[1];
+    srccn[4] = (src + 2 * ofst[dst_width - 1])[0]; srccn[5] = (src + 2 * ofst[dst_width - 1])[1]; srccn[6] = (src + 2 * ofst[dst_width - 1])[0]; srccn[7] = (src + 2 * ofst[dst_width - 1])[1];
+    v_srccn = v_load((uint16_t*)srccn);
+    for (; i < dst_width - 3; i += 4, dst += 8) // Points that fall left from src image so became equal to leftmost src point
+    {
+        v_store((uint16_t*)dst, v_srccn);
+    }
+    for (; i < dst_width; i++)
+    {
+        *(dst++) = srccn[0];
+        *(dst++) = srccn[1];
+    }
+}
+template <>
+void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 3>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
+{
+    int i = 0;
+    ufixedpoint16 srccn[3] = { src[0], src[1], src[2] };
+    v_uint16x8 v_srccn0 = v_setall_u16(((uint16_t*)srccn)[0]);
+    v_uint16x8 v_srccn1 = v_setall_u16(((uint16_t*)srccn)[1]);
+    v_uint16x8 v_srccn2 = v_setall_u16(((uint16_t*)srccn)[2]);
+    for (; i < dst_min - 7; i += 8, m += 16, dst += 24) // Points that fall left from src image so became equal to leftmost src point
+    {
+        v_store_interleave((uint16_t*)dst, v_srccn0, v_srccn1, v_srccn2);
+    }
+    for (; i < dst_min; i++, m += 2)
+    {
+        *(dst++) = srccn[0];
+        *(dst++) = srccn[1];
+        *(dst++) = srccn[2];
+    }
+    for (; i < dst_max - 7 && ofst[i + 7] + 15 <= ofst[dst_width - 1]; i += 8, m += 16, dst += 24)
+    {
+        v_uint8x16 v_src0_c1, v_src0_c2, v_src0_c3;
+        v_load_deinterleave(src + 3 * ofst[i    ], v_src0_c1, v_src0_c2, v_src0_c3);
+        v_uint8x16 v_src1_c1, v_src1_c2, v_src1_c3;
+        v_load_deinterleave(src + 3 * ofst[i + 1], v_src1_c1, v_src1_c2, v_src1_c3);
+        v_uint8x16 v_src2_c1, v_src2_c2, v_src2_c3;
+        v_load_deinterleave(src + 3 * ofst[i + 2], v_src2_c1, v_src2_c2, v_src2_c3);
+        v_uint8x16 v_src3_c1, v_src3_c2, v_src3_c3;
+        v_load_deinterleave(src + 3 * ofst[i + 3], v_src3_c1, v_src3_c2, v_src3_c3);
+
+        v_uint16x8 v_tmp0, v_tmp1, v_tmp2;
+        v_uint16x8 v_src0123_c1, v_src0123_c2, v_src0123_c3;
+        v_zip(v_reinterpret_as_u16(v_src0_c1), v_reinterpret_as_u16(v_src2_c1), v_tmp0, v_tmp1);
+        v_zip(v_reinterpret_as_u16(v_src1_c1), v_reinterpret_as_u16(v_src3_c1), v_tmp1, v_tmp2);
+        v_zip(v_tmp0, v_tmp1, v_src0123_c1, v_tmp2);
+        v_zip(v_reinterpret_as_u16(v_src0_c2), v_reinterpret_as_u16(v_src2_c2), v_tmp0, v_tmp1);
+        v_zip(v_reinterpret_as_u16(v_src1_c2), v_reinterpret_as_u16(v_src3_c2), v_tmp1, v_tmp2);
+        v_zip(v_tmp0, v_tmp1, v_src0123_c2, v_tmp2);
+        v_zip(v_reinterpret_as_u16(v_src0_c3), v_reinterpret_as_u16(v_src2_c3), v_tmp0, v_tmp1);
+        v_zip(v_reinterpret_as_u16(v_src1_c3), v_reinterpret_as_u16(v_src3_c3), v_tmp1, v_tmp2);
+        v_zip(v_tmp0, v_tmp1, v_src0123_c3, v_tmp2);
+
+        v_load_deinterleave(src + 3 * ofst[i + 4], v_src0_c1, v_src0_c2, v_src0_c3);
+        v_load_deinterleave(src + 3 * ofst[i + 5], v_src1_c1, v_src1_c2, v_src1_c3);
+        v_load_deinterleave(src + 3 * ofst[i + 6], v_src2_c1, v_src2_c2, v_src2_c3);
+        v_load_deinterleave(src + 3 * ofst[i + 7], v_src3_c1, v_src3_c2, v_src3_c3);
+
+        v_uint16x8 v_src4567_c1, v_src4567_c2, v_src4567_c3;
+        v_zip(v_reinterpret_as_u16(v_src0_c1), v_reinterpret_as_u16(v_src2_c1), v_tmp0, v_tmp1);
+        v_zip(v_reinterpret_as_u16(v_src1_c1), v_reinterpret_as_u16(v_src3_c1), v_tmp1, v_tmp2);
+        v_zip(v_tmp0, v_tmp1, v_src4567_c1, v_tmp2);
+        v_zip(v_reinterpret_as_u16(v_src0_c2), v_reinterpret_as_u16(v_src2_c2), v_tmp0, v_tmp1);
+        v_zip(v_reinterpret_as_u16(v_src1_c2), v_reinterpret_as_u16(v_src3_c2), v_tmp1, v_tmp2);
+        v_zip(v_tmp0, v_tmp1, v_src4567_c2, v_tmp2);
+        v_zip(v_reinterpret_as_u16(v_src0_c3), v_reinterpret_as_u16(v_src2_c3), v_tmp0, v_tmp1);
+        v_zip(v_reinterpret_as_u16(v_src1_c3), v_reinterpret_as_u16(v_src3_c3), v_tmp1, v_tmp2);
+        v_zip(v_tmp0, v_tmp1, v_src4567_c3, v_tmp2);
+
+        v_expand(v_reinterpret_as_u8(v_combine_low(v_src0123_c1, v_src4567_c1)),
+            v_src0123_c1, v_src4567_c1
+        );
+        v_expand(v_reinterpret_as_u8(v_combine_low(v_src0123_c2, v_src4567_c2)),
+            v_src0123_c2, v_src4567_c2
+        );
+        v_expand(v_reinterpret_as_u8(v_combine_low(v_src0123_c3, v_src4567_c3)),
+            v_src0123_c3, v_src4567_c3
+        );
+        v_int16x8 v_mul0123 = v_load((int16_t*)m);
+        v_int16x8 v_mul4567 = v_load((int16_t*)m+8);
+        v_uint32x4 v_res0123_c1 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0123_c1), v_mul0123));
+        v_uint32x4 v_res0123_c2 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0123_c2), v_mul0123));
+        v_uint32x4 v_res0123_c3 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0123_c3), v_mul0123));
+        v_uint32x4 v_res4567_c1 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src4567_c1), v_mul4567));
+        v_uint32x4 v_res4567_c2 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src4567_c2), v_mul4567));
+        v_uint32x4 v_res4567_c3 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src4567_c3), v_mul4567));
+
+        v_store_interleave((uint16_t*)dst , v_pack(v_res0123_c1, v_res4567_c1), v_pack(v_res0123_c2, v_res4567_c2), v_pack(v_res0123_c3, v_res4567_c3));
+    }
+    for (; i < dst_max; i += 1, m += 2)
+    {
+        uint8_t* px = src + 3 * ofst[i];
+        *(dst++) = m[0] * px[0] + m[1] * px[3];
+        *(dst++) = m[0] * px[1] + m[1] * px[4];
+        *(dst++) = m[0] * px[2] + m[1] * px[5];
+    }
+    srccn[0] = (src + 3 * ofst[dst_width - 1])[0]; v_srccn0 = v_setall_u16(((uint16_t*)srccn)[0]);
+    srccn[1] = (src + 3 * ofst[dst_width - 1])[1]; v_srccn1 = v_setall_u16(((uint16_t*)srccn)[1]);
+    srccn[2] = (src + 3 * ofst[dst_width - 1])[2]; v_srccn2 = v_setall_u16(((uint16_t*)srccn)[2]);
+    for (; i < dst_width - 7; i += 8, dst += 24) // Points that fall left from src image so became equal to leftmost src point
+    {
+        v_store_interleave((uint16_t*)dst, v_srccn0, v_srccn1, v_srccn2);
+    }
+    for (; i < dst_width; i++)
+    {
+        *(dst++) = srccn[0];
+        *(dst++) = srccn[1];
+        *(dst++) = srccn[2];
+    }
+}
+template <>
+void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
+{
+    int i = 0;
+    ufixedpoint16 srccn[8] = { src[0], src[1], src[2], src[3], src[0], src[1], src[2], src[3] };
+    v_uint16x8 v_srccn = v_load((uint16_t*)srccn);
+    for (; i < dst_min - 1; i += 2, m += 4, dst += 8) // Points that fall left from src image so became equal to leftmost src point
+    {
+        v_store((uint16_t*)dst, v_srccn);
+    }
+    if (i < dst_min) // Points that fall left from src image so became equal to leftmost src point
+    {
+        *(dst++) = srccn[0];
+        *(dst++) = srccn[1];
+        *(dst++) = srccn[2];
+        *(dst++) = srccn[3];
+        i++; m += 2;
+    }
+    for (; i < dst_max - 1 && ofst[i + 1] + 3 <= ofst[dst_width - 1]; i += 2, m += 4, dst += 8)
+    {
+        v_int16x8 v_src01 = v_reinterpret_as_s16(v_load_expand(src + 4 * ofst[i    ]));
+        v_int16x8 v_src23 = v_reinterpret_as_s16(v_load_expand(src + 4 * ofst[i + 1]));
+
+        v_int16x8 v_tmp0, v_tmp1;
+        v_recombine(v_src01, v_src23, v_tmp0, v_tmp1);
+        v_zip(v_tmp0, v_tmp1, v_src01, v_src23);
+
+        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(((uint32_t*)m)[0]));//AaAaAaAa
+        v_int16x8 v_mul23 = v_reinterpret_as_s16(v_setall_u32(((uint32_t*)m)[1]));//BbBbBbBb
+        v_uint32x4 v_res0 = v_reinterpret_as_u32(v_dotprod(v_src01, v_mul01));
+        v_uint32x4 v_res1 = v_reinterpret_as_u32(v_dotprod(v_src23, v_mul23));
+        v_store((uint16_t*)dst, v_pack(v_res0, v_res1));//AB1AB2CD1CD2
+    }
+    for (; i < dst_max; i += 1, m += 2)
+    {
+        uint8_t* px = src + 4 * ofst[i];
+        *(dst++) = m[0] * px[0] + m[1] * px[4];
+        *(dst++) = m[0] * px[1] + m[1] * px[5];
+        *(dst++) = m[0] * px[2] + m[1] * px[6];
+        *(dst++) = m[0] * px[3] + m[1] * px[7];
+    }
+    srccn[0] = (src + 4 * ofst[dst_width - 1])[0]; srccn[1] = (src + 4 * ofst[dst_width - 1])[1]; srccn[2] = (src + 4 * ofst[dst_width - 1])[2]; srccn[3] = (src + 4 * ofst[dst_width - 1])[3];
+    srccn[4] = (src + 4 * ofst[dst_width - 1])[0]; srccn[5] = (src + 4 * ofst[dst_width - 1])[1]; srccn[6] = (src + 4 * ofst[dst_width - 1])[2]; srccn[7] = (src + 4 * ofst[dst_width - 1])[3];
+    v_srccn = v_load((uint16_t*)srccn);
+    for (; i < dst_width - 1; i += 2, dst += 8) // Points that fall right from src image so became equal to rightmost src point
+    {
+        v_store((uint16_t*)dst, v_srccn);
+    }
+    if (i < dst_width)
+    {
+        *(dst++) = srccn[0];
+        *(dst++) = srccn[1];
+        *(dst++) = srccn[2];
+        *(dst++) = srccn[3];
+    }
+}
 template <>
 void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int *ofst, ufixedpoint32* m, ufixedpoint32* dst, int dst_min, int dst_max, int dst_width)
 {
-    typedef v_uint32x4 v_fixedtype;
-    typedef uint32_t lanetype;
     int i = 0;
     ufixedpoint32 src_0(src[0]);
-    v_fixedtype v_src_0 = v_setall_u32(*((lanetype*)&src_0));
+    v_uint32x4 v_src_0 = v_setall_u32(*((uint32_t*)&src_0));
     for (; i < dst_min - 3; i += 4, m += 8, dst += 4) // Points that fall left from src image so became equal to leftmost src point
     {
-        v_store((lanetype*)dst, v_src_0);
+        v_store((uint32_t*)dst, v_src_0);
     }
     for (; i < dst_min; i++, m += 2)
     {
@@ -409,17 +612,17 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
     }
     for (; i < dst_max - 3 && ofst[i + 3] + 8 <= ofst[dst_width - 1]; i += 4, m += 8, dst += 4)
     {
-        v_fixedtype v_src0 = v_combine_low(v_load_expand(src + ofst[i]), v_load_expand(src + ofst[i + 1]));
-        v_fixedtype v_mul0 = v_load((lanetype*)m);
-        v_fixedtype v_src1 = v_combine_low(v_load_expand(src + ofst[i + 2]), v_load_expand(src + ofst[i + 3]));
-        v_fixedtype v_mul1 = v_load((lanetype*)m + 4);
-        v_fixedtype v_res0 = v_src0 * v_mul0;//a1a2b1b2
-        v_fixedtype v_res1 = v_src1 * v_mul1;//c1c2d1d2
-        v_fixedtype v_tmp0, v_tmp1;
+        v_uint32x4 v_src0 = v_combine_low(v_load_expand(src + ofst[i]), v_load_expand(src + ofst[i + 1]));
+        v_uint32x4 v_mul0 = v_load((uint32_t*)m);
+        v_uint32x4 v_src1 = v_combine_low(v_load_expand(src + ofst[i + 2]), v_load_expand(src + ofst[i + 3]));
+        v_uint32x4 v_mul1 = v_load((uint32_t*)m + 4);
+        v_uint32x4 v_res0 = v_src0 * v_mul0;//a1a2b1b2
+        v_uint32x4 v_res1 = v_src1 * v_mul1;//c1c2d1d2
+        v_uint32x4 v_tmp0, v_tmp1;
         v_recombine(v_res0, v_res1, v_tmp0, v_tmp1);//a1a2c1c2 b1b2d1d2
         v_zip(v_tmp0, v_tmp1, v_res0, v_res1);//a1b1a2b2 c1d1c2d2
         v_recombine(v_res0, v_res1, v_tmp0, v_tmp1);//a1b1c1d1 a2b2c2d2
-        v_store((lanetype*)dst, v_tmp0 + v_tmp1);//abcd
+        v_store((uint32_t*)dst, v_tmp0 + v_tmp1);//abcd
     }
     for (; i < dst_max; i += 1, m += 2)
     {
@@ -427,10 +630,10 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
         *(dst++) = m[0] * px[0] + m[1] * px[1];
     }
     src_0 = (src + ofst[dst_width - 1])[0];
-    v_src_0 = v_setall_u32(*((lanetype*)&src_0));
+    v_src_0 = v_setall_u32(*((uint32_t*)&src_0));
     for (; i < dst_width - 3; i += 4, dst += 4)
     {
-        v_store((lanetype*)dst, v_src_0);
+        v_store((uint32_t*)dst, v_src_0);
     }
     for (; i < dst_width; i++)
     {
@@ -3714,7 +3917,7 @@ void resize(int src_type,
     {
         // in case of inv_scale_x && inv_scale_y is equal to 0.5
         // INTER_AREA (fast) is equal to bit exact INTER_LINEAR
-        if (is_area_fast && iscale_x == 2 && iscale_y == 2)
+        if (is_area_fast && iscale_x == 2 && iscale_y == 2 && cn != 2)//Area resize implementation for 2-channel images isn't bit-exact
             interpolation = INTER_AREA;
         else
         {
