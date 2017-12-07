@@ -50,8 +50,36 @@
 using namespace cv;
 using namespace std;
 
-string getTestCaseName(const string& picture, double minD, double edge, double accum, int minR, int maxR);
-void highlightCircles(const string& imagePath, const vector<Vec3f>& circles, const string& outputImagePath);
+static string getTestCaseName(const string& picture_name, double minDist, double edgeThreshold, double accumThreshold, int minRadius, int maxRadius)
+{
+    string results_name = format("circles_%s_%.0f_%.0f_%.0f_%d_%d",
+        picture_name.c_str(), minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    string temp(results_name);
+    size_t pos = temp.find_first_of("\\/.");
+    while (pos != string::npos) {
+        temp.replace(pos, 1, "_");
+        pos = temp.find_first_of("\\/.");
+    }
+    return temp;
+}
+
+#if DEBUG_IMAGES
+static void highlightCircles(const string& imagePath, const vector<Vec3f>& circles, const string& outputImagePath)
+{
+    Mat imgDebug = imread(imagePath, IMREAD_COLOR);
+    const Scalar yellow(0, 255, 255);
+
+    for (vector<Vec3f>::const_iterator iter = circles.begin(); iter != circles.end(); ++iter)
+    {
+        const Vec3f& circle = *iter;
+        float x = circle[0];
+        float y = circle[1];
+        float r = circle[2];
+        cv::circle(imgDebug, Point(int(x), int(y)), int(r), yellow);
+    }
+    imwrite(outputImagePath, imgDebug);
+}
+#endif
 
 typedef std::tr1::tuple<string, double, double, double, int, int> Image_MinDist_EdgeThreshold_AccumThreshold_MinRadius_MaxRadius_t;
 class HoughCirclesTestFixture : public testing::TestWithParam<Image_MinDist_EdgeThreshold_AccumThreshold_MinRadius_MaxRadius_t>
@@ -59,10 +87,10 @@ class HoughCirclesTestFixture : public testing::TestWithParam<Image_MinDist_Edge
     string picture_name;
     const double dp = 1.0;
     double minDist;
-    double edgeThreshold = 100;
-    double accumThreshold = 100;
-    int minRadius = 0;
-    int maxRadius = 0;
+    double edgeThreshold;
+    double accumThreshold;
+    int minRadius;
+    int maxRadius;
 
 public:
     HoughCirclesTestFixture()
@@ -88,7 +116,7 @@ public:
         EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
 
         GaussianBlur(src, src, Size(9, 9), 2, 2);
-        
+
         vector<Vec3f> circles;
         HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
@@ -118,35 +146,6 @@ public:
         EXPECT_EQ(exp_circles.size(), circles.size());
     }
 };
-
-string getTestCaseName(const string& picture_name, double minDist, double edgeThreshold, double accumThreshold, int minRadius, int maxRadius)
-{
-    string results_name = format("circles_%s_%.0f_%.0f_%.0f_%d_%d",
-        picture_name.c_str(), minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-    string temp(results_name);
-    size_t pos = temp.find_first_of("\\/.");
-    while (pos != string::npos) {
-        temp.replace(pos, 1, "_");
-        pos = temp.find_first_of("\\/.");
-    }
-    return temp;
-}
-
-void highlightCircles(const string& imagePath, const vector<Vec3f>& circles, const string& outputImagePath)
-{
-    Mat imgDebug = imread(imagePath, IMREAD_COLOR);
-    const Scalar yellow(0, 255, 255);
-
-    for (auto iter = circles.begin(); iter != circles.end(); ++iter)
-    {
-        const Vec3f& circle = *iter;
-        float x = circle[0];
-        float y = circle[1];
-        float r = circle[2];
-        cv::circle(imgDebug, Point(int(x), int(y)), int(r), yellow);
-    }
-    imwrite(outputImagePath, imgDebug);
-}
 
 TEST_P(HoughCirclesTestFixture, regression)
 {
@@ -194,7 +193,7 @@ TEST(HoughCirclesTest, DefaultMaxRadius)
 
     int maxDimension = std::max(src.rows, src.cols);
 
-    EXPECT_GT(circles.size(), 0) << "Should find at least some circles";
+    EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
     for (size_t i = 0; i < circles.size(); ++i)
     {
         EXPECT_GE(circles[0][2], minRadius) << "Radius should be >= minRadius";
@@ -225,5 +224,5 @@ TEST(HoughCirclesTest, ManySmallCircles)
     highlightCircles(filename, circles, imgProc + test_case_name + ".png");
 #endif
 
-    EXPECT_GT(circles.size(), 3000) << "Should find a lot of circles";
+    EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
 }

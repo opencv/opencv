@@ -45,6 +45,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iterator>
+#include <stdexcept>
 
 namespace cv
 {
@@ -961,14 +962,14 @@ public:
         return points.size();
     }
 
-    const_iterator cbegin(Point2f /*curCenter*/, int /*maxRadius*/) const
+    const_iterator begin(Point2f /*curCenter*/, int /*maxRadius*/) const
     {
-        return points.cbegin();
+        return points.begin();
     }
 
-    const_iterator cend() const
+    const_iterator end() const
     {
-        return points.cend();
+        return points.end();
     }
 };
 
@@ -980,8 +981,8 @@ class NZPointSet
 public:
     class const_iterator;
 
-    NZPointSet(int rows, int cols) :
-        positions(Mat::zeros(rows, cols, CV_8UC1))
+    NZPointSet(int _rows, int _cols) :
+        positions(Mat::zeros(_rows, _cols, CV_8UC1))
     {
     }
 
@@ -1003,12 +1004,12 @@ public:
         return cv::countNonZero(positions);
     }
 
-    const_iterator cbegin(Point2f curCenter, int maxRadius) const
+    const_iterator begin(Point2f curCenter, int maxRadius) const
     {
         return const_iterator(positions, curCenter, maxRadius);
     }
 
-    const_iterator cend() const
+    const_iterator end() const
     {
         return const_iterator(positions);
     }
@@ -1082,7 +1083,7 @@ public:
             }
         }
 
-        Point operator*() const
+        const Point& operator*() const
         {
             if (!mi)
             {
@@ -1091,13 +1092,13 @@ public:
             return current;
         }
 
-        const Point& operator->()
+        const Point* operator->() const
         {
             if (!mi)
             {
                 throw std::out_of_range("");
             }
-            return current;
+            return &current;
         }
 
         bool operator==(const const_iterator& rhs)
@@ -1332,7 +1333,7 @@ private:
     Mutex& _lock;
 };
 
-bool CheckDistance(const std::vector<Vec3f> &circles, size_t endIdx, const Vec3f& circle, float minDist2)
+static bool CheckDistance(const std::vector<Vec3f> &circles, size_t endIdx, const Vec3f& circle, float minDist2)
 {
     bool goodPoint = true;
     for (uint j = 0; j < endIdx; ++j)
@@ -1348,7 +1349,7 @@ bool CheckDistance(const std::vector<Vec3f> &circles, size_t endIdx, const Vec3f
     return goodPoint;
 }
 
-void RemoveOverlaps(std::vector<Vec3f>& circles, float minDist)
+static void RemoveOverlaps(std::vector<Vec3f>& circles, float minDist)
 {
     float minDist2 = minDist * minDist;
     size_t endIdx = 1;
@@ -1427,10 +1428,10 @@ public:
                 int CV_DECL_ALIGNED(16) nzx[4];
                 int CV_DECL_ALIGNED(16) nzy[4];
                 int nnz = 0;
-                for(auto pt = nz.cbegin(curCenter, maxRadius); pt != nz.cend(); ++pt)
+                for(NZPoints::const_iterator pt = nz.begin(curCenter, maxRadius); pt != nz.end(); ++pt)
                 {
-                    nzx[nnz] = (*pt).x;
-                    nzy[nnz] = (*pt).y;
+                    nzx[nnz] = pt->x;
+                    nzy[nnz] = pt->y;
                     ++nnz;
                     if(nnz == 4)
                     {
@@ -1475,10 +1476,9 @@ public:
             else
 #endif
             {
-                const int mr = maxRadius + 1;
-                for (auto pt = nz.cbegin(curCenter, maxRadius); pt != nz.cend(); ++pt)
+                for (NZPoints::const_iterator pt = nz.begin(curCenter, maxRadius); pt != nz.end(); ++pt)
                 {
-                    float _dx = curCenter.x - (*pt).x, _dy = curCenter.y - (*pt).y;
+                    float _dx = curCenter.x - pt->x, _dy = curCenter.y - pt->y;
                     float _r2 = _dx * _dx + _dy * _dy;
 
                     if(minRadius2 <= _r2 && _r2 <= maxRadius2)
