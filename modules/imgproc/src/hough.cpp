@@ -1349,6 +1349,23 @@ static bool CheckDistance(const std::vector<Vec3f> &circles, size_t endIdx, cons
     return goodPoint;
 }
 
+static void GetCircleCenters(const std::vector<int> &centers, std::vector<Vec3f> &circles, int acols, float minDist, float dr)
+{
+    size_t centerCnt = centers.size();
+    float minDist2 = minDist * minDist;
+    for (int i = 0; i < centerCnt; ++i)
+    {
+        int center = centers[i];
+        int y = center / acols;
+        int x = center - y * acols;
+        Vec3f circle = Vec3f((x + 0.5f) * dr, (y + 0.5f) * dr, 0);
+
+        bool goodPoint = CheckDistance(circles, circles.size(), circle, minDist2);
+        if (goodPoint)
+            circles.push_back(circle);
+    }
+}
+
 static void RemoveOverlaps(std::vector<Vec3f>& circles, float minDist)
 {
     float minDist2 = minDist * minDist;
@@ -1559,7 +1576,7 @@ private:
 
 static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float dp, float minDist,
                                  int minRadius, int maxRadius, int cannyThreshold,
-                                 int accThreshold, int maxCircles, int kernelSize )
+                                 int accThreshold, int maxCircles, int kernelSize, bool centersOnly)
 {
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
     dp = max(dp, 1.f);
@@ -1601,21 +1618,27 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     std::sort(centers.begin(), centers.end(), hough_cmp_gt(accum.ptr<int>()));
 
-    std::vector<EstimatedCircle> circlesEst;
-    // One loop iteration per thread if multithreaded.
-    parallel_for_(Range(0, centerCnt),
-        HoughCircleEstimateRadiusInvoker(nz, centers, circlesEst, accum.cols,
-            accThreshold, minRadius, maxRadius, dp, mtx),
-        numThreads);
-
-    // Sort by accumulator value
-    std::sort(circlesEst.begin(), circlesEst.end(), cmpAccum);
-
     std::vector<Vec3f> circles;
     circles.reserve(256);
-    std::transform(circlesEst.begin(), circlesEst.end(), std::back_inserter(circles), GetCircle);
+    if (centersOnly)
+    {
+        // Just get the circle centers
+        GetCircleCenters(centers, circles, accum.cols, minDist, dp);
+    }
+    else
+    {
+        std::vector<EstimatedCircle> circlesEst;
+        // One loop iteration per thread if multithreaded.
+        parallel_for_(Range(0, centerCnt),
+            HoughCircleEstimateRadiusInvoker(nz, centers, circlesEst, accum.cols,
+                accThreshold, minRadius, maxRadius, dp, mtx),
+            numThreads);
 
-    RemoveOverlaps(circles, minDist);
+        // Sort by accumulator value
+        std::sort(circlesEst.begin(), circlesEst.end(), cmpAccum);
+        std::transform(circlesEst.begin(), circlesEst.end(), std::back_inserter(circles), GetCircle);
+        RemoveOverlaps(circles, minDist);
+    }
 
     if(circles.size() > 0)
     {
@@ -1647,6 +1670,8 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     if(maxCircles < 0)
         maxCircles = INT_MAX;
 
+    bool centersOnly = (maxRadius < 0);
+
     if( maxRadius <= 0 )
         maxRadius = std::max( _image.rows(), _image.cols() );
     else if( maxRadius <= minRadius )
@@ -1657,7 +1682,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     case CV_HOUGH_GRADIENT:
         HoughCirclesGradient(_image, _circles, (float)dp, (float)minDist,
                              minRadius, maxRadius, cannyThresh,
-                             accThresh, maxCircles, kernelSize);
+                             accThresh, maxCircles, kernelSize, centersOnly);
         break;
     default:
         CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );

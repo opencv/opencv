@@ -74,7 +74,7 @@ static void highlightCircles(const string& imagePath, const vector<Vec3f>& circl
         const Vec3f& circle = *iter;
         float x = circle[0];
         float y = circle[1];
-        float r = circle[2];
+        float r = max(circle[2], 2.0f);
         cv::circle(imgDebug, Point(int(x), int(y)), int(r), yellow);
     }
     imwrite(outputImagePath, imgDebug);
@@ -198,6 +198,37 @@ TEST(HoughCirclesTest, DefaultMaxRadius)
     {
         EXPECT_GE(circles[0][2], minRadius) << "Radius should be >= minRadius";
         EXPECT_LE(circles[0][2], maxDimension) << "Radius should be <= max image dimension";
+    }
+}
+
+TEST(HoughCirclesTest, CentersOnly)
+{
+    string picture_name = "imgproc/stuff.jpg";
+    const double dp = 1.0;
+    double minDist = 20;
+    double edgeThreshold = 20;
+    double accumThreshold = 30;
+    int minRadius = 20;
+    int maxRadius = -1;
+
+    string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
+
+    GaussianBlur(src, src, Size(9, 9), 2, 2);
+
+    vector<Vec3f> circles;
+    HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+
+#if DEBUG_IMAGES
+    string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
+    highlightCircles(filename, circles, imgProc + "HoughCirclesTest_CentersOnly.png");
+#endif
+
+    EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
+    for (size_t i = 0; i < circles.size(); ++i)
+    {
+        EXPECT_EQ(circles[0][2], 0.0f) << "Did not ask for radius";
     }
 }
 
