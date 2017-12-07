@@ -458,7 +458,14 @@ double cv::kmeans( InputArray _data, int K,
         {
             best_compactness = compactness;
             if( _centers.needed() )
-                centers.copyTo(_centers);
+            {
+                Mat reshaped = centers;
+                if(_centers.rows() == 1 && _centers.channels() == dims)
+                    reshaped = centers.reshape(dims, 1);
+                else if(_centers.cols()*_centers.channels() == dims)
+                    reshaped = centers.reshape(_centers.channels(), K);
+                reshaped.copyTo(_centers);
+            }
             _labels.copyTo(best_labels);
         }
     }
