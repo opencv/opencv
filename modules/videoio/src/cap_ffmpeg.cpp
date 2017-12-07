@@ -124,8 +124,10 @@ private:
             if (m)
             {
                 wchar_t path[MAX_PATH];
-                size_t sz = GetModuleFileNameW(m, path, sizeof(path));
-                if (sz > 0 && ERROR_SUCCESS == GetLastError())
+                const size_t path_size = sizeof(path)/sizeof(*path);
+                size_t sz = GetModuleFileNameW(m, path, path_size);
+                /* Don't handle paths longer than MAX_PATH until that becomes a real issue */
+                if (sz > 0 && sz < path_size)
                 {
                     wchar_t* s = wcsrchr(path, L'\\');
                     if (s)
