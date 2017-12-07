@@ -78,12 +78,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    cv::Size inputImgSize = cv::Size(224, 224);
-
-    if (inputImgSize != img.size())
-        resize(img, img, inputImgSize);       //Resize image to input size
-
-    Mat inputBlob = blobFromImage(img);   //Convert Mat to image batch
+    Mat inputBlob = blobFromImage(img, 1.0f, Size(224, 224), Scalar(), true, false);   //Convert Mat to batch of images
     //! [Prepare blob]
     inputBlob -= 117.0;
     //! [Set input blob]
