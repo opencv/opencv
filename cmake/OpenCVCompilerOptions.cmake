@@ -184,8 +184,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     # Remove unreferenced functions: function level linking
     add_extra_compiler_option(-ffunction-sections)
     add_extra_compiler_option(-fdata-sections)
-    if(NOT APPLE)
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+    if(NOT APPLE AND NOT OPENCV_SKIP_GC_SECTIONS)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
     endif()
   endif()
 
