@@ -37,11 +37,7 @@ Explanation
 
 -# Read input image and convert to the blob, acceptable by GoogleNet
    @snippet dnn/caffe_googlenet.cpp Prepare blob
-   Firstly, we resize the image and change its channel sequence order.
-
-   Now image is actually a 3-dimensional array with 224x224x3 shape.
-
-   Next, we convert the image to 4-dimensional blob (so-called batch) with 1x3x224x224 shape by using special cv::dnn::blobFromImages constructor.
+   We convert the image to a 4-dimensional blob (so-called batch) with 1x3x224x224 shape after applying necessary pre-processing like resizing and mean subtraction using cv::dnn::blobFromImage constructor.
 
 -# Pass the blob to the network
    @snippet dnn/caffe_googlenet.cpp Set input blob
