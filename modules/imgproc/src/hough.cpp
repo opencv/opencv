@@ -938,7 +938,7 @@ class NZPointList
 
 public:
     typedef Point value_type;
-    typedef std::vector<Point>::const_iterator const_iterator;
+    typedef typename std::vector<Point>::const_iterator const_iterator;
 
     NZPointList(int _rows, int _cols) :
         nrows(_rows), ncols(_cols)
