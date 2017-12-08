@@ -1505,23 +1505,23 @@ public:
     /** ANNEAL: Update initial temperature.
     It must be \>=0. Default value is 10.*/
     /** @see setAnnealInitialT */
-    CV_WRAP virtual double getAnnealInitialT() const = 0;
+    CV_WRAP double getAnnealInitialT() const;
     /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
+    CV_WRAP void setAnnealInitialT(double val) const;
 
     /** ANNEAL: Update final temperature.
     It must be \>=0 and less than initialT. Default value is 0.1.*/
     /** @see setAnnealFinalT */
-    CV_WRAP virtual double getAnnealFinalT() const = 0;
+    CV_WRAP double getAnnealFinalT() const;
     /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP virtual void setAnnealFinalT(double val) = 0;
+    CV_WRAP void setAnnealFinalT(double val) const;
 
     /** ANNEAL: Update cooling ratio.
     It must be \>0 and less than 1. Default value is 0.95.*/
     /** @see setAnnealCoolingRatio */
-    CV_WRAP virtual double getAnnealCoolingRatio() const = 0;
+    CV_WRAP double getAnnealCoolingRatio() const;
     /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP virtual void setAnnealCoolingRatio(double val) = 0;
+    CV_WRAP void setAnnealCoolingRatio(double val) const;
 
     /** ANNEAL: Update iteration per step.
     It must be \>0 . Default value is 10.*/
@@ -1868,6 +1868,60 @@ CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, Out
 /** @brief Creates test set */
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
+
+/** @brief Artificial Neural Networks - Multi-Layer Perceptrons.
+
+@sa @ref ml_intro_ann
+*/
+class CV_EXPORTS_W ANN_MLP_ANNEAL : public ANN_MLP
+{
+public:
+    /** ANNEAL: Update initial temperature.
+    It must be \>=0. Default value is 10.*/
+    /** @see setAnnealInitialT */
+    CV_WRAP virtual double getAnnealInitialT() const=0;
+    /** @copybrief getAnnealInitialT @see getAnnealInitialT */
+    CV_WRAP virtual void setAnnealInitialT(double val) const = 0;
+
+    /** ANNEAL: Update final temperature.
+    It must be \>=0 and less than initialT. Default value is 0.1.*/
+    /** @see setAnnealFinalT */
+    CV_WRAP  virtual double getAnnealFinalT() const = 0;
+    /** @copybrief getAnnealFinalT @see getAnnealFinalT */
+    CV_WRAP  virtual void setAnnealFinalT(double val) const = 0;
+
+    /** ANNEAL: Update cooling ratio.
+    It must be \>0 and less than 1. Default value is 0.95.*/
+    /** @see setAnnealCoolingRatio */
+    CV_WRAP  virtual double getAnnealCoolingRatio() const = 0;
+    /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
+    CV_WRAP  virtual void setAnnealCoolingRatio(double val) const = 0;
+
+    /** ANNEAL: Update iteration per step.
+    It must be \>0 . Default value is 10.*/
+    /** @see setAnnealItePerStep */
+    CV_WRAP virtual int getAnnealItePerStep() const = 0;
+    /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
+    CV_WRAP virtual  void setAnnealItePerStep(int val) const = 0;
+
+
+    /** @brief Creates empty model
+
+    Use StatModel::train to train the model, Algorithm::load\<ANN_MLP\>(filename) to load the pre-trained model.
+    Note that the train method has optional flags: ANN_MLP::TrainFlags.
+    */
+    CV_WRAP static Ptr<ANN_MLP> create();
+
+    /** @brief Loads and creates a serialized ANN from a file
+    *
+    * Use ANN::save to serialize and store an ANN to disk.
+    * Load the ANN from this file again, by calling this function with the path to the file.
+    *
+    * @param filepath path to serialized ANN
+    */
+    CV_WRAP static Ptr<ANN_MLP_ANNEAL> load(const String& filepath);
+
+};
 
 /****************************************************************************************\
 *                                   Simulated annealing solver                             *
