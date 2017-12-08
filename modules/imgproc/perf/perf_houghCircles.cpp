@@ -33,10 +33,9 @@ PERF_TEST(PerfHoughCircles, Basic)
     SANITY_CHECK_NOTHING();
 }
 
-#if 0
 PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 {
-    string filename = getDataPath("cv/imgproc/beads.png");
+    string filename = getDataPath("cv/imgproc/beads.jpg");
     const double dp = 1.0;
     double minDist = 10;
     double edgeThreshold = 90;
@@ -59,4 +58,3 @@ PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 
     SANITY_CHECK_NOTHING();
 }
-#endif

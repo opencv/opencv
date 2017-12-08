@@ -232,10 +232,9 @@ TEST(HoughCirclesTest, CentersOnly)
     }
 }
 
-#if 0
 TEST(HoughCirclesTest, ManySmallCircles)
 {
-    string picture_name = "imgproc/beads.png";
+    string picture_name = "imgproc/beads.jpg";
     const double dp = 1.0;
     double minDist = 10;
     double edgeThreshold = 90;
@@ -258,4 +257,3 @@ TEST(HoughCirclesTest, ManySmallCircles)
 
     EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
 }
-#endif
