@@ -938,7 +938,7 @@ class NZPointList
 
 public:
     typedef Point value_type;
-    typedef typename std::vector<Point>::const_iterator const_iterator;
+    typedef std::vector<Point>::const_iterator const_iterator;
 
     NZPointList(int _rows, int _cols) :
         nrows(_rows), ncols(_cols)
@@ -1494,7 +1494,7 @@ public:
                 int CV_DECL_ALIGNED(16) nzx[4];
                 int CV_DECL_ALIGNED(16) nzy[4];
                 int nnz = 0;
-                for(NZPoints::const_iterator pt = nz.begin(curCenter, minRadius, maxRadius); pt != nz.end(); ++pt)
+                for(typename NZPoints::const_iterator pt = nz.begin(curCenter, minRadius, maxRadius); pt != nz.end(); ++pt)
                 {
                     nzx[nnz] = pt->x;
                     nzy[nnz] = pt->y;
@@ -1542,7 +1542,7 @@ public:
             else
 #endif
             {
-                for (NZPoints::const_iterator pt = nz.begin(curCenter, minRadius, maxRadius); pt != nz.end(); ++pt)
+                for (typename NZPoints::const_iterator pt = nz.begin(curCenter, minRadius, maxRadius); pt != nz.end(); ++pt)
                 {
                     float _dx = curCenter.x - pt->x, _dy = curCenter.y - pt->y;
                     float _r2 = _dx * _dx + _dy * _dy;
