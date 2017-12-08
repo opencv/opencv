@@ -701,6 +701,61 @@ inline int hal_ni_gaussianBlur(const uchar* src_data, size_t src_step, uchar* ds
 #define cv_hal_gaussianBlur hal_ni_gaussianBlur
 //! @endcond
 
+/**
+   @brief Computes Sobel derivatives
+   @param src_depth,dst_depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param cn Number of channels
+   @param margin_left,margin_top,margin_right,margin_bottom Margins for source image
+   @param dx,dy orders of the derivative x and y respectively
+   @param ksize Size of kernel
+   @param scale Scale factor for the computed derivative values
+   @param delta Delta value that is added to the results prior to storing them in dst
+   @param border_type Border type
+*/
+inline int hal_ni_sobel(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, int ksize, double scale, double delta, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_sobel hal_ni_sobel
+//! @endcond
+
+/**
+   @brief Computes Scharr filter
+   @param src_depth,dst_depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param cn Number of channels
+   @param margin_left,margin_top,margin_right,margin_bottom Margins for source image
+   @param dx,dy orders of the derivative x and y respectively
+   @param scale Scale factor for the computed derivative values
+   @param delta Delta value that is added to the results prior to storing them in dst
+   @param border_type Border type
+*/
+inline int hal_ni_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type)  { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_scharr hal_ni_scharr
+//! @endcond
+
+/**
+   @brief Perform Gaussian Blur and downsampling for input tile.
+   @param depth Depths of source and destination image
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param src_width,src_height Source image dimensions
+   @param dst_width,dst_height Destination image dimensions
+   @param cn Number of channels
+   @param border_type Border type
+*/
+inline int hal_ni_pyrdown(const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int depth, int cn, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_pyrdown hal_ni_pyrdown
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
