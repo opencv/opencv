@@ -183,6 +183,7 @@ static bool f32_lt( float32_t, float32_t );
 | 64-bit (double-precision) floating-point operations.
 *----------------------------------------------------------------------------*/
 static int_fast32_t f64_to_i32( float64_t, uint_fast8_t, bool );
+static int_fast64_t f64_to_i64( float64_t, uint_fast8_t, bool );
 static int_fast32_t f64_to_i32_r_minMag( float64_t, bool );
 static float32_t f64_to_f32( float64_t );
 static float64_t f64_roundToInt( float64_t, uint_fast8_t, bool );
@@ -257,6 +258,8 @@ int cvTrunc(const cv::softdouble& a) { return cv::f64_to_i32_r_minMag(a, false);
 int cvRound(const cv::softdouble& a) { return cv::f64_to_i32(a, cv::round_near_even, false); }
 int cvFloor(const cv::softdouble& a) { return cv::f64_to_i32(a, cv::round_min, false); }
 int cvCeil (const cv::softdouble& a) { return cv::f64_to_i32(a, cv::round_max, false); }
+
+int64_t cvRound64(const cv::softdouble& a) { return cv::f64_to_i64(a, cv::round_near_even, false); }
 
 namespace cv
 {
@@ -468,6 +471,7 @@ static float32_t softfloat_mulAddF32(uint_fast32_t, uint_fast32_t, uint_fast32_t
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
+static int_fast64_t softfloat_roundToI64( bool, uint_fast64_t, uint_fast64_t, uint_fast8_t, bool);
 
 struct exp16_sig64 { int_fast16_t exp; uint_fast64_t sig; };
 static struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t );
@@ -2026,6 +2030,59 @@ static int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exa
     return softfloat_roundToI32( sign, sig, roundingMode, exact );
 }
 
+static int_fast64_t f64_to_i64(float64_t a, uint_fast8_t roundingMode, bool exact )
+{
+    uint_fast64_t uiA;
+    bool sign;
+    int_fast16_t exp;
+    uint_fast64_t sig;
+    int_fast16_t shiftDist;
+
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    uiA = a.v;
+    sign = signF64UI(uiA);
+    exp = expF64UI(uiA);
+    sig = fracF64UI(uiA);
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+#if (i64_fromNaN != i64_fromPosOverflow) || (i64_fromNaN != i64_fromNegOverflow)
+    if ((exp == 0x7FF) && sig) {
+#if (i64_fromNaN == i64_fromPosOverflow)
+        sign = 0;
+#elif (i64_fromNaN == i64_fromNegOverflow)
+        sign = 1;
+#else
+        raiseFlags(flag_invalid);
+        return i64_fromNaN;
+#endif
+    }
+#endif
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    if (exp) sig |= UINT64_C(0x0010000000000000);
+    shiftDist = 0x433 - exp;
+    if (shiftDist <= 0) {
+        uint_fast64_t z = sig << -shiftDist;
+        if ((shiftDist < -11) || (z & UINT64_C(0x8000000000000000)))
+        {
+            raiseFlags(flag_invalid);
+            return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
+        }
+        return sign ? -(int_fast64_t)z : (int_fast64_t)z;
+    }
+    else {
+        if (shiftDist < 64)
+            return
+                softfloat_roundToI64(
+                    sign, sig >> shiftDist, sig << (-shiftDist & 63), roundingMode, exact);
+        else
+            return
+                softfloat_roundToI64(
+                    sign, 0, (shiftDist == 64) ? sig : (sig != 0), roundingMode, exact);
+    }
+}
+
 static int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
 {
     uint_fast64_t uiA;
@@ -3074,6 +3131,46 @@ static int_fast32_t
  invalid:
     raiseFlags( flag_invalid );
     return sign ? i32_fromNegOverflow : i32_fromPosOverflow;
+}
+
+static int_fast64_t
+ softfloat_roundToI64(
+    bool sign, uint_fast64_t sig, uint_fast64_t sigExtra, uint_fast8_t roundingMode, bool exact )
+{
+    bool roundNearEven, doIncrement;
+    union { uint64_t ui; int64_t i; } uZ;
+    int_fast64_t z;
+
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    roundNearEven = (roundingMode == round_near_even);
+    doIncrement = (UINT64_C(0x8000000000000000) <= sigExtra);
+    if (!roundNearEven && (roundingMode != round_near_maxMag)) {
+        doIncrement =
+            (roundingMode
+                == (sign ? round_min : round_max))
+            && sigExtra;
+    }
+    if (doIncrement) {
+        ++sig;
+        if (!sig) goto invalid;
+        sig &=
+            ~(uint_fast64_t)
+            (!(sigExtra & UINT64_C(0x7FFFFFFFFFFFFFFF))
+                & roundNearEven);
+    }
+    uZ.ui = sign ? (~sig + 1) : sig;
+    z = uZ.i;
+    if (z && ((z < 0) ^ sign)) goto invalid;
+    if (exact && sigExtra) {
+        raiseFlags(flag_inexact);
+    }
+    return z;
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+invalid:
+    raiseFlags(flag_invalid);
+    return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
 }
 
 static struct uint128
