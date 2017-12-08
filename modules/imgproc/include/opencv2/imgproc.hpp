@@ -117,6 +117,8 @@ f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$
 interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
 resize for details.
 
+@note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
+
     @defgroup imgproc_misc Miscellaneous Image Transformations
     @defgroup imgproc_draw Drawing Functions
 
