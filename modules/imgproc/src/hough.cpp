@@ -938,6 +938,12 @@ class NZPointList
 
 public:
     typedef Point value_type;
+    typedef std::vector<Point>::size_type size_type;
+    typedef std::vector<Point>::difference_type difference_type;
+    typedef std::vector<Point>::pointer pointer;
+    typedef std::vector<Point>::const_pointer const_pointer;
+    typedef std::vector<Point>::reference reference;
+    typedef std::vector<Point>::const_reference const_reference;
     typedef std::vector<Point>::const_iterator const_iterator;
 
     NZPointList(int _rows, int _cols) :
@@ -1051,9 +1057,12 @@ public:
     public:
         typedef std::forward_iterator_tag iterator_category;
         typedef Point value_type;
+        typedef size_t size_type;
         typedef ptrdiff_t difference_type;
         typedef Point* pointer;
+        typedef const Point* const_pointer;
         typedef Point& reference;
+        typedef const Point& const_reference;
 
         const_iterator(const Mat& _positions, const Point2f& _curCenter, int _minRadius, int _maxRadius)
             : positions(_positions)
