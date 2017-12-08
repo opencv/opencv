@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,17 +43,18 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfHeader.h>
-#include <ImfFrameBuffer.h>
-#include <ImfThreading.h>
+#include "ImfHeader.h"
+#include "ImfFrameBuffer.h"
+#include "ImfThreading.h"
+#include "ImfGenericOutputFile.h"
+#include "ImfNamespace.h"
+#include "ImfForward.h"
+#include "ImfExport.h"
 
-namespace Imf {
-
-class InputFile;
-struct PreviewRgba;
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class OutputFile
+class IMF_EXPORT OutputFile : public GenericOutputFile
 {
   public:
 
@@ -84,7 +85,7 @@ class OutputFile
     // used to write the file (see ImfThreading.h).
     //------------------------------------------------------------
 
-    OutputFile (OStream &os, const Header &header,
+    OutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, const Header &header,
                 int numThreads = globalThreadCount());
 
 
@@ -183,6 +184,14 @@ class OutputFile
     //--------------------------------------------------------------
 
     void		copyPixels (InputFile &in);
+    
+    //-------------------------------------------------------------
+    // Shortcut to copy all pixels from an InputPart into this file
+    // - equivalent to copyPixel(InputFile &in) but for multipart files
+    //---------------------------------------------------------------
+    
+    void                copyPixels (InputPart &in);
+        
 
 
     //--------------------------------------------------------------
@@ -191,7 +200,7 @@ class OutputFile
     // updatePreviewImage() supplies a new set of pixels for the
     // preview image attribute in the file's header.  If the header
     // does not contain a preview image, updatePreviewImage() throws
-    // an Iex::LogicExc.
+    // an IEX_NAMESPACE::LogicExc.
     //
     // Note: updatePreviewImage() is necessary because images are
     // often stored in a file incrementally, a few scan lines at a
@@ -208,7 +217,7 @@ class OutputFile
 
     //---------------------------------------------------------
     // Break a scan line -- for testing and debugging only:
-    //
+    // 
     // breakScanLine(y,p,n,c) introduces an error into the
     // output file by writing n copies of character c, starting
     // p bytes from the beginning of the pixel data block that
@@ -227,15 +236,28 @@ class OutputFile
 
   private:
 
+    //------------------------------------------------------------
+    // Constructor -- attaches the OutputStreamMutex to the
+    // given one from MultiPartOutputFile. Set the previewPosition
+    // and lineOffsetsPosition which have been acquired from
+    // the constructor of MultiPartOutputFile as well.
+    //------------------------------------------------------------
+    OutputFile (const OutputPartData* part);
+
     OutputFile (const OutputFile &);			// not implemented
     OutputFile & operator = (const OutputFile &);	// not implemented
 
     void		initialize (const Header &header);
 
     Data *		_data;
+
+
+    friend class MultiPartOutputFile;
+    
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
 
 #endif

@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2005-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -48,16 +48,16 @@
 #include "Iex.h"
 #include <assert.h>
 
-namespace IlmThread {
+ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
 Semaphore::Semaphore (unsigned int value)
 {
     if (int error = ::pthread_mutex_init (&_semaphore.mutex, 0))
-        Iex::throwErrnoExc ("Cannot initialize mutex (%T).", error);
+        IEX_NAMESPACE::throwErrnoExc ("Cannot initialize mutex (%T).", error);
 
     if (int error = ::pthread_cond_init (&_semaphore.nonZero, 0))
-        Iex::throwErrnoExc ("Cannot initialize condition variable (%T).",
+        IEX_NAMESPACE::throwErrnoExc ("Cannot initialize condition variable (%T).",
                             error);
 
     _semaphore.count = value;
@@ -85,12 +85,12 @@ Semaphore::wait ()
     {
         if (int error = ::pthread_cond_wait (&_semaphore.nonZero,
                                              &_semaphore.mutex))
-    {
+        {
             ::pthread_mutex_unlock (&_semaphore.mutex);
 
-            Iex::throwErrnoExc ("Cannot wait on condition variable (%T).",
-                                error);
-    }
+            IEX_NAMESPACE::throwErrnoExc ("Cannot wait on condition variable (%T).",
+                                          error);
+        }
     }
 
     _semaphore.numWaiting--;
@@ -104,7 +104,7 @@ bool
 Semaphore::tryWait ()
 {
     ::pthread_mutex_lock (&_semaphore.mutex);
-
+    
     if (_semaphore.count == 0)
     {
         ::pthread_mutex_unlock (&_semaphore.mutex);
@@ -127,12 +127,12 @@ Semaphore::post ()
     if (_semaphore.numWaiting > 0)
     {
         if (int error = ::pthread_cond_signal (&_semaphore.nonZero))
-    {
+        {
             ::pthread_mutex_unlock (&_semaphore.mutex);
 
-            Iex::throwErrnoExc ("Cannot signal condition variable (%T).",
+            IEX_NAMESPACE::throwErrnoExc ("Cannot signal condition variable (%T).",
                                 error);
-    }
+        }
     }
 
     _semaphore.count++;
@@ -150,6 +150,6 @@ Semaphore::value () const
 }
 
 
-} // namespace IlmThread
+ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_EXIT
 
 #endif

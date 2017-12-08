@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -33,82 +33,46 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
+#ifndef INCLUDED_IMF_ZIP_H
+#define INCLUDED_IMF_ZIP_H
 
-#include <iostream>
-#include <iomanip>
+#include "ImfNamespace.h"
 
-using namespace std;
+#include <cstddef>
 
-//-----------------------------------------------------
-// Compute a lookup table for float-to-half conversion.
-//
-// When indexed with the combined sign and exponent of
-// a float, the table either returns the combined sign
-// and exponent of the corresponding half, or zero if
-// the corresponding half may not be normalized (zero,
-// denormalized, overflow).
-//-----------------------------------------------------
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-void
-initELut (unsigned short eLut[])
+class Zip
 {
-    for (int i = 0; i < 0x100; i++)
-    {
-    int e = (i & 0x0ff) - (127 - 15);
+    public:
+        explicit Zip(size_t rawMaxSize);
+        Zip(size_t maxScanlineSize, size_t numScanLines);
+        ~Zip();
 
-    if (e <= 0 || e >= 30)
-    {
+        size_t maxRawSize();
+        size_t maxCompressedSize();
+
         //
-        // Special case
+        // Compress the raw data into the provided buffer.
+        // Returns the amount of compressed data.
         //
+        int compress(const char *raw, int rawSize, char *compressed);
 
-        eLut[i]         = 0;
-        eLut[i | 0x100] = 0;
-    }
-    else
-    {
+        // 
+        // Uncompress the compressed data into the provided
+        // buffer. Returns the amount of raw data actually decoded.
         //
-        // Common case - normalized half, no exponent overflow possible
-        //
+        int uncompress(const char *compressed, int compressedSize,
+                                                 char *raw);
 
-        eLut[i]         =  (e << 10);
-        eLut[i | 0x100] = ((e << 10) | 0x8000);
-    }
-    }
-}
+    private:
+        size_t _maxRawSize;
+        char  *_tmpBuffer;
 
+        Zip();
+        Zip(const Zip&);
+};
 
-//------------------------------------------------------------
-// Main - prints the sign-and-exponent conversion lookup table
-//------------------------------------------------------------
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
-int
-main ()
-{
-    const int tableSize = 1 << 9;
-    unsigned short eLut[tableSize];
-    initELut (eLut);
-
-    cout << "//\n"
-        "// This is an automatically generated file.\n"
-        "// Do not edit.\n"
-        "//\n\n";
-
-    cout << "{\n    ";
-
-    for (int i = 0; i < tableSize; i++)
-    {
-    cout << setw (5) << eLut[i] << ", ";
-
-    if (i % 8 == 7)
-    {
-        cout << "\n";
-
-        if (i < tableSize - 1)
-        cout << "    ";
-    }
-    }
-
-    cout << "};\n";
-    return 0;
-}
+#endif

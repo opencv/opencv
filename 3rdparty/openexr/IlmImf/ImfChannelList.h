@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -44,17 +44,20 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfName.h>
-#include <ImfPixelType.h>
+#include "ImfName.h"
+#include "ImfPixelType.h"
+
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+
 #include <map>
 #include <set>
 #include <string>
 
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-namespace Imf {
 
-
-struct Channel
+struct IMF_EXPORT Channel
 {
     //------------------------------
     // Data type; see ImfPixelType.h
@@ -65,7 +68,7 @@ struct Channel
 
     //--------------------------------------------
     // Subsampling: pixel (x, y) is present in the
-    // channel only if
+    // channel only if 
     //
     //  x % xSampling == 0 && y % ySampling == 0
     //
@@ -96,11 +99,11 @@ struct Channel
     //------------
     // Constructor
     //------------
-
+    
     Channel (PixelType type = HALF,
-         int xSampling = 1,
-         int ySampling = 1,
-         bool pLinear = false);
+	     int xSampling = 1,
+	     int ySampling = 1,
+	     bool pLinear = false);
 
 
     //------------
@@ -111,7 +114,7 @@ struct Channel
 };
 
 
-class ChannelList
+class IMF_EXPORT ChannelList
 {
   public:
 
@@ -120,16 +123,16 @@ class ChannelList
     //--------------
 
     void			insert (const char name[],
-                    const Channel &channel);
+					const Channel &channel);
 
     void			insert (const std::string &name,
-                    const Channel &channel);
+					const Channel &channel);
 
     //------------------------------------------------------------------
     // Access to existing channels:
     //
     // [n]		Returns a reference to the channel with name n.
-    //			If no channel with name n exists, an Iex::ArgExc
+    //			If no channel with name n exists, an IEX_NAMESPACE::ArgExc
     //			is thrown.
     //
     // findChannel(n)	Returns a pointer to the channel with name n,
@@ -171,7 +174,7 @@ class ChannelList
     Iterator			find (const std::string &name);
     ConstIterator		find (const std::string &name) const;
 
-
+    
     //-----------------------------------------------------------------
     // Support for image layers:
     //
@@ -186,7 +189,7 @@ class ChannelList
     // several different virtual light sources.  The channels in
     // this image might be called "light1.R", "light1.G", "light1.B",
     // "light2.R", "light2.G", "light2.B", etc.
-    //
+    // 
     // Note that this naming convention allows layers to be nested;
     // for example, "light1.specular.R" identifies the "R" channel
     // in the "specular" sub-layer of layer "light1".
@@ -215,12 +218,12 @@ class ChannelList
     void		layers (std::set <std::string> &layerNames) const;
 
     void		channelsInLayer (const std::string &layerName,
-                         Iterator &first,
-                     Iterator &last);
+	    				 Iterator &first,
+					 Iterator &last);
 
     void		channelsInLayer (const std::string &layerName,
-                         ConstIterator &first,
-                     ConstIterator &last) const;
+	    				 ConstIterator &first,
+					 ConstIterator &last) const;
 
 
     //-------------------------------------------------------------------
@@ -236,20 +239,20 @@ class ChannelList
     //-------------------------------------------------------------------
 
     void			channelsWithPrefix (const char prefix[],
-                            Iterator &first,
-                            Iterator &last);
+						    Iterator &first,
+						    Iterator &last);
 
     void			channelsWithPrefix (const char prefix[],
-                            ConstIterator &first,
-                            ConstIterator &last) const;
+						    ConstIterator &first,
+						    ConstIterator &last) const;
 
     void			channelsWithPrefix (const std::string &prefix,
-                            Iterator &first,
-                            Iterator &last);
+						    Iterator &first,
+						    Iterator &last);
 
     void			channelsWithPrefix (const std::string &prefix,
-                            ConstIterator &first,
-                            ConstIterator &last) const;
+						    ConstIterator &first,
+						    ConstIterator &last) const;
 
     //------------
     // Operator ==
@@ -330,7 +333,7 @@ ChannelList::Iterator::Iterator (const ChannelList::ChannelMap::iterator &i):
 }
 
 
-inline ChannelList::Iterator &
+inline ChannelList::Iterator &		
 ChannelList::Iterator::operator ++ ()
 {
     ++_i;
@@ -338,7 +341,7 @@ ChannelList::Iterator::operator ++ ()
 }
 
 
-inline ChannelList::Iterator
+inline ChannelList::Iterator 	
 ChannelList::Iterator::operator ++ (int)
 {
     Iterator tmp = *this;
@@ -354,7 +357,7 @@ ChannelList::Iterator::name () const
 }
 
 
-inline Channel &
+inline Channel &	
 ChannelList::Iterator::channel () const
 {
     return _i->second;
@@ -390,7 +393,7 @@ ChannelList::ConstIterator::operator ++ ()
 }
 
 
-inline ChannelList::ConstIterator
+inline ChannelList::ConstIterator 		
 ChannelList::ConstIterator::operator ++ (int)
 {
     ConstIterator tmp = *this;
@@ -405,7 +408,7 @@ ChannelList::ConstIterator::name () const
     return *_i->first;
 }
 
-inline const Channel &
+inline const Channel &	
 ChannelList::ConstIterator::channel () const
 {
     return _i->second;
@@ -414,7 +417,7 @@ ChannelList::ConstIterator::channel () const
 
 inline bool
 operator == (const ChannelList::ConstIterator &x,
-         const ChannelList::ConstIterator &y)
+	     const ChannelList::ConstIterator &y)
 {
     return x._i == y._i;
 }
@@ -422,12 +425,12 @@ operator == (const ChannelList::ConstIterator &x,
 
 inline bool
 operator != (const ChannelList::ConstIterator &x,
-         const ChannelList::ConstIterator &y)
+	     const ChannelList::ConstIterator &y)
 {
     return !(x == y);
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,44 +43,45 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfLineOrder.h>
-#include <ImfCompression.h>
-#include <ImfName.h>
-#include <ImfTileDescription.h>
-#include <ImfInt64.h>
+#include "ImfLineOrder.h"
+#include "ImfCompression.h"
+#include "ImfName.h"
+#include "ImfTileDescription.h"
+#include "ImfInt64.h"
 #include "ImathVec.h"
 #include "ImathBox.h"
 #include "IexBaseExc.h"
+
+#include "ImfForward.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+
 #include <map>
 #include <iosfwd>
 #include <string>
 
-namespace Imf {
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
+
+using std::string;
 
 
-class Attribute;
-class ChannelList;
-class IStream;
-class OStream;
-class PreviewImage;
-
-
-class Header
+class IMF_EXPORT Header
 {
   public:
-
+    
     //----------------------------------------------------------------
     // Default constructor -- the display window and the data window
     // are both set to Box2i (V2i (0, 0), V2i (width-1, height-1).
     //----------------------------------------------------------------
 
     Header (int width = 64,
-        int height = 64,
-        float pixelAspectRatio = 1,
-        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-        float screenWindowWidth = 1,
-        LineOrder lineOrder = INCREASING_Y,
-        Compression = ZIP_COMPRESSION);
+	    int height = 64,
+	    float pixelAspectRatio = 1,
+	    const IMATH_NAMESPACE::V2f &screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+	    float screenWindowWidth = 1,
+	    LineOrder lineOrder = INCREASING_Y,
+	    Compression = ZIP_COMPRESSION);
 
 
     //--------------------------------------------------------------------
@@ -89,13 +90,13 @@ class Header
     //--------------------------------------------------------------------
 
     Header (int width,
-        int height,
-        const Imath::Box2i &dataWindow,
-        float pixelAspectRatio = 1,
-        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-        float screenWindowWidth = 1,
-        LineOrder lineOrder = INCREASING_Y,
-        Compression = ZIP_COMPRESSION);
+	    int height,
+	    const IMATH_NAMESPACE::Box2i &dataWindow,
+	    float pixelAspectRatio = 1,
+	    const IMATH_NAMESPACE::V2f &screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+	    float screenWindowWidth = 1,
+	    LineOrder lineOrder = INCREASING_Y,
+	    Compression = ZIP_COMPRESSION);
 
 
     //----------------------------------------------------------
@@ -103,13 +104,13 @@ class Header
     // both specified explicitly.
     //----------------------------------------------------------
 
-    Header (const Imath::Box2i &displayWindow,
-        const Imath::Box2i &dataWindow,
-        float pixelAspectRatio = 1,
-        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-        float screenWindowWidth = 1,
-        LineOrder lineOrder = INCREASING_Y,
-        Compression = ZIP_COMPRESSION);
+    Header (const IMATH_NAMESPACE::Box2i &displayWindow,
+	    const IMATH_NAMESPACE::Box2i &dataWindow,
+	    float pixelAspectRatio = 1,
+	    const IMATH_NAMESPACE::V2f &screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+	    float screenWindowWidth = 1,
+	    LineOrder lineOrder = INCREASING_Y,
+	    Compression = ZIP_COMPRESSION);
 
 
     //-----------------
@@ -146,30 +147,45 @@ class Header
     //			is copied into this attribute.
     //
     //			If an attribute with name n exists, and its
-    //			type is different from attr, an Iex::TypeExc
+    //			type is different from attr, an IEX_NAMESPACE::TypeExc
     //			is thrown.
     //
     //---------------------------------------------------------------
 
     void			insert (const char name[],
-                        const Attribute &attribute);
+				        const Attribute &attribute);
 
     void			insert (const std::string &name,
-                        const Attribute &attribute);
+				        const Attribute &attribute);
 
+    //---------------------------------------------------------------
+    // Remove an attribute:
+    //
+    // remove(n)       If an attribute with name n exists, then it
+    //                 is removed from the map of present attributes.
+    //
+    //                 If no attribute with name n exists, then this
+    //                 functions becomes a 'no-op'
+    //
+    //---------------------------------------------------------------
+    void                        erase (const char name[]);
+    void                        erase (const std::string &name);
+
+    
+    
     //------------------------------------------------------------------
     // Access to existing attributes:
     //
     // [n]			Returns a reference to the attribute
     //				with name n.  If no attribute with
-    //				name n exists, an Iex::ArgExc is thrown.
+    //				name n exists, an IEX_NAMESPACE::ArgExc is thrown.
     //
     // typedAttribute<T>(n)	Returns a reference to the attribute
     //				with name n and type T.  If no attribute
-    //				with name n exists, an Iex::ArgExc is
+    //				with name n exists, an IEX_NAMESPACE::ArgExc is
     //				thrown.  If an attribute with name n
     //				exists, but its type is not T, an
-    //				Iex::TypeExc is thrown.
+    //				IEX_NAMESPACE::TypeExc is thrown.
     //
     // findTypedAttribute<T>(n)	Returns a pointer to the attribute with
     //				name n and type T, or 0 if no attribute
@@ -194,7 +210,7 @@ class Header
 
     template <class T> T*	findTypedAttribute (const std::string &name);
     template <class T> const T*	findTypedAttribute (const std::string &name)
-                                       const;
+								       const;
 
     //---------------------------------------------
     // Iterator-style access to existing attributes
@@ -222,17 +238,17 @@ class Header
     // Access to predefined attributes
     //--------------------------------
 
-    Imath::Box2i &		displayWindow ();
-    const Imath::Box2i &	displayWindow () const;
+    IMATH_NAMESPACE::Box2i &		displayWindow ();
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
 
-    Imath::Box2i &		dataWindow ();
-    const Imath::Box2i &	dataWindow () const;
+    IMATH_NAMESPACE::Box2i &		dataWindow ();
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
 
     float &			pixelAspectRatio ();
     const float &		pixelAspectRatio () const;
 
-    Imath::V2f &		screenWindowCenter ();
-    const Imath::V2f &		screenWindowCenter () const;
+    IMATH_NAMESPACE::V2f &		screenWindowCenter ();
+    const IMATH_NAMESPACE::V2f &		screenWindowCenter () const;
 
     float &			screenWindowWidth ();
     const float &		screenWindowWidth () const;
@@ -246,6 +262,52 @@ class Header
     Compression &		compression ();
     const Compression &		compression () const;
 
+
+    //-----------------------------------------------------
+    // Access to required attributes for multipart files
+    // They are optional to non-multipart files and mandatory
+    // for multipart files.
+    //-----------------------------------------------------
+    void                        setName (const string& name);
+
+    string&                     name();
+    const string&               name() const;
+
+    bool                        hasName() const;
+
+    void                        setType (const string& Type);
+
+    string&                     type();
+    const string&               type() const;
+
+    bool                        hasType() const;
+
+    void                        setVersion (const int version);
+
+    int&                        version();
+    const int&                  version() const;
+
+    bool                        hasVersion() const;
+
+    //
+    // the chunkCount attribute is set automatically when a file is written.
+    // There is no need to set it manually
+    //
+    void                        setChunkCount(int chunks);
+    bool                        hasChunkCount() const;
+    const int &                 chunkCount() const;
+    int &                       chunkCount();
+
+    
+    //
+    // for multipart files, return whether the file has a view string attribute
+    // (for the deprecated single part multiview format EXR, see ImfMultiView.h)
+    //
+    void                       setView(const string & view);
+    bool                       hasView() const;
+    string &                   view();
+    const string &             view() const;
+    
 
     //----------------------------------------------------------------------
     // Tile Description:
@@ -314,7 +376,8 @@ class Header
     // header
     //-------------------------------------------------------------
 
-    void			sanityCheck (bool isTiled = false) const;
+    void			sanityCheck (bool isTiled = false,
+        			             bool isMultipartFile = false) const;
 
 
     //----------------------------------------------------------------
@@ -323,7 +386,7 @@ class Header
     // sanityCheck() will throw an exception if the width or height of
     // the data window exceeds the maximum image width or height, or
     // if the size of a tile exceeds the maximum tile width or height.
-    //
+    // 
     // At program startup the maximum image and tile width and height
     // are set to zero, meaning that width and height are unlimited.
     //
@@ -335,6 +398,11 @@ class Header
 
     static void			setMaxImageSize (int maxWidth, int maxHeight);
     static void			setMaxTileSize (int maxWidth, int maxHeight);
+
+    //
+    // Check if the header reads nothing.
+    //
+    bool                        readsNothing();
 
 
     //------------------------------------------------------------------
@@ -348,14 +416,18 @@ class Header
     //------------------------------------------------------------------
 
 
-    Int64			writeTo (OStream &os,
-                     bool isTiled = false) const;
+    Int64			writeTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+					 bool isTiled = false) const;
 
-    void			readFrom (IStream &is, int &version);
+    void			readFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+        			          int &version);
+    
 
   private:
 
     AttributeMap		_map;
+
+    bool                        _readsNothing;
 };
 
 
@@ -443,7 +515,7 @@ Header::Iterator::Iterator (const Header::AttributeMap::iterator &i): _i (i)
 }
 
 
-inline Header::Iterator &
+inline Header::Iterator &		
 Header::Iterator::operator ++ ()
 {
     ++_i;
@@ -451,7 +523,7 @@ Header::Iterator::operator ++ ()
 }
 
 
-inline Header::Iterator
+inline Header::Iterator 	
 Header::Iterator::operator ++ (int)
 {
     Iterator tmp = *this;
@@ -467,7 +539,7 @@ Header::Iterator::name () const
 }
 
 
-inline Attribute &
+inline Attribute &	
 Header::Iterator::attribute () const
 {
     return *_i->second;
@@ -503,7 +575,7 @@ Header::ConstIterator::operator ++ ()
 }
 
 
-inline Header::ConstIterator
+inline Header::ConstIterator 		
 Header::ConstIterator::operator ++ (int)
 {
     ConstIterator tmp = *this;
@@ -519,7 +591,7 @@ Header::ConstIterator::name () const
 }
 
 
-inline const Attribute &
+inline const Attribute &	
 Header::ConstIterator::attribute () const
 {
     return *_i->second;
@@ -552,7 +624,7 @@ Header::typedAttribute (const char name[])
     T *tattr = dynamic_cast <T*> (attr);
 
     if (tattr == 0)
-    throw Iex::TypeExc ("Unexpected attribute type.");
+	throw IEX_NAMESPACE::TypeExc ("Unexpected attribute type.");
 
     return *tattr;
 }
@@ -566,7 +638,7 @@ Header::typedAttribute (const char name[]) const
     const T *tattr = dynamic_cast <const T*> (attr);
 
     if (tattr == 0)
-    throw Iex::TypeExc ("Unexpected attribute type.");
+	throw IEX_NAMESPACE::TypeExc ("Unexpected attribute type.");
 
     return *tattr;
 }
@@ -622,6 +694,6 @@ Header::findTypedAttribute (const std::string &name) const
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

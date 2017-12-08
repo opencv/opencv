@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,7 +39,7 @@
 //-----------------------------------------------------------------------------
 //
 //	class KeyCode
-//
+// 	
 // 	A KeyCode object uniquely identifies a motion picture film frame.
 // 	The following fields specifiy film manufacturer, film type, film
 // 	roll and the frame's position within the roll:
@@ -61,7 +61,7 @@
 // 				zero-frame reference mark
 // 				range: 0 - 119
 //
-//	    perfsPerFrame	number of perforations per frame
+//	    perfsPerFrame	number of perforations per frame 
 // 				range: 1 - 15
 //
 //				typical values:
@@ -70,7 +70,7 @@
 //				    3, 4, or 8 for 35mm film
 //				    5, 8 or 15 for 65mm film
 //
-//	    perfsPerCount	number of perforations per count
+//	    perfsPerCount	number of perforations per count 
 // 				range: 20 - 120
 //
 //				typical values:
@@ -95,11 +95,13 @@
 // 			Latent Image Identification Information
 //
 //-----------------------------------------------------------------------------
+#include "ImfNamespace.h"
+#include "ImfExport.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-
-class KeyCode
+   
+class IMF_EXPORT KeyCode
 {
   public:
 
@@ -108,12 +110,12 @@ class KeyCode
     //-------------------------------------
 
     KeyCode (int filmMfcCode = 0,
-         int filmType = 0,
-         int prefix = 0,
-         int count = 0,
-         int perfOffset = 0,
-         int perfsPerFrame = 4,
-         int perfsPerCount = 64);
+	     int filmType = 0,
+	     int prefix = 0,
+	     int count = 0,
+	     int perfOffset = 0,
+	     int perfsPerFrame = 4,
+	     int perfsPerCount = 64);
 
     KeyCode (const KeyCode &other);
     KeyCode & operator = (const KeyCode &other);
@@ -156,6 +158,10 @@ class KeyCode
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
+
+
+
 
 #endif

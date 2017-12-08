@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -48,6 +48,7 @@
 #include "ImathExc.h"
 #include "ImathVec.h"
 #include "ImathShear.h"
+#include "ImathNamespace.h"
 
 #include <cstring>
 #include <iostream>
@@ -60,7 +61,7 @@
 #endif
 
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 enum Uninitialized {UNINITIALIZED};
 
@@ -121,7 +122,7 @@ template <class T> class Matrix33
     //----------------------
     // Compatibility with Sb
     //----------------------
-
+    
     T *                 getValue ();
     const T *           getValue () const;
 
@@ -258,20 +259,20 @@ template <class T> class Matrix33
     // inverse() and invert() are significantly faster than
     // gjInverse() and gjInvert(), but the results may be slightly
     // less accurate.
-    //
+    // 
     //------------------------------------------------------------
 
     const Matrix33 &    invert (bool singExc = false)
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
     Matrix33<T>         inverse (bool singExc = false) const
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
     const Matrix33 &    gjInvert (bool singExc = false)
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
     Matrix33<T>         gjInverse (bool singExc = false) const
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
 
     //------------------------------------------------
@@ -284,7 +285,7 @@ template <class T> class Matrix33
     // Build a minor using the specified rows and columns
     //---------------------------------------------------
 
-    T                   fastMinor (const int r0, const int r1,
+    T                   fastMinor (const int r0, const int r1, 
                                    const int c0, const int c1) const;
 
     //------------
@@ -492,7 +493,7 @@ template <class T> class Matrix44
     //----------------------
     // Compatibility with Sb
     //----------------------
-
+    
     T *                 getValue ();
     const T *           getValue () const;
 
@@ -632,20 +633,20 @@ template <class T> class Matrix44
     // inverse() and invert() are significantly faster than
     // gjInverse() and gjInvert(), but the results may be slightly
     // less accurate.
-    //
+    // 
     //------------------------------------------------------------
 
     const Matrix44 &    invert (bool singExc = false)
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
     Matrix44<T>         inverse (bool singExc = false) const
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
     const Matrix44 &    gjInvert (bool singExc = false)
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
     Matrix44<T>         gjInverse (bool singExc = false) const
-                        throw (Iex::MathExc);
+                        throw (IEX_NAMESPACE::MathExc);
 
 
     //------------------------------------------------
@@ -752,7 +753,7 @@ template <class T> class Matrix44
     // Set matrix to shear by given factors.  The resulting matrix
     //    will shear x for each y coord. by a factor of h.xy ;
     //    will shear x for each z coord. by a factor of h.xz ;
-    //    will shear y for each z coord. by a factor of h.yz ;
+    //    will shear y for each z coord. by a factor of h.yz ; 
     //    will shear y for each x coord. by a factor of h.yx ;
     //    will shear z for each x coord. by a factor of h.zx ;
     //    will shear z for each y coord. by a factor of h.zy .
@@ -763,7 +764,7 @@ template <class T> class Matrix44
 
 
     //--------------------------------------------------------
-    // Shear the matrix by given vector.  The composed matrix
+    // Shear the matrix by given vector.  The composed matrix 
     // will be <shear> * <this>, where the shear matrix ...
     //    will shear x for each y coord. by a factor of h[0] ;
     //    will shear x for each z coord. by a factor of h[1] ;
@@ -782,7 +783,7 @@ template <class T> class Matrix44
 
 
     //------------------------------------------------------------
-    // Shear the matrix by the given factors.  The composed matrix
+    // Shear the matrix by the given factors.  The composed matrix 
     // will be <shear> * <this>, where the shear matrix ...
     //    will shear x for each y coord. by a factor of h.xy ;
     //    will shear x for each z coord. by a factor of h.xz ;
@@ -829,10 +830,10 @@ template <class T> class Matrix44
 //--------------
 
 template <class T>
-std::ostream &  operator << (std::ostream & s, const Matrix33<T> &m);
+std::ostream &  operator << (std::ostream & s, const Matrix33<T> &m); 
 
 template <class T>
-std::ostream &  operator << (std::ostream & s, const Matrix44<T> &m);
+std::ostream &  operator << (std::ostream & s, const Matrix44<T> &m); 
 
 
 //---------------------------------------------
@@ -918,7 +919,7 @@ Matrix33<T>::Matrix33 (T a)
 
 template <class T>
 inline
-Matrix33<T>::Matrix33 (const T a[3][3])
+Matrix33<T>::Matrix33 (const T a[3][3]) 
 {
     memcpy (x, a, sizeof (x));
 }
@@ -1118,7 +1119,7 @@ Matrix33<T>::equalWithAbsError (const Matrix33<T> &m, T e) const
 {
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            if (!Imath::equalWithAbsError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i][j], m[i][j], e))
                 return false;
 
     return true;
@@ -1130,7 +1131,7 @@ Matrix33<T>::equalWithRelError (const Matrix33<T> &m, T e) const
 {
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            if (!Imath::equalWithRelError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i][j], m[i][j], e))
                 return false;
 
     return true;
@@ -1166,7 +1167,7 @@ Matrix33<T>::operator += (T a)
     x[2][0] += a;
     x[2][1] += a;
     x[2][2] += a;
-
+  
     return *this;
 }
 
@@ -1198,7 +1199,7 @@ Matrix33<T>::operator -= (const Matrix33<T> &v)
     x[2][0] -= v.x[2][0];
     x[2][1] -= v.x[2][1];
     x[2][2] -= v.x[2][2];
-
+  
     return *this;
 }
 
@@ -1215,7 +1216,7 @@ Matrix33<T>::operator -= (T a)
     x[2][0] -= a;
     x[2][1] -= a;
     x[2][2] -= a;
-
+  
     return *this;
 }
 
@@ -1279,7 +1280,7 @@ Matrix33<T>::operator *= (T a)
     x[2][0] *= a;
     x[2][1] *= a;
     x[2][2] *= a;
-
+  
     return *this;
 }
 
@@ -1376,7 +1377,7 @@ Matrix33<T>::operator /= (T a)
     x[2][0] /= a;
     x[2][1] /= a;
     x[2][2] /= a;
-
+  
     return *this;
 }
 
@@ -1429,7 +1430,7 @@ Matrix33<T>::transposed () const
 
 template <class T>
 const Matrix33<T> &
-Matrix33<T>::gjInvert (bool singExc) throw (Iex::MathExc)
+Matrix33<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 {
     *this = gjInverse (singExc);
     return *this;
@@ -1437,7 +1438,7 @@ Matrix33<T>::gjInvert (bool singExc) throw (Iex::MathExc)
 
 template <class T>
 Matrix33<T>
-Matrix33<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
+Matrix33<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 {
     int i, j, k;
     Matrix33 s;
@@ -1471,7 +1472,7 @@ Matrix33<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
         if (pivotsize == 0)
         {
             if (singExc)
-                throw ::Imath::SingMatrixExc ("Cannot invert singular matrix.");
+                throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
 
             return Matrix33();
         }
@@ -1513,7 +1514,7 @@ Matrix33<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
         if ((f = t[i][i]) == 0)
         {
             if (singExc)
-                throw ::Imath::SingMatrixExc ("Cannot invert singular matrix.");
+                throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
 
             return Matrix33();
         }
@@ -1541,7 +1542,7 @@ Matrix33<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
 
 template <class T>
 const Matrix33<T> &
-Matrix33<T>::invert (bool singExc) throw (Iex::MathExc)
+Matrix33<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 {
     *this = inverse (singExc);
     return *this;
@@ -1549,7 +1550,7 @@ Matrix33<T>::invert (bool singExc) throw (Iex::MathExc)
 
 template <class T>
 Matrix33<T>
-Matrix33<T>::inverse (bool singExc) const throw (Iex::MathExc)
+Matrix33<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 {
     if (x[0][2] != 0 || x[1][2] != 0 || x[2][2] != 1)
     {
@@ -1567,7 +1568,7 @@ Matrix33<T>::inverse (bool singExc) const throw (Iex::MathExc)
 
         T r = x[0][0] * s[0][0] + x[0][1] * s[1][0] + x[0][2] * s[2][0];
 
-        if (Imath::abs (r) >= 1)
+        if (IMATH_INTERNAL_NAMESPACE::abs (r) >= 1)
         {
             for (int i = 0; i < 3; ++i)
             {
@@ -1579,13 +1580,13 @@ Matrix33<T>::inverse (bool singExc) const throw (Iex::MathExc)
         }
         else
         {
-            T mr = Imath::abs (r) / limits<T>::smallest();
+            T mr = IMATH_INTERNAL_NAMESPACE::abs (r) / limits<T>::smallest();
 
             for (int i = 0; i < 3; ++i)
             {
                 for (int j = 0; j < 3; ++j)
                 {
-                    if (mr > Imath::abs (s[i][j]))
+                    if (mr > IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
                     {
                         s[i][j] /= r;
                     }
@@ -1606,7 +1607,7 @@ Matrix33<T>::inverse (bool singExc) const throw (Iex::MathExc)
     {
         Matrix33 s ( x[1][1],
                     -x[0][1],
-                     0,
+                     0, 
 
                     -x[1][0],
                      x[0][0],
@@ -1618,7 +1619,7 @@ Matrix33<T>::inverse (bool singExc) const throw (Iex::MathExc)
 
         T r = x[0][0] * x[1][1] - x[1][0] * x[0][1];
 
-        if (Imath::abs (r) >= 1)
+        if (IMATH_INTERNAL_NAMESPACE::abs (r) >= 1)
         {
             for (int i = 0; i < 2; ++i)
             {
@@ -1630,13 +1631,13 @@ Matrix33<T>::inverse (bool singExc) const throw (Iex::MathExc)
         }
         else
         {
-            T mr = Imath::abs (r) / limits<T>::smallest();
+            T mr = IMATH_INTERNAL_NAMESPACE::abs (r) / limits<T>::smallest();
 
             for (int i = 0; i < 2; ++i)
             {
                 for (int j = 0; j < 2; ++j)
                 {
-                    if (mr > Imath::abs (s[i][j]))
+                    if (mr > IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
                     {
                         s[i][j] /= r;
                     }
@@ -1783,7 +1784,7 @@ Matrix33<T>::setTranslation (const Vec2<S> &t)
 }
 
 template <class T>
-inline Vec2<T>
+inline Vec2<T> 
 Matrix33<T>::translation () const
 {
     return Vec2<T> (x[2][0], x[2][1]);
@@ -1847,10 +1848,10 @@ const Matrix33<T> &
 Matrix33<T>::shear (const S &xy)
 {
     //
-    // In this case, we don't need a temp. copy of the matrix
-    // because we never use a value on the RHS after we've
+    // In this case, we don't need a temp. copy of the matrix 
+    // because we never use a value on the RHS after we've 
     // changed it on the LHS.
-    //
+    // 
 
     x[1][0] += xy * x[0][0];
     x[1][1] += xy * x[0][1];
@@ -1865,11 +1866,11 @@ const Matrix33<T> &
 Matrix33<T>::shear (const Vec2<S> &h)
 {
     Matrix33<T> P (*this);
-
+    
     x[0][0] = P[0][0] + h[1] * P[1][0];
     x[0][1] = P[0][1] + h[1] * P[1][1];
     x[0][2] = P[0][2] + h[1] * P[1][2];
-
+    
     x[1][0] = P[1][0] + h[0] * P[0][0];
     x[1][1] = P[1][1] + h[0] * P[0][1];
     x[1][2] = P[1][2] + h[0] * P[0][2];
@@ -1931,7 +1932,7 @@ Matrix44<T>::Matrix44 (T a)
 
 template <class T>
 inline
-Matrix44<T>::Matrix44 (const T a[4][4])
+Matrix44<T>::Matrix44 (const T a[4][4]) 
 {
     memcpy (x, a, sizeof (x));
 }
@@ -2242,7 +2243,7 @@ Matrix44<T>::equalWithAbsError (const Matrix44<T> &m, T e) const
 {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            if (!Imath::equalWithAbsError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i][j], m[i][j], e))
                 return false;
 
     return true;
@@ -2254,7 +2255,7 @@ Matrix44<T>::equalWithRelError (const Matrix44<T> &m, T e) const
 {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            if (!Imath::equalWithRelError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i][j], m[i][j], e))
                 return false;
 
     return true;
@@ -2698,7 +2699,7 @@ Matrix44<T>::transposed () const
 
 template <class T>
 const Matrix44<T> &
-Matrix44<T>::gjInvert (bool singExc) throw (Iex::MathExc)
+Matrix44<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 {
     *this = gjInverse (singExc);
     return *this;
@@ -2706,7 +2707,7 @@ Matrix44<T>::gjInvert (bool singExc) throw (Iex::MathExc)
 
 template <class T>
 Matrix44<T>
-Matrix44<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
+Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 {
     int i, j, k;
     Matrix44 s;
@@ -2740,7 +2741,7 @@ Matrix44<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
         if (pivotsize == 0)
         {
             if (singExc)
-                throw ::Imath::SingMatrixExc ("Cannot invert singular matrix.");
+                throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
 
             return Matrix44();
         }
@@ -2782,7 +2783,7 @@ Matrix44<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
         if ((f = t[i][i]) == 0)
         {
             if (singExc)
-                throw ::Imath::SingMatrixExc ("Cannot invert singular matrix.");
+                throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
 
             return Matrix44();
         }
@@ -2810,7 +2811,7 @@ Matrix44<T>::gjInverse (bool singExc) const throw (Iex::MathExc)
 
 template <class T>
 const Matrix44<T> &
-Matrix44<T>::invert (bool singExc) throw (Iex::MathExc)
+Matrix44<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 {
     *this = inverse (singExc);
     return *this;
@@ -2818,7 +2819,7 @@ Matrix44<T>::invert (bool singExc) throw (Iex::MathExc)
 
 template <class T>
 Matrix44<T>
-Matrix44<T>::inverse (bool singExc) const throw (Iex::MathExc)
+Matrix44<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 {
     if (x[0][3] != 0 || x[1][3] != 0 || x[2][3] != 0 || x[3][3] != 1)
         return gjInverse(singExc);
@@ -2845,7 +2846,7 @@ Matrix44<T>::inverse (bool singExc) const throw (Iex::MathExc)
 
     T r = x[0][0] * s[0][0] + x[0][1] * s[1][0] + x[0][2] * s[2][0];
 
-    if (Imath::abs (r) >= 1)
+    if (IMATH_INTERNAL_NAMESPACE::abs (r) >= 1)
     {
         for (int i = 0; i < 3; ++i)
         {
@@ -2857,13 +2858,13 @@ Matrix44<T>::inverse (bool singExc) const throw (Iex::MathExc)
     }
     else
     {
-        T mr = Imath::abs (r) / limits<T>::smallest();
+        T mr = IMATH_INTERNAL_NAMESPACE::abs (r) / limits<T>::smallest();
 
         for (int i = 0; i < 3; ++i)
         {
             for (int j = 0; j < 3; ++j)
             {
-                if (mr > Imath::abs (s[i][j]))
+                if (mr > IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
                 {
                     s[i][j] /= r;
                 }
@@ -2933,25 +2934,25 @@ const Matrix44<T> &
 Matrix44<T>::setEulerAngles (const Vec3<S>& r)
 {
     S cos_rz, sin_rz, cos_ry, sin_ry, cos_rx, sin_rx;
-
+    
     cos_rz = Math<T>::cos (r[2]);
     cos_ry = Math<T>::cos (r[1]);
     cos_rx = Math<T>::cos (r[0]);
-
+    
     sin_rz = Math<T>::sin (r[2]);
     sin_ry = Math<T>::sin (r[1]);
     sin_rx = Math<T>::sin (r[0]);
-
+    
     x[0][0] =  cos_rz * cos_ry;
     x[0][1] =  sin_rz * cos_ry;
     x[0][2] = -sin_ry;
     x[0][3] =  0;
-
+    
     x[1][0] = -sin_rz * cos_rx + cos_rz * sin_ry * sin_rx;
     x[1][1] =  cos_rz * cos_rx + sin_rz * sin_ry * sin_rx;
     x[1][2] =  cos_ry * sin_rx;
     x[1][3] =  0;
-
+    
     x[2][0] =  sin_rz * sin_rx + cos_rz * sin_ry * cos_rx;
     x[2][1] = -cos_rz * sin_rx + sin_rz * sin_ry * cos_rx;
     x[2][2] =  cos_ry * cos_rx;
@@ -3010,7 +3011,7 @@ Matrix44<T>::rotate (const Vec3<S> &r)
     cos_rz = Math<S>::cos (r[2]);
     cos_ry = Math<S>::cos (r[1]);
     cos_rx = Math<S>::cos (r[0]);
-
+    
     sin_rz = Math<S>::sin (r[2]);
     sin_ry = Math<S>::sin (r[1]);
     sin_rx = Math<S>::sin (r[0]);
@@ -3205,10 +3206,10 @@ const Matrix44<T> &
 Matrix44<T>::shear (const Vec3<S> &h)
 {
     //
-    // In this case, we don't need a temp. copy of the matrix
-    // because we never use a value on the RHS after we've
+    // In this case, we don't need a temp. copy of the matrix 
+    // because we never use a value on the RHS after we've 
     // changed it on the LHS.
-    //
+    // 
 
     for (int i=0; i < 4; i++)
     {
@@ -3435,8 +3436,6 @@ operator * (const Vec4<S> &v, const Matrix44<T> &m)
     return Vec4<S> (x, y, z, w);
 }
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-
-
-#endif
+#endif // INCLUDED_IMATHMATRIX_H

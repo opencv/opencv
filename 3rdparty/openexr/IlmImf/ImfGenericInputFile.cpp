@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2011, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
 //
 // All rights reserved.
@@ -32,23 +32,45 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
+#include "ImfGenericInputFile.h"
 
+#include <ImfVersion.h>
+#include <ImfXdr.h>
+#include <Iex.h>
+#include <OpenEXRConfig.h>
 
-#ifndef INCLUDED_IMATHGLU_H
-#define INCLUDED_IMATHGLU_H
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-
-#include "ImathVec.h"
-
-inline
-void
-gluLookAt(const Imath::V3f &pos, const Imath::V3f &interest, const Imath::V3f &up)
+void GenericInputFile::readMagicNumberAndVersionField(OPENEXR_IMF_INTERNAL_NAMESPACE::IStream& is, int& version)
 {
-    gluLookAt(pos.x,      pos.y,      pos.z,
-              interest.x, interest.y, interest.z,
-              up.x,       up.y,       up.z);
+    //
+    // Read the magic number and the file format version number.
+    // Then check if we can read the rest of this file.
+    //
+
+    int magic;
+
+    OPENEXR_IMF_INTERNAL_NAMESPACE::Xdr::read <OPENEXR_IMF_INTERNAL_NAMESPACE::StreamIO> (is, magic);
+    OPENEXR_IMF_INTERNAL_NAMESPACE::Xdr::read <OPENEXR_IMF_INTERNAL_NAMESPACE::StreamIO> (is, version);
+
+    if (magic != MAGIC)
+    {
+        throw IEX_NAMESPACE::InputExc ("File is not an image file.");
+    }
+
+    if (getVersion (version) != EXR_VERSION)
+    {
+        THROW (IEX_NAMESPACE::InputExc, "Cannot read "
+                              "version " << getVersion (version) << " "
+                              "image files.  Current file format version "
+                              "is " << EXR_VERSION << ".");
+    }
+
+    if (!supportsFlags (getFlags (version)))
+    {
+        THROW (IEX_NAMESPACE::InputExc, "The file format version number's flag field "
+                              "contains unrecognized flags.");
+    }
 }
 
-#endif
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

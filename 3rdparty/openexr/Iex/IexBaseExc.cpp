@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -40,19 +40,27 @@
 //
 //---------------------------------------------------------------------
 
+#include "IexExport.h"
 #include "IexBaseExc.h"
+#include "IexMacros.h"
 
-namespace Iex {
+#ifdef PLATFORM_WINDOWS
+#include <windows.h>
+#endif
+
+#include <stdlib.h>
+
+IEX_INTERNAL_NAMESPACE_SOURCE_ENTER
+
+
 namespace {
 
-
 StackTracer currentStackTracer = 0;
-
 
 } // namespace
 
 
-void
+void	
 setStackTracer (StackTracer stackTracer)
 {
     currentStackTracer = stackTracer;
@@ -125,5 +133,24 @@ BaseExc::append (std::stringstream &s)
     return *this;
 }
 
+IEX_INTERNAL_NAMESPACE_SOURCE_EXIT
 
-} // namespace Iex
+
+#ifdef PLATFORM_WINDOWS
+
+#pragma optimize("", off)
+void
+iex_debugTrap()
+{
+    if (0 != getenv("IEXDEBUGTHROW"))
+        ::DebugBreak();
+}
+#else
+void
+iex_debugTrap()
+{
+    // how to in Linux?
+    if (0 != ::getenv("IEXDEBUGTHROW"))
+        __builtin_trap();
+}
+#endif

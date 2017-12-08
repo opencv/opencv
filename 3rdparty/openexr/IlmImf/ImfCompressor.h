@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,16 +43,19 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfCompression.h>
+#include "ImfCompression.h"
 #include "ImathBox.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+#include "ImfForward.h"
+
 #include <stdlib.h>
 
-namespace Imf {
 
-class Header;
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class Compressor
+class IMF_EXPORT Compressor
 {
   public:
 
@@ -88,8 +91,8 @@ class Compressor
 
     enum Format
     {
-    NATIVE,		// the machine's native format
-    XDR		// Xdr format
+	NATIVE,		// the machine's native format
+	XDR		// Xdr format
     };
 
     virtual Format	format () const;
@@ -156,14 +159,14 @@ class Compressor
     //-------------------------------------------------------------------------
 
     virtual int		compress (const char *inPtr,
-                  int inSize,
-                  int minY,
-                  const char *&outPtr) = 0;
+				  int inSize,
+				  int minY,
+				  const char *&outPtr) = 0;
 
     virtual int		compressTile (const char *inPtr,
-                      int inSize,
-                      Imath::Box2i range,
-                      const char *&outPtr);
+				      int inSize,
+				      IMATH_NAMESPACE::Box2i range,
+				      const char *&outPtr);
 
     //-------------------------------------------------------------------------
     // Uncompress an array of bytes that has been compressed by compress():
@@ -182,14 +185,14 @@ class Compressor
     //-------------------------------------------------------------------------
 
     virtual int		uncompress (const char *inPtr,
-                    int inSize,
-                    int minY,
-                    const char *&outPtr) = 0;
+				    int inSize,
+				    int minY,
+				    const char *&outPtr) = 0;
 
     virtual int		uncompressTile (const char *inPtr,
-                    int inSize,
-                    Imath::Box2i range,
-                    const char *&outPtr);
+					int inSize,
+					IMATH_NAMESPACE::Box2i range,
+					const char *&outPtr);
 
   private:
 
@@ -201,7 +204,15 @@ class Compressor
 // Test if c is a valid compression type
 //--------------------------------------
 
-bool		isValidCompression (Compression c);
+IMF_EXPORT 
+bool isValidCompression (Compression c);
+
+//--------------------------------------
+// Test if c is valid for deep data
+//--------------------------------------
+
+IMF_EXPORT
+bool            isValidDeepCompression (Compression c);
 
 
 //-----------------------------------------------------------------
@@ -212,16 +223,17 @@ bool		isValidCompression (Compression c);
 //
 //  header		Header of the input or output file whose
 //			pixels will be compressed or uncompressed.
-//
+//			
 //  return value	A pointer to a new Compressor object (it
 //			is the caller's responsibility to delete
 //			the object), or 0 (if c is NO_COMPRESSION).
 //
 //-----------------------------------------------------------------
 
+IMF_EXPORT 
 Compressor *	newCompressor (Compression c,
-                   size_t maxScanLineSize,
-                   const Header &hdr);
+			       size_t maxScanLineSize,
+			       const Header &hdr);
 
 
 //-----------------------------------------------------------------
@@ -241,12 +253,13 @@ Compressor *	newCompressor (Compression c,
 //
 //-----------------------------------------------------------------
 
+IMF_EXPORT 
 Compressor *    newTileCompressor (Compression c,
-                   size_t tileLineSize,
-                   size_t numTileLines,
-                   const Header &hdr);
+				   size_t tileLineSize,
+				   size_t numTileLines,
+				   const Header &hdr);
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

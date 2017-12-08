@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,20 +43,22 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfHeader.h>
-#include <ImfFrameBuffer.h>
-#include <ImfTiledOutputFile.h>
-#include <string>
+#include "ImfHeader.h"
+#include "ImfFrameBuffer.h"
+#include "ImfTiledOutputFile.h"
+#include "ImfThreading.h"
+#include "ImfGenericInputFile.h"
+#include "ImfNamespace.h"
+#include "ImfForward.h"
+#include "ImfExport.h"
+
 #include <fstream>
-#include <ImfThreading.h>
-
-namespace Imf {
-
-class TiledInputFile;
-class ScanLineInputFile;
 
 
-class InputFile
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
+
+
+class IMF_EXPORT InputFile : public GenericInputFile
 {
   public:
 
@@ -80,7 +82,7 @@ class InputFile
     // used to read the file (see ImfThreading.h).
     //-------------------------------------------------------------
 
-    InputFile (IStream &is, int numThreads = globalThreadCount());
+    InputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int numThreads = globalThreadCount());
 
 
     //-----------
@@ -143,6 +145,29 @@ class InputFile
 
     bool		isComplete () const;
 
+    
+    //---------------------------------------------------------------
+    // Check if SSE optimization is enabled
+    //
+    // Call after setFrameBuffer() to query whether optimized file decoding
+    // is available - decode times will be faster if returns true
+    //
+    // Optimization depends on:
+    //   the file type (only scanline data is supported),
+    //   the framebuffer channels (RGB/RGBA mono or stereo)
+    //   the framebuffer channel types (all channels half-float format only)
+    //   the file channels (RGB/RGBA mono or stereo)
+    //   the file channel types (all channel half-float format only)
+    //   whether SSE2 instruction support was detected at compile time
+    //
+    // Calling isOptimizationEnabled before setFrameBuffer will throw an exception
+    //
+    //---------------------------------------------------------------
+    
+    bool                isOptimizationEnabled () const;
+    
+    
+    
 
     //---------------------------------------------------------------
     // Read pixel data:
@@ -174,9 +199,9 @@ class InputFile
     //----------------------------------------------
 
     void		rawPixelData (int firstScanLine,
-                      const char *&pixelData,
-                      int &pixelDataSize);
-
+				      const char *&pixelData,
+				      int &pixelDataSize);
+                                     
     //--------------------------------------------------
     // Read a tile of raw pixel data from the file,
     // without uncompressing it (this function is
@@ -184,26 +209,32 @@ class InputFile
     //--------------------------------------------------
 
     void		rawTileData (int &dx, int &dy,
-                     int &lx, int &ly,
-                     const char *&pixelData,
-                     int &pixelDataSize);
+				     int &lx, int &ly,
+				     const char *&pixelData,
+				     int &pixelDataSize);
 
     struct Data;
-
+    
   private:
 
+    InputFile (InputPartData* part);
     InputFile (const InputFile &);			// not implemented
     InputFile & operator = (const InputFile &);		// not implemented
 
     void		initialize ();
+    void                multiPartInitialize(InputPartData* part);
+    void                compatibilityInitialize(OPENEXR_IMF_INTERNAL_NAMESPACE::IStream& is);
     TiledInputFile *	tFile ();
-
+    
     friend void TiledOutputFile::copyPixels (InputFile &);
-
+    
     Data *		_data;
+
+
+    friend class MultiPartInputFile;
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

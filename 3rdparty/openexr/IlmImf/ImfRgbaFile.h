@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -47,27 +47,25 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfHeader.h>
-#include <ImfFrameBuffer.h>
-#include <ImfRgba.h>
+#include "ImfHeader.h"
+#include "ImfFrameBuffer.h"
+#include "ImfRgba.h"
 #include "ImathVec.h"
 #include "ImathBox.h"
 #include "half.h"
-#include <ImfThreading.h>
+#include "ImfThreading.h"
 #include <string>
+#include "ImfNamespace.h"
+#include "ImfForward.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-
-class OutputFile;
-class InputFile;
-struct PreviewRgba;
 
 //
 // RGBA output file.
 //
 
-class RgbaOutputFile
+class IMF_EXPORT RgbaOutputFile
 {
   public:
 
@@ -76,8 +74,8 @@ class RgbaOutputFile
     //---------------------------------------------------
 
     RgbaOutputFile (const char name[],
-            const Header &header,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
+		    const Header &header,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
                     int numThreads = globalThreadCount());
 
 
@@ -87,9 +85,9 @@ class RgbaOutputFile
     // automatically close the file.
     //----------------------------------------------------
 
-    RgbaOutputFile (OStream &os,
-            const Header &header,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
+    RgbaOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+		    const Header &header,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
                     int numThreads = globalThreadCount());
 
 
@@ -99,14 +97,14 @@ class RgbaOutputFile
     //----------------------------------------------------------------
 
     RgbaOutputFile (const char name[],
-            const Imath::Box2i &displayWindow,
-            const Imath::Box2i &dataWindow = Imath::Box2i(),
-            RgbaChannels rgbaChannels = WRITE_RGBA,
-            float pixelAspectRatio = 1,
-            const Imath::V2f screenWindowCenter = Imath::V2f (0, 0),
-            float screenWindowWidth = 1,
-            LineOrder lineOrder = INCREASING_Y,
-            Compression compression = PIZ_COMPRESSION,
+		    const IMATH_NAMESPACE::Box2i &displayWindow,
+		    const IMATH_NAMESPACE::Box2i &dataWindow = IMATH_NAMESPACE::Box2i(),
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
+		    float pixelAspectRatio = 1,
+		    const IMATH_NAMESPACE::V2f screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+		    float screenWindowWidth = 1,
+		    LineOrder lineOrder = INCREASING_Y,
+		    Compression compression = PIZ_COMPRESSION,
                     int numThreads = globalThreadCount());
 
 
@@ -117,14 +115,14 @@ class RgbaOutputFile
     //-----------------------------------------------
 
     RgbaOutputFile (const char name[],
-            int width,
-            int height,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
-            float pixelAspectRatio = 1,
-            const Imath::V2f screenWindowCenter = Imath::V2f (0, 0),
-            float screenWindowWidth = 1,
-            LineOrder lineOrder = INCREASING_Y,
-            Compression compression = PIZ_COMPRESSION,
+		    int width,
+		    int height,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
+		    float pixelAspectRatio = 1,
+		    const IMATH_NAMESPACE::V2f screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+		    float screenWindowWidth = 1,
+		    LineOrder lineOrder = INCREASING_Y,
+		    Compression compression = PIZ_COMPRESSION,
                     int numThreads = globalThreadCount());
 
 
@@ -144,8 +142,8 @@ class RgbaOutputFile
     //------------------------------------------------
 
     void			setFrameBuffer (const Rgba *base,
-                        size_t xStride,
-                        size_t yStride);
+						size_t xStride,
+						size_t yStride);
 
 
     //---------------------------------------------
@@ -162,10 +160,10 @@ class RgbaOutputFile
 
     const Header &		header () const;
     const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
     float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
+    const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
     float			screenWindowWidth () const;
     LineOrder			lineOrder () const;
     Compression			compression () const;
@@ -194,7 +192,7 @@ class RgbaOutputFile
     //-----------------------------------------------------------------------
 
     void			setYCRounding (unsigned int roundY,
-                           unsigned int roundC);
+					       unsigned int roundC);
 
 
     //----------------------------------------------------
@@ -208,9 +206,9 @@ class RgbaOutputFile
     //----------------------------------------------------
 
     void			breakScanLine  (int y,
-                        int offset,
-                        int length,
-                        char c);
+						int offset,
+						int length,
+						char c);
   private:
 
     RgbaOutputFile (const RgbaOutputFile &);		  // not implemented
@@ -227,7 +225,7 @@ class RgbaOutputFile
 // RGBA input file
 //
 
-class RgbaInputFile
+class IMF_EXPORT RgbaInputFile
 {
   public:
 
@@ -246,7 +244,7 @@ class RgbaInputFile
     // close the file.
     //-----------------------------------------------------------
 
-    RgbaInputFile (IStream &is, int numThreads = globalThreadCount());
+    RgbaInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int numThreads = globalThreadCount());
 
 
     //--------------------------------------------------------------
@@ -256,12 +254,12 @@ class RgbaInputFile
     //--------------------------------------------------------------
 
     RgbaInputFile (const char name[],
-           const std::string &layerName,
-           int numThreads = globalThreadCount());
+		   const std::string &layerName,
+		   int numThreads = globalThreadCount());
 
-    RgbaInputFile (IStream &is,
-           const std::string &layerName,
-           int numThreads = globalThreadCount());
+    RgbaInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+		   const std::string &layerName,
+		   int numThreads = globalThreadCount());
 
 
     //-----------
@@ -280,8 +278,8 @@ class RgbaInputFile
     //-----------------------------------------------------
 
     void			setFrameBuffer (Rgba *base,
-                        size_t xStride,
-                        size_t yStride);
+						size_t xStride,
+						size_t yStride);
 
 
     //----------------------------------------------------------------
@@ -308,10 +306,10 @@ class RgbaInputFile
 
     const Header &		header () const;
     const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
     float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
+    const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
     float			screenWindowWidth () const;
     LineOrder			lineOrder () const;
     Compression			compression () const;
@@ -339,6 +337,10 @@ class RgbaInputFile
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
+
+
+
 
 #endif
