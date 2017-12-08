@@ -48,7 +48,16 @@ layer {
     }
   }
 
-  name: "output"
+  name: "fc2"
   bottom: "fc1"
+  top: "fc2"
+}
+
+layer {
+  type: "Scale"
+  scale_param { bias_term: true }
+
+  name: "output"
+  bottom: "fc2"
   top: "output"
 }
