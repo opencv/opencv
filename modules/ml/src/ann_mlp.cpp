@@ -170,12 +170,44 @@ double ANN_MLP::getAnnealFinalT() const
     return this_->getAnnealFinalT();
 }
 
+void ANN_MLP::setAnnealFinalT(double val) const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealFinalT(val);
+}
+
 double ANN_MLP::getAnnealCoolingRatio() const
 {
     const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     return this_->getAnnealCoolingRatio();
+}
+
+void ANN_MLP::setAnnealCoolingRatio(double val) const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealCoolingRatio(val);
+}
+
+int ANN_MLP::getAnnealItePerStep() const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    return this_->getAnnealItePerStep();
+}
+
+void ANN_MLP::setAnnealItePerStep(int val) const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealItePerStep(val);
 }
 
 class ANN_MLPImpl : public ANN_MLP
@@ -199,10 +231,6 @@ public:
     CV_IMPL_PROPERTY(double, RpropDWMinus, params.rpDWMinus)
     CV_IMPL_PROPERTY(double, RpropDWMin, params.rpDWMin)
     CV_IMPL_PROPERTY(double, RpropDWMax, params.rpDWMax)
-    CV_IMPL_PROPERTY(double, AnnealInitialT, params.initialT)
-    CV_IMPL_PROPERTY(double, AnnealFinalT, params.finalT)
-    CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
-    CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
 
     void clear()
     {

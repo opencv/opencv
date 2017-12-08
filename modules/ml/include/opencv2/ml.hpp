@@ -1526,9 +1526,9 @@ public:
     /** ANNEAL: Update iteration per step.
     It must be \>0 . Default value is 10.*/
     /** @see setAnnealItePerStep */
-    CV_WRAP virtual int getAnnealItePerStep() const = 0;
+    CV_WRAP int getAnnealItePerStep() const;
     /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
+    CV_WRAP void setAnnealItePerStep(int val) const;
 
     /** possible activation functions */
     enum ActivationFunctions {
