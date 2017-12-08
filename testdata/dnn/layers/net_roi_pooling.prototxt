@@ -1,0 +1,46 @@
+# Script to generate data. Be sure that PYTHONPATH contains path to
+# https://github.com/rbgirshick/caffe-fast-rcnn/tree/fast-rcnn branch. So
+# caffe.__file__ is a path to caffe-fast-rcnn/python/caffe/__init__.pyc
+#
+# import caffe
+# import numpy as np
+#
+# caffe_net = caffe.Net('net_roi_pooling.prototxt', caffe.TEST)
+#
+# caffe_net.blobs['input'].data[:,:,:,:] = np.random.standard_normal([4, 3, 21, 17]).astype(np.float32)
+# caffe_net.blobs['rois'].data[:,0] = np.random.randint(0, 4, [100]).astype(np.float32)
+# caffe_net.blobs['rois'].data[:,1:] = np.random.randint(-10, 30, [100, 4]).astype(np.float32)
+# print caffe_net.blobs['rois'].data
+# caffe_net.forward()
+#
+# np.save('net_roi_pooling.input.npy', caffe_net.blobs['input'].data)
+# np.save('net_roi_pooling.rois.npy', caffe_net.blobs['rois'].data)
+# np.save('net_roi_pooling.npy', caffe_net.blobs['output'].data)
+name: "test_ROIPooling"
+
+input: "input"
+input_shape {
+  dim: 4
+  dim: 3
+  dim: 21
+  dim: 17
+}
+
+input: "rois"
+input_shape {
+  dim: 100
+  dim: 5
+}
+
+layer {
+  name: "output"
+  type: "ROIPooling"
+  bottom: "input"
+  bottom: "rois"
+  top: "output"
+  roi_pooling_param {
+    pooled_w: 6
+    pooled_h: 6
+    spatial_scale: 0.0625 # 1/16
+  }
+}
