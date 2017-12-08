@@ -560,4 +560,20 @@ TEST(Layer_Test_Reorg, Accuracy)
     testLayerUsingDarknetModels("reorg", false, false);
 }
 
+TEST(Layer_Test_ROIPooling, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
+
+    Mat inp = blobFromNPY(_tf("net_roi_pooling.input.npy"));
+    Mat rois = blobFromNPY(_tf("net_roi_pooling.rois.npy"));
+    Mat ref = blobFromNPY(_tf("net_roi_pooling.npy"));
+
+    net.setInput(inp, "input");
+    net.setInput(rois, "rois");
+
+    Mat out = net.forward();
+
+    normAssert(out, ref);
+}
+
 }

@@ -1113,11 +1113,6 @@ double CvCapture_FFMPEG::get_duration_sec() const
         sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
     }
 
-    if (sec < eps_zero)
-    {
-        sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
-    }
-
     return sec;
 }
 

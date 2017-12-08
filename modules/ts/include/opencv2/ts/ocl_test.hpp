@@ -105,10 +105,10 @@ do \
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
 do \
 { \
-    ASSERT_EQ(mat1.type(), mat2.type()); \
-    ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(TestUtils::checkNormRelative(mat1, mat2), eps) \
-        << "Size: " << mat1.size() << std::endl; \
+    ASSERT_EQ((mat1).type(), (mat2).type()); \
+    ASSERT_EQ((mat1).size(), (mat2).size()); \
+    EXPECT_LE(TestUtils::checkNormRelative((mat1), (mat2)), eps) \
+        << "Size: " << (mat1).size() << std::endl; \
 } while ((void)0, 0)
 
 #define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
@@ -192,7 +192,7 @@ using perf::MatType;
 
 #define OCL_RNG_SEED 123456
 
-struct CV_EXPORTS TestUtils
+struct TestUtils
 {
     cv::RNG rng;
 
@@ -319,7 +319,7 @@ do \
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
 
 template <typename T>
-struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
+struct TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
 {
 
 };

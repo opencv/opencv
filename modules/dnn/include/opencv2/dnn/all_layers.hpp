@@ -242,7 +242,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         {
             MAX,
             AVE,
-            STOCHASTIC
+            STOCHASTIC,
+            ROI
         };
 
         int type;
@@ -251,6 +252,9 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool computeMaxIdx;
         String padMode;
         bool ceilMode;
+        // ROIPooling parameters.
+        Size pooledSize;
+        float spatialScale;
 
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };

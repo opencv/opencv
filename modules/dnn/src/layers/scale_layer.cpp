@@ -74,8 +74,8 @@ public:
                 {
                     float w = blobs[0].at<float>(n);
                     float b = hasBias ? blobs[1].at<float>(n) : 0;
-                    Mat outBlobPlane = getPlane(outBlob, cn, n);
-                    Mat inpBlobPlane = getPlane(inpBlob, cn, n);
+                    Mat outBlobPlane = slice(outBlob, cn, n);
+                    Mat inpBlobPlane = slice(inpBlob, cn, n);
                     inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
                 }
             }

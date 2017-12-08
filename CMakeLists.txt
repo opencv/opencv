@@ -29,6 +29,8 @@ else()
   cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 endif()
 
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+
 # Following block can break build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect cross-compiling by presense of CMAKE_TOOLCHAIN_FILE
@@ -197,14 +199,14 @@ OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"            
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" ON IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               ON IF (NOT IOS AND NOT APPLE) )
-OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON   IF (NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
+OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               (NOT CV_DISABLE_OPTIMIZATION)       IF (NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
 OCV_OPTION(WITH_VFW            "Include Video for Windows support"           ON   IF WIN32 )
 OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GSTREAMER      "Include Gstreamer support"                   ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GSTREAMER_0_10 "Enable Gstreamer 0.10 support (instead of 1.x)"                              OFF )
 OCV_OPTION(WITH_GTK            "Include GTK support"                         ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_GTK_2_X        "Use GTK version 2"                           OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
-OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   NOT MINGW IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS )
+OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)  IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS )
 OCV_OPTION(WITH_HALIDE         "Include Halide support"                      OFF)
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
@@ -236,7 +238,7 @@ OCV_OPTION(WITH_MSMF           "Build VideoIO with Media Foundation support" OFF
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT WINRT) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF)
-OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              NOT ANDROID IF (NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              (NOT ANDROID AND NOT CV_DISABLE_OPTIMIZATION)  IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_OPENCL_SVM     "Include OpenCL Shared Virtual Memory support" OFF ) # experimental
 OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -248,7 +250,7 @@ OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF
 OCV_OPTION(WITH_MFX            "Include Intel Media SDK support"             OFF   IF ((UNIX AND NOT ANDROID) OR (WIN32 AND NOT WINRT AND NOT MINGW)) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              (NOT CV_DISABLE_OPTIMIZATION)  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_ITT            "Include Intel ITT support"                   ON   IF (NOT APPLE_FRAMEWORK) )
 
 # OpenCV build components
@@ -311,6 +313,7 @@ OCV_OPTION(ENABLE_IMPL_COLLECTION     "Collect implementation data on function c
 OCV_OPTION(ENABLE_INSTRUMENTATION     "Instrument functions to collect calls trace and performance" OFF )
 OCV_OPTION(ENABLE_GNU_STL_DEBUG       "Enable GNU STL Debug mode (defines _GLIBCXX_DEBUG)"       OFF IF ((NOT CMAKE_VERSION VERSION_LESS "2.8.11") AND CMAKE_COMPILER_IS_GNUCXX) )
 OCV_OPTION(ENABLE_BUILD_HARDENING     "Enable hardening of the resulting binaries (against security attacks, detects memory corruption, etc)" OFF)
+OCV_OPTION(ENABLE_LTO                 "Enable Link Time Optimization" OFF IF CMAKE_COMPILER_IS_GNUCXX OR MSVC)
 OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_checker tool" OFF IF UNIX)
 OCV_OPTION(CV_ENABLE_INTRINSICS       "Use intrinsic-based optimized code" ON )
 OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatched code/intrinsics/loop unrolling/etc)" OFF )

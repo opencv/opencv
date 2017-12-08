@@ -109,6 +109,7 @@ endif()
 set_target_properties(${the_module} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
                       ARCHIVE_OUTPUT_NAME ${the_module}  # prevent name conflict for python2/3 outputs
+                      DEFINE_SYMBOL CVAPI_EXPORTS
                       PREFIX ""
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
