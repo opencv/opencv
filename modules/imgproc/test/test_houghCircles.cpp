@@ -232,6 +232,7 @@ TEST(HoughCirclesTest, CentersOnly)
     }
 }
 
+#if 0
 TEST(HoughCirclesTest, ManySmallCircles)
 {
     string picture_name = "imgproc/beads.png";
@@ -257,3 +258,4 @@ TEST(HoughCirclesTest, ManySmallCircles)
 
     EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
 }
+#endif

@@ -33,6 +33,7 @@ PERF_TEST(PerfHoughCircles, Basic)
     SANITY_CHECK_NOTHING();
 }
 
+#if 0
 PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 {
     string filename = getDataPath("cv/imgproc/beads.png");
@@ -58,3 +59,4 @@ PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 
     SANITY_CHECK_NOTHING();
 }
+#endif
