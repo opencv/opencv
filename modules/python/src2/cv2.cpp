@@ -9,6 +9,12 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
 
+#if PY_MAJOR_VERSION >= 3
+#  define CV_PYTHON_TYPE_HEAD_INIT() PyVarObject_HEAD_INIT(&PyType_Type, 0)
+#else
+#  define CV_PYTHON_TYPE_HEAD_INIT() PyObject_HEAD_INIT(&PyType_Type) 0,
+#endif
+
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
 
