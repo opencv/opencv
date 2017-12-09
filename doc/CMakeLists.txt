@@ -218,7 +218,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     COMPONENT "docs" OPTIONAL
   )
 
-  if(BUILD_opencv_python2)
+  if(PYTHON2_EXECUTABLE)
     add_custom_target(doxygen_python
       COMMAND ${PYTHON2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/add_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON2_SIGNATURES_FILE}" "python"
       DEPENDS "${doxygen_result}" gen_opencv_python2
@@ -226,7 +226,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     add_custom_target(doxygen
       DEPENDS doxygen_cpp doxygen_python
     )
-  elseif(BUILD_opencv_python3)
+  elseif(PYTHON3_EXECUTABLE)
     add_custom_target(doxygen_python
       COMMAND ${PYTHON3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/add_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON3_SIGNATURES_FILE}" "python"
       DEPENDS "${doxygen_result}" gen_opencv_python3
