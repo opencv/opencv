@@ -45,6 +45,8 @@
 #include <vector>
 #include <iostream>
 
+namespace {
+
 using namespace cv;
 
 namespace
@@ -1249,3 +1251,5 @@ TEST_P(Imgproc_Resize, BigSize)
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Resize, Interpolation::all());
 
 #endif
+
+} // namespace

@@ -42,11 +42,11 @@
 
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace testing;
 using namespace perf;
-
-namespace { // workaround conflict with DftFlags
 
 //////////////////////////////////////////////////////////////////////
 // GEMM

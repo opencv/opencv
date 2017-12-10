@@ -45,9 +45,9 @@
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // FarnebackOpticalFlow
@@ -115,6 +115,5 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlow,
                            );
 
 
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL

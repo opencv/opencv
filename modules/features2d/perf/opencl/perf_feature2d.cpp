@@ -1,11 +1,13 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
-#include "../perf_feature2d.hpp"
 
 #ifdef HAVE_OPENCL
+namespace opencv_tests {
+namespace {
 
-namespace cvtest {
-namespace ocl {
+#include "../perf_feature2d.hpp"
+
+using namespace cvtest::ocl;
 
 OCL_PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
 {
@@ -75,7 +77,6 @@ OCL_PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DE
     SANITY_CHECK_NOTHING();
 }
 
-} // ocl
-} // cvtest
+}} // namespace
 
 #endif // HAVE_OPENCL

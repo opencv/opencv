@@ -4,6 +4,8 @@
 #include "tbb/task_scheduler_init.h"
 #endif
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -157,3 +159,5 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
     SANITY_CHECK(rvec, 1e-6);
     SANITY_CHECK(tvec, 1e-6);
 }
+
+} // namespace

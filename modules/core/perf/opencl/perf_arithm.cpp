@@ -46,6 +46,7 @@
 
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////// Lut ////////////////////////
 
@@ -1176,6 +1177,6 @@ OCL_PERF_TEST_P(ReduceAccFixture, Reduce,
     SANITY_CHECK(dst, eps);
 }
 
-} } // namespace cvtest::ocl
+} } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL

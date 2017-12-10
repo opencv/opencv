@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+namespace {
 
 using namespace cvtest;
 
@@ -62,8 +63,6 @@ namespace
         return m(roi);
     }
 }
-
-namespace {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Blur
@@ -706,5 +705,4 @@ INSTANTIATE_TEST_CASE_P(CUDA_Filters, Median, testing::Combine(
     );
 
 } //namespace
-
 #endif // HAVE_CUDA

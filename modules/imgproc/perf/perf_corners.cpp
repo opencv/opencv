@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -90,3 +92,5 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
 
     SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
+
+} // namespace

@@ -1,8 +1,6 @@
 #ifndef __OPENCV_PERF_FEATURE2D_HPP__
 #define __OPENCV_PERF_FEATURE2D_HPP__
 
-#include "perf_precomp.hpp"
-
 /* cofiguration for tests of detectors/descriptors. shared between ocl and cpu tests. */
 
 using namespace std;

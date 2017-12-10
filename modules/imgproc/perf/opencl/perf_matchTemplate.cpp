@@ -2,10 +2,9 @@
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
-
 namespace ocl {
+namespace {
 
 CV_ENUM(MethodType, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
 
@@ -84,6 +83,5 @@ OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
     SANITY_CHECK(dst, 3e-2);
 }
 
-} }
-
+} } } // namespace
 #endif // HAVE_OPENCL

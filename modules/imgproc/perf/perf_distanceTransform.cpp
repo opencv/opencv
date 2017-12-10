@@ -24,6 +24,8 @@ PERF_TEST_P(Size_DistanceTransform, icvTrueDistTrans, testing::Values(TYPICAL_MA
 
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -100,3 +102,5 @@ PERF_TEST_P(DistanceTransform_NeedLabels_Test, distanceTransform_NeedLabels,
     SANITY_CHECK(label, eps);
     SANITY_CHECK(dst, eps);
 }
+
+} // namespace

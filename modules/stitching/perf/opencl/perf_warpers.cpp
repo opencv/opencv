@@ -44,9 +44,9 @@
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////////////////// Stitching Warpers ///////////////////////////
 
@@ -157,6 +157,5 @@ OCL_PERF_TEST_P(StitchingWarpersFixture, StitchingWarpers_Warp,
     SANITY_CHECK(dst, 1e-5);
 }
 
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL

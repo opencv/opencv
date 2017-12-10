@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+namespace {
 
 using namespace cvtest;
 
@@ -336,4 +337,5 @@ CUDA_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
 
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MatchTemplate_CanFindBigTemplate, ALL_DEVICES);
 
+} // namespace
 #endif // HAVE_CUDA

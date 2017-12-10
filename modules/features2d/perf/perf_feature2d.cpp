@@ -1,3 +1,8 @@
+#include "perf_precomp.hpp"
+
+namespace opencv_tests {
+namespace {
+
 #include "perf_feature2d.hpp"
 
 PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
@@ -64,3 +69,5 @@ PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DETECT
     EXPECT_EQ((size_t)descriptors.rows, points.size());
     SANITY_CHECK_NOTHING();
 }
+
+}} //namespace

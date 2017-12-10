@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -36,3 +38,5 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
     Mat inpaintedArea = result(inpaintArea);
     SANITY_CHECK(inpaintedArea);
 }
+
+} // namespace

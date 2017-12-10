@@ -42,6 +42,8 @@
 
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace testing;
 using namespace perf;
@@ -1495,3 +1497,5 @@ PERF_TEST_P(Sz_Depth_Op, Threshold,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+} // namespace

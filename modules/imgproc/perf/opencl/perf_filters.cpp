@@ -48,9 +48,9 @@
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 typedef tuple<Size, MatType, int> FilterParams;
 typedef TestBaseWithParam<FilterParams> FilterFixture;
@@ -323,6 +323,5 @@ OCL_PERF_TEST_P(MedianBlurFixture, Bilateral, ::testing::Combine(OCL_TEST_SIZES,
     SANITY_CHECK(dst);
 }
 
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL

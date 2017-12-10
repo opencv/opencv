@@ -50,9 +50,9 @@
 using std::tr1::make_tuple;
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////// FarnebackOpticalFlow ////////////////////////
 CV_ENUM(farneFlagType, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
@@ -109,6 +109,5 @@ OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
     SANITY_CHECK(uFlow, eps, ERROR_RELATIVE);
 }
 
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL

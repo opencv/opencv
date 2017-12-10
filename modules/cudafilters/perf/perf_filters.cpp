@@ -42,6 +42,8 @@
 
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace testing;
 using namespace perf;
@@ -415,3 +417,5 @@ PERF_TEST_P(Sz_KernelSz, Median, Combine(CUDA_TYPICAL_MAT_SIZES, Values(3, 5, 7,
         SANITY_CHECK_NOTHING();
     }
 }
+
+} // namespace

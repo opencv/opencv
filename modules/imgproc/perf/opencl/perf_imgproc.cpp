@@ -49,6 +49,7 @@
 
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////// equalizeHist ////////////////////////
 
@@ -323,4 +324,4 @@ OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } } // namespace cvtest::ocl

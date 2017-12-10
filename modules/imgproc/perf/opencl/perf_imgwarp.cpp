@@ -48,9 +48,9 @@
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
+namespace {
 
 ///////////// WarpAffine ////////////////////////
 
@@ -208,6 +208,5 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
     SANITY_CHECK(dst, eps);
 }
 
-} } // namespace cvtest::ocl
-
+} } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL

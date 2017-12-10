@@ -42,6 +42,8 @@
 
 #include "perf_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace testing;
 using namespace perf;
@@ -514,3 +516,5 @@ PERF_TEST_P(Sz, IntegralSqr,
         FAIL_NO_CPU();
     }
 }
+
+} // namespace

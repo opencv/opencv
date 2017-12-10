@@ -48,6 +48,8 @@ using namespace testing;
 #include <vector>
 #include <numeric>
 
+namespace {
+
 CV_ENUM(Method, RANSAC, LMEDS)
 typedef TestWithParam<Method> EstimateAffine2D;
 
@@ -156,3 +158,5 @@ TEST_P(EstimateAffine2D, testConversion)
 }
 
 INSTANTIATE_TEST_CASE_P(Calib3d, EstimateAffine2D, Method::all());
+
+} // namespace
