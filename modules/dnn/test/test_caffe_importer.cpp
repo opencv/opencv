@@ -338,6 +338,7 @@ OCL_TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
     normAssert(ref, out);
 }
 
+#ifdef HAVE_PROTOBUF
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {
     const float l1 = 1e-5;
@@ -379,6 +380,7 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref, "", l1, lInf);
 }
+#endif  // HAVE_PROTOBUF
 
 // https://github.com/richzhang/colorization
 TEST(Reproducibility_Colorization, Accuracy)

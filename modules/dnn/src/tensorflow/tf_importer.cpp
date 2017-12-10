@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2016, Intel Corporation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 /*
@@ -11,34 +11,278 @@ Implementation of Tensorflow models parser
 
 #include "../precomp.hpp"
 
-#ifdef HAVE_PROTOBUF
-#include "graph.pb.h"
-
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <string>
+#include <set>
+
+#ifdef HAVE_PROTOBUF
+#include "graph.pb.h"
+
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "tf_io.hpp"
+#else  // #ifdef HAVE_PROTOBUF
+#include "graph.hpp"
 #endif
 
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
-#if HAVE_PROTOBUF
-
+#ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::RepeatedPtrField;
 using ::google::protobuf::Message;
 using ::google::protobuf::Descriptor;
 using ::google::protobuf::FieldDescriptor;
 using ::google::protobuf::Reflection;
+#endif
 
 namespace
 {
+
+#ifndef HAVE_PROTOBUF
+
+namespace
+{
+
+class NodeWrapper
+{
+public:
+    NodeWrapper(const pb::ProtobufNode& node) : pbNode(node) {}
+
+protected:
+    pb::ProtobufNode pbNode;
+};
+
+template <typename T>
+struct RepeatedField : public NodeWrapper
+{
+    RepeatedField(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    bool empty() const
+    {
+        return pbNode.empty();
+    }
+
+    int size() const
+    {
+        return pbNode.size();
+    }
+
+    Mat getMat(int dtype) const
+    {
+        Mat m(1, pbNode.size(), dtype);
+        pbNode.copyTo(m.total() * m.elemSize1(), m.data);
+        return m;
+    }
+};
+
+}  // anonymous namespace
+
+// Fake namespace to make softer migration to OpenCV's protobuf parser.
+namespace tensorflow
+{
+
+static const int DT_FLOAT = 1;
+static const int DT_DOUBLE = 2;
+static const int DT_INT32 = 3;
+static const int DT_HALF = 19;
+
+struct Dim : public NodeWrapper
+{
+    Dim(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    int64_t size()
+    {
+        return pbNode["size"];
+    }
+
+    std::string name() const
+    {
+        return pbNode["name"];
+    }
+};
+
+struct TensorShapeProto : public NodeWrapper
+{
+    TensorShapeProto(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    int dim_size() const
+    {
+        return pbNode["dim"].size();
+    }
+
+    Dim dim(int i) const
+    {
+        return Dim(pbNode["dim"][i]);
+    }
+};
+
+struct TensorProto : public NodeWrapper
+{
+    TensorProto(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    bool has_tensor_shape() const
+    {
+        return pbNode.has("tensor_shape");
+    }
+
+    TensorShapeProto tensor_shape() const
+    {
+        return TensorShapeProto(pbNode["tensor_shape"]);
+    }
+
+    std::string tensor_content() const
+    {
+        return pbNode.has("tensor_content") ? (std::string)pbNode["tensor_content"] : "";
+    }
+
+    int dtype() const
+    {
+        std::string typeStr = pbNode["dtype"];
+        if (typeStr == "DT_FLOAT") return DT_FLOAT;
+        else if (typeStr == "DT_DOUBLE") return DT_DOUBLE;
+        else if (typeStr == "DT_INT32") return DT_INT32;
+        else if (typeStr == "DT_HALF") return DT_HALF;
+        else CV_Error(Error::StsError, "Tensor's data type is not supported");
+        return 0;
+    }
+
+    int32_t int_val(int i) const
+    {
+        return pbNode["int_val"][i];
+    }
+
+    float float_val(int i) const
+    {
+        return pbNode["float_val"][i];
+    }
+
+    RepeatedField<float> float_val() const
+    {
+        return pbNode["float_val"];
+    }
+
+    RepeatedField<double> double_val() const
+    {
+        return pbNode["double_val"];
+    }
+
+    RepeatedField<int32_t> half_val() const
+    {
+        return pbNode["half_val"];
+    }
+
+    RepeatedField<int32_t> int_val() const
+    {
+        return pbNode["int_val"];
+    }
+};
+
+struct AttrValue : public NodeWrapper
+{
+    struct ListValue : public NodeWrapper
+    {
+        ListValue(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+        int i_size() const
+        {
+            return pbNode["i"].size();
+        }
+
+        int64_t i(int i) const
+        {
+            return pbNode["i"][i];
+        }
+    };
+
+    AttrValue() : NodeWrapper(pb::ProtobufNode()) {}
+
+    AttrValue(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    ListValue list() const
+    {
+        return ListValue(pbNode["list"]);
+    }
+
+    int64_t i() const { return pbNode["i"]; }
+
+    std::string s() const { return pbNode["s"]; }
+
+    bool b() const { return pbNode["b"]; }
+
+    float f() const { return pbNode["f"]; }
+
+    TensorProto tensor() const
+    {
+        return TensorProto(pbNode["tensor"]);
+    }
+};
+
+struct NodeDef : public NodeWrapper
+{
+    NodeDef(const pb::ProtobufNode& node) : NodeWrapper(node) {}
+
+    std::string name() const
+    {
+        return pbNode["name"];
+    }
+
+    std::string op() const
+    {
+        return pbNode["op"];
+    }
+
+    std::string input(int i) const
+    {
+        return pbNode["input"][i];
+    }
+
+    int input_size() const
+    {
+        return pbNode["input"].size();
+    }
+
+    std::map<std::string, AttrValue> attr() const
+    {
+        pb::ProtobufNode attr = pbNode["attr"];
+        std::map<std::string, AttrValue> mapped;
+        for (int i = 0; i < attr.size(); ++i)
+        {
+            mapped[attr[i]["key"]] = AttrValue(attr[i]["value"]);
+        }
+        return mapped;
+    }
+
+    void set_input(int input_id, const std::string& input)
+    {
+        pbNode["input"].set(input, input_id);
+    }
+};
+
+struct GraphDef : public pb::ProtobufParser
+{
+    GraphDef()
+        : pb::ProtobufParser((char*)kTensorflowGraphProto.c_str(), kTensorflowGraphProto.size(),
+                             ".tensorflow.GraphDef", true) {}
+
+    int node_size() const
+    {
+        return operator[]("node").size();
+    }
+
+    NodeDef node(int i) const
+    {
+        return operator[]("node")[i];
+    }
+};
+
+}
+#endif  // #ifndef HAVE_PROTOBUF
 
 static int toNCHW[] = {0, 2, 3, 1};
 
@@ -92,7 +336,11 @@ static Mat getTensorContent(const tensorflow::TensorProto &tensor)
             {
                 const RepeatedField<float>& field = tensor.float_val();
                 CV_Assert(!field.empty());
+#ifdef HAVE_PROTOBUF
                 return Mat(1, field.size(), CV_32FC1, (void*)field.data()).clone();
+#else
+                return field.getMat(CV_32FC1);
+#endif  // HAVE_PROTOBUF
             }
         }
         case tensorflow::DT_DOUBLE:
@@ -103,7 +351,11 @@ static Mat getTensorContent(const tensorflow::TensorProto &tensor)
             {
                 const RepeatedField<double>& field = tensor.double_val();
                 CV_Assert(!field.empty());
+#ifdef HAVE_PROTOBUF
                 return Mat(1, field.size(), CV_64FC1, (void*)field.data()).clone();
+#else
+                return field.getMat(CV_64FC1);
+#endif  // HAVE_PROTOBUF
             }
         }
         case tensorflow::DT_INT32:
@@ -114,7 +366,11 @@ static Mat getTensorContent(const tensorflow::TensorProto &tensor)
             {
                 const RepeatedField<int32_t>& field = tensor.int_val();
                 CV_Assert(!field.empty());
+#ifdef HAVE_PROTOBUF
                 return Mat(1, field.size(), CV_32SC1, (void*)field.data()).clone();
+#else
+                return field.getMat(CV_32SC1);
+#endif  // HAVE_PROTOBUF
             }
         }
         case tensorflow::DT_HALF:
@@ -129,7 +385,11 @@ static Mat getTensorContent(const tensorflow::TensorProto &tensor)
             {
                 const RepeatedField<int32_t>& field = tensor.half_val();
                 CV_Assert(!field.empty());
+#ifdef HAVE_PROTOBUF
                 Mat ints(1, field.size(), CV_32SC1, (void*)field.data());
+#else
+                Mat ints = field.getMat(CV_32SC1);
+#endif  // HAVE_PROTOBUF
                 ints.convertTo(halfs, CV_16UC1);
             }
             // Reinterpret as a signed shorts just for a convertFp16 call.
@@ -237,7 +497,8 @@ void printTensor(const tensorflow::TensorProto &tensor)
     {
     case tensorflow::DT_FLOAT:
         {
-            const float *data = reinterpret_cast<const float*>(tensor.tensor_content().c_str());
+            std::string tensor_content = tensor.tensor_content();
+            const float *data = reinterpret_cast<const float*>(tensor_content.c_str());
             int size = tensor.tensor_content().size() / sizeof(float);
             for (int i = 0; i < std::min(10, size); i++)
                 std::cout << " " << data[i];
@@ -247,7 +508,8 @@ void printTensor(const tensorflow::TensorProto &tensor)
         }
     case tensorflow::DT_INT32:
         {
-            const int *data = reinterpret_cast<const int*>(tensor.tensor_content().c_str());
+            std::string tensor_content = tensor.tensor_content();
+            const int *data = reinterpret_cast<const int*>(tensor_content.c_str());
             int size = tensor.tensor_content().size() / sizeof(int);
             for (int i = 0; i < std::min(10, size); i++)
                 std::cout << " " << data[i];
@@ -267,9 +529,14 @@ void printLayerAttr(const tensorflow::NodeDef &layer)
     for (int ii = 0; ii < layer.input_size(); ii++)
         std::cout << "(" << layer.input(ii) << ")";
     std::cout << std::endl;
+#ifdef HAVE_PROTOBUF
     google::protobuf::Map<std::string, tensorflow::AttrValue> attr
             = layer.attr();
     for (google::protobuf::Map<std::string, tensorflow::AttrValue>::const_iterator ai = attr.begin();
+#else
+    std::map<std::string, tensorflow::AttrValue> attr = layer.attr();
+    for (std::map<std::string, tensorflow::AttrValue>::const_iterator ai = attr.begin();
+#endif
          ai != attr.end(); ++ai)
     {
         std::cout << ai->first << ":";
@@ -291,11 +558,15 @@ void printLayerAttr(const tensorflow::NodeDef &layer)
 
 bool hasLayerAttr(const tensorflow::NodeDef &layer, const std::string &name)
 {
+#ifdef HAVE_PROTOBUF
     google::protobuf::Map<std::string, tensorflow::AttrValue> attr = layer.attr();
+#else
+    std::map<std::string, tensorflow::AttrValue> attr = layer.attr();
+#endif
     return attr.find(name) != attr.end();
 }
 
-const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, const std::string &name)
+const tensorflow::AttrValue getLayerAttr(const tensorflow::NodeDef &layer, const std::string &name)
 {
     return layer.attr().at(name);
 }
@@ -304,7 +575,7 @@ void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "strides"))
     {
-        const tensorflow::AttrValue& val = getLayerAttr(layer, "strides");
+        const tensorflow::AttrValue val = getLayerAttr(layer, "strides");
         if (val.list().i_size() != 4 ||
             val.list().i(0) != 1 || val.list().i(3) != 1)
             CV_Error(Error::StsError, "Unsupported strides");
@@ -331,7 +602,7 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "ksize"))
     {
-        const tensorflow::AttrValue& val = getLayerAttr(layer, "ksize");
+        const tensorflow::AttrValue val = getLayerAttr(layer, "ksize");
         if (val.list().i_size() != 4 ||
             val.list().i(0) != 1 || val.list().i(3) != 1)
             CV_Error(Error::StsError, "Unsupported ksize");
@@ -371,6 +642,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net) {
 
     for (int li = 0; li < layersCount; li++)
     {
+#ifdef HAVE_PROTOBUF
         tensorflow::NodeDef* layer = net.mutable_node(li);
         for (int input_id = 0; input_id < layer->input_size(); input_id++) {
             String input_op_name = layer->input(input_id);
@@ -380,6 +652,17 @@ void RemoveIdentityOps(tensorflow::GraphDef& net) {
                 layer->set_input(input_id, it->second);
             }
         }
+#else
+        tensorflow::NodeDef layer = net.node(li);
+        for (int input_id = 0; input_id < layer.input_size(); input_id++) {
+            String input_op_name = layer.input(input_id);
+            IdentityOpsMap::iterator it = identity_ops.find(input_op_name);
+
+            if (it != identity_ops.end()) {
+                layer.set_input(input_id, it->second);
+            }
+        }
+#endif
     }
 
     std::sort(identity_ops_idx.begin(), identity_ops_idx.end());
@@ -387,7 +670,11 @@ void RemoveIdentityOps(tensorflow::GraphDef& net) {
     int removed_nodes = 0;
     for(size_t i = 0; i < identity_ops_idx.size(); i++) {
         int start_id = identity_ops_idx[i] - removed_nodes;
+#ifdef HAVE_PROTOBUF
         net.mutable_node()->DeleteSubrange(start_id, 1);
+#else
+        net.remove("node", start_id);
+#endif
         removed_nodes++;
     }
 }
@@ -412,7 +699,7 @@ StrIntVector getNextLayers(const tensorflow::GraphDef& net, const String& layer_
 
    for (int li = 0; li < net.node_size(); li++)
    {
-       const tensorflow::NodeDef& layer = net.node(li);
+       const tensorflow::NodeDef layer = net.node(li);
        for (int input_id = 0; input_id < layer.input_size(); input_id++) {
            String input_op_name = parsePin(layer.input(input_id)).name;
            bool type_ok = type.empty() ? true : type == layer.op();
@@ -432,6 +719,7 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
 
     for (size_t i = 0; i < layers.size(); i++)
     {
+#ifdef HAVE_PROTOBUF
         tensorflow::NodeDef* layer = net.mutable_node(layers[i].second);
         for (int input_id = 0; input_id < layer->input_size(); input_id++) {
                 String input_op_name = layer->input(input_id);
@@ -440,10 +728,24 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
                     layer->set_input(input_id, removed_layer_input);
                 }
         }
+#else
+        tensorflow::NodeDef layer = net.node(layers[i].second);
+        for (int input_id = 0; input_id < layer.input_size(); input_id++) {
+                String input_op_name = layer.input(input_id);
+
+                if (input_op_name == layer_name) {
+                    layer.set_input(input_id, removed_layer_input);
+                }
+        }
+#endif
     }
 
     if (remove_from_net)
+#ifdef HAVE_PROTOBUF
         net.mutable_node()->DeleteSubrange(layer_index, 1);
+#else
+        net.remove("node", layer_index);
+#endif
 }
 
 class TFImporter : public Importer {
@@ -462,8 +764,8 @@ private:
                  const int input_layer_id, const int input_blob_id);
     void connectToAllBlobs(const std::map<String, int>& layer_id, Net& network, const Pin& outPin,
                            const int input_layer_id, const int input_blobs_count);
-    const tensorflow::TensorProto& getConstBlob(const tensorflow::NodeDef &layer, std::map<String, int> const_layers,
-                                                int input_blob_index = -1, int* actual_inp_blob_idx = 0);
+    const tensorflow::TensorProto getConstBlob(const tensorflow::NodeDef &layer, std::map<String, int> const_layers,
+                                               int input_blob_index = -1, int* actual_inp_blob_idx = 0);
 
 
     // Binary serialized TensorFlow graph includes weights.
@@ -474,21 +776,36 @@ private:
     tensorflow::GraphDef netTxt;
 };
 
+
 TFImporter::TFImporter(const char *model, const char *config)
 {
+#ifdef HAVE_PROTOBUF
     if (model && model[0])
         ReadTFNetParamsFromBinaryFileOrDie(model, &netBin);
     if (config && config[0])
         ReadTFNetParamsFromTextFileOrDie(config, &netTxt);
+#else
+    if (model && model[0])
+        netBin.parse(model);
+    if (config && config[0])
+        netTxt.parse(config, true);
+#endif
 }
 
 TFImporter::TFImporter(const char *dataModel, size_t lenModel,
                        const char *dataConfig, size_t lenConfig)
 {
+#ifdef HAVE_PROTOBUF
     if (dataModel != NULL && lenModel > 0)
         ReadTFNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBin);
     if (dataConfig != NULL && lenConfig > 0)
         ReadTFNetParamsFromTextBufferOrDie(dataConfig, lenConfig, &netTxt);
+#else
+    if (dataModel != NULL && lenModel > 0)
+        netBin.parse((char*)dataModel, lenModel);
+    if (dataConfig != NULL && lenConfig > 0)
+        netTxt.parse((char*)dataConfig, lenConfig, true);
+#endif
 }
 
 void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
@@ -549,7 +866,7 @@ void TFImporter::connectToAllBlobs(const std::map<String, int>& layer_id, Net& n
         connect(layer_id, network, outPin, input_layer_id, input_blob_id);
 }
 
-const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDef &layer, std::map<String, int> const_layers,
+const tensorflow::TensorProto TFImporter::getConstBlob(const tensorflow::NodeDef &layer, std::map<String, int> const_layers,
                                               int input_blob_index, int* actual_inp_blob_idx) {
     if (input_blob_index == -1) {
         for(int i = 0; i < layer.input_size(); i++) {
@@ -616,7 +933,7 @@ void TFImporter::populateNet(Net dstNet)
 
     std::set<String> layers_to_ignore;
 
-    tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
+    tensorflow::GraphDef& net = netTxt.node_size() != 0 ? netTxt : netBin;
 
     int layersSize = net.node_size();
 
@@ -870,7 +1187,7 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Concat" || type == "ConcatV2")
         {
             int axisId = (type == "Concat" ? 0 : layer.input_size() - 1);
-            int axis = getConstBlob(layer, value_id, axisId).int_val().Get(0);
+            int axis = getConstBlob(layer, value_id, axisId).int_val(0);
             layerParams.set("axis", 0 <= axis && axis < 4 ? toNCHW[axis] : axis);
 
             int id = dstNet.addLayer(name, "Concat", layerParams);
@@ -930,7 +1247,7 @@ void TFImporter::populateNet(Net dstNet)
             CV_Assert(layer.input_size() == 2);
             // num_split
             // 1st blob is dims tensor
-            int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
+            int axis = getConstBlob(layer, value_id, 0).int_val(0);
             layerParams.set("axis", toNCHW[axis]);
 
             int id = dstNet.addLayer(name, "Slice", layerParams);
@@ -1319,16 +1636,6 @@ Ptr<Importer> createTensorflowImporter(const String &model)
 {
     return Ptr<Importer>(new TFImporter(model.c_str()));
 }
-
-#else //HAVE_PROTOBUF
-
-Ptr<Importer> createTensorflowImporter(const String&)
-{
-    CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from TensorFlow models");
-    return Ptr<Importer>();
-}
-
-#endif //HAVE_PROTOBUF
 
 Net readNetFromTensorflow(const String &model, const String &config)
 {
