@@ -267,12 +267,12 @@ TEST(ML_ANN, Method)
     tdata->setTrainTestSplitRatio(0.8);
 
     vector<int> methodType;
-    methodType.push_back(ml::ANN_MLP::RPROP);
     methodType.push_back(ml::ANN_MLP::ANNEAL);
+    methodType.push_back(ml::ANN_MLP::RPROP);
     methodType.push_back(ml::ANN_MLP::BACKPROP);
     vector<String> methodName;
-    methodName.push_back("_rprop");
     methodName.push_back("_anneal");
+    methodName.push_back("_rprop");
     methodName.push_back("_backprop");
 #ifdef GENERATE_TESTDATA
     //    rng.state = 1027401484159173092;
@@ -300,7 +300,16 @@ TEST(ML_ANN, Method)
         Ptr<ml::ANN_MLP> x = ml::ANN_MLP_ANNEAL::create();
         x->read(fs.root());
         x->setTrainMethod(methodType[i]);
-        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 100, 0.01));
+        if (methodType[i] == ml::ANN_MLP::ANNEAL)
+        {
+            /*            Ptr<ml::ANN_MLP_ANNEAL> y = x.dynamicCast<ml::ANN_MLP_ANNEAL>();
+            y->setAnnealInitialT(10);
+            const ml::ANN_MLP_ANNEAL* this_= dynamic_cast<const ml::ANN_MLP_ANNEAL*>(x.get());*/
+            x->setAnnealInitialT(10);
+            x->setAnnealFinalT(0.1);
+            x->setAnnealCoolingRatio(0.97);
+            x->setAnnealItePerStep(10);
+        }
 
 /*        for (int jj = 0; jj < x->getLayerSizes().rows; jj++)
         {
