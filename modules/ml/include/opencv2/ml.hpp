@@ -1414,8 +1414,6 @@ public:
     @param method Default value is ANN_MLP::RPROP. See ANN_MLP::TrainingMethods.
     @param param1 passed to setRpropDW0 for ANN_MLP::RPROP and to setBackpropWeightScale for ANN_MLP::BACKPROP and to initialT for ANN_MLP::ANNEAL.
     @param param2 passed to setRpropDWMin for ANN_MLP::RPROP and to setBackpropMomentumScale for ANN_MLP::BACKPROP and to finalT for ANN_MLP::ANNEAL.
-    @param param3 passed to coolingRatio for ANN_MLP::ANNEAL.
-    @param param4 passed for ite for ANN_MLP::ANNEAL.
     */
     CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0) = 0;
 
