@@ -98,12 +98,6 @@ if(USE_PROTOBUF)
   ocv_glob_module_sources(${Protobuf_SRCS} ${Protobuf_HDRS} ${CBLAS_H_PROXY_PATH})
   ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES})
 else()
-  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/binary_to_header.cmake")
-  binary_to_header("${CMAKE_CURRENT_SOURCE_DIR}/misc/caffe/caffe_proto.pbtxt"
-                   "${OPENCV_MODULE_${the_module}_BINARY_DIR}/caffe_proto.hpp")
-  binary_to_header("${CMAKE_CURRENT_SOURCE_DIR}/misc/tensorflow/graph_proto.pbtxt"
-                   "${OPENCV_MODULE_${the_module}_BINARY_DIR}/graph_proto.hpp")
-
   ocv_module_include_directories(include)
 
   ocv_glob_module_sources(${CBLAS_H_PROXY_PATH})

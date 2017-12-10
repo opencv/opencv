@@ -51,7 +51,7 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "caffe_io.hpp"
 #else
-#include "caffe_proto.hpp"
+#include "opencv-caffe.hpp"
 #endif
 
 namespace cv {
@@ -166,7 +166,8 @@ class NetParameter : public pb::ProtobufParser
 {
 public:
     NetParameter()
-        : pb::ProtobufParser(caffe_proto, sizeof(caffe_proto), ".caffe.NetParameter", true) {}
+        : pb::ProtobufParser((char*)kCaffeProto.c_str(), kCaffeProto.size(),
+                             ".opencv_caffe.NetParameter", true) {}
 
     int layer_size() const
     {
@@ -228,9 +229,9 @@ public:
         if (dataModel != NULL && lenModel > 0)
             ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
 #else
-        net.parse(dataProto, lenProto, true);
+        net.parse((char*)dataProto, lenProto, true);
         if (dataModel != NULL && lenModel > 0)
-            netBinary.parse(dataModel, lenModel);
+            netBinary.parse((char*)dataModel, lenModel);
 #endif  // HAVE_PROTOBUF
     }
 

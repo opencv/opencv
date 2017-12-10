@@ -25,7 +25,7 @@ Implementation of Tensorflow models parser
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "tf_io.hpp"
 #else  // #ifdef HAVE_PROTOBUF
-#include "graph_proto.hpp"
+#include "graph.hpp"
 #endif
 
 namespace cv {
@@ -267,7 +267,8 @@ struct NodeDef : public NodeWrapper
 struct GraphDef : public pb::ProtobufParser
 {
     GraphDef()
-        : pb::ProtobufParser(graph_proto, sizeof(graph_proto), ".tensorflow.GraphDef", true) {}
+        : pb::ProtobufParser((char*)kTensorflowGraphProto.c_str(), kTensorflowGraphProto.size(),
+                             ".tensorflow.GraphDef", true) {}
 
     int node_size() const
     {
@@ -775,31 +776,36 @@ private:
     tensorflow::GraphDef netTxt;
 };
 
-#ifdef HAVE_PROTOBUF
+
 TFImporter::TFImporter(const char *model, const char *config)
 {
+#ifdef HAVE_PROTOBUF
     if (model && model[0])
         ReadTFNetParamsFromBinaryFileOrDie(model, &netBin);
     if (config && config[0])
         ReadTFNetParamsFromTextFileOrDie(config, &netTxt);
-}
 #else
-TFImporter::TFImporter(const char *model, const char *config)
-{
     if (model && model[0])
         netBin.parse(model);
     if (config && config[0])
         netTxt.parse(config, true);
-}
 #endif
+}
 
 TFImporter::TFImporter(const char *dataModel, size_t lenModel,
                        const char *dataConfig, size_t lenConfig)
 {
+#ifdef HAVE_PROTOBUF
     if (dataModel != NULL && lenModel > 0)
         ReadTFNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBin);
     if (dataConfig != NULL && lenConfig > 0)
         ReadTFNetParamsFromTextBufferOrDie(dataConfig, lenConfig, &netTxt);
+#else
+    if (dataModel != NULL && lenModel > 0)
+        netBin.parse((char*)dataModel, lenModel);
+    if (dataConfig != NULL && lenConfig > 0)
+        netTxt.parse((char*)dataConfig, lenConfig, true);
+#endif
 }
 
 void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
