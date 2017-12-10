@@ -218,7 +218,7 @@ public:
         clear();
         setActivationFunction( SIGMOID_SYM, 0, 0);
         setLayerSizes(Mat());
-        setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON,0,0 );
+        setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON);
     }
 
     virtual ~ANN_MLPImpl() {}
@@ -243,7 +243,7 @@ public:
 
     int layer_count() const { return (int)layer_sizes.size(); }
 
-    void setTrainMethod(int method, double param1, double param2, double param3, int param4)
+    void setTrainMethod(int method, double param1, double param2)
     {
         if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP && method != ANN_MLP::ANNEAL)
             method = ANN_MLP::RPROP;
@@ -264,7 +264,7 @@ public:
                 param2 = 0.1;
             params.bpMomentScale = std::min(param2, 1.);
         }
-        else if (method == ANN_MLP::ANNEAL)
+/*        else if (method == ANN_MLP::ANNEAL)
         {
             if (param1 <= 0)
                 param1 = 10;
@@ -278,7 +278,7 @@ public:
             params.finalT = param2;
             params.coolingRatio = param3;
             params.itePerStep = param4;
-        }
+        }*/
     }
 
     int getTrainMethod() const
@@ -1605,6 +1605,43 @@ public:
         setLayerSizes(Mat());
         setTrainMethod(ANN_MLP::ANNEAL, 0.1, FLT_EPSILON, 0, 0);
     }
+    void setTrainMethod(int method, double param1, double param2, double param3, int param4)
+    {
+        if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP && method != ANN_MLP::ANNEAL)
+            method = ANN_MLP::RPROP;
+        params.trainMethod = method;
+        if (method == ANN_MLP::RPROP)
+        {
+            if (param1 < FLT_EPSILON)
+                param1 = 1.;
+            params.rpDW0 = param1;
+            params.rpDWMin = std::max(param2, 0.);
+        }
+        else if (method == ANN_MLP::BACKPROP)
+        {
+            if (param1 <= 0)
+                param1 = 0.1;
+            params.bpDWScale = inBounds<double>(param1, 1e-3, 1.);
+            if (param2 < 0)
+                param2 = 0.1;
+            params.bpMomentScale = std::min(param2, 1.);
+        }
+        else if (method == ANN_MLP::ANNEAL)
+        {
+            if (param1 <= 0)
+                param1 = 10;
+            if (param2 <= 0 || param2>param1)
+                param2 = 0.1;
+            if (param3 <= 0 || param3 >= 1)
+                param3 = 0.95;
+            if (param4 <= 0)
+                param4 = 10;
+            params.initialT = param1;
+            params.finalT = param2;
+            params.coolingRatio = param3;
+            params.itePerStep = param4;
+        }
+    }
 
     virtual ~ANN_MLP_ANNEALImpl() {}
 
@@ -1613,7 +1650,6 @@ public:
         CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
         CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
 
-     AnnParams params;
 };
 
 Ptr<ANN_MLP> ANN_MLP_ANNEAL::create()

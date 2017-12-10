@@ -1417,7 +1417,7 @@ public:
     @param param3 passed to coolingRatio for ANN_MLP::ANNEAL.
     @param param4 passed for ite for ANN_MLP::ANNEAL.
     */
-    CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0, double param3 = 0, int param4 = 0) = 0;
+    CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0) = 0;
 
     /** Returns current training method */
     CV_WRAP virtual int getTrainMethod() const = 0;
@@ -1876,7 +1876,7 @@ CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int
 class CV_EXPORTS_W ANN_MLP_ANNEAL : public ANN_MLP
 {
 public:
-    /** ANNEAL: Update initial temperature.
+    CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0, double param3 = 0, int param4 = 0) = 0;    /** ANNEAL: Update initial temperature.
     It must be \>=0. Default value is 10.*/
     /** @see setAnnealInitialT */
     CV_WRAP virtual double getAnnealInitialT() const=0;
@@ -1911,15 +1911,6 @@ public:
     Note that the train method has optional flags: ANN_MLP::TrainFlags.
     */
     CV_WRAP static Ptr<ANN_MLP> create();
-
-    /** @brief Loads and creates a serialized ANN from a file
-    *
-    * Use ANN::save to serialize and store an ANN to disk.
-    * Load the ANN from this file again, by calling this function with the path to the file.
-    *
-    * @param filepath path to serialized ANN
-    */
-    CV_WRAP static Ptr<ANN_MLP_ANNEAL> load(const String& filepath);
 
 };
 
