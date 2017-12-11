@@ -10,7 +10,7 @@ if PY3:
 
 import numpy as np
 from numpy import random
-import cv2
+import cv2 as cv
 
 def make_gaussians(cluster_n, img_size):
     points = []
@@ -38,9 +38,9 @@ class gaussian_mix_test(NewOpenCVTests):
 
         points, ref_distrs = make_gaussians(cluster_n, img_size)
 
-        em = cv2.ml.EM_create()
+        em = cv.ml.EM_create()
         em.setClustersNumber(cluster_n)
-        em.setCovarianceMatrixType(cv2.ml.EM_COV_MAT_GENERIC)
+        em.setCovarianceMatrixType(cv.ml.EM_COV_MAT_GENERIC)
         em.trainEM(points)
         means = em.getMeans()
         covs = em.getCovs()  # Known bug: https://github.com/opencv/opencv/pull/4232
@@ -53,8 +53,8 @@ class gaussian_mix_test(NewOpenCVTests):
 
         for i in range(cluster_n):
             for j in range(cluster_n):
-                if (cv2.norm(means[i] - ref_distrs[j][0], cv2.NORM_L2) / cv2.norm(ref_distrs[j][0], cv2.NORM_L2) < meanEps and
-                    cv2.norm(covs[i] - ref_distrs[j][1], cv2.NORM_L2) / cv2.norm(ref_distrs[j][1], cv2.NORM_L2) < covEps):
+                if (cv.norm(means[i] - ref_distrs[j][0], cv.NORM_L2) / cv.norm(ref_distrs[j][0], cv.NORM_L2) < meanEps and
+                    cv.norm(covs[i] - ref_distrs[j][1], cv.NORM_L2) / cv.norm(ref_distrs[j][1], cv.NORM_L2) < covEps):
                     matches_count += 1
 
         self.assertEqual(matches_count, cluster_n)

@@ -35,8 +35,8 @@ Installing OpenCV from prebuilt binaries
 
 -#  Open Python IDLE and type following codes in Python terminal.
     @code
-        >>> import cv2
-        >>> print( cv2.__version__ )
+        >>> import cv2 as cv
+        >>> print( cv.__version__ )
     @endcode
 
 If the results are printed out without any errors, congratulations !!! You have installed
@@ -136,7 +136,7 @@ Building OpenCV from source
 
     ![image](images/Capture8.png)
 
--#  Open Python IDLE and enter import cv2. If no error, it is installed correctly.
+-#  Open Python IDLE and enter 'import cv2 as cv'. If no error, it is installed correctly.
 
 @note We have installed with no other support like TBB, Eigen, Qt, Documentation etc. It would be
 difficult to explain it here. A more detailed video will be added soon or you can just hack around.

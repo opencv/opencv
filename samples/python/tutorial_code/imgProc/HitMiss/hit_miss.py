@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import numpy as np
 
 input_image = np.array((
@@ -16,23 +16,23 @@ kernel = np.array((
         [1, -1, 1],
         [0, 1, 0]), dtype="int")
 
-output_image = cv2.morphologyEx(input_image, cv2.MORPH_HITMISS, kernel)
+output_image = cv.morphologyEx(input_image, cv.MORPH_HITMISS, kernel)
 
 rate = 50
 kernel = (kernel + 1) * 127
 kernel = np.uint8(kernel)
 
-kernel = cv2.resize(kernel, None, fx = rate, fy = rate, interpolation = cv2.INTER_NEAREST)
-cv2.imshow("kernel", kernel)
-cv2.moveWindow("kernel", 0, 0)
+kernel = cv.resize(kernel, None, fx = rate, fy = rate, interpolation = cv.INTER_NEAREST)
+cv.imshow("kernel", kernel)
+cv.moveWindow("kernel", 0, 0)
 
-input_image = cv2.resize(input_image, None, fx = rate, fy = rate, interpolation = cv2.INTER_NEAREST)
-cv2.imshow("Original", input_image)
-cv2.moveWindow("Original", 0, 200)
+input_image = cv.resize(input_image, None, fx = rate, fy = rate, interpolation = cv.INTER_NEAREST)
+cv.imshow("Original", input_image)
+cv.moveWindow("Original", 0, 200)
 
-output_image = cv2.resize(output_image, None , fx = rate, fy = rate, interpolation = cv2.INTER_NEAREST)
-cv2.imshow("Hit or Miss", output_image)
-cv2.moveWindow("Hit or Miss", 500, 200)
+output_image = cv.resize(output_image, None , fx = rate, fy = rate, interpolation = cv.INTER_NEAREST)
+cv.imshow("Hit or Miss", output_image)
+cv.moveWindow("Hit or Miss", 500, 200)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+cv.waitKey(0)
+cv.destroyAllWindows()

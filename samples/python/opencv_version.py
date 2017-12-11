@@ -13,7 +13,7 @@ Usage:
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import cv2
+import cv2 as cv
 
 if __name__ == '__main__':
     import sys
@@ -25,7 +25,7 @@ if __name__ == '__main__':
         param = ""
 
     if "--build" == param:
-        print(cv2.getBuildInformation())
+        print(cv.getBuildInformation())
     elif "--help" == param:
         print("\t--build\n\t\tprint complete build info")
         print("\t--help\n\t\tprint this help")

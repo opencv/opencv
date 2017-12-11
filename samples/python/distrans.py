@@ -15,7 +15,7 @@ Keys:
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from common import make_cmap
 
@@ -27,7 +27,7 @@ if __name__ == '__main__':
         fn = '../data/fruits.jpg'
     print(__doc__)
 
-    img = cv2.imread(fn, 0)
+    img = cv.imread(fn, 0)
     if img is None:
         print('Failed to load fn:', fn)
         sys.exit(1)
@@ -39,27 +39,27 @@ if __name__ == '__main__':
     def update(dummy=None):
         global need_update
         need_update = False
-        thrs = cv2.getTrackbarPos('threshold', 'distrans')
-        mark = cv2.Canny(img, thrs, 3*thrs)
-        dist, labels = cv2.distanceTransformWithLabels(~mark, cv2.DIST_L2, 5)
+        thrs = cv.getTrackbarPos('threshold', 'distrans')
+        mark = cv.Canny(img, thrs, 3*thrs)
+        dist, labels = cv.distanceTransformWithLabels(~mark, cv.DIST_L2, 5)
         if voronoi:
             vis = cm[np.uint8(labels)]
         else:
             vis = cm[np.uint8(dist*2)]
         vis[mark != 0] = 255
-        cv2.imshow('distrans', vis)
+        cv.imshow('distrans', vis)
 
     def invalidate(dummy=None):
         global need_update
         need_update = True
 
-    cv2.namedWindow('distrans')
-    cv2.createTrackbar('threshold', 'distrans', 60, 255, invalidate)
+    cv.namedWindow('distrans')
+    cv.createTrackbar('threshold', 'distrans', 60, 255, invalidate)
     update()
 
 
     while True:
-        ch = cv2.waitKey(50)
+        ch = cv.waitKey(50)
         if ch == 27:
             break
         if ch == ord('v'):
@@ -68,4 +68,4 @@ if __name__ == '__main__':
             update()
         if need_update:
             update()
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()

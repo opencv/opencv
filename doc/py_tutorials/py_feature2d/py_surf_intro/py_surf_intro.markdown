@@ -76,11 +76,11 @@ and descriptors.
 First we will see a simple demo on how to find SURF keypoints and descriptors and draw it. All
 examples are shown in Python terminal since it is just same as SIFT only.
 @code{.py}
->>> img = cv2.imread('fly.png',0)
+>>> img = cv.imread('fly.png',0)
 
 # Create SURF object. You can specify params here or later.
 # Here I set Hessian Threshold to 400
->>> surf = cv2.xfeatures2d.SURF_create(400)
+>>> surf = cv.xfeatures2d.SURF_create(400)
 
 # Find keypoints and descriptors directly
 >>> kp, des = surf.detectAndCompute(img,None)
@@ -107,7 +107,7 @@ While matching, we may need all those features, but not now. So we increase the 
 @endcode
 It is less than 50. Let's draw it on the image.
 @code{.py}
->>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv.drawKeypoints(img,kp,None,(255,0,0),4)
 
 >>> plt.imshow(img2),plt.show()
 @endcode
@@ -126,7 +126,7 @@ False
 
 # Recompute the feature points and draw it
 >>> kp = surf.detect(img,None)
->>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv.drawKeypoints(img,kp,None,(255,0,0),4)
 
 >>> plt.imshow(img2),plt.show()
 @endcode

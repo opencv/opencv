@@ -52,7 +52,7 @@ choice in low-power devices for panorama stitching etc.
 ORB in OpenCV
 -------------
 
-As usual, we have to create an ORB object with the function, **cv2.ORB()** or using feature2d common
+As usual, we have to create an ORB object with the function, **cv.ORB()** or using feature2d common
 interface. It has a number of optional parameters. Most useful ones are nFeatures which denotes
 maximum number of features to be retained (by default 500), scoreType which denotes whether Harris
 score or FAST score to rank the features (by default, Harris score) etc. Another parameter, WTA_K
@@ -64,13 +64,13 @@ is defined by NORM_HAMMING2.
 Below is a simple code which shows the use of ORB.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('simple.jpg',0)
+img = cv.imread('simple.jpg',0)
 
 # Initiate ORB detector
-orb = cv2.ORB_create()
+orb = cv.ORB_create()
 
 # find the keypoints with ORB
 kp = orb.detect(img,None)
@@ -79,7 +79,7 @@ kp = orb.detect(img,None)
 kp, des = orb.compute(img, kp)
 
 # draw only keypoints location,not size and orientation
-img2 = cv2.drawKeypoints(img, kp, None, color=(0,255,0), flags=0)
+img2 = cv.drawKeypoints(img, kp, None, color=(0,255,0), flags=0)
 plt.imshow(img2), plt.show()
 @endcode
 See the result below:
