@@ -7,7 +7,7 @@ from __future__ import print_function
 import numpy as np
 from numpy import pi, sin, cos
 
-import cv2
+import cv2 as cv
 
 defaultSize = 512
 
@@ -88,14 +88,14 @@ class TestSceneRender():
             self.currentRect = self.initialRect + np.int( 30*cos(self.time) + 50*sin(self.time/3))
             if self.deformation:
                 self.currentRect[1:3] += int(self.h/20*cos(self.time))
-            cv2.fillConvexPoly(img, self.currentRect, (0, 0, 255))
+            cv.fillConvexPoly(img, self.currentRect, (0, 0, 255))
 
         self.time += self.timeStep
 
         if self.noise:
             noise = np.zeros(self.sceneBg.shape, np.int8)
-            cv2.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
-            img = cv2.add(img, noise, dtype=cv2.CV_8UC3)
+            cv.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
+            img = cv.add(img, noise, dtype=cv.CV_8UC3)
         return img
 
     def resetTime(self):
@@ -104,16 +104,16 @@ class TestSceneRender():
 
 if __name__ == '__main__':
 
-    backGr = cv2.imread('../../../samples/data/lena.jpg')
+    backGr = cv.imread('../../../samples/data/lena.jpg')
 
     render = TestSceneRender(backGr, noise = 0.5)
 
     while True:
 
         img = render.getNextFrame()
-        cv2.imshow('img', img)
+        cv.imshow('img', img)
 
-        ch = cv2.waitKey(3)
+        ch = cv.waitKey(3)
         if ch == 27:
             break
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()

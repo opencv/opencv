@@ -8,7 +8,7 @@ example to detect upright people in images using HOG features
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 
 def inside(r, q):
@@ -21,8 +21,8 @@ from tests_common import NewOpenCVTests, intersectionRate
 class peopledetect_test(NewOpenCVTests):
     def test_peopledetect(self):
 
-        hog = cv2.HOGDescriptor()
-        hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )
+        hog = cv.HOGDescriptor()
+        hog.setSVMDetector( cv.HOGDescriptor_getDefaultPeopleDetector() )
 
         dirPath = 'samples/data/'
         samples = ['basketball1.png', 'basketball2.png']

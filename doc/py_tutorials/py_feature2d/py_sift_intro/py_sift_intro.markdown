@@ -113,30 +113,30 @@ So now let's see SIFT functionalities available in OpenCV. Let's start with keyp
 draw them. First we have to construct a SIFT object. We can pass different parameters to it which
 are optional and they are well explained in docs.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 
-img = cv2.imread('home.jpg')
-gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+img = cv.imread('home.jpg')
+gray= cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
-sift = cv2.xfeatures2d.SIFT_create()
+sift = cv.xfeatures2d.SIFT_create()
 kp = sift.detect(gray,None)
 
-img=cv2.drawKeypoints(gray,kp,img)
+img=cv.drawKeypoints(gray,kp,img)
 
-cv2.imwrite('sift_keypoints.jpg',img)
+cv.imwrite('sift_keypoints.jpg',img)
 @endcode
 **sift.detect()** function finds the keypoint in the images. You can pass a mask if you want to
 search only a part of image. Each keypoint is a special structure which has many attributes like its
 (x,y) coordinates, size of the meaningful neighbourhood, angle which specifies its orientation,
 response that specifies strength of keypoints etc.
 
-OpenCV also provides **cv2.drawKeyPoints()** function which draws the small circles on the locations
-of keypoints. If you pass a flag, **cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS** to it, it will
+OpenCV also provides **cv.drawKeyPoints()** function which draws the small circles on the locations
+of keypoints. If you pass a flag, **cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS** to it, it will
 draw a circle with size of keypoint and it will even show its orientation. See below example.
 @code{.py}
-img=cv2.drawKeypoints(gray,kp,img,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-cv2.imwrite('sift_keypoints.jpg',img)
+img=cv.drawKeypoints(gray,kp,img,flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+cv.imwrite('sift_keypoints.jpg',img)
 @endcode
 See the two results below:
 
@@ -151,7 +151,7 @@ Now to calculate the descriptor, OpenCV provides two methods.
 
 We will see the second method:
 @code{.py}
-sift = cv2.xfeatures2d.SIFT_create()
+sift = cv.xfeatures2d.SIFT_create()
 kp, des = sift.detectAndCompute(gray,None)
 @endcode
 Here kp will be a list of keypoints and des is a numpy array of shape

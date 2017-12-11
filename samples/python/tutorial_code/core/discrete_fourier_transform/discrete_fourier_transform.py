@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 
-import cv2
+import cv2 as cv
 import numpy as np
 
 
@@ -19,34 +19,34 @@ def main(argv):
 
     filename = argv[0] if len(argv) > 0 else "../../../../data/lena.jpg"
 
-    I = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+    I = cv.imread(filename, cv.IMREAD_GRAYSCALE)
     if I is None:
         print('Error opening image')
         return -1
     ## [expand]
     rows, cols = I.shape
-    m = cv2.getOptimalDFTSize( rows )
-    n = cv2.getOptimalDFTSize( cols )
-    padded = cv2.copyMakeBorder(I, 0, m - rows, 0, n - cols, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    m = cv.getOptimalDFTSize( rows )
+    n = cv.getOptimalDFTSize( cols )
+    padded = cv.copyMakeBorder(I, 0, m - rows, 0, n - cols, cv.BORDER_CONSTANT, value=[0, 0, 0])
     ## [expand]
     ## [complex_and_real]
     planes = [np.float32(padded), np.zeros(padded.shape, np.float32)]
-    complexI = cv2.merge(planes)         # Add to the expanded another plane with zeros
+    complexI = cv.merge(planes)         # Add to the expanded another plane with zeros
     ## [complex_and_real]
     ## [dft]
-    cv2.dft(complexI, complexI)         # this way the result may fit in the source matrix
+    cv.dft(complexI, complexI)         # this way the result may fit in the source matrix
     ## [dft]
     # compute the magnitude and switch to logarithmic scale
     # = > log(1 + sqrt(Re(DFT(I)) ^ 2 + Im(DFT(I)) ^ 2))
     ## [magnitude]
-    cv2.split(complexI, planes)                   # planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
-    cv2.magnitude(planes[0], planes[1], planes[0])# planes[0] = magnitude
+    cv.split(complexI, planes)                   # planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
+    cv.magnitude(planes[0], planes[1], planes[0])# planes[0] = magnitude
     magI = planes[0]
     ## [magnitude]
     ## [log]
     matOfOnes = np.ones(magI.shape, dtype=magI.dtype)
-    cv2.add(matOfOnes, magI, magI) #  switch to logarithmic scale
-    cv2.log(magI, magI)
+    cv.add(matOfOnes, magI, magI) #  switch to logarithmic scale
+    cv.log(magI, magI)
     ## [log]
     ## [crop_rearrange]
     magI_rows, magI_cols = magI.shape
@@ -69,12 +69,12 @@ def main(argv):
     magI[0:cx, cy:cy + cy] = tmp
     ## [crop_rearrange]
     ## [normalize]
-    cv2.normalize(magI, magI, 0, 1, cv2.NORM_MINMAX) # Transform the matrix with float values into a
+    cv.normalize(magI, magI, 0, 1, cv.NORM_MINMAX) # Transform the matrix with float values into a
     ## viewable image form(float between values 0 and 1).
     ## [normalize]
-    cv2.imshow("Input Image"       , I   )    # Show the result
-    cv2.imshow("spectrum magnitude", magI)
-    cv2.waitKey()
+    cv.imshow("Input Image"       , I   )    # Show the result
+    cv.imshow("spectrum magnitude", magI)
+    cv.waitKey()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

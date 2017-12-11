@@ -60,15 +60,16 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
 CV_ENUM(AdaptThreshType, THRESH_BINARY, THRESH_BINARY_INV)
 CV_ENUM(AdaptThreshMethod, ADAPTIVE_THRESH_MEAN_C, ADAPTIVE_THRESH_GAUSSIAN_C)
 
-typedef std::tr1::tuple<Size, AdaptThreshType, AdaptThreshMethod, int> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_t;
-typedef perf::TestBaseWithParam<Size_AdaptThreshType_AdaptThreshMethod_BlockSize_t> Size_AdaptThreshType_AdaptThreshMethod_BlockSize;
+typedef std::tr1::tuple<Size, AdaptThreshType, AdaptThreshMethod, int, double> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta_t;
+typedef perf::TestBaseWithParam<Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta_t> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta;
 
-PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
+PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta, adaptiveThreshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 AdaptThreshType::all(),
                 AdaptThreshMethod::all(),
-                testing::Values(3, 5)
+                testing::Values(3, 5),
+                testing::Values(0.0, 10.0)
                 )
             )
 {
@@ -76,12 +77,14 @@ PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
     AdaptThreshType adaptThreshType = get<1>(GetParam());
     AdaptThreshMethod adaptThreshMethod = get<2>(GetParam());
     int blockSize = get<3>(GetParam());
+    double C = get<4>(GetParam());
 
     double maxValue = theRNG().uniform(1, 254);
-    double C = 10.0;
 
     int type = CV_8UC1;
-    Mat src(sz, type);
+
+    Mat src_full(cv::Size(sz.width + 2, sz.height + 2), type);
+    Mat src = src_full(cv::Rect(1, 1, sz.width, sz.height));
     Mat dst(sz, type);
 
     declare.in(src, WARMUP_RNG).out(dst);

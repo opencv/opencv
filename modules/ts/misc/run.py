@@ -92,6 +92,9 @@ if __name__ == "__main__":
         if not [a for a in test_args if a.startswith("--perf_verify_sanity")] :
             test_args.extend(["--perf_verify_sanity"])
 
+    if bool(os.environ.get('BUILD_PRECOMMIT', None)):
+        test_args.extend(["--skip_unstable=1"])
+
     ret = 0
     logs = []
     for path in args.build_path:

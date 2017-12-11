@@ -78,11 +78,8 @@
 #if GST_VERSION_MAJOR == 0
 #define COLOR_ELEM "ffmpegcolorspace"
 #define COLOR_ELEM_NAME "ffmpegcsp"
-#elif FULL_GST_VERSION < VERSION_NUM(1,5,0)
-#define COLOR_ELEM "videoconvert"
-#define COLOR_ELEM_NAME COLOR_ELEM
 #else
-#define COLOR_ELEM "autovideoconvert"
+#define COLOR_ELEM "videoconvert"
 #define COLOR_ELEM_NAME COLOR_ELEM
 #endif
 

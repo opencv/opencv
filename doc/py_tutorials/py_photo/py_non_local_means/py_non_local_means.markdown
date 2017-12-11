@@ -7,8 +7,8 @@ Goal
 In this chapter,
 
 -   You will learn about Non-local Means Denoising algorithm to remove noise in the image.
--   You will see different functions like **cv2.fastNlMeansDenoising()**,
-    **cv2.fastNlMeansDenoisingColored()** etc.
+-   You will see different functions like **cv.fastNlMeansDenoising()**,
+    **cv.fastNlMeansDenoisingColored()** etc.
 
 Theory
 ------
@@ -52,11 +52,11 @@ Image Denoising in OpenCV
 
 OpenCV provides four variations of this technique.
 
--#  **cv2.fastNlMeansDenoising()** - works with a single grayscale images
-2.  **cv2.fastNlMeansDenoisingColored()** - works with a color image.
-3.  **cv2.fastNlMeansDenoisingMulti()** - works with image sequence captured in short period of time
+-#  **cv.fastNlMeansDenoising()** - works with a single grayscale images
+2.  **cv.fastNlMeansDenoisingColored()** - works with a color image.
+3.  **cv.fastNlMeansDenoisingMulti()** - works with image sequence captured in short period of time
     (grayscale images)
-4.  **cv2.fastNlMeansDenoisingColoredMulti()** - same as above, but for color images.
+4.  **cv.fastNlMeansDenoisingColoredMulti()** - same as above, but for color images.
 
 Common arguments are:
     -   h : parameter deciding filter strength. Higher h value removes noise better, but removes
@@ -69,18 +69,18 @@ Please visit first link in additional resources for more details on these parame
 
 We will demonstrate 2 and 3 here. Rest is left for you.
 
-### 1. cv2.fastNlMeansDenoisingColored()
+### 1. cv.fastNlMeansDenoisingColored()
 
 As mentioned above it is used to remove noise from color images. (Noise is expected to be gaussian).
 See the example below:
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('die.png')
+img = cv.imread('die.png')
 
-dst = cv2.fastNlMeansDenoisingColored(img,None,10,10,7,21)
+dst = cv.fastNlMeansDenoisingColored(img,None,10,10,7,21)
 
 plt.subplot(121),plt.imshow(img)
 plt.subplot(122),plt.imshow(dst)
@@ -91,7 +91,7 @@ result:
 
 ![image](images/nlm_result1.jpg)
 
-### 2. cv2.fastNlMeansDenoisingMulti()
+### 2. cv.fastNlMeansDenoisingMulti()
 
 Now we will apply the same method to a video. The first argument is the list of noisy frames. Second
 argument imgToDenoiseIndex specifies which frame we need to denoise, for that we pass the index of
@@ -102,16 +102,16 @@ input. Let imgToDenoiseIndex = 2 and temporalWindowSize = 3. Then frame-1, frame
 used to denoise frame-2. Let's see an example.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-cap = cv2.VideoCapture('vtest.avi')
+cap = cv.VideoCapture('vtest.avi')
 
 # create a list of first 5 frames
 img = [cap.read()[1] for i in xrange(5)]
 
 # convert all to grayscale
-gray = [cv2.cvtColor(i, cv2.COLOR_BGR2GRAY) for i in img]
+gray = [cv.cvtColor(i, cv.COLOR_BGR2GRAY) for i in img]
 
 # convert all to float64
 gray = [np.float64(i) for i in gray]
@@ -126,7 +126,7 @@ noisy = [i+noise for i in gray]
 noisy = [np.uint8(np.clip(i,0,255)) for i in noisy]
 
 # Denoise 3rd frame considering all the 5 frames
-dst = cv2.fastNlMeansDenoisingMulti(noisy, 2, 5, None, 4, 7, 35)
+dst = cv.fastNlMeansDenoisingMulti(noisy, 2, 5, None, 4, 7, 35)
 
 plt.subplot(131),plt.imshow(gray[2],'gray')
 plt.subplot(132),plt.imshow(noisy[2],'gray')

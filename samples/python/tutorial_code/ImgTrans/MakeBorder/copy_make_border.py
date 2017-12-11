@@ -4,20 +4,20 @@
 """
 import sys
 from random import randint
-import cv2
+import cv2 as cv
 
 
 def main(argv):
     ## [variables]
     # First we declare the variables we are going to use
-    borderType = cv2.BORDER_CONSTANT
+    borderType = cv.BORDER_CONSTANT
     window_name = "copyMakeBorder Demo"
     ## [variables]
     ## [load]
     imageName = argv[0] if len(argv) > 0 else "../data/lena.jpg"
 
     # Loads an image
-    src = cv2.imread(imageName, cv2.IMREAD_COLOR)
+    src = cv.imread(imageName, cv.IMREAD_COLOR)
 
     # Check if image is loaded fine
     if src is None:
@@ -33,7 +33,7 @@ def main(argv):
            ' ** Press \'r\' to set the border to be replicated \n'
            ' ** Press \'ESC\' to exit the program ')
     ## [create_window]
-    cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+    cv.namedWindow(window_name, cv.WINDOW_AUTOSIZE)
     ## [create_window]
     ## [init_arguments]
     # Initialize arguments for the filter
@@ -47,20 +47,20 @@ def main(argv):
         value = [randint(0, 255), randint(0, 255), randint(0, 255)]
         ## [update_value]
         ## [copymakeborder]
-        dst = cv2.copyMakeBorder(src, top, bottom, left, right, borderType, None, value)
+        dst = cv.copyMakeBorder(src, top, bottom, left, right, borderType, None, value)
         ## [copymakeborder]
         ## [display]
-        cv2.imshow(window_name, dst)
+        cv.imshow(window_name, dst)
         ## [display]
         ## [check_keypress]
-        c = cv2.waitKey(500)
+        c = cv.waitKey(500)
 
         if c == 27:
             break
         elif c == 99: # 99 = ord('c')
-            borderType = cv2.BORDER_CONSTANT
+            borderType = cv.BORDER_CONSTANT
         elif c == 114: # 114 = ord('r')
-            borderType = cv2.BORDER_REPLICATE
+            borderType = cv.BORDER_REPLICATE
         ## [check_keypress]
     return 0
 

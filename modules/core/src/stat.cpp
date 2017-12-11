@@ -3359,6 +3359,11 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
 
+#ifdef __APPLE__
+    if(normType == NORM_L1 && type == CV_16UC3 && !_mask.empty())
+        return false;
+#endif
+
     if (normsum)
     {
         if (!ocl_sum(_src1, sc1, normType == NORM_L2 || normType == NORM_L2SQR ?

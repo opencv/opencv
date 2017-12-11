@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    Mat inputBlob = blobFromImage(img, 1./255, Size(1024, 512), Scalar(), true, false);   //Convert Mat to image batch
+    Mat inputBlob = blobFromImage(img, 1./255, Size(1024, 512), Scalar(), true, false);   //Convert Mat to batch of images
     //! [Prepare blob]
 
     //! [Set input blob]

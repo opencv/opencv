@@ -17,7 +17,7 @@ default values:
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 # local modules
 from common import splitfn
@@ -53,27 +53,27 @@ if __name__ == '__main__':
 
     obj_points = []
     img_points = []
-    h, w = cv2.imread(img_names[0], 0).shape[:2]  # TODO: use imquery call to retrieve results
+    h, w = cv.imread(img_names[0], 0).shape[:2]  # TODO: use imquery call to retrieve results
 
     def processImage(fn):
         print('processing %s... ' % fn)
-        img = cv2.imread(fn, 0)
+        img = cv.imread(fn, 0)
         if img is None:
             print("Failed to load", fn)
             return None
 
         assert w == img.shape[1] and h == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
-        found, corners = cv2.findChessboardCorners(img, pattern_size)
+        found, corners = cv.findChessboardCorners(img, pattern_size)
         if found:
-            term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 30, 0.1)
-            cv2.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
+            term = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_COUNT, 30, 0.1)
+            cv.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
 
         if debug_dir:
-            vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-            cv2.drawChessboardCorners(vis, pattern_size, corners, found)
+            vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+            cv.drawChessboardCorners(vis, pattern_size, corners, found)
             path, name, ext = splitfn(fn)
             outfile = os.path.join(debug_dir, name + '_chess.png')
-            cv2.imwrite(outfile, vis)
+            cv.imwrite(outfile, vis)
 
         if not found:
             print('chessboard not found')
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         obj_points.append(pattern_points)
 
     # calculate camera distortion
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None)
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
     print("\nRMS:", rms)
     print("camera matrix:\n", camera_matrix)
@@ -110,20 +110,20 @@ if __name__ == '__main__':
         img_found = os.path.join(debug_dir, name + '_chess.png')
         outfile = os.path.join(debug_dir, name + '_undistorted.png')
 
-        img = cv2.imread(img_found)
+        img = cv.imread(img_found)
         if img is None:
             continue
 
         h, w = img.shape[:2]
-        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(camera_matrix, dist_coefs, (w, h), 1, (w, h))
+        newcameramtx, roi = cv.getOptimalNewCameraMatrix(camera_matrix, dist_coefs, (w, h), 1, (w, h))
 
-        dst = cv2.undistort(img, camera_matrix, dist_coefs, None, newcameramtx)
+        dst = cv.undistort(img, camera_matrix, dist_coefs, None, newcameramtx)
 
         # crop and save the image
         x, y, w, h = roi
         dst = dst[y:y+h, x:x+w]
 
         print('Undistorted image written to: %s' % outfile)
-        cv2.imwrite(outfile, dst)
+        cv.imwrite(outfile, dst)
 
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()

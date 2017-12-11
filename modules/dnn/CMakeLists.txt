@@ -15,7 +15,7 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file("layers/layers_common" AVX AVX2)
 
-ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java)
+ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java js)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninitialized -Wsign-promo
                                      -Wmissing-declarations -Wmissing-prototypes
 )
