@@ -300,6 +300,10 @@ public:
     CV_IMPL_PROPERTY(double, RpropDWMinus, params.rpDWMinus)
     CV_IMPL_PROPERTY(double, RpropDWMin, params.rpDWMin)
     CV_IMPL_PROPERTY(double, RpropDWMax, params.rpDWMax)
+    CV_IMPL_PROPERTY(double, AnnealInitialT, params.initialT)
+    CV_IMPL_PROPERTY(double, AnnealFinalT, params.finalT)
+    CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
+    CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
 
     void clear()
     {
@@ -1649,29 +1653,10 @@ public:
 
 
 
-class ANN_MLP_ANNEALImpl : public ANN_MLPImpl
-{
-public:
-    ANN_MLP_ANNEALImpl()
-    {
-        clear();
-        setActivationFunction(SIGMOID_SYM, 0, 0);
-        setLayerSizes(Mat());
-        setTrainMethod(ANN_MLP::ANNEAL, 0.1,FLT_EPSILON);
-    }
-
-    virtual ~ANN_MLP_ANNEALImpl() {}
-
-        CV_IMPL_PROPERTY(double, AnnealInitialT, params.initialT)
-        CV_IMPL_PROPERTY(double, AnnealFinalT, params.finalT)
-        CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
-        CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
-
-};
 
 Ptr<ANN_MLP> ANN_MLP::create()
 {
-    return makePtr<ANN_MLP_ANNEALImpl>();
+    return makePtr<ANN_MLPImpl>();
 }
 
 Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
@@ -1679,15 +1664,15 @@ Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
     FileStorage fs;
     fs.open(filepath, FileStorage::READ);
 
-    Ptr<ANN_MLP> ann = makePtr<ANN_MLP_ANNEALImpl>();
-
+    CV_Assert(fs.isOpened());
+    Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
     ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());
     return ann;
 }
 
 double ANN_MLP_ANNEAL::getAnnealInitialT() const
 {
-    const ANN_MLP_ANNEALImpl* this_ = dynamic_cast<const ANN_MLP_ANNEALImpl*>(this);
+    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     return this_->getAnnealInitialT();
@@ -1695,7 +1680,7 @@ double ANN_MLP_ANNEAL::getAnnealInitialT() const
 
 void ANN_MLP_ANNEAL::setAnnealInitialT(double val)
 {
-    ANN_MLP_ANNEALImpl* this_ = dynamic_cast< ANN_MLP_ANNEALImpl*>(this);
+    ANN_MLPImpl* this_ = dynamic_cast< ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     this_->setAnnealInitialT(val);
@@ -1703,7 +1688,7 @@ void ANN_MLP_ANNEAL::setAnnealInitialT(double val)
 
 double ANN_MLP_ANNEAL::getAnnealFinalT() const
 {
-    const ANN_MLP_ANNEALImpl* this_ = dynamic_cast<const ANN_MLP_ANNEALImpl*>(this);
+    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     return this_->getAnnealFinalT();
@@ -1711,7 +1696,7 @@ double ANN_MLP_ANNEAL::getAnnealFinalT() const
 
 void ANN_MLP_ANNEAL::setAnnealFinalT(double val)
 {
-    ANN_MLP_ANNEALImpl* this_ = dynamic_cast<ANN_MLP_ANNEALImpl*>(this);
+    ANN_MLPImpl* this_ = dynamic_cast<ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     this_->setAnnealFinalT(val);
@@ -1719,7 +1704,7 @@ void ANN_MLP_ANNEAL::setAnnealFinalT(double val)
 
 double ANN_MLP_ANNEAL::getAnnealCoolingRatio() const
 {
-    const ANN_MLP_ANNEALImpl* this_ = dynamic_cast<const ANN_MLP_ANNEALImpl*>(this);
+    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     return this_->getAnnealCoolingRatio();
@@ -1727,7 +1712,7 @@ double ANN_MLP_ANNEAL::getAnnealCoolingRatio() const
 
 void ANN_MLP_ANNEAL::setAnnealCoolingRatio(double val)
 {
-    ANN_MLP_ANNEALImpl* this_ = dynamic_cast< ANN_MLP_ANNEALImpl*>(this);
+    ANN_MLPImpl* this_ = dynamic_cast< ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     this_->setAnnealInitialT(val);
@@ -1735,7 +1720,7 @@ void ANN_MLP_ANNEAL::setAnnealCoolingRatio(double val)
 
 int ANN_MLP_ANNEAL::getAnnealItePerStep() const
 {
-    const ANN_MLP_ANNEALImpl* this_ = dynamic_cast<const ANN_MLP_ANNEALImpl*>(this);
+    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     return this_->getAnnealItePerStep();
@@ -1743,7 +1728,7 @@ int ANN_MLP_ANNEAL::getAnnealItePerStep() const
 
 void ANN_MLP_ANNEAL::setAnnealItePerStep(int val)
 {
-    ANN_MLP_ANNEALImpl* this_ = dynamic_cast<ANN_MLP_ANNEALImpl*>(this);
+    ANN_MLPImpl* this_ = dynamic_cast<ANN_MLPImpl*>(this);
     if (!this_)
         CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
     this_->setAnnealInitialT(val);
