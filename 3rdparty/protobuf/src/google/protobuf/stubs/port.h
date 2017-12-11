@@ -224,8 +224,7 @@ static const uint64 kuint64max = GOOGLE_ULONGLONG(0xFFFFFFFFFFFFFFFF);
 
 #if defined(__clang__) && defined(__has_cpp_attribute) \
     && !defined(GOOGLE_PROTOBUF_OS_APPLE)
-# if defined(GOOGLE_PROTOBUF_OS_NACL) || defined(EMSCRIPTEN) || \
-     __has_cpp_attribute(clang::fallthrough)
+# if defined(GOOGLE_PROTOBUF_OS_NACL) || __has_cpp_attribute(clang::fallthrough)
 #  define GOOGLE_FALLTHROUGH_INTENDED [[clang::fallthrough]]
 # endif
 #endif
