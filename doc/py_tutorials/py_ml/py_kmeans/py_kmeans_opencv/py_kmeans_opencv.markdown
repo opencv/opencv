@@ -4,7 +4,7 @@ K-Means Clustering in OpenCV {#tutorial_py_kmeans_opencv}
 Goal
 ----
 
--   Learn to use **cv2.kmeans()** function in OpenCV for data clustering
+-   Learn to use **cv.kmeans()** function in OpenCV for data clustering
 
 Understanding Parameters
 ------------------------
@@ -16,9 +16,9 @@ Understanding Parameters
 -#  **nclusters(K)** : Number of clusters required at end
 -#  **criteria** : It is the iteration termination criteria. When this criteria is satisfied, algorithm iteration stops. Actually, it should be a tuple of 3 parameters. They are \`( type, max_iter, epsilon )\`:
         -#  type of termination criteria. It has 3 flags as below:
-            - **cv2.TERM_CRITERIA_EPS** - stop the algorithm iteration if specified accuracy, *epsilon*, is reached.
-            - **cv2.TERM_CRITERIA_MAX_ITER** - stop the algorithm after the specified number of iterations, *max_iter*.
-            - **cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER** - stop the iteration when any of the above condition is met.
+            - **cv.TERM_CRITERIA_EPS** - stop the algorithm iteration if specified accuracy, *epsilon*, is reached.
+            - **cv.TERM_CRITERIA_MAX_ITER** - stop the algorithm after the specified number of iterations, *max_iter*.
+            - **cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER** - stop the iteration when any of the above condition is met.
         -#  max_iter - An integer specifying maximum number of iterations.
         -#  epsilon - Required accuracy
 
@@ -26,7 +26,7 @@ Understanding Parameters
     initial labellings. The algorithm returns the labels that yield the best compactness. This
     compactness is returned as output.
 -#  **flags** : This flag is used to specify how initial centers are taken. Normally two flags are
-    used for this : **cv2.KMEANS_PP_CENTERS** and **cv2.KMEANS_RANDOM_CENTERS**.
+    used for this : **cv.KMEANS_PP_CENTERS** and **cv.KMEANS_RANDOM_CENTERS**.
 
 ### Output parameters
 
@@ -47,7 +47,7 @@ t-shirt problem where you use only height of people to decide the size of t-shir
 So we start by creating data and plot it in Matplotlib
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
 x = np.random.randint(25,100,25)
@@ -70,13 +70,13 @@ that, whenever 10 iterations of algorithm is ran, or an accuracy of epsilon = 1.
 the algorithm and return the answer.
 @code{.py}
 # Define criteria = ( type, max_iter = 10 , epsilon = 1.0 )
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
 
 # Set flags (Just to avoid line break in the code)
-flags = cv2.KMEANS_RANDOM_CENTERS
+flags = cv.KMEANS_RANDOM_CENTERS
 
 # Apply KMeans
-compactness,labels,centers = cv2.kmeans(z,2,None,criteria,10,flags)
+compactness,labels,centers = cv.kmeans(z,2,None,criteria,10,flags)
 @endcode
 This gives us the compactness, labels and centers. In this case, I got centers as 60 and 207. Labels
 will have the same size as that of test data where each data will be labelled as '0','1','2' etc.
@@ -117,7 +117,7 @@ Check image below:
 Now I am directly moving to the code:
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
 X = np.random.randint(25,50,(25,2))
@@ -128,8 +128,8 @@ Z = np.vstack((X,Y))
 Z = np.float32(Z)
 
 # define criteria and apply kmeans()
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-ret,label,center=cv2.kmeans(Z,2,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+ret,label,center=cv.kmeans(Z,2,None,criteria,10,cv.KMEANS_RANDOM_CENTERS)
 
 # Now separate the data, Note the flatten()
 A = Z[label.ravel()==0]
@@ -161,27 +161,27 @@ specified number of colors. And again we need to reshape it back to the shape of
 Below is the code:
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 
-img = cv2.imread('home.jpg')
+img = cv.imread('home.jpg')
 Z = img.reshape((-1,3))
 
 # convert to np.float32
 Z = np.float32(Z)
 
 # define criteria, number of clusters(K) and apply kmeans()
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
 K = 8
-ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_RANDOM_CENTERS)
 
 # Now convert back into uint8, and make original image
 center = np.uint8(center)
 res = center[label.flatten()]
 res2 = res.reshape((img.shape))
 
-cv2.imshow('res2',res2)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+cv.imshow('res2',res2)
+cv.waitKey(0)
+cv.destroyAllWindows()
 @endcode
 See the result below for K=8:
 

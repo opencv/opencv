@@ -6,24 +6,24 @@ Goal
 
 -   In this tutorial, you will learn Simple thresholding, Adaptive thresholding, Otsu's thresholding
     etc.
--   You will learn these functions : **cv2.threshold**, **cv2.adaptiveThreshold** etc.
+-   You will learn these functions : **cv.threshold**, **cv.adaptiveThreshold** etc.
 
 Simple Thresholding
 -------------------
 
 Here, the matter is straight forward. If pixel value is greater than a threshold value, it is
 assigned one value (may be white), else it is assigned another value (may be black). The function
-used is **cv2.threshold**. First argument is the source image, which **should be a grayscale
+used is **cv.threshold**. First argument is the source image, which **should be a grayscale
 image**. Second argument is the threshold value which is used to classify the pixel values. Third
 argument is the maxVal which represents the value to be given if pixel value is more than (sometimes
 less than) the threshold value. OpenCV provides different styles of thresholding and it is decided
 by the fourth parameter of the function. Different types are:
 
--   cv2.THRESH_BINARY
--   cv2.THRESH_BINARY_INV
--   cv2.THRESH_TRUNC
--   cv2.THRESH_TOZERO
--   cv2.THRESH_TOZERO_INV
+-   cv.THRESH_BINARY
+-   cv.THRESH_BINARY_INV
+-   cv.THRESH_TRUNC
+-   cv.THRESH_TOZERO
+-   cv.THRESH_TOZERO_INV
 
 Documentation clearly explain what each type is meant for. Please check out the documentation.
 
@@ -32,16 +32,16 @@ our **thresholded image**.
 
 Code :
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv2.imread('gradient.png',0)
-ret,thresh1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
-ret,thresh2 = cv2.threshold(img,127,255,cv2.THRESH_BINARY_INV)
-ret,thresh3 = cv2.threshold(img,127,255,cv2.THRESH_TRUNC)
-ret,thresh4 = cv2.threshold(img,127,255,cv2.THRESH_TOZERO)
-ret,thresh5 = cv2.threshold(img,127,255,cv2.THRESH_TOZERO_INV)
+img = cv.imread('gradient.png',0)
+ret,thresh1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
+ret,thresh2 = cv.threshold(img,127,255,cv.THRESH_BINARY_INV)
+ret,thresh3 = cv.threshold(img,127,255,cv.THRESH_TRUNC)
+ret,thresh4 = cv.threshold(img,127,255,cv.THRESH_TOZERO)
+ret,thresh5 = cv.threshold(img,127,255,cv.THRESH_TOZERO_INV)
 
 titles = ['Original Image','BINARY','BINARY_INV','TRUNC','TOZERO','TOZERO_INV']
 images = [img, thresh1, thresh2, thresh3, thresh4, thresh5]
@@ -72,8 +72,8 @@ results for images with varying illumination.
 It has three ‘special’ input params and only one output argument.
 
 **Adaptive Method** - It decides how thresholding value is calculated.
-    -   cv2.ADAPTIVE_THRESH_MEAN_C : threshold value is the mean of neighbourhood area.
-    -   cv2.ADAPTIVE_THRESH_GAUSSIAN_C : threshold value is the weighted sum of neighbourhood
+    -   cv.ADAPTIVE_THRESH_MEAN_C : threshold value is the mean of neighbourhood area.
+    -   cv.ADAPTIVE_THRESH_GAUSSIAN_C : threshold value is the weighted sum of neighbourhood
         values where weights are a gaussian window.
 
 **Block Size** - It decides the size of neighbourhood area.
@@ -83,18 +83,18 @@ It has three ‘special’ input params and only one output argument.
 Below piece of code compares global thresholding and adaptive thresholding for an image with varying
 illumination:
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv2.imread('sudoku.png',0)
-img = cv2.medianBlur(img,5)
+img = cv.imread('sudoku.png',0)
+img = cv.medianBlur(img,5)
 
-ret,th1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
-th2 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
-            cv2.THRESH_BINARY,11,2)
-th3 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-            cv2.THRESH_BINARY,11,2)
+ret,th1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
+th2 = cv.adaptiveThreshold(img,255,cv.ADAPTIVE_THRESH_MEAN_C,\
+            cv.THRESH_BINARY,11,2)
+th3 = cv.adaptiveThreshold(img,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv.THRESH_BINARY,11,2)
 
 titles = ['Original Image', 'Global Thresholding (v = 127)',
             'Adaptive Mean Thresholding', 'Adaptive Gaussian Thresholding']
@@ -124,7 +124,7 @@ That is what Otsu binarization does. So in simple words, it automatically calcul
 value from image histogram for a bimodal image. (For images which are not bimodal, binarization
 won’t be accurate.)
 
-For this, our cv2.threshold() function is used, but pass an extra flag, cv2.THRESH_OTSU. **For
+For this, our cv.threshold() function is used, but pass an extra flag, cv.THRESH_OTSU. **For
 threshold value, simply pass zero**. Then the algorithm finds the optimal threshold value and
 returns you as the second output, retVal. If Otsu thresholding is not used, retVal is same as the
 threshold value you used.
@@ -134,21 +134,21 @@ for a value of 127. In second case, I applied Otsu’s thresholding directly. In
 filtered image with a 5x5 gaussian kernel to remove the noise, then applied Otsu thresholding. See
 how noise filtering improves the result.
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv2.imread('noisy2.png',0)
+img = cv.imread('noisy2.png',0)
 
 # global thresholding
-ret1,th1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
+ret1,th1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
 
 # Otsu's thresholding
-ret2,th2 = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+ret2,th2 = cv.threshold(img,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
 
 # Otsu's thresholding after Gaussian filtering
-blur = cv2.GaussianBlur(img,(5,5),0)
-ret3,th3 = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+blur = cv.GaussianBlur(img,(5,5),0)
+ret3,th3 = cv.threshold(blur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
 
 # plot all the images and their histograms
 images = [img, 0, th1,
@@ -188,11 +188,11 @@ where
 It actually finds a value of t which lies in between two peaks such that variances to both classes
 are minimum. It can be simply implemented in Python as follows:
 @code{.py}
-img = cv2.imread('noisy2.png',0)
-blur = cv2.GaussianBlur(img,(5,5),0)
+img = cv.imread('noisy2.png',0)
+blur = cv.GaussianBlur(img,(5,5),0)
 
 # find normalized_histogram, and its cumulative distribution function
-hist = cv2.calcHist([blur],[0],None,[256],[0,256])
+hist = cv.calcHist([blur],[0],None,[256],[0,256])
 hist_norm = hist.ravel()/hist.max()
 Q = hist_norm.cumsum()
 
@@ -217,7 +217,7 @@ for i in xrange(1,256):
         thresh = i
 
 # find otsu's threshold value with OpenCV function
-ret, otsu = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+ret, otsu = cv.threshold(blur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
 print( "{} {}".format(thresh,ret) )
 @endcode
 *(Some of the functions may be new here, but we will cover them in coming chapters)*

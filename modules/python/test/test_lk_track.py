@@ -13,7 +13,7 @@ between frames.
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 #local modules
 from tst_scene_render import TestSceneRender
@@ -21,7 +21,7 @@ from tests_common import NewOpenCVTests, intersectionRate, isPointInRect
 
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+                  criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 
 feature_params = dict( maxCorners = 500,
                        qualityLevel = 0.3,
@@ -32,7 +32,7 @@ def getRectFromPoints(points):
 
     distances = []
     for point in points:
-        distances.append(cv2.norm(point, cv2.NORM_L2))
+        distances.append(cv.norm(point, cv.NORM_L2))
 
     x0, y0 = points[np.argmin(distances)]
     x1, y1 = points[np.argmax(distances)]
@@ -58,13 +58,13 @@ class lk_track_test(NewOpenCVTests):
 
         while True:
             frame = self.render.getNextFrame()
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1][0] for tr in self.tracks]).reshape(-1, 1, 2)
-                p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-                p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+                p1, _st, _err = cv.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+                p0r, _st, _err = cv.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
                 d = abs(p0-p0r).reshape(-1, 2).max(-1)
                 good = d < 1
                 new_tracks = []
@@ -98,8 +98,8 @@ class lk_track_test(NewOpenCVTests):
                 mask = np.zeros_like(frame_gray)
                 mask[:] = 255
                 for x, y in [np.int32(tr[-1][0]) for tr in self.tracks]:
-                    cv2.circle(mask, (x, y), 5, 0, -1)
-                p = cv2.goodFeaturesToTrack(frame_gray, mask = mask, **feature_params)
+                    cv.circle(mask, (x, y), 5, 0, -1)
+                p = cv.goodFeaturesToTrack(frame_gray, mask = mask, **feature_params)
                 if p is not None:
                     for x, y in np.float32(p).reshape(-1, 2):
                         self.tracks.append([[(x, y), self.frame_idx]])

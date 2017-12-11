@@ -3,7 +3,7 @@ import sys
 import time
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 ## [basic_method]
 def is_grayscale(my_image):
@@ -23,7 +23,7 @@ def sharpen(my_image):
     if is_grayscale(my_image):
         height, width = my_image.shape
     else:
-        my_image = cv2.cvtColor(my_image, cv2.CV_8U)
+        my_image = cv.cvtColor(my_image, cv.CV_8U)
         height, width, n_channels = my_image.shape
 
     result = np.zeros(my_image.shape, my_image.dtype)
@@ -47,13 +47,13 @@ def sharpen(my_image):
 def main(argv):
     filename = "../../../../data/lena.jpg"
 
-    img_codec = cv2.IMREAD_COLOR
+    img_codec = cv.IMREAD_COLOR
     if argv:
         filename = sys.argv[1]
         if len(argv) >= 2 and sys.argv[2] == "G":
-            img_codec = cv2.IMREAD_GRAYSCALE
+            img_codec = cv.IMREAD_GRAYSCALE
 
-    src = cv2.imread(filename, img_codec)
+    src = cv.imread(filename, img_codec)
 
     if src is None:
         print("Can't open image [" + filename + "]")
@@ -61,10 +61,10 @@ def main(argv):
         print("mat_mask_operations.py [image_path -- default ../../../../data/lena.jpg] [G -- grayscale]")
         return -1
 
-    cv2.namedWindow("Input", cv2.WINDOW_AUTOSIZE)
-    cv2.namedWindow("Output", cv2.WINDOW_AUTOSIZE)
+    cv.namedWindow("Input", cv.WINDOW_AUTOSIZE)
+    cv.namedWindow("Output", cv.WINDOW_AUTOSIZE)
 
-    cv2.imshow("Input", src)
+    cv.imshow("Input", src)
     t = round(time.time())
 
     dst0 = sharpen(src)
@@ -72,8 +72,8 @@ def main(argv):
     t = (time.time() - t) / 1000
     print("Hand written function time passed in seconds: %s" % t)
 
-    cv2.imshow("Output", dst0)
-    cv2.waitKey()
+    cv.imshow("Output", dst0)
+    cv.waitKey()
 
     t = time.time()
     ## [kern]
@@ -82,17 +82,17 @@ def main(argv):
                        [0, -1, 0]], np.float32)  # kernel should be floating point type
     ## [kern]
     ## [filter2D]
-    dst1 = cv2.filter2D(src, -1, kernel)
+    dst1 = cv.filter2D(src, -1, kernel)
     # ddepth = -1, means destination image has depth same as input image
     ## [filter2D]
 
     t = (time.time() - t) / 1000
     print("Built-in filter2D time passed in seconds:     %s" % t)
 
-    cv2.imshow("Output", dst1)
+    cv.imshow("Output", dst1)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv.waitKey(0)
+    cv.destroyAllWindows()
     return 0
 
 

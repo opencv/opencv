@@ -10,7 +10,7 @@ So in this chapter, you will learn
 
 -   To measure the performance of your code.
 -   Some tips to improve the performance of your code.
--   You will see these functions : **cv2.getTickCount**, **cv2.getTickFrequency** etc.
+-   You will see these functions : **cv.getTickCount**, **cv.getTickFrequency** etc.
 
 Apart from OpenCV, Python also provides a module **time** which is helpful in measuring the time of
 execution. Another module **profile** helps to get detailed report on the code, like how much time
@@ -21,34 +21,34 @@ ones, and for more details, check links in **Additional Resouces** section.
 Measuring Performance with OpenCV
 ---------------------------------
 
-**cv2.getTickCount** function returns the number of clock-cycles after a reference event (like the
+**cv.getTickCount** function returns the number of clock-cycles after a reference event (like the
 moment machine was switched ON) to the moment this function is called. So if you call it before and
 after the function execution, you get number of clock-cycles used to execute a function.
 
-**cv2.getTickFrequency** function returns the frequency of clock-cycles, or the number of
+**cv.getTickFrequency** function returns the frequency of clock-cycles, or the number of
 clock-cycles per second. So to find the time of execution in seconds, you can do following:
 @code{.py}
-e1 = cv2.getTickCount()
+e1 = cv.getTickCount()
 # your code execution
-e2 = cv2.getTickCount()
-time = (e2 - e1)/ cv2.getTickFrequency()
+e2 = cv.getTickCount()
+time = (e2 - e1)/ cv.getTickFrequency()
 @endcode
 We will demonstrate with following example. Following example apply median filtering with a kernel
 of odd size ranging from 5 to 49. (Don't worry about what will the result look like, that is not our
 goal):
 @code{.py}
-img1 = cv2.imread('messi5.jpg')
+img1 = cv.imread('messi5.jpg')
 
-e1 = cv2.getTickCount()
+e1 = cv.getTickCount()
 for i in xrange(5,49,2):
-    img1 = cv2.medianBlur(img1,i)
-e2 = cv2.getTickCount()
-t = (e2 - e1)/cv2.getTickFrequency()
+    img1 = cv.medianBlur(img1,i)
+e2 = cv.getTickCount()
+t = (e2 - e1)/cv.getTickFrequency()
 print( t )
 
 # Result I got is 0.521107655 seconds
 @endcode
-@note You can do the same with time module. Instead of cv2.getTickCount, use time.time() function.
+@note You can do the same with time module. Instead of cv.getTickCount, use time.time() function.
 Then take the difference of two times.
 
 Default Optimization in OpenCV
@@ -57,23 +57,23 @@ Default Optimization in OpenCV
 Many of the OpenCV functions are optimized using SSE2, AVX etc. It contains unoptimized code also.
 So if our system support these features, we should exploit them (almost all modern day processors
 support them). It is enabled by default while compiling. So OpenCV runs the optimized code if it is
-enabled, else it runs the unoptimized code. You can use **cv2.useOptimized()** to check if it is
-enabled/disabled and **cv2.setUseOptimized()** to enable/disable it. Let's see a simple example.
+enabled, else it runs the unoptimized code. You can use **cv.useOptimized()** to check if it is
+enabled/disabled and **cv.setUseOptimized()** to enable/disable it. Let's see a simple example.
 @code{.py}
 # check if optimization is enabled
-In [5]: cv2.useOptimized()
+In [5]: cv.useOptimized()
 Out[5]: True
 
-In [6]: %timeit res = cv2.medianBlur(img,49)
+In [6]: %timeit res = cv.medianBlur(img,49)
 10 loops, best of 3: 34.9 ms per loop
 
 # Disable it
-In [7]: cv2.setUseOptimized(False)
+In [7]: cv.setUseOptimized(False)
 
-In [8]: cv2.useOptimized()
+In [8]: cv.useOptimized()
 Out[8]: False
 
-In [9]: %timeit res = cv2.medianBlur(img,49)
+In [9]: %timeit res = cv.medianBlur(img,49)
 10 loops, best of 3: 64.1 ms per loop
 @endcode
 See, optimized median filtering is \~2x faster than unoptimized version. If you check its source,
@@ -115,11 +115,11 @@ working on this issue)*
 one or two elements, Python scalar is better than Numpy arrays. Numpy takes advantage when size of
 array is a little bit bigger.
 
-We will try one more example. This time, we will compare the performance of **cv2.countNonZero()**
+We will try one more example. This time, we will compare the performance of **cv.countNonZero()**
 and **np.count_nonzero()** for same image.
 
 @code{.py}
-In [35]: %timeit z = cv2.countNonZero(img)
+In [35]: %timeit z = cv.countNonZero(img)
 100000 loops, best of 3: 15.8 us per loop
 
 In [36]: %timeit z = np.count_nonzero(img)
