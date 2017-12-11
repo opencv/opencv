@@ -8,7 +8,7 @@ In this section, we will learn
     -   To find the Fourier Transform of images using OpenCV
     -   To utilize the FFT functions available in Numpy
     -   Some applications of Fourier Transform
-    -   We will see following functions : **cv2.dft()**, **cv2.idft()** etc
+    -   We will see following functions : **cv.dft()**, **cv.idft()** etc
 
 Theory
 ------
@@ -50,11 +50,11 @@ you want to bring it to center, you need to shift the result by \f$\frac{N}{2}\f
 directions. This is simply done by the function, **np.fft.fftshift()**. (It is more easier to
 analyze). Once you found the frequency transform, you can find the magnitude spectrum.
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv2.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg',0)
 f = np.fft.fft2(img)
 fshift = np.fft.fftshift(f)
 magnitude_spectrum = 20*np.log(np.abs(fshift))
@@ -112,21 +112,21 @@ Better option is Gaussian Windows.
 Fourier Transform in OpenCV
 ---------------------------
 
-OpenCV provides the functions **cv2.dft()** and **cv2.idft()** for this. It returns the same result
+OpenCV provides the functions **cv.dft()** and **cv.idft()** for this. It returns the same result
 as previous, but with two channels. First channel will have the real part of the result and second
 channel will have the imaginary part of the result. The input image should be converted to
 np.float32 first. We will see how to do it.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg',0)
 
-dft = cv2.dft(np.float32(img),flags = cv2.DFT_COMPLEX_OUTPUT)
+dft = cv.dft(np.float32(img),flags = cv.DFT_COMPLEX_OUTPUT)
 dft_shift = np.fft.fftshift(dft)
 
-magnitude_spectrum = 20*np.log(cv2.magnitude(dft_shift[:,:,0],dft_shift[:,:,1]))
+magnitude_spectrum = 20*np.log(cv.magnitude(dft_shift[:,:,0],dft_shift[:,:,1]))
 
 plt.subplot(121),plt.imshow(img, cmap = 'gray')
 plt.title('Input Image'), plt.xticks([]), plt.yticks([])
@@ -135,7 +135,7 @@ plt.title('Magnitude Spectrum'), plt.xticks([]), plt.yticks([])
 plt.show()
 @endcode
 
-@note You can also use **cv2.cartToPolar()** which returns both magnitude and phase in a single shot
+@note You can also use **cv.cartToPolar()** which returns both magnitude and phase in a single shot
 
 So, now we have to do inverse DFT. In previous session, we created a HPF, this time we will see how
 to remove high frequency contents in the image, ie we apply LPF to image. It actually blurs the
@@ -153,8 +153,8 @@ mask[crow-30:crow+30, ccol-30:ccol+30] = 1
 # apply mask and inverse DFT
 fshift = dft_shift*mask
 f_ishift = np.fft.ifftshift(fshift)
-img_back = cv2.idft(f_ishift)
-img_back = cv2.magnitude(img_back[:,:,0],img_back[:,:,1])
+img_back = cv.idft(f_ishift)
+img_back = cv.magnitude(img_back[:,:,0],img_back[:,:,1])
 
 plt.subplot(121),plt.imshow(img, cmap = 'gray')
 plt.title('Input Image'), plt.xticks([]), plt.yticks([])
@@ -166,7 +166,7 @@ See the result:
 
 ![image](images/fft4.jpg)
 
-@note As usual, OpenCV functions **cv2.dft()** and **cv2.idft()** are faster than Numpy
+@note As usual, OpenCV functions **cv.dft()** and **cv.idft()** are faster than Numpy
 counterparts. But Numpy functions are more user-friendly. For more details about performance issues,
 see below section.
 
@@ -180,23 +180,23 @@ the array to any optimal size (by padding zeros) before finding DFT. For OpenCV,
 manually pad zeros. But for Numpy, you specify the new size of FFT calculation, and it will
 automatically pad zeros for you.
 
-So how do we find this optimal size ? OpenCV provides a function, **cv2.getOptimalDFTSize()** for
-this. It is applicable to both **cv2.dft()** and **np.fft.fft2()**. Let's check their performance
+So how do we find this optimal size ? OpenCV provides a function, **cv.getOptimalDFTSize()** for
+this. It is applicable to both **cv.dft()** and **np.fft.fft2()**. Let's check their performance
 using IPython magic command %timeit.
 @code{.py}
-In [16]: img = cv2.imread('messi5.jpg',0)
+In [16]: img = cv.imread('messi5.jpg',0)
 In [17]: rows,cols = img.shape
 In [18]: print("{} {}".format(rows,cols))
 342 548
 
-In [19]: nrows = cv2.getOptimalDFTSize(rows)
-In [20]: ncols = cv2.getOptimalDFTSize(cols)
+In [19]: nrows = cv.getOptimalDFTSize(rows)
+In [20]: ncols = cv.getOptimalDFTSize(cols)
 In [21]: print("{} {}".format(nrows,ncols))
 360 576
 @endcode
 See, the size (342,548) is modified to (360, 576). Now let's pad it with zeros (for OpenCV) and find
 their DFT calculation performance. You can do it by creating a new big zero array and copy the data
-to it, or use **cv2.copyMakeBorder()**.
+to it, or use **cv.copyMakeBorder()**.
 @code{.py}
 nimg = np.zeros((nrows,ncols))
 nimg[:rows,:cols] = img
@@ -205,8 +205,8 @@ OR:
 @code{.py}
 right = ncols - cols
 bottom = nrows - rows
-bordertype = cv2.BORDER_CONSTANT #just to avoid line breakup in PDF file
-nimg = cv2.copyMakeBorder(img,0,bottom,0,right,bordertype, value = 0)
+bordertype = cv.BORDER_CONSTANT #just to avoid line breakup in PDF file
+nimg = cv.copyMakeBorder(img,0,bottom,0,right,bordertype, value = 0)
 @endcode
 Now we calculate the DFT performance comparison of Numpy function:
 @code{.py}
@@ -217,9 +217,9 @@ In [23]: %timeit fft2 = np.fft.fft2(img,[nrows,ncols])
 @endcode
 It shows a 4x speedup. Now we will try the same with OpenCV functions.
 @code{.py}
-In [24]: %timeit dft1= cv2.dft(np.float32(img),flags=cv2.DFT_COMPLEX_OUTPUT)
+In [24]: %timeit dft1= cv.dft(np.float32(img),flags=cv.DFT_COMPLEX_OUTPUT)
 100 loops, best of 3: 13.5 ms per loop
-In [27]: %timeit dft2= cv2.dft(np.float32(nimg),flags=cv2.DFT_COMPLEX_OUTPUT)
+In [27]: %timeit dft2= cv.dft(np.float32(nimg),flags=cv.DFT_COMPLEX_OUTPUT)
 100 loops, best of 3: 3.11 ms per loop
 @endcode
 It also shows a 4x speed-up. You can also see that OpenCV functions are around 3x faster than Numpy
@@ -232,7 +232,7 @@ A similar question was asked in a forum. The question is, why Laplacian is a hig
 Sobel is a HPF? etc. And the first answer given to it was in terms of Fourier Transform. Just take
 the fourier transform of Laplacian for some higher size of FFT. Analyze it:
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -240,7 +240,7 @@ from matplotlib import pyplot as plt
 mean_filter = np.ones((3,3))
 
 # creating a guassian filter
-x = cv2.getGaussianKernel(5,10)
+x = cv.getGaussianKernel(5,10)
 gaussian = x*x.T
 
 # different edge detecting filters

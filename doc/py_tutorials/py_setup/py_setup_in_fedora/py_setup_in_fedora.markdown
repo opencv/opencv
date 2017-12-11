@@ -29,8 +29,8 @@ $ yum install numpy opencv*
 @endcode
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 @code{.py}
->>> import cv2
->>> print( cv2.__version__ )
+>>> import cv2 as cv
+>>> print( cv.__version__ )
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -230,7 +230,7 @@ But you will have to do this every time you install OpenCV.
     @code{.sh}
     export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
     @endcode
-Thus OpenCV installation is finished. Open a terminal and try import cv2.
+Thus OpenCV installation is finished. Open a terminal and try 'import cv2 as cv'.
 
 To build the documentation, just enter following commands:
 @code{.sh}

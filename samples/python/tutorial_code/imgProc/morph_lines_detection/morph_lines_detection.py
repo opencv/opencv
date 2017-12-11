@@ -4,14 +4,14 @@
 """
 import numpy as np
 import sys
-import cv2
+import cv2 as cv
 
 
 def show_wait_destroy(winname, img):
-    cv2.imshow(winname, img)
-    cv2.moveWindow(winname, 500, 0)
-    cv2.waitKey(0)
-    cv2.destroyWindow(winname)
+    cv.imshow(winname, img)
+    cv.moveWindow(winname, 500, 0)
+    cv.waitKey(0)
+    cv.destroyWindow(winname)
 
 
 def main(argv):
@@ -23,7 +23,7 @@ def main(argv):
         return -1
 
     # Load the image
-    src = cv2.imread(argv[0], cv2.IMREAD_COLOR)
+    src = cv.imread(argv[0], cv.IMREAD_COLOR)
 
     # Check if image is loaded fine
     if src is None:
@@ -31,13 +31,13 @@ def main(argv):
         return -1
 
     # Show source image
-    cv2.imshow("src", src)
+    cv.imshow("src", src)
     # [load_image]
 
     # [gray]
     # Transform source image to gray if it is not already
     if len(src.shape) != 2:
-        gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
     else:
         gray = src
 
@@ -47,9 +47,9 @@ def main(argv):
 
     # [bin]
     # Apply adaptiveThreshold at the bitwise_not of gray, notice the ~ symbol
-    gray = cv2.bitwise_not(gray)
-    bw = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
-                                cv2.THRESH_BINARY, 15, -2)
+    gray = cv.bitwise_not(gray)
+    bw = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_MEAN_C, \
+                                cv.THRESH_BINARY, 15, -2)
     # Show binary image
     show_wait_destroy("binary", bw)
     # [bin]
@@ -66,11 +66,11 @@ def main(argv):
     horizontal_size = cols / 30
 
     # Create structure element for extracting horizontal lines through morphology operations
-    horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_size, 1))
+    horizontalStructure = cv.getStructuringElement(cv.MORPH_RECT, (horizontal_size, 1))
 
     # Apply morphology operations
-    horizontal = cv2.erode(horizontal, horizontalStructure)
-    horizontal = cv2.dilate(horizontal, horizontalStructure)
+    horizontal = cv.erode(horizontal, horizontalStructure)
+    horizontal = cv.dilate(horizontal, horizontalStructure)
 
     # Show extracted horizontal lines
     show_wait_destroy("horizontal", horizontal)
@@ -82,11 +82,11 @@ def main(argv):
     verticalsize = rows / 30
 
     # Create structure element for extracting vertical lines through morphology operations
-    verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
+    verticalStructure = cv.getStructuringElement(cv.MORPH_RECT, (1, verticalsize))
 
     # Apply morphology operations
-    vertical = cv2.erode(vertical, verticalStructure)
-    vertical = cv2.dilate(vertical, verticalStructure)
+    vertical = cv.erode(vertical, verticalStructure)
+    vertical = cv.dilate(vertical, verticalStructure)
 
     # Show extracted vertical lines
     show_wait_destroy("vertical", vertical)
@@ -94,7 +94,7 @@ def main(argv):
 
     # [smooth]
     # Inverse vertical image
-    vertical = cv2.bitwise_not(vertical)
+    vertical = cv.bitwise_not(vertical)
     show_wait_destroy("vertical_bit", vertical)
 
     '''
@@ -107,20 +107,20 @@ def main(argv):
     '''
 
     # Step 1
-    edges = cv2.adaptiveThreshold(vertical, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
-                                cv2.THRESH_BINARY, 3, -2)
+    edges = cv.adaptiveThreshold(vertical, 255, cv.ADAPTIVE_THRESH_MEAN_C, \
+                                cv.THRESH_BINARY, 3, -2)
     show_wait_destroy("edges", edges)
 
     # Step 2
     kernel = np.ones((2, 2), np.uint8)
-    edges = cv2.dilate(edges, kernel)
+    edges = cv.dilate(edges, kernel)
     show_wait_destroy("dilate", edges)
 
     # Step 3
     smooth = np.copy(vertical)
 
     # Step 4
-    smooth = cv2.blur(smooth, (2, 2))
+    smooth = cv.blur(smooth, (2, 2))
 
     # Step 5
     (rows, cols) = np.where(edges != 0)
