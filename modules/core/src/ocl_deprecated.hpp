@@ -968,7 +968,7 @@ OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
 
 OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
 
-
+/*
 OCL_FUNC_P(cl_program, clCreateProgramWithSource,
     (cl_context context,
     cl_uint count,
@@ -1014,7 +1014,7 @@ OCL_FUNC(cl_int, clGetProgramBuildInfo,
     void * param_value,
     size_t * param_value_size_ret),
     (program, device, param_name, param_value_size, param_value, param_value_size_ret))
-
+*/
 OCL_FUNC_P(cl_kernel, clCreateKernel,
     (cl_program program,
     const char * kernel_name,

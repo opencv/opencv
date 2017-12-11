@@ -598,7 +598,7 @@ namespace integral_detail
     __host__ static void integral(const GlobPtr<uchar>& src, const GlobPtr<uint>& dst, int rows, int cols, cudaStream_t stream)
     {
         if (deviceSupports(FEATURE_SET_COMPUTE_30)
-            && (cols % 16 == 0)
+            && (cols % 64 == 0)
             && reinterpret_cast<intptr_t>(src.data) % 32 == 0
             && reinterpret_cast<intptr_t>(dst.data) % 32 == 0)
         {

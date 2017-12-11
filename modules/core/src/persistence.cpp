@@ -4513,7 +4513,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         //mode = cvGetErrMode();
         //cvSetErrMode( CV_ErrModeSilent );
-        try
+        CV_TRY
         {
             switch (fs->fmt)
             {
@@ -4523,11 +4523,11 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             default: break;
             }
         }
-        catch (...)
+        CV_CATCH_ALL
         {
             fs->is_opened = true;
             cvReleaseFileStorage( &fs );
-            throw;
+            CV_RETHROW();
         }
         //cvSetErrMode( mode );
 
@@ -5986,11 +5986,11 @@ icvReadSeq( CvFileStorage* fs, CvFileNode* node )
             flags |= CV_SEQ_FLAG_HOLE;
         if( !strstr(flags_str, "untyped") )
         {
-            try
+            CV_TRY
             {
                 flags |= icvDecodeSimpleFormat(dt);
             }
-            catch(...)
+            CV_CATCH_ALL
             {
             }
         }

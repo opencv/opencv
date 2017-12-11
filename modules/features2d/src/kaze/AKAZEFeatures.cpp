@@ -520,7 +520,7 @@ convertScalePyramid(const std::vector<Evolution<MatTypeSrc> >& src, std::vector<
  */
 void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
 {
-  if (ocl::useOpenCL() && image.isUMat()) {
+  if (ocl::isOpenCLActivated() && image.isUMat()) {
     // will run OCL version of scale space pyramid
     UMatPyramid uPyr;
     // init UMat pyramid with sizes

@@ -79,8 +79,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    resize(img, img, Size(227, 227));                // SqueezeNet v1.1 predict class by 3x227x227 input image.
-    Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(), false);  // Convert Mat to 4-dimensional batch.
+    Mat inputBlob = blobFromImage(img, 1.0, Size(227, 227), Scalar(), false, false);  // Convert Mat to 4-dimensional batch.
     //! [Prepare blob]
 
     //! [Set input blob]

@@ -182,10 +182,39 @@ public:
         return true;
     }
 
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat srcBlob = inputs[i];
+            void *src_handle = inputs[i].handle(ACCESS_READ);
+            void *dst_handle = outputs[i].handle(ACCESS_WRITE);
+            if (src_handle != dst_handle)
+            {
+                MatShape outShape = shape(outputs[i]);
+                UMat umat = srcBlob.reshape(1, (int)outShape.size(), &outShape[0]);
+                umat.copyTo(outputs[i]);
+            }
+        }
+        outs.assign(outputs);
+
+        return true;
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }

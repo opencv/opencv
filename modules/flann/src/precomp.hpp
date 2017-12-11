@@ -14,7 +14,6 @@
 #include "opencv2/flann/params.h"
 #include "opencv2/flann/saving.h"
 #include "opencv2/flann/general.h"
-#include "opencv2/flann/dummy.h"
 
 // index types
 #include "opencv2/flann/all_indices.h"

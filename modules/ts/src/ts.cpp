@@ -694,11 +694,14 @@ void checkIppStatus()
     }
 }
 
+bool skipUnstableTests = false;
+
 void parseCustomOptions(int argc, char **argv)
 {
     const char * const command_line_keys =
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
         "{ test_seed          |809564   |seed for random numbers generator }"
+        "{ skip_unstable      |false    |skip unstable tests }"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -717,6 +720,8 @@ void parseCustomOptions(int argc, char **argv)
 #endif
 
     param_seed = parser.get<unsigned int>("test_seed");
+
+    skipUnstableTests = parser.get<bool>("skip_unstable");
 }
 
 
@@ -742,12 +747,12 @@ static bool isDirectory(const std::string& path)
 #endif
 }
 
-CV_EXPORTS void addDataSearchPath(const std::string& path)
+void addDataSearchPath(const std::string& path)
 {
     if (isDirectory(path))
         TS::ptr()->data_search_path.push_back(path);
 }
-CV_EXPORTS void addDataSearchSubDirectory(const std::string& subdir)
+void addDataSearchSubDirectory(const std::string& subdir)
 {
     TS::ptr()->data_search_subdir.push_back(subdir);
 }

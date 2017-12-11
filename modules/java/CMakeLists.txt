@@ -421,8 +421,8 @@ endif()
 
 
 ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
-                                 ${copied_files}
-                                "${JAR_FILE}" "${JAR_FILE}.dephelper")
+                                ${copied_files}
+                               "${JAR_FILE}" "${JAR_FILE}.dephelper")
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
@@ -456,6 +456,7 @@ set_target_properties(${the_module} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+    DEFINE_SYMBOL CVAPI_EXPORTS
     )
 
 if(ANDROID)

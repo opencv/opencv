@@ -84,11 +84,11 @@ static String toString(const T &v)
     return ss.str();
 }
 
-Mat blobFromImage(const Mat& image, double scalefactor, const Size& size,
+Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
                   const Scalar& mean, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
-    std::vector<Mat> images(1, image);
+    std::vector<Mat> images(1, image.getMat());
     return blobFromImages(images, scalefactor, size, mean, swapRB, crop);
 }
 
@@ -1196,7 +1196,8 @@ struct Net::Impl
             // some other layers.
 
             // TODO: OpenCL target support more fusion styles.
-            if ( preferableTarget == DNN_TARGET_OPENCL && ld.layerInstance->type.compare("Convolution") )
+            if ( preferableTarget == DNN_TARGET_OPENCL &&
+                 (!cv::ocl::useOpenCL() || ld.layerInstance->type.compare("Convolution")) )
                 continue;
 
             Ptr<Layer>& currLayer = ld.layerInstance;
@@ -1214,7 +1215,10 @@ struct Net::Impl
                     {
                         printf_(("\tfused with %s\n", nextBNormLayer->name.c_str()));
                         bnormData->skipFlags[DNN_BACKEND_DEFAULT] = true;
-                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                        if ( preferableTarget == DNN_TARGET_OPENCL )
+                            ld.umat_outputBlobs = layers[lpNext.lid].umat_outputBlobs;
+                        else
+                            ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         if( bnormData->consumers.size() == 1 )
                         {
                             nextData = &layers[bnormData->consumers[0].lid];
@@ -1234,7 +1238,10 @@ struct Net::Impl
                     {
                         printf_(("\tfused with %s\n", nextScaleLayer->name.c_str()));
                         scaleData->skipFlags[DNN_BACKEND_DEFAULT] = true;
-                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                        if ( preferableTarget == DNN_TARGET_OPENCL )
+                            ld.umat_outputBlobs = layers[lpNext.lid].umat_outputBlobs;
+                        else
+                            ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         if( scaleData->consumers.size() == 1 )
                         {
                             nextData = &layers[scaleData->consumers[0].lid];
@@ -1263,7 +1270,10 @@ struct Net::Impl
                         LayerData *activData = nextData;
                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
                         activData->skipFlags[DNN_BACKEND_DEFAULT] = true;
-                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                        if ( preferableTarget == DNN_TARGET_OPENCL )
+                            ld.umat_outputBlobs = layers[lpNext.lid].umat_outputBlobs;
+                        else
+                            ld.outputBlobs = layers[lpNext.lid].outputBlobs;
 
                         if ( preferableTarget == DNN_TARGET_OPENCL )
                         {
@@ -1325,13 +1335,13 @@ struct Net::Impl
                                              !nextData->type.compare("Power")) &&
                                             currLayer->setActivation(nextActivLayer) )
                                     {
-                                        CV_Assert(firstConvLayerData->outputBlobs.size() == 1 && ld.inputBlobs.size() == 1);
-                                        ld.inputBlobs.push_back(&firstConvLayerData->outputBlobs[0]);
+                                        CV_Assert(firstConvLayerData->umat_outputBlobs.size() == 1 && ld.umat_inputBlobs.size() == 1);
+                                        ld.umat_inputBlobs.push_back(firstConvLayerData->umat_outputBlobs[0]);
                                         printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
                                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
                                         eltwiseData->skipFlags[DNN_BACKEND_DEFAULT] = true;
                                         nextData->skipFlags[DNN_BACKEND_DEFAULT] = true;
-                                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                                        ld.umat_outputBlobs = layers[lpNext.lid].umat_outputBlobs;
                                     }
                                 }
                             }
@@ -1900,7 +1910,7 @@ void Net::setInputsNames(const std::vector<String> &inputBlobNames)
     impl->netInputLayer->setNames(inputBlobNames);
 }
 
-void Net::setInput(const Mat &blob_, const String& name)
+void Net::setInput(InputArray blob, const String& name)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -1920,6 +1930,7 @@ void Net::setInput(const Mat &blob_, const String& name)
         ld.umat_outputBlobs.resize( std::max(pin.oid+1, (int)ld.requiredOutputs.size()) );
     ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
     MatShape prevShape = shape(ld.outputBlobs[pin.oid]);
+    Mat blob_ = blob.getMat();
     bool oldShape = prevShape == shape(blob_);
     if (oldShape)
     {
