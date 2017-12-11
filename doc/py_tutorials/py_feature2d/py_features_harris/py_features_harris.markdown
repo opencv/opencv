@@ -7,7 +7,7 @@ Goal
 In this chapter,
 
 -   We will understand the concepts behind Harris Corner Detection.
--   We will see the functions: **cv2.cornerHarris()**, **cv2.cornerSubPix()**
+-   We will see the functions: **cv.cornerHarris()**, **cv.cornerSubPix()**
 
 Theory
 ------
@@ -35,7 +35,7 @@ where
                                      I_x I_y & I_y I_y \end{bmatrix}\f]
 
 Here, \f$I_x\f$ and \f$I_y\f$ are image derivatives in x and y directions respectively. (Can be easily found
-out using **cv2.Sobel()**).
+out using **cv.Sobel()**).
 
 Then comes the main part. After this, they created a score, basically an equation, which will
 determine if a window can contain a corner or not.
@@ -65,7 +65,7 @@ suitable give you the corners in the image. We will do it with a simple image.
 Harris Corner Detector in OpenCV
 --------------------------------
 
-OpenCV has the function **cv2.cornerHarris()** for this purpose. Its arguments are :
+OpenCV has the function **cv.cornerHarris()** for this purpose. Its arguments are :
 
 -   **img** - Input image, it should be grayscale and float32 type.
 -   **blockSize** - It is the size of neighbourhood considered for corner detection
@@ -74,25 +74,25 @@ OpenCV has the function **cv2.cornerHarris()** for this purpose. Its arguments a
 
 See the example below:
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 
 filename = 'chessboard.png'
-img = cv2.imread(filename)
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+img = cv.imread(filename)
+gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
 gray = np.float32(gray)
-dst = cv2.cornerHarris(gray,2,3,0.04)
+dst = cv.cornerHarris(gray,2,3,0.04)
 
 #result is dilated for marking the corners, not important
-dst = cv2.dilate(dst,None)
+dst = cv.dilate(dst,None)
 
 # Threshold for an optimal value, it may vary depending on the image.
 img[dst>0.01*dst.max()]=[0,0,255]
 
-cv2.imshow('dst',img)
-if cv2.waitKey(0) & 0xff == 27:
-    cv2.destroyAllWindows()
+cv.imshow('dst',img)
+if cv.waitKey(0) & 0xff == 27:
+    cv.destroyAllWindows()
 @endcode
 Below are the three results:
 
@@ -102,7 +102,7 @@ Corner with SubPixel Accuracy
 -----------------------------
 
 Sometimes, you may need to find the corners with maximum accuracy. OpenCV comes with a function
-**cv2.cornerSubPix()** which further refines the corners detected with sub-pixel accuracy. Below is
+**cv.cornerSubPix()** which further refines the corners detected with sub-pixel accuracy. Below is
 an example. As usual, we need to find the harris corners first. Then we pass the centroids of these
 corners (There may be a bunch of pixels at a corner, we take their centroid) to refine them. Harris
 corners are marked in red pixels and refined corners are marked in green pixels. For this function,
@@ -110,26 +110,26 @@ we have to define the criteria when to stop the iteration. We stop it after a sp
 iteration or a certain accuracy is achieved, whichever occurs first. We also need to define the size
 of neighbourhood it would search for corners.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 
 filename = 'chessboard2.jpg'
-img = cv2.imread(filename)
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+img = cv.imread(filename)
+gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
 # find Harris corners
 gray = np.float32(gray)
-dst = cv2.cornerHarris(gray,2,3,0.04)
-dst = cv2.dilate(dst,None)
-ret, dst = cv2.threshold(dst,0.01*dst.max(),255,0)
+dst = cv.cornerHarris(gray,2,3,0.04)
+dst = cv.dilate(dst,None)
+ret, dst = cv.threshold(dst,0.01*dst.max(),255,0)
 dst = np.uint8(dst)
 
 # find centroids
-ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
+ret, labels, stats, centroids = cv.connectedComponentsWithStats(dst)
 
 # define the criteria to stop and refine the corners
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-corners = cv2.cornerSubPix(gray,np.float32(centroids),(5,5),(-1,-1),criteria)
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+corners = cv.cornerSubPix(gray,np.float32(centroids),(5,5),(-1,-1),criteria)
 
 # Now draw them
 res = np.hstack((centroids,corners))
@@ -137,7 +137,7 @@ res = np.int0(res)
 img[res[:,1],res[:,0]]=[0,0,255]
 img[res[:,3],res[:,2]] = [0,255,0]
 
-cv2.imwrite('subpixel5.png',img)
+cv.imwrite('subpixel5.png',img)
 @endcode
 Below is the result, where some important locations are shown in zoomed window to visualize:
 

@@ -18,7 +18,7 @@ if PY3:
     xrange = range
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
     h, w = img.shape[:2]
@@ -26,19 +26,19 @@ def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
     for i in xrange(iter_n):
         print(i)
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        eigen = cv2.cornerEigenValsAndVecs(gray, str_sigma, 3)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        eigen = cv.cornerEigenValsAndVecs(gray, str_sigma, 3)
         eigen = eigen.reshape(h, w, 3, 2)  # [[e1, e2], v1, v2]
         x, y = eigen[:,:,1,0], eigen[:,:,1,1]
 
-        gxx = cv2.Sobel(gray, cv2.CV_32F, 2, 0, ksize=sigma)
-        gxy = cv2.Sobel(gray, cv2.CV_32F, 1, 1, ksize=sigma)
-        gyy = cv2.Sobel(gray, cv2.CV_32F, 0, 2, ksize=sigma)
+        gxx = cv.Sobel(gray, cv.CV_32F, 2, 0, ksize=sigma)
+        gxy = cv.Sobel(gray, cv.CV_32F, 1, 1, ksize=sigma)
+        gyy = cv.Sobel(gray, cv.CV_32F, 0, 2, ksize=sigma)
         gvv = x*x*gxx + 2*x*y*gxy + y*y*gyy
         m = gvv < 0
 
-        ero = cv2.erode(img, None)
-        dil = cv2.dilate(img, None)
+        ero = cv.erode(img, None)
+        dil = cv.dilate(img, None)
         img1 = ero
         img1[m] = dil[m]
         img = np.uint8(img*(1.0 - blend) + img1*blend)
@@ -53,33 +53,33 @@ if __name__ == '__main__':
     except:
         fn = '../data/baboon.jpg'
 
-    src = cv2.imread(fn)
+    src = cv.imread(fn)
 
     def nothing(*argv):
         pass
 
     def update():
-        sigma = cv2.getTrackbarPos('sigma', 'control')*2+1
-        str_sigma = cv2.getTrackbarPos('str_sigma', 'control')*2+1
-        blend = cv2.getTrackbarPos('blend', 'control') / 10.0
+        sigma = cv.getTrackbarPos('sigma', 'control')*2+1
+        str_sigma = cv.getTrackbarPos('str_sigma', 'control')*2+1
+        blend = cv.getTrackbarPos('blend', 'control') / 10.0
         print('sigma: %d  str_sigma: %d  blend_coef: %f' % (sigma, str_sigma, blend))
         dst = coherence_filter(src, sigma=sigma, str_sigma = str_sigma, blend = blend)
-        cv2.imshow('dst', dst)
+        cv.imshow('dst', dst)
 
-    cv2.namedWindow('control', 0)
-    cv2.createTrackbar('sigma', 'control', 9, 15, nothing)
-    cv2.createTrackbar('blend', 'control', 7, 10, nothing)
-    cv2.createTrackbar('str_sigma', 'control', 9, 15, nothing)
+    cv.namedWindow('control', 0)
+    cv.createTrackbar('sigma', 'control', 9, 15, nothing)
+    cv.createTrackbar('blend', 'control', 7, 10, nothing)
+    cv.createTrackbar('str_sigma', 'control', 9, 15, nothing)
 
 
     print('Press SPACE to update the image\n')
 
-    cv2.imshow('src', src)
+    cv.imshow('src', src)
     update()
     while True:
-        ch = cv2.waitKey()
+        ch = cv.waitKey()
         if ch == ord(' '):
             update()
         if ch == 27:
             break
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()
