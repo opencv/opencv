@@ -17,6 +17,7 @@ find_host_program(AVDMANAGER_EXECUTABLE
   NAMES avdmanager
   PATH_SUFFIXES tools/bin
     PATHS
+      ${ANDROID_SDK}
       ENV ANDROID_SDK
     DOC "Android AVD Manager location"
     NO_DEFAULT_PATH
@@ -27,6 +28,7 @@ find_host_program(ANDROID_EXECUTABLE
   NAMES android.bat android
   PATH_SUFFIXES tools
   PATHS
+    ${ANDROID_SDK}
     ENV ANDROID_SDK
   DOC "Android SDK location"
   NO_DEFAULT_PATH
