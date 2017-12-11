@@ -1505,28 +1505,28 @@ public:
     /** @see setAnnealInitialT */
     CV_WRAP double getAnnealInitialT() const;
     /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP void setAnnealInitialT(double val) const;
+    CV_WRAP void setAnnealInitialT(double val);
 
     /** ANNEAL: Update final temperature.
     It must be \>=0 and less than initialT. Default value is 0.1.*/
     /** @see setAnnealFinalT */
     CV_WRAP double getAnnealFinalT() const;
     /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP void setAnnealFinalT(double val) const;
+    CV_WRAP void setAnnealFinalT(double val);
 
     /** ANNEAL: Update cooling ratio.
     It must be \>0 and less than 1. Default value is 0.95.*/
     /** @see setAnnealCoolingRatio */
     CV_WRAP double getAnnealCoolingRatio() const;
     /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP void setAnnealCoolingRatio(double val) const;
+    CV_WRAP void setAnnealCoolingRatio(double val);
 
     /** ANNEAL: Update iteration per step.
     It must be \>0 . Default value is 10.*/
     /** @see setAnnealItePerStep */
     CV_WRAP int getAnnealItePerStep() const;
     /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP void setAnnealItePerStep(int val) const;
+    CV_WRAP void setAnnealItePerStep(int val);
 
     /** possible activation functions */
     enum ActivationFunctions {
@@ -1874,33 +1874,31 @@ CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int
 class CV_EXPORTS_W ANN_MLP_ANNEAL : public ANN_MLP
 {
 public:
-    CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0, double param3 = 0, int param4 = 0) = 0;    /** ANNEAL: Update initial temperature.
-    It must be \>=0. Default value is 10.*/
     /** @see setAnnealInitialT */
-    CV_WRAP virtual double getAnnealInitialT() const=0;
+    CV_WRAP virtual double getAnnealInitialT() const;
     /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP virtual void setAnnealInitialT(double val) const = 0;
+    CV_WRAP virtual void setAnnealInitialT(double val);
 
     /** ANNEAL: Update final temperature.
     It must be \>=0 and less than initialT. Default value is 0.1.*/
     /** @see setAnnealFinalT */
-    CV_WRAP  virtual double getAnnealFinalT() const = 0;
+    CV_WRAP  virtual double getAnnealFinalT() const;
     /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP  virtual void setAnnealFinalT(double val) const = 0;
+    CV_WRAP  virtual void setAnnealFinalT(double val);
 
     /** ANNEAL: Update cooling ratio.
     It must be \>0 and less than 1. Default value is 0.95.*/
     /** @see setAnnealCoolingRatio */
-    CV_WRAP  virtual double getAnnealCoolingRatio() const = 0;
+    CV_WRAP  virtual double getAnnealCoolingRatio() const;
     /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP  virtual void setAnnealCoolingRatio(double val) const = 0;
+    CV_WRAP  virtual void setAnnealCoolingRatio(double val);
 
     /** ANNEAL: Update iteration per step.
     It must be \>0 . Default value is 10.*/
     /** @see setAnnealItePerStep */
-    CV_WRAP virtual int getAnnealItePerStep() const = 0;
+    CV_WRAP virtual int getAnnealItePerStep() const;
     /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP virtual  void setAnnealItePerStep(int val) const = 0;
+    CV_WRAP virtual  void setAnnealItePerStep(int val);
 
 
     /** @brief Creates empty model
@@ -1908,7 +1906,7 @@ public:
     Use StatModel::train to train the model, Algorithm::load\<ANN_MLP\>(filename) to load the pre-trained model.
     Note that the train method has optional flags: ANN_MLP::TrainFlags.
     */
-    CV_WRAP static Ptr<ANN_MLP> create();
+//    CV_WRAP static Ptr<ANN_MLP> create();
 
 };
 
@@ -1923,6 +1921,7 @@ class CV_EXPORTS SimulatedAnnealingSolver : public Algorithm
 {
 public:
     SimulatedAnnealingSolver() { init(); };
+    ~SimulatedAnnealingSolver();
     /** Give energy value for  a state of system.*/
     double energy();
     /** Function which change the state of system (random pertubation).*/
@@ -1930,91 +1929,41 @@ public:
     /** Function to reverse to the previous state.*/
     void reverseChangedState();
     /** Simulated annealing procedure.  */
-    int run()
-    {
-        CV_Assert(initialT>finalT);
-        double Ti = initialT;
-        double previousEnergy = energy();
-        int exchange = 0;
-        while (Ti > finalT)
-        {
-            for (int i = 0; i < iterPerStep; i++)
-            {
-                changedState();
-                double newEnergy = energy();
-                if (newEnergy < previousEnergy)
-                {
-                    previousEnergy = newEnergy;
-                }
-                else
-                {
-                    double r = rEnergy.uniform(double(0.0), double(1.0));
-                    if (r < exp(-(newEnergy - previousEnergy) / Ti))
-                    {
-                        previousEnergy = newEnergy;
-                        exchange++;
-                    }
-                    else
-                        reverseChangedState();
-                }
-
-            }
-            Ti *= coolingRatio;
-        }
-        return exchange;
-    }
+    int run();
     /** Set intial temperature of simulated annealing procedure.
     *@param x new initial temperature. x\>0
     */
-    void setInitialTemperature(double x)
-    {
-        CV_Assert(x>0);
-        initialT = x;
-    };
+    void setInitialTemperature(double x);
     /** Set final temperature of simulated annealing procedure.
     *@param x new final temperature value. 0\<x\<initial temperature
     */
-    void setFinalTemperature(double x)
-    {
-        CV_Assert(x>0);
-        finalT = x;
-    };
+    void setFinalTemperature(double x);
     /** Set setCoolingRatio of simulated annealing procedure : T(t) = coolingRatio * T(t-1).
     * @param x new cooling ratio value. 0\<x\<1
     */
-    void setCoolingRatio(double x)
-    {
-        CV_Assert(x>0 && x<1);
-        coolingRatio = x;
-    };
+    void setCoolingRatio(double x);
     /** Set number iteration per temperature step.
     * @param ite number of iteration per temperature step ite \> 0
     */
-    void setIterPerStep(int ite)
-    {
-        CV_Assert(ite>0);
-        iterPerStep = ite;
-    }
+    void setIterPerStep(int ite);
     struct Impl;
 protected :
-    void init()
-    {
-        initialT = 2;
-        finalT = 0.1;
-        coolingRatio = 0.95;
-        iterPerStep = 100;
-    }
+    void init();
+    Impl* impl;
+};
+struct SimulatedAnnealingSolver::Impl
+{
     RNG rEnergy;
     double coolingRatio;
     double initialT;
     double finalT;
     int iterPerStep;
-    Impl* impl;
-};
-struct SimulatedAnnealingSolver::Impl
-{
     Impl()
     {
+        initialT = 2;
+        finalT = 0.1;
+        coolingRatio = 0.95;
+        iterPerStep = 100;
         refcount = 1;
     }
     ~Impl() {  }
