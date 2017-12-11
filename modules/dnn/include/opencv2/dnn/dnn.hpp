@@ -423,8 +423,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
-        CV_WRAP void forward(std::vector<std::vector<Mat> >& outputBlobs,
-                             const std::vector<String>& outBlobNames);
+        void forward(std::vector<std::vector<Mat> >& outputBlobs,
+                     const std::vector<String>& outBlobNames);
 
         //TODO:
         /** @brief Optimized forward.
@@ -467,7 +467,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @note If updating blob is not empty then @p blob must have the same shape,
          *  because network reshaping is not implemented yet.
          */
-        CV_WRAP void setInput(const Mat &blob, const String& name = "");
+        CV_WRAP void setInput(InputArray blob, const String& name = "");
 
         /** @brief Sets the new value for the learned param of the layer.
          *  @param layer name or id of the layer.
@@ -733,7 +733,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
-    CV_EXPORTS_W Mat blobFromImage(const Mat& image, double scalefactor=1.0, const Size& size = Size(),
+    CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
      *  crops @p images from center, subtract @p mean values, scales values by @p scalefactor,
