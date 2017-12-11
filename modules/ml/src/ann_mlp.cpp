@@ -42,9 +42,6 @@
 
 namespace cv { namespace ml {
 
-    double SimulatedAnnealingSolver::energy() { return impl->energy(); };
-    void SimulatedAnnealingSolver::changedState() { impl->changedState(); };
-    void SimulatedAnnealingSolver::reverseChangedState() { impl->reverseChangedState(); };
 
 struct AnnParams
 {
@@ -185,30 +182,23 @@ protected:
         Mat l = nn->getLayerSizes();
         nbVariables = 0;
         adrVariables.clear();
-        for (int i = 0; i < l.rows; i++)
+        for (int i = 1; i < l.rows-1; i++)
         {
             Mat w = nn->getWeights(i);
-            if (i != 0)
-                for (int j = 0; j < w.rows; j++)
+            for (int j = 0; j < w.rows; j++)
+            {
+                for (int k = 0; k < w.cols; k++, nbVariables++)
                 {
-                    for (int k = 0; k < w.cols; k++, nbVariables++)
+                    if (j == w.rows - 1)
                     {
-                        if (j == w.rows - 1)
-                        {
-                            adrVariables.push_back(&w.at<double>(w.rows - 1, k));
-                        }
-                        else
-                        {
-                            adrVariables.push_back(&w.at<double>(j, k));
-                        }
+                        adrVariables.push_back(&w.at<double>(w.rows - 1, k));
+                    }
+                    else
+                    {
+                        adrVariables.push_back(&w.at<double>(j, k));
                     }
                 }
-            else
-                for (int k = 0; k < w.cols / 2; k++, nbVariables += 2)
-                {
-                    adrVariables.push_back(&w.at<double>(0, 2 * k));
-                    adrVariables.push_back(&w.at<double>(0, 2 * k + 1));
-                }
+            }
         }
     }
 

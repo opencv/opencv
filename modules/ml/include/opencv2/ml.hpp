@@ -1923,11 +1923,11 @@ public:
     SimulatedAnnealingSolver() { init(); };
     ~SimulatedAnnealingSolver();
     /** Give energy value for  a state of system.*/
-    double energy();
+    virtual double energy() =0;
     /** Function which change the state of system (random pertubation).*/
-    void changedState();
+    virtual void changedState() = 0;
     /** Function to reverse to the previous state.*/
-    void reverseChangedState();
+    virtual void reverseChangedState() = 0;
     /** Simulated annealing procedure.  */
     int run();
     /** Set intial temperature of simulated annealing procedure.
@@ -1966,13 +1966,8 @@ struct SimulatedAnnealingSolver::Impl
         iterPerStep = 100;
         refcount = 1;
     }
-    ~Impl() {  }
-
-    double energy() {return 0;};
-    void changedState(){};
-    void reverseChangedState(){};
-
     int refcount;
+    ~Impl() { refcount--;CV_Assert(refcount==0); }
 };
 
 
