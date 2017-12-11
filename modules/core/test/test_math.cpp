@@ -3736,4 +3736,130 @@ TEST(Core_SoftFloat, sincos64)
     }
 }
 
+TEST(Core_SoftFloat, CvRound)
+{
+    struct
+    {
+        uint64_t inVal;
+        int64_t out64;
+        int32_t out32;
+    } _values[] =
+    {
+        { 0x0123456789abcdefU,                     0,             0 }, // 3.51270056408850369812238561681E-303
+        { 0x0000000000000000U,                     0,             0 }, // 0
+        { 0x8000000000000000U,                     0,             0 }, // -0
+        { 0x000123456789abcdU,                     0,             0 }, // 1.5822747438273385725152200433E-309
+        { 0x800123456789abcdU,                     0,             0 }, // -1.5822747438273385725152200433E-309
+        { 0x7ff0000000000000U,             INT64_MAX,     INT32_MAX }, // +inf
+        { 0xfff0000000000000U,             INT64_MIN,     INT32_MIN }, // -inf
+        { 0x7ff0000000000001U,             INT64_MAX,     INT32_MAX }, // nan(casts to maximum value)
+        { 0xfff0000000000001U,             INT64_MAX,     INT32_MAX }, // nan(casts to maximum value)
+        { 0x7ffa5a5a5a5a5a5aU,             INT64_MAX,     INT32_MAX }, // nan(casts to maximum value)
+        { 0xfffa5a5a5a5a5a5aU,             INT64_MAX,     INT32_MAX }, // nan(casts to maximum value)
+        { 0x7fe123456789abcdU,             INT64_MAX,     INT32_MAX }, // 9.627645455595956656406699747E307
+        { 0xffe123456789abcdU,             INT64_MIN,     INT32_MIN }, // -9.627645455595956656406699747E307
+        { 0x43ffffffffffffffU,             INT64_MAX,     INT32_MAX }, // (2^53-1)*2^12
+        { 0xc3ffffffffffffffU,             INT64_MIN,     INT32_MIN }, // -(2^53-1)*2^12
+        { 0x43f0000000000000U,             INT64_MAX,     INT32_MAX }, // 2^64
+        { 0xc3f0000000000000U,             INT64_MIN,     INT32_MIN }, // -2^64
+        { 0x43efffffffffffffU,             INT64_MAX,     INT32_MAX }, // (2^53-1)*2^11
+        { 0xc3efffffffffffffU,             INT64_MIN,     INT32_MIN }, // -(2^53-1)*2^11
+        { 0x43e0000000000000U,             INT64_MAX,     INT32_MAX }, // 2^63
+        { 0xc3e0000000000000U, -0x7fffffffffffffff-1,     INT32_MIN }, // -2^63
+        { 0x43dfffffffffffffU,    0x7ffffffffffffc00,     INT32_MAX }, // (2^53-1)*2^10
+        { 0xc3dfffffffffffffU,   -0x7ffffffffffffc00,     INT32_MIN }, // -(2^53-1)*2^10
+        { 0x433fffffffffffffU,      0x1fffffffffffff,     INT32_MAX }, // (2^53-1)
+        { 0xc33fffffffffffffU,     -0x1fffffffffffff,     INT32_MIN }, // -(2^53-1)
+        { 0x432fffffffffffffU,      0x10000000000000,     INT32_MAX }, // (2^52-1) + 0.5
+        { 0xc32fffffffffffffU,     -0x10000000000000,     INT32_MIN }, // -(2^52-1) - 0.5
+        { 0x431fffffffffffffU,       0x8000000000000,     INT32_MAX }, // (2^51-1) + 0.75
+        { 0xc31fffffffffffffU,      -0x8000000000000,     INT32_MIN }, // -(2^51-1) - 0.75
+        { 0x431ffffffffffffeU,       0x8000000000000,     INT32_MAX }, // (2^51-1) + 0.5
+        { 0xc31ffffffffffffeU,      -0x8000000000000,     INT32_MIN }, // -(2^51-1) - 0.5
+        { 0x431ffffffffffffdU,       0x7ffffffffffff,     INT32_MAX }, // (2^51-1) + 0.25
+        { 0xc31ffffffffffffdU,      -0x7ffffffffffff,     INT32_MIN }, // -(2^51-1) - 0.25
+
+        { 0x41f0000000000000U,           0x100000000,     INT32_MAX }, // 2^32 = 4294967296
+        { 0xc1f0000000000000U,          -0x100000000,     INT32_MIN }, // -2^32 = -4294967296
+        { 0x41efffffffffffffU,           0x100000000,     INT32_MAX }, // 4294967295.99999952316284179688
+        { 0xc1efffffffffffffU,          -0x100000000,     INT32_MIN }, // -4294967295.99999952316284179688
+        { 0x41effffffff00000U,           0x100000000,     INT32_MAX }, // (2^32-1) + 0.5 = 4294967295.5
+        { 0xc1effffffff00000U,          -0x100000000,     INT32_MIN }, // -(2^32-1) - 0.5 = -4294967295.5
+        { 0x41efffffffe00000U,          0xffffffffll,     INT32_MAX }, // (2^32-1)
+        { 0xc1efffffffe00000U,         -0xffffffffll,     INT32_MIN }, // -(2^32-1)
+        { 0x41e0000000000000U,          0x80000000ll,     INT32_MAX }, // 2^31 = 2147483648
+        { 0xc1e0000000000000U,         -0x80000000ll, -0x7fffffff-1 }, // -2^31 = -2147483648
+        { 0x41dfffffffffffffU,          0x80000000ll,     INT32_MAX }, // 2147483647.99999976158142089844
+        { 0xc1dfffffffffffffU,         -0x80000000ll, -0x7fffffff-1 }, // -2147483647.99999976158142089844
+
+        { 0x41dffffffff00000U,          0x80000000ll,     INT32_MAX }, // (2^31-1) + 0.75
+        { 0xc1dffffffff00000U,         -0x80000000ll, -0x7fffffff-1 }, // -(2^31-1) - 0.75
+        { 0x41dfffffffe00001U,          0x80000000ll,     INT32_MAX }, // (2^31-1) + 0.5 + 2^-22
+        { 0xc1dfffffffe00001U,         -0x80000000ll, -0x7fffffff-1 }, // -(2^31-1) - 0.5 - 2^-22
+        { 0x41dfffffffe00000U,          0x80000000ll,     INT32_MAX }, // (2^31-1) + 0.5
+        { 0xc1dfffffffe00000U,         -0x80000000ll, -0x7fffffff-1 }, // -(2^31-1) - 0.5
+        { 0x41dfffffffdfffffU,            0x7fffffff,    0x7fffffff }, // (2^31-1) + 0.5 - 2^-22
+        { 0xc1dfffffffdfffffU,           -0x7fffffff,   -0x7fffffff }, // -(2^31-1) - 0.5 + 2^-22
+        { 0x41dfffffffd00000U,            0x7fffffff,    0x7fffffff }, // (2^31-1) + 0.25
+        { 0xc1dfffffffd00000U,           -0x7fffffff,   -0x7fffffff }, // -(2^31-1) - 0.25
+        { 0x41dfffffffc00000U,            0x7fffffff,    0x7fffffff }, // (2^31-1)
+        { 0xc1dfffffffc00000U,           -0x7fffffff,   -0x7fffffff }, // -(2^31-1)
+        { 0x41d0000000000000U,            0x40000000,    0x40000000 }, // 2^30 = 2147483648
+        { 0xc1d0000000000000U,           -0x40000000,   -0x40000000 }, // -2^30 = -2147483648
+
+        { 0x4006000000000000U,                     3,             3 }, // 2.75
+        { 0xc006000000000000U,                    -3,            -3 }, // -2.75
+        { 0x4004000000000001U,                     3,             3 }, // 2.5 + 2^-51
+        { 0xc004000000000001U,                    -3,            -3 }, // -2.5 - 2^-51
+        { 0x4004000000000000U,                     2,             2 }, // 2.5
+        { 0xc004000000000000U,                    -2,            -2 }, // -2.5
+        { 0x4003ffffffffffffU,                     2,             2 }, // 2.5 - 2^-51
+        { 0xc003ffffffffffffU,                    -2,            -2 }, // -2.5 + 2^-51
+        { 0x4002000000000000U,                     2,             2 }, // 2.25
+        { 0xc002000000000000U,                    -2,            -2 }, // -2.25
+
+        { 0x3ffc000000000000U,                     2,             2 }, // 1.75
+        { 0xbffc000000000000U,                    -2,            -2 }, // -1.75
+        { 0x3ff8000000000001U,                     2,             2 }, // 1.5 + 2^-52
+        { 0xbff8000000000001U,                    -2,            -2 }, // -1.5 - 2^-52
+        { 0x3ff8000000000000U,                     2,             2 }, // 1.5
+        { 0xbff8000000000000U,                    -2,            -2 }, // -1.5
+        { 0x3ff7ffffffffffffU,                     1,             1 }, // 1.5 - 2^-52
+        { 0xbff7ffffffffffffU,                    -1,            -1 }, // -1.5 + 2^-52
+        { 0x3ff4000000000000U,                     1,             1 }, // 1.25
+        { 0xbff4000000000000U,                    -1,            -1 }, // -1.25
+
+        { 0x3fe8000000000000U,                     1,             1 }, // 0.75
+        { 0xbfe8000000000000U,                    -1,            -1 }, // -0.75
+        { 0x3fe0000000000001U,                     1,             1 }, // 0.5 + 2^-53
+        { 0xbfe0000000000001U,                    -1,            -1 }, // -0.5 - 2^-53
+        { 0x3fe0000000000000U,                     0,             0 }, // 0.5
+        { 0xbfe0000000000000U,                     0,             0 }, // -0.5
+
+        { 0x3fd8000000000000U,                     0,             0 }, // 0.375
+        { 0xbfd8000000000000U,                     0,             0 }, // -0.375
+        { 0x3fd0000000000000U,                     0,             0 }, // 0.25
+        { 0xbfd0000000000000U,                     0,             0 }, // -0.25
+
+        { 0x0ff123456789abcdU,                     0,             0 }, // 6.89918601543515033558134828315E-232
+        { 0x8ff123456789abcdU,                     0,             0 }  // -6.89918601543515033558134828315E-232
+    };
+    struct testvalues
+    {
+        softdouble inVal;
+        int64_t out64;
+        int32_t out32;
+    } *values = (testvalues*)_values;
+
+    for (int i = 0, maxi = sizeof(_values) / sizeof(_values[0]); i < maxi; i++)
+    {
+        EXPECT_EQ(values[i].out64, cvRound64(values[i].inVal));
+        EXPECT_EQ(values[i].out64, saturate_cast<int64_t>(values[i].inVal));
+        EXPECT_EQ((uint64_t)(values[i].out64), saturate_cast<uint64_t>(values[i].inVal));
+        EXPECT_EQ(values[i].out32, cvRound(values[i].inVal));
+        EXPECT_EQ(values[i].out32, saturate_cast<int32_t>(values[i].inVal));
+        EXPECT_EQ((uint32_t)(values[i].out32), saturate_cast<uint32_t>(values[i].inVal));
+    }
+}
+
 /* End of file. */
