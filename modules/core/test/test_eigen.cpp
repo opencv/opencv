@@ -419,7 +419,7 @@ static void testEigen(const Mat_<T>& src, const Mat_<T>& expected_eigenvalues, b
     SCOPED_TRACE(runSymmetric ? "cv::eigen" : "cv::eigenNonSymmetric");
 
     int type = traits::Type<T>::value;
-    const T eps = 1e-6f;
+    const T eps = src.type() == CV_32F ? 1e-4f : 1e-6f;
 
     Mat eigenvalues, eigenvectors, eigenvalues0;
 
