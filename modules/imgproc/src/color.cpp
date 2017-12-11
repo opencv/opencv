@@ -6251,6 +6251,7 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     c = CV_DESCALE(c, trilinear_shift*3);
 }
 
+#if CV_SIMD128
 
 // 8 inValues are in [0; LAB_BASE]
 static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uint16x8& inY, const v_uint16x8& inZ,
@@ -6338,6 +6339,8 @@ static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uin
 
 #undef DOT_SHIFT_PACK
 }
+
+#endif // CV_SIMD128
 
 
 struct RGB2Lab_b
@@ -6465,6 +6468,8 @@ struct RGB2Lab_f
         i = 0;
         if(useInterpolation)
         {
+
+#if CV_SIMD128
             if(enablePackedLab)
             {
                 static const int nPixels = 4*2;
@@ -6548,6 +6553,7 @@ struct RGB2Lab_f
                     v_store_interleave(dst + i + 3*4, l_vec1, a_vec1, b_vec1);
                 }
             }
+#endif // CV_SIMD128
 
             for(; i < n; i += 3, src += scn)
             {
@@ -7036,6 +7042,8 @@ struct Lab2RGBinteger
         float alpha = ColorChannel<float>::max();
 
         int i = 0;
+
+#if CV_SIMD128
         if(enablePackedLab)
         {
             v_float32x4 vldiv  = v_setall_f32(256.f/100.0f);
@@ -7122,6 +7130,7 @@ struct Lab2RGBinteger
                 }
             }
         }
+#endif
 
         for(; i < n*3; i += 3, dst += dcn)
         {
@@ -7142,6 +7151,7 @@ struct Lab2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
         i = 0;
 
+#if CV_SIMD128
         if(enablePackedLab)
         {
             static const int nPixels = 8*2;
@@ -7213,6 +7223,7 @@ struct Lab2RGBinteger
                 }
             }
         }
+#endif
 
         for (; i < n*3; i += 3, dst += dcn)
         {
@@ -8097,6 +8108,8 @@ struct RGB2Luvinterpolate
         int i, scn = srccn, bIdx = blueIdx;
 
         i = 0; n *= 3;
+
+#if CV_SIMD128
         if(enablePackedRGB2Luv)
         {
             static const int nPixels = 8*2;
@@ -8154,6 +8167,7 @@ struct RGB2Luvinterpolate
                 v_store_interleave(dst + i, l16, u16, v16);
             }
         }
+#endif // CV_SIMD128
 
         for(; i < n; i += 3, src += scn)
         {
@@ -8514,6 +8528,7 @@ struct Luv2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
+#if CV_SIMD128
         if(enablePackedLuv2RGB)
         {
             static const int nPixels = 16;
@@ -8586,6 +8601,7 @@ struct Luv2RGBinteger
                 }
             }
         }
+#endif
 
         for (; i < n*3; i += 3, dst += dcn)
         {
