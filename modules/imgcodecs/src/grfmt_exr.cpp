@@ -584,37 +584,58 @@ bool  ExrEncoder::isFormatSupported( int depth ) const
 }
 
 
-// TODO scale appropriately
+/*
+  convertion table:
+  	CV_8U -> HALF
+    CV_8S -> HALF
+    CV_16U -> UINT
+    CV_16S -> FLOAT   
+    CV_32S -> FLOAT  loss precision
+    CV_32F -> FLOAT
+    CV_64F not supported
+ */
 bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
 {
     int width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
     bool result = false;
     bool issigned = depth == CV_8S || depth == CV_16S || depth == CV_32S;
-    bool isfloat = depth == CV_32F || depth == CV_64F;
-    depth = CV_ELEM_SIZE1(depth)*8;
     const size_t step = img.step;
 
     Header header( width, height );
     Imf::PixelType type;
 
-    if(depth == 8)
+    Mat exrMat;
+
+    switch( depth )
+    {
+    case CV_8S:
+    case CV_8U:
         type = HALF;
-    else if(isfloat)
-        type = FLOAT;
-    else
+        exrMat = img;
+        break;
+    case CV_16U:
         type = UINT;
+        img.convertTo( exrMat, CV_32S );
+        break;
+    case CV_16S:
+    case CV_32S:
+    case CV_32F:
+    default:
+        type = FLOAT;
+        img.convertTo( exrMat, CV_32F );
+    }
 
     if( channels == 3 )
     {
-        header.channels().insert( "R", Channel( type ));
-        header.channels().insert( "G", Channel( type ));
-        header.channels().insert( "B", Channel( type ));
+        header.channels().insert( "R", Channel( type ) );
+        header.channels().insert( "G", Channel( type ) );
+        header.channels().insert( "B", Channel( type ) );
         //printf("bunt\n");
     }
     else
     {
-        header.channels().insert( "Y", Channel( type ));
+        header.channels().insert( "Y", Channel( type ) );
         //printf("gray\n");
     }
 
@@ -625,26 +646,18 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     char *buffer;
     size_t bufferstep;
     int size;
-    if( type == FLOAT && depth == 32 )
-    {
-        buffer = (char *)const_cast<uchar *>(img.ptr());
-        bufferstep = step;
-        size = 4;
-    }
-    else if( depth > 16 || type == UINT )
-    {
-        buffer = (char *)new unsigned[width * channels];
-        bufferstep = 0;
-        size = 4;
-    }
-    else
+    if( type == HALF )
     {
         buffer = (char *)new half[width * channels];
         bufferstep = 0;
         size = 2;
     }
-
-    //printf("depth %d %s\n", depth, types[type]);
+    else
+    {
+        buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
+        bufferstep = step;
+        size = 4;
+    }
 
     if( channels == 3 )
     {
@@ -657,10 +670,8 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
 
     file.setFrameBuffer( frame );
 
-    int offset = issigned ? 1 << (depth - 1) : 0;
-
     result = true;
-    if( type == FLOAT && depth == 32 )
+    if( type != HALF )
     {
         try
         {
@@ -673,49 +684,21 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     }
     else
     {
-    //    int scale = 1 << (32 - depth);
-    //    printf("scale %d\n", scale);
         for(int line = 0; line < height; line++)
         {
-            if(type == UINT)
-            {
-                unsigned *buf = (unsigned*)buffer; // FIXME 64-bit problems
+            half *buf = (half *)buffer;
 
-                if( depth <= 8 )
-                {
-                    const uchar* sd = img.ptr(line);
-                    for(int i = 0; i < width * channels; i++)
-                        buf[i] = sd[i] + offset;
-                }
-                else if( depth <= 16 )
-                {
-                    const unsigned short *sd = img.ptr<unsigned short>(line);
-                    for(int i = 0; i < width * channels; i++)
-                        buf[i] = sd[i] + offset;
-                }
-                else
-                {
-                    const int *sd = img.ptr<int>(line); // FIXME 64-bit problems
-                    for(int i = 0; i < width * channels; i++)
-                        buf[i] = (unsigned) sd[i] + offset;
-                }
+            if( issigned )
+            {
+                const char* sd = exrMat.ptr<char>(line);
+                for(int i = 0; i < width * channels; i++)
+                    buf[i] = sd[i];
             }
             else
             {
-                half *buf = (half *)buffer;
-
-                if( depth <= 8 )
-                {
-                    const uchar* sd = img.ptr(line);
-                    for(int i = 0; i < width * channels; i++)
-                        buf[i] = sd[i];
-                }
-                else if( depth <= 16 )
-                {
-                    const unsigned short *sd = img.ptr<unsigned short>(line);
-                    for(int i = 0; i < width * channels; i++)
-                        buf[i] = sd[i];
-                }
+                const uchar* sd = exrMat.ptr(line);
+                for(int i = 0; i < width * channels; i++)
+                    buf[i] = sd[i];
             }
             try
             {
