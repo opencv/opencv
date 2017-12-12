@@ -385,12 +385,21 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         CV_Assert( size() == mask.size() );
     }
 
-    uchar* data0 = _dst.getMat().data;
-    _dst.create( dims, size, type() );
-    Mat dst = _dst.getMat();
+    Mat dst;
+    {
+        Mat dst0 = _dst.getMat();
+        _dst.create(dims, size, type()); // TODO Prohibit 'dst' re-creation, user should pass it explicitly with correct size/type or empty
+        dst = _dst.getMat();
 
-    if( dst.data != data0 ) // do not leave dst uninitialized
-        dst = Scalar(0);
+        if (dst.data != dst0.data) // re-allocation happened
+        {
+#ifdef OPENCV_FUTURE
+            CV_Assert(dst0.empty() &&
+                "copyTo(): dst size/type mismatch (looks like a bug) - use dst.release() before copyTo() call to suppress this message");
+#endif
+            dst = Scalar(0); // do not leave dst uninitialized
+        }
+    }
 
     CV_IPP_RUN_FAST(ipp_copyTo(*this, dst, mask))
 
