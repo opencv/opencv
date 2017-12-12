@@ -33,7 +33,7 @@ endif(HAVE_DOC_GENERATOR)
 
 if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
-  list(APPEND blacklist "ts" "java" "python2" "python3" "js" "world")
+  list(APPEND blacklist "ts" "java" "python_bindings_generator" "python2" "python3" "js" "world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
   unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
 
@@ -104,7 +104,6 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
         list(APPEND deps ${bib_file})
       endif()
       # Reference entry
-    #   set(one_ref "@ref ${m} | ${m}\n")
       set(one_ref "\t- ${m}. @ref ${m}\n")
       list(FIND EXTRA_MODULES ${m} _pos)
       if(${_pos} EQUAL -1)
@@ -205,14 +204,48 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     list(APPEND js_tutorials_assets_deps "${f}" "${opencv_tutorial_html_dir}/${fname}")
   endforeach()
 
-  add_custom_target(doxygen
+  add_custom_target(
+    doxygen_cpp
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
     DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps} ${js_tutorials_assets_deps}
+    COMMENT "Generate Doxygen documentation"
   )
+
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
     COMPONENT "docs" OPTIONAL
   )
+
+  if(NOT DEFINED HAVE_PYTHON_BS4 AND PYTHON_DEFAULT_EXECUTABLE)
+    # Documentation post-processing tool requires BuautifulSoup Python package
+    execute_process(COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" -c "import bs4; from bs4 import BeautifulSoup; print(bs4.__version__)"
+                    RESULT_VARIABLE _result
+                    OUTPUT_VARIABLE _bs4_version
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if(NOT _result EQUAL 0)
+      set(HAVE_PYTHON_BS4 0 CACHE INTERNAL "")
+    else()
+      message(STATUS "Python BeautifulSoup (bs4) version: ${_bs4_version}")
+      set(HAVE_PYTHON_BS4 1 CACHE INTERNAL "")
+    endif()
+  endif()
+
+  if(PYTHON_DEFAULT_EXECUTABLE AND HAVE_PYTHON_BS4
+      AND OPENCV_PYTHON_SIGNATURES_FILE AND TARGET gen_opencv_python_source)
+    add_custom_target(doxygen_python
+      COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/add_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON_SIGNATURES_FILE}" "python"
+      DEPENDS doxygen_cpp gen_opencv_python_source
+      COMMENT "Inject Python signatures into documentation"
+    )
+    add_custom_target(doxygen
+      DEPENDS doxygen_cpp doxygen_python
+    )
+  else()
+    add_custom_target(doxygen
+      DEPENDS doxygen_cpp
+    )
+  endif()
 
   # Alias to build/install docs only
   add_custom_target(install_docs
