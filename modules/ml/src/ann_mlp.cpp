@@ -127,6 +127,7 @@ int SimulatedAnnealingSolver::run()
         }
         Ti *= impl->coolingRatio;
     }
+    impl->finalT = Ti;
     return exchange;
 }
 
@@ -140,6 +141,11 @@ void SimulatedAnnealingSolver::setFinalTemperature(double x)
 {
     CV_Assert(x>0);
     impl->finalT = x;
+};
+
+double SimulatedAnnealingSolver::getFinalTemperature()
+{
+    return impl->finalT;
 };
 
 void SimulatedAnnealingSolver::setCoolingRatio(double x)

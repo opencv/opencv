@@ -1938,6 +1938,7 @@ public:
     *@param x new final temperature value. 0\<x\<initial temperature
     */
     void setFinalTemperature(double x);
+    double getFinalTemperature();
     /** Set setCoolingRatio of simulated annealing procedure : T(t) = coolingRatio * T(t-1).
     * @param x new cooling ratio value. 0\<x\<1
     */
