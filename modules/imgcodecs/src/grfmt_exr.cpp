@@ -160,26 +160,8 @@ bool  ExrDecoder::readHeader()
 
     if( result )
     {
-        int uintcnt = 0;
-        int chcnt = 0;
-        if( m_red )
-        {
-            chcnt++;
-            uintcnt += ( m_red->type == UINT );
-        }
-        if( m_green )
-        {
-            chcnt++;
-            uintcnt += ( m_green->type == UINT );
-        }
-        if( m_blue )
-        {
-            chcnt++;
-            uintcnt += ( m_blue->type == UINT );
-        }
-        m_type = (chcnt == uintcnt) ? UINT : FLOAT;
-
-        m_isfloat = (m_type == FLOAT);
+        m_type = FLOAT;
+        m_isfloat = ( m_type == FLOAT );
     }
 
     if( !result )
@@ -580,50 +562,37 @@ ExrEncoder::~ExrEncoder()
 
 bool  ExrEncoder::isFormatSupported( int depth ) const
 {
-    return CV_MAT_DEPTH(depth) >= CV_8U && CV_MAT_DEPTH(depth) < CV_64F;
+    return ( CV_MAT_DEPTH(depth) == CV_32F );
 }
 
 
-/*
-  convertion table:
-  CV_8U -> HALF
-  CV_8S -> HALF
-  CV_16U -> UINT
-  CV_16S -> FLOAT
-  CV_32S -> FLOAT  loss precision
-  CV_32F -> FLOAT
-  CV_64F not supported
- */
-bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
+bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     int width = img.cols, height = img.rows;
-    int depth = img.depth(), channels = img.channels();
+    int depth = img.depth();
+    CV_Assert( depth == CV_32F );
+    int channels = img.channels();
+    CV_Assert( channels == 3 || channels == 1 );
     bool result = false;
-    bool issigned = depth == CV_8S || depth == CV_16S || depth == CV_32S;
-    const size_t step = img.step;
-
     Header header( width, height );
-    Imf::PixelType type;
+    Imf::PixelType type = FLOAT;
 
-    Mat exrMat;
-
-    switch( depth )
+    for( size_t i = 0; i < params.size(); i += 2 )
     {
-    case CV_8S:
-    case CV_8U:
-        type = HALF;
-        exrMat = img;
-        break;
-    case CV_16U:
-        type = UINT;
-        img.convertTo( exrMat, CV_32S );
-        break;
-    case CV_16S:
-    case CV_32S:
-    case CV_32F:
-    default:
-        type = FLOAT;
-        img.convertTo( exrMat, CV_32F );
+        if( params[i] == CV_IMWRITE_EXR_TYPE )
+        {
+            switch( params[i+1] )
+            {
+            case IMWRITE_EXR_TYPE_HALF:
+                type = HALF;
+                break;
+            case IMWRITE_EXR_TYPE_FLOAT:
+                type = FLOAT;
+                break;
+            default:
+                throw std::runtime_error( "IMWRITE_EXR_TYPE is invalid or not supported" );
+            }
+        }
     }
 
     if( channels == 3 )
@@ -646,16 +615,18 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     char *buffer;
     size_t bufferstep;
     int size;
+    Mat exrMat;
     if( type == HALF )
     {
-        buffer = (char *)new half[width * channels];
-        bufferstep = 0;
+        convertFp16(img, exrMat);
+        buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
+        bufferstep = exrMat.step;
         size = 2;
     }
     else
     {
-        buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
-        bufferstep = step;
+        buffer = (char *)const_cast<uchar *>( img.ptr() );
+        bufferstep = img.step;
         size = 4;
     }
 
@@ -671,46 +642,13 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     file.setFrameBuffer( frame );
 
     result = true;
-    if( type != HALF )
+    try
     {
-        try
-        {
-            file.writePixels( height );
-        }
-        catch(...)
-        {
-            result = false;
-        }
+        file.writePixels( height );
     }
-    else
+    catch(...)
     {
-        for(int line = 0; line < height; line++)
-        {
-            half *buf = (half *)buffer;
-
-            if( issigned )
-            {
-                const char* sd = exrMat.ptr<char>(line);
-                for(int i = 0; i < width * channels; i++)
-                    buf[i] = sd[i];
-            }
-            else
-            {
-                const uchar* sd = exrMat.ptr(line);
-                for(int i = 0; i < width * channels; i++)
-                    buf[i] = sd[i];
-            }
-            try
-            {
-                file.writePixels( 1 );
-            }
-            catch(...)
-            {
-                result = false;
-                break;
-            }
-        }
-        delete[] buffer;
+        result = false;
     }
 
     return result;
