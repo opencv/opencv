@@ -57,6 +57,10 @@ namespace cv
 {
 namespace dnn
 {
+static inline int scaleAndRoundRoi(float f, float scale)
+{
+    return (int)(f * scale + (f >= 0.f ? 0.5f : -0.5f));
+}
 
 class PoolingLayerImpl : public PoolingLayer
 {
@@ -295,16 +299,16 @@ public:
                 if (poolingType == ROI)
                 {
                     const float *roisData = rois->ptr<float>(n);
-                    int ystartROI = round(roisData[2] * spatialScale);
-                    int yendROI = round(roisData[4] * spatialScale);
+                    int ystartROI = scaleAndRoundRoi(roisData[2], spatialScale);
+                    int yendROI = scaleAndRoundRoi(roisData[4], spatialScale);
                     int roiHeight = std::max(yendROI - ystartROI + 1, 1);
                     roiRatio = (float)roiHeight / height;
 
                     ystart = ystartROI + y0 * roiRatio;
                     yend = ystartROI + std::ceil((y0 + 1) * roiRatio);
 
-                    xstartROI = round(roisData[1] * spatialScale);
-                    int xendROI = round(roisData[3] * spatialScale);
+                    xstartROI = scaleAndRoundRoi(roisData[1], spatialScale);
+                    int xendROI = scaleAndRoundRoi(roisData[3], spatialScale);
                     int roiWidth = std::max(xendROI - xstartROI + 1, 1);
                     roiRatio = (float)roiWidth / width;
 
