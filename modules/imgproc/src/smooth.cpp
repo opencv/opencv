@@ -42,6 +42,9 @@
 //M*/
 
 #include "precomp.hpp"
+
+#include <vector>
+
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
@@ -49,6 +52,7 @@
 
 #include "filter.hpp"
 
+#include "fixedpoint.inl.hpp"
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -1763,7 +1767,223 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 
 namespace cv {
 
-static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size & ksize,
+template <typename T>
+static std::vector<T> getFixedpointGaussianKernel( int n, double sigma )
+{
+    if (sigma <= 0)
+    {
+        if(n == 1)
+            return std::vector<T>(1, softdouble(1.0));
+        else if(n == 3)
+        {
+            T v3[] = { softdouble(0.25), softdouble(0.5), softdouble(0.25) };
+            return std::vector<T>(v3, v3 + 3);
+        }
+        else if(n == 5)
+        {
+            T v5[] = { softdouble(0.0625), softdouble(0.25), softdouble(0.375), softdouble(0.25), softdouble(0.0625) };
+            return std::vector<T>(v5, v5 + 5);
+        }
+        else if(n == 7)
+        {
+            T v7[] = { softdouble(0.03125), softdouble(0.109375), softdouble(0.21875), softdouble(0.28125), softdouble(0.21875), softdouble(0.109375), softdouble(0.03125) };
+            return std::vector<T>(v7, v7 + 7);
+        }
+    }
+
+
+    softdouble sigmaX = sigma > 0 ? softdouble(sigma) : mulAdd(softdouble(n),softdouble(0.15),softdouble(0.35));// softdouble(((n-1)*0.5 - 1)*0.3 + 0.8)
+    softdouble scale2X = softdouble(-0.5*0.25)/(sigmaX*sigmaX);
+    std::vector<softdouble> values(n);
+    softdouble sum(0.);
+    for(int i = 0, x = 1 - n; i < n; i++, x+=2 )
+    {
+        // x = i - (n - 1)*0.5
+        // t = std::exp(scale2X*x*x)
+        values[i] = exp(softdouble(x*x)*scale2X);
+        sum += values[i];
+    }
+    sum = softdouble::one()/sum;
+
+    std::vector<T> kernel(n);
+    for(int i = 0; i < n; i++ )
+    {
+        kernel[i] = values[i] * sum;
+    }
+
+    return kernel;
+};
+
+template <typename ET, typename FT>
+static void hlineSmooth(ET* src, int cn, FT* m, int n, FT* dst, int len, int borderType)
+{
+    int pre_shift = n / 2;
+    int post_shift = n - pre_shift;
+    int i = 0;
+    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[pre_shift-i] * src[k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (int j = i - pre_shift, mid = 0; j < 0; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+        int j, mid;
+        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[mid] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)
+            for (; j < i + post_shift; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+    }
+    for (; i < len - post_shift + 1; i++, src += cn, dst += cn)
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k];
+        for (int j = 1; j < n; j++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[j] * src[j*cn + k];
+    }
+    for (i -= pre_shift; i < len - pre_shift; i++, src += cn, dst += cn) // Points that fall right from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k];
+        int j = 1;
+        for (; j < len - i; j++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[j] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (; j < n; j++)
+            {
+                int src_idx = borderInterpolate(i + j, len, borderType) - i;
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[j] * src[src_idx*cn + k];
+            }
+    }
+}
+template <typename ET, typename FT>
+static void vlineSmooth(FT** src, FT* m, int n, ET* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        typename FT::WT val = m[0] * src[0][i];
+        for (int j = 1; j < n; j++)
+            val = val + m[j] * src[j][i];
+        dst[i] = val;
+    }
+}
+template <typename ET, typename FT>
+static void fixedSmooth(ET* src, size_t src_stride, ET* dst, size_t dst_stride, int width, int height, int cn, FT* kx, int kxlen, FT* ky, int kylen, int borderType)
+{
+    AutoBuffer<FT> _buf((width*cn+2)*kylen);
+    FT* buf = _buf;
+    FT* coeffs = buf + width*cn*kylen;
+    memcpy(coeffs, ky, kylen*sizeof(FT));
+    coeffs += kylen;
+    memcpy(coeffs, ky, kylen*sizeof(FT));
+
+    AutoBuffer<FT*> _ptrs(kylen);
+    FT** ptrs = _ptrs;
+    int pre_shift = kylen / 2;
+    int post_shift = kylen - pre_shift;
+    // First line evaluation
+    int i = 0;
+    for (; i < min(post_shift, height); i++)
+    {
+        ptrs[i] = buf + i * width*cn;
+        hlineSmooth(src + i * src_stride, cn, kx, kxlen, ptrs[i], width, borderType);
+    }
+    if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+    {
+        for (; i < post_shift; i++)
+        {
+            int src_idx = borderInterpolate(i, height, borderType);
+            ptrs[i] = ptrs[src_idx];
+        }
+        for (int j = -pre_shift; j < 0; j++)
+        {
+            int src_idx = borderInterpolate(j, height, borderType);
+            if (src_idx >= post_shift)
+            {
+                ptrs[kylen + j] = buf + (kylen + j) * width*cn;
+                hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[kylen + j], width, borderType);
+            }
+            else
+            {
+                ptrs[kylen + j] = ptrs[src_idx];
+            }
+        }
+    }
+    vlineSmooth(ptrs, coeffs - post_shift, borderType == BORDER_CONSTANT ? min(post_shift, height) : kylen, dst, width*cn);
+    dst += dst_stride;
+
+    // border mode dependent part evaluation
+    // i points to last src row to evaluate in convolution
+    int bufline = i % kylen;
+    for (; i < min(kylen, height); i++, dst += dst_stride)
+    {
+        ptrs[bufline] = buf + bufline * width*cn;
+        hlineSmooth(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+        bufline = (bufline + 1) % kylen;
+        vlineSmooth(ptrs, coeffs - bufline, borderType == BORDER_CONSTANT ? i+1 : kylen, dst, width*cn);
+    }
+    // Points inside the border
+    for (; i < height; i++, dst += dst_stride)
+    {
+        hlineSmooth(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+        bufline = (bufline + 1) % kylen;
+        vlineSmooth(ptrs, coeffs - bufline, kylen, dst, width*cn);
+    }
+    // Points that fall below border
+    if (borderType != BORDER_CONSTANT)
+        for (; i < height + post_shift - 1; i++, dst += dst_stride)
+        {
+            int src_idx = borderInterpolate(i, height, borderType);
+            if ((i - src_idx) > kylen)
+                hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+            else
+                ptrs[bufline] = ptrs[(bufline + kylen - (i - src_idx)) % kylen];
+            bufline = (bufline + 1) % kylen;
+            vlineSmooth(ptrs, coeffs - bufline, kylen, dst, width*cn);
+        }
+    else if(height >= kylen - 1)
+    {
+        bufline = (bufline + 1) % kylen;
+        if (bufline > 1)
+        {
+            for (int j = 0; j < kylen - 1; j++)
+            {
+                ptrs[j] = buf + bufline * width*cn;
+                bufline = (bufline + 1) % kylen;
+            }
+            bufline = 0;
+        }
+        // i points to first src row to evaluate in convolution
+        for (i = height - kylen + 1; i < height - pre_shift; i++, dst += dst_stride, bufline++)
+            vlineSmooth(ptrs+bufline, coeffs, height - i, dst, width*cn);
+    }
+    else
+    {
+        // i points to first src row to evaluate in convolution
+        for (i = 1 - min(kylen - height, pre_shift); i < min(height - pre_shift, 0); i++, dst += dst_stride)
+            vlineSmooth(ptrs, coeffs - i, height, dst, width*cn);
+        for (; i < height - pre_shift; i++, dst += dst_stride)
+            vlineSmooth(ptrs+i, coeffs, height - i, dst, width*cn);
+    }
+}
+
+static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
+template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res) { res = getFixedpointGaussianKernel<T>(n, sigma); }
+
+template <typename T>
+static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
                                    double sigma1, double sigma2 )
 {
     int depth = CV_MAT_DEPTH(type);
@@ -1782,11 +2002,11 @@ static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size & ksize,
     sigma1 = std::max( sigma1, 0. );
     sigma2 = std::max( sigma2, 0. );
 
-    kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
+    getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F), kx );
     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
         ky = kx;
     else
-        ky = getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F) );
+        getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F), ky );
 }
 
 }
@@ -2082,7 +2302,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     Size size = _src.size();
     _dst.create( size, type );
 
-    if( borderType != BORDER_CONSTANT && (borderType & BORDER_ISOLATED) != 0 )
+    if( (borderType & ~BORDER_ISOLATED) != BORDER_CONSTANT &&
+        ((borderType & BORDER_ISOLATED) != 0 || !_src.getMat().isSubmatrix()) )
     {
         if( size.height == 1 )
             ksize.height = 1;
@@ -2103,6 +2324,17 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     (void)useOpenCL;
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
+    {
+        std::vector<ufixedpoint16> fkx, fky;
+        createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+        fixedSmooth(src.ptr<uint8_t>(), src.step1(), dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(), &fkx[0], (int)fkx.size(), &fky[0], (int)fky.size(), borderType & ~BORDER_ISOLATED);
+        return;
+    }
+
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
