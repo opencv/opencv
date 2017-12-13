@@ -52,6 +52,11 @@
 #  pragma GCC diagnostic ignored "-Wshadow"
 #endif
 
+/// C++ Standard Libraries
+#include <iostream>
+#include <stdexcept>
+#include <string>
+
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
