@@ -74,7 +74,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS BlankLayer : public Layer
     {
     public:
-        static Ptr<BlankLayer> create(const LayerParams &params);
+        static Ptr<Layer> create(const LayerParams &params);
     };
 
     //! LSTM recurrent layer
@@ -565,6 +565,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         static Ptr<ResizeNearestNeighborLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ProposalLayer : public Layer
+    {
+    public:
+        static Ptr<ProposalLayer> create(const LayerParams& params);
     };
 
 //! @}

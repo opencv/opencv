@@ -547,6 +547,7 @@ message LayerParameter {
   optional PowerParameter power_param = 122;
   optional PReLUParameter prelu_param = 131;
   optional PriorBoxParameter prior_box_param = 150;
+  optional ProposalParameter proposal_param = 201;
   optional PythonParameter python_param = 130;
   optional RecurrentParameter recurrent_param = 146;
   optional ReductionParameter reduction_param = 136;
@@ -854,6 +855,9 @@ message SaveOutputParameter {
 
 message DropoutParameter {
   optional float dropout_ratio = 1 [default = 0.5]; // dropout ratio
+  // Faster-RCNN framework's parameter.
+  // source: https://github.com/rbgirshick/caffe-fast-rcnn/tree/faster-rcnn
+  optional bool scale_train = 2 [default = true];  // scale train or test phase
 }
 
 // DummyDataLayer fills any number of arbitrarily shaped blobs with random
@@ -1617,4 +1621,15 @@ message ROIPoolingParameter {
   // Multiplicative spatial scale factor to translate ROI coords from their
   // input scale to the scale used when pooling
   optional float spatial_scale = 3 [default = 1];
+}
+
+message ProposalParameter {
+  optional uint32 feat_stride = 1 [default = 16];
+  optional uint32 base_size = 2 [default = 16];
+  optional uint32 min_size = 3 [default = 16];
+  repeated float ratio = 4;
+  repeated float scale = 5;
+  optional uint32 pre_nms_topn = 6 [default = 6000];
+  optional uint32 post_nms_topn = 7 [default = 300];
+  optional float nms_thresh = 8 [default = 0.7];
 }

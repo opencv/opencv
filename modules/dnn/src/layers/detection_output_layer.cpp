@@ -85,6 +85,8 @@ static inline bool SortScorePairDescend(const std::pair<float, T>& pair1,
 
 static inline float caffe_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b);
 
+static inline float caffe_norm_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b);
+
 } // namespace
 
 class DetectionOutputLayerImpl : public DetectionOutputLayer
@@ -106,6 +108,9 @@ public:
     int _topK;
     // Whenever predicted bounding boxes are respresented in YXHW instead of XYWH layout.
     bool _locPredTransposed;
+    // It's true whenever predicted bounding boxes and proposals are normalized to [0, 1].
+    bool _bboxesNormalized;
+    bool _clip;
 
     enum { _numAxes = 4 };
     static const std::string _layerName;
@@ -172,6 +177,8 @@ public:
         _confidenceThreshold = getParameter<float>(params, "confidence_threshold", 0, false, -FLT_MAX);
         _topK = getParameter<int>(params, "top_k", 0, false, -1);
         _locPredTransposed = getParameter<bool>(params, "loc_pred_transposed", 0, false, false);
+        _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
+        _clip = getParameter<bool>(params, "clip", 0, false, false);
 
         getCodeType(params);
 
@@ -182,20 +189,12 @@ public:
         setParamsFrom(params);
     }
 
-    void checkInputs(const std::vector<Mat*> &inputs)
-    {
-        for (size_t i = 1; i < inputs.size(); i++)
-        {
-            CV_Assert(inputs[i]->size == inputs[0]->size);
-        }
-    }
-
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(inputs.size() > 0);
+        CV_Assert(inputs.size() >= 3);
         CV_Assert(inputs[0][0] == inputs[1][0]);
 
         int numPriors = inputs[2][2] / 4;
@@ -398,12 +397,28 @@ public:
             // Retrieve all prior bboxes
             std::vector<util::NormalizedBBox> priorBBoxes;
             std::vector<std::vector<float> > priorVariances;
-            GetPriorBBoxes(priorData, numPriors, priorBBoxes, priorVariances);
+            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, priorBBoxes, priorVariances);
 
             // Decode all loc predictions to bboxes
+            util::NormalizedBBox clipBounds;
+            if (_clip)
+            {
+                CV_Assert(_bboxesNormalized || inputs.size() >= 4);
+                clipBounds.xmin = clipBounds.ymin = 0.0f;
+                if (_bboxesNormalized)
+                    clipBounds.xmax = clipBounds.ymax = 1.0f;
+                else
+                {
+                    // Input image sizes;
+                    CV_Assert(inputs[3]->dims == 4);
+                    clipBounds.xmax = inputs[3]->size[3] - 1;
+                    clipBounds.ymax = inputs[3]->size[2] - 1;
+                }
+            }
             DecodeBBoxesAll(allLocationPredictions, priorBBoxes, priorVariances, num,
                             _shareLocation, _numLocClasses, _backgroundLabelId,
-                            _codeType, _varianceEncodedInTarget, false, allDecodedBBoxes);
+                            _codeType, _varianceEncodedInTarget, _clip, clipBounds,
+                            _bboxesNormalized, allDecodedBBoxes);
         }
 
         size_t numKept = 0;
@@ -489,8 +504,12 @@ public:
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
                 CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
-            NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                indices[c], util::caffe_box_overlap);
+            if (_bboxesNormalized)
+                NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
+                         indices[c], util::caffe_norm_box_overlap);
+            else
+                NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
+                         indices[c], util::caffe_box_overlap);
             numDetections += indices[c].size();
         }
         if (_keepTopK > -1 && numDetections > (size_t)_keepTopK)
@@ -539,8 +558,7 @@ public:
     // **************************************************************
 
     // Compute bbox size
-    template<bool normalized>
-    static float BBoxSize(const util::NormalizedBBox& bbox)
+    static float BBoxSize(const util::NormalizedBBox& bbox, bool normalized)
     {
         if (bbox.xmax < bbox.xmin || bbox.ymax < bbox.ymin)
         {
@@ -575,7 +593,8 @@ public:
     static void DecodeBBox(
         const util::NormalizedBBox& prior_bbox, const std::vector<float>& prior_variance,
         const cv::String& code_type,
-        const bool clip_bbox, const util::NormalizedBBox& bbox,
+        const bool clip_bbox, const util::NormalizedBBox& clip_bounds,
+        const bool normalized_bbox, const util::NormalizedBBox& bbox,
         util::NormalizedBBox& decode_bbox)
     {
         float bbox_xmin = variance_encoded_in_target ? bbox.xmin : prior_variance[0] * bbox.xmin;
@@ -592,11 +611,16 @@ public:
         else if (code_type == "CENTER_SIZE")
         {
             float prior_width = prior_bbox.xmax - prior_bbox.xmin;
-            CV_Assert(prior_width > 0);
             float prior_height = prior_bbox.ymax - prior_bbox.ymin;
+            if (!normalized_bbox)
+            {
+                prior_width += 1.0f;
+                prior_height += 1.0f;
+            }
+            CV_Assert(prior_width > 0);
             CV_Assert(prior_height > 0);
-            float prior_center_x = (prior_bbox.xmin + prior_bbox.xmax) * .5;
-            float prior_center_y = (prior_bbox.ymin + prior_bbox.ymax) * .5;
+            float prior_center_x = prior_bbox.xmin + prior_width * .5;
+            float prior_center_y = prior_bbox.ymin + prior_height * .5;
 
             float decode_bbox_center_x, decode_bbox_center_y;
             float decode_bbox_width, decode_bbox_height;
@@ -614,14 +638,14 @@ public:
 
         if (clip_bbox)
         {
-            // Clip the util::NormalizedBBox such that the range for each corner is [0, 1]
-            decode_bbox.xmin = std::max(std::min(decode_bbox.xmin, 1.f), 0.f);
-            decode_bbox.ymin = std::max(std::min(decode_bbox.ymin, 1.f), 0.f);
-            decode_bbox.xmax = std::max(std::min(decode_bbox.xmax, 1.f), 0.f);
-            decode_bbox.ymax = std::max(std::min(decode_bbox.ymax, 1.f), 0.f);
+            // Clip the util::NormalizedBBox.
+            decode_bbox.xmin = std::max(std::min(decode_bbox.xmin, clip_bounds.xmax), clip_bounds.xmin);
+            decode_bbox.ymin = std::max(std::min(decode_bbox.ymin, clip_bounds.ymax), clip_bounds.ymin);
+            decode_bbox.xmax = std::max(std::min(decode_bbox.xmax, clip_bounds.xmax), clip_bounds.xmin);
+            decode_bbox.ymax = std::max(std::min(decode_bbox.ymax, clip_bounds.ymax), clip_bounds.ymin);
         }
         decode_bbox.clear_size();
-        decode_bbox.set_size(BBoxSize<true>(decode_bbox));
+        decode_bbox.set_size(BBoxSize(decode_bbox, normalized_bbox));
     }
 
     // Decode a set of bboxes according to a set of prior bboxes
@@ -629,7 +653,8 @@ public:
         const std::vector<util::NormalizedBBox>& prior_bboxes,
         const std::vector<std::vector<float> >& prior_variances,
         const cv::String& code_type, const bool variance_encoded_in_target,
-        const bool clip_bbox, const std::vector<util::NormalizedBBox>& bboxes,
+        const bool clip_bbox, const util::NormalizedBBox& clip_bounds,
+        const bool normalized_bbox, const std::vector<util::NormalizedBBox>& bboxes,
         std::vector<util::NormalizedBBox>& decode_bboxes)
     {
         CV_Assert(prior_bboxes.size() == prior_variances.size());
@@ -641,13 +666,15 @@ public:
         {
             for (int i = 0; i < num_bboxes; ++i)
                 DecodeBBox<true>(prior_bboxes[i], prior_variances[i], code_type,
-                                 clip_bbox, bboxes[i], decode_bboxes[i]);
+                                 clip_bbox, clip_bounds, normalized_bbox,
+                                 bboxes[i], decode_bboxes[i]);
         }
         else
         {
             for (int i = 0; i < num_bboxes; ++i)
                 DecodeBBox<false>(prior_bboxes[i], prior_variances[i], code_type,
-                                  clip_bbox, bboxes[i], decode_bboxes[i]);
+                                  clip_bbox, clip_bounds, normalized_bbox,
+                                  bboxes[i], decode_bboxes[i]);
         }
     }
 
@@ -658,7 +685,8 @@ public:
         const int num, const bool share_location,
         const int num_loc_classes, const int background_label_id,
         const cv::String& code_type, const bool variance_encoded_in_target,
-        const bool clip, std::vector<LabelBBox>& all_decode_bboxes)
+        const bool clip, const util::NormalizedBBox& clip_bounds,
+        const bool normalized_bbox, std::vector<LabelBBox>& all_decode_bboxes)
     {
         CV_Assert(all_loc_preds.size() == num);
         all_decode_bboxes.clear();
@@ -677,8 +705,8 @@ public:
                 if (label_loc_preds == loc_preds.end())
                     CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
                 DecodeBBoxes(prior_bboxes, prior_variances,
-                             code_type, variance_encoded_in_target, clip,
-                             label_loc_preds->second, decode_bboxes[label]);
+                             code_type, variance_encoded_in_target, clip, clip_bounds,
+                             normalized_bbox, label_loc_preds->second, decode_bboxes[label]);
             }
         }
     }
@@ -689,7 +717,7 @@ public:
     //    prior_bboxes: stores all the prior bboxes in the format of util::NormalizedBBox.
     //    prior_variances: stores all the variances needed by prior bboxes.
     static void GetPriorBBoxes(const float* priorData, const int& numPriors,
-                        std::vector<util::NormalizedBBox>& priorBBoxes,
+                        bool normalized_bbox, std::vector<util::NormalizedBBox>& priorBBoxes,
                         std::vector<std::vector<float> >& priorVariances)
     {
         priorBBoxes.clear(); priorBBoxes.resize(numPriors);
@@ -702,7 +730,7 @@ public:
             bbox.ymin = priorData[startIdx + 1];
             bbox.xmax = priorData[startIdx + 2];
             bbox.ymax = priorData[startIdx + 3];
-            bbox.set_size(BBoxSize<true>(bbox));
+            bbox.set_size(BBoxSize(bbox, normalized_bbox));
         }
 
         for (int i = 0; i < numPriors; ++i)
@@ -805,36 +833,16 @@ public:
                          const util::NormalizedBBox& bbox2)
     {
         util::NormalizedBBox intersect_bbox;
-        if (bbox2.xmin > bbox1.xmax || bbox2.xmax < bbox1.xmin ||
-            bbox2.ymin > bbox1.ymax || bbox2.ymax < bbox1.ymin)
-        {
-            // Return [0, 0, 0, 0] if there is no intersection.
-            intersect_bbox.xmin = 0;
-            intersect_bbox.ymin = 0;
-            intersect_bbox.xmax = 0;
-            intersect_bbox.ymax = 0;
-        }
-        else
-        {
-            intersect_bbox.xmin = std::max(bbox1.xmin, bbox2.xmin);
-            intersect_bbox.ymin = std::max(bbox1.ymin, bbox2.ymin);
-            intersect_bbox.xmax = std::min(bbox1.xmax, bbox2.xmax);
-            intersect_bbox.ymax = std::min(bbox1.ymax, bbox2.ymax);
-        }
+        intersect_bbox.xmin = std::max(bbox1.xmin, bbox2.xmin);
+        intersect_bbox.ymin = std::max(bbox1.ymin, bbox2.ymin);
+        intersect_bbox.xmax = std::min(bbox1.xmax, bbox2.xmax);
+        intersect_bbox.ymax = std::min(bbox1.ymax, bbox2.ymax);
 
-        float intersect_width, intersect_height;
-        intersect_width = intersect_bbox.xmax - intersect_bbox.xmin;
-        intersect_height = intersect_bbox.ymax - intersect_bbox.ymin;
-        if (intersect_width > 0 && intersect_height > 0)
+        float intersect_size = BBoxSize(intersect_bbox, normalized);
+        if (intersect_size > 0)
         {
-            if (!normalized)
-            {
-                intersect_width++;
-                intersect_height++;
-            }
-            float intersect_size = intersect_width * intersect_height;
-            float bbox1_size = BBoxSize<true>(bbox1);
-            float bbox2_size = BBoxSize<true>(bbox2);
+            float bbox1_size = BBoxSize(bbox1, normalized);
+            float bbox2_size = BBoxSize(bbox2, normalized);
             return intersect_size / (bbox1_size + bbox2_size - intersect_size);
         }
         else
@@ -845,6 +853,11 @@ public:
 };
 
 float util::caffe_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b)
+{
+    return DetectionOutputLayerImpl::JaccardOverlap<false>(a, b);
+}
+
+float util::caffe_norm_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b)
 {
     return DetectionOutputLayerImpl::JaccardOverlap<true>(a, b);
 }
