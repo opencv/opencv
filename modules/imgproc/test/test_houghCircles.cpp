@@ -196,8 +196,8 @@ TEST(HoughCirclesTest, DefaultMaxRadius)
     EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
     for (size_t i = 0; i < circles.size(); ++i)
     {
-        EXPECT_GE(circles[0][2], minRadius) << "Radius should be >= minRadius";
-        EXPECT_LE(circles[0][2], maxDimension) << "Radius should be <= max image dimension";
+        EXPECT_GE(circles[i][2], minRadius) << "Radius should be >= minRadius";
+        EXPECT_LE(circles[i][2], maxDimension) << "Radius should be <= max image dimension";
     }
 }
 
@@ -228,6 +228,6 @@ TEST(HoughCirclesTest, CentersOnly)
     EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
     for (size_t i = 0; i < circles.size(); ++i)
     {
-        EXPECT_EQ(circles[0][2], 0.0f) << "Did not ask for radius";
+        EXPECT_EQ(circles[i][2], 0.0f) << "Did not ask for radius";
     }
 }
