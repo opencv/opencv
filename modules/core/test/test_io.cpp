@@ -653,6 +653,11 @@ struct data_t
 
 TEST(Core_InputOutput, filestorage_base64_basic)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_valid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_basic_test.yml",
         "core_io_base64_basic_test.xml",
@@ -662,7 +667,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         std::vector<data_t> rawdata;
 
@@ -809,12 +815,17 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         EXPECT_EQ(_rd_in.depth(), _rd_out.depth());
         EXPECT_EQ(cv::countNonZero(cv::mean(_rd_in != _rd_out)), 0);
 
-        remove(name);
+        remove(name.c_str());
     }
 }
 
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_valid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
@@ -839,7 +850,8 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         EXPECT_NO_THROW(
         {
@@ -897,12 +909,17 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             fs.release();
         }
 
-        remove(real_name[ptr - filenames]);
+        remove((basename + '_' + real_name[ptr - filenames]).c_str());
     }
 }
 
 TEST(Core_InputOutput, filestorage_base64_invalid_call)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_invalid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
@@ -912,7 +929,8 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         EXPECT_ANY_THROW({
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
@@ -924,10 +942,10 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
             cvStartWriteStruct(*fs, "rawdata", CV_NODE_SEQ);
             cvStartWriteStruct(*fs, 0, CV_NODE_SEQ | CV_NODE_FLOW);
-            cvWriteRawDataBase64(*fs, name, 1, "u");
+            cvWriteRawDataBase64(*fs, name.c_str(), 1, "u");
         });
 
-        remove(name);
+        remove(name.c_str());
     }
 }
 
@@ -1015,7 +1033,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         }
     }
 
-    String fileName = "vec_test.";
+    String fileName = "vec_vec_io_test.";
 
     std::vector<String> formats;
     formats.push_back("xml");
@@ -1572,7 +1590,7 @@ TEST(Core_InputOutput, FileStorage_json_bool)
 
 TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 {
-    const std::string fileName = "test.yml";
+    const std::string fileName = "FileStorage_free_file_after_exception_test.yml";
     const std::string content = "%YAML:1.0\n cameraMatrix;:: !<tag:yaml.org,2002:opencv-matrix>\n";
 
     fstream testFile;
