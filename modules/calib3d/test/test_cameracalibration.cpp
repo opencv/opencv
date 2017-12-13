@@ -1431,10 +1431,10 @@ void CV_StereoCalibrationCornerTest::run(int)
     // perform remap-resize
     Mat src_result;
     remap(image, src_result, srcRmap[0], srcRmap[1], INTER_LINEAR);
-    resize(src_result, src_result, Size(), scale, scale, INTER_LINEAR);
+    resize(src_result, src_result, Size(), scale, scale, INTER_LINEAR_EXACT);
     // perform resize-remap
     Mat rsz_result;
-    resize(image, rsz_result, Size(), scale, scale, INTER_LINEAR);
+    resize(image, rsz_result, Size(), scale, scale, INTER_LINEAR_EXACT);
     remap(rsz_result, rsz_result, rszRmap[0], rszRmap[1], INTER_LINEAR);
 
     // modifying the camera matrix with resizeCameraMatrix must yield the same

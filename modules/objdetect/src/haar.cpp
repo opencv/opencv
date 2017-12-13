@@ -1323,7 +1323,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             norm1 = cvMat( sz1.height, sz1.width, CV_32FC1, normImg ? normImg->data.ptr : 0 );
             mask1 = cvMat( sz1.height, sz1.width, CV_8UC1, temp->data.ptr );
 
-            cvResize( img, &img1, CV_INTER_LINEAR );
+            cvResize( img, &img1, cv::INTER_LINEAR_EXACT );
             cvIntegral( &img1, &sum1, &sqsum1, _tilted );
 
             int ystep = factor > 2 ? 1 : 2;

@@ -1814,7 +1814,7 @@ public:
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
-                resize(img, smallerImg, sz);
+                resize(img, smallerImg, sz, 0, 0, INTER_LINEAR_EXACT);
             hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
 
@@ -2031,7 +2031,7 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
         }
         else
         {
-            resize(_img, image_scale, effect_size);
+            resize(_img, image_scale, effect_size, 0, 0, INTER_LINEAR_EXACT);
             if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
                 blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
@@ -3525,7 +3525,7 @@ public:
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
-                resize(img, smallerImg, sz);
+                resize(img, smallerImg, sz, 0, 0, INTER_LINEAR_EXACT);
 
             hog->detectROI(smallerImg, (*locations)[i].locations, dets, (*locations)[i].confidences, hitThreshold, Size(), padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));

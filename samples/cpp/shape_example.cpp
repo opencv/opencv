@@ -80,7 +80,7 @@ int main(int argc, char** argv)
     queryName<<path<<indexQuery<<".png";
     Mat query=imread(queryName.str(), IMREAD_GRAYSCALE);
     Mat queryToShow;
-    resize(query, queryToShow, sz2Sh);
+    resize(query, queryToShow, sz2Sh, 0, 0, INTER_LINEAR_EXACT);
     imshow("QUERY", queryToShow);
     moveWindow("TEST", 0,0);
     vector<Point> contQuery = simpleContour(query);
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
         cout<<"name: "<<iiname.str()<<endl;
         Mat iiIm=imread(iiname.str(), 0);
         Mat iiToShow;
-        resize(iiIm, iiToShow, sz2Sh);
+        resize(iiIm, iiToShow, sz2Sh, 0, 0, INTER_LINEAR_EXACT);
         imshow("TEST", iiToShow);
         moveWindow("TEST", sz2Sh.width+50,0);
         vector<Point> contii = simpleContour(iiIm);
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     bestname<<path<<bestMatch<<".png";
     Mat iiIm=imread(bestname.str(), 0);
     Mat bestToShow;
-    resize(iiIm, bestToShow, sz2Sh);
+    resize(iiIm, bestToShow, sz2Sh, 0, 0, INTER_LINEAR_EXACT);
     imshow("BEST MATCH", bestToShow);
     moveWindow("BEST MATCH", sz2Sh.width+50,0);
     waitKey();

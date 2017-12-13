@@ -108,14 +108,14 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
             {
               float resizeFactor = std::max(size.width / (float)imgSize.width,
                                             size.height / (float)imgSize.height);
-              resize(images[i], images[i], Size(), resizeFactor, resizeFactor);
+              resize(images[i], images[i], Size(), resizeFactor, resizeFactor, INTER_LINEAR);
               Rect crop(Point(0.5 * (images[i].cols - size.width),
                               0.5 * (images[i].rows - size.height)),
                         size);
               images[i] = images[i](crop);
             }
             else
-              resize(images[i], images[i], size);
+              resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
         }
         if(images[i].depth() == CV_8U)
             images[i].convertTo(images[i], CV_32F);

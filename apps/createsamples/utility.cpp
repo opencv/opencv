@@ -686,8 +686,8 @@ void icvPlaceDistortedSample( Mat background,
     Mat img( background.size(), CV_8UC1 );
     Mat maskimg( background.size(), CV_8UC1 );
 
-    resize( data->img(roi), img, img.size(), 0, 0, INTER_LINEAR);
-    resize( data->maskimg(roi), maskimg, maskimg.size(), 0, 0, INTER_LINEAR);
+    resize( data->img(roi), img, img.size(), 0, 0, INTER_LINEAR_EXACT);
+    resize( data->maskimg(roi), maskimg, maskimg.size(), 0, 0, INTER_LINEAR_EXACT);
 
     forecolordev = (int) (maxintensitydev * (2.0 * rand() / RAND_MAX - 1.0));
 
@@ -877,7 +877,7 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         ((float) data->winsize.height + reader->point.y) / ((float) reader->src.rows) );
 
     resize( reader->src, reader->img,
-            Size((int)(reader->scale * reader->src.rows + 0.5F), (int)(reader->scale * reader->src.cols + 0.5F)), 0, 0, INTER_LINEAR );
+            Size((int)(reader->scale * reader->src.rows + 0.5F), (int)(reader->scale * reader->src.cols + 0.5F)), 0, 0, INTER_LINEAR_EXACT );
 }
 
 /*
@@ -932,7 +932,7 @@ void icvGetBackgroundImage( CvBackgroundData* data,
             if( reader->scale <= 1.0F )
             {
                 resize(reader->src, reader->img,
-                       Size((int)(reader->scale * reader->src.rows), (int)(reader->scale * reader->src.cols)), 0, 0, INTER_LINEAR);
+                       Size((int)(reader->scale * reader->src.rows), (int)(reader->scale * reader->src.cols)), 0, 0, INTER_LINEAR_EXACT);
             }
             else
             {
@@ -1323,7 +1323,7 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
             if( error ) break;
             Mat sample;
             resize( src(Rect(x, y, width, height)), sample, Size(winwidth, winheight), 0, 0,
-                    width >= winwidth && height >= winheight ? INTER_AREA : INTER_LINEAR );
+                    width >= winwidth && height >= winheight ? INTER_AREA : INTER_LINEAR_EXACT );
 
             if( showsamples )
             {
@@ -1452,7 +1452,7 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
                 icvGetTraininDataFromVec( sample, file );
                 if( scale != 1.0 )
                     resize( sample, sample,
-                            Size(MAX(1, cvCeil(scale * winheight)), MAX(1, cvCeil(scale * winwidth))), 0, 0, INTER_LINEAR);
+                            Size(MAX(1, cvCeil(scale * winheight)), MAX(1, cvCeil(scale * winwidth))), 0, 0, INTER_LINEAR_EXACT);
                 imshow( "Sample", sample );
                 if( (waitKey( 0 ) & 0xFF) == 27 ) break;
             }

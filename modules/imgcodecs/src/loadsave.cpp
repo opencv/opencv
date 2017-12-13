@@ -506,7 +506,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
     if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ) );
+        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :

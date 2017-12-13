@@ -1060,10 +1060,10 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
         // Compute the resized image
         if( level != firstLevel )
         {
-            resize(prevImg, currImg, sz, 0, 0, INTER_LINEAR);
+            resize(prevImg, currImg, sz, 0, 0, INTER_LINEAR_EXACT);
             if( !mask.empty() )
             {
-                resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR);
+                resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR_EXACT);
                 if( level > firstLevel )
                     threshold(currMask, currMask, 254, 0, THRESH_TOZERO);
             }
