@@ -917,11 +917,15 @@ endif()
 # ========================== build platform ==========================
 status("")
 status("  Platform:")
-if(NOT CMAKE_VERSION VERSION_LESS 2.8.11 AND NOT BUILD_INFO_SKIP_TIMESTAMP)
-  string(TIMESTAMP TIMESTAMP "" UTC)
-  if(TIMESTAMP)
-    status("    Timestamp:"    ${TIMESTAMP})
-  endif()
+if(NOT DEFINED OPENCV_TIMESTAMP
+    AND NOT CMAKE_VERSION VERSION_LESS 2.8.11
+    AND NOT BUILD_INFO_SKIP_TIMESTAMP
+)
+  string(TIMESTAMP OPENCV_TIMESTAMP "" UTC)
+  set(OPENCV_TIMESTAMP "${OPENCV_TIMESTAMP}" CACHE STRING "Timestamp of OpenCV build configuration" FORCE)
+endif()
+if(OPENCV_TIMESTAMP)
+  status("    Timestamp:"      ${OPENCV_TIMESTAMP})
 endif()
 status("    Host:"             ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR})
 if(CMAKE_CROSSCOMPILING)
