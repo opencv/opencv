@@ -136,13 +136,13 @@ typedef  __vector double vec_double2;
 #define vec_double2_mn       vec_double2_sp(2.2250738585072014E-308)
 #define vec_double2_z        vec_double2_sp(0)
 
-#define vec_bchar16	          __vector __bool char
+#define vec_bchar16           __vector __bool char
 #define vec_bchar16_set(...) (vec_bchar16){__VA_ARGS__}
 #define vec_bchar16_c(v)     ((vec_bchar16)(v))
 #define vec_bchar16_f        (__VSX_S16__(vec_bchar16, 0))
 #define vec_bchar16_t        (__VSX_S16__(vec_bchar16, 1))
 
-#define vec_bshort8	          __vector __bool short
+#define vec_bshort8           __vector __bool short
 #define vec_bshort8_set(...) (vec_bshort8){__VA_ARGS__}
 #define vec_bshort8_c(v)     ((vec_bshort8)(v))
 #define vec_bshort8_f        (__VSX_S8__(vec_bshort8, 0))
@@ -154,20 +154,20 @@ typedef  __vector double vec_double2;
 #define vec_bint4_f          (__VSX_S4__(vec_bint4, 0))
 #define vec_bint4_t          (__VSX_S4__(vec_bint4, 1))
 
-#define vec_bdword2	           __vector __bool long long
+#define vec_bdword2            __vector __bool long long
 #define vec_bdword2_set(...)  (vec_bdword2){__VA_ARGS__}
 #define vec_bdword2_c(v)      ((vec_bdword2)(v))
 #define vec_bdword2_f         (__VSX_S2__(vec_bdword2, 0))
 #define vec_bdword2_t         (__VSX_S2__(vec_bdword2, 1))
 
 
-#define FORCE_INLINE(tp) extern inline tp __attribute__((always_inline))
+#define VSX_FINLINE(tp) extern inline tp __attribute__((always_inline))
 
 #define VSX_REDIRECT_1RG(rt, rg, fnm, fn2)   \
-FORCE_INLINE(rt) fnm(const rg& a) { return fn2(a); }
+VSX_FINLINE(rt) fnm(const rg& a) { return fn2(a); }
 
 #define VSX_REDIRECT_2RG(rt, rg, fnm, fn2)   \
-FORCE_INLINE(rt) fnm(const rg& a, const rg& b) { return fn2(a, b); }
+VSX_FINLINE(rt) fnm(const rg& a, const rg& b) { return fn2(a, b); }
 
 /*
  * GCC VSX compatibility
@@ -176,16 +176,16 @@ FORCE_INLINE(rt) fnm(const rg& a, const rg& b) { return fn2(a, b); }
 
 // inline asm helper
 #define VSX_IMPL_1RG(rt, rto, rg, rgo, opc, fnm) \
-FORCE_INLINE(rt) fnm(const rg& a)                \
-    { rt rs; __asm__ __volatile__(#opc" %x0,%x1" : "="#rto (rs) : #rgo (a)); return rs; }
+VSX_FINLINE(rt) fnm(const rg& a)                 \
+{ rt rs; __asm__ __volatile__(#opc" %x0,%x1" : "="#rto (rs) : #rgo (a)); return rs; }
 
 #define VSX_IMPL_1VRG(rt, rg, opc, fnm) \
-FORCE_INLINE(rt) fnm(const rg& a)       \
-    { rt rs; __asm__ __volatile__(#opc" %0,%1" : "=v" (rs) : "v" (a)); return rs; }
+VSX_FINLINE(rt) fnm(const rg& a)        \
+{ rt rs; __asm__ __volatile__(#opc" %0,%1" : "=v" (rs) : "v" (a)); return rs; }
 
 #define VSX_IMPL_2VRG_F(rt, rg, fopc, fnm)     \
-FORCE_INLINE(rt) fnm(const rg& a, const rg& b) \
-    { rt rs; __asm__ __volatile__(fopc : "=v" (rs) : "v" (a), "v" (b)); return rs; }
+VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
+{ rt rs; __asm__ __volatile__(fopc : "=v" (rs) : "v" (a), "v" (b)); return rs; }
 
 #define VSX_IMPL_2VRG(rt, rg, opc, fnm) VSX_IMPL_2VRG_F(rt, rg, #opc" %0,%1,%2", fnm)
 
@@ -196,11 +196,11 @@ FORCE_INLINE(rt) fnm(const rg& a, const rg& b) \
 #   endif
 /*
  * there's no a direct instruction for supporting 16-bit multiplication in ISA 2.07,
- * XLC Implement it by using instruction "multiply even", "multiply oden" and "permute"
+ * XLC Implement it by using instruction "multiply even", "multiply odd" and "permute"
  * todo: Do I need to support 8-bit ?
 **/
 #   define VSX_IMPL_MULH(Tvec, Tcast)                                               \
-    FORCE_INLINE(Tvec) vec_mul(const Tvec& a, const Tvec& b)                        \
+    VSX_FINLINE(Tvec) vec_mul(const Tvec& a, const Tvec& b)                         \
     {                                                                               \
         static const vec_uchar16 even_perm = {0, 1, 16, 17, 4, 5, 20, 21,           \
                                               8, 9, 24, 25, 12, 13, 28, 29};        \
@@ -252,7 +252,7 @@ FORCE_INLINE(rt) fnm(const rg& a, const rg& b) \
     template<typename T>
     VSX_REDIRECT_2RG(T, T, vec_nor, __builtin_vec_nor)
 
-    FORCE_INLINE(vec_bdword2) vec_nor(const vec_bdword2& a, const vec_bdword2& b)
+    VSX_FINLINE(vec_bdword2) vec_nor(const vec_bdword2& a, const vec_bdword2& b)
     { return vec_bdword2_c(__builtin_vec_nor(vec_dword2_c(a), vec_dword2_c(b))); }
 
 // vec_packs doesn't support double words in gcc4 and old versions of gcc5
@@ -289,14 +289,8 @@ VSX_IMPL_1VRG(vec_udword2, vec_udword2, vpopcntd, vec_popcntu)
 VSX_IMPL_1VRG(vec_udword2, vec_dword2,  vpopcntd, vec_popcntu)
 
 // converts between single and double-precision
-#ifdef vec_cvf
-#   undef vec_cvf
-#endif
-VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvf,  __builtin_vsx_xvcvdpsp)
+VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, __builtin_vsx_xvcvdpsp)
 VSX_REDIRECT_1RG(vec_double2, vec_float4,  vec_cvfo, __builtin_vsx_xvcvspdp)
-
-FORCE_INLINE(vec_double2) vec_cvf(const vec_float4& a)
-{ return vec_cvfo(vec_sldw(a, a, 1)); }
 
 // converts word and doubleword to double-precision
 #ifdef vec_ctd
@@ -307,27 +301,21 @@ VSX_IMPL_1RG(vec_double2, wd, vec_uint4,   wa, xvcvuxwdp, vec_ctdo)
 VSX_IMPL_1RG(vec_double2, wd, vec_dword2,  wi, xvcvsxddp, vec_ctd)
 VSX_IMPL_1RG(vec_double2, wd, vec_udword2, wi, xvcvuxddp, vec_ctd)
 
-FORCE_INLINE(vec_double2) vec_ctd(const vec_int4& a)
-{ return vec_ctdo(vec_sldw(a, a, 1)); }
-
-FORCE_INLINE(vec_double2) vec_ctd(const vec_uint4& a)
-{ return vec_ctdo(vec_sldw(a, a, 1)); }
-
 // converts word and doubleword to single-precision
 #undef vec_ctf
 VSX_IMPL_1RG(vec_float4, wf, vec_int4,    wa, xvcvsxwsp, vec_ctf)
 VSX_IMPL_1RG(vec_float4, wf, vec_uint4,   wa, xvcvuxwsp, vec_ctf)
-VSX_IMPL_1RG(vec_float4, wf, vec_dword2,  wi, xvcvsxdsp, vec_ctf)
-VSX_IMPL_1RG(vec_float4, wf, vec_udword2, wi, xvcvuxdsp, vec_ctf)
+VSX_IMPL_1RG(vec_float4, wf, vec_dword2,  wi, xvcvsxdsp, vec_ctfo)
+VSX_IMPL_1RG(vec_float4, wf, vec_udword2, wi, xvcvuxdsp, vec_ctfo)
 
 // converts single and double precision to signed word
 #undef vec_cts
-VSX_IMPL_1RG(vec_int4,  wa, vec_double2, wd, xvcvdpsxws, vec_cts)
+VSX_IMPL_1RG(vec_int4,  wa, vec_double2, wd, xvcvdpsxws, vec_ctso)
 VSX_IMPL_1RG(vec_int4,  wa, vec_float4,  wf, xvcvspsxws, vec_cts)
 
 // converts single and double precision to unsigned word
 #undef vec_ctu
-VSX_IMPL_1RG(vec_uint4, wa, vec_double2, wd, xvcvdpuxws, vec_ctu)
+VSX_IMPL_1RG(vec_uint4, wa, vec_double2, wd, xvcvdpuxws, vec_ctuo)
 VSX_IMPL_1RG(vec_uint4, wa, vec_float4,  wf, xvcvspuxws, vec_ctu)
 
 // converts single and double precision to signed doubleword
@@ -337,18 +325,12 @@ VSX_IMPL_1RG(vec_uint4, wa, vec_float4,  wf, xvcvspuxws, vec_ctu)
 VSX_IMPL_1RG(vec_dword2, wi, vec_double2, wd, xvcvdpsxds, vec_ctsl)
 VSX_IMPL_1RG(vec_dword2, wi, vec_float4,  wf, xvcvspsxds, vec_ctslo)
 
-FORCE_INLINE(vec_dword2) vec_ctsl(const vec_float4& a)
-{ return vec_ctslo(vec_sldw(a, a, 1)); }
-
 // converts single and double precision to unsigned doubleword
 #ifdef vec_ctul
 #   undef vec_ctul
 #endif
 VSX_IMPL_1RG(vec_udword2, wi, vec_double2, wd, xvcvdpuxds, vec_ctul)
 VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
-
-FORCE_INLINE(vec_udword2) vec_ctul(const vec_float4& a)
-{ return vec_ctulo(vec_sldw(a, a, 1)); }
 
 // just in case if GCC doesn't define it
 #ifndef vec_xl
@@ -376,12 +358,12 @@ FORCE_INLINE(vec_udword2) vec_ctul(const vec_float4& a)
 
 // convert vector helper
 #define VSX_IMPL_CONVERT(rt, rg, fnm) \
-FORCE_INLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
+VSX_FINLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
 
 #if __clang_major__ < 5
 // implement vec_permi in a dirty way
 #   define VSX_IMPL_CLANG_4_PERMI(Tvec)                                                 \
-    FORCE_INLINE(Tvec) vec_permi(const Tvec& a, const Tvec& b, unsigned const char c)   \
+    VSX_FINLINE(Tvec) vec_permi(const Tvec& a, const Tvec& b, unsigned const char c)    \
     {                                                                                   \
         switch (c)                                                                      \
         {                                                                               \
@@ -413,22 +395,22 @@ FORCE_INLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
 
 // Implement vec_rsqrt since clang only supports vec_rsqrte
 #ifndef vec_rsqrt
-    FORCE_INLINE(vec_float4) vec_rsqrt(const vec_float4& a)
+    VSX_FINLINE(vec_float4) vec_rsqrt(const vec_float4& a)
     { return vec_div(vec_float4_sp(1), vec_sqrt(a)); }
 
-    FORCE_INLINE(vec_double2) vec_rsqrt(const vec_double2& a)
+    VSX_FINLINE(vec_double2) vec_rsqrt(const vec_double2& a)
     { return vec_div(vec_double2_sp(1), vec_sqrt(a)); }
 #endif
 
 // vec_promote missing support for doubleword
-FORCE_INLINE(vec_dword2) vec_promote(long long a, int b)
+VSX_FINLINE(vec_dword2) vec_promote(long long a, int b)
 {
     vec_dword2 ret = vec_dword2_z;
     ret[b & 1] = a;
     return ret;
 }
 
-FORCE_INLINE(vec_udword2) vec_promote(unsigned long long a, int b)
+VSX_FINLINE(vec_udword2) vec_promote(unsigned long long a, int b)
 {
     vec_udword2 ret = vec_udword2_z;
     ret[b & 1] = a;
@@ -437,7 +419,7 @@ FORCE_INLINE(vec_udword2) vec_promote(unsigned long long a, int b)
 
 // vec_popcnt should return unsigned but clang has different thought just like gcc in vec_vpopcnt
 #define VSX_IMPL_POPCNTU(Tvec, Tvec2, ucast)   \
-FORCE_INLINE(Tvec) vec_popcntu(const Tvec2& a) \
+VSX_FINLINE(Tvec) vec_popcntu(const Tvec2& a)  \
 { return ucast(vec_popcnt(a)); }
 VSX_IMPL_POPCNTU(vec_uchar16, vec_char16, vec_uchar16_c);
 VSX_IMPL_POPCNTU(vec_ushort8, vec_short8, vec_ushort8_c);
@@ -448,14 +430,8 @@ VSX_REDIRECT_1RG(vec_ushort8, vec_ushort8, vec_popcntu, vec_popcnt)
 VSX_REDIRECT_1RG(vec_uint4,   vec_uint4,   vec_popcntu, vec_popcnt)
 
 // converts between single and double precision
-#ifdef vec_cvf
-#   undef vec_cvf
-#endif
-VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvf,  __builtin_vsx_xvcvdpsp)
+VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, __builtin_vsx_xvcvdpsp)
 VSX_REDIRECT_1RG(vec_double2, vec_float4,  vec_cvfo, __builtin_vsx_xvcvspdp)
-
-FORCE_INLINE(vec_double2) vec_cvf(const vec_float4& a)
-{ return vec_cvfo(vec_sldw(a, a, 1)); }
 
 // converts word and doubleword to double-precision
 #ifdef vec_ctd
@@ -467,33 +443,27 @@ VSX_REDIRECT_1RG(vec_double2, vec_uint4, vec_ctdo, __builtin_vsx_xvcvuxwdp)
 VSX_IMPL_CONVERT(vec_double2, vec_dword2,  vec_ctd)
 VSX_IMPL_CONVERT(vec_double2, vec_udword2, vec_ctd)
 
-FORCE_INLINE(vec_double2) vec_ctd(const vec_int4& a)
-{ return vec_ctdo(vec_sldw(a, a, 1)); }
-
-FORCE_INLINE(vec_double2) vec_ctd(const vec_uint4& a)
-{ return vec_ctdo(vec_sldw(a, a, 1)); }
-
 // converts word and doubleword to single-precision
 #if __clang_major__ > 4
 #   undef vec_ctf
 #endif
 VSX_IMPL_CONVERT(vec_float4, vec_int4,    vec_ctf)
 VSX_IMPL_CONVERT(vec_float4, vec_uint4,   vec_ctf)
-VSX_REDIRECT_1RG(vec_float4, vec_dword2,  vec_ctf, __builtin_vsx_xvcvsxdsp)
-VSX_REDIRECT_1RG(vec_float4, vec_udword2, vec_ctf, __builtin_vsx_xvcvuxdsp)
+VSX_REDIRECT_1RG(vec_float4, vec_dword2,  vec_ctfo, __builtin_vsx_xvcvsxdsp)
+VSX_REDIRECT_1RG(vec_float4, vec_udword2, vec_ctfo, __builtin_vsx_xvcvuxdsp)
 
 // converts single and double precision to signed word
 #if __clang_major__ > 4
 #   undef vec_cts
 #endif
-VSX_REDIRECT_1RG(vec_int4,  vec_double2, vec_cts, __builtin_vsx_xvcvdpsxws)
+VSX_REDIRECT_1RG(vec_int4,  vec_double2, vec_ctso, __builtin_vsx_xvcvdpsxws)
 VSX_IMPL_CONVERT(vec_int4,  vec_float4,  vec_cts)
 
 // converts single and double precision to unsigned word
 #if __clang_major__ > 4
 #   undef vec_ctu
 #endif
-VSX_REDIRECT_1RG(vec_uint4, vec_double2, vec_ctu, __builtin_vsx_xvcvdpuxws)
+VSX_REDIRECT_1RG(vec_uint4, vec_double2, vec_ctuo, __builtin_vsx_xvcvdpuxws)
 VSX_IMPL_CONVERT(vec_uint4, vec_float4,  vec_ctu)
 
 // converts single and double precision to signed doubleword
@@ -502,11 +472,8 @@ VSX_IMPL_CONVERT(vec_uint4, vec_float4,  vec_ctu)
 #endif
 VSX_IMPL_CONVERT(vec_dword2, vec_double2, vec_ctsl)
 // __builtin_convertvector unable to convert, xvcvspsxds is missing on it
-FORCE_INLINE(vec_dword2) vec_ctslo(const vec_float4& a)
+VSX_FINLINE(vec_dword2) vec_ctslo(const vec_float4& a)
 { return vec_ctsl(vec_cvfo(a)); }
-
-FORCE_INLINE(vec_dword2) vec_ctsl(const vec_float4& a)
-{ return vec_ctsl(vec_cvf(a)); }
 
 // converts single and double precision to unsigned doubleword
 #ifdef vec_ctul
@@ -514,13 +481,46 @@ FORCE_INLINE(vec_dword2) vec_ctsl(const vec_float4& a)
 #endif
 VSX_IMPL_CONVERT(vec_udword2, vec_double2, vec_ctul)
 // __builtin_convertvector unable to convert, xvcvspuxds is missing on it
-FORCE_INLINE(vec_udword2) vec_ctulo(const vec_float4& a)
+VSX_FINLINE(vec_udword2) vec_ctulo(const vec_float4& a)
 { return vec_ctul(vec_cvfo(a)); }
 
-FORCE_INLINE(vec_udword2) vec_ctul(const vec_float4& a)
-{ return vec_ctul(vec_cvf(a)); }
-
 #endif // CLANG VSX compatibility
+
+/*
+ * Common GCC, CLANG compatibility
+**/
+#if defined(__GNUG__) && !defined(__IBMCPP__)
+
+#ifdef vec_cvf
+#   undef vec_cvf
+#endif
+
+#define VSX_IMPL_CONV_EVEN_4_2(rt, rg, fnm, fn2) \
+VSX_FINLINE(rt) fnm(const rg& a)                 \
+{ return fn2(vec_sldw(a, a, 1)); }
+
+VSX_IMPL_CONV_EVEN_4_2(vec_double2, vec_float4, vec_cvf,  vec_cvfo)
+VSX_IMPL_CONV_EVEN_4_2(vec_double2, vec_int4,   vec_ctd,  vec_ctdo)
+VSX_IMPL_CONV_EVEN_4_2(vec_double2, vec_uint4,  vec_ctd,  vec_ctdo)
+
+VSX_IMPL_CONV_EVEN_4_2(vec_dword2,  vec_float4, vec_ctsl, vec_ctslo)
+VSX_IMPL_CONV_EVEN_4_2(vec_udword2, vec_float4, vec_ctul, vec_ctulo)
+
+#define VSX_IMPL_CONV_EVEN_2_4(rt, rg, fnm, fn2) \
+VSX_FINLINE(rt) fnm(const rg& a)                 \
+{                                                \
+    rt v4 = fn2(a);                              \
+    return vec_sldw(v4, v4, 3);                  \
+}
+
+VSX_IMPL_CONV_EVEN_2_4(vec_float4, vec_double2, vec_cvf, vec_cvfo)
+VSX_IMPL_CONV_EVEN_2_4(vec_float4, vec_dword2,  vec_ctf, vec_ctfo)
+VSX_IMPL_CONV_EVEN_2_4(vec_float4, vec_udword2, vec_ctf, vec_ctfo)
+
+VSX_IMPL_CONV_EVEN_2_4(vec_int4,   vec_double2, vec_cts, vec_ctso)
+VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
+
+#endif // Common GCC, CLANG compatibility
 
 /*
  * XLC VSX compatibility
@@ -533,7 +533,7 @@ FORCE_INLINE(vec_udword2) vec_ctul(const vec_float4& a)
 // overload and redirect wih setting second arg to zero
 // since we only support conversions without the second arg
 #define VSX_IMPL_OVERLOAD_Z2(rt, rg, fnm) \
-FORCE_INLINE(rt) fnm(const rg& a) { return fnm(a, 0); }
+VSX_FINLINE(rt) fnm(const rg& a) { return fnm(a, 0); }
 
 VSX_IMPL_OVERLOAD_Z2(vec_double2, vec_int4,    vec_ctd)
 VSX_IMPL_OVERLOAD_Z2(vec_double2, vec_uint4,   vec_ctd)
@@ -559,14 +559,29 @@ VSX_IMPL_OVERLOAD_Z2(vec_udword2, vec_float4,  vec_ctul)
 
 // fixme: implement conversions of odd-numbered elements in a dirty way
 // since xlc doesn't support VSX registers operand in inline asm.
-#define VSX_IMPL_DIRTY_ODD(rt, rg, fnm, fn2) \
-FORCE_INLINE(rt) fnm(const rg& a) { return fn2(vec_sldw(a, a, 3)); }
+#define VSX_IMPL_CONV_ODD_4_2(rt, rg, fnm, fn2) \
+VSX_FINLINE(rt) fnm(const rg& a) { return fn2(vec_sldw(a, a, 3)); }
 
-VSX_IMPL_DIRTY_ODD(vec_double2, vec_float4, vec_cvfo,  vec_cvf)
-VSX_IMPL_DIRTY_ODD(vec_double2, vec_int4,   vec_ctdo,  vec_ctd)
-VSX_IMPL_DIRTY_ODD(vec_double2, vec_uint4,  vec_ctdo,  vec_ctd)
-VSX_IMPL_DIRTY_ODD(vec_dword2,  vec_float4, vec_ctslo, vec_ctsl)
-VSX_IMPL_DIRTY_ODD(vec_udword2, vec_float4, vec_ctulo, vec_ctul)
+VSX_IMPL_CONV_ODD_4_2(vec_double2, vec_float4, vec_cvfo,  vec_cvf)
+VSX_IMPL_CONV_ODD_4_2(vec_double2, vec_int4,   vec_ctdo,  vec_ctd)
+VSX_IMPL_CONV_ODD_4_2(vec_double2, vec_uint4,  vec_ctdo,  vec_ctd)
+
+VSX_IMPL_CONV_ODD_4_2(vec_dword2,  vec_float4, vec_ctslo, vec_ctsl)
+VSX_IMPL_CONV_ODD_4_2(vec_udword2, vec_float4, vec_ctulo, vec_ctul)
+
+#define VSX_IMPL_CONV_ODD_2_4(rt, rg, fnm, fn2)  \
+VSX_FINLINE(rt) fnm(const rg& a)                 \
+{                                                \
+    rt v4 = fn2(a);                              \
+    return vec_sldw(v4, v4, 1);                  \
+}
+
+VSX_IMPL_CONV_ODD_2_4(vec_float4, vec_double2, vec_cvfo, vec_cvf)
+VSX_IMPL_CONV_ODD_2_4(vec_float4, vec_dword2,  vec_ctfo, vec_ctf)
+VSX_IMPL_CONV_ODD_2_4(vec_float4, vec_udword2, vec_ctfo, vec_ctf)
+
+VSX_IMPL_CONV_ODD_2_4(vec_int4,   vec_double2, vec_ctso, vec_cts)
+VSX_IMPL_CONV_ODD_2_4(vec_uint4,  vec_double2, vec_ctuo, vec_ctu)
 
 #endif // XLC VSX compatibility
 
@@ -579,16 +594,16 @@ VSX_IMPL_DIRTY_ODD(vec_udword2, vec_float4, vec_ctulo, vec_ctul)
 
 // gcc can find his way in casting log int and XLC, CLANG ambiguous
 #if defined(__clang__) || defined(__IBMCPP__)
-    FORCE_INLINE(vec_udword2) vec_splats(uint64 v)
+    VSX_FINLINE(vec_udword2) vec_splats(uint64 v)
     { return vec_splats((unsigned long long) v); }
 
-    FORCE_INLINE(vec_dword2) vec_splats(int64 v)
+    VSX_FINLINE(vec_dword2) vec_splats(int64 v)
     { return vec_splats((long long) v); }
 
-    FORCE_INLINE(vec_udword2) vec_promote(uint64 a, int b)
+    VSX_FINLINE(vec_udword2) vec_promote(uint64 a, int b)
     { return vec_promote((unsigned long long) a, b); }
 
-    FORCE_INLINE(vec_dword2) vec_promote(int64 a, int b)
+    VSX_FINLINE(vec_dword2) vec_promote(int64 a, int b)
     { return vec_promote((long long) a, b); }
 #endif
 
@@ -623,28 +638,28 @@ VSX_IMPL_DIRTY_ODD(vec_udword2, vec_float4, vec_ctulo, vec_ctul)
  * In XLC vec_xl and vec_xst fail to cast int64(long int) to long long
 */
 #if (defined(__GNUG__) || defined(__clang__)) && !defined(__IBMCPP__)
-    FORCE_INLINE(vec_udword2) vsx_ld2(long o, const uint64* p)
+    VSX_FINLINE(vec_udword2) vsx_ld2(long o, const uint64* p)
     { return vec_udword2_c(vsx_ldf(VSX_OFFSET(o, p), (unsigned int*)p)); }
 
-    FORCE_INLINE(vec_dword2) vsx_ld2(long o, const int64* p)
+    VSX_FINLINE(vec_dword2) vsx_ld2(long o, const int64* p)
     { return vec_dword2_c(vsx_ldf(VSX_OFFSET(o, p), (int*)p)); }
 
-    FORCE_INLINE(void) vsx_st2(const vec_udword2& vec, long o, uint64* p)
+    VSX_FINLINE(void) vsx_st2(const vec_udword2& vec, long o, uint64* p)
     { vsx_stf(vec_uint4_c(vec), VSX_OFFSET(o, p), (unsigned int*)p); }
 
-    FORCE_INLINE(void) vsx_st2(const vec_dword2& vec, long o, int64* p)
+    VSX_FINLINE(void) vsx_st2(const vec_dword2& vec, long o, int64* p)
     { vsx_stf(vec_int4_c(vec), VSX_OFFSET(o, p), (int*)p); }
 #else // XLC
-    FORCE_INLINE(vec_udword2) vsx_ld2(long o, const uint64* p)
+    VSX_FINLINE(vec_udword2) vsx_ld2(long o, const uint64* p)
     { return vsx_ldf(VSX_OFFSET(o, p), (unsigned long long*)p); }
 
-    FORCE_INLINE(vec_dword2) vsx_ld2(long o, const int64* p)
+    VSX_FINLINE(vec_dword2) vsx_ld2(long o, const int64* p)
     { return vsx_ldf(VSX_OFFSET(o, p), (long long*)p); }
 
-    FORCE_INLINE(void) vsx_st2(const vec_udword2& vec, long o, uint64* p)
+    VSX_FINLINE(void) vsx_st2(const vec_udword2& vec, long o, uint64* p)
     { vsx_stf(vec, VSX_OFFSET(o, p), (unsigned long long*)p); }
 
-    FORCE_INLINE(void) vsx_st2(const vec_dword2& vec, long o, int64* p)
+    VSX_FINLINE(void) vsx_st2(const vec_dword2& vec, long o, int64* p)
     { vsx_stf(vec, VSX_OFFSET(o, p), (long long*)p); }
 #endif
 
@@ -668,9 +683,9 @@ VSX_IMPL_DIRTY_ODD(vec_udword2, vec_float4, vec_ctulo, vec_ctul)
  * vec_ldz_l8(ptr) -> Load 64-bits of integer data to lower part and zero upper part
 **/
 #define VSX_IMPL_LOAD_L8(Tvec, Tp)                                              \
-FORCE_INLINE(Tvec) vec_ld_l8(const Tp *p)                                       \
+VSX_FINLINE(Tvec) vec_ld_l8(const Tp *p)                                        \
 { return ((Tvec)vec_promote(*((uint64*)p), 0)); }                               \
-FORCE_INLINE(Tvec) vec_ldz_l8(const Tp *p)                                      \
+VSX_FINLINE(Tvec) vec_ldz_l8(const Tp *p)                                       \
 {                                                                               \
     /* TODO: try (Tvec)(vec_udword2{*((uint64*)p), 0}) */                       \
     static const vec_bdword2 mask = {0xFFFFFFFFFFFFFFFF, 0x0000000000000000};   \
@@ -705,10 +720,10 @@ VSX_IMPL_LOAD_L8(vec_double2, double)
  * Implement vec_unpacklu and vec_unpackhu
  * since vec_unpackl, vec_unpackh only support signed integers
 **/
-#define VSX_IMPL_UNPACKU(rt, rg, zero)                  \
-FORCE_INLINE(rt) vec_unpacklu(const rg& a)              \
-{ return reinterpret_cast<rt>(vec_mergel(a, zero)); }   \
-FORCE_INLINE(rt) vec_unpackhu(const rg& a)              \
+#define VSX_IMPL_UNPACKU(rt, rg, zero)                 \
+VSX_FINLINE(rt) vec_unpacklu(const rg& a)              \
+{ return reinterpret_cast<rt>(vec_mergel(a, zero)); }  \
+VSX_FINLINE(rt) vec_unpackhu(const rg& a)              \
 { return reinterpret_cast<rt>(vec_mergeh(a, zero));  }
 
 VSX_IMPL_UNPACKU(vec_ushort8, vec_uchar16, vec_uchar16_z)
@@ -720,7 +735,7 @@ VSX_IMPL_UNPACKU(vec_udword2, vec_uint4,   vec_uint4_z)
  * Merges the sequence values of even and odd elements of two vectors
 */
 #define VSX_IMPL_PERM(rt, fnm, ...)            \
-FORCE_INLINE(rt) fnm(const rt& a, const rt& b) \
+VSX_FINLINE(rt) fnm(const rt& a, const rt& b)  \
 { static const vec_uchar16 perm = {__VA_ARGS__}; return vec_perm(a, b, perm); }
 
 // 16
@@ -759,9 +774,9 @@ VSX_REDIRECT_2RG(vec_udword2, vec_udword2, vec_mergesqo, vec_mergel)
  * Merges the sequence most and least significant halves of two vectors
 */
 #define VSX_IMPL_MERGESQHL(Tvec)                                    \
-FORCE_INLINE(Tvec) vec_mergesqh(const Tvec& a, const Tvec& b)       \
+VSX_FINLINE(Tvec) vec_mergesqh(const Tvec& a, const Tvec& b)        \
 { return (Tvec)vec_mergeh(vec_udword2_c(a), vec_udword2_c(b)); }    \
-FORCE_INLINE(Tvec) vec_mergesql(const Tvec& a, const Tvec& b)       \
+VSX_FINLINE(Tvec) vec_mergesql(const Tvec& a, const Tvec& b)        \
 { return (Tvec)vec_mergel(vec_udword2_c(a), vec_udword2_c(b)); }
 VSX_IMPL_MERGESQHL(vec_uchar16)
 VSX_IMPL_MERGESQHL(vec_char16)
@@ -780,12 +795,12 @@ VSX_REDIRECT_2RG(vec_double2, vec_double2, vec_mergesql, vec_mergel)
 
 // 2 and 4 channels interleave for all types except 2 lanes
 #define VSX_IMPL_ST_INTERLEAVE(Tp, Tvec)                                    \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b, Tp* ptr) \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b, Tp* ptr)  \
 {                                                                           \
     vsx_stf(vec_mergeh(a, b), 0, ptr);                                      \
     vsx_stf(vec_mergel(a, b), 16, ptr);                                     \
 }                                                                           \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,          \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,           \
                                      const Tvec& c, const Tvec& d, Tp* ptr) \
 {                                                                           \
     Tvec ac = vec_mergeh(a, c);                                             \
@@ -807,14 +822,14 @@ VSX_IMPL_ST_INTERLEAVE(float,  vec_float4)
 
 // 2 and 4 channels deinterleave for 16 lanes
 #define VSX_IMPL_ST_DINTERLEAVE_8(Tp, Tvec)                                 \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)      \
 {                                                                           \
     Tvec v0 = vsx_ld(0, ptr);                                               \
     Tvec v1 = vsx_ld(16, ptr);                                              \
     a = vec_mergesqe(v0, v1);                                               \
     b = vec_mergesqo(v0, v1);                                               \
 }                                                                           \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,      \
                                        Tvec& c, Tvec& d)                    \
 {                                                                           \
     Tvec v0 = vsx_ld(0, ptr);                                               \
@@ -835,14 +850,14 @@ VSX_IMPL_ST_DINTERLEAVE_8(schar, vec_char16)
 
 // 2 and 4 channels deinterleave for 8 lanes
 #define VSX_IMPL_ST_DINTERLEAVE_16(Tp, Tvec)                                \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)      \
 {                                                                           \
     Tvec v0 = vsx_ld(0, ptr);                                               \
     Tvec v1 = vsx_ld(8, ptr);                                               \
     a = vec_mergesqe(v0, v1);                                               \
     b = vec_mergesqo(v0, v1);                                               \
 }                                                                           \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,      \
                                        Tvec& c, Tvec& d)                    \
 {                                                                           \
     Tvec v0 = vsx_ld(0, ptr);                                               \
@@ -867,7 +882,7 @@ VSX_IMPL_ST_DINTERLEAVE_16(short,  vec_short8)
 
 // 2 and 4 channels deinterleave for 4 lanes
 #define VSX_IMPL_ST_DINTERLEAVE_32(Tp, Tvec)                                \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)      \
 {                                                                           \
     a = vsx_ld(0, ptr);                                                     \
     b = vsx_ld(4, ptr);                                                     \
@@ -876,7 +891,7 @@ FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)     \
     a = vec_mergeh(m0, m1);                                                 \
     b = vec_mergel(m0, m1);                                                 \
 }                                                                           \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,      \
                                        Tvec& c, Tvec& d)                    \
 {                                                                           \
     Tvec v0 = vsx_ld(0, ptr);                                               \
@@ -898,12 +913,12 @@ VSX_IMPL_ST_DINTERLEAVE_32(float, vec_float4)
 
 // 2 and 4 channels interleave and deinterleave for 2 lanes
 #define VSX_IMPL_ST_D_INTERLEAVE_64(Tp, Tvec, ld_func, st_func)             \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b, Tp* ptr) \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b, Tp* ptr)  \
 {                                                                           \
     st_func(vec_mergeh(a, b), 0, ptr);                                      \
     st_func(vec_mergel(a, b), 2, ptr);                                      \
 }                                                                           \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,          \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,           \
                                      const Tvec& c, const Tvec& d, Tp* ptr) \
 {                                                                           \
     st_func(vec_mergeh(a, b), 0, ptr);                                      \
@@ -911,14 +926,14 @@ FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,          \
     st_func(vec_mergel(a, b), 4, ptr);                                      \
     st_func(vec_mergel(c, d), 6, ptr);                                      \
 }                                                                           \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b)      \
 {                                                                           \
     Tvec m0 = ld_func(0, ptr);                                              \
     Tvec m1 = ld_func(2, ptr);                                              \
     a = vec_mergeh(m0, m1);                                                 \
     b = vec_mergel(m0, m1);                                                 \
 }                                                                           \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,     \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b,      \
                                        Tvec& c, Tvec& d)                    \
 {                                                                           \
     Tvec v0 = ld_func(0, ptr);                                              \
@@ -936,7 +951,7 @@ VSX_IMPL_ST_D_INTERLEAVE_64(double, vec_double2, vsx_ld,  vsx_st)
 
 /* 3 channels */
 #define VSX_IMPL_ST_INTERLEAVE_3CH_16(Tp, Tvec)                                                   \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,                                \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,                                 \
                                      const Tvec& c, Tp* ptr)                                      \
 {                                                                                                 \
     static const vec_uchar16 a12 = {0, 16, 0, 1, 17, 0, 2, 18, 0, 3, 19, 0, 4, 20, 0, 5};         \
@@ -949,7 +964,7 @@ FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,              
     static const vec_uchar16 c123 = {26, 1, 2, 27, 4, 5, 28, 7, 8, 29, 10, 11, 30, 13, 14, 31};   \
     vsx_st(vec_perm(vec_perm(a, b, c12), c, c123), 32, ptr);                                      \
 }                                                                                                 \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b, Tvec& c)                  \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b, Tvec& c)                   \
 {                                                                                                 \
     Tvec v1 = vsx_ld(0, ptr);                                                                     \
     Tvec v2 = vsx_ld(16, ptr);                                                                    \
@@ -968,7 +983,7 @@ VSX_IMPL_ST_INTERLEAVE_3CH_16(uchar, vec_uchar16)
 VSX_IMPL_ST_INTERLEAVE_3CH_16(schar, vec_char16)
 
 #define VSX_IMPL_ST_INTERLEAVE_3CH_8(Tp, Tvec)                                                    \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,                                \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,                                 \
                                      const Tvec& c, Tp* ptr)                                      \
 {                                                                                                 \
     static const vec_uchar16 a12 = {0, 1, 16, 17, 0, 0, 2, 3, 18, 19, 0, 0, 4, 5, 20, 21};        \
@@ -981,7 +996,7 @@ FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,              
     static const vec_uchar16 c123 = {0, 1, 26, 27, 4, 5, 6, 7, 28, 29, 10, 11, 12, 13, 30, 31};   \
     vsx_st(vec_perm(vec_perm(a, b, c12), c, c123), 16, ptr);                                      \
 }                                                                                                 \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b, Tvec& c)                  \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b, Tvec& c)                   \
 {                                                                                                 \
     Tvec v1 = vsx_ld(0, ptr);                                                                     \
     Tvec v2 = vsx_ld(8, ptr);                                                                     \
@@ -1000,7 +1015,7 @@ VSX_IMPL_ST_INTERLEAVE_3CH_8(ushort, vec_ushort8)
 VSX_IMPL_ST_INTERLEAVE_3CH_8(short,  vec_short8)
 
 #define VSX_IMPL_ST_INTERLEAVE_3CH_4(Tp, Tvec)                                                     \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,                                 \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,                                  \
                                      const Tvec& c, Tp* ptr)                                       \
 {                                                                                                  \
     Tvec hbc = vec_mergeh(b, c);                                                                   \
@@ -1011,7 +1026,7 @@ FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,              
     static const vec_uchar16 clab = {8, 9, 10, 11, 24, 25, 26, 27, 28, 29, 30, 31, 12, 13, 14, 15};\
     vsx_st(vec_perm(c, lab, clab), 8, ptr);                                                        \
 }                                                                                                  \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b, Tvec& c)                   \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a, Tvec& b, Tvec& c)                    \
 {                                                                                                  \
     Tvec v1 = vsx_ld(0, ptr);                                                                      \
     Tvec v2 = vsx_ld(4, ptr);                                                                      \
@@ -1027,14 +1042,14 @@ VSX_IMPL_ST_INTERLEAVE_3CH_4(int,   vec_int4)
 VSX_IMPL_ST_INTERLEAVE_3CH_4(float, vec_float4)
 
 #define VSX_IMPL_ST_INTERLEAVE_3CH_2(Tp, Tvec, ld_func, st_func)     \
-FORCE_INLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,   \
+VSX_FINLINE(void) vec_st_interleave(const Tvec& a, const Tvec& b,    \
                                      const Tvec& c, Tp* ptr)         \
 {                                                                    \
     st_func(vec_mergeh(a, b), 0, ptr);                               \
     st_func(vec_permi(c, a, 1), 2, ptr);                             \
     st_func(vec_mergel(b, c), 4, ptr);                               \
 }                                                                    \
-FORCE_INLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a,       \
+VSX_FINLINE(void) vec_ld_deinterleave(const Tp* ptr, Tvec& a,        \
                                        Tvec& b, Tvec& c)             \
 {                                                                    \
     Tvec v1 = ld_func(0, ptr);                                       \
