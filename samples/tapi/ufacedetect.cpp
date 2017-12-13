@@ -177,7 +177,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
 
     cvtColor( img, gray, COLOR_BGR2GRAY );
     double fx = 1 / scale;
-    resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR );
+    resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR_EXACT );
     equalizeHist( smallImg, smallImg );
 
     cascade.detectMultiScale( smallImg, faces,

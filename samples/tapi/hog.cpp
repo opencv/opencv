@@ -191,7 +191,7 @@ void App::run()
             if (abs(scale-1.0)>0.001)
             {
                 Size sz((int)((double)img_aux.cols/resize_scale), (int)((double)img_aux.rows/resize_scale));
-                resize(img_aux, img, sz);
+                resize(img_aux, img, sz, 0, 0, INTER_LINEAR_EXACT);
             }
             else img = img_aux;
             img.copyTo(img_to_show);

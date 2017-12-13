@@ -347,7 +347,7 @@ int main( int argc, char** argv )
             remap(view, rview, map1[k1], map2[k1], INTER_LINEAR);
         }
         printf("%s %s %s\n", imageList[i*3].c_str(), imageList[i*3+1].c_str(), imageList[i*3+2].c_str());
-        resize( canvas, small_canvas, Size(1500, 1500/3) );
+        resize( canvas, small_canvas, Size(1500, 1500/3), 0, 0, INTER_LINEAR_EXACT );
         for( k = 0; k < small_canvas.rows; k += 16 )
             line(small_canvas, Point(0, k), Point(small_canvas.cols, k), Scalar(0,255,0), 1);
         imshow("rectified", small_canvas);

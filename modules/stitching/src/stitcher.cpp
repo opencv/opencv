@@ -173,7 +173,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         for (size_t i = 0; i < imgs.size(); ++i)
         {
             imgs_[i] = imgs[i];
-            resize(imgs[i], img, Size(), seam_scale_, seam_scale_);
+            resize(imgs[i], img, Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
             seam_est_imgs_[i] = img.clone();
         }
 
@@ -315,7 +315,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #if ENABLE_LOG
             int64 resize_t = getTickCount();
 #endif
-            resize(full_img, img, Size(), compose_scale, compose_scale);
+            resize(full_img, img, Size(), compose_scale, compose_scale, INTER_LINEAR_EXACT);
             LOGLN("  resize time: " << ((getTickCount() - resize_t) / getTickFrequency()) << " sec");
         }
         else
@@ -361,7 +361,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
         // Make sure seam mask has proper size
         dilate(masks_warped[img_idx], dilated_mask, Mat());
-        resize(dilated_mask, seam_mask, mask_warped.size());
+        resize(dilated_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
 
         bitwise_and(seam_mask, mask_warped, mask_warped);
 
@@ -471,7 +471,7 @@ Stitcher::Status Stitcher::matchImages()
                 work_scale_ = std::min(1.0, std::sqrt(registr_resol_ * 1e6 / full_img.size().area()));
                 is_work_scale_set = true;
             }
-            resize(full_img, img, Size(), work_scale_, work_scale_);
+            resize(full_img, img, Size(), work_scale_, work_scale_, INTER_LINEAR_EXACT);
         }
         if (!is_seam_scale_set)
         {
@@ -496,7 +496,7 @@ Stitcher::Status Stitcher::matchImages()
         features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
-        resize(full_img, img, Size(), seam_scale_, seam_scale_);
+        resize(full_img, img, Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
         seam_est_imgs_[i] = img.clone();
     }
 

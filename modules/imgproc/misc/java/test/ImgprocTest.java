@@ -1617,7 +1617,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(1));
         Size dsize = new Size(1, 1);
 
-        Imgproc.resize(src, dst, dsize);
+        Imgproc.resize(src, dst, dsize, 0, 0, Imgproc.INTER_LINEAR_EXACT);
 
         truth = new Mat(1, 1, CvType.CV_8UC1, new Scalar(1));
         assertMatEqual(truth, dst);
