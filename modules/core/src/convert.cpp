@@ -2078,7 +2078,7 @@ struct cvtScale_SIMD<float, float, float>
 
 #if CV_SIMD128_64F
 
-static inline void v_load_scale_shift(const double* src, const v_float64x2 v_scale, const v_float64x2 &v_shift, v_float32x4& v_dst1, v_float32x4 &v_dst2)
+static inline void v_load_scale_shift(const double* src, const v_float64x2& v_scale, const v_float64x2 &v_shift, v_float32x4& v_dst1, v_float32x4 &v_dst2)
 {
     int cWidth = v_float64x2::nlanes;
     v_float64x2 v_src1 = v_shift + v_scale * v_load(src);
