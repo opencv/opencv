@@ -4,6 +4,10 @@
 #if defined(JPEG_DUAL_MODE_8_12)
 
 #  define TIFFInitJPEG TIFFInitJPEG_12
+#  define TIFFJPEGIsFullStripRequired TIFFJPEGIsFullStripRequired_12
+
+int
+TIFFInitJPEG_12(TIFF* tif, int scheme);
 
 #  include LIBJPEG_12_PATH
 
@@ -40,7 +44,7 @@ int TIFFReInitJPEG_12( TIFF *tif, int scheme, int is_encode )
     tif->tif_postencode = JPEGPostEncode;
     tif->tif_encoderow = JPEGEncode;
     tif->tif_encodestrip = JPEGEncode;
-    tif->tif_encodetile = JPEGEncode;
+    tif->tif_encodetile = JPEGEncode;  
     tif->tif_cleanup = JPEGCleanup;
     tif->tif_defstripsize = JPEGDefaultStripSize;
     tif->tif_deftilesize = JPEGDefaultTileSize;
