@@ -1047,7 +1047,7 @@ struct cvtScaleAbs_SIMD<schar, uchar, float>
             v_float32x4 v_shift = v_setall_f32(shift);
             v_float32x4 v_scale = v_setall_f32(scale);
             const int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
+            for (; x <= width - cWidth*2; x += cWidth*2)
             {
                 v_float32x4 v_dst_0, v_dst_1, v_dst_2, v_dst_3;
                 v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_dst_0, v_dst_1);
