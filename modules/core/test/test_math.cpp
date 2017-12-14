@@ -3159,9 +3159,9 @@ softdouble naiveExp(softdouble x)
 TEST(Core_SoftFloat, exp32)
 {
     //special cases
-    ASSERT_TRUE(exp( softfloat::nan()).isNaN());
-    ASSERT_TRUE(exp( softfloat::inf()).isInf());
-    ASSERT_EQ  (exp(-softfloat::inf()), softfloat::zero());
+    EXPECT_TRUE(exp( softfloat::nan()).isNaN());
+    EXPECT_TRUE(exp( softfloat::inf()).isInf());
+    EXPECT_EQ  (exp(-softfloat::inf()), softfloat::zero());
 
     //ln(FLT_MAX) ~ 88.722
     const softfloat ln_max(88.722f);
@@ -3201,9 +3201,9 @@ TEST(Core_SoftFloat, exp32)
 TEST(Core_SoftFloat, exp64)
 {
     //special cases
-    ASSERT_TRUE(exp( softdouble::nan()).isNaN());
-    ASSERT_TRUE(exp( softdouble::inf()).isInf());
-    ASSERT_EQ  (exp(-softdouble::inf()), softdouble::zero());
+    EXPECT_TRUE(exp( softdouble::nan()).isNaN());
+    EXPECT_TRUE(exp( softdouble::inf()).isInf());
+    EXPECT_EQ  (exp(-softdouble::inf()), softdouble::zero());
 
     //ln(DBL_MAX) ~ 709.7827
     const softdouble ln_max(709.7827);
@@ -3246,7 +3246,7 @@ TEST(Core_SoftFloat, log32)
     const int nValues = 50000;
     RNG rng(0);
     //special cases
-    ASSERT_TRUE(log(softfloat::nan()).isNaN());
+    EXPECT_TRUE(log(softfloat::nan()).isNaN());
     for(int i = 0; i < nValues; i++)
     {
         Cv32suf x;
@@ -3256,7 +3256,7 @@ TEST(Core_SoftFloat, log32)
         softfloat x32(x.f);
         ASSERT_TRUE(log(x32).isNaN());
     }
-    ASSERT_TRUE(log(softfloat::zero()).isInf());
+    EXPECT_TRUE(log(softfloat::zero()).isInf());
 
     vector<softfloat> inputs;
 
@@ -3296,7 +3296,7 @@ TEST(Core_SoftFloat, log64)
     const int nValues = 50000;
     RNG rng(0);
     //special cases
-    ASSERT_TRUE(log(softdouble::nan()).isNaN());
+    EXPECT_TRUE(log(softdouble::nan()).isNaN());
     for(int i = 0; i < nValues; i++)
     {
         Cv64suf x;
@@ -3307,7 +3307,7 @@ TEST(Core_SoftFloat, log64)
         softdouble x64(x.f);
         ASSERT_TRUE(log(x64).isNaN());
     }
-    ASSERT_TRUE(log(softdouble::zero()).isInf());
+    EXPECT_TRUE(log(softdouble::zero()).isInf());
 
     vector<softdouble> inputs;
     inputs.push_back(softdouble::one());
@@ -3411,8 +3411,8 @@ TEST(Core_SoftFloat, pow32)
         }
     }
     //+-1 ** inf
-    ASSERT_TRUE(pow( one, inf).isNaN());
-    ASSERT_TRUE(pow(-one, inf).isNaN());
+    EXPECT_TRUE(pow( one, inf).isNaN());
+    EXPECT_TRUE(pow(-one, inf).isNaN());
 
     // x ** 0 == 1
     for(size_t i = 0; i < nValues; i++)
@@ -3442,7 +3442,7 @@ TEST(Core_SoftFloat, pow32)
         ASSERT_TRUE(pow(nan, x32).isNaN());
     }
     // nan ** 0 == 1
-    ASSERT_EQ(pow(nan, zero), one);
+    EXPECT_EQ(pow(nan, zero), one);
 
     // inf ** y == 0, if y < 0
     // inf ** y == inf, if y > 0
@@ -3485,7 +3485,7 @@ TEST(Core_SoftFloat, pow32)
     }
 
     // (0 ** 0) == 1
-    ASSERT_EQ(pow(zero, zero), one);
+    EXPECT_EQ(pow(zero, zero), one);
 
     // 0 ** y == inf, if y < 0
     // 0 ** y == 0, if y > 0
@@ -3542,8 +3542,8 @@ TEST(Core_SoftFloat, pow64)
         }
     }
     //+-1 ** inf
-    ASSERT_TRUE(pow( one, inf).isNaN());
-    ASSERT_TRUE(pow(-one, inf).isNaN());
+    EXPECT_TRUE(pow( one, inf).isNaN());
+    EXPECT_TRUE(pow(-one, inf).isNaN());
 
     // x ** 0 == 1
     for(size_t i = 0; i < nValues; i++)
@@ -3573,7 +3573,7 @@ TEST(Core_SoftFloat, pow64)
         ASSERT_TRUE(pow(nan, x64).isNaN());
     }
     // nan ** 0 == 1
-    ASSERT_EQ(pow(nan, zero), one);
+    EXPECT_EQ(pow(nan, zero), one);
 
     // inf ** y == 0, if y < 0
     // inf ** y == inf, if y > 0
@@ -3621,7 +3621,7 @@ TEST(Core_SoftFloat, pow64)
     }
 
     // (0 ** 0) == 1
-    ASSERT_EQ(pow(zero, zero), one);
+    EXPECT_EQ(pow(zero, zero), one);
 
     // 0 ** y == inf, if y < 0
     // 0 ** y == 0, if y > 0
@@ -3685,8 +3685,8 @@ TEST(Core_SoftFloat, sincos64)
     }
 
     // sin(x) is NaN iff x ix NaN or Inf
-    ASSERT_TRUE(sin(softdouble::inf()).isNaN());
-    ASSERT_TRUE(sin(softdouble::nan()).isNaN());
+    EXPECT_TRUE(sin(softdouble::inf()).isNaN());
+    EXPECT_TRUE(sin(softdouble::nan()).isNaN());
 
     vector<int> exponents;
     exponents.push_back(0);
