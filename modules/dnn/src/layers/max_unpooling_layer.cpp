@@ -103,6 +103,7 @@ public:
                             << "i_c=" << i_c << std::endl
                             << "i_wh=" << i_wh << std::endl
                             << "index=" << index << std::endl
+                            << "maxval=" << inptr[i_wh] << std::endl
                             << "outPlaneTotal=" << outPlaneTotal << std::endl
                             << "input.size=" << input.size << std::endl
                             << "indices.size=" << indices.size << std::endl
