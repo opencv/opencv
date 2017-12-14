@@ -1253,12 +1253,12 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
-    return v_float64x2(vcvt_f64_s32(vget_low_s32(a.val)));
+    return v_float64x2(vcvt_f64_f32(vcvt_f32_s32(vget_low_s32(a.val))));
 }
 
 inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
 {
-    return v_float64x2(vcvt_f64_s32(vget_high_s32(a.val)));
+    return v_float64x2(vcvt_f64_f32(vcvt_f32_s32(vget_high_s32(a.val))));
 }
 
 inline v_float64x2 v_cvt_f64(const v_float32x4& a)
