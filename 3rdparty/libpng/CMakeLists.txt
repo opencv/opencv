@@ -37,9 +37,9 @@ if(ARM OR AARCH64)
   endif()
 endif()
 
-if(ENABLE_SSE
+if(";${CPU_BASELINE_FINAL};" MATCHES "SSE2"
     AND (NOT MSVC OR (MSVC_VERSION GREATER 1799))) # MSVS2013+ (issue #7232)
-  list(APPEND lib_srcs contrib/intel/intel_init.c contrib/intel/filter_sse2_intrinsics.c)
+  list(APPEND lib_srcs intel/intel_init.c intel/filter_sse2_intrinsics.c)
   add_definitions(-DPNG_INTEL_SSE)
 endif()
 
