@@ -863,6 +863,11 @@ macro(_ocv_create_module)
     ocv_target_link_libraries(${the_module} LINK_PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
   endif()
 
+  if(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS)
+    target_compile_definitions(${the_module} ${OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS})
+    unset(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS CACHE)
+  endif()
+
   add_dependencies(opencv_modules ${the_module})
 
   if(ENABLE_SOLUTION_FOLDERS)
