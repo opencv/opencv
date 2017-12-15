@@ -374,23 +374,23 @@ static void cvWarpPerspective( Mat src, Mat dst, double quad[4][2] )
                 i00 = i10 = i01 = i11 = (int) fill_value;
 
                 /* linear interpolation using 2x2 neighborhood */
-                if( isrc_x >= 0 && isrc_x <= src.cols &&
-                    isrc_y >= 0 && isrc_y <= src.rows )
+                if( isrc_x >= 0 && isrc_x < src.cols &&
+                    isrc_y >= 0 && isrc_y < src.rows )
                 {
                     i00 = src.at<uchar>(isrc_y, isrc_x);
                 }
-                if( isrc_x >= -1 && isrc_x < src.cols &&
-                    isrc_y >= 0 && isrc_y <= src.rows )
+                if( isrc_x >= -1 && isrc_x + 1 < src.cols &&
+                    isrc_y >= 0 && isrc_y < src.rows )
                 {
                     i10 = src.at<uchar>(isrc_y, isrc_x + 1);
                 }
-                if( isrc_x >= 0 && isrc_x <= src.cols &&
-                    isrc_y >= -1 && isrc_y < src.rows )
+                if( isrc_x >= 0 && isrc_x < src.cols &&
+                    isrc_y >= -1 && isrc_y + 1 < src.rows )
                 {
                     i01 = src.at<uchar>(isrc_y + 1, isrc_x);
                 }
-                if( isrc_x >= -1 && isrc_x < src.cols &&
-                    isrc_y >= -1 && isrc_y < src.rows )
+                if( isrc_x >= -1 && isrc_x + 1 < src.cols &&
+                    isrc_y >= -1 && isrc_y + 1 < src.rows )
                 {
                     i11 = src.at<uchar>(isrc_y + 1, isrc_x + 1);
                 }
