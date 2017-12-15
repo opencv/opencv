@@ -149,9 +149,7 @@ bool HOGDescriptor::read(FileNode& obj)
     it = obj["cellSize"].begin();
     it >> cellSize.width >> cellSize.height;
     obj["nbins"] >> nbins;
-    obj["derivAperture"] >> derivAperture;
     obj["winSigma"] >> winSigma;
-    obj["histogramNormType"] >> histogramNormType;
     obj["L2HysThreshold"] >> L2HysThreshold;
     obj["gammaCorrection"] >> gammaCorrection;
     obj["nlevels"] >> nlevels;
@@ -180,9 +178,7 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
        << "blockStride" << blockStride
        << "cellSize" << cellSize
        << "nbins" << nbins
-       << "derivAperture" << derivAperture
        << "winSigma" << getWinSigma()
-       << "histogramNormType" << histogramNormType
        << "L2HysThreshold" << L2HysThreshold
        << "gammaCorrection" << gammaCorrection
        << "nlevels" << nlevels
@@ -212,9 +208,7 @@ void HOGDescriptor::copyTo(HOGDescriptor& c) const
     c.blockStride = blockStride;
     c.cellSize = cellSize;
     c.nbins = nbins;
-    c.derivAperture = derivAperture;
     c.winSigma = winSigma;
-    c.histogramNormType = histogramNormType;
     c.L2HysThreshold = L2HysThreshold;
     c.gammaCorrection = gammaCorrection;
     c.svmDetector = svmDetector;

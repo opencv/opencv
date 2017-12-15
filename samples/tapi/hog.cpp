@@ -141,8 +141,7 @@ void App::run()
 
     // Create HOG descriptors and detectors here
 
-    HOGDescriptor hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
-                          HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
+    HOGDescriptor hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, -1, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     hog.setSVMDetector( HOGDescriptor::getDaimlerPeopleDetector() );
 
     while (running)

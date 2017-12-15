@@ -372,8 +372,6 @@ http://www.learnopencv.com/handwritten-digits-classification-an-opencv-c-python-
 struct CV_EXPORTS_W HOGDescriptor
 {
 public:
-    enum { L2Hys = 0 //!< Default histogramNormType
-         };
     enum { DEFAULT_NLEVELS = 64 //!< Default nlevels value.
          };
     /**@brief Creates the HOG descriptor and detector with default params.
@@ -381,8 +379,7 @@ public:
     aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9, 1 )
     */
     CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
-        cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
-        histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true),
+        cellSize(8,8), nbins(9), winSigma(-1), L2HysThreshold(0.2), gammaCorrection(true),
         free_coef(-1.f), nlevels(HOGDescriptor::DEFAULT_NLEVELS), signedGradient(false)
     {}
 
@@ -392,22 +389,18 @@ public:
     @param _blockStride sets blockStride with given value.
     @param _cellSize sets cellSize with given value.
     @param _nbins sets nbins with given value.
-    @param _derivAperture sets derivAperture with given value.
     @param _winSigma sets winSigma with given value.
-    @param _histogramNormType sets histogramNormType with given value.
     @param _L2HysThreshold sets L2HysThreshold with given value.
     @param _gammaCorrection sets gammaCorrection with given value.
     @param _nlevels sets nlevels with given value.
     @param _signedGradient sets signedGradient with given value.
     */
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
-                  Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
-                  int _histogramNormType=HOGDescriptor::L2Hys,
+                  Size _cellSize, int _nbins, double _winSigma=-1,
                   double _L2HysThreshold=0.2, bool _gammaCorrection=false,
                   int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
-    nbins(_nbins), derivAperture(_derivAperture), winSigma(_winSigma),
-    histogramNormType(_histogramNormType), L2HysThreshold(_L2HysThreshold),
+    nbins(_nbins), winSigma(_winSigma), L2HysThreshold(_L2HysThreshold),
     gammaCorrection(_gammaCorrection), free_coef(-1.f), nlevels(_nlevels), signedGradient(_signedGradient)
     {}
 
@@ -596,14 +589,8 @@ public:
     //! Number of bins used in the calculation of histogram of gradients. Default value is 9.
     CV_PROP int nbins;
 
-    //! not documented
-    CV_PROP int derivAperture;
-
     //! Gaussian smoothing window parameter.
     CV_PROP double winSigma;
-
-    //! histogramNormType
-    CV_PROP int histogramNormType;
 
     //! L2-Hys normalization method shrinkage.
     CV_PROP double L2HysThreshold;
