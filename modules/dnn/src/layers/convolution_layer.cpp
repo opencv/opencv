@@ -783,6 +783,7 @@ public:
                 if( IS_POWER_LAYER(activ) )
                 {
                     Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+                    CV_Assert(activ_power);
                     a = activ_power->scale;
                     b = activ_power->shift;
                 }
