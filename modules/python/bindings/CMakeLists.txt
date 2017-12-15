@@ -1,4 +1,5 @@
 set(MODULE_NAME "python_bindings_generator")
+set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 ocv_add_module(${MODULE_NAME} INTERNAL)
 
 set(OPENCV_PYTHON_SIGNATURES_FILE "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_signatures.json" CACHE INTERNAL "")
