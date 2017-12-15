@@ -92,9 +92,25 @@ public:
     }
 };
 
-Ptr<BlankLayer> BlankLayer::create(const LayerParams& params)
+Ptr<Layer> BlankLayer::create(const LayerParams& params)
 {
-    return Ptr<BlankLayer>(new BlankLayerImpl(params));
+    // In case of Caffe's Dropout layer from Faster-RCNN framework,
+    // https://github.com/rbgirshick/caffe-fast-rcnn/tree/faster-rcnn
+    // return Power layer.
+    if (!params.get<bool>("scale_train", true))
+    {
+        float scale = 1 - params.get<float>("dropout_ratio", 0.5f);
+        CV_Assert(scale > 0);
+
+        LayerParams powerParams;
+        powerParams.name = params.name;
+        powerParams.type = "Power";
+        powerParams.set("scale", scale);
+
+        return PowerLayer::create(powerParams);
+    }
+    else
+        return Ptr<BlankLayer>(new BlankLayerImpl(params));
 }
 
 }

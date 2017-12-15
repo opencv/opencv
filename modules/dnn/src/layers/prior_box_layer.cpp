@@ -183,6 +183,7 @@ public:
         _minSize = getParameter<float>(params, "min_size", 0, false, 0);
         _flip = getParameter<bool>(params, "flip", 0, false, true);
         _clip = getParameter<bool>(params, "clip", 0, false, true);
+        _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
 
         _scales.clear();
         _aspectRatios.clear();
@@ -251,7 +252,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(!inputs.empty());
 
         int layerHeight = inputs[0][2];
         int layerWidth = inputs[0][3];
@@ -281,6 +282,8 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_Assert(inputs.size() == 2);
 
         size_t real_numPriors = _numPriors / pow(2, _offsetsX.size() - 1);
         if (_scales.empty())
@@ -323,7 +326,8 @@ public:
                 {
                     float center_x = (w + _offsetsX[i]) * stepX;
                     float center_y = (h + _offsetsY[i]) * stepY;
-                    outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                    outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                         _imageHeight, _bboxesNormalized, outputPtr);
                 }
                 if (_maxSize > 0)
                 {
@@ -333,7 +337,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[i]) * stepX;
                         float center_y = (h + _offsetsY[i]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                             _imageHeight, _bboxesNormalized, outputPtr);
                     }
                 }
 
@@ -349,7 +354,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[i]) * stepX;
                         float center_y = (h + _offsetsY[i]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                             _imageHeight, _bboxesNormalized, outputPtr);
                     }
                 }
 
@@ -363,7 +369,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[j]) * stepX;
                         float center_y = (h + _offsetsY[j]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                             _imageHeight, _bboxesNormalized, outputPtr);
                     }
                 }
             }
@@ -437,6 +444,7 @@ private:
     bool _flip;
     bool _clip;
     bool _explicitSizes;
+    bool _bboxesNormalized;
 
     size_t _numPriors;
 
@@ -444,12 +452,22 @@ private:
     static const std::string _layerName;
 
     static float* addPrior(float center_x, float center_y, float width, float height,
-                           float imgWidth, float imgHeight, float* dst)
+                           float imgWidth, float imgHeight, bool normalized, float* dst)
     {
-        dst[0] = (center_x - width * 0.5f) / imgWidth;    // xmin
-        dst[1] = (center_y - height * 0.5f) / imgHeight;  // ymin
-        dst[2] = (center_x + width * 0.5f) / imgWidth;    // xmax
-        dst[3] = (center_y + height * 0.5f) / imgHeight;  // ymax
+        if (normalized)
+        {
+            dst[0] = (center_x - width * 0.5f) / imgWidth;    // xmin
+            dst[1] = (center_y - height * 0.5f) / imgHeight;  // ymin
+            dst[2] = (center_x + width * 0.5f) / imgWidth;    // xmax
+            dst[3] = (center_y + height * 0.5f) / imgHeight;  // ymax
+        }
+        else
+        {
+            dst[0] = center_x - width * 0.5f;          // xmin
+            dst[1] = center_y - height * 0.5f;         // ymin
+            dst[2] = center_x + width * 0.5f - 1.0f;   // xmax
+            dst[3] = center_y + height * 0.5f - 1.0f;  // ymax
+        }
         return dst + 4;
     }
 };

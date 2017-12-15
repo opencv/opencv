@@ -88,6 +88,7 @@ public:
         else if (params.has("pooled_w") || params.has("pooled_h") || params.has("spatial_scale"))
         {
             type = ROI;
+            computeMaxIdx = false;
         }
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
@@ -294,23 +295,16 @@ public:
                 int ystart, yend;
 
                 const float *srcData;
-                int xstartROI = 0;
-                float roiRatio = 0;
                 if (poolingType == ROI)
                 {
                     const float *roisData = rois->ptr<float>(n);
                     int ystartROI = scaleAndRoundRoi(roisData[2], spatialScale);
                     int yendROI = scaleAndRoundRoi(roisData[4], spatialScale);
                     int roiHeight = std::max(yendROI - ystartROI + 1, 1);
-                    roiRatio = (float)roiHeight / height;
+                    float roiRatio = (float)roiHeight / height;
 
                     ystart = ystartROI + y0 * roiRatio;
                     yend = ystartROI + std::ceil((y0 + 1) * roiRatio);
-
-                    xstartROI = scaleAndRoundRoi(roisData[1], spatialScale);
-                    int xendROI = scaleAndRoundRoi(roisData[3], spatialScale);
-                    int roiWidth = std::max(xendROI - xstartROI + 1, 1);
-                    roiRatio = (float)roiWidth / width;
 
                     CV_Assert(roisData[0] < src->size[0]);
                     srcData = src->ptr<float>(roisData[0], c);
@@ -331,22 +325,12 @@ public:
                 ofs0 += delta;
                 int x1 = x0 + delta;
 
-                if( poolingType == MAX || poolingType == ROI)
+                if( poolingType == MAX)
                     for( ; x0 < x1; x0++ )
                     {
-                        int xstart, xend;
-                        if (poolingType == ROI)
-                        {
-                            xstart = xstartROI + x0 * roiRatio;
-                            xend = xstartROI + std::ceil((x0 + 1) * roiRatio);
-                        }
-                        else
-                        {
-                            xstart = x0 * stride_w - pad_w;
-                            xend = xstart + kernel_w;
-                        }
+                        int xstart = x0 * stride_w - pad_w;
+                        int xend = min(xstart + kernel_w, inp_width);
                         xstart = max(xstart, 0);
-                        xend = min(xend, inp_width);
                         if (xstart >= xend || ystart >= yend)
                         {
                             dstData[x0] = 0;
@@ -493,7 +477,7 @@ public:
                             }
                         }
                     }
-                else
+                else if (poolingType == AVE)
                 {
                     for( ; x0 < x1; x0++ )
                     {
@@ -541,6 +525,37 @@ public:
 
                             dstData[x0] = sum_val*inv_kernel_area;
                         }
+                    }
+                }
+                else  // ROI
+                {
+                    const float *roisData = rois->ptr<float>(n);
+                    int xstartROI = scaleAndRoundRoi(roisData[1], spatialScale);
+                    int xendROI = scaleAndRoundRoi(roisData[3], spatialScale);
+                    int roiWidth = std::max(xendROI - xstartROI + 1, 1);
+                    float roiRatio = (float)roiWidth / width;
+                    for( ; x0 < x1; x0++ )
+                    {
+                        int xstart = xstartROI + x0 * roiRatio;
+                        int xend = xstartROI + std::ceil((x0 + 1) * roiRatio);
+                        xstart = max(xstart, 0);
+                        xend = min(xend, inp_width);
+                        if (xstart >= xend || ystart >= yend)
+                        {
+                            dstData[x0] = 0;
+                            if (compMaxIdx && dstMaskData)
+                                dstMaskData[x0] = -1;
+                            continue;
+                        }
+                        float max_val = -FLT_MAX;
+                        for (int y = ystart; y < yend; ++y)
+                            for (int x = xstart; x < xend; ++x)
+                            {
+                                const int index = y * inp_width + x;
+                                float val = srcData[index];
+                                max_val = std::max(max_val, val);
+                            }
+                        dstData[x0] = max_val;
                     }
                 }
             }
