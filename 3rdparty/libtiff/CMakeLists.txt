@@ -7,6 +7,7 @@ project(${TIFF_LIBRARY})
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
+include(CheckTypeSize)
 
 
 # Find libm, if available
