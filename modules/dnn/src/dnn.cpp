@@ -655,6 +655,8 @@ struct Net::Impl
         fusion = true;
         preferableBackend = DNN_BACKEND_DEFAULT;
         preferableTarget = DNN_TARGET_CPU;
+        blobManager.setPreferableBackend(DNN_BACKEND_DEFAULT);
+        blobManager.setPreferableTarget(DNN_TARGET_CPU);
     }
 
     Ptr<DataLayer> netInputLayer;
