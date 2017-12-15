@@ -55,7 +55,6 @@
 /// C++ Standard Libraries
 #include <iostream>
 #include <stdexcept>
-#include <string>
 
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
