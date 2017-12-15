@@ -36,7 +36,7 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     You will learn how to setup OpenCV in your Windows Operating System!
 
--   @subpage tutorial_windows_visual_studio_Opencv
+-   @subpage tutorial_windows_visual_studio_opencv
 
     _Compatibility:_ \> OpenCV 2.0
 
