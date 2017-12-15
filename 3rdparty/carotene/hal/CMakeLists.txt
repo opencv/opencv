@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 set(TEGRA_HAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CAROTENE_DIR "${TEGRA_HAL_DIR}/../")
 
@@ -95,7 +93,6 @@ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS ${carotene_defs})
   endif()
 
 add_library(tegra_hal STATIC $<TARGET_OBJECTS:carotene_objs>)
-set_target_properties(tegra_hal PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 set_target_properties(tegra_hal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
 set(OPENCV_SRC_DIR "${CMAKE_SOURCE_DIR}")
 if(NOT BUILD_SHARED_LIBS)

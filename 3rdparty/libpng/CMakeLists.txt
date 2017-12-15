@@ -63,12 +63,6 @@ endif(MSVC)
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
 
-if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  endif()
-endif()
-
 ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align)
 
 set_target_properties(${PNG_LIBRARY}
