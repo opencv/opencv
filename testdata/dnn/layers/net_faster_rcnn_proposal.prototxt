@@ -1,0 +1,33 @@
+name: "TestFasterRCNNProposal"
+
+layer {
+  type: 'Input'
+  name: 'rpn_cls_prob_reshape'
+  top: 'rpn_cls_prob_reshape'
+}
+layer {
+  type: 'Input'
+  name: 'rpn_bbox_pred'
+  top: 'rpn_bbox_pred'
+}
+layer {
+  type: 'Input'
+  name: 'im_info'
+  top: 'im_info'
+}
+layer {
+  name: 'output'
+  type: 'Proposal'
+  bottom: 'rpn_cls_prob_reshape'
+  bottom: 'rpn_bbox_pred'
+  bottom: 'im_info'
+  top: 'output'
+  proposal_param {
+    ratio: 0.5
+    ratio: 1.0
+    ratio: 2.0
+    scale: 8
+    scale: 16
+    scale: 32
+  }
+}
