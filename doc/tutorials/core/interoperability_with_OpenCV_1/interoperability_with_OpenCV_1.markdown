@@ -46,7 +46,7 @@ and the subsequent words start with a capital letter (like *copyMakeBorder*).
 
 Now, remember that you need to link to your application all the modules you use, and in case you are
 on Windows using the *DLL* system you will need to add, again, to the path all the binaries. For
-more in-depth information if you're on Windows read @ref tutorial_windows_visual_studio_Opencv and for
+more in-depth information if you're on Windows read @ref tutorial_windows_visual_studio_opencv and for
 Linux an example usage is explained in @ref tutorial_linux_eclipse.
 
 Now for converting the *Mat* object you can use either the *IplImage* or the *CvMat* operators.
