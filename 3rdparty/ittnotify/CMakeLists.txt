@@ -43,12 +43,6 @@ if(NOT WIN32)
   endif()
 endif()
 
-if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  endif()
-endif()
-
 set_target_properties(${ITT_LIBRARY} PROPERTIES
         OUTPUT_NAME ${ITT_LIBRARY}
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
