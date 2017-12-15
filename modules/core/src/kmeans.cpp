@@ -460,10 +460,8 @@ double cv::kmeans( InputArray _data, int K,
             if( _centers.needed() )
             {
                 Mat reshaped = centers;
-                if(_centers.rows() == 1 && _centers.channels() == dims)
-                    reshaped = centers.reshape(dims, 1);
-                else if(_centers.cols()*_centers.channels() == dims)
-                    reshaped = centers.reshape(_centers.channels(), K);
+                if(_centers.fixedType() && _centers.channels() == dims)
+                    reshaped = centers.reshape(dims);
                 reshaped.copyTo(_centers);
             }
             _labels.copyTo(best_labels);
