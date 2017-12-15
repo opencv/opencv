@@ -41,6 +41,8 @@
 
 #include "test_precomp.hpp"
 
+//#define GENERATE_TESTDATA
+
 using namespace cv;
 using namespace std;
 
@@ -248,7 +250,7 @@ TEST(ML_ANN, ActivationFunction)
 #endif
     }
 }
-//#define GENERATE_TESTDATA
+
 TEST(ML_ANN, Method)
 {
     String folder = string(cvtest::TS::ptr()->get_data_path());
@@ -275,6 +277,7 @@ TEST(ML_ANN, Method)
     methodName.push_back("_anneal");
 //    methodName.push_back("_backprop"); -----> NO BACKPROP TEST
 #ifdef GENERATE_TESTDATA
+    {
     Ptr<ml::ANN_MLP> xx = ml::ANN_MLP_ANNEAL::create();
     Mat_<int> layerSizesXX(1, 4);
     layerSizesXX(0, 0) = tdata->getNVars();
@@ -290,6 +293,7 @@ TEST(ML_ANN, Method)
     fs.open(dataname + "_init_weight.yml.gz", FileStorage::WRITE + FileStorage::BASE64);
     xx->write(fs);
     fs.release();
+    }
 #endif
     for (size_t i = 0; i < methodType.size(); i++)
     {
@@ -300,6 +304,7 @@ TEST(ML_ANN, Method)
         x->setTrainMethod(methodType[i]);
         if (methodType[i] == ml::ANN_MLP::ANNEAL)
         {
+            x->setAnnealEnergyRNG(RNG(CV_BIG_INT(0xffffffff)));
             x->setAnnealInitialT(12);
             x->setAnnealFinalT(0.15);
             x->setAnnealCoolingRatio(0.96);
