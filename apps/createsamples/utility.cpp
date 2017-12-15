@@ -374,23 +374,23 @@ static void cvWarpPerspective( Mat src, Mat dst, double quad[4][2] )
                 i00 = i10 = i01 = i11 = (int) fill_value;
 
                 /* linear interpolation using 2x2 neighborhood */
-                if( isrc_x >= 0 && isrc_x <= src.cols &&
-                    isrc_y >= 0 && isrc_y <= src.rows )
+                if( isrc_x >= 0 && isrc_x < src.cols &&
+                    isrc_y >= 0 && isrc_y < src.rows )
                 {
                     i00 = src.at<uchar>(isrc_y, isrc_x);
                 }
-                if( isrc_x >= -1 && isrc_x < src.cols &&
-                    isrc_y >= 0 && isrc_y <= src.rows )
+                if( isrc_x >= -1 && isrc_x + 1 < src.cols &&
+                    isrc_y >= 0 && isrc_y < src.rows )
                 {
                     i10 = src.at<uchar>(isrc_y, isrc_x + 1);
                 }
-                if( isrc_x >= 0 && isrc_x <= src.cols &&
-                    isrc_y >= -1 && isrc_y < src.rows )
+                if( isrc_x >= 0 && isrc_x < src.cols &&
+                    isrc_y >= -1 && isrc_y + 1 < src.rows )
                 {
                     i01 = src.at<uchar>(isrc_y + 1, isrc_x);
                 }
-                if( isrc_x >= -1 && isrc_x < src.cols &&
-                    isrc_y >= -1 && isrc_y < src.rows )
+                if( isrc_x >= -1 && isrc_x + 1 < src.cols &&
+                    isrc_y >= -1 && isrc_y + 1 < src.rows )
                 {
                     i11 = src.at<uchar>(isrc_y + 1, isrc_x + 1);
                 }
@@ -458,11 +458,10 @@ void icvRandomQuad( int width, int height, double quad[4][2],
     Mat rotMat( 3, 3, CV_64FC1, &rotMatData[0] );
     Mat vect( 3, 1, CV_64FC1, &vectData[0] );
 
-    rotVectData[0] = maxxangle * (2.0 * rand() / RAND_MAX - 1.0);
-    rotVectData[1] = ( maxyangle - fabs( rotVectData[0] ) )
-        * (2.0 * rand() / RAND_MAX - 1.0);
-    rotVectData[2] = maxzangle * (2.0 * rand() / RAND_MAX - 1.0);
-    d = (distfactor + distfactor2 * (2.0 * rand() / RAND_MAX - 1.0)) * width;
+    rotVectData[0] = theRNG().uniform( -maxxangle, maxxangle );
+    rotVectData[1] = ( maxyangle - fabs( rotVectData[0] ) ) * theRNG().uniform( -1.0, 1.0 );
+    rotVectData[2] = theRNG().uniform( -maxzangle, maxzangle );
+    d = ( distfactor + distfactor2 * theRNG().uniform( -1.0, 1.0 ) ) * width;
 
     Rodrigues( rotVect, rotMat );
 
@@ -662,15 +661,15 @@ void icvPlaceDistortedSample( Mat background,
         cr.height = (int) (MAX( quad[2][1], quad[3][1] ) + 0.5F ) - cr.y;
     }
 
-    xshift = maxshiftf * rand() / RAND_MAX;
-    yshift = maxshiftf * rand() / RAND_MAX;
+    xshift = theRNG().uniform( 0., maxshiftf );
+    yshift = theRNG().uniform( 0., maxshiftf );
 
     cr.x -= (int) ( xshift * cr.width  );
     cr.y -= (int) ( yshift * cr.height );
     cr.width  = (int) ((1.0 + maxshiftf) * cr.width );
     cr.height = (int) ((1.0 + maxshiftf) * cr.height);
 
-    randscale = maxscalef * rand() / RAND_MAX;
+    randscale = theRNG().uniform( 0., maxscalef );
     cr.x -= (int) ( 0.5 * randscale * cr.width  );
     cr.y -= (int) ( 0.5 * randscale * cr.height );
     cr.width  = (int) ((1.0 + randscale) * cr.width );
@@ -689,7 +688,7 @@ void icvPlaceDistortedSample( Mat background,
     resize( data->img(roi), img, img.size(), 0, 0, INTER_LINEAR_EXACT);
     resize( data->maskimg(roi), maskimg, maskimg.size(), 0, 0, INTER_LINEAR_EXACT);
 
-    forecolordev = (int) (maxintensitydev * (2.0 * rand() / RAND_MAX - 1.0));
+    forecolordev = theRNG().uniform( -maxintensitydev, maxintensitydev );
 
     for( r = 0; r < img.rows; r++ )
     {
@@ -829,7 +828,7 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         {
             round = data->round;
 
-            data->last = rand() % data->count;
+            data->last = theRNG().uniform( 0, RAND_MAX ) % data->count;
 
 #ifdef CV_VERBOSE
             printf( "Open background image: %s\n", data->filename[data->last] );
@@ -877,7 +876,7 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         ((float) data->winsize.height + reader->point.y) / ((float) reader->src.rows) );
 
     resize( reader->src, reader->img,
-            Size((int)(reader->scale * reader->src.rows + 0.5F), (int)(reader->scale * reader->src.cols + 0.5F)), 0, 0, INTER_LINEAR_EXACT );
+            Size((int)(reader->scale * reader->src.cols + 0.5F), (int)(reader->scale * reader->src.rows + 0.5F)), 0, 0, INTER_LINEAR_EXACT);
 }
 
 /*
@@ -932,7 +931,7 @@ void icvGetBackgroundImage( CvBackgroundData* data,
             if( reader->scale <= 1.0F )
             {
                 resize(reader->src, reader->img,
-                       Size((int)(reader->scale * reader->src.rows), (int)(reader->scale * reader->src.cols)), 0, 0, INTER_LINEAR_EXACT);
+                       Size((int)(reader->scale * reader->src.cols), (int)(reader->scale * reader->src.rows)), 0, 0, INTER_LINEAR_EXACT);
             }
             else
             {
@@ -1072,7 +1071,7 @@ void cvCreateTrainingSamples( const char* filename,
 
                 if( invert == CV_RANDOM_INVERT )
                 {
-                    inverse = (rand() > (RAND_MAX/2));
+                    inverse = theRNG().uniform( 0, 2 );
                 }
                 icvPlaceDistortedSample( sample, inverse, maxintensitydev,
                     maxxangle, maxyangle, maxzangle,
@@ -1182,16 +1181,16 @@ void cvCreateTestSamples( const char* infoname,
 
                 if( maxscale < 1.0F ) continue;
 
-                scale = ((float)maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
+                scale = theRNG().uniform( 1.0F, (float)maxscale );
 
                 width = (int) (scale * winwidth);
                 height = (int) (scale * winheight);
-                x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
-                y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
+                x = (int) ( theRNG().uniform( 0.1, 0.8 ) * (cvbgreader->src.cols - width));
+                y = (int) ( theRNG().uniform( 0.1, 0.8 ) * (cvbgreader->src.rows - height));
 
                 if( invert == CV_RANDOM_INVERT )
                 {
-                    inverse = (rand() > (RAND_MAX/2));
+                    inverse = theRNG().uniform( 0, 2 );
                 }
                 icvPlaceDistortedSample( cvbgreader->src(Rect(x, y, width, height)), inverse, maxintensitydev,
                                          maxxangle, maxyangle, maxzangle,
@@ -1452,9 +1451,9 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
                 icvGetTraininDataFromVec( sample, file );
                 if( scale != 1.0 )
                     resize( sample, sample,
-                            Size(MAX(1, cvCeil(scale * winheight)), MAX(1, cvCeil(scale * winwidth))), 0, 0, INTER_LINEAR_EXACT);
+                            Size(MAX(1, cvCeil(scale * winwidth)), MAX(1, cvCeil(scale * winheight))), 0, 0, INTER_LINEAR_EXACT);
                 imshow( "Sample", sample );
-                if( (waitKey( 0 ) & 0xFF) == 27 ) break;
+                if( waitKey( 0 ) == 27 ) break;
             }
         }
         fclose( file.input );
