@@ -127,17 +127,12 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/wrappers.pb.cc
 )
 
-if(CMAKE_VERSION VERSION_LESS 2.8.9 AND UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 add_library(libprotobuf STATIC ${Protobuf_SRCS})
 ocv_include_directories(${PROTOBUF_ROOT}/src)
 
 set_target_properties(libprotobuf
     PROPERTIES
     FOLDER "3rdparty"
-    POSITION_INDEPENDENT_CODE 1    # CMake 2.8.9+
     OUTPUT_NAME libprotobuf
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
