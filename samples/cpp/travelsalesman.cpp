@@ -1,68 +1,62 @@
 #include <opencv2/opencv.hpp>
 
-using namespace std;
 using namespace cv;
 
-void DrawTravelMap(Mat &img, vector<Point> &p, vector<int> &n);
-
-class TravelSalesman : public ml::SimulatedAnnealingSolver
+class TravelSalesman : public ml::SimulatedAnnealingSolverSystem
 {
 private :
-    vector<Point> &posCity;
-    vector<int> &next;
+    const std::vector<Point>& posCity;
+    std::vector<int>& next;
     RNG rng;
     int d0,d1,d2,d3;
 
 public:
-
-    TravelSalesman(vector<Point> &p,vector<int> &n):posCity(p),next(n)
+    TravelSalesman(std::vector<Point> &p, std::vector<int> &n) :
+        posCity(p), next(n)
     {
         rng = theRNG();
-    };
+    }
     /** Give energy value for  a state of system.*/
-    virtual double energy();
+    /*virtual*/ double energy() const;
     /** Function which change the state of system (random pertubation).*/
-    virtual void changedState();
+    /*virtual*/ void changeState();
     /** Function to reverse to the previous state.*/
-    virtual void reverseChangedState();
+    /*virtual*/ void reverseState();
 
 };
 
-void TravelSalesman::changedState()
+void TravelSalesman::changeState()
 {
     d0 = rng.uniform(0,static_cast<int>(posCity.size()));
     d1 = next[d0];
     d2 = next[d1];
     d3 = next[d2];
-    int d0Tmp = d0;
-    int d1Tmp = d1;
-    int d2Tmp = d2;
 
-    next[d0Tmp] = d2;
-    next[d2Tmp] = d1;
-    next[d1Tmp] = d3;
+    next[d0] = d2;
+    next[d2] = d1;
+    next[d1] = d3;
 }
 
 
-void TravelSalesman::reverseChangedState()
+void TravelSalesman::reverseState()
 {
     next[d0] = d1;
     next[d1] = d2;
     next[d2] = d3;
 }
 
-double TravelSalesman::energy()
+double TravelSalesman::energy() const
 {
-    double e=0;
+    double e = 0;
     for (size_t i = 0; i < next.size(); i++)
     {
-        e +=  norm(posCity[i]-posCity[next[i]]);
+        e += norm(posCity[i]-posCity[next[i]]);
     }
     return e;
 }
 
 
-void DrawTravelMap(Mat &img, vector<Point> &p, vector<int> &n)
+static void DrawTravelMap(Mat &img, std::vector<Point> &p, std::vector<int> &n)
 {
     for (size_t i = 0; i < n.size(); i++)
     {
@@ -74,12 +68,12 @@ int main(void)
 {
     int nbCity=40;
     Mat img(500,500,CV_8UC3,Scalar::all(0));
-    RNG &rng=theRNG();
+    RNG rng(123456);
     int radius=static_cast<int>(img.cols*0.45);
     Point center(img.cols/2,img.rows/2);
 
-    vector<Point> posCity(nbCity);
-    vector<int> next(nbCity);
+    std::vector<Point> posCity(nbCity);
+    std::vector<int> next(nbCity);
     for (size_t i = 0; i < posCity.size(); i++)
     {
         double theta = rng.uniform(0., 2 * CV_PI);
@@ -87,25 +81,33 @@ int main(void)
         posCity[i].y = static_cast<int>(radius*sin(theta)) + center.y;
         next[i]=(i+1)%nbCity;
     }
-    TravelSalesman ts(posCity,next);
+    Ptr<TravelSalesman> ts_system(new TravelSalesman(posCity, next));
+    ml::SimulatedAnnealingSolver ts(ts_system);
+
+    ts.setIterPerStep(10000*nbCity);
     ts.setCoolingRatio(0.99);
     ts.setInitialTemperature(100);
-    ts.setIterPerStep(10000*nbCity);
     ts.setFinalTemperature(100*0.97);
     DrawTravelMap(img,posCity,next);
     imshow("Map",img);
     waitKey(10);
-    for (int i = 0; i < 100; i++)
+    for (int i = 0, zeroChanges = 0; zeroChanges < 10; i++)
     {
-        ts.run();
+        int changesApplied = ts.run();
         img = Mat::zeros(img.size(),CV_8UC3);
         DrawTravelMap(img, posCity, next);
         imshow("Map", img);
-        waitKey(10);
+        int k = waitKey(10);
         double ti=ts.getFinalTemperature();
-        cout<<ti <<"  -> "<<ts.energy()<<"\n";
+        std::cout << "i=" << i << " changesApplied=" << changesApplied << " temp=" << ti << " result=" << ts_system->energy() << std::endl;
+        if (k == 27 || k == 'q' || k == 'Q')
+            return 0;
+        if (changesApplied == 0)
+            zeroChanges++;
         ts.setInitialTemperature(ti);
         ts.setFinalTemperature(ti*0.97);
     }
+    std::cout << "Done" << std::endl;
+    waitKey(0);
     return 0;
 }
