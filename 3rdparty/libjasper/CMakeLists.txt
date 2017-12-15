@@ -31,12 +31,6 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-unini
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wstrict-prototypes) # clang
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4018 /wd4101 /wd4244 /wd4267 /wd4715) # vs2005
 
-if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  endif()
-endif()
-
 set_target_properties(${JASPER_LIBRARY}
   PROPERTIES
   OUTPUT_NAME ${JASPER_LIBRARY}
