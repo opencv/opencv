@@ -44,21 +44,37 @@ namespace cv { namespace ml {
 
 struct SimulatedAnnealingSolver::Impl
 {
+    int refcount;
+
+    const Ptr<SimulatedAnnealingSolverSystem> systemPtr;
+    SimulatedAnnealingSolverSystem& system;
     RNG rEnergy;
     double coolingRatio;
     double initialT;
     double finalT;
     int iterPerStep;
-    Impl()
+
+    Impl(const Ptr<SimulatedAnnealingSolverSystem>& s) :
+        refcount(1),
+        systemPtr(s),
+        system(*(s.get())),
+        rEnergy(12345)
     {
+        CV_Assert(!systemPtr.empty());
         initialT = 2;
         finalT = 0.1;
         coolingRatio = 0.95;
         iterPerStep = 100;
-        refcount = 1;
     }
-    int refcount;
-    ~Impl() { refcount--;CV_Assert(refcount==0); }
+
+    inline double energy() { return system.energy(); }
+    inline void changeState() { system.changeState(); }
+    inline void reverseState() { system.reverseState(); }
+
+    void addref() { CV_XADD(&refcount, 1); }
+    void release() { if (CV_XADD(&refcount, -1) == 1) delete this; }
+protected:
+    virtual ~Impl() { CV_Assert(refcount==0); }
 };
 
 struct AnnParams
@@ -71,7 +87,7 @@ struct AnnParams
         rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
         rpDWMin = FLT_EPSILON; rpDWMax = 50.;
         initialT=10;finalT=0.1,coolingRatio=0.95;itePerStep=10;
-
+        rEnergy = cv::RNG(12345);
     }
 
     TermCriteria termCrit;
@@ -90,6 +106,7 @@ struct AnnParams
     double finalT;
     double coolingRatio;
     int itePerStep;
+    RNG rEnergy;
 };
 
 template <typename T>
@@ -98,48 +115,60 @@ inline T inBounds(T val, T min_val, T max_val)
     return std::min(std::max(val, min_val), max_val);
 }
 
-SimulatedAnnealingSolver::~SimulatedAnnealingSolver()
+SimulatedAnnealingSolver::SimulatedAnnealingSolver(const Ptr<SimulatedAnnealingSolverSystem>& system)
 {
-    if (impl) delete impl;
+    impl = new Impl(system);
 }
 
-void SimulatedAnnealingSolver::init()
+SimulatedAnnealingSolver::SimulatedAnnealingSolver(const SimulatedAnnealingSolver& b)
 {
-    impl = new SimulatedAnnealingSolver::Impl();
+    if (b.impl) b.impl->addref();
+    release();
+    impl = b.impl;
+}
+
+void SimulatedAnnealingSolver::release()
+{
+    if (impl) { impl->release(); impl = NULL; }
 }
 
 void SimulatedAnnealingSolver::setIterPerStep(int ite)
 {
+    CV_Assert(impl);
     CV_Assert(ite>0);
     impl->iterPerStep = ite;
 }
 
 int SimulatedAnnealingSolver::run()
 {
+    CV_Assert(impl);
     CV_Assert(impl->initialT>impl->finalT);
     double Ti = impl->initialT;
-    double previousEnergy = energy();
+    double previousEnergy = impl->energy();
     int exchange = 0;
     while (Ti > impl->finalT)
     {
         for (int i = 0; i < impl->iterPerStep; i++)
         {
-            changedState();
-            double newEnergy = energy();
+            impl->changeState();
+            double newEnergy = impl->energy();
             if (newEnergy < previousEnergy)
             {
                 previousEnergy = newEnergy;
+                //??? exchange++;
             }
             else
             {
-                double r = impl->rEnergy.uniform(double(0.0), double(1.0));
-                if (r < exp(-(newEnergy - previousEnergy) / Ti))
+                double r = impl->rEnergy.uniform(0.0, 1.0);
+                if (r < std::exp(-(newEnergy - previousEnergy) / Ti))
                 {
                     previousEnergy = newEnergy;
                     exchange++;
                 }
                 else
-                    reverseChangedState();
+                {
+                    impl->reverseState();
+                }
             }
 
         }
@@ -149,33 +178,43 @@ int SimulatedAnnealingSolver::run()
     return exchange;
 }
 
+void SimulatedAnnealingSolver::setEnergyRNG(const RNG& rng)
+{
+    CV_Assert(impl);
+    impl->rEnergy = rng;
+}
+
 void SimulatedAnnealingSolver::setInitialTemperature(double x)
 {
+    CV_Assert(impl);
     CV_Assert(x>0);
     impl->initialT = x;
 }
 
 void SimulatedAnnealingSolver::setFinalTemperature(double x)
 {
+    CV_Assert(impl);
     CV_Assert(x>0);
     impl->finalT = x;
 }
 
 double SimulatedAnnealingSolver::getFinalTemperature()
 {
+    CV_Assert(impl);
     return impl->finalT;
 }
 
 void SimulatedAnnealingSolver::setCoolingRatio(double x)
 {
+    CV_Assert(impl);
     CV_Assert(x>0 && x<1);
     impl->coolingRatio = x;
 }
 
-class SimulatedAnnealingANN_MLP : public ml::SimulatedAnnealingSolver
+class SimulatedAnnealingANN_MLP : public SimulatedAnnealingSolverSystem
 {
-public:
-    ml::ANN_MLP *nn;
+protected:
+    ml::ANN_MLP& nn;
     Ptr<ml::TrainData> data;
     int nbVariables;
     vector<double*> adrVariables;
@@ -183,13 +222,14 @@ public:
     RNG rIndex;
     double varTmp;
     int index;
-
-    SimulatedAnnealingANN_MLP(ml::ANN_MLP *x, Ptr<ml::TrainData> d) : nn(x), data(d)
+public:
+    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d)
     {
         initVarMap();
     }
-
-    void changedState()
+    ~SimulatedAnnealingANN_MLP() {}
+protected:
+    void changeState()
     {
         index = rIndex.uniform(0, nbVariables);
         double dv = rVar.uniform(-1.0, 1.0);
@@ -197,22 +237,22 @@ public:
         *adrVariables[index] = dv;
     }
 
-    void reverseChangedState()
+    void reverseState()
     {
         *adrVariables[index] = varTmp;
     }
 
-    double energy() { return nn->calcError(data, false, noArray()); }
+    double energy() const { return nn.calcError(data, false, noArray()); }
 
 protected:
     void initVarMap()
     {
-        Mat l = nn->getLayerSizes();
+        Mat l = nn.getLayerSizes();
         nbVariables = 0;
         adrVariables.clear();
         for (int i = 1; i < l.rows-1; i++)
         {
-            Mat w = nn->getWeights(i);
+            Mat w = nn.getWeights(i);
             for (int j = 0; j < w.rows; j++)
             {
                 for (int k = 0; k < w.cols; k++, nbVariables++)
@@ -296,6 +336,13 @@ void ANN_MLP::setAnnealItePerStep(int val)
     this_->setAnnealItePerStep(val);
 }
 
+void ANN_MLP::setAnnealEnergyRNG(const RNG& rng)
+{
+    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealEnergyRNG(rng);
+}
 
 class ANN_MLPImpl : public ANN_MLP_ANNEAL
 {
@@ -322,6 +369,9 @@ public:
     CV_IMPL_PROPERTY(double, AnnealFinalT, params.finalT)
     CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
     CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
+
+    //CV_IMPL_PROPERTY(RNG, AnnealEnergyRNG, params.rEnergy)
+    inline void setAnnealEnergyRNG(const RNG& val) { params.rEnergy = val; }
 
     void clear()
     {
@@ -1040,7 +1090,8 @@ public:
     }
     int train_anneal(const Ptr<TrainData>& trainData)
     {
-        SimulatedAnnealingANN_MLP t(this, trainData);
+        SimulatedAnnealingSolver t(Ptr<SimulatedAnnealingANN_MLP>(new SimulatedAnnealingANN_MLP(*this, trainData)));
+        t.setEnergyRNG(params.rEnergy);
         t.setFinalTemperature(params.finalT);
         t.setInitialTemperature(params.initialT);
         t.setCoolingRatio(params.coolingRatio);
@@ -1685,70 +1736,6 @@ Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
     Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
     ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());
     return ann;
-}
-
-double ANN_MLP_ANNEAL::getAnnealInitialT() const
-{
-    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealInitialT();
-}
-
-void ANN_MLP_ANNEAL::setAnnealInitialT(double val)
-{
-    ANN_MLPImpl* this_ = dynamic_cast< ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealInitialT(val);
-}
-
-double ANN_MLP_ANNEAL::getAnnealFinalT() const
-{
-    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealFinalT();
-}
-
-void ANN_MLP_ANNEAL::setAnnealFinalT(double val)
-{
-    ANN_MLPImpl* this_ = dynamic_cast<ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealFinalT(val);
-}
-
-double ANN_MLP_ANNEAL::getAnnealCoolingRatio() const
-{
-    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealCoolingRatio();
-}
-
-void ANN_MLP_ANNEAL::setAnnealCoolingRatio(double val)
-{
-    ANN_MLPImpl* this_ = dynamic_cast< ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealInitialT(val);
-}
-
-int ANN_MLP_ANNEAL::getAnnealItePerStep() const
-{
-    const ANN_MLPImpl* this_ = dynamic_cast<const ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealItePerStep();
-}
-
-void ANN_MLP_ANNEAL::setAnnealItePerStep(int val)
-{
-    ANN_MLPImpl* this_ = dynamic_cast<ANN_MLPImpl*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealInitialT(val);
 }
 
 }}
