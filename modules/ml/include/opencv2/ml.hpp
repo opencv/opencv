@@ -1920,7 +1920,7 @@ public:
 class CV_EXPORTS SimulatedAnnealingSolver : public Algorithm
 {
 public:
-    SimulatedAnnealingSolver() { init(); };
+    SimulatedAnnealingSolver() { init(); }
     ~SimulatedAnnealingSolver();
     /** Give energy value for  a state of system.*/
     virtual double energy() =0;
@@ -1947,31 +1947,14 @@ public:
     * @param ite number of iteration per temperature step ite \> 0
     */
     void setIterPerStep(int ite);
-    struct Impl;
-protected :
+
+protected:
     void init();
+
+private:
+    struct Impl;
     Impl* impl;
 };
-struct SimulatedAnnealingSolver::Impl
-{
-    RNG rEnergy;
-    double coolingRatio;
-    double initialT;
-    double finalT;
-    int iterPerStep;
-    Impl()
-    {
-        initialT = 2;
-        finalT = 0.1;
-        coolingRatio = 0.95;
-        iterPerStep = 100;
-        refcount = 1;
-    }
-    int refcount;
-    ~Impl() { refcount--;CV_Assert(refcount==0); }
-};
-
-
 //! @} ml
 
 }

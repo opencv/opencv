@@ -42,6 +42,24 @@
 
 namespace cv { namespace ml {
 
+struct SimulatedAnnealingSolver::Impl
+{
+    RNG rEnergy;
+    double coolingRatio;
+    double initialT;
+    double finalT;
+    int iterPerStep;
+    Impl()
+    {
+        initialT = 2;
+        finalT = 0.1;
+        coolingRatio = 0.95;
+        iterPerStep = 100;
+        refcount = 1;
+    }
+    int refcount;
+    ~Impl() { refcount--;CV_Assert(refcount==0); }
+};
 
 struct AnnParams
 {
@@ -135,24 +153,24 @@ void SimulatedAnnealingSolver::setInitialTemperature(double x)
 {
     CV_Assert(x>0);
     impl->initialT = x;
-};
+}
 
 void SimulatedAnnealingSolver::setFinalTemperature(double x)
 {
     CV_Assert(x>0);
     impl->finalT = x;
-};
+}
 
 double SimulatedAnnealingSolver::getFinalTemperature()
 {
     return impl->finalT;
-};
+}
 
 void SimulatedAnnealingSolver::setCoolingRatio(double x)
 {
     CV_Assert(x>0 && x<1);
     impl->coolingRatio = x;
-};
+}
 
 class SimulatedAnnealingANN_MLP : public ml::SimulatedAnnealingSolver
 {
@@ -169,19 +187,23 @@ public:
     SimulatedAnnealingANN_MLP(ml::ANN_MLP *x, Ptr<ml::TrainData> d) : nn(x), data(d)
     {
         initVarMap();
-    };
+    }
+
     void changedState()
     {
         index = rIndex.uniform(0, nbVariables);
         double dv = rVar.uniform(-1.0, 1.0);
         varTmp = *adrVariables[index];
         *adrVariables[index] = dv;
-    };
+    }
+
     void reverseChangedState()
     {
         *adrVariables[index] = varTmp;
-    };
+    }
+
     double energy() { return nn->calcError(data, false, noArray()); }
+
 protected:
     void initVarMap()
     {
