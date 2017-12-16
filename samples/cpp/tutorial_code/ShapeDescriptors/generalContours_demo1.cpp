@@ -23,11 +23,18 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   //![setup]
   /// Load source image
-  src = imread( argv[1], IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | ../data/stuff.jpg | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+  if( src.empty() )
+    {
+      cout << "Could not open or find the image!\n" << endl;
+      cout << "usage: " << argv[0] << " <Input image>" << endl;
+      return -1;
+    }
 
   /// Convert image to gray and blur it
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
@@ -84,8 +91,8 @@ void thresh_callback(int, void* )
   //![allthework]
   for( size_t i = 0; i < contours.size(); i++ )
   {
-    approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-    boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+    approxPolyDP( contours[i], contours_poly[i], 3, true );
+    boundRect[i] = boundingRect( contours_poly[i] );
     minEnclosingCircle( contours_poly[i], center[i], radius[i] );
   }
   //![allthework]

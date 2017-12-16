@@ -27,9 +27,6 @@
 using namespace cv;
 using namespace dnn;
 
-const char* about = "This sample is used to run Faster-RCNN object detection "
-                    "models from https://github.com/rbgirshick/py-faster-rcnn with OpenCV.";
-
 const char* keys =
     "{ help  h |     | print help message  }"
     "{ proto p |     | path to .prototxt   }"
@@ -53,9 +50,12 @@ int main(int argc, char** argv)
 {
     // Parse command line arguments.
     CommandLineParser parser(argc, argv, keys);
+    parser.about( "This sample is used to run Faster-RCNN object detection with OpenCV.\n"
+                  "You can get required models from https://github.com/rbgirshick/py-faster-rcnn" );
+
     if (argc == 1 || parser.has("help"))
     {
-        std::cout << about << std::endl;
+        parser.printMessage();
         return 0;
     }
 

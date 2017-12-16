@@ -116,15 +116,12 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
     //! [display-pose]
 }
 
-const char* about = "Code for homography tutorial.\n"
-                    "Example 1: pose from homography with coplanar points.\n";
-
 const char* params
-    = "{ h help         | false | print usage }"
-      "{ image          |       | path to a chessboard image (left04.jpg) }"
-      "{ intrinsics     |       | path to camera intrinsics (left_intrinsics.yml) }"
-      "{ width w        | 9     | chessboard width }"
-      "{ height h       | 6     | chessboard height }"
+    = "{ help h         |       | print usage }"
+      "{ image          | ../data/left04.jpg | path to a chessboard image }"
+      "{ intrinsics     | ../data/left_intrinsics.yml | path to camera intrinsics }"
+      "{ width bw       | 9     | chessboard width }"
+      "{ height bh      | 6     | chessboard height }"
       "{ square_size    | 0.025 | chessboard square size }";
 }
 
@@ -132,17 +129,18 @@ int main(int argc, char *argv[])
 {
     CommandLineParser parser(argc, argv, params);
 
-    if (parser.get<bool>("help"))
+    if (parser.has("help"))
     {
-        cout << about << endl;
+        parser.about("Code for homography tutorial.\n"
+            "Example 1: pose from homography with coplanar points.\n");
         parser.printMessage();
         return 0;
     }
 
     Size patternSize(parser.get<int>("width"), parser.get<int>("height"));
     float squareSize = (float) parser.get<double>("square_size");
-    poseEstimationFromCoplanarPoints(parser.get<string>("image"),
-                                     parser.get<string>("intrinsics"),
+    poseEstimationFromCoplanarPoints(parser.get<String>("image"),
+                                     parser.get<String>("intrinsics"),
                                      patternSize, squareSize);
 
     return 0;

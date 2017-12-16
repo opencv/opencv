@@ -23,10 +23,17 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image and convert it to gray
-  src = imread( argv[1], IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | ../data/stuff.jpg | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+  if( src.empty() )
+  {
+    cout << "Could not open or find the image!\n" << endl;
+    cout << "Usage: " << argv[0] << " <Input image>" << endl;
+    return -1;
+  }
 
   /// Convert image to gray and blur it
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
@@ -62,7 +69,7 @@ void thresh_callback(int, void* )
   /// Find the convex hull object for each contour
   vector<vector<Point> >hull( contours.size() );
   for( size_t i = 0; i < contours.size(); i++ )
-     {   convexHull( Mat(contours[i]), hull[i], false ); }
+     {   convexHull( contours[i], hull[i], false ); }
 
   /// Draw contours + hull results
   Mat drawing = Mat::zeros( threshold_output.size(), CV_8UC3 );

@@ -89,31 +89,31 @@ This can be tested easily using a chessboard object and `findChessboardCorners()
 
 The first thing consists to detect the chessboard corners, the chessboard size (`patternSize`), here `9x6`, is required:
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp find-chessboard-corners
+@snippet pose_from_homography.cpp find-chessboard-corners
 
 ![](images/homography_pose_chessboard_corners.jpg)
 
 The object points expressed in the object frame can be computed easily knowing the size of a chessboard square:
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp compute-chessboard-object-points
+@snippet pose_from_homography.cpp compute-chessboard-object-points
 
 The coordinate `Z=0` must be removed for the homography estimation part:
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp compute-object-points
+@snippet pose_from_homography.cpp compute-object-points
 
 The image points expressed in the normalized camera can be computed from the corner points and by applying a reverse perspective transformation using the camera intrinsics and the distortion coefficients:
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp load-intrinsics
+@snippet pose_from_homography.cpp load-intrinsics
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp compute-image-points
+@snippet pose_from_homography.cpp compute-image-points
 
 The homography can then be estimated with:
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp estimate-homography
+@snippet pose_from_homography.cpp estimate-homography
 
 A quick solution to retrieve the pose from the homography matrix is (see \ref pose_ar "5"):
 
-@snippet tutorial_homography_ex1_pose_from_homography.cpp pose-from-homography
+@snippet pose_from_homography.cpp pose-from-homography
 
 \f[
   \begin{align*}
@@ -164,15 +164,15 @@ The following image shows the source image (left) and the chessboard view that w
 
 The first step consists to detect the chessboard corners in the source and desired images:
 
-@snippet tutorial_homography_ex2_perspective_correction.cpp find-corners
+@snippet perspective_correction.cpp find-corners
 
 The homography is estimated easily with:
 
-@snippet tutorial_homography_ex2_perspective_correction.cpp estimate-homography
+@snippet perspective_correction.cpp estimate-homography
 
 To warp the source chessboard view into the desired chessboard view, we use @ref cv::warpPerspective
 
-@snippet tutorial_homography_ex2_perspective_correction.cpp warp-chessboard
+@snippet perspective_correction.cpp warp-chessboard
 
 The result image is:
 
@@ -180,7 +180,7 @@ The result image is:
 
 To compute the coordinates of the source corners transformed by the homography:
 
-@snippet tutorial_homography_ex2_perspective_correction.cpp compute-transformed-corners
+@snippet perspective_correction.cpp compute-transformed-corners
 
 To check the correctness of the calculation, the matching lines are displayed:
 
@@ -295,13 +295,13 @@ To transform a 3D point expressed in the camera 1 frame to the camera 2 frame:
 
 In this example, we will compute the camera displacement between two camera poses with respect to the chessboard object. The first step consists to compute the camera poses for the two images:
 
-@snippet tutorial_homography_ex3_homography_from_camera_displacement.cpp compute-poses
+@snippet homography_from_camera_displacement.cpp compute-poses
 
 ![](images/homography_camera_displacement_poses.jpg)
 
 The camera displacement can be computed from the camera poses using the formulas above:
 
-@snippet tutorial_homography_ex3_homography_from_camera_displacement.cpp compute-c2Mc1
+@snippet homography_from_camera_displacement.cpp compute-c2Mc1
 
 The homography related to a specific plane computed from the camera displacement is:
 
@@ -320,11 +320,11 @@ the translation vector between the two camera frames.
 
 Here the normal vector `n` is the plane normal expressed in the camera frame 1 and can be computed as the cross product of 2 vectors (using 3 non collinear points that lie on the plane) or in our case directly with:
 
-@snippet tutorial_homography_ex3_homography_from_camera_displacement.cpp compute-plane-normal-at-camera-pose-1
+@snippet homography_from_camera_displacement.cpp compute-plane-normal-at-camera-pose-1
 
 The distance `d` can be computed as the dot product between the plane normal and a point on the plane or by computing the [plane equation](http://mathworld.wolfram.com/Plane.html) and using the D coefficient:
 
-@snippet tutorial_homography_ex3_homography_from_camera_displacement.cpp compute-plane-distance-to-the-camera-frame-1
+@snippet homography_from_camera_displacement.cpp compute-plane-distance-to-the-camera-frame-1
 
 The projective homography matrix \f$ \textbf{G} \f$ can be computed from the Euclidean homography \f$ \textbf{H} \f$ using the intrinsic matrix \f$ \textbf{K} \f$ (see @cite Malis), here assuming the same camera between the two plane views:
 
@@ -332,7 +332,7 @@ The projective homography matrix \f$ \textbf{G} \f$ can be computed from the Euc
   \textbf{G} = \gamma \textbf{K} \textbf{H} \textbf{K}^{-1}
 \f]
 
-@snippet tutorial_homography_ex3_homography_from_camera_displacement.cpp compute-homography
+@snippet homography_from_camera_displacement.cpp compute-homography
 
 In our case, the Z-axis of the chessboard goes inside the object whereas in the homography figure it goes outside. This is just a matter of sign:
 
@@ -340,7 +340,7 @@ In our case, the Z-axis of the chessboard goes inside the object whereas in the 
   ^{2}\textrm{H}_{1} = \hspace{0.2em} ^{2}\textrm{R}_{1} + \hspace{0.1em} \frac{^{2}\textrm{t}_{1} \cdot n^T}{d}
 \f]
 
-@snippet tutorial_homography_ex3_homography_from_camera_displacement.cpp compute-homography-from-camera-displacement
+@snippet homography_from_camera_displacement.cpp compute-homography-from-camera-displacement
 
 We will now compare the projective homography computed from the camera displacement with the one estimated with @ref cv::findHomography
 
@@ -368,11 +368,11 @@ Visually, it is hard to distinguish a difference between the result image from t
 OpenCV 3 contains the function @ref cv::decomposeHomographyMat which allows to decompose the homography matrix to a set of rotations, translations and plane normals.
 First we will decompose the homography matrix computed from the camera displacement:
 
-@snippet tutorial_homography_ex4_decompose_homography.cpp compute-homography-from-camera-displacement
+@snippet decompose_homography.cpp compute-homography-from-camera-displacement
 
 The results of @ref cv::decomposeHomographyMat are:
 
-@snippet tutorial_homography_ex4_decompose_homography.cpp decompose-homography-from-camera-displacement
+@snippet decompose_homography.cpp decompose-homography-from-camera-displacement
 
 ```
 Solution 0:

@@ -20,7 +20,7 @@ const char* warp_rotate_window = "Warp + Rotate";
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   Point2f srcTri[3];
   Point2f dstTri[3];
@@ -30,7 +30,14 @@ int main( int, char** argv )
   Mat src, warp_dst, warp_rotate_dst;
 
   /// Load the image
-  src = imread( argv[1], IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+  if( src.empty() )
+  {
+      cout << "Could not open or find the image!\n" << endl;
+      cout << "Usage: " << argv[0] << " <Input image>" << endl;
+      return -1;
+  }
 
   /// Set the dst image the same type and size as src
   warp_dst = Mat::zeros( src.rows, src.cols, src.type() );

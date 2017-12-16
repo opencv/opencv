@@ -4,8 +4,10 @@
  * @author OpenCV team
  */
 
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <iostream>
-#include <opencv2/opencv.hpp>
 
 using namespace std;
 using namespace cv;
@@ -30,16 +32,16 @@ void drawAxis(Mat& img, Point p, Point q, Scalar colour, const float scale = 0.2
     // Here we lengthen the arrow by a factor of scale
     q.x = (int) (p.x - scale * hypotenuse * cos(angle));
     q.y = (int) (p.y - scale * hypotenuse * sin(angle));
-    line(img, p, q, colour, 1, CV_AA);
+    line(img, p, q, colour, 1, LINE_AA);
 
     // create the arrow hooks
     p.x = (int) (q.x + 9 * cos(angle + CV_PI / 4));
     p.y = (int) (q.y + 9 * sin(angle + CV_PI / 4));
-    line(img, p, q, colour, 1, CV_AA);
+    line(img, p, q, colour, 1, LINE_AA);
 
     p.x = (int) (q.x + 9 * cos(angle - CV_PI / 4));
     p.y = (int) (q.y + 9 * sin(angle - CV_PI / 4));
-    line(img, p, q, colour, 1, CV_AA);
+    line(img, p, q, colour, 1, LINE_AA);
 //! [visualization1]
 }
 
@@ -59,7 +61,7 @@ double getOrientation(const vector<Point> &pts, Mat &img)
     }
 
     //Perform PCA analysis
-    PCA pca_analysis(data_pts, Mat(), CV_PCA_DATA_AS_ROW);
+    PCA pca_analysis(data_pts, Mat(), PCA::DATA_AS_ROW);
 
     //Store the center of the object
     Point cntr = Point(static_cast<int>(pca_analysis.mean.at<double>(0, 0)),
@@ -98,15 +100,14 @@ int main(int argc, char** argv)
 {
 //! [pre-process]
     // Load image
-    String imageName("../data/pca_test1.jpg"); // by default
-    if (argc > 1)
-    {
-        imageName = argv[1];
-    }
-    Mat src = imread( imageName );
+    CommandLineParser parser(argc, argv, "{@input | ../data/pca_test1.jpg | input image}");
+    parser.about( "This program demonstrates how to use OpenCV PCA to extract the orienation of an object.\n" );
+    parser.printMessage();
+
+    Mat src = imread(parser.get<String>("@input"));
 
     // Check if image is loaded successfully
-    if(!src.data || src.empty())
+    if(src.empty())
     {
         cout << "Problem loading image!!!" << endl;
         return EXIT_FAILURE;
@@ -120,14 +121,13 @@ int main(int argc, char** argv)
 
     // Convert image to binary
     Mat bw;
-    threshold(gray, bw, 50, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    threshold(gray, bw, 50, 255, THRESH_BINARY | THRESH_OTSU);
 //! [pre-process]
 
 //! [contours]
     // Find all the contours in the thresholded image
-    vector<Vec4i> hierarchy;
     vector<vector<Point> > contours;
-    findContours(bw, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+    findContours(bw, contours, RETR_LIST, CHAIN_APPROX_NONE);
 
     for (size_t i = 0; i < contours.size(); ++i)
     {
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
         if (area < 1e2 || 1e5 < area) continue;
 
         // Draw each contour only for visualisation purposes
-        drawContours(src, contours, static_cast<int>(i), Scalar(0, 0, 255), 2, 8, hierarchy, 0);
+        drawContours(src, contours, static_cast<int>(i), Scalar(0, 0, 255), 2, LINE_8);
         // Find the orientation of each shape
         getOrientation(contours[i], src);
     }

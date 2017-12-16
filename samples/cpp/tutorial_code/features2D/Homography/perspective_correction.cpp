@@ -92,15 +92,12 @@ void perspectiveCorrection(const string &img1Path, const string &img2Path, const
     //! [compute-transformed-corners]
 }
 
-const char* about = "Code for homography tutorial.\n"
-                    "Example 2: perspective correction.\n";
-
 const char* params
-    = "{ h help         | false | print usage }"
-      "{ image1         |       | path to the source chessboard image (left02.jpg) }"
-      "{ image2         |       | path to the desired chessboard image (left01.jpg) }"
-      "{ width w        | 9     | chessboard width }"
-      "{ height h       | 6     | chessboard height }";
+    = "{ help h         |       | print usage }"
+      "{ image1         | ../data/left02.jpg | path to the source chessboard image }"
+      "{ image2         | ../data/left01.jpg | path to the desired chessboard image }"
+      "{ width bw       | 9     | chessboard width }"
+      "{ height bh      | 6     | chessboard height }";
 }
 
 int main(int argc, char *argv[])
@@ -108,16 +105,17 @@ int main(int argc, char *argv[])
     cv::RNG rng( 0xFFFFFFFF );
     CommandLineParser parser(argc, argv, params);
 
-    if (parser.get<bool>("help"))
+    if (parser.has("help"))
     {
-        cout << about << endl;
+        parser.about("Code for homography tutorial.\n"
+            "Example 2: perspective correction.\n");
         parser.printMessage();
         return 0;
     }
 
     Size patternSize(parser.get<int>("width"), parser.get<int>("height"));
-    perspectiveCorrection(parser.get<string>("image1"),
-                          parser.get<string>("image2"),
+    perspectiveCorrection(parser.get<String>("image1"),
+                          parser.get<String>("image2"),
                           patternSize, rng);
 
     return 0;
