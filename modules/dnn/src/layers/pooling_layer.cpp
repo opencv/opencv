@@ -67,13 +67,14 @@ class PoolingLayerImpl : public PoolingLayer
 public:
     PoolingLayerImpl(const LayerParams& params)
     {
-        type = MAX;
         computeMaxIdx = true;
         globalPooling = false;
+        stride = Size(1, 1);
 
-        if (params.has("pool"))
+        if (params.has("pool") || params.has("kernel_size") ||
+            params.has("kernel_w") || params.has("kernel_h"))
         {
-            String pool = params.get<String>("pool").toLowerCase();
+            String pool = params.get<String>("pool", "max").toLowerCase();
             if (pool == "max")
                 type = MAX;
             else if (pool == "ave")
@@ -90,6 +91,8 @@ public:
             type = ROI;
             computeMaxIdx = false;
         }
+        else
+            CV_Error(Error::StsBadArg, "Cannot determine pooling type");
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
         pooledSize.width = params.get<uint32_t>("pooled_w", 1);
