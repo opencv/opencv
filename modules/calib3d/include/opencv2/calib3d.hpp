@@ -311,7 +311,7 @@ CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobi
 
   Check @ref tutorial_homography "the corresponding tutorial" for more details
  */
-  
+
 /** @brief Finds a perspective transformation between two planes.
 
 @param srcPoints Coordinates of the points in the original plane, a matrix of the type CV_32FC2
