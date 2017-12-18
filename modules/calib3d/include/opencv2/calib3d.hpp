@@ -307,7 +307,9 @@ optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
 /** @example pose_from_homography.cpp
-An example program about pose from homography with coplanar points
+  An example program about pose estimation from coplanar points
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details
  */
   
 /** @brief Finds a perspective transformation between two planes.
