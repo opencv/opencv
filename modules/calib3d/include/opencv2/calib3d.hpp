@@ -306,6 +306,12 @@ optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
+/** @example pose_from_homography.cpp
+  An example program about pose estimation from coplanar points
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details
+ */
+
 /** @brief Finds a perspective transformation between two planes.
 
 @param srcPoints Coordinates of the points in the original plane, a matrix of the type CV_32FC2
@@ -364,12 +370,6 @@ cannot be estimated, an empty one will be returned.
 @sa
 getAffineTransform, estimateAffine2D, estimateAffinePartial2D, getPerspectiveTransform, warpPerspective,
 perspectiveTransform
-
-
-@note
-   -   A example on calculating a homography for image matching can be found at
-        opencv_source_code/samples/cpp/video_homography.cpp
-
  */
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method = 0, double ransacReprojThreshold = 3,
@@ -524,6 +524,12 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  OutputArray imagePoints,
                                  OutputArray jacobian = noArray(),
                                  double aspectRatio = 0 );
+
+/** @example homography_from_camera_displacement.cpp
+  An example program about homography from the camera displacement
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details
+ */
 
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
