@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     Mat dst, cdst, cdstP;
 
     //![load]
-    const char* default_file = "../../../data/sudoku.png";
+    const char* default_file = "../data/sudoku.png";
     const char* filename = argc >=2 ? argv[1] : default_file;
 
     // Loads an image
