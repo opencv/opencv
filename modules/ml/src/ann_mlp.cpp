@@ -155,7 +155,7 @@ int SimulatedAnnealingSolver::run()
             if (newEnergy < previousEnergy)
             {
                 previousEnergy = newEnergy;
-                //??? exchange++;
+                exchange++;
             }
             else
             {
