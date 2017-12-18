@@ -75,7 +75,7 @@ static cv::String toString(const T &v)
     return ss.str();
 }
 
-class CaffeImporter : public Importer
+class CaffeImporter
 {
     caffe::NetParameter net;
     caffe::NetParameter netBinary;
@@ -390,19 +390,8 @@ public:
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
     }
-
-    ~CaffeImporter()
-    {
-
-    }
-
 };
 
-}
-
-Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeModel)
-{
-    return Ptr<Importer>(new CaffeImporter(prototxt.c_str(), caffeModel.c_str()));
 }
 
 Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)

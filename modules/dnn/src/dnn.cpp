@@ -2294,8 +2294,6 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
 
 //////////////////////////////////////////////////////////////////////////
 
-Importer::~Importer() {}
-
 Layer::Layer() { preferableTarget = DNN_TARGET_CPU; }
 
 Layer::Layer(const LayerParams &params)

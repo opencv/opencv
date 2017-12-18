@@ -446,14 +446,13 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
         net.mutable_node()->DeleteSubrange(layer_index, 1);
 }
 
-class TFImporter : public Importer {
+class TFImporter {
 public:
     TFImporter(const char *model, const char *config = NULL);
     TFImporter(const char *dataModel, size_t lenModel,
                const char *dataConfig = NULL, size_t lenConfig = 0);
 
     void populateNet(Net dstNet);
-    ~TFImporter() {}
 
 private:
     void kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob);
@@ -1314,19 +1313,6 @@ void TFImporter::populateNet(Net dstNet)
 }
 
 } // namespace
-
-Ptr<Importer> createTensorflowImporter(const String &model)
-{
-    return Ptr<Importer>(new TFImporter(model.c_str()));
-}
-
-#else //HAVE_PROTOBUF
-
-Ptr<Importer> createTensorflowImporter(const String&)
-{
-    CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from TensorFlow models");
-    return Ptr<Importer>();
-}
 
 #endif //HAVE_PROTOBUF
 

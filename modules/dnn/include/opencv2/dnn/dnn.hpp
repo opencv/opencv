@@ -426,15 +426,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         void forward(std::vector<std::vector<Mat> >& outputBlobs,
                      const std::vector<String>& outBlobNames);
 
-        //TODO:
-        /** @brief Optimized forward.
-         *  @warning Not implemented yet.
-         *  @details Makes forward only those layers which weren't changed after previous forward().
-         */
-        void forwardOpt(LayerId toLayer);
-        /** @overload */
-        void forwardOpt(const std::vector<LayerId> &toLayers);
-
         /**
          * @brief Compile Halide layers.
          * @param[in] scheduler Path to YAML file with scheduling directives.
@@ -609,38 +600,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         Ptr<Impl> impl;
     };
 
-    /**
-     * @deprecated Deprecated as external interface. Will be for internal needs only.
-     * @brief Small interface class for loading trained serialized models of different dnn-frameworks. */
-    class CV_EXPORTS_W Importer : public Algorithm
-    {
-    public:
-
-        /** @brief Adds loaded layers into the @p net and sets connections between them. */
-        CV_DEPRECATED CV_WRAP virtual void populateNet(Net net) = 0;
-
-        virtual ~Importer();
-    };
-
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
     *  @param darknetModel path to the .weights file with learned network.
     *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    * @details This is shortcut consisting from DarknetImporter and Net::populateNet calls.
+    *  @returns Net object.
     */
     CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
 
-    /**
-     *  @deprecated Use @ref readNetFromCaffe instead.
-     *  @brief Creates the importer of <a href="http://caffe.berkeleyvision.org">Caffe</a> framework network.
-     *  @param prototxt   path to the .prototxt file with text description of the network architecture.
-     *  @param caffeModel path to the .caffemodel file with learned network.
-     *  @returns Pointer to the created importer, NULL in failure cases.
-     */
-    CV_DEPRECATED CV_EXPORTS_W Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeModel = String());
-
-    /** @brief Reads a network model stored in Caffe model files.
-      * @details This is shortcut consisting from createCaffeImporter and Net::populateNet calls.
+    /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
+      * @param prototxt   path to the .prototxt file with text description of the network architecture.
+      * @param caffeModel path to the .caffemodel file with learned network.
+      * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
 
@@ -651,16 +622,21 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @param lenProto length of bufferProto
       * @param bufferModel buffer containing the content of the .caffemodel file
       * @param lenModel length of bufferModel
+      * @returns Net object.
       */
     CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
                                     const char *bufferModel = NULL, size_t lenModel = 0);
 
-    /** @brief Reads a network model stored in Tensorflow model file.
-      * @details This is shortcut consisting from createTensorflowImporter and Net::populateNet calls.
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
+      * @param model  path to the .pb file with binary protobuf description of the network architecture
+      * @param config path to the .pbtxt file that contains text graph definition in protobuf format.
+      *               Resulting Net object is built by text graph using weights from a binary one that
+      *               let us make it more flexible.
+      * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
 
-    /** @brief Reads a network model stored in Tensorflow model in memory.
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
       * It differs from the above function only in what argument(s) it accepts.
       * @param bufferModel buffer containing the content of the pb file
@@ -671,27 +647,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
                                          const char *bufferConfig = NULL, size_t lenConfig = 0);
 
-    /** @brief Reads a network model stored in Torch model file.
-      * @details This is shortcut consisting from createTorchImporter and Net::populateNet calls.
-      */
-    CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true);
-
     /**
-     *  @deprecated Use @ref readNetFromTensorflow instead.
-     *  @brief Creates the importer of <a href="http://www.tensorflow.org">TensorFlow</a> framework network.
-     *  @param model   path to the .pb file with binary protobuf description of the network architecture.
-     *  @returns Pointer to the created importer, NULL in failure cases.
-     */
-    CV_DEPRECATED CV_EXPORTS_W Ptr<Importer> createTensorflowImporter(const String &model);
-
-    /**
-     *  @deprecated Use @ref readNetFromTorch instead.
-     *  @brief Creates the importer of <a href="http://torch.ch">Torch7</a> framework network.
-     *  @param filename path to the file, dumped from Torch by using torch.save() function.
+     *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.
+     *  @param model    path to the file, dumped from Torch by using torch.save() function.
      *  @param isBinary specifies whether the network was serialized in ascii mode or binary.
-     *  @returns Pointer to the created importer, NULL in failure cases.
-     *
-     *  @warning Torch7 importer is experimental now, you need explicitly set CMake `opencv_dnn_BUILD_TORCH_IMPORTER` flag to compile its.
+     *  @returns Net object.
      *
      *  @note Ascii mode of Torch serializer is more preferable, because binary mode extensively use `long` type of C language,
      *  which has various bit-length on different systems.
@@ -712,10 +672,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *
      * Also some equivalents of these classes from cunn, cudnn, and fbcunn may be successfully imported.
      */
-    CV_DEPRECATED CV_EXPORTS_W Ptr<Importer> createTorchImporter(const String &filename, bool isBinary = true);
+     CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true);
 
     /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
-     *  @warning This function has the same limitations as createTorchImporter().
+     *  @warning This function has the same limitations as readNetFromTorch().
      */
     CV_EXPORTS_W Mat readTorchBlob(const String &filename, bool isBinary = true);
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,

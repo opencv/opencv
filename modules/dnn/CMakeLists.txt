@@ -97,15 +97,3 @@ if(BUILD_PERF_TESTS)
     endif()
   endif()
 endif()
-
-# ----------------------------------------------------------------------------
-# Torch7 importer of blobs and models, produced by Torch.nn module
-# ----------------------------------------------------------------------------
-OCV_OPTION(${the_module}_BUILD_TORCH_IMPORTER "Build Torch model importer" ON)
-if(${the_module}_BUILD_TORCH_IMPORTER)
-    message(STATUS "Torch importer has been enabled. To run the tests you have to install Torch "
-      "('th' executable should be available) "
-      "and generate testdata using opencv_extra/testdata/dnn/generate_torch_models.py script.")
-    add_definitions(-DENABLE_TORCH_IMPORTER=1)
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702 /wd4127 /wd4267) #supress warnings in original torch files
-endif()
