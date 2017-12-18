@@ -35,31 +35,27 @@ if(NOT MSVC)
   check_include_file(unistd.h    HAVE_UNISTD_H)
 endif()
 
-if(MSVC)
-  set(INLINE_KEYWORD "inline")
-else()
-  # Inspired from /usr/share/autoconf/autoconf/c.m4
-  foreach(inline_keyword "inline" "__inline__" "__inline")
-    if(NOT DEFINED C_INLINE)
-      set(CMAKE_REQUIRED_DEFINITIONS_SAVE ${CMAKE_REQUIRED_DEFINITIONS})
-      set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
-          "-Dinline=${inline_keyword}")
-      check_c_source_compiles("
-          typedef int foo_t;
-          static inline foo_t static_foo() {return 0;}
-          foo_t foo(){return 0;}
-          int main(int argc, char *argv[]) {return 0;}"
-        C_HAS_${inline_keyword})
-      set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS_SAVE})
-      if(C_HAS_${inline_keyword})
-        set(C_INLINE TRUE)
-        set(INLINE_KEYWORD "${inline_keyword}")
-      endif()
-   endif()
-  endforeach()
+# Inspired from /usr/share/autoconf/autoconf/c.m4
+foreach(inline_keyword "inline" "__inline__" "__inline")
   if(NOT DEFINED C_INLINE)
-    set(INLINE_KEYWORD)
-  endif()
+    set(CMAKE_REQUIRED_DEFINITIONS_SAVE ${CMAKE_REQUIRED_DEFINITIONS})
+    set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
+        "-Dinline=${inline_keyword}")
+    check_c_source_compiles("
+        typedef int foo_t;
+        static inline foo_t static_foo() {return 0;}
+        foo_t foo(){return 0;}
+        int main(int argc, char *argv[]) {return 0;}"
+      C_HAS_${inline_keyword})
+    set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS_SAVE})
+    if(C_HAS_${inline_keyword})
+      set(C_INLINE TRUE)
+      set(INLINE_KEYWORD "${inline_keyword}")
+    endif()
+ endif()
+endforeach()
+if(NOT DEFINED C_INLINE)
+  set(INLINE_KEYWORD)
 endif()
 
 
@@ -414,6 +410,7 @@ set(lib_srcs
     tif_write.c
     tif_zip.c
     tif_stream.cxx
+	snprintf.c
     t4.h
     tif_dir.h
     tif_fax3.h
