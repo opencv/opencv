@@ -525,6 +525,12 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  OutputArray jacobian = noArray(),
                                  double aspectRatio = 0 );
 
+/** @example homography_from_camera_displacement.cpp
+  An example program about homography from the camera displacement
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details
+ */
+
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
