@@ -567,7 +567,97 @@ focal length.
 function requires exactly four object and image points.
 
 The function estimates the object pose given a set of object points, their corresponding image
-projections, as well as the camera matrix and the distortion coefficients.
+projections, as well as the camera matrix and the distortion coefficients, see the figure below
+(more precisely, the X-axis of the camera frame is pointing to the right, the Y-axis downward
+and the Z-axis forward).
+
+![](pnp.jpg)
+
+Points expressed in the world frame \f$ \bf{X}_w \f$ are projected into the image plane \f$ \left[ u, v \right] \f$
+using the perspective projection model \f$ \Pi \f$ and the camera intrinsic parameters matrix \f$ \bf{A} \f$:
+
+\f[
+  \begin{align*}
+  \begin{bmatrix}
+  u \\
+  v \\
+  1
+  \end{bmatrix} &=
+  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{M}_w
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix} \\
+  \begin{bmatrix}
+  u \\
+  v \\
+  1
+  \end{bmatrix} &=
+  \begin{bmatrix}
+  f_x & 0 & c_x \\
+  0 & f_y & c_y \\
+  0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  1 & 0 & 0 & 0 \\
+  0 & 1 & 0 & 0 \\
+  0 & 0 & 1 & 0
+  \end{bmatrix}
+  \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} & t_x \\
+  r_{21} & r_{22} & r_{23} & t_y \\
+  r_{31} & r_{32} & r_{33} & t_z \\
+  0 & 0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix}
+  \end{align*}
+\f]
+
+The estimated pose is thus the rotation (`rvec`) and the translation (`tvec`) vectors that allow to transform
+a 3D point expressed in the world frame into the camera frame:
+
+\f[
+  \begin{align*}
+  \begin{bmatrix}
+  X_c \\
+  Y_c \\
+  Z_c \\
+  1
+  \end{bmatrix} &=
+  \hspace{0.2em} ^{c}\bf{M}_w
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix} \\
+  \begin{bmatrix}
+  X_c \\
+  Y_c \\
+  Z_c \\
+  1
+  \end{bmatrix} &=
+  \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} & t_x \\
+  r_{21} & r_{22} & r_{23} & t_y \\
+  r_{31} & r_{32} & r_{33} & t_z \\
+  0 & 0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix}
+  \end{align*}
+\f]
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
