@@ -11,6 +11,8 @@ Test for Tensorflow models loading
 
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/ts/ocl_test.hpp>
 
 namespace cvtest
 {
@@ -209,6 +211,43 @@ TEST(Test_TensorFlow, MobileNet_SSD)
     }
 
     Net net = readNetFromTensorflow(netPath, netConfig);
+    net.setInput(inp);
+
+    std::vector<Mat> output;
+    net.forward(output, outNames);
+
+    normAssert(target[0].reshape(1, 1), output[0].reshape(1, 1));
+    normAssert(target[1].reshape(1, 1), output[1].reshape(1, 1), "", 1e-5, 2e-4);
+    normAssert(target[2].reshape(1, 1), output[2].reshape(1, 1), "", 4e-5, 1e-2);
+}
+
+OCL_TEST(Test_TensorFlow, MobileNet_SSD)
+{
+    std::string netPath = findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false);
+    std::string netConfig = findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false);
+    std::string imgPath = findDataFile("dnn/street.png", false);
+
+    Mat inp;
+    resize(imread(imgPath), inp, Size(300, 300));
+    inp = blobFromImage(inp, 1.0f / 127.5, Size(), Scalar(127.5, 127.5, 127.5), true);
+
+    std::vector<String> outNames(3);
+    outNames[0] = "concat";
+    outNames[1] = "concat_1";
+    outNames[2] = "detection_out";
+
+    std::vector<Mat> target(outNames.size());
+    for (int i = 0; i < outNames.size(); ++i)
+    {
+        std::string path = findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco." + outNames[i] + ".npy", false);
+        target[i] = blobFromNPY(path);
+    }
+
+    Net net = readNetFromTensorflow(netPath, netConfig);
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
     net.setInput(inp);
 
     std::vector<Mat> output;
