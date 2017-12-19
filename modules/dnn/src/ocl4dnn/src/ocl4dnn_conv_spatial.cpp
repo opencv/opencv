@@ -103,6 +103,7 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     top_dim_ = num_output_ * output_w_ * output_h_;
 
     cache_path_ = utils::getConfigurationParameterString("OPENCV_OCL4DNN_CONFIG_PATH", "");
+    dwconv_ = (num_output_ == channels_ && channels_ == group_);
 
     use_cache_path_ = false;
     if (!cache_path_.empty())
@@ -203,7 +204,8 @@ void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
 typedef enum {
     KERNEL_TYPE_INTEL_IDLF = 2,
     KERNEL_TYPE_BASIC = 4,
-    KERNEL_TYPE_GEMM_LIKE = 5
+    KERNEL_TYPE_GEMM_LIKE = 5,
+    KERNEL_TYPE_DWCONV = 6
 } ocl4dnnConvSpatialKernelType_t;
 
 template<typename Dtype>
@@ -313,6 +315,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         if (clOptionSupport("-cl-no-subgroup-ifp"))
             options_ << " -cl-no-subgroup-ifp ";
 
+        addDef("KERNEL_GEMM_LIKE");
         addDef("INPUT_DEPTH", channels_);
         addDef("WIDTH1", M_);
         addDef("OUT_PADDING_LEFT", 0);
@@ -328,6 +331,28 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("APPLY_BIAS", bias_term_);
         setFusionDefine(fused_activ_, fused_eltwise_);
         src_ = ocl::dnn::conv_layer_spatial_oclsrc;
+    }
+    else if (kernelType == KERNEL_TYPE_DWCONV)
+    {
+        kernelUKey = generateSpecificKey(KERNEL_TYPE_DWCONV, blockM, blockK, blockN);
+        kernel_name_ = "DWCONV_";
+        kernel_name_ += kernelUKey.c_str();
+
+        options_ << " -cl-fast-relaxed-math ";
+        if (clOptionSupport("-cl-no-subgroup-ifp"))
+            options_ << " -cl-no-subgroup-ifp ";
+
+        addDef("KERNEL_DWCONV");
+        addDef("KERNEL_SIZE", kernel_w_ * kernel_h_);
+        addDef("KERNEL_W", kernel_w_);
+        addDef("KERNEL_H", kernel_h_);
+        addDef("APPLY_BIAS", bias_term_);
+        addDef("OUTPUT_Z", num_output_ * num_);
+        addDef("CHANNELS", num_output_);
+        setFusionDefine(fused_activ_, fused_eltwise_);
+
+        options_ << " -D DWCONV=" << kernel_name_;
+        src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
     }
 }
 
@@ -906,6 +931,33 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 return false;
             }
         }
+    } else if (config->kernelType == KERNEL_TYPE_DWCONV) {
+        ocl::Kernel kernel(config->kernelName.c_str(), program);
+        if (kernel.empty())
+            return false;
+
+        cl_uint argIdx = 0;
+        setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
+        kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
+        kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+        if (bias_term_)
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+        kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+        kernel.set(argIdx++, (uint16_t)width_);
+        kernel.set(argIdx++, (uint16_t)height_);
+        kernel.set(argIdx++, (uint16_t)output_w_);
+        kernel.set(argIdx++, (uint16_t)output_h_);
+
+        size_t global_size[3];
+        global_size[0] = output_w_;
+        global_size[1] = output_h_;
+        global_size[2] = num_output_ * num_;
+
+        if (!kernel.run(3, global_size, NULL, false))
+        {
+            std::cout << "DWCONV kernel run failed." << std::endl;
+            return false;
+        }
     } else {
         for (int32_t n = 0; n < numImages; ++n) {
             for (int32_t g = 0; g < group_; ++g) {
@@ -1223,6 +1275,39 @@ bool OCL4DNNConvSpatial<float>::createIDLFKernel(int32_t blockWidth,
 }
 
 template<>
+bool OCL4DNNConvSpatial<float>::createDWConvKernel(int32_t blockWidth,
+                                                   int32_t blockHeight,
+                                                   int32_t blockDepth)
+{
+    if (!dwconv_)
+        return false;
+
+    int workItemOutput[3] = { 1, 1, 1 };
+    size_t local_size[3] = { 1, 1, 1 };
+    size_t global_size[3];
+    global_size[0] = divUp(output_w_, workItemOutput[0]);
+    global_size[1] = divUp(output_h_, workItemOutput[1]);
+    global_size[2] = divUp(M_ * num_, workItemOutput[2]);
+
+    kernelType_ = KERNEL_TYPE_DWCONV;
+    blockM_ = blockWidth;
+    blockK_ = blockHeight;
+    blockN_ = blockDepth;
+
+    setupKernel();
+
+    ocl::Program program = compileKernel();
+    if (program.ptr())
+    {
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0],
+                              &workItemOutput[0], false, KERNEL_TYPE_DWCONV));
+        return true;
+    }
+    else
+        return false;
+}
+
+template<>
 bool OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
                                                         int32_t blockWidth,
                                                         int32_t blockHeight,
@@ -1238,6 +1323,8 @@ bool OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
         return createBasicKernel(blockWidth, blockHeight, blockDepth);
     else if (kernelType == KERNEL_TYPE_GEMM_LIKE)
         return createGEMMLikeConvKernel(blockWidth, blockHeight, blockDepth);
+    else if (kernelType == KERNEL_TYPE_DWCONV)
+        return createDWConvKernel(blockWidth, blockHeight, blockDepth);
     else
         CV_Assert(0 && "Internal error");
     return false;
@@ -1246,7 +1333,16 @@ bool OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
 template<>
 void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerParam> > &tunerItems)
 {
-    if (ocl::Device::getDefault().intelSubgroupsSupport()) {
+    if (ocl::Device::getDefault().intelSubgroupsSupport())
+    {
+        //depth_wise kernels
+        if (dwconv_)
+        {
+            tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_DWCONV, 1, 1, 1));
+            if (group_ > 8)
+                return;
+        }
+
         /* IDLF kernels are using Intel specific extension which make
            them intel only. */
         // Generates static key_

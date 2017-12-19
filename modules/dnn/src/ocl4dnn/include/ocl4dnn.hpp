@@ -215,6 +215,9 @@ class OCL4DNNConvSpatial
         bool createGEMMLikeConvKernel(int32_t blockWidth,
                                       int32_t blockHeight,
                                       int32_t blockDepth);
+        bool createDWConvKernel(int32_t blockWidth,
+                                int32_t blockHeight,
+                                int32_t blockDepth);
         void CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
                              int32_t offset, int32_t size, bool write_only);
         bool convolve(const UMat &bottom, UMat &top,
@@ -282,6 +285,8 @@ class OCL4DNNConvSpatial
         int32_t M_;
 
         bool tuned_;
+        bool dwconv_;
+
         std::string key_, key_sanitized_;
         std::string short_key_;
         std::string kernel_name_;
