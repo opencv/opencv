@@ -242,6 +242,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         // ROIPooling parameters.
         Size pooledSize;
         float spatialScale;
+        // PSROIPooling parameters.
+        int psRoiOutChannels;
 
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
