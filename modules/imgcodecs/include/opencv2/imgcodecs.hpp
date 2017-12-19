@@ -89,6 +89,8 @@ enum ImwriteFlags {
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
+       IMWRITE_PBM_BITMAP          = 33, //!< For PBM, it can be a BitMap Flag, i.e. whether to write image in a BitMap Format, 0 or 1. Default value is 0.
+       IMWRITE_PBM_THRESH_BITMAP   = 34, //!< For PBM, threshold above which & equal to will be written as 1's and below 0's. Default value is 128 CV_8U and 32768 for CV_16U.
        IMWRITE_EXR_TYPE            = (3 << 4) + 0, /* 48 */ //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
