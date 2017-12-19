@@ -1885,6 +1885,12 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
+/** @example decompose_homography.cpp
+  An example program with homography decomposition.
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details.
+ */
+
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 
 @param H The input homography matrix between two images.
