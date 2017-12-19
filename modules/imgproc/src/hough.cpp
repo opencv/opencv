@@ -896,7 +896,7 @@ struct EstimatedCircle
     int accum;
 };
 
-inline bool cmpAccum(const EstimatedCircle& left, const EstimatedCircle& right)
+static bool cmpAccum(const EstimatedCircle& left, const EstimatedCircle& right)
 {
     // Compare everything so the order is completely deterministic
     // Larger accum first
@@ -919,9 +919,9 @@ inline bool cmpAccum(const EstimatedCircle& left, const EstimatedCircle& right)
         return true;
     else if (left.c[1] > right.c[1])
         return false;
-    // Identical
+    // Identical - neither object is less than the other
     else
-        return true;
+        return false;
 }
 
 inline Vec3f GetCircle(const EstimatedCircle& est)
