@@ -258,6 +258,12 @@ class OCL4DNNConvSpatial
                                  int lx, int ly, int lz,
                                  bool swizzle, bool nullLocal);
         void generateTunerItems(std::vector< cv::Ptr<tunerParam> > &tunerItems);
+        void generate_dwconv_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
+                                        int blockM, int blockK, int blockN);
+        void generate_gemmlike_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
+                                          int blockM, int blockK, int blockN);
+        void generate_idlf_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
+                                      int blockM, int blockK, int simd_size);
         void setFusionDefine(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise);
         void setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, ocl::Kernel &kernel, cl_uint &argIdx);
 
