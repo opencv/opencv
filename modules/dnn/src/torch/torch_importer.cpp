@@ -47,15 +47,12 @@
 #include <iostream>
 #include <fstream>
 
-#if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 #include "THDiskFile.h"
-#endif
 
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
-#if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 using namespace TH;
 
 //#ifdef NDEBUG
@@ -95,7 +92,7 @@ static inline bool endsWith(const String &str, const char *substr)
     return str.rfind(substr) == str.length() - strlen(substr);
 }
 
-struct TorchImporter : public ::cv::dnn::Importer
+struct TorchImporter
 {
     typedef std::map<String, std::pair<int, Mat> > TensorsMap;
     Net net;
@@ -1191,19 +1188,13 @@ struct TorchImporter : public ::cv::dnn::Importer
     }
 };
 
-Ptr<Importer> createTorchImporter(const String &filename, bool isBinary)
-{
-    return Ptr<Importer>(new TorchImporter(filename, isBinary));
-}
-
-
 Mat readTorchBlob(const String &filename, bool isBinary)
 {
-    Ptr<TorchImporter> importer(new TorchImporter(filename, isBinary));
-    importer->readObject();
-    CV_Assert(importer->tensors.size() == 1);
+    TorchImporter importer(filename, isBinary);
+    importer.readObject();
+    CV_Assert(importer.tensors.size() == 1);
 
-    return importer->tensors.begin()->second;
+    return importer.tensors.begin()->second;
 }
 
 Net readNetFromTorch(const String &model, bool isBinary)
@@ -1215,28 +1206,6 @@ Net readNetFromTorch(const String &model, bool isBinary)
     importer.populateNet(net);
     return net;
 }
-
-#else
-
-Ptr<Importer> createTorchImporter(const String&, bool)
-{
-    CV_Error(Error::StsNotImplemented, "Torch importer is disabled in current build");
-    return Ptr<Importer>();
-}
-
-Mat readTorchBlob(const String&, bool)
-{
-    CV_Error(Error::StsNotImplemented, "Torch importer is disabled in current build");
-    return Mat();
-}
-
-Net readNetFromTorch(const String &model, bool isBinary)
-{
-    CV_Error(Error::StsNotImplemented, "Torch importer is disabled in current build");
-    return Net();
-}
-
-#endif //defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace
