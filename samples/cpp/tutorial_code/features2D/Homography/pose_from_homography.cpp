@@ -107,6 +107,14 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
     }
     //! [pose-from-homography]
 
+    //! [polar-decomposition-of-the-rotation-matrix]
+    cout << "R (before polar decomposition):\n" << R << "\ndet(R): " << determinant(R) << endl;
+    Mat W, U, Vt;
+    SVDecomp(R, W, U, Vt);
+    R = U*Vt;
+    cout << "R (after polar decomposition):\n" << R << "\ndet(R): " << determinant(R) << endl;
+    //! [polar-decomposition-of-the-rotation-matrix]
+
     //! [display-pose]
     Mat rvec;
     Rodrigues(R, rvec);
