@@ -32,3 +32,29 @@ PERF_TEST(PerfHoughCircles, Basic)
 
     SANITY_CHECK_NOTHING();
 }
+
+PERF_TEST(PerfHoughCircles2, ManySmallCircles)
+{
+    string filename = getDataPath("cv/imgproc/beads.jpg");
+    const double dp = 1.0;
+    double minDist = 10;
+    double edgeThreshold = 90;
+    double accumThreshold = 11;
+    int minRadius = 7;
+    int maxRadius = 18;
+
+    Mat img = imread(filename, IMREAD_GRAYSCALE);
+    if (img.empty())
+        FAIL() << "Unable to load source image " << filename;
+
+    vector<Vec3f> circles;
+    declare.in(img);
+    declare.iterations(3);
+
+    TEST_CYCLE()
+    {
+        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    }
+
+    SANITY_CHECK_NOTHING();
+}

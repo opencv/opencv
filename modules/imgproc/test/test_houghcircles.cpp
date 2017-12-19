@@ -231,3 +231,29 @@ TEST(HoughCirclesTest, CentersOnly)
         EXPECT_EQ(circles[i][2], 0.0f) << "Did not ask for radius";
     }
 }
+
+TEST(HoughCirclesTest, ManySmallCircles)
+{
+    string picture_name = "imgproc/beads.jpg";
+    const double dp = 1.0;
+    double minDist = 10;
+    double edgeThreshold = 90;
+    double accumThreshold = 11;
+    int minRadius = 7;
+    int maxRadius = 18;
+
+    string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
+
+    vector<Vec3f> circles;
+    HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+
+#if DEBUG_IMAGES
+    string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
+    string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    highlightCircles(filename, circles, imgProc + test_case_name + ".png");
+#endif
+
+    EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
+}
