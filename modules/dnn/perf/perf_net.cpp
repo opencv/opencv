@@ -70,7 +70,7 @@ public:
         }
         else if (framework == "tensorflow")
         {
-            net = cv::dnn::readNetFromTensorflow(weights);
+            net = cv::dnn::readNetFromTensorflow(weights, proto);
         }
         else
             CV_Error(Error::StsNotImplemented, "Unknown framework " + framework);
@@ -146,6 +146,24 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", "dnn/ssd_vgg16.prototxt", "disabled",
             Mat(cv::Size(300, 300), CV_32FC3), "detection_out", "caffe");
+}
+
+PERF_TEST_P_(DNNTestNetwork, OpenFace)
+{
+    processNet("dnn/openface_nn4.small2.v1.t7", "", "",
+            Mat(cv::Size(96, 96), CV_32FC3), "", "torch");
+}
+
+PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
+{
+    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt", "",
+            Mat(cv::Size(300, 300), CV_32FC3), "detection_out", "caffe");
+}
+
+PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_TensorFlow)
+{
+    processNet("dnn/ssd_mobilenet_v1_coco.pb", "ssd_mobilenet_v1_coco.pbtxt", "",
+            Mat(cv::Size(300, 300), CV_32FC3), "", "tensorflow");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork,
