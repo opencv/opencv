@@ -155,7 +155,7 @@ int SimulatedAnnealingSolver::run()
             if (newEnergy < previousEnergy)
             {
                 previousEnergy = newEnergy;
-                //??? exchange++;
+                exchange++;
             }
             else
             {
@@ -405,21 +405,6 @@ public:
                 param2 = 0.1;
             params.bpMomentScale = std::min(param2, 1.);
         }
-/*        else if (method == ANN_MLP::ANNEAL)
-        {
-            if (param1 <= 0)
-                param1 = 10;
-            if (param2 <= 0 || param2>param1)
-                param2 = 0.1;
-            if (param3 <= 0 || param3 >=1)
-                param3 = 0.95;
-            if (param4 <= 0)
-                param4 = 10;
-            params.initialT = param1;
-            params.finalT = param2;
-            params.coolingRatio = param3;
-            params.itePerStep = param4;
-        }*/
     }
 
     int getTrainMethod() const
