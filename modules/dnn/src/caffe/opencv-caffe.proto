@@ -179,6 +179,8 @@ message DetectionOutputParameter {
   // Only consider detections whose confidences are larger than a threshold.
   // If not provided, consider all boxes.
   optional float confidence_threshold = 9;
+  // If prior boxes are normalized to [0, 1] or not.
+  optional bool normalized_bbox = 10 [default = true];
 }
 
 message Datum {
@@ -548,6 +550,7 @@ message LayerParameter {
   optional PReLUParameter prelu_param = 131;
   optional PriorBoxParameter prior_box_param = 150;
   optional ProposalParameter proposal_param = 201;
+  optional PSROIPoolingParameter psroi_pooling_param = 10001;  // https://github.com/daijifeng001/caffe-rfcn
   optional PythonParameter python_param = 130;
   optional RecurrentParameter recurrent_param = 146;
   optional ReductionParameter reduction_param = 136;
@@ -1632,4 +1635,11 @@ message ProposalParameter {
   optional uint32 pre_nms_topn = 6 [default = 6000];
   optional uint32 post_nms_topn = 7 [default = 300];
   optional float nms_thresh = 8 [default = 0.7];
+}
+
+// origin: https://github.com/daijifeng001/caffe-rfcn
+message PSROIPoolingParameter {
+  required float spatial_scale = 1;
+  required int32 output_dim = 2; // output channel number
+  required int32 group_size = 3; // equal to pooled_size
 }
