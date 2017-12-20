@@ -206,6 +206,40 @@ INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_mo
 
 //==================================================================================================
 
+TEST(Imgcodecs_Tiff_Modes, write_multipage)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> pages;
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i]);
+        pages.push_back(page);
+    }
+
+    string tmp_filename = cv::tempfile(".tiff");
+    bool res = imwrite(tmp_filename, pages);
+    ASSERT_TRUE(res);
+
+    vector<Mat> read_pages;
+    imreadmulti(tmp_filename, read_pages);
+    for (size_t i = 0; i < page_count; i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
+    }
+}
+
+//==================================================================================================
+
 TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
