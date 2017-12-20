@@ -159,6 +159,8 @@ TEST(Test_TensorFlow, deconvolution)
 TEST(Test_TensorFlow, matmul)
 {
     runTensorFlowNet("matmul");
+    runTensorFlowNet("nhwc_reshape_matmul");
+    runTensorFlowNet("nhwc_transpose_reshape_matmul");
 }
 
 TEST(Test_TensorFlow, defun)
