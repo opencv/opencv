@@ -80,6 +80,7 @@ class NonMaximumSuppressionParameter;
 class NormalizeBBoxParameter;
 class NormalizedBBox;
 class PReLUParameter;
+class PSROIPoolingParameter;
 class ParamSpec;
 class ParameterParameter;
 class PermuteParameter;
@@ -1781,6 +1782,13 @@ class DetectionOutputParameter : public ::google::protobuf::Message /* @@protoc_
   float confidence_threshold() const;
   void set_confidence_threshold(float value);
 
+  // optional bool normalized_bbox = 10 [default = true];
+  bool has_normalized_bbox() const;
+  void clear_normalized_bbox();
+  static const int kNormalizedBboxFieldNumber = 10;
+  bool normalized_bbox() const;
+  void set_normalized_bbox(bool value);
+
   // @@protoc_insertion_point(class_scope:opencv_caffe.DetectionOutputParameter)
  private:
   inline void set_has_num_classes();
@@ -1801,6 +1809,8 @@ class DetectionOutputParameter : public ::google::protobuf::Message /* @@protoc_
   inline void clear_has_keep_top_k();
   inline void set_has_confidence_threshold();
   inline void clear_has_confidence_threshold();
+  inline void set_has_normalized_bbox();
+  inline void clear_has_normalized_bbox();
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::HasBits<1> _has_bits_;
@@ -1812,8 +1822,9 @@ class DetectionOutputParameter : public ::google::protobuf::Message /* @@protoc_
   bool variance_encoded_in_target_;
   float confidence_threshold_;
   ::google::protobuf::int32 keep_top_k_;
-  bool share_location_;
   int code_type_;
+  bool share_location_;
+  bool normalized_bbox_;
   friend void  protobuf_InitDefaults_opencv_2dcaffe_2eproto_impl();
   friend void  protobuf_AddDesc_opencv_2dcaffe_2eproto_impl();
   friend void protobuf_AssignDesc_opencv_2dcaffe_2eproto();
@@ -4148,6 +4159,15 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   ::opencv_caffe::ProposalParameter* release_proposal_param();
   void set_allocated_proposal_param(::opencv_caffe::ProposalParameter* proposal_param);
 
+  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+  bool has_psroi_pooling_param() const;
+  void clear_psroi_pooling_param();
+  static const int kPsroiPoolingParamFieldNumber = 10001;
+  const ::opencv_caffe::PSROIPoolingParameter& psroi_pooling_param() const;
+  ::opencv_caffe::PSROIPoolingParameter* mutable_psroi_pooling_param();
+  ::opencv_caffe::PSROIPoolingParameter* release_psroi_pooling_param();
+  void set_allocated_psroi_pooling_param(::opencv_caffe::PSROIPoolingParameter* psroi_pooling_param);
+
   // optional .opencv_caffe.PythonParameter python_param = 130;
   bool has_python_param() const;
   void clear_python_param();
@@ -4367,6 +4387,8 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   inline void clear_has_prior_box_param();
   inline void set_has_proposal_param();
   inline void clear_has_proposal_param();
+  inline void set_has_psroi_pooling_param();
+  inline void clear_has_psroi_pooling_param();
   inline void set_has_python_param();
   inline void clear_has_python_param();
   inline void set_has_recurrent_param();
@@ -4399,7 +4421,8 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   inline void clear_has_window_data_param();
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
-  ::google::protobuf::internal::HasBits<2> _has_bits_;
+  ::google::protobuf::internal::HasBits<3> _has_bits_;
+  mutable int _cached_size_;
   ::google::protobuf::RepeatedPtrField< ::std::string> bottom_;
   ::google::protobuf::RepeatedPtrField< ::std::string> top_;
   ::google::protobuf::RepeatedField< float > loss_weight_;
@@ -4448,6 +4471,7 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   ::opencv_caffe::PReLUParameter* prelu_param_;
   ::opencv_caffe::PriorBoxParameter* prior_box_param_;
   ::opencv_caffe::ProposalParameter* proposal_param_;
+  ::opencv_caffe::PSROIPoolingParameter* psroi_pooling_param_;
   ::opencv_caffe::PythonParameter* python_param_;
   ::opencv_caffe::RecurrentParameter* recurrent_param_;
   ::opencv_caffe::ReductionParameter* reduction_param_;
@@ -4464,7 +4488,6 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   ::opencv_caffe::TileParameter* tile_param_;
   ::opencv_caffe::WindowDataParameter* window_data_param_;
   int phase_;
-  mutable int _cached_size_;
   friend void  protobuf_InitDefaults_opencv_2dcaffe_2eproto_impl();
   friend void  protobuf_AddDesc_opencv_2dcaffe_2eproto_impl();
   friend void protobuf_AssignDesc_opencv_2dcaffe_2eproto();
@@ -13111,6 +13134,127 @@ class ProposalParameter : public ::google::protobuf::Message /* @@protoc_inserti
 };
 extern ::google::protobuf::internal::ExplicitlyConstructed<ProposalParameter> ProposalParameter_default_instance_;
 
+// -------------------------------------------------------------------
+
+class PSROIPoolingParameter : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_caffe.PSROIPoolingParameter) */ {
+ public:
+  PSROIPoolingParameter();
+  virtual ~PSROIPoolingParameter();
+
+  PSROIPoolingParameter(const PSROIPoolingParameter& from);
+
+  inline PSROIPoolingParameter& operator=(const PSROIPoolingParameter& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _internal_metadata_.unknown_fields();
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return _internal_metadata_.mutable_unknown_fields();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const PSROIPoolingParameter& default_instance();
+
+  static const PSROIPoolingParameter* internal_default_instance();
+
+  void Swap(PSROIPoolingParameter* other);
+
+  // implements Message ----------------------------------------------
+
+  inline PSROIPoolingParameter* New() const { return New(NULL); }
+
+  PSROIPoolingParameter* New(::google::protobuf::Arena* arena) const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const PSROIPoolingParameter& from);
+  void MergeFrom(const PSROIPoolingParameter& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  size_t ByteSizeLong() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
+      bool deterministic, ::google::protobuf::uint8* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
+    return InternalSerializeWithCachedSizesToArray(false, output);
+  }
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(PSROIPoolingParameter* other);
+  void UnsafeMergeFrom(const PSROIPoolingParameter& from);
+  private:
+  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
+    return _internal_metadata_.arena();
+  }
+  inline void* MaybeArenaPtr() const {
+    return _internal_metadata_.raw_arena_ptr();
+  }
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required float spatial_scale = 1;
+  bool has_spatial_scale() const;
+  void clear_spatial_scale();
+  static const int kSpatialScaleFieldNumber = 1;
+  float spatial_scale() const;
+  void set_spatial_scale(float value);
+
+  // required int32 output_dim = 2;
+  bool has_output_dim() const;
+  void clear_output_dim();
+  static const int kOutputDimFieldNumber = 2;
+  ::google::protobuf::int32 output_dim() const;
+  void set_output_dim(::google::protobuf::int32 value);
+
+  // required int32 group_size = 3;
+  bool has_group_size() const;
+  void clear_group_size();
+  static const int kGroupSizeFieldNumber = 3;
+  ::google::protobuf::int32 group_size() const;
+  void set_group_size(::google::protobuf::int32 value);
+
+  // @@protoc_insertion_point(class_scope:opencv_caffe.PSROIPoolingParameter)
+ private:
+  inline void set_has_spatial_scale();
+  inline void clear_has_spatial_scale();
+  inline void set_has_output_dim();
+  inline void clear_has_output_dim();
+  inline void set_has_group_size();
+  inline void clear_has_group_size();
+
+  // helper for ByteSizeLong()
+  size_t RequiredFieldsByteSizeFallback() const;
+
+  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
+  ::google::protobuf::internal::HasBits<1> _has_bits_;
+  mutable int _cached_size_;
+  float spatial_scale_;
+  ::google::protobuf::int32 output_dim_;
+  ::google::protobuf::int32 group_size_;
+  friend void  protobuf_InitDefaults_opencv_2dcaffe_2eproto_impl();
+  friend void  protobuf_AddDesc_opencv_2dcaffe_2eproto_impl();
+  friend void protobuf_AssignDesc_opencv_2dcaffe_2eproto();
+  friend void protobuf_ShutdownFile_opencv_2dcaffe_2eproto();
+
+  void InitAsDefaultInstance();
+};
+extern ::google::protobuf::internal::ExplicitlyConstructed<PSROIPoolingParameter> PSROIPoolingParameter_default_instance_;
+
 // ===================================================================
 
 
@@ -14409,6 +14553,30 @@ inline void DetectionOutputParameter::set_confidence_threshold(float value) {
   set_has_confidence_threshold();
   confidence_threshold_ = value;
   // @@protoc_insertion_point(field_set:opencv_caffe.DetectionOutputParameter.confidence_threshold)
+}
+
+// optional bool normalized_bbox = 10 [default = true];
+inline bool DetectionOutputParameter::has_normalized_bbox() const {
+  return (_has_bits_[0] & 0x00000200u) != 0;
+}
+inline void DetectionOutputParameter::set_has_normalized_bbox() {
+  _has_bits_[0] |= 0x00000200u;
+}
+inline void DetectionOutputParameter::clear_has_normalized_bbox() {
+  _has_bits_[0] &= ~0x00000200u;
+}
+inline void DetectionOutputParameter::clear_normalized_bbox() {
+  normalized_bbox_ = true;
+  clear_has_normalized_bbox();
+}
+inline bool DetectionOutputParameter::normalized_bbox() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.DetectionOutputParameter.normalized_bbox)
+  return normalized_bbox_;
+}
+inline void DetectionOutputParameter::set_normalized_bbox(bool value) {
+  set_has_normalized_bbox();
+  normalized_bbox_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.DetectionOutputParameter.normalized_bbox)
 }
 
 inline const DetectionOutputParameter* DetectionOutputParameter::internal_default_instance() {
@@ -19163,15 +19331,60 @@ inline void LayerParameter::set_allocated_proposal_param(::opencv_caffe::Proposa
   // @@protoc_insertion_point(field_set_allocated:opencv_caffe.LayerParameter.proposal_param)
 }
 
-// optional .opencv_caffe.PythonParameter python_param = 130;
-inline bool LayerParameter::has_python_param() const {
+// optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+inline bool LayerParameter::has_psroi_pooling_param() const {
   return (_has_bits_[1] & 0x00020000u) != 0;
 }
-inline void LayerParameter::set_has_python_param() {
+inline void LayerParameter::set_has_psroi_pooling_param() {
   _has_bits_[1] |= 0x00020000u;
 }
-inline void LayerParameter::clear_has_python_param() {
+inline void LayerParameter::clear_has_psroi_pooling_param() {
   _has_bits_[1] &= ~0x00020000u;
+}
+inline void LayerParameter::clear_psroi_pooling_param() {
+  if (psroi_pooling_param_ != NULL) psroi_pooling_param_->::opencv_caffe::PSROIPoolingParameter::Clear();
+  clear_has_psroi_pooling_param();
+}
+inline const ::opencv_caffe::PSROIPoolingParameter& LayerParameter::psroi_pooling_param() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.LayerParameter.psroi_pooling_param)
+  return psroi_pooling_param_ != NULL ? *psroi_pooling_param_
+                         : *::opencv_caffe::PSROIPoolingParameter::internal_default_instance();
+}
+inline ::opencv_caffe::PSROIPoolingParameter* LayerParameter::mutable_psroi_pooling_param() {
+  set_has_psroi_pooling_param();
+  if (psroi_pooling_param_ == NULL) {
+    psroi_pooling_param_ = new ::opencv_caffe::PSROIPoolingParameter;
+  }
+  // @@protoc_insertion_point(field_mutable:opencv_caffe.LayerParameter.psroi_pooling_param)
+  return psroi_pooling_param_;
+}
+inline ::opencv_caffe::PSROIPoolingParameter* LayerParameter::release_psroi_pooling_param() {
+  // @@protoc_insertion_point(field_release:opencv_caffe.LayerParameter.psroi_pooling_param)
+  clear_has_psroi_pooling_param();
+  ::opencv_caffe::PSROIPoolingParameter* temp = psroi_pooling_param_;
+  psroi_pooling_param_ = NULL;
+  return temp;
+}
+inline void LayerParameter::set_allocated_psroi_pooling_param(::opencv_caffe::PSROIPoolingParameter* psroi_pooling_param) {
+  delete psroi_pooling_param_;
+  psroi_pooling_param_ = psroi_pooling_param;
+  if (psroi_pooling_param) {
+    set_has_psroi_pooling_param();
+  } else {
+    clear_has_psroi_pooling_param();
+  }
+  // @@protoc_insertion_point(field_set_allocated:opencv_caffe.LayerParameter.psroi_pooling_param)
+}
+
+// optional .opencv_caffe.PythonParameter python_param = 130;
+inline bool LayerParameter::has_python_param() const {
+  return (_has_bits_[1] & 0x00040000u) != 0;
+}
+inline void LayerParameter::set_has_python_param() {
+  _has_bits_[1] |= 0x00040000u;
+}
+inline void LayerParameter::clear_has_python_param() {
+  _has_bits_[1] &= ~0x00040000u;
 }
 inline void LayerParameter::clear_python_param() {
   if (python_param_ != NULL) python_param_->::opencv_caffe::PythonParameter::Clear();
@@ -19210,13 +19423,13 @@ inline void LayerParameter::set_allocated_python_param(::opencv_caffe::PythonPar
 
 // optional .opencv_caffe.RecurrentParameter recurrent_param = 146;
 inline bool LayerParameter::has_recurrent_param() const {
-  return (_has_bits_[1] & 0x00040000u) != 0;
+  return (_has_bits_[1] & 0x00080000u) != 0;
 }
 inline void LayerParameter::set_has_recurrent_param() {
-  _has_bits_[1] |= 0x00040000u;
+  _has_bits_[1] |= 0x00080000u;
 }
 inline void LayerParameter::clear_has_recurrent_param() {
-  _has_bits_[1] &= ~0x00040000u;
+  _has_bits_[1] &= ~0x00080000u;
 }
 inline void LayerParameter::clear_recurrent_param() {
   if (recurrent_param_ != NULL) recurrent_param_->::opencv_caffe::RecurrentParameter::Clear();
@@ -19255,13 +19468,13 @@ inline void LayerParameter::set_allocated_recurrent_param(::opencv_caffe::Recurr
 
 // optional .opencv_caffe.ReductionParameter reduction_param = 136;
 inline bool LayerParameter::has_reduction_param() const {
-  return (_has_bits_[1] & 0x00080000u) != 0;
+  return (_has_bits_[1] & 0x00100000u) != 0;
 }
 inline void LayerParameter::set_has_reduction_param() {
-  _has_bits_[1] |= 0x00080000u;
+  _has_bits_[1] |= 0x00100000u;
 }
 inline void LayerParameter::clear_has_reduction_param() {
-  _has_bits_[1] &= ~0x00080000u;
+  _has_bits_[1] &= ~0x00100000u;
 }
 inline void LayerParameter::clear_reduction_param() {
   if (reduction_param_ != NULL) reduction_param_->::opencv_caffe::ReductionParameter::Clear();
@@ -19300,13 +19513,13 @@ inline void LayerParameter::set_allocated_reduction_param(::opencv_caffe::Reduct
 
 // optional .opencv_caffe.ReLUParameter relu_param = 123;
 inline bool LayerParameter::has_relu_param() const {
-  return (_has_bits_[1] & 0x00100000u) != 0;
+  return (_has_bits_[1] & 0x00200000u) != 0;
 }
 inline void LayerParameter::set_has_relu_param() {
-  _has_bits_[1] |= 0x00100000u;
+  _has_bits_[1] |= 0x00200000u;
 }
 inline void LayerParameter::clear_has_relu_param() {
-  _has_bits_[1] &= ~0x00100000u;
+  _has_bits_[1] &= ~0x00200000u;
 }
 inline void LayerParameter::clear_relu_param() {
   if (relu_param_ != NULL) relu_param_->::opencv_caffe::ReLUParameter::Clear();
@@ -19345,13 +19558,13 @@ inline void LayerParameter::set_allocated_relu_param(::opencv_caffe::ReLUParamet
 
 // optional .opencv_caffe.ReshapeParameter reshape_param = 133;
 inline bool LayerParameter::has_reshape_param() const {
-  return (_has_bits_[1] & 0x00200000u) != 0;
+  return (_has_bits_[1] & 0x00400000u) != 0;
 }
 inline void LayerParameter::set_has_reshape_param() {
-  _has_bits_[1] |= 0x00200000u;
+  _has_bits_[1] |= 0x00400000u;
 }
 inline void LayerParameter::clear_has_reshape_param() {
-  _has_bits_[1] &= ~0x00200000u;
+  _has_bits_[1] &= ~0x00400000u;
 }
 inline void LayerParameter::clear_reshape_param() {
   if (reshape_param_ != NULL) reshape_param_->::opencv_caffe::ReshapeParameter::Clear();
@@ -19390,13 +19603,13 @@ inline void LayerParameter::set_allocated_reshape_param(::opencv_caffe::ReshapeP
 
 // optional .opencv_caffe.ROIPoolingParameter roi_pooling_param = 8266711;
 inline bool LayerParameter::has_roi_pooling_param() const {
-  return (_has_bits_[1] & 0x00400000u) != 0;
+  return (_has_bits_[1] & 0x00800000u) != 0;
 }
 inline void LayerParameter::set_has_roi_pooling_param() {
-  _has_bits_[1] |= 0x00400000u;
+  _has_bits_[1] |= 0x00800000u;
 }
 inline void LayerParameter::clear_has_roi_pooling_param() {
-  _has_bits_[1] &= ~0x00400000u;
+  _has_bits_[1] &= ~0x00800000u;
 }
 inline void LayerParameter::clear_roi_pooling_param() {
   if (roi_pooling_param_ != NULL) roi_pooling_param_->::opencv_caffe::ROIPoolingParameter::Clear();
@@ -19435,13 +19648,13 @@ inline void LayerParameter::set_allocated_roi_pooling_param(::opencv_caffe::ROIP
 
 // optional .opencv_caffe.ScaleParameter scale_param = 142;
 inline bool LayerParameter::has_scale_param() const {
-  return (_has_bits_[1] & 0x00800000u) != 0;
+  return (_has_bits_[1] & 0x01000000u) != 0;
 }
 inline void LayerParameter::set_has_scale_param() {
-  _has_bits_[1] |= 0x00800000u;
+  _has_bits_[1] |= 0x01000000u;
 }
 inline void LayerParameter::clear_has_scale_param() {
-  _has_bits_[1] &= ~0x00800000u;
+  _has_bits_[1] &= ~0x01000000u;
 }
 inline void LayerParameter::clear_scale_param() {
   if (scale_param_ != NULL) scale_param_->::opencv_caffe::ScaleParameter::Clear();
@@ -19480,13 +19693,13 @@ inline void LayerParameter::set_allocated_scale_param(::opencv_caffe::ScaleParam
 
 // optional .opencv_caffe.SigmoidParameter sigmoid_param = 124;
 inline bool LayerParameter::has_sigmoid_param() const {
-  return (_has_bits_[1] & 0x01000000u) != 0;
+  return (_has_bits_[1] & 0x02000000u) != 0;
 }
 inline void LayerParameter::set_has_sigmoid_param() {
-  _has_bits_[1] |= 0x01000000u;
+  _has_bits_[1] |= 0x02000000u;
 }
 inline void LayerParameter::clear_has_sigmoid_param() {
-  _has_bits_[1] &= ~0x01000000u;
+  _has_bits_[1] &= ~0x02000000u;
 }
 inline void LayerParameter::clear_sigmoid_param() {
   if (sigmoid_param_ != NULL) sigmoid_param_->::opencv_caffe::SigmoidParameter::Clear();
@@ -19525,13 +19738,13 @@ inline void LayerParameter::set_allocated_sigmoid_param(::opencv_caffe::SigmoidP
 
 // optional .opencv_caffe.SoftmaxParameter softmax_param = 125;
 inline bool LayerParameter::has_softmax_param() const {
-  return (_has_bits_[1] & 0x02000000u) != 0;
+  return (_has_bits_[1] & 0x04000000u) != 0;
 }
 inline void LayerParameter::set_has_softmax_param() {
-  _has_bits_[1] |= 0x02000000u;
+  _has_bits_[1] |= 0x04000000u;
 }
 inline void LayerParameter::clear_has_softmax_param() {
-  _has_bits_[1] &= ~0x02000000u;
+  _has_bits_[1] &= ~0x04000000u;
 }
 inline void LayerParameter::clear_softmax_param() {
   if (softmax_param_ != NULL) softmax_param_->::opencv_caffe::SoftmaxParameter::Clear();
@@ -19570,13 +19783,13 @@ inline void LayerParameter::set_allocated_softmax_param(::opencv_caffe::SoftmaxP
 
 // optional .opencv_caffe.SPPParameter spp_param = 132;
 inline bool LayerParameter::has_spp_param() const {
-  return (_has_bits_[1] & 0x04000000u) != 0;
+  return (_has_bits_[1] & 0x08000000u) != 0;
 }
 inline void LayerParameter::set_has_spp_param() {
-  _has_bits_[1] |= 0x04000000u;
+  _has_bits_[1] |= 0x08000000u;
 }
 inline void LayerParameter::clear_has_spp_param() {
-  _has_bits_[1] &= ~0x04000000u;
+  _has_bits_[1] &= ~0x08000000u;
 }
 inline void LayerParameter::clear_spp_param() {
   if (spp_param_ != NULL) spp_param_->::opencv_caffe::SPPParameter::Clear();
@@ -19615,13 +19828,13 @@ inline void LayerParameter::set_allocated_spp_param(::opencv_caffe::SPPParameter
 
 // optional .opencv_caffe.SliceParameter slice_param = 126;
 inline bool LayerParameter::has_slice_param() const {
-  return (_has_bits_[1] & 0x08000000u) != 0;
+  return (_has_bits_[1] & 0x10000000u) != 0;
 }
 inline void LayerParameter::set_has_slice_param() {
-  _has_bits_[1] |= 0x08000000u;
+  _has_bits_[1] |= 0x10000000u;
 }
 inline void LayerParameter::clear_has_slice_param() {
-  _has_bits_[1] &= ~0x08000000u;
+  _has_bits_[1] &= ~0x10000000u;
 }
 inline void LayerParameter::clear_slice_param() {
   if (slice_param_ != NULL) slice_param_->::opencv_caffe::SliceParameter::Clear();
@@ -19660,13 +19873,13 @@ inline void LayerParameter::set_allocated_slice_param(::opencv_caffe::SliceParam
 
 // optional .opencv_caffe.TanHParameter tanh_param = 127;
 inline bool LayerParameter::has_tanh_param() const {
-  return (_has_bits_[1] & 0x10000000u) != 0;
+  return (_has_bits_[1] & 0x20000000u) != 0;
 }
 inline void LayerParameter::set_has_tanh_param() {
-  _has_bits_[1] |= 0x10000000u;
+  _has_bits_[1] |= 0x20000000u;
 }
 inline void LayerParameter::clear_has_tanh_param() {
-  _has_bits_[1] &= ~0x10000000u;
+  _has_bits_[1] &= ~0x20000000u;
 }
 inline void LayerParameter::clear_tanh_param() {
   if (tanh_param_ != NULL) tanh_param_->::opencv_caffe::TanHParameter::Clear();
@@ -19705,13 +19918,13 @@ inline void LayerParameter::set_allocated_tanh_param(::opencv_caffe::TanHParamet
 
 // optional .opencv_caffe.ThresholdParameter threshold_param = 128;
 inline bool LayerParameter::has_threshold_param() const {
-  return (_has_bits_[1] & 0x20000000u) != 0;
+  return (_has_bits_[1] & 0x40000000u) != 0;
 }
 inline void LayerParameter::set_has_threshold_param() {
-  _has_bits_[1] |= 0x20000000u;
+  _has_bits_[1] |= 0x40000000u;
 }
 inline void LayerParameter::clear_has_threshold_param() {
-  _has_bits_[1] &= ~0x20000000u;
+  _has_bits_[1] &= ~0x40000000u;
 }
 inline void LayerParameter::clear_threshold_param() {
   if (threshold_param_ != NULL) threshold_param_->::opencv_caffe::ThresholdParameter::Clear();
@@ -19750,13 +19963,13 @@ inline void LayerParameter::set_allocated_threshold_param(::opencv_caffe::Thresh
 
 // optional .opencv_caffe.TileParameter tile_param = 138;
 inline bool LayerParameter::has_tile_param() const {
-  return (_has_bits_[1] & 0x40000000u) != 0;
+  return (_has_bits_[1] & 0x80000000u) != 0;
 }
 inline void LayerParameter::set_has_tile_param() {
-  _has_bits_[1] |= 0x40000000u;
+  _has_bits_[1] |= 0x80000000u;
 }
 inline void LayerParameter::clear_has_tile_param() {
-  _has_bits_[1] &= ~0x40000000u;
+  _has_bits_[1] &= ~0x80000000u;
 }
 inline void LayerParameter::clear_tile_param() {
   if (tile_param_ != NULL) tile_param_->::opencv_caffe::TileParameter::Clear();
@@ -19795,13 +20008,13 @@ inline void LayerParameter::set_allocated_tile_param(::opencv_caffe::TileParamet
 
 // optional .opencv_caffe.WindowDataParameter window_data_param = 129;
 inline bool LayerParameter::has_window_data_param() const {
-  return (_has_bits_[1] & 0x80000000u) != 0;
+  return (_has_bits_[2] & 0x00000001u) != 0;
 }
 inline void LayerParameter::set_has_window_data_param() {
-  _has_bits_[1] |= 0x80000000u;
+  _has_bits_[2] |= 0x00000001u;
 }
 inline void LayerParameter::clear_has_window_data_param() {
-  _has_bits_[1] &= ~0x80000000u;
+  _has_bits_[2] &= ~0x00000001u;
 }
 inline void LayerParameter::clear_window_data_param() {
   if (window_data_param_ != NULL) window_data_param_->::opencv_caffe::WindowDataParameter::Clear();
@@ -29392,7 +29605,88 @@ inline void ProposalParameter::set_nms_thresh(float value) {
 inline const ProposalParameter* ProposalParameter::internal_default_instance() {
   return &ProposalParameter_default_instance_.get();
 }
+// -------------------------------------------------------------------
+
+// PSROIPoolingParameter
+
+// required float spatial_scale = 1;
+inline bool PSROIPoolingParameter::has_spatial_scale() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void PSROIPoolingParameter::set_has_spatial_scale() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void PSROIPoolingParameter::clear_has_spatial_scale() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void PSROIPoolingParameter::clear_spatial_scale() {
+  spatial_scale_ = 0;
+  clear_has_spatial_scale();
+}
+inline float PSROIPoolingParameter::spatial_scale() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PSROIPoolingParameter.spatial_scale)
+  return spatial_scale_;
+}
+inline void PSROIPoolingParameter::set_spatial_scale(float value) {
+  set_has_spatial_scale();
+  spatial_scale_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.PSROIPoolingParameter.spatial_scale)
+}
+
+// required int32 output_dim = 2;
+inline bool PSROIPoolingParameter::has_output_dim() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void PSROIPoolingParameter::set_has_output_dim() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void PSROIPoolingParameter::clear_has_output_dim() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void PSROIPoolingParameter::clear_output_dim() {
+  output_dim_ = 0;
+  clear_has_output_dim();
+}
+inline ::google::protobuf::int32 PSROIPoolingParameter::output_dim() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PSROIPoolingParameter.output_dim)
+  return output_dim_;
+}
+inline void PSROIPoolingParameter::set_output_dim(::google::protobuf::int32 value) {
+  set_has_output_dim();
+  output_dim_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.PSROIPoolingParameter.output_dim)
+}
+
+// required int32 group_size = 3;
+inline bool PSROIPoolingParameter::has_group_size() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void PSROIPoolingParameter::set_has_group_size() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void PSROIPoolingParameter::clear_has_group_size() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void PSROIPoolingParameter::clear_group_size() {
+  group_size_ = 0;
+  clear_has_group_size();
+}
+inline ::google::protobuf::int32 PSROIPoolingParameter::group_size() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.PSROIPoolingParameter.group_size)
+  return group_size_;
+}
+inline void PSROIPoolingParameter::set_group_size(::google::protobuf::int32 value) {
+  set_has_group_size();
+  group_size_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.PSROIPoolingParameter.group_size)
+}
+
+inline const PSROIPoolingParameter* PSROIPoolingParameter::internal_default_instance() {
+  return &PSROIPoolingParameter_default_instance_.get();
+}
 #endif  // !PROTOBUF_INLINE_NOT_IN_HEADERS
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
