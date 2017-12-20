@@ -144,7 +144,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<SunRasterDecoder>() );
         encoders.push_back( makePtr<SunRasterEncoder>() );
         decoders.push_back( makePtr<PxMDecoder>() );
-        encoders.push_back( makePtr<PxMEncoder>() );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_AUTO) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PBM) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PGM) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PPM) );
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );

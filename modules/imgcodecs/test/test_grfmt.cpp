@@ -144,23 +144,27 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
     for (int cn = 1; cn <= 4; cn++)
     {
         SCOPED_TRACE(format("channels %d", cn));
+        std::vector<int> parameters;
         if (cn == 2)
             continue;
         if (cn == 4 && ext != ".tiff")
+            continue;
+        if (cn > 1 && (ext == ".pbm" || ext == ".pgm"))
+            continue;
+        if (cn != 3 && ext == ".ppm")
             continue;
         string filename = cv::tempfile(format("%d%s", cn, ext.c_str()).c_str());
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
         circle(img_gt, center, radius, Scalar::all(255));
-        if (ext == ".pbm")
+#if 1
+        if (ext == ".pbm" || ext == ".pgm" || ext == ".ppm")
         {
-          ASSERT_TRUE( imwrite(filename, img_gt, vector<int>(IMWRITE_PBM_MONOCHROME,1) ) );
-          //Extra parameter so thet imwrite, writes a Monochrome image.
+            parameters.push_back(IMWRITE_PXM_BINARY);
+            parameters.push_back(0);
         }
-        else
-        {
-          ASSERT_TRUE(imwrite(filename, img_gt));
-        }
+#endif
+        ASSERT_TRUE(imwrite(filename, img_gt, parameters));
         Mat img = imread(filename, IMREAD_UNCHANGED);
         ASSERT_FALSE(img.empty());
         EXPECT_EQ(img.size(), img.size());
@@ -182,7 +186,13 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
+#if 0
+        std::cout << filename << std::endl;
+        imshow("loaded", img);
+        waitKey(0);
+#else
         EXPECT_EQ(0, remove(filename.c_str()));
+#endif
     }
 }
 
@@ -198,9 +208,11 @@ const string all_exts[] =
     ".jpg",
 #endif
     ".bmp",
-    ".pgm",
     ".pam",
-    ".pbm"
+    ".ppm",
+    ".pgm",
+    ".pbm",
+    ".pnm"
 };
 
 vector<Size> all_sizes()
@@ -216,86 +228,38 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_ExtSize,
                             testing::ValuesIn(all_exts),
                             testing::ValuesIn(all_sizes())));
 
-
-
-
-typedef tuple<Size, int> Size_thresh;
-typedef testing::TestWithParam<Size_thresh> Imgcodecs_Image_pbm_thresh;
-
-
-TEST_P(Imgcodecs_Image_pbm_thresh, read_write_pbm)
+typedef testing::TestWithParam<bool> Imgcodecs_pbm;
+TEST_P(Imgcodecs_pbm, write_read)
 {
+    bool binary = GetParam();
     const String ext = "pbm";
-    const Size size = get<0>(GetParam());
-    const int thresh = get<1>(GetParam());
     const string full_name = cv::tempfile(ext.c_str());
-    const string _name = cvtest::TS::ptr()->get_data_path() + "readwrite/marbles.pbm";
-    const double thresDbell = 32;
 
-    Mat image = imread(_name, IMREAD_UNCHANGED);
-    ASSERT_FALSE(image.empty());
+    Size size(640, 480);
+    const Point2i center = Point2i(size.width / 2, size.height / 2);
+    const int radius = std::min(size.height, size.width / 4);
+    Mat image(size, CV_8UC1, Scalar::all(0));
+    circle(image, center, radius, Scalar::all(255));
 
-    resize(image, image, size, 0.0, 0.0, INTER_CUBIC);
+    vector<int> pbm_params;
+    pbm_params.push_back(IMWRITE_PXM_BINARY);
+    pbm_params.push_back(binary);
 
-    for (int i = 0; i <= 1; i++)          //for both types Binary and Ascii
-    {
-        vector<int> pbm_params;
-        pbm_params.push_back(IMWRITE_PXM_BINARY);
-        pbm_params.push_back(i);
-        pbm_params.push_back(IMWRITE_PBM_MONOCHROME);
-        pbm_params.push_back(1);
-        pbm_params.push_back(IMWRITE_PBM_THRESH_MONOCHROME);
-        pbm_params.push_back(thresh);
+    imwrite( full_name, image, pbm_params );
+    Mat loaded = imread(full_name, IMREAD_UNCHANGED);
+    ASSERT_FALSE(loaded.empty());
 
-        imwrite( full_name, image, pbm_params );
-        Mat loaded = imread(full_name, IMREAD_UNCHANGED);
-        ASSERT_FALSE(loaded.empty());
+    EXPECT_EQ(0, cvtest::norm(loaded, image, NORM_INF));
 
-        threshold(image, image, thresh, 255, THRESH_BINARY);
-
-        double psnr = cvtest::PSNR(loaded, image);
-
-        EXPECT_GT(psnr, thresDbell);
-
-        FILE *f = fopen(full_name.c_str(), "rb");
-        ASSERT_TRUE(getc(f) == 'P');
-
-        ASSERT_TRUE(getc(f) == '1' + (i ? 3 : 0));
-        getc(f);
-        while(getc(f) != '\n');
-
-        Size temp;
-        fscanf(f,"%d %d", &temp.width, &temp.height);
-        EXPECT_EQ(size, temp);
-
-        fclose(f);
-
-
-    }
-
-
+    FILE *f = fopen(full_name.c_str(), "rb");
+    ASSERT_TRUE(f != NULL);
+    ASSERT_EQ('P', getc(f));
+    ASSERT_EQ('1' + (binary ? 3 : 0), getc(f));
+    fclose(f);
     EXPECT_EQ(0, remove(full_name.c_str()));
 }
 
-
-vector<Size> pbm_sizes()
-{
-    vector<Size> res;
-    for (int k = 1; k <= 6; ++k)
-        res.push_back(Size(160 * k, 120 * k));
-    return res;
-}
-
-const int all_thresholds[] = {20,60,128,180,240};
-
-
-INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Image_pbm_thresh, testing::Combine(
-    testing::ValuesIn(pbm_sizes()),
-    testing::ValuesIn(all_thresholds)));
-
-
-
-
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_pbm, testing::Bool());
 
 
 //==================================================================================================
