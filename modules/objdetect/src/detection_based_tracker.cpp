@@ -284,23 +284,23 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
 }
 
 #define CATCH_ALL_AND_LOG(_block)                                                           \
-    try {                                                                                   \
+    CV_TRY {                                                                                   \
         _block;                                                                             \
     }                                                                                       \
-    catch(cv::Exception& e) {                                                               \
+    CV_CATCH(cv::Exception, e) {                                                               \
         LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", CV_Func, e.what());      \
-    } catch(std::exception& e) {                                                            \
+    } CV_CATCH(std::exception, e) {                                                            \
         LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", CV_Func, e.what());             \
-    } catch(...) {                                                                          \
+    } CV_CATCH_ALL {                                                                          \
         LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", CV_Func);                       \
     }
 
 void* cv::workcycleObjectDetectorFunction(void* p)
 {
     CATCH_ALL_AND_LOG({ ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
-    try{
+    CV_TRY{
         ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->init();
-    } catch(...) {
+    } CV_CATCH_ALL {
         LOGE0("DetectionBasedTracker: workcycleObjectDetectorFunction: ERROR concerning pointer, received as the function parameter");
     }
     return NULL;

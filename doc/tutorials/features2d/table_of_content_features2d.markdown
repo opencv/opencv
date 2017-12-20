@@ -93,3 +93,10 @@ OpenCV.
     *Author:* Fedor Morozov
 
     Using *AKAZE* and *ORB* for planar object tracking.
+
+-   @subpage tutorial_homography
+
+    *Compatibility:* \> OpenCV 3.0
+
+    This tutorial will explain the basic concepts of the homography with some
+    demonstration codes.

@@ -148,11 +148,11 @@ bool PxMDecoder::readHeader()
     else if( !m_strm.open( m_filename ))
         return false;
 
-    try
+    CV_TRY
     {
         int code = m_strm.getByte();
         if( code != 'P' )
-            throw RBS_BAD_HEADER;
+            CV_THROW (RBS_BAD_HEADER);
 
         code = m_strm.getByte();
         switch( code )
@@ -160,7 +160,7 @@ bool PxMDecoder::readHeader()
         case '1': case '4': m_bpp = 1; break;
         case '2': case '5': m_bpp = 8; break;
         case '3': case '6': m_bpp = 24; break;
-        default: throw RBS_BAD_HEADER;
+        default: CV_THROW (RBS_BAD_HEADER);
         }
 
         m_binary = code >= '4';
@@ -171,7 +171,7 @@ bool PxMDecoder::readHeader()
 
         m_maxval = m_bpp == 1 ? 1 : ReadNumber(m_strm);
         if( m_maxval > 65535 )
-            throw RBS_BAD_HEADER;
+            CV_THROW (RBS_BAD_HEADER);
 
         //if( m_maxval > 255 ) m_binary = false; nonsense
         if( m_maxval > 255 )
@@ -183,14 +183,15 @@ bool PxMDecoder::readHeader()
             result = true;
         }
     }
-    catch (const cv::Exception&)
+    CV_CATCH (cv::Exception, e)
     {
-        throw;
+        CV_UNUSED(e);
+        CV_RETHROW();
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "PXM::readHeader(): unknown C++ exception" << std::endl << std::flush;
-        throw;
+        CV_RETHROW();
     }
 
     if( !result )
@@ -230,7 +231,7 @@ bool PxMDecoder::readData( Mat& img )
         FillGrayPalette( palette, m_bpp==1 ? 1 : 8 , m_bpp == 1 );
     }
 
-    try
+    CV_TRY
     {
         m_strm.setPos( m_offset );
 
@@ -356,14 +357,15 @@ bool PxMDecoder::readData( Mat& img )
             CV_ErrorNoReturn(Error::StsError, "m_bpp is not supported");
         }
     }
-    catch (const cv::Exception&)
+    CV_CATCH (cv::Exception, e)
     {
-        throw;
+        CV_UNUSED(e);
+        CV_RETHROW();
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "PXM::readData(): unknown exception" << std::endl << std::flush;
-        throw;
+        CV_RETHROW();
     }
 
     return result;

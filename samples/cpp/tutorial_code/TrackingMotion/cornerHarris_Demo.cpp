@@ -4,7 +4,6 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iostream>
@@ -26,10 +25,17 @@ void cornerHarris_demo( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image and convert it to gray
-  src = imread( argv[1], IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | ../data/building.jpg | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+  if ( src.empty() )
+  {
+    cout << "Could not open or find the image!\n" << endl;
+    cout << "Usage: " << argv[0] << " <Input image>" << endl;
+    return -1;
+  }
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window and a trackbar

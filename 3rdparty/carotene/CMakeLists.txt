@@ -37,6 +37,4 @@ if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
 endif()
 
-set_target_properties(carotene_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-
 add_library(carotene STATIC EXCLUDE_FROM_ALL "$<TARGET_OBJECTS:carotene_objs>")

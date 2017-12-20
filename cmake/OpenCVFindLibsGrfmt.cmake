@@ -26,7 +26,28 @@ if(NOT ZLIB_FOUND)
   ocv_parse_header2(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
 endif()
 
-# --- libtiff (optional, should be searched after zlib) ---
+# --- libjpeg (optional) ---
+if(WITH_JPEG)
+  if(BUILD_JPEG)
+    ocv_clear_vars(JPEG_FOUND)
+  else()
+    include(FindJPEG)
+  endif()
+
+  if(NOT JPEG_FOUND)
+    ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
+
+    set(JPEG_LIBRARY libjpeg)
+    set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg")
+    set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}")
+  endif()
+
+  ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
+  set(HAVE_JPEG YES)
+endif()
+
+# --- libtiff (optional, should be searched after zlib and libjpeg) ---
 if(WITH_TIFF)
   if(BUILD_TIFF)
     ocv_clear_vars(TIFF_FOUND)
@@ -68,27 +89,6 @@ if(WITH_TIFF)
   set(HAVE_TIFF YES)
 endif()
 
-# --- libjpeg (optional) ---
-if(WITH_JPEG)
-  if(BUILD_JPEG)
-    ocv_clear_vars(JPEG_FOUND)
-  else()
-    include(FindJPEG)
-  endif()
-
-  if(NOT JPEG_FOUND)
-    ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
-
-    set(JPEG_LIBRARY libjpeg)
-    set(JPEG_LIBRARIES ${JPEG_LIBRARY})
-    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg")
-    set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}")
-  endif()
-
-  ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
-  set(HAVE_JPEG YES)
-endif()
-
 # --- libwebp (optional) ---
 
 if(WITH_WEBP)
@@ -111,7 +111,7 @@ if(WITH_WEBP AND NOT WEBP_FOUND
   set(WEBP_LIBRARIES ${WEBP_LIBRARY})
 
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libwebp")
-  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}")
+  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}/src")
   set(HAVE_WEBP 1)
 endif()
 

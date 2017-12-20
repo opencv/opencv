@@ -576,4 +576,27 @@ TEST(Layer_Test_ROIPooling, Accuracy)
     normAssert(out, ref);
 }
 
+TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+
+    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
+    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
+    Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
+    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
+
+    net.setInput(scores, "rpn_cls_prob_reshape");
+    net.setInput(deltas, "rpn_bbox_pred");
+    net.setInput(imInfo, "im_info");
+
+    Mat out = net.forward();
+
+    const int numDets = ref.size[0];
+    EXPECT_LE(numDets, out.size[0]);
+    normAssert(out.rowRange(0, numDets), ref);
+
+    if (numDets < out.size[0])
+        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
+}
+
 }

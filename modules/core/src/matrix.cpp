@@ -424,12 +424,12 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if(!a)
             a = a0;
-        try
+        CV_TRY
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
-        catch(...)
+        CV_CATCH_ALL
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
@@ -484,7 +484,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    try
+    CV_TRY
     {
         if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
         {
@@ -505,10 +505,10 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
         release();
-        throw;
+        CV_RETHROW();
     }
 
     if( rows == 1 )

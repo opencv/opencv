@@ -987,7 +987,14 @@ endfunction()
 
 function(ocv_target_compile_definitions target)
   _ocv_fix_target(target)
-  target_compile_definitions(${target} ${ARGN})
+  if(NOT TARGET ${target})
+    if(NOT DEFINED OPENCV_MODULE_${target}_LOCATION)
+      message(FATAL_ERROR "ocv_target_compile_definitions: invalid target: '${target}'")
+    endif()
+    set(OPENCV_MODULE_${target}_COMPILE_DEFINITIONS ${OPENCV_MODULE_${target}_COMPILE_DEFINITIONS} ${ARGN} CACHE INTERNAL "" FORCE)
+  else()
+    target_compile_definitions(${target} ${ARGN})
+  endif()
 endfunction()
 
 

@@ -119,6 +119,8 @@ String CV_ImageWarpBaseTest::interpolation_to_string(int inter) const
         str = "INTER_NEAREST";
     else if (inter == INTER_LINEAR)
         str = "INTER_LINEAR";
+    else if (inter == INTER_LINEAR_EXACT)
+        str = "INTER_LINEAR_EXACT";
     else if (inter == INTER_AREA)
         str = "INTER_AREA";
     else if (inter == INTER_CUBIC)
@@ -418,10 +420,77 @@ namespace
 
 void CV_Resize_Test::generate_test_data()
 {
-    CV_ImageWarpBaseTest::generate_test_data();
+    RNG& rng = ts->get_rng();
+
+    // generating the src matrix structure
+    Size ssize = randSize(rng), dsize;
+
+    int depth = rng.uniform(0, CV_64F);
+    while (depth == CV_8S || depth == CV_32S)
+        depth = rng.uniform(0, CV_64F);
+
+    int cn = rng.uniform(1, 4);
+    while (cn == 2)
+        cn = rng.uniform(1, 4);
+
+    src.create(ssize, CV_MAKE_TYPE(depth, cn));
+
+    // generating the src matrix
+    int x, y;
+    if (cvtest::randInt(rng) % 2)
+    {
+        for (y = 0; y < ssize.height; y += cell_size)
+            for (x = 0; x < ssize.width; x += cell_size)
+                rectangle(src, Point(x, y), Point(x + std::min<int>(cell_size, ssize.width - x), y +
+                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), CV_FILLED);
+    }
+    else
+    {
+        src = Scalar::all(255);
+        for (y = cell_size; y < src.rows; y += cell_size)
+            line(src, Point2i(0, y), Point2i(src.cols, y), Scalar::all(0), 1);
+        for (x = cell_size; x < src.cols; x += cell_size)
+            line(src, Point2i(x, 0), Point2i(x, src.rows), Scalar::all(0), 1);
+    }
+
+    // generating an interpolation type
+    interpolation = rng.uniform(0, cv::INTER_MAX - 1);
+
+    // generating the dst matrix structure
+    if (interpolation == INTER_AREA)
+    {
+        area_fast = rng.uniform(0., 1.) > 0.5;
+        if (area_fast)
+        {
+            scale_x = rng.uniform(2, 5);
+            scale_y = rng.uniform(2, 5);
+        }
+        else
+        {
+            scale_x = rng.uniform(1.0, 3.0);
+            scale_y = rng.uniform(1.0, 3.0);
+        }
+    }
+    else
+    {
+        scale_x = rng.uniform(0.4, 4.0);
+        scale_y = rng.uniform(0.4, 4.0);
+    }
+    CV_Assert(scale_x > 0.0f && scale_y > 0.0f);
+
+    dsize.width = saturate_cast<int>((ssize.width + scale_x - 1) / scale_x);
+    dsize.height = saturate_cast<int>((ssize.height + scale_y - 1) / scale_y);
+
+    dst = Mat::zeros(dsize, src.type());
+    reference_dst = Mat::zeros(dst.size(), CV_MAKE_TYPE(CV_32F, dst.channels()));
 
     scale_x = src.cols / static_cast<double>(dst.cols);
     scale_y = src.rows / static_cast<double>(dst.rows);
+
+    if (interpolation == INTER_AREA && (scale_x < 1.0 || scale_y < 1.0))
+        interpolation = INTER_LINEAR_EXACT;
+    if (interpolation == INTER_LINEAR_EXACT && (depth == CV_32F || depth == CV_64F))
+        interpolation = INTER_LINEAR;
 
     area_fast = interpolation == INTER_AREA &&
         fabs(scale_x - cvRound(scale_x)) < FLT_EPSILON &&
@@ -508,7 +577,7 @@ void CV_Resize_Test::resize_area()
     }
 }
 
-// for interpolation type : INTER_LINEAR, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4
+// for interpolation type : INTER_LINEAR, INTER_LINEAR_EXACT, INTER_CUBIC, INTER_LANCZOS4
 void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _dim)
 {
     Size dsize = _dst.size();
@@ -528,9 +597,9 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
                 xyD[r] = xyS[r];
         }
     }
-    else if (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
+    else if (interpolation == INTER_LINEAR || interpolation == INTER_LINEAR_EXACT || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
     {
-        interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
+        interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : interpolation == INTER_LINEAR_EXACT ? 5 : 1)];
         size_t elemsize = _src.elemSize();
 
         int ofs = 0, ksize = 2;
@@ -1223,7 +1292,7 @@ TEST(Imgproc_WarpPerspective_Test, accuracy) { CV_WarpPerspective_Test test; tes
 
 #ifdef OPENCV_TEST_BIGDATA
 
-CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_LINEAR_EXACT, INTER_CUBIC, INTER_AREA)
 
 class Imgproc_Resize :
         public ::testing::TestWithParam<Interpolation>

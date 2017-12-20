@@ -1,5 +1,5 @@
 import sys
-import cv2
+import cv2 as cv
 
 
 def main(argv):
@@ -14,7 +14,7 @@ def main(argv):
     filename = argv[0] if len(argv) > 0 else "../data/chicky_512.png"
 
     # Load the image
-    src = cv2.imread(filename)
+    src = cv.imread(filename)
 
     # Check if image is loaded fine
     if src is None:
@@ -26,25 +26,25 @@ def main(argv):
     while 1:
         rows, cols, _channels = map(int, src.shape)
         ## [show_image]
-        cv2.imshow('Pyramids Demo', src)
+        cv.imshow('Pyramids Demo', src)
         ## [show_image]
-        k = cv2.waitKey(0)
+        k = cv.waitKey(0)
 
         if k == 27:
             break
             ## [pyrup]
         elif chr(k) == 'i':
-            src = cv2.pyrUp(src, dstsize=(2 * cols, 2 * rows))
+            src = cv.pyrUp(src, dstsize=(2 * cols, 2 * rows))
             print ('** Zoom In: Image x 2')
             ## [pyrup]
             ## [pyrdown]
         elif chr(k) == 'o':
-            src = cv2.pyrDown(src, dstsize=(cols // 2, rows // 2))
+            src = cv.pyrDown(src, dstsize=(cols // 2, rows // 2))
             print ('** Zoom Out: Image / 2')
             ## [pyrdown]
     ## [loop]
 
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()
     return 0
 
 if __name__ == "__main__":

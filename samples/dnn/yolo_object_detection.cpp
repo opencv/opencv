@@ -14,9 +14,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::dnn;
 
-const size_t network_width = 416;
-const size_t network_height = 416;
-
 static const char* about =
 "This sample uses You only look once (YOLO)-Detector (https://arxiv.org/abs/1612.08242) to detect objects on camera/video/image.\n"
 "Models can be downloaded here: https://pjreddie.com/darknet/yolo/\n"
@@ -104,13 +101,8 @@ int main(int argc, char** argv)
         if (frame.channels() == 4)
             cvtColor(frame, frame, COLOR_BGRA2BGR);
 
-        //! [Resizing without keeping aspect ratio]
-        Mat resized;
-        resize(frame, resized, Size(network_width, network_height));
-        //! [Resizing without keeping aspect ratio]
-
         //! [Prepare blob]
-        Mat inputBlob = blobFromImage(resized, 1 / 255.F); //Convert Mat to batch of images
+        Mat inputBlob = blobFromImage(frame, 1 / 255.F, Size(416, 416), Scalar(), true, false); //Convert Mat to batch of images
         //! [Prepare blob]
 
         //! [Set input blob]

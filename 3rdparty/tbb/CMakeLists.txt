@@ -9,10 +9,11 @@ set(tbb_filename "2018_U1.tar.gz")
 set(tbb_subdir "tbb-2018_U1")
 set(tbb_md5 "b2f2fa09adf44a22f4024049907f774b")
 
-set(tbb_version_file "version_string.ver")
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-parameter)
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702
+    -Wshadow
+    -Wunused-parameter
+    -Wmissing-prototypes  # MacOSX
+)
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${tbb_filename}
@@ -94,11 +95,15 @@ if (ARM AND NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 endif()
 
-set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+set(tbb_version_file "version_string.ver")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}.cmakein" "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}" @ONLY)
+list(APPEND TBB_SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
 target_compile_definitions(tbb PUBLIC TBB_USE_GCC_BUILTINS=1 __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
-target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>)
+target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>
+    PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
+)
 
 if (WIN32)
   if (ARM)

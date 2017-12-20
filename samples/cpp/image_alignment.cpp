@@ -232,7 +232,7 @@ int main (const int argc, const char * argv[])
 
     }
     else{ //apply random warp to input image
-        resize(inputImage, target_image, Size(216, 216));
+        resize(inputImage, target_image, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
         Mat warpGround;
         RNG rng(getTickCount());
         double angle;

@@ -31,8 +31,8 @@ $ sudo apt-get install python-opencv
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 
 ```
-import cv2
-print(cv2.__version__)
+import cv2 as cv
+print(cv.__version__)
 ```
 
 If the results are printed out without any errors, congratulations !!!
@@ -160,6 +160,6 @@ All files are installed in "/usr/local/" folder.
 Open a terminal and try import "cv2".
 
 ```
-import cv2
-print(cv2.__version__)
+import cv2 as cv
+print(cv.__version__)
 ```

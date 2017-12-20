@@ -723,31 +723,9 @@ inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
 }
 
 /** Popcount **/
-#define OPENCV_HAL_IMPL_VSX_POPCOUNT_8(_Tpvec)                           \
-inline v_uint32x4 v_popcount(const _Tpvec& a)                            \
-{                                                                        \
-    vec_uchar16 v16 = vec_popcntu(a.val);                                \
-    vec_ushort8 v8  = vec_add(vec_unpacklu(v16), vec_unpackhu(v16));     \
-    return v_uint32x4(vec_add(vec_unpacklu(v8), vec_unpackhu(v8)));      \
-}
-OPENCV_HAL_IMPL_VSX_POPCOUNT_8(v_int8x16)
-OPENCV_HAL_IMPL_VSX_POPCOUNT_8(v_uint8x16)
-
-#define OPENCV_HAL_IMPL_VSX_POPCOUNT_16(_Tpvec)                          \
-inline v_uint32x4 v_popcount(const _Tpvec& a)                            \
-{                                                                        \
-    vec_ushort8 v8  = vec_popcntu(a.val);                                \
-    return v_uint32x4(vec_add(vec_unpacklu(v8), vec_unpackhu(v8)));      \
-}
-OPENCV_HAL_IMPL_VSX_POPCOUNT_16(v_int16x8)
-OPENCV_HAL_IMPL_VSX_POPCOUNT_16(v_uint16x8)
-
-#define OPENCV_HAL_IMPL_VSX_POPCOUNT_32(_Tpvec)                          \
-inline v_uint32x4 v_popcount(const _Tpvec& a)                            \
-{ return v_uint32x4(vec_popcntu(a.val)); }
-
-OPENCV_HAL_IMPL_VSX_POPCOUNT_32(v_int32x4)
-OPENCV_HAL_IMPL_VSX_POPCOUNT_32(v_uint32x4)
+template<typename _Tpvec>
+inline v_uint32x4 v_popcount(const _Tpvec& a)
+{ return v_uint32x4(vec_popcntu(vec_uint4_c(a.val))); }
 
 /** Mask **/
 inline int v_signmask(const v_uint8x16& a)
@@ -879,32 +857,32 @@ inline v_int32x4 v_round(const v_float32x4& a)
 { return v_int32x4(vec_cts(vec_round(a.val))); }
 
 inline v_int32x4 v_round(const v_float64x2& a)
-{ return v_int32x4(vec_mergesqo(vec_cts(vec_round(a.val)), vec_int4_z)); }
+{ return v_int32x4(vec_mergesqo(vec_ctso(vec_round(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 { return v_int32x4(vec_cts(vec_floor(a.val))); }
 
 inline v_int32x4 v_floor(const v_float64x2& a)
-{ return v_int32x4(vec_mergesqo(vec_cts(vec_floor(a.val)), vec_int4_z)); }
+{ return v_int32x4(vec_mergesqo(vec_ctso(vec_floor(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 { return v_int32x4(vec_cts(vec_ceil(a.val))); }
 
 inline v_int32x4 v_ceil(const v_float64x2& a)
-{ return v_int32x4(vec_mergesqo(vec_cts(vec_ceil(a.val)), vec_int4_z)); }
+{ return v_int32x4(vec_mergesqo(vec_ctso(vec_ceil(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
 { return v_int32x4(vec_cts(a.val)); }
 
 inline v_int32x4 v_trunc(const v_float64x2& a)
-{ return v_int32x4(vec_mergesqo(vec_cts(a.val), vec_int4_z)); }
+{ return v_int32x4(vec_mergesqo(vec_ctso(a.val), vec_int4_z)); }
 
 /** To float **/
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 { return v_float32x4(vec_ctf(a.val)); }
 
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
-{ return v_float32x4(vec_mergesqo(vec_cvf(a.val), vec_float4_z)); }
+{ return v_float32x4(vec_mergesqo(vec_cvfo(a.val), vec_float4_z)); }
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 { return v_float64x2(vec_ctdo(vec_mergeh(a.val, a.val))); }

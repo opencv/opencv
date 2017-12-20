@@ -10,36 +10,6 @@ using namespace cv::dnn;
 #include <cstdlib>
 using namespace std;
 
-const size_t width = 300;
-const size_t height = 300;
-
-static Mat getMean(const size_t& imageHeight, const size_t& imageWidth)
-{
-    Mat mean;
-
-    const int meanValues[3] = {104, 117, 123};
-    vector<Mat> meanChannels;
-    for(int i = 0; i < 3; i++)
-    {
-        Mat channel((int)imageHeight, (int)imageWidth, CV_32F, Scalar(meanValues[i]));
-        meanChannels.push_back(channel);
-    }
-    cv::merge(meanChannels, mean);
-    return mean;
-}
-
-static Mat preprocess(const Mat& frame)
-{
-    Mat preprocessed;
-    frame.convertTo(preprocessed, CV_32F);
-    resize(preprocessed, preprocessed, Size(width, height)); //SSD accepts 300x300 RGB-images
-
-    Mat mean = getMean(width, height);
-    cv::subtract(preprocessed, mean, preprocessed);
-
-    return preprocessed;
-}
-
 const char* classNames[] = {"background",
                             "aeroplane", "bicycle", "bird", "boat",
                             "bottle", "bus", "car", "cat", "chair",
@@ -126,9 +96,7 @@ int main(int argc, char** argv)
             cvtColor(frame, frame, COLOR_BGRA2BGR);
 
         //! [Prepare blob]
-        Mat preprocessedFrame = preprocess(frame);
-
-        Mat inputBlob = blobFromImage(preprocessedFrame, 1.0f, Size(), Scalar(), false); //Convert Mat to batch of images
+        Mat inputBlob = blobFromImage(frame, 1.0f, Size(300, 300), Scalar(104, 117, 123), false, false); //Convert Mat to batch of images
         //! [Prepare blob]
 
         //! [Set input blob]

@@ -401,6 +401,6 @@ Save it to the registry and you are done. If you ever change the location of you
 or want to try out your application with a different build, all you will need to do is to update the
 OPENCV_DIR variable via the *setx* command inside a command window.
 
-Now you can continue reading the tutorials with the @ref tutorial_windows_visual_studio_Opencv section.
+Now you can continue reading the tutorials with the @ref tutorial_windows_visual_studio_opencv section.
 There you will find out how to use the OpenCV library in your own projects with the help of the
 Microsoft Visual Studio IDE.

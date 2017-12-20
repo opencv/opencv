@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import numpy as np
 
 W = 400
@@ -7,7 +7,7 @@ def my_ellipse(img, angle):
     thickness = 2
     line_type = 8
 
-    cv2.ellipse(img,
+    cv.ellipse(img,
                 (W / 2, W / 2),
                 (W / 4, W / 16),
                 angle,
@@ -22,7 +22,7 @@ def my_filled_circle(img, center):
     thickness = -1
     line_type = 8
 
-    cv2.circle(img,
+    cv.circle(img,
                center,
                W / 32,
                (0, 0, 255),
@@ -45,16 +45,16 @@ def my_polygon(img):
                     [W / 4, 3 * W / 8], [13 * W / 32, 3 * W / 8],
                     [5 * W / 16, 13 * W / 16], [W / 4, 13 * W / 16]], np.int32)
     ppt = ppt.reshape((-1, 1, 2))
-    cv2.fillPoly(img, [ppt], (255, 255, 255), line_type)
+    cv.fillPoly(img, [ppt], (255, 255, 255), line_type)
     # Only drawind the lines would be:
-    # cv2.polylines(img, [ppt], True, (255, 0, 255), line_type)
+    # cv.polylines(img, [ppt], True, (255, 0, 255), line_type)
 ## [my_polygon]
 ## [my_line]
 def my_line(img, start, end):
     thickness = 2
     line_type = 8
 
-    cv2.line(img,
+    cv.line(img,
              start,
              end,
              (0, 0, 0),
@@ -92,7 +92,7 @@ my_filled_circle(atom_image, (W / 2, W / 2))
 my_polygon(rook_image)
 ## [rectangle]
 # 2.b. Creating rectangles
-cv2.rectangle(rook_image,
+cv.rectangle(rook_image,
               (0, 7 * W / 8),
               (W, W),
               (0, 255, 255),
@@ -106,10 +106,10 @@ my_line(rook_image, (W / 4, 7 * W / 8), (W / 4, W))
 my_line(rook_image, (W / 2, 7 * W / 8), (W / 2, W))
 my_line(rook_image, (3 * W / 4, 7 * W / 8), (3 * W / 4, W))
 ## [draw_rook]
-cv2.imshow(atom_window, atom_image)
-cv2.moveWindow(atom_window, 0, 200)
-cv2.imshow(rook_window, rook_image)
-cv2.moveWindow(rook_window, W, 200)
+cv.imshow(atom_window, atom_image)
+cv.moveWindow(atom_window, 0, 200)
+cv.imshow(rook_window, rook_image)
+cv.moveWindow(rook_window, W, 200)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+cv.waitKey(0)
+cv.destroyAllWindows()

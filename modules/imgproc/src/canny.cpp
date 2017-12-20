@@ -956,7 +956,11 @@ void Canny( InputArray _src, OutputArray _dst,
     CV_OCL_RUN(_dst.isUMat() && (_src.channels() == 1 || _src.channels() == 3),
                ocl_Canny<false>(_src, UMat(), UMat(), _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, _src.channels(), size))
 
-    Mat src = _src.getMat(), dst = _dst.getMat();
+    Mat src0 = _src.getMat(), dst = _dst.getMat();
+    Mat src(src0.size(), src0.type(), src0.data, src0.step);
+
+    CALL_HAL(canny, cv_hal_canny, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.channels(),
+             low_thresh, high_thresh, aperture_size, L2gradient);
 
     CV_OVX_RUN(
         false && /* disabling due to accuracy issues */

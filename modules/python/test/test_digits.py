@@ -28,7 +28,7 @@ from __future__ import print_function
 # built-in modules
 from multiprocessing.pool import ThreadPool
 
-import cv2
+import cv2 as cv
 
 import numpy as np
 from numpy.linalg import norm
@@ -48,12 +48,12 @@ def split2d(img, cell_size, flatten=True):
     return cells
 
 def deskew(img):
-    m = cv2.moments(img)
+    m = cv.moments(img)
     if abs(m['mu02']) < 1e-2:
         return img.copy()
     skew = m['mu11']/m['mu02']
     M = np.float32([[1, skew, -0.5*SZ*skew], [0, 1, 0]])
-    img = cv2.warpAffine(img, M, (SZ, SZ), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
+    img = cv.warpAffine(img, M, (SZ, SZ), flags=cv.WARP_INVERSE_MAP | cv.INTER_LINEAR)
     return img
 
 class StatModel(object):
@@ -65,10 +65,10 @@ class StatModel(object):
 class KNearest(StatModel):
     def __init__(self, k = 3):
         self.k = k
-        self.model = cv2.ml.KNearest_create()
+        self.model = cv.ml.KNearest_create()
 
     def train(self, samples, responses):
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
         _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, self.k)
@@ -76,14 +76,14 @@ class KNearest(StatModel):
 
 class SVM(StatModel):
     def __init__(self, C = 1, gamma = 0.5):
-        self.model = cv2.ml.SVM_create()
+        self.model = cv.ml.SVM_create()
         self.model.setGamma(gamma)
         self.model.setC(C)
-        self.model.setKernel(cv2.ml.SVM_RBF)
-        self.model.setType(cv2.ml.SVM_C_SVC)
+        self.model.setKernel(cv.ml.SVM_RBF)
+        self.model.setType(cv.ml.SVM_C_SVC)
 
     def train(self, samples, responses):
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
         return self.model.predict(samples)[1].ravel()
@@ -105,9 +105,9 @@ def preprocess_simple(digits):
 def preprocess_hog(digits):
     samples = []
     for img in digits:
-        gx = cv2.Sobel(img, cv2.CV_32F, 1, 0)
-        gy = cv2.Sobel(img, cv2.CV_32F, 0, 1)
-        mag, ang = cv2.cartToPolar(gx, gy)
+        gx = cv.Sobel(img, cv.CV_32F, 1, 0)
+        gy = cv.Sobel(img, cv.CV_32F, 0, 1)
+        mag, ang = cv.cartToPolar(gx, gy)
         bin_n = 16
         bin = np.int32(bin_n*ang/(2*np.pi))
         bin_cells = bin[:10,:10], bin[10:,:10], bin[:10,10:], bin[10:,10:]
@@ -190,8 +190,8 @@ class digits_test(NewOpenCVTests):
           [ 0,  0,  0,  0,  0,  0,  0,  0, 47,  0],
           [ 0,  1,  0,  1,  0,  0,  0,  0,  1, 45]]
 
-        self.assertLess(cv2.norm(confusionMatrixes[0] - confusionKNN, cv2.NORM_L1), normEps)
-        self.assertLess(cv2.norm(confusionMatrixes[1] - confusionSVM, cv2.NORM_L1), normEps)
+        self.assertLess(cv.norm(confusionMatrixes[0] - confusionKNN, cv.NORM_L1), normEps)
+        self.assertLess(cv.norm(confusionMatrixes[1] - confusionSVM, cv.NORM_L1), normEps)
 
         self.assertLess(errors[0] - 0.034, eps)
         self.assertLess(errors[1] - 0.018, eps)

@@ -5,10 +5,11 @@
  */
 
 #include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
+#include <iostream>
 
 using namespace cv;
+using namespace std;
 
 /// Global variables
 Mat src, erosion_dst, dilation_dst;
@@ -27,13 +28,17 @@ void Dilation( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load an image
-  src = imread( argv[1], IMREAD_COLOR );
-
+  CommandLineParser parser( argc, argv, "{@input | ../data/chicky_512.png | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
   if( src.empty() )
-    { return -1; }
+  {
+    cout << "Could not open or find the image!\n" << endl;
+    cout << "Usage: " << argv[0] << " <Input image>" << endl;
+    return -1;
+  }
 
   /// Create windows
   namedWindow( "Erosion Demo", WINDOW_AUTOSIZE );

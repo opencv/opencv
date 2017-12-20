@@ -58,7 +58,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
   You can use both API, but factory API is less convinient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTorch(), @ref readNetFromTensorflow()).
 
   Bult-in layers partially reproduce functionality of corresponding Caffe and Torch7 layers.
-  In partuclar, the following layers and Caffe @ref Importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
+  In partuclar, the following layers and Caffe importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
   - Convolution
   - Deconvolution
   - Pooling
@@ -74,7 +74,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS BlankLayer : public Layer
     {
     public:
-        static Ptr<BlankLayer> create(const LayerParams &params);
+        static Ptr<Layer> create(const LayerParams &params);
     };
 
     //! LSTM recurrent layer
@@ -221,11 +221,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS LRNLayer : public Layer
     {
     public:
-        enum Type
-        {
-            CHANNEL_NRM,
-            SPATIAL_NRM
-        };
         int type;
 
         int size;
@@ -238,14 +233,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS PoolingLayer : public Layer
     {
     public:
-        enum Type
-        {
-            MAX,
-            AVE,
-            STOCHASTIC,
-            ROI
-        };
-
         int type;
         Size kernel, stride, pad;
         bool globalPooling;
@@ -255,6 +242,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         // ROIPooling parameters.
         Size pooledSize;
         float spatialScale;
+        // PSROIPooling parameters.
+        int psRoiOutChannels;
 
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
@@ -474,13 +463,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS EltwiseLayer : public Layer
     {
     public:
-        enum EltwiseOp
-        {
-            PROD = 0,
-            SUM = 1,
-            MAX = 2,
-        };
-
         static Ptr<EltwiseLayer> create(const LayerParams &params);
     };
 
@@ -585,6 +567,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         static Ptr<ResizeNearestNeighborLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ProposalLayer : public Layer
+    {
+    public:
+        static Ptr<ProposalLayer> create(const LayerParams& params);
     };
 
 //! @}

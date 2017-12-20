@@ -84,11 +84,11 @@ static String toString(const T &v)
     return ss.str();
 }
 
-Mat blobFromImage(const Mat& image, double scalefactor, const Size& size,
+Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
                   const Scalar& mean, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
-    std::vector<Mat> images(1, image);
+    std::vector<Mat> images(1, image.getMat());
     return blobFromImages(images, scalefactor, size, mean, swapRB, crop);
 }
 
@@ -108,14 +108,14 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
             {
               float resizeFactor = std::max(size.width / (float)imgSize.width,
                                             size.height / (float)imgSize.height);
-              resize(images[i], images[i], Size(), resizeFactor, resizeFactor);
+              resize(images[i], images[i], Size(), resizeFactor, resizeFactor, INTER_LINEAR);
               Rect crop(Point(0.5 * (images[i].cols - size.width),
                               0.5 * (images[i].rows - size.height)),
                         size);
               images[i] = images[i](crop);
             }
             else
-              resize(images[i], images[i], size);
+              resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
         }
         if(images[i].depth() == CV_8U)
             images[i].convertTo(images[i], CV_32F);
@@ -655,6 +655,8 @@ struct Net::Impl
         fusion = true;
         preferableBackend = DNN_BACKEND_DEFAULT;
         preferableTarget = DNN_TARGET_CPU;
+        blobManager.setPreferableBackend(DNN_BACKEND_DEFAULT);
+        blobManager.setPreferableTarget(DNN_TARGET_CPU);
     }
 
     Ptr<DataLayer> netInputLayer;
@@ -1910,7 +1912,7 @@ void Net::setInputsNames(const std::vector<String> &inputBlobNames)
     impl->netInputLayer->setNames(inputBlobNames);
 }
 
-void Net::setInput(const Mat &blob_, const String& name)
+void Net::setInput(InputArray blob, const String& name)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -1930,6 +1932,7 @@ void Net::setInput(const Mat &blob_, const String& name)
         ld.umat_outputBlobs.resize( std::max(pin.oid+1, (int)ld.requiredOutputs.size()) );
     ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
     MatShape prevShape = shape(ld.outputBlobs[pin.oid]);
+    Mat blob_ = blob.getMat();
     bool oldShape = prevShape == shape(blob_);
     if (oldShape)
     {
@@ -2290,8 +2293,6 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
 }
 
 //////////////////////////////////////////////////////////////////////////
-
-Importer::~Importer() {}
 
 Layer::Layer() { preferableTarget = DNN_TARGET_CPU; }
 

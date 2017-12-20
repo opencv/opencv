@@ -383,7 +383,7 @@ convolve_simd(
   }
 }
 
-#else // KERNEL_GEMM_LIKE
+#elif defined KERNEL_GEMM_LIKE
 
 #if APPLY_BIAS
 // Dtype bias[4];
@@ -1501,4 +1501,59 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     INTERLEAVED_SIMD16_OUTPUT(dst, out_offset, 0);
 }
 #endif
-#endif // KERNEL_BASIC/IDLF/GEMM_LIKE
+
+#elif defined KERNEL_DWCONV
+
+__kernel void DWCONV(
+    ELTWISE_DATA_ARG
+    NEGATIVE_SLOPE_ARG
+    __global Dtype* image_data,
+    __global Dtype* kernel_data,
+    BIAS_KERNEL_ARG
+    __global Dtype* convolved_image,
+    const ushort input_width,
+    const ushort input_height,
+    const ushort output_width,
+    const ushort output_height) {
+
+  const int outputX = get_global_id(0);
+  const int outputY = get_global_id(1);
+  const int outputZ = get_global_id(2);
+  if(outputX < output_width && outputY < output_height)
+  {
+    Dtype sum = 0.;
+
+    const int org_y = outputY * STRIDE_Y - INPUT_PAD_H;
+    const int org_x = outputX * STRIDE_X - INPUT_PAD_W;
+    const int currentKernelOffset = KERNEL_SIZE*(outputZ%CHANNELS);
+    const int biasIndex=outputZ%CHANNELS;
+    const int local_image_offset = org_y*input_width + org_x;
+    const int imageSize = input_width*input_height;
+
+    __global Dtype* image_dataPtrFloat = (image_data + (imageSize*outputZ + local_image_offset));
+    __global Dtype* kernel_dataPtrFloat = (kernel_data + (currentKernelOffset));
+
+    for(int y = 0; y < KERNEL_H; y++)
+    {
+      for(int x = 0; x < KERNEL_W; x++)
+      {
+        if(!(org_y + y * DILATION_Y >= 0 && org_y + y * DILATION_Y < input_height && org_x + x * DILATION_X >= 0 && org_x + x * DILATION_X < input_width))
+        {
+          continue;
+        }
+        sum += image_dataPtrFloat[x * DILATION_X] * kernel_dataPtrFloat[x];
+      }
+      image_dataPtrFloat += input_width * DILATION_Y;
+      kernel_dataPtrFloat += KERNEL_W;
+    }
+
+    #if APPLY_BIAS
+    int offset = outputZ*output_height*output_width + outputY*output_width + outputX;
+    ACTIVATION_FUNCTION(convolved_image, offset, sum + biases_base[biasIndex], biasIndex);
+    #else
+    int offset = outputZ*output_height*output_width + outputY*output_width + outputX;
+    ACTIVATION_FUNCTION(convolved_image, offset, sum, biasIndex);
+    #endif
+  }
+}
+#endif // KERNEL_BASIC/IDLF/GEMM_LIKE/DWCONV

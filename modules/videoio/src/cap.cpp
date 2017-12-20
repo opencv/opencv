@@ -141,15 +141,15 @@ static bool get_capture_debug_flag()
 #define TRY_OPEN(capture, backend_func) \
 { \
     if (!capture) \
-        try { \
+        CV_TRY { \
             if (get_capture_debug_flag()) fprintf(stderr, "VIDEOIO(%s): trying ...\n", #backend_func); \
             capture = backend_func; \
             if (get_capture_debug_flag()) fprintf(stderr, "VIDEOIO(%s): result=%p ...\n", #backend_func, capture); \
-        } catch (const cv::Exception& e) { \
+        } CV_CATCH (cv::Exception, e) { \
             fprintf(stderr, "VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what()); \
-        } catch (const std::exception& e) { \
+        } CV_CATCH (std::exception, e) { \
             fprintf(stderr, "VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what()); \
-        } catch (...) { \
+        } CV_CATCH_ALL { \
             fprintf(stderr, "VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func); \
         } \
 }

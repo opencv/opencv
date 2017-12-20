@@ -23,7 +23,7 @@ will be useful in understanding further topics like Histogram Back-Projection.
 2D Histogram in OpenCV
 ----------------------
 
-It is quite simple and calculated using the same function, **cv2.calcHist()**. For color histograms,
+It is quite simple and calculated using the same function, **cv.calcHist()**. For color histograms,
 we need to convert the image from BGR to HSV. (Remember, for 1D histogram, we converted from BGR to
 Grayscale). For 2D histograms, its parameters will be modified as follows:
 
@@ -34,13 +34,13 @@ Grayscale). For 2D histograms, its parameters will be modified as follows:
 
 Now check the code below:
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 
-img = cv2.imread('home.jpg')
-hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+img = cv.imread('home.jpg')
+hsv = cv.cvtColor(img,cv.COLOR_BGR2HSV)
 
-hist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+hist = cv.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
 @endcode
 That's it.
 
@@ -50,12 +50,12 @@ That's it.
 Numpy also provides a specific function for this : **np.histogram2d()**. (Remember, for 1D histogram
 we used **np.histogram()** ).
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('home.jpg')
-hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+img = cv.imread('home.jpg')
+hsv = cv.cvtColor(img,cv.COLOR_BGR2HSV)
 
 hist, xbins, ybins = np.histogram2d(h.ravel(),s.ravel(),[180,256],[[0,180],[0,256]])
 @endcode
@@ -67,10 +67,10 @@ Now we can check how to plot this color histogram.
 Plotting 2D Histograms
 ----------------------
 
-### Method - 1 : Using cv2.imshow()
+### Method - 1 : Using cv.imshow()
 
 The result we get is a two dimensional array of size 180x256. So we can show them as we do normally,
-using cv2.imshow() function. It will be a grayscale image and it won't give much idea what colors
+using cv.imshow() function. It will be a grayscale image and it won't give much idea what colors
 are there, unless you know the Hue values of different colors.
 
 ### Method - 2 : Using Matplotlib
@@ -84,13 +84,13 @@ I prefer this method. It is simple and better.
 
 Consider code:
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('home.jpg')
-hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-hist = cv2.calcHist( [hsv], [0, 1], None, [180, 256], [0, 180, 0, 256] )
+img = cv.imread('home.jpg')
+hsv = cv.cvtColor(img,cv.COLOR_BGR2HSV)
+hist = cv.calcHist( [hsv], [0, 1], None, [180, 256], [0, 180, 0, 256] )
 
 plt.imshow(hist,interpolation = 'nearest')
 plt.show()

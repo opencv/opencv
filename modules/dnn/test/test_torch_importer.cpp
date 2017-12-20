@@ -39,8 +39,6 @@
 //
 //M*/
 
-#ifdef ENABLE_TORCH_IMPORTER
-
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -316,9 +314,8 @@ OCL_TEST(Torch_Importer, ENet_accuracy)
     Net net;
     {
         const string model = findDataFile("dnn/Enet-model-best.net", false);
-        Ptr<Importer> importer = createTorchImporter(model, true);
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
+        net = readNetFromTorch(model, true);
+        ASSERT_TRUE(!net.empty());
     }
 
     net.setPreferableBackend(DNN_BACKEND_DEFAULT);
@@ -421,5 +418,3 @@ OCL_TEST(Torch_Importer, FastNeuralStyle_accuracy)
 }
 
 }
-
-#endif

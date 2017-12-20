@@ -57,38 +57,53 @@ namespace cv
 {
 namespace dnn
 {
+static inline int roundRoiSize(float v)
+{
+    return (int)(v + (v >= 0.f ? 0.5f : -0.5f));
+}
 
 class PoolingLayerImpl : public PoolingLayer
 {
 public:
     PoolingLayerImpl(const LayerParams& params)
     {
-        type = PoolingLayer::MAX;
         computeMaxIdx = true;
         globalPooling = false;
+        stride = Size(1, 1);
 
-        if (params.has("pool"))
+        if (params.has("pool") || params.has("kernel_size") ||
+            params.has("kernel_w") || params.has("kernel_h"))
         {
-            String pool = params.get<String>("pool").toLowerCase();
+            String pool = params.get<String>("pool", "max").toLowerCase();
             if (pool == "max")
-                type = PoolingLayer::MAX;
+                type = MAX;
             else if (pool == "ave")
-                type = PoolingLayer::AVE;
+                type = AVE;
             else if (pool == "stochastic")
-                type = PoolingLayer::STOCHASTIC;
+                type = STOCHASTIC;
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
             getPoolingKernelParams(params, kernel.height, kernel.width, globalPooling,
                                    pad.height, pad.width, stride.height, stride.width, padMode);
         }
-        else if (params.has("pooled_w") || params.has("pooled_h") || params.has("spatial_scale"))
+        else if (params.has("pooled_w") || params.has("pooled_h"))
         {
-            type = PoolingLayer::ROI;
+            type = ROI;
+            computeMaxIdx = false;
+            pooledSize.width = params.get<uint32_t>("pooled_w", 1);
+            pooledSize.height = params.get<uint32_t>("pooled_h", 1);
         }
+        else if (params.has("output_dim") && params.has("group_size"))
+        {
+            type = PSROI;
+            pooledSize.width = params.get<int>("group_size");
+            pooledSize.height = pooledSize.width;
+            psRoiOutChannels = params.get<int>("output_dim");
+        }
+        else
+            CV_Error(Error::StsBadArg, "Cannot determine pooling type");
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
-        pooledSize.width = params.get<uint32_t>("pooled_w", 1);
-        pooledSize.height = params.get<uint32_t>("pooled_h", 1);
         spatialScale = params.get<float>("spatial_scale", 1);
     }
 
@@ -115,8 +130,7 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == PoolingLayer::MAX ||
-                type == PoolingLayer::AVE && !pad.width && !pad.height);
+               (type == MAX || type == AVE && !pad.width && !pad.height);
     }
 
 #ifdef HAVE_OPENCL
@@ -188,7 +202,7 @@ public:
                 CV_Assert(inputs.size() == 1, outputs.size() == 1);
                 avePooling(*inputs[0], outputs[0]);
                 break;
-            case ROI:
+            case ROI: case PSROI:
                 CV_Assert(inputs.size() == 2, outputs.size() == 1);
                 roiPooling(*inputs[0], *inputs[1], outputs[0]);
                 break;
@@ -200,9 +214,9 @@ public:
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
     {
-        if (type == PoolingLayer::MAX)
+        if (type == MAX)
             return initMaxPoolingHalide(inputs);
-        else if (type == PoolingLayer::AVE)
+        else if (type == AVE)
             return initAvePoolingHalide(inputs);
         else
             return Ptr<BackendNode>();
@@ -221,17 +235,17 @@ public:
         float spatialScale;
 
         PoolingInvoker() : src(0), rois(0), dst(0), mask(0), nstripes(0),
-                           computeMaxIdx(0), poolingType(PoolingLayer::MAX), spatialScale(0) {}
+                           computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask, Size kernel,
                         Size stride, Size pad, int poolingType, float spatialScale,
                         bool computeMaxIdx, int nstripes)
         {
-            CV_Assert(src.isContinuous() && dst.isContinuous() &&
-                      src.type() == CV_32F && src.type() == dst.type() &&
-                      src.dims == 4 && dst.dims == 4 &&
-                      (poolingType == ROI && dst.size[0] == rois.size[0] ||
-                       src.size[0] == dst.size[0]) && src.size[1] == dst.size[1] &&
+            CV_Assert(src.isContinuous(), dst.isContinuous(),
+                      src.type() == CV_32F, src.type() == dst.type(),
+                      src.dims == 4, dst.dims == 4,
+                      ((poolingType == ROI || poolingType == PSROI) && dst.size[0] ==rois.size[0] || src.size[0] == dst.size[0]),
+                       poolingType == PSROI || src.size[1] == dst.size[1],
                       (mask.empty() || (mask.type() == src.type() && mask.size == dst.size)));
 
             PoolingInvoker p;
@@ -290,27 +304,31 @@ public:
                 int n = (int)(ofs / channels);
                 int ystart, yend;
 
-                const float *srcData;
-                int xstartROI = 0;
-                float roiRatio = 0;
+                const float *srcData = 0;
                 if (poolingType == ROI)
                 {
                     const float *roisData = rois->ptr<float>(n);
-                    int ystartROI = round(roisData[2] * spatialScale);
-                    int yendROI = round(roisData[4] * spatialScale);
+                    int ystartROI = roundRoiSize(roisData[2] * spatialScale);
+                    int yendROI = roundRoiSize(roisData[4] * spatialScale);
                     int roiHeight = std::max(yendROI - ystartROI + 1, 1);
-                    roiRatio = (float)roiHeight / height;
+                    float roiRatio = (float)roiHeight / height;
 
                     ystart = ystartROI + y0 * roiRatio;
                     yend = ystartROI + std::ceil((y0 + 1) * roiRatio);
 
-                    xstartROI = round(roisData[1] * spatialScale);
-                    int xendROI = round(roisData[3] * spatialScale);
-                    int roiWidth = std::max(xendROI - xstartROI + 1, 1);
-                    roiRatio = (float)roiWidth / width;
-
                     CV_Assert(roisData[0] < src->size[0]);
                     srcData = src->ptr<float>(roisData[0], c);
+                }
+                else if (poolingType == PSROI)
+                {
+                    const float *roisData = rois->ptr<float>(n);
+                    float ystartROI = roundRoiSize(roisData[2]) * spatialScale;
+                    float yendROI = roundRoiSize(roisData[4] + 1) * spatialScale;
+                    float roiHeight = std::max(yendROI - ystartROI, 0.1f);
+                    float roiRatio = roiHeight / height;
+
+                    ystart = (int)std::floor(ystartROI + y0 * roiRatio);
+                    yend = (int)std::ceil(ystartROI + (y0 + 1) * roiRatio);
                 }
                 else
                 {
@@ -328,22 +346,12 @@ public:
                 ofs0 += delta;
                 int x1 = x0 + delta;
 
-                if( poolingType == MAX || poolingType == ROI)
+                if( poolingType == MAX)
                     for( ; x0 < x1; x0++ )
                     {
-                        int xstart, xend;
-                        if (poolingType == ROI)
-                        {
-                            xstart = xstartROI + x0 * roiRatio;
-                            xend = xstartROI + std::ceil((x0 + 1) * roiRatio);
-                        }
-                        else
-                        {
-                            xstart = x0 * stride_w - pad_w;
-                            xend = xstart + kernel_w;
-                        }
+                        int xstart = x0 * stride_w - pad_w;
+                        int xend = min(xstart + kernel_w, inp_width);
                         xstart = max(xstart, 0);
-                        xend = min(xend, inp_width);
                         if (xstart >= xend || ystart >= yend)
                         {
                             dstData[x0] = 0;
@@ -490,7 +498,7 @@ public:
                             }
                         }
                     }
-                else
+                else if (poolingType == AVE)
                 {
                     for( ; x0 < x1; x0++ )
                     {
@@ -538,6 +546,69 @@ public:
 
                             dstData[x0] = sum_val*inv_kernel_area;
                         }
+                    }
+                }
+                else if (poolingType == ROI)
+                {
+                    const float *roisData = rois->ptr<float>(n);
+                    int xstartROI = roundRoiSize(roisData[1] * spatialScale);
+                    int xendROI = roundRoiSize(roisData[3] * spatialScale);
+                    int roiWidth = std::max(xendROI - xstartROI + 1, 1);
+                    float roiRatio = (float)roiWidth / width;
+                    for( ; x0 < x1; x0++ )
+                    {
+                        int xstart = xstartROI + x0 * roiRatio;
+                        int xend = xstartROI + std::ceil((x0 + 1) * roiRatio);
+                        xstart = max(xstart, 0);
+                        xend = min(xend, inp_width);
+                        if (xstart >= xend || ystart >= yend)
+                        {
+                            dstData[x0] = 0;
+                            if (compMaxIdx && dstMaskData)
+                                dstMaskData[x0] = -1;
+                            continue;
+                        }
+                        float max_val = -FLT_MAX;
+                        for (int y = ystart; y < yend; ++y)
+                            for (int x = xstart; x < xend; ++x)
+                            {
+                                const int index = y * inp_width + x;
+                                float val = srcData[index];
+                                max_val = std::max(max_val, val);
+                            }
+                        dstData[x0] = max_val;
+                    }
+                }
+                else  // PSROI
+                {
+                    const float *roisData = rois->ptr<float>(n);
+                    CV_Assert(roisData[0] < src->size[0]);
+                    float xstartROI = roundRoiSize(roisData[1]) * spatialScale;
+                    float xendROI = roundRoiSize(roisData[3] + 1) * spatialScale;
+                    float roiWidth = std::max(xendROI - xstartROI, 0.1f);
+                    float roiRatio = roiWidth / width;
+                    for( ; x0 < x1; x0++ )
+                    {
+                        int xstart = (int)std::floor(xstartROI + x0 * roiRatio);
+                        int xend = (int)std::ceil(xstartROI + (x0 + 1) * roiRatio);
+                        xstart = max(xstart, 0);
+                        xend = min(xend, inp_width);
+                        if (xstart >= xend || ystart >= yend)
+                        {
+                            dstData[x0] = 0;
+                            continue;
+                        }
+
+                        srcData = src->ptr<float>(roisData[0], (c * height + y0) * width + x0);
+                        float sum_val = 0.f;
+                        for (int y = ystart; y < yend; ++y)
+                            for (int x = xstart; x < xend; ++x)
+                            {
+                                const int index = y * inp_width + x;
+                                float val = srcData[index];
+                                sum_val += val;
+                            }
+                        dstData[x0] = sum_val / ((yend - ystart) * (xend - xstart));
                     }
                 }
             }
@@ -698,7 +769,7 @@ public:
             out.height = 1;
             out.width = 1;
         }
-        else if (type == PoolingLayer::ROI)
+        else if (type == ROI || type == PSROI)
         {
             out.height = pooledSize.height;
             out.width = pooledSize.width;
@@ -733,6 +804,13 @@ public:
             CV_Assert(inputs.size() == 2);
             dims[0] = inputs[1][0];  // Number of proposals;
         }
+        else if (type == PSROI)
+        {
+            CV_Assert(inputs.size() == 2);
+            CV_Assert(psRoiOutChannels * pooledSize.width * pooledSize.height == inputs[0][1]);
+            dims[0] = inputs[1][0];  // Number of proposals;
+            dims[1] = psRoiOutChannels;
+        }
         outputs.assign(type == MAX ? 2 : 1, shape(dims));
         return false;
     }
@@ -757,6 +835,15 @@ public:
         }
         return flops;
     }
+private:
+    enum Type
+    {
+        MAX,
+        AVE,
+        STOCHASTIC,
+        ROI,   // RoI pooling, https://arxiv.org/pdf/1504.08083.pdf
+        PSROI  // Position-sensitive RoI pooling, https://arxiv.org/pdf/1605.06409.pdf
+    };
 };
 
 Ptr<PoolingLayer> PoolingLayer::create(const LayerParams& params)

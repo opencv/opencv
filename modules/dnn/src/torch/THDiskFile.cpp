@@ -1,5 +1,4 @@
 #include "../precomp.hpp"
-#if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 #include "THGeneral.h"
 #include "THDiskFile.h"
 #include "THFilePrivate.h"
@@ -517,4 +516,3 @@ THFile *THDiskFile_new(const std::string &name, const char *mode, int isQuiet)
 }
 
 }
-#endif

@@ -756,6 +756,22 @@ inline int hal_ni_pyrdown(const uchar* src_data, size_t src_step, int src_width,
 #define cv_hal_pyrdown hal_ni_pyrdown
 //! @endcond
 
+/**
+   @brief Canny edge detector
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param width,height Source image dimensions
+   @param cn Number of channels
+   @param lowThreshold, highThreshold Thresholds value
+   @param ksize Kernel size for Sobel operator.
+   @param L2gradient Flag, indicating use L2 or L1 norma.
+*/
+inline int hal_ni_canny(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, double lowThreshold, double highThreshold, int ksize, bool L2gradient) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_canny hal_ni_canny
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__

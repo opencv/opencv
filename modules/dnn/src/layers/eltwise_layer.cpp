@@ -52,22 +52,27 @@ namespace dnn
 class EltwiseLayerImpl : public EltwiseLayer
 {
 public:
-    EltwiseOp op;
+    enum EltwiseOp
+    {
+        PROD = 0,
+        SUM = 1,
+        MAX = 2,
+    } op;
     std::vector<float> coeffs;
 
     EltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        op = EltwiseLayer::SUM;
+        op = SUM;
         if (params.has("operation"))
         {
             String operation = params.get<String>("operation").toLowerCase();
             if (operation == "prod")
-                op = EltwiseLayer::PROD;
+                op = PROD;
             else if (operation == "sum")
-                op = EltwiseLayer::SUM;
+                op = SUM;
             else if (operation == "max")
-                op = EltwiseLayer::MAX;
+                op = MAX;
             else
                 CV_Error(cv::Error::StsBadArg, "Unknown operaticon type \"" + operation + "\"");
         }
@@ -122,7 +127,7 @@ public:
         int channels;
         size_t planeSize;
 
-        EltwiseInvoker() : srcs(0), nsrcs(0), dst(0), coeffs(0), op(EltwiseLayer::PROD), nstripes(0), activ(0), channels(0), planeSize(0)  {}
+        EltwiseInvoker() : srcs(0), nsrcs(0), dst(0), coeffs(0), op(PROD), nstripes(0), activ(0), channels(0), planeSize(0)  {}
 
         static void run(const Mat** srcs, int nsrcs, Mat& dst,
                         const std::vector<float>& coeffs, EltwiseOp op,
@@ -150,7 +155,7 @@ public:
             CV_Assert(dst.total() == dst.size[0] * p.channels * p.planeSize);
 
             bool simpleCoeffs = true;
-            if( op == EltwiseLayer::SUM && !coeffs.empty() )
+            if( op == SUM && !coeffs.empty() )
             {
                 CV_Assert( coeffs.size() == (size_t)nsrcs );
 
@@ -192,7 +197,7 @@ public:
                     const float* srcptr0 = srcs[0]->ptr<float>() + globalDelta;
                     float* dstptr = dstptr0 + globalDelta;
 
-                    if( op == EltwiseLayer::PROD )
+                    if( op == PROD )
                     {
                         for( k = 1; k < n; k++ )
                         {
@@ -204,7 +209,7 @@ public:
                             srcptr0 = (const float*)dstptr;
                         }
                     }
-                    else if( op == EltwiseLayer::MAX )
+                    else if( op == MAX )
                     {
                         for( k = 1; k < n; k++ )
                         {

@@ -2,18 +2,18 @@
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from tests_common import NewOpenCVTests
 
 class Bindings(NewOpenCVTests):
 
     def test_inheritance(self):
-        bm = cv2.StereoBM_create()
+        bm = cv.StereoBM_create()
         bm.getPreFilterCap() # from StereoBM
         bm.getBlockSize() # from SteroMatcher
 
-        boost = cv2.ml.Boost_create()
+        boost = cv.ml.Boost_create()
         boost.getBoostType() # from ml::Boost
         boost.getMaxDepth() # from ml::DTrees
         boost.isClassifier() # from ml::StatModel

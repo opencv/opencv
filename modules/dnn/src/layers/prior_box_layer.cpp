@@ -45,6 +45,7 @@
 #include <float.h>
 #include <algorithm>
 #include <cmath>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -183,6 +184,7 @@ public:
         _minSize = getParameter<float>(params, "min_size", 0, false, 0);
         _flip = getParameter<bool>(params, "flip", 0, false, true);
         _clip = getParameter<bool>(params, "clip", 0, false, true);
+        _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
 
         _scales.clear();
         _aspectRatios.clear();
@@ -251,7 +253,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(!inputs.empty());
 
         int layerHeight = inputs[0][2];
         int layerWidth = inputs[0][3];
@@ -269,10 +271,107 @@ public:
         return false;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        int _layerWidth = inputs[0].size[3];
+        int _layerHeight = inputs[0].size[2];
+
+        int _imageWidth = inputs[1].size[3];
+        int _imageHeight = inputs[1].size[2];
+
+        float stepX, stepY;
+        if (_stepX == 0 || _stepY == 0)
+        {
+            stepX = static_cast<float>(_imageWidth) / _layerWidth;
+            stepY = static_cast<float>(_imageHeight) / _layerHeight;
+        } else {
+            stepX = _stepX;
+            stepY = _stepY;
+        }
+
+        if (umat_offsetsX.empty())
+        {
+            Mat offsetsX(1, _offsetsX.size(), CV_32FC1, &_offsetsX[0]);
+            Mat offsetsY(1, _offsetsX.size(), CV_32FC1, &_offsetsY[0]);
+            Mat aspectRatios(1, _aspectRatios.size(), CV_32FC1, &_aspectRatios[0]);
+            Mat variance(1, _variance.size(), CV_32FC1, &_variance[0]);
+
+            offsetsX.copyTo(umat_offsetsX);
+            offsetsY.copyTo(umat_offsetsY);
+            aspectRatios.copyTo(umat_aspectRatios);
+            variance.copyTo(umat_variance);
+
+            int real_numPriors = _numPriors / pow(2, _offsetsX.size() - 1);
+            umat_scales = UMat(1, &real_numPriors, CV_32F, 1.0f);
+        }
+
+        size_t nthreads = _layerHeight * _layerWidth;
+
+        ocl::Kernel kernel("prior_box", ocl::dnn::prior_box_oclsrc);
+        kernel.set(0, (int)nthreads);
+        kernel.set(1, (float)stepX);
+        kernel.set(2, (float)stepY);
+        kernel.set(3, (float)_minSize);
+        kernel.set(4, (float)_maxSize);
+        kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_offsetsX));
+        kernel.set(6, ocl::KernelArg::PtrReadOnly(umat_offsetsY));
+        kernel.set(7, (int)_offsetsX.size());
+        kernel.set(8, ocl::KernelArg::PtrReadOnly(umat_aspectRatios));
+        kernel.set(9, (int)_aspectRatios.size());
+        kernel.set(10, ocl::KernelArg::PtrReadOnly(umat_scales));
+        kernel.set(11, ocl::KernelArg::PtrWriteOnly(outputs[0]));
+        kernel.set(12, (int)_layerHeight);
+        kernel.set(13, (int)_layerWidth);
+        kernel.set(14, (int)_imageHeight);
+        kernel.set(15, (int)_imageWidth);
+        kernel.run(1, &nthreads, NULL, false);
+
+        // clip the prior's coordidate such that it is within [0, 1]
+        if (_clip)
+        {
+            Mat mat = outputs[0].getMat(ACCESS_READ);
+            int aspect_count = (_maxSize > 0) ? 1 : 0;
+            int offset = nthreads * 4 * _offsetsX.size() * (1 + aspect_count + _aspectRatios.size());
+            float* outputPtr = mat.ptr<float>() + offset;
+            int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
+            for (size_t d = 0; d < _outChannelSize; ++d)
+            {
+                outputPtr[d] = std::min<float>(std::max<float>(outputPtr[d], 0.), 1.);
+            }
+        }
+
+        // set the variance.
+        {
+            ocl::Kernel kernel("set_variance", ocl::dnn::prior_box_oclsrc);
+            int offset = total(shape(outputs[0]), 2);
+            size_t nthreads = _layerHeight * _layerWidth * _numPriors;
+            kernel.set(0, (int)nthreads);
+            kernel.set(1, (int)offset);
+            kernel.set(2, (int)_variance.size());
+            kernel.set(3, ocl::KernelArg::PtrReadOnly(umat_variance));
+            kernel.set(4, ocl::KernelArg::PtrWriteOnly(outputs[0]));
+            if (!kernel.run(1, &nthreads, NULL, false))
+                return false;
+        }
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
@@ -281,6 +380,8 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_Assert(inputs.size() == 2);
 
         size_t real_numPriors = _numPriors / pow(2, _offsetsX.size() - 1);
         if (_scales.empty())
@@ -323,7 +424,8 @@ public:
                 {
                     float center_x = (w + _offsetsX[i]) * stepX;
                     float center_y = (h + _offsetsY[i]) * stepY;
-                    outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                    outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                         _imageHeight, _bboxesNormalized, outputPtr);
                 }
                 if (_maxSize > 0)
                 {
@@ -333,7 +435,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[i]) * stepX;
                         float center_y = (h + _offsetsY[i]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                             _imageHeight, _bboxesNormalized, outputPtr);
                     }
                 }
 
@@ -349,7 +452,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[i]) * stepX;
                         float center_y = (h + _offsetsY[i]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                             _imageHeight, _bboxesNormalized, outputPtr);
                     }
                 }
 
@@ -363,7 +467,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[j]) * stepX;
                         float center_y = (h + _offsetsY[j]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth, _imageHeight, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
+                                             _imageHeight, _bboxesNormalized, outputPtr);
                     }
                 }
             }
@@ -434,9 +539,18 @@ private:
     std::vector<float> _offsetsX;
     std::vector<float> _offsetsY;
 
+#ifdef HAVE_OPENCL
+    UMat umat_offsetsX;
+    UMat umat_offsetsY;
+    UMat umat_aspectRatios;
+    UMat umat_scales;
+    UMat umat_variance;
+#endif
+
     bool _flip;
     bool _clip;
     bool _explicitSizes;
+    bool _bboxesNormalized;
 
     size_t _numPriors;
 
@@ -444,12 +558,22 @@ private:
     static const std::string _layerName;
 
     static float* addPrior(float center_x, float center_y, float width, float height,
-                           float imgWidth, float imgHeight, float* dst)
+                           float imgWidth, float imgHeight, bool normalized, float* dst)
     {
-        dst[0] = (center_x - width * 0.5f) / imgWidth;    // xmin
-        dst[1] = (center_y - height * 0.5f) / imgHeight;  // ymin
-        dst[2] = (center_x + width * 0.5f) / imgWidth;    // xmax
-        dst[3] = (center_y + height * 0.5f) / imgHeight;  // ymax
+        if (normalized)
+        {
+            dst[0] = (center_x - width * 0.5f) / imgWidth;    // xmin
+            dst[1] = (center_y - height * 0.5f) / imgHeight;  // ymin
+            dst[2] = (center_x + width * 0.5f) / imgWidth;    // xmax
+            dst[3] = (center_y + height * 0.5f) / imgHeight;  // ymax
+        }
+        else
+        {
+            dst[0] = center_x - width * 0.5f;          // xmin
+            dst[1] = center_y - height * 0.5f;         // ymin
+            dst[2] = center_x + width * 0.5f - 1.0f;   // xmax
+            dst[3] = center_y + height * 0.5f - 1.0f;  // ymax
+        }
         return dst + 4;
     }
 };

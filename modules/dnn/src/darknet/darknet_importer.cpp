@@ -58,7 +58,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 namespace
 {
 
-class DarknetImporter : public Importer
+class DarknetImporter
 {
     darknet::NetParameter net;
 
@@ -173,12 +173,6 @@ public:
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
     }
-
-    ~DarknetImporter()
-    {
-
-    }
-
 };
 
 }

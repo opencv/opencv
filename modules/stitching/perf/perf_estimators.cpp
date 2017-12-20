@@ -24,8 +24,8 @@ PERF_TEST_P(bundleAdjuster, affine, testing::Combine(TEST_DETECTORS, AFFINE_FUNC
     Mat img2, img2_full = imread(getDataPath("stitching/s2.jpg"));
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
+    resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
+    resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
     string detector = get<0>(GetParam());
     string affine_fun = get<1>(GetParam());

@@ -67,9 +67,9 @@ public:
         type = -1;
         String nrmType = params.get<String>("norm_region", "ACROSS_CHANNELS");
         if (nrmType == "ACROSS_CHANNELS")
-            type = LRNLayer::CHANNEL_NRM;
+            type = CHANNEL_NRM;
         else if (nrmType == "WITHIN_CHANNEL")
-            type = LRNLayer::SPATIAL_NRM;
+            type = SPATIAL_NRM;
         else
             CV_Error(Error::StsBadArg, "Unknown region type \"" + nrmType + "\"");
 
@@ -397,6 +397,13 @@ public:
         }
         return flops;
     }
+
+private:
+    enum Type
+    {
+        CHANNEL_NRM,
+        SPATIAL_NRM
+    };
 };
 
 Ptr<LRNLayer> LRNLayer::create(const LayerParams& params)
