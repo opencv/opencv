@@ -423,8 +423,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
-        void forward(std::vector<std::vector<Mat> >& outputBlobs,
-                     const std::vector<String>& outBlobNames);
+        CV_WRAP_AS(forwardAndRetrieve) void forward(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
+                                                    const std::vector<String>& outBlobNames);
 
         /**
          * @brief Compile Halide layers.
