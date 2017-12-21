@@ -257,11 +257,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("INPUT_DEPTH", channels_ / group_);
         addDef("TOTAL_INPUT_DEPTH_SIZE", channels_);
         addDef("TOTAL_OUTPUT_DEPTH", num_output_);
-        addDef("INPUT_START_X", 0);
-        addDef("INPUT_START_Y", 0);
-        addDef("INPUT_START_Z", 0);
         addDef("NUM_FILTERS", M_);
-        addDef("OUT_BUFF_OFFSET", 0);
         addDef("TILE_X", tile_x);
         addDef("TILE_Y", tile_y);
         addDef("TILE_Y_STRIDE", tile_y_stride);
