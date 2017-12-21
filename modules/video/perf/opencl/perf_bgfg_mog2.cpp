@@ -98,7 +98,7 @@ OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Combine(Values("gpu/video/768x576
         }
         mog2->getBackgroundImage(u_background);
     }
-    SANITY_CHECK(u_background);
+    SANITY_CHECK_NOTHING();
 }
 
 }}// namespace cvtest::ocl
