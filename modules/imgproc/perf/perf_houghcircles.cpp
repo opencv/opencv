@@ -17,8 +17,7 @@ PERF_TEST(PerfHoughCircles, Basic)
     int maxRadius = 200;
 
     Mat img = imread(filename, IMREAD_GRAYSCALE);
-    if (img.empty())
-        FAIL() << "Unable to load source image " << filename;
+    ASSERT_FALSE(img.empty()) << "Unable to load source image " << filename;
 
     GaussianBlur(img, img, Size(9, 9), 2, 2);
 
@@ -44,12 +43,10 @@ PERF_TEST(PerfHoughCircles2, ManySmallCircles)
     int maxRadius = 18;
 
     Mat img = imread(filename, IMREAD_GRAYSCALE);
-    if (img.empty())
-        FAIL() << "Unable to load source image " << filename;
+    ASSERT_FALSE(img.empty()) << "Unable to load source image " << filename;
 
     vector<Vec3f> circles;
     declare.in(img);
-    declare.iterations(3);
 
     TEST_CYCLE()
     {
