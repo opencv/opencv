@@ -54,7 +54,6 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     int dims = config.in_shape.size();
     int spatial_dims = 2;
 
-    batch_size_ = config.in_shape[0];
     channels_ = config.channels;
     pool_method_ = config.pool_method;
 
@@ -88,7 +87,7 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
 template<typename Dtype>
 OCL4DNNPool<Dtype>::~OCL4DNNPool()
 {
-    mask_idx_.release();
+    // nothing
 }
 
 template<typename Dtype>
@@ -97,102 +96,102 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                                  UMat& top_mask)
 {
     bool ret = true;
-    ocl::Queue queue = ocl::Queue::getDefault();
     size_t global[] = { 128 * 128 };
     size_t local[] = { 128 };
-    cl_uint argIdx = 0;
 
     // support 2D case
     switch (pool_method_)
     {
     case LIBDNN_POOLING_METHOD_MAX:
         {
-            if (top_mask.empty() && mask_idx_.empty())
-            {
-                mask_idx_.create(1, count_, CV_32FC1);
-            }
-            ocl::Kernel oclk_max_pool_forward(CL_KERNEL_SELECT("max_pool_forward"),
-                                              cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
+            bool haveMask = !top_mask.empty();
+            ocl::Kernel oclk_max_pool_forward(
+                haveMask ? CL_KERNEL_SELECT("max_pool_forward_mask") : CL_KERNEL_SELECT("max_pool_forward"),
+                ocl::dnn::ocl4dnn_pooling_oclsrc,
+                format("-D KERNEL_MAX_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                       " -D STRIDE_W=%d -D STRIDE_H=%d"
+                       " -D PAD_W=%d -D PAD_H=%d%s",
+                       kernel_w_, kernel_h_,
+                       stride_w_, stride_h_,
+                       pad_w_, pad_h_,
+                       haveMask ? " -D HAVE_MASK=1" : ""
+                ));
 
             if (oclk_max_pool_forward.empty())
                 return false;
 
-            argIdx = 0;
-            oclk_max_pool_forward.set(argIdx++, count_);
-            oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-            oclk_max_pool_forward.set(argIdx++, batch_size_);
-            oclk_max_pool_forward.set(argIdx++, channels_);
-            oclk_max_pool_forward.set(argIdx++, height_);
-            oclk_max_pool_forward.set(argIdx++, width_);
-            oclk_max_pool_forward.set(argIdx++, pooled_height_);
-            oclk_max_pool_forward.set(argIdx++, pooled_width_);
-            oclk_max_pool_forward.set(argIdx++, kernel_h_);
-            oclk_max_pool_forward.set(argIdx++, kernel_w_);
-            oclk_max_pool_forward.set(argIdx++, stride_h_);
-            oclk_max_pool_forward.set(argIdx++, stride_w_);
-            oclk_max_pool_forward.set(argIdx++, pad_h_);
-            oclk_max_pool_forward.set(argIdx++, pad_w_);
-            oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
-            oclk_max_pool_forward.set(argIdx++, mask_idx_.empty() ? 0 : 1);
-            if (mask_idx_.empty())
-                oclk_max_pool_forward.set(argIdx++, (void *)NULL);
-            else
-                oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(mask_idx_));
-            oclk_max_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top_mask));
+            oclk_max_pool_forward.args(
+                count_,
+                ocl::KernelArg::PtrReadOnly(bottom),
+                channels_,
+                height_,
+                width_,
+                pooled_height_,
+                pooled_width_,
+                ocl::KernelArg::PtrWriteOnly(top),
+                ocl::KernelArg::PtrWriteOnly(top_mask)
+            );
 
             ret = oclk_max_pool_forward.run(1, global, local, false);
         }
         break;
     case LIBDNN_POOLING_METHOD_AVE:
         {
+            CV_Assert(top_mask.empty());
+
             ocl::Kernel oclk_ave_pool_forward(CL_KERNEL_SELECT("ave_pool_forward"),
-                                              cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
+                ocl::dnn::ocl4dnn_pooling_oclsrc,
+                format("-D KERNEL_AVE_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                       " -D STRIDE_W=%d -D STRIDE_H=%d"
+                       " -D PAD_W=%d -D PAD_H=%d",
+                       kernel_w_, kernel_h_,
+                       stride_w_, stride_h_,
+                       pad_w_, pad_h_
+                ));
 
             if (oclk_ave_pool_forward.empty())
                 return false;
 
-            argIdx = 0;
-            oclk_ave_pool_forward.set(argIdx++, count_);
-            oclk_ave_pool_forward.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-            oclk_ave_pool_forward.set(argIdx++, batch_size_);
-            oclk_ave_pool_forward.set(argIdx++, channels_);
-            oclk_ave_pool_forward.set(argIdx++, height_);
-            oclk_ave_pool_forward.set(argIdx++, width_);
-            oclk_ave_pool_forward.set(argIdx++, pooled_height_);
-            oclk_ave_pool_forward.set(argIdx++, pooled_width_);
-            oclk_ave_pool_forward.set(argIdx++, kernel_h_);
-            oclk_ave_pool_forward.set(argIdx++, kernel_w_);
-            oclk_ave_pool_forward.set(argIdx++, stride_h_);
-            oclk_ave_pool_forward.set(argIdx++, stride_w_);
-            oclk_ave_pool_forward.set(argIdx++, pad_h_);
-            oclk_ave_pool_forward.set(argIdx++, pad_w_);
-            oclk_ave_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+            oclk_ave_pool_forward.args(
+                count_,
+                ocl::KernelArg::PtrReadOnly(bottom),
+                channels_,
+                height_,
+                width_,
+                pooled_height_,
+                pooled_width_,
+                ocl::KernelArg::PtrWriteOnly(top)
+            );
 
             ret = oclk_ave_pool_forward.run(1, global, local, false);
         }
         break;
     case LIBDNN_POOLING_METHOD_STO:
         {
+            CV_Assert(top_mask.empty());
+
             ocl::Kernel oclk_sto_pool_forward(CL_KERNEL_SELECT("sto_pool_forward_test"),
-                                              cv::ocl::dnn::ocl4dnn_pooling_oclsrc);
+                ocl::dnn::ocl4dnn_pooling_oclsrc,
+                format("-D KERNEL_STO_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                       " -D STRIDE_W=%d -D STRIDE_H=%d",
+                       kernel_w_, kernel_h_,
+                       stride_w_, stride_h_
+                ));
+
 
             if (oclk_sto_pool_forward.empty())
                 return false;
 
-            argIdx = 0;
-            oclk_sto_pool_forward.set(argIdx++, count_);
-            oclk_sto_pool_forward.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-            oclk_sto_pool_forward.set(argIdx++, batch_size_);
-            oclk_sto_pool_forward.set(argIdx++, channels_);
-            oclk_sto_pool_forward.set(argIdx++, height_);
-            oclk_sto_pool_forward.set(argIdx++, width_);
-            oclk_sto_pool_forward.set(argIdx++, pooled_height_);
-            oclk_sto_pool_forward.set(argIdx++, pooled_width_);
-            oclk_sto_pool_forward.set(argIdx++, kernel_h_);
-            oclk_sto_pool_forward.set(argIdx++, kernel_w_);
-            oclk_sto_pool_forward.set(argIdx++, stride_h_);
-            oclk_sto_pool_forward.set(argIdx++, stride_w_);
-            oclk_sto_pool_forward.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+            oclk_sto_pool_forward.args(
+                count_,
+                ocl::KernelArg::PtrReadOnly(bottom),
+                channels_,
+                height_,
+                width_,
+                pooled_height_,
+                pooled_width_,
+                ocl::KernelArg::PtrWriteOnly(top)
+            );
 
             ret = oclk_sto_pool_forward.run(1, global, local, false);
         }

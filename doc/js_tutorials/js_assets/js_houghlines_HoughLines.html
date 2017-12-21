@@ -41,7 +41,7 @@
 <script src="utils.js" type="text/javascript"></script>
 <script id="codeSnippet" type="text/code-snippet">
 let src = cv.imread('canvasInput');
-let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 let lines = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.Canny(src, src, 50, 200, 3);

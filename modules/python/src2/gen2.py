@@ -46,20 +46,7 @@ gen_template_func_body = Template("""$code_decl
     }
 """)
 
-py_major_version = sys.version_info[0]
-if __name__ == "__main__":
-    if len(sys.argv) > 3:
-        if sys.argv[3] == 'PYTHON3':
-            py_major_version = 3
-        elif sys.argv[3] == 'PYTHON2':
-            py_major_version = 2
-        else:
-            raise Exception('Incorrect argument: expected PYTHON2 or PYTHON3, received: ' + sys.argv[3])
-if py_major_version >= 3:
-    head_init_str = "PyVarObject_HEAD_INIT(&PyType_Type, 0)"
-else:
-    head_init_str = """PyObject_HEAD_INIT(&PyType_Type)
-0,"""
+head_init_str = "CV_PYTHON_TYPE_HEAD_INIT()"
 
 gen_template_simple_type_decl = Template("""
 struct pyopencv_${name}_t
@@ -1027,9 +1014,27 @@ class PythonWrapperGenerator(object):
                     print("Generator error: unable to resolve base %s for %s"
                         % (classinfo.base, classinfo.name))
                     sys.exit(-1)
+                base_instance = self.classes[base]
                 classinfo.base = base
-                classinfo.isalgorithm |= self.classes[base].isalgorithm
+                classinfo.isalgorithm |= base_instance.isalgorithm  # wrong processing of 'isalgorithm' flag:
+                                                                    # doesn't work for trees(graphs) with depth > 2
                 self.classes[name] = classinfo
+
+        # tree-based propagation of 'isalgorithm'
+        processed = dict()
+        def process_isalgorithm(classinfo):
+            if classinfo.isalgorithm or classinfo in processed:
+                return classinfo.isalgorithm
+            res = False
+            if classinfo.base:
+                res = process_isalgorithm(self.classes[classinfo.base])
+                #assert not (res == True or classinfo.isalgorithm is False), "Internal error: " + classinfo.name + " => " + classinfo.base
+                classinfo.isalgorithm |= res
+                res = classinfo.isalgorithm
+            processed[classinfo] = True
+            return res
+        for name, classinfo in self.classes.items():
+            process_isalgorithm(classinfo)
 
         # step 2: generate code for the classes and their methods
         classlist = list(self.classes.items())

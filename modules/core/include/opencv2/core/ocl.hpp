@@ -261,6 +261,8 @@ public:
     void setUseSVM(bool enabled);
 
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+//protected:
     Impl* p;
 };
 
@@ -604,20 +606,33 @@ public:
 
     bool create(const ProgramSource& src,
                 const String& buildflags, String& errmsg);
-    bool read(const String& buf, const String& buildflags);
-    bool write(String& buf) const;
 
-    const ProgramSource& source() const;
     void* ptr() const;
 
-    String getPrefix() const;
-    static String getPrefix(const String& buildflags);
+    /**
+     * @brief Query device-specific program binary.
+     *
+     * Returns RAW OpenCL executable binary without additional attachments.
+     *
+     * @sa ProgramSource::fromBinary
+     *
+     * @param[out] binary output buffer
+     */
+    void getBinary(std::vector<char>& binary) const;
 
-
-    struct Impl;
+    struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
 protected:
     Impl* p;
+public:
+#ifndef OPENCV_REMOVE_DEPRECATED_API
+    // TODO Remove this
+    CV_DEPRECATED bool read(const String& buf, const String& buildflags); // removed, use ProgramSource instead
+    CV_DEPRECATED bool write(String& buf) const; // removed, use getBinary() method instead (RAW OpenCL binary)
+    CV_DEPRECATED const ProgramSource& source() const; // implementation removed
+    CV_DEPRECATED String getPrefix() const; // deprecated, implementation replaced
+    CV_DEPRECATED static String getPrefix(const String& buildflags); // deprecated, implementation replaced
+#endif
 };
 
 
@@ -634,10 +649,59 @@ public:
     ProgramSource(const ProgramSource& prog);
     ProgramSource& operator = (const ProgramSource& prog);
 
-    const String& source() const;
+    const String& source() const; // deprecated
     hash_t hash() const; // deprecated
 
-    struct Impl;
+
+    /** @brief Describe OpenCL program binary.
+     * Do not call clCreateProgramWithBinary() and/or clBuildProgram().
+     *
+     * Caller should guarantee binary buffer lifetime greater than ProgramSource object (and any of its copies).
+     *
+     * This kind of binary is not portable between platforms in general - it is specific to OpenCL vendor / device / driver version.
+     *
+     * @param module name of program owner module
+     * @param name unique name of program (module+name is used as key for OpenCL program caching)
+     * @param binary buffer address. See buffer lifetime requirement in description.
+     * @param size buffer size
+     * @param buildOptions additional program-related build options passed to clBuildProgram()
+     * @return created ProgramSource object
+     */
+    static ProgramSource fromBinary(const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions = cv::String());
+
+    /** @brief Describe OpenCL program in SPIR format.
+     * Do not call clCreateProgramWithBinary() and/or clBuildProgram().
+     *
+     * Supports SPIR 1.2 by default (pass '-spir-std=X.Y' in buildOptions to override this behavior)
+     *
+     * Caller should guarantee binary buffer lifetime greater than ProgramSource object (and any of its copies).
+     *
+     * Programs in this format are portable between OpenCL implementations with 'khr_spir' extension:
+     * https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/cl_khr_spir.html
+     * (but they are not portable between different platforms: 32-bit / 64-bit)
+     *
+     * Note: these programs can't support vendor specific extensions, like 'cl_intel_subgroups'.
+     *
+     * @param module name of program owner module
+     * @param name unique name of program (module+name is used as key for OpenCL program caching)
+     * @param binary buffer address. See buffer lifetime requirement in description.
+     * @param size buffer size
+     * @param buildOptions additional program-related build options passed to clBuildProgram()
+     *        (these options are added automatically: '-x spir' and '-spir-std=1.2')
+     * @return created ProgramSource object.
+     */
+    static ProgramSource fromSPIR(const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions = cv::String());
+
+    //OpenCL 2.1+ only
+    //static Program fromSPIRV(const String& module, const String& name,
+    //        const unsigned char* binary, const size_t size,
+    //        const cv::String& buildOptions = cv::String());
+
+    struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
 protected:
     Impl* p;

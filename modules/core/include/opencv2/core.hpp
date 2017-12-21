@@ -3093,13 +3093,18 @@ public:
     */
     virtual void write(FileStorage& fs) const { (void)fs; }
 
+    /** @brief simplified API for language bindings
+     * @overload
+     */
+    CV_WRAP void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
+
     /** @brief Reads algorithm parameters from a file storage
     */
-    virtual void read(const FileNode& fn) { (void)fn; }
+    CV_WRAP virtual void read(const FileNode& fn) { (void)fn; }
 
     /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
      */
-    virtual bool empty() const { return false; }
+    CV_WRAP virtual bool empty() const { return false; }
 
     /** @brief Reads algorithm from the file node
 
@@ -3134,6 +3139,7 @@ public:
     template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
     {
         FileStorage fs(filename, FileStorage::READ);
+        CV_Assert(fs.isOpened());
         FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
         if (fn.empty()) return Ptr<_Tp>();
         Ptr<_Tp> obj = _Tp::create();

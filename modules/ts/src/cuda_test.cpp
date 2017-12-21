@@ -51,7 +51,7 @@ using namespace testing::internal;
 
 namespace perf
 {
-    CV_EXPORTS void printCudaInfo();
+    void printCudaInfo();
 }
 
 namespace cvtest

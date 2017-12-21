@@ -106,7 +106,8 @@ bool isResizeLinearOpenCVSupported(const Size2D &ssize, const Size2D &dsize, u32
             && !(ssize.width > 0xffffFFFF || ssize.height > 0xffffFFFF)// Restrict image size since internal index evaluation
                                                                        // is performed with u32
 #endif
-            && dsize.width >= 2 && dsize.height >= 8)
+            && dsize.width >= 2 && dsize.height >= 8
+            && (2*dsize.width != ssize.width || 2*dsize.height != ssize.height)) // 2x downscaling is performed as area in OpenCV which differs from this implementation
             return isSupportedConfiguration();
     default:
         return false;

@@ -215,6 +215,9 @@ class OCL4DNNConvSpatial
         bool createGEMMLikeConvKernel(int32_t blockWidth,
                                       int32_t blockHeight,
                                       int32_t blockDepth);
+        bool createDWConvKernel(int32_t blockWidth,
+                                int32_t blockHeight,
+                                int32_t blockDepth);
         void CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
                              int32_t offset, int32_t size, bool write_only);
         bool convolve(const UMat &bottom, UMat &top,
@@ -282,6 +285,8 @@ class OCL4DNNConvSpatial
         int32_t M_;
 
         bool tuned_;
+        bool dwconv_;
+
         std::string key_, key_sanitized_;
         std::string short_key_;
         std::string kernel_name_;
@@ -351,8 +356,6 @@ class OCL4DNNPool
                      UMat& top_data,
                      UMat& top_mask);
     private:
-        UMat mask_idx_;
-
         // Pooling parameters
         std::vector<int32_t> pad_;
         std::vector<int32_t> stride_;
@@ -362,7 +365,6 @@ class OCL4DNNPool
 
         ocl4dnnPoolingMethod_t pool_method_;
         int32_t count_;
-        int32_t batch_size_;
         int32_t channels_;
         int32_t kernel_h_;
         int32_t kernel_w_;

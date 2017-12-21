@@ -141,7 +141,7 @@ void UMatData::unlock()
 MatAllocator* UMat::getStdAllocator()
 {
 #ifdef HAVE_OPENCL
-    if( ocl::haveOpenCL() && ocl::useOpenCL() )
+    if (ocl::useOpenCL())
         return ocl::getOpenCLAllocator();
 #endif
     return Mat::getDefaultAllocator();
@@ -295,11 +295,11 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
     }
     bool allocated = false;
-    try
+    CV_TRY
     {
         allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
     }
-    catch (const cv::Exception& e)
+    CV_CATCH(cv::Exception, e)
     {
         fprintf(stderr, "Exception: %s\n", e.what());
     }
@@ -371,12 +371,12 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             a = a0;
             a0 = Mat::getDefaultAllocator();
         }
-        try
+        CV_TRY
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
             CV_Assert(u != 0);
         }
-        catch(...)
+        CV_CATCH_ALL
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, 0, usageFlags);

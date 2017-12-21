@@ -103,7 +103,7 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
   endif()
 endfunction()
 
-if(UNIX AND NOT ANDROID)
+if((CMAKE_HOST_SYSTEM_NAME MATCHES "Linux" OR UNIX) AND NOT ANDROID)
   ocv_gen_config("${CMAKE_BINARY_DIR}/unix-install" "" "")
 endif()
 

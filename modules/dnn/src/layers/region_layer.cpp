@@ -44,6 +44,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <iostream>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -114,10 +115,82 @@ public:
         }
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        if (useSoftmaxTree) {   // Yolo 9000
+            CV_Error(cv::Error::StsNotImplemented, "Yolo9000 is not implemented");
+            return false;
+        }
+
+        CV_Assert(inputs.size() >= 1);
+        int const cell_size = classes + coords + 1;
+        UMat blob_umat = blobs[0].getUMat(ACCESS_READ);
+
+        for (size_t ii = 0; ii < outputs.size(); ii++)
+        {
+            UMat& inpBlob = inputs[ii];
+            UMat& outBlob = outputs[ii];
+
+            int rows = inpBlob.size[1];
+            int cols = inpBlob.size[2];
+
+            ocl::Kernel logistic_kernel("logistic_activ", ocl::dnn::region_oclsrc);
+            size_t global = rows*cols*anchors;
+            logistic_kernel.set(0, (int)global);
+            logistic_kernel.set(1, ocl::KernelArg::PtrReadOnly(inpBlob));
+            logistic_kernel.set(2, (int)cell_size);
+            logistic_kernel.set(3, ocl::KernelArg::PtrWriteOnly(outBlob));
+            logistic_kernel.run(1, &global, NULL, false);
+
+            if (useSoftmax)
+            {
+                // Yolo v2
+                // softmax activation for Probability, for each grid cell (X x Y x Anchor-index)
+                ocl::Kernel softmax_kernel("softmax_activ", ocl::dnn::region_oclsrc);
+                size_t nthreads = rows*cols*anchors;
+                softmax_kernel.set(0, (int)nthreads);
+                softmax_kernel.set(1, ocl::KernelArg::PtrReadOnly(inpBlob));
+                softmax_kernel.set(2, ocl::KernelArg::PtrReadOnly(blob_umat));
+                softmax_kernel.set(3, (int)cell_size);
+                softmax_kernel.set(4, (int)classes);
+                softmax_kernel.set(5, (int)classfix);
+                softmax_kernel.set(6, (int)rows);
+                softmax_kernel.set(7, (int)cols);
+                softmax_kernel.set(8, (int)anchors);
+                softmax_kernel.set(9, (float)thresh);
+                softmax_kernel.set(10, ocl::KernelArg::PtrWriteOnly(outBlob));
+                if (!softmax_kernel.run(1, &nthreads, NULL, false))
+                    return false;
+            }
+
+            if (nmsThreshold > 0) {
+                Mat mat = outBlob.getMat(ACCESS_WRITE);
+                float *dstData = mat.ptr<float>();
+                do_nms_sort(dstData, rows*cols*anchors, nmsThreshold);
+                //do_nms(dstData, rows*cols*anchors, nmsThreshold);
+            }
+
+        }
+
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }

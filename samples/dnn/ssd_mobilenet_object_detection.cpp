@@ -37,7 +37,9 @@ const char* params
       "{ camera_device  | 0     | camera device number }"
       "{ video          |       | video or image for detection}"
       "{ out            |       | path to output video file}"
-      "{ min_confidence | 0.2   | min confidence      }";
+      "{ min_confidence | 0.2   | min confidence      }"
+      "{ opencl         | false | enable OpenCL }"
+;
 
 int main(int argc, char** argv)
 {
@@ -56,6 +58,11 @@ int main(int argc, char** argv)
     //! [Initialize network]
     dnn::Net net = readNetFromCaffe(modelConfiguration, modelBinary);
     //! [Initialize network]
+
+    if (parser.get<bool>("opencl"))
+    {
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
+    }
 
     if (net.empty())
     {
@@ -108,10 +115,12 @@ int main(int argc, char** argv)
                     (inVideoSize.height - cropSize.height) / 2),
               cropSize);
 
+    double fps = cap.get(CV_CAP_PROP_FPS);
+    int fourcc = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
     VideoWriter outputVideo;
     outputVideo.open(parser.get<String>("out") ,
-                     static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)),
-                     cap.get(CV_CAP_PROP_FPS), cropSize, true);
+                     (fourcc != 0 ? fourcc : VideoWriter::fourcc('M','J','P','G')),
+                     (fps != 0 ? fps : 10.0), cropSize, true);
 
     for(;;)
     {

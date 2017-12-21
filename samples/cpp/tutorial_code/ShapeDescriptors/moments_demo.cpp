@@ -23,10 +23,18 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image and convert it to gray
-  src = imread( argv[1], IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | ../data/stuff.jpg | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+
+  if( src.empty() )
+  {
+      cout << "Could not open or find the image!\n" << endl;
+      cout << "usage: " << argv[0] << " <Input image>" << endl;
+      exit(0);
+  }
 
   /// Convert image to gray and blur it
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
@@ -51,12 +59,11 @@ void thresh_callback(int, void* )
 {
   Mat canny_output;
   vector<vector<Point> > contours;
-  vector<Vec4i> hierarchy;
 
   /// Detect edges using canny
   Canny( src_gray, canny_output, thresh, thresh*2, 3 );
   /// Find contours
-  findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
+  findContours( canny_output, contours, RETR_TREE, CHAIN_APPROX_SIMPLE );
 
   /// Get the moments
   vector<Moments> mu(contours.size() );
@@ -73,7 +80,7 @@ void thresh_callback(int, void* )
   for( size_t i = 0; i< contours.size(); i++ )
      {
        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       drawContours( drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point() );
+       drawContours( drawing, contours, (int)i, color, 2, LINE_8 );
        circle( drawing, mc[i], 4, color, -1, 8, 0 );
      }
 
@@ -87,7 +94,7 @@ void thresh_callback(int, void* )
      {
        printf(" * Contour[%d] - Area (M_00) = %.2f - Area OpenCV: %.2f - Length: %.2f \n", (int)i, mu[i].m00, contourArea(contours[i]), arcLength( contours[i], true ) );
        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       drawContours( drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point() );
+       drawContours( drawing, contours, (int)i, color, 2, LINE_8 );
        circle( drawing, mc[i], 4, color, -1, 8, 0 );
      }
 }

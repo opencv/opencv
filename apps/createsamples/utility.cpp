@@ -49,11 +49,12 @@
 
 #include "utility.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/core/core_c.h"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/highgui/highgui_c.h"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+
+using namespace cv;
 
 #ifndef PATH_MAX
 #define PATH_MAX 512
@@ -130,21 +131,15 @@ static void icvWriteVecHeader( FILE* file, int count, int width, int height )
     fwrite( &tmp, sizeof( tmp ), 1, file );
 }
 
-static void icvWriteVecSample( FILE* file, CvArr* sample )
+static void icvWriteVecSample( FILE* file, Mat sample )
 {
-    CvMat* mat, stub;
-    int r, c;
-    short tmp;
-    uchar chartmp;
-
-    mat = cvGetMat( sample, &stub );
-    chartmp = 0;
+    uchar chartmp = 0;
     fwrite( &chartmp, sizeof( chartmp ), 1, file );
-    for( r = 0; r < mat->rows; r++ )
+    for(int r = 0; r < sample.rows; r++ )
     {
-        for( c = 0; c < mat->cols; c++ )
+        for(int c = 0; c < sample.cols; c++ )
         {
-            tmp = (short) (CV_MAT_ELEM( *mat, uchar, r, c ));
+            short tmp = sample.at<uchar>(r,c);
             fwrite( &tmp, sizeof( tmp ), 1, file );
         }
     }
@@ -176,18 +171,14 @@ static void icvWriteVecSample( FILE* file, CvArr* sample )
  *        cij - coeffs[i][j], coeffs[2][2] = 1
  *   (ui, vi) - rectangle vertices
  */
-static void cvGetPerspectiveTransform( CvSize src_size, double quad[4][2], double coeffs[3][3] )
+static void cvGetPerspectiveTransform( Size src_size, double quad[4][2], double coeffs[3][3] )
 {
-    //CV_FUNCNAME( "cvWarpPerspective" );
-
-    __BEGIN__;
-
     double a[8][8];
     double b[8];
 
-    CvMat A = cvMat( 8, 8, CV_64FC1, a );
-    CvMat B = cvMat( 8, 1, CV_64FC1, b );
-    CvMat X = cvMat( 8, 1, CV_64FC1, coeffs );
+    Mat A( 8, 8, CV_64FC1, a );
+    Mat B( 8, 1, CV_64FC1, b );
+    Mat X( 8, 1, CV_64FC1, coeffs );
 
     int i;
     for( i = 0; i < 4; ++i )
@@ -214,30 +205,14 @@ static void cvGetPerspectiveTransform( CvSize src_size, double quad[4][2], doubl
     a[7][6] = -quad[3][0] * v; a[7][7] = -quad[3][1] * v;
     b[6] = b[7] = v;
 
-    cvSolve( &A, &B, &X );
+    solve( A, B, X );
 
     coeffs[2][2] = 1;
-
-    __END__;
 }
 
 /* Warps source into destination by a perspective transform */
-static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
+static void cvWarpPerspective( Mat src, Mat dst, double quad[4][2] )
 {
-    CV_FUNCNAME( "cvWarpPerspective" );
-
-    __BEGIN__;
-
-#ifdef __IPL_H__
-    IplImage src_stub, dst_stub;
-    IplImage* src_img;
-    IplImage* dst_img;
-    CV_CALL( src_img = cvGetImage( src, &src_stub ) );
-    CV_CALL( dst_img = cvGetImage( dst, &dst_stub ) );
-    iplWarpPerspectiveQ( src_img, dst_img, quad, IPL_WARP_R_TO_Q,
-                         IPL_INTER_CUBIC | IPL_SMOOTH_EDGE );
-#else
-
     int fill_value = 0;
 
     double c[3][3]; /* transformation coefficients */
@@ -251,37 +226,22 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
     double y_max = 0;
     double k_left, b_left, k_right, b_right;
 
-    uchar* src_data;
-    int src_step;
-    CvSize src_size;
-
-    uchar* dst_data;
-    int dst_step;
-    CvSize dst_size;
-
     double d = 0;
     int direction = 0;
     int i;
 
-    if( !src || (!CV_IS_IMAGE( src ) && !CV_IS_MAT( src )) ||
-        cvGetElemType( src ) != CV_8UC1 ||
-        cvGetDims( src ) != 2 )
+    if( src.type() != CV_8UC1 || src.dims != 2 )
     {
-        CV_ERROR( CV_StsBadArg,
+        CV_Error( Error::StsBadArg,
             "Source must be two-dimensional array of CV_8UC1 type." );
     }
-    if( !dst || (!CV_IS_IMAGE( dst ) && !CV_IS_MAT( dst )) ||
-        cvGetElemType( dst ) != CV_8UC1 ||
-        cvGetDims( dst ) != 2 )
+    if( dst.type() != CV_8UC1 || dst.dims != 2 )
     {
-        CV_ERROR( CV_StsBadArg,
+        CV_Error( Error::StsBadArg,
             "Destination must be two-dimensional array of CV_8UC1 type." );
     }
 
-    CV_CALL( cvGetRawData( src, &src_data, &src_step, &src_size ) );
-    CV_CALL( cvGetRawData( dst, &dst_data, &dst_step, &dst_size ) );
-
-    CV_CALL( cvGetPerspectiveTransform( src_size, quad, c ) );
+    cvGetPerspectiveTransform( src.size(), quad, c );
 
     /* if direction > 0 then vertices in quad follow in a CW direction,
        otherwise they follow in a CCW direction */
@@ -293,7 +253,7 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
 
         d = (quad[i][0] - quad[pi][0])*(quad[ni][1] - quad[i][1]) -
             (quad[i][1] - quad[pi][1])*(quad[ni][0] - quad[i][0]);
-        int cur_direction = CV_SIGN(d);
+        int cur_direction = d > 0 ? 1 : d < 0 ? -1 : 0;
         if( direction == 0 )
         {
             direction = cur_direction;
@@ -306,7 +266,7 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
     }
     if( direction == 0 )
     {
-        CV_ERROR( CV_StsBadArg, "Quadrangle is nonconvex or degenerated." );
+        CV_Error(Error::StsBadArg, "Quadrangle is nonconvex or degenerated." );
     }
 
     /* <left> is the index of the topmost quad vertice
@@ -387,7 +347,7 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
         y_max = MIN( q[next_left][1], q[next_right][1] );
 
         int iy_min = MAX( cvRound(y_min), 0 ) + 1;
-        int iy_max = MIN( cvRound(y_max), dst_size.height - 1 );
+        int iy_max = MIN( cvRound(y_max), dst.rows - 1 );
 
         double x_min = k_left * iy_min + b_left;
         double x_max = k_right * iy_min + b_right;
@@ -396,7 +356,7 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
         for( y = iy_min; y <= iy_max; ++y )
         {
             int ix_min = MAX( cvRound( x_min ), 0 );
-            int ix_max = MIN( cvRound( x_max ), dst_size.width - 1 );
+            int ix_max = MIN( cvRound( x_max ), dst.cols - 1 );
 
             for( x = ix_min; x <= ix_max; ++x )
             {
@@ -410,37 +370,35 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
                 double delta_x = src_x - isrc_x;
                 double delta_y = src_y - isrc_y;
 
-                uchar* s = src_data + isrc_y * src_step + isrc_x;
-
                 int i00, i10, i01, i11;
                 i00 = i10 = i01 = i11 = (int) fill_value;
 
                 /* linear interpolation using 2x2 neighborhood */
-                if( isrc_x >= 0 && isrc_x <= src_size.width &&
-                    isrc_y >= 0 && isrc_y <= src_size.height )
+                if( isrc_x >= 0 && isrc_x < src.cols &&
+                    isrc_y >= 0 && isrc_y < src.rows )
                 {
-                    i00 = s[0];
+                    i00 = src.at<uchar>(isrc_y, isrc_x);
                 }
-                if( isrc_x >= -1 && isrc_x < src_size.width &&
-                    isrc_y >= 0 && isrc_y <= src_size.height )
+                if( isrc_x >= -1 && isrc_x + 1 < src.cols &&
+                    isrc_y >= 0 && isrc_y < src.rows )
                 {
-                    i10 = s[1];
+                    i10 = src.at<uchar>(isrc_y, isrc_x + 1);
                 }
-                if( isrc_x >= 0 && isrc_x <= src_size.width &&
-                    isrc_y >= -1 && isrc_y < src_size.height )
+                if( isrc_x >= 0 && isrc_x < src.cols &&
+                    isrc_y >= -1 && isrc_y + 1 < src.rows )
                 {
-                    i01 = s[src_step];
+                    i01 = src.at<uchar>(isrc_y + 1, isrc_x);
                 }
-                if( isrc_x >= -1 && isrc_x < src_size.width &&
-                    isrc_y >= -1 && isrc_y < src_size.height )
+                if( isrc_x >= -1 && isrc_x + 1 < src.cols &&
+                    isrc_y >= -1 && isrc_y + 1 < src.rows )
                 {
-                    i11 = s[src_step+1];
+                    i11 = src.at<uchar>(isrc_y + 1, isrc_x + 1);
                 }
 
                 double i0 = i00 + (i10 - i00)*delta_x;
                 double i1 = i01 + (i11 - i01)*delta_x;
 
-                ((uchar*)(dst_data + y * dst_step))[x] = (uchar) (i0 + (i1 - i0)*delta_y);
+                dst.at<uchar>(y, x) = (uchar) (i0 + (i1 - i0)*delta_y);
             }
             x_min += k_left;
             x_max += k_right;
@@ -476,9 +434,6 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
         }
         y_min = y_max;
     }
-#endif /* #ifndef __IPL_H__ */
-
-    __END__;
 }
 
 static
@@ -497,31 +452,18 @@ void icvRandomQuad( int width, int height, double quad[4][2],
     double vectData[3];
     double rotMatData[9];
 
-    CvMat rotVect;
-    CvMat rotMat;
-    CvMat vect;
-
     double d;
 
-    rotVect = cvMat( 3, 1, CV_64FC1, &rotVectData[0] );
-    rotMat = cvMat( 3, 3, CV_64FC1, &rotMatData[0] );
-    vect = cvMat( 3, 1, CV_64FC1, &vectData[0] );
+    Mat rotVect( 3, 1, CV_64FC1, &rotVectData[0] );
+    Mat rotMat( 3, 3, CV_64FC1, &rotMatData[0] );
+    Mat vect( 3, 1, CV_64FC1, &vectData[0] );
 
-    rotVectData[0] = maxxangle * (2.0 * rand() / RAND_MAX - 1.0);
-    rotVectData[1] = ( maxyangle - fabs( rotVectData[0] ) )
-        * (2.0 * rand() / RAND_MAX - 1.0);
-    rotVectData[2] = maxzangle * (2.0 * rand() / RAND_MAX - 1.0);
-    d = (distfactor + distfactor2 * (2.0 * rand() / RAND_MAX - 1.0)) * width;
+    rotVectData[0] = theRNG().uniform( -maxxangle, maxxangle );
+    rotVectData[1] = ( maxyangle - fabs( rotVectData[0] ) ) * theRNG().uniform( -1.0, 1.0 );
+    rotVectData[2] = theRNG().uniform( -maxzangle, maxzangle );
+    d = ( distfactor + distfactor2 * theRNG().uniform( -1.0, 1.0 ) ) * width;
 
-/*
-    rotVectData[0] = maxxangle;
-    rotVectData[1] = maxyangle;
-    rotVectData[2] = maxzangle;
-
-    d = distfactor * width;
-*/
-
-    cvRodrigues2( &rotVect, &rotMat );
+    Rodrigues( rotVect, rotMat );
 
     halfw = 0.5 * width;
     halfh = 0.5 * height;
@@ -540,26 +482,21 @@ void icvRandomQuad( int width, int height, double quad[4][2],
         rotVectData[0] = quad[i][0];
         rotVectData[1] = quad[i][1];
         rotVectData[2] = 0.0;
-        cvMatMulAdd( &rotMat, &rotVect, 0, &vect );
+        gemm(rotMat, rotVect, 1., Mat(), 1., vect);
         quad[i][0] = vectData[0] * d / (d + vectData[2]) + halfw;
         quad[i][1] = vectData[1] * d / (d + vectData[2]) + halfh;
-
-        /*
-        quad[i][0] += halfw;
-        quad[i][1] += halfh;
-        */
     }
 }
 
 
 typedef struct CvSampleDistortionData
 {
-    IplImage* src;
-    IplImage* erode;
-    IplImage* dilate;
-    IplImage* mask;
-    IplImage* img;
-    IplImage* maskimg;
+    Mat src;
+    Mat erode;
+    Mat dilate;
+    Mat mask;
+    Mat img;
+    Mat maskimg;
     int dx;
     int dy;
     int bgcolor;
@@ -577,18 +514,18 @@ typedef struct CvBackgroundData
     char** filename;
     int    last;
     int    round;
-    CvSize winsize;
+    Size winsize;
 } CvBackgroundData;
 
 typedef struct CvBackgroundReader
 {
-    CvMat   src;
-    CvMat   img;
-    CvPoint offset;
+    Mat   src;
+    Mat   img;
+    Point offset;
     float   scale;
     float   scalefactor;
     float   stepfactor;
-    CvPoint point;
+    Point point;
 } CvBackgroundReader;
 
 /*
@@ -607,81 +544,66 @@ static int icvStartSampleDistortion( const char* imgfilename, int bgcolor, int b
                               CvSampleDistortionData* data )
 {
     memset( data, 0, sizeof( *data ) );
-    data->src = cvLoadImage( imgfilename, 0 );
-    if( data->src != NULL && data->src->nChannels == 1
-        && data->src->depth == IPL_DEPTH_8U )
+    data->src = imread( imgfilename, IMREAD_GRAYSCALE );
+    if( !(data->src.empty()) && data->src.type() == CV_8UC1 )
     {
         int r, c;
-        uchar* pmask;
-        uchar* psrc;
-        uchar* perode;
-        uchar* pdilate;
-        uchar dd, de;
 
-        data->dx = data->src->width / 2;
-        data->dy = data->src->height / 2;
+        data->dx = data->src.cols / 2;
+        data->dy = data->src.rows / 2;
         data->bgcolor = bgcolor;
 
-        data->mask = cvCloneImage( data->src );
-        data->erode = cvCloneImage( data->src );
-        data->dilate = cvCloneImage( data->src );
+        data->mask = data->src.clone();
+        data->erode = data->src.clone();
+        data->dilate = data->src.clone();
 
         /* make mask image */
-        for( r = 0; r < data->mask->height; r++ )
+        for( r = 0; r < data->mask.rows; r++ )
         {
-            for( c = 0; c < data->mask->width; c++ )
+            for( c = 0; c < data->mask.cols; c++ )
             {
-                pmask = ( (uchar*) (data->mask->imageData + r * data->mask->widthStep)
-                        + c );
-                if( bgcolor - bgthreshold <= (int) (*pmask) &&
-                    (int) (*pmask) <= bgcolor + bgthreshold )
+                uchar& pmask = data->mask.at<uchar>(r, c);
+                if( bgcolor - bgthreshold <= (int)pmask &&
+                    (int)pmask <= bgcolor + bgthreshold )
                 {
-                    *pmask = (uchar) 0;
+                    pmask = (uchar) 0;
                 }
                 else
                 {
-                    *pmask = (uchar) 255;
+                    pmask = (uchar) 255;
                 }
             }
         }
 
         /* extend borders of source image */
-        cvErode( data->src, data->erode, 0, 1 );
-        cvDilate( data->src, data->dilate, 0, 1 );
-        for( r = 0; r < data->mask->height; r++ )
+        erode( data->src, data->erode, Mat() );
+        dilate( data->src, data->dilate, Mat() );
+        for( r = 0; r < data->mask.rows; r++ )
         {
-            for( c = 0; c < data->mask->width; c++ )
+            for( c = 0; c < data->mask.cols; c++ )
             {
-                pmask = ( (uchar*) (data->mask->imageData + r * data->mask->widthStep)
-                        + c );
-                if( (*pmask) == 0 )
+                uchar& pmask = data->mask.at<uchar>(r, c);
+                if( pmask == 0 )
                 {
-                    psrc = ( (uchar*) (data->src->imageData + r * data->src->widthStep)
-                           + c );
-                    perode =
-                        ( (uchar*) (data->erode->imageData + r * data->erode->widthStep)
-                                + c );
-                    pdilate =
-                        ( (uchar*)(data->dilate->imageData + r * data->dilate->widthStep)
-                                + c );
-                    de = (uchar)(bgcolor - (*perode));
-                    dd = (uchar)((*pdilate) - bgcolor);
+                    uchar& psrc = data->src.at<uchar>(r, c);
+                    uchar& perode = data->erode.at<uchar>(r, c);
+                    uchar& pdilate = data->dilate.at<uchar>(r, c);
+                    uchar de = (uchar)(bgcolor - perode);
+                    uchar dd = (uchar)(pdilate - bgcolor);
                     if( de >= dd && de > bgthreshold )
                     {
-                        (*psrc) = (*perode);
+                        psrc = perode;
                     }
                     if( dd > de && dd > bgthreshold )
                     {
-                        (*psrc) = (*pdilate);
+                        psrc = pdilate;
                     }
                 }
             }
         }
 
-        data->img = cvCreateImage( cvSize( data->src->width + 2 * data->dx,
-                                           data->src->height + 2 * data->dy ),
-                                   IPL_DEPTH_8U, 1 );
-        data->maskimg = cvCloneImage( data->img );
+        data->img = Mat(Size( data->src.cols + 2 * data->dx, data->src.rows + 2 * data->dy ), CV_8UC1);
+        data->maskimg = Mat(Size(data->src.cols + 2 * data->dx, data->src.rows + 2 * data->dy), CV_8UC1);
 
         return 1;
     }
@@ -690,7 +612,7 @@ static int icvStartSampleDistortion( const char* imgfilename, int bgcolor, int b
 }
 
 static
-void icvPlaceDistortedSample( CvArr* background,
+void icvPlaceDistortedSample( Mat background,
                               int inverse, int maxintensitydev,
                               double maxxangle, double maxyangle, double maxzangle,
                               int inscribe, double maxshiftf, double maxscalef,
@@ -698,23 +620,15 @@ void icvPlaceDistortedSample( CvArr* background,
 {
     double quad[4][2];
     int r, c;
-    uchar* pimg;
-    uchar* pbg;
-    uchar* palpha;
-    uchar chartmp;
     int forecolordev;
     float scale;
-    IplImage* img;
-    IplImage* maskimg;
-    CvMat  stub;
-    CvMat* bgimg;
 
-    CvRect cr;
-    CvRect roi;
+    Rect cr;
+    Rect roi;
 
     double xshift, yshift, randscale;
 
-    icvRandomQuad( data->src->width, data->src->height, quad,
+    icvRandomQuad( data->src.cols, data->src.rows, quad,
                    maxxangle, maxyangle, maxzangle );
     quad[0][0] += (double) data->dx;
     quad[0][1] += (double) data->dy;
@@ -725,20 +639,18 @@ void icvPlaceDistortedSample( CvArr* background,
     quad[3][0] += (double) data->dx;
     quad[3][1] += (double) data->dy;
 
-    cvSet( data->img, cvScalar( data->bgcolor ) );
-    cvSet( data->maskimg, cvScalar( 0.0 ) );
+    data->img = data->bgcolor;
+    data->maskimg = 0;
 
     cvWarpPerspective( data->src, data->img, quad );
     cvWarpPerspective( data->mask, data->maskimg, quad );
 
-    cvSmooth( data->maskimg, data->maskimg, CV_GAUSSIAN, 3, 3 );
-
-    bgimg = cvGetMat( background, &stub );
+    GaussianBlur( data->maskimg, data->maskimg, Size(3, 3), 0, 0 );
 
     cr.x = data->dx;
     cr.y = data->dy;
-    cr.width = data->src->width;
-    cr.height = data->src->height;
+    cr.width = data->src.cols;
+    cr.height = data->src.rows;
 
     if( inscribe )
     {
@@ -749,90 +661,53 @@ void icvPlaceDistortedSample( CvArr* background,
         cr.height = (int) (MAX( quad[2][1], quad[3][1] ) + 0.5F ) - cr.y;
     }
 
-    xshift = maxshiftf * rand() / RAND_MAX;
-    yshift = maxshiftf * rand() / RAND_MAX;
+    xshift = theRNG().uniform( 0., maxshiftf );
+    yshift = theRNG().uniform( 0., maxshiftf );
 
     cr.x -= (int) ( xshift * cr.width  );
     cr.y -= (int) ( yshift * cr.height );
     cr.width  = (int) ((1.0 + maxshiftf) * cr.width );
     cr.height = (int) ((1.0 + maxshiftf) * cr.height);
 
-    randscale = maxscalef * rand() / RAND_MAX;
+    randscale = theRNG().uniform( 0., maxscalef );
     cr.x -= (int) ( 0.5 * randscale * cr.width  );
     cr.y -= (int) ( 0.5 * randscale * cr.height );
     cr.width  = (int) ((1.0 + randscale) * cr.width );
     cr.height = (int) ((1.0 + randscale) * cr.height);
 
-    scale = MAX( ((float) cr.width) / bgimg->cols, ((float) cr.height) / bgimg->rows );
+    scale = MAX( ((float) cr.width) / background.cols, ((float) cr.height) / background.rows );
 
-    roi.x = (int) (-0.5F * (scale * bgimg->cols - cr.width) + cr.x);
-    roi.y = (int) (-0.5F * (scale * bgimg->rows - cr.height) + cr.y);
-    roi.width  = (int) (scale * bgimg->cols);
-    roi.height = (int) (scale * bgimg->rows);
+    roi.x = (int) (-0.5F * (scale * background.cols - cr.width) + cr.x);
+    roi.y = (int) (-0.5F * (scale * background.rows - cr.height) + cr.y);
+    roi.width  = (int) (scale * background.cols);
+    roi.height = (int) (scale * background.rows);
 
-    img = cvCreateImage( cvSize( bgimg->cols, bgimg->rows ), IPL_DEPTH_8U, 1 );
-    maskimg = cvCreateImage( cvSize( bgimg->cols, bgimg->rows ), IPL_DEPTH_8U, 1 );
+    Mat img( background.size(), CV_8UC1 );
+    Mat maskimg( background.size(), CV_8UC1 );
 
-    cvSetImageROI( data->img, roi );
-    cvResize( data->img, img );
-    cvResetImageROI( data->img );
-    cvSetImageROI( data->maskimg, roi );
-    cvResize( data->maskimg, maskimg );
-    cvResetImageROI( data->maskimg );
+    resize( data->img(roi), img, img.size(), 0, 0, INTER_LINEAR_EXACT);
+    resize( data->maskimg(roi), maskimg, maskimg.size(), 0, 0, INTER_LINEAR_EXACT);
 
-    forecolordev = (int) (maxintensitydev * (2.0 * rand() / RAND_MAX - 1.0));
+    forecolordev = theRNG().uniform( -maxintensitydev, maxintensitydev );
 
-    for( r = 0; r < img->height; r++ )
+    for( r = 0; r < img.rows; r++ )
     {
-        for( c = 0; c < img->width; c++ )
+        for( c = 0; c < img.cols; c++ )
         {
-            pimg = (uchar*) img->imageData + r * img->widthStep + c;
-            pbg = (uchar*) bgimg->data.ptr + r * bgimg->step + c;
-            palpha = (uchar*) maskimg->imageData + r * maskimg->widthStep + c;
-            chartmp = (uchar) MAX( 0, MIN( 255, forecolordev + (*pimg) ) );
+            uchar& pbg = background.at<uchar>(r, c);
+            uchar& palpha = maskimg.at<uchar>(r, c);
+            uchar chartmp = (uchar) MAX( 0, MIN( 255, forecolordev + img.at<uchar>(r, c)) );
             if( inverse )
             {
                 chartmp ^= 0xFF;
             }
-            *pbg = (uchar) (( chartmp*(*palpha )+(255 - (*palpha) )*(*pbg) ) / 255);
+            pbg = (uchar) ((chartmp*palpha + (255 - palpha)*pbg) / 255);
         }
     }
-
-    cvReleaseImage( &img );
-    cvReleaseImage( &maskimg );
 }
 
 static
-void icvEndSampleDistortion( CvSampleDistortionData* data )
-{
-    if( data->src )
-    {
-        cvReleaseImage( &data->src );
-    }
-    if( data->mask )
-    {
-        cvReleaseImage( &data->mask );
-    }
-    if( data->erode )
-    {
-        cvReleaseImage( &data->erode );
-    }
-    if( data->dilate )
-    {
-        cvReleaseImage( &data->dilate );
-    }
-    if( data->img )
-    {
-        cvReleaseImage( &data->img );
-    }
-    if( data->maskimg )
-    {
-        cvReleaseImage( &data->maskimg );
-    }
-}
-
-static
-CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize )
+CvBackgroundData* icvCreateBackgroundData( const char* filename, Size winsize )
 {
     CvBackgroundData* data = NULL;
 
@@ -845,7 +720,7 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
     char*  tmp   = NULL;
     int    len   = 0;
 
-    assert( filename != NULL );
+    CV_Assert( filename != NULL );
 
     dir = strrchr( filename, '\\' );
     if( dir == NULL )
@@ -889,7 +764,7 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
             //rewind( input );
             fseek( input, 0, SEEK_SET );
             datasize += sizeof( *data ) + sizeof( char* ) * count;
-            data = (CvBackgroundData*) cvAlloc( datasize );
+            data = (CvBackgroundData*) fastMalloc( datasize );
             memset( (void*) data, 0, datasize );
             data->count = count;
             data->filename = (char**) (data + 1);
@@ -922,70 +797,28 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
 }
 
 static
-void icvReleaseBackgroundData( CvBackgroundData** data )
-{
-    assert( data != NULL && (*data) != NULL );
-
-    cvFree( data );
-}
-
-static
 CvBackgroundReader* icvCreateBackgroundReader()
 {
     CvBackgroundReader* reader = NULL;
 
-    reader = (CvBackgroundReader*) cvAlloc( sizeof( *reader ) );
-    memset( (void*) reader, 0, sizeof( *reader ) );
-    reader->src = cvMat( 0, 0, CV_8UC1, NULL );
-    reader->img = cvMat( 0, 0, CV_8UC1, NULL );
-    reader->offset = cvPoint( 0, 0 );
+    reader = new CvBackgroundReader;
     reader->scale       = 1.0F;
     reader->scalefactor = 1.4142135623730950488016887242097F;
     reader->stepfactor  = 0.5F;
-    reader->point = reader->offset;
 
     return reader;
-}
-
-static
-void icvReleaseBackgroundReader( CvBackgroundReader** reader )
-{
-    assert( reader != NULL && (*reader) != NULL );
-
-    if( (*reader)->src.data.ptr != NULL )
-    {
-        cvFree( &((*reader)->src.data.ptr) );
-    }
-    if( (*reader)->img.data.ptr != NULL )
-    {
-        cvFree( &((*reader)->img.data.ptr) );
-    }
-
-    cvFree( reader );
 }
 
 static
 void icvGetNextFromBackgroundData( CvBackgroundData* data,
                                    CvBackgroundReader* reader )
 {
-    IplImage* img = NULL;
-    size_t datasize = 0;
+    Mat img;
     int round = 0;
     int i = 0;
-    CvPoint offset = cvPoint(0,0);
+    Point offset;
 
-    assert( data != NULL && reader != NULL );
-
-    if( reader->src.data.ptr != NULL )
-    {
-        cvFree( &(reader->src.data.ptr) );
-        reader->src.data.ptr = NULL;
-    }
-    if( reader->img.data.ptr != NULL )
-    {
-        cvFree( &(reader->img.data.ptr) );
-        reader->img.data.ptr = NULL;
-    }
+    CV_Assert( data != NULL && reader != NULL );
 
     #ifdef CV_OPENMP
     #pragma omp critical(c_background_data)
@@ -995,14 +828,14 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         {
             round = data->round;
 
+            data->last = theRNG().uniform( 0, RAND_MAX ) % data->count;
+
 #ifdef CV_VERBOSE
             printf( "Open background image: %s\n", data->filename[data->last] );
 #endif /* CV_VERBOSE */
 
-            data->last = rand() % data->count;
-            data->last %= data->count;
-            img = cvLoadImage( data->filename[data->last], 0 );
-            if( !img )
+            img = imread( data->filename[data->last], IMREAD_GRAYSCALE );
+            if( img.empty() )
                 continue;
             data->round += data->last / data->count;
             data->round = data->round % (data->winsize.width * data->winsize.height);
@@ -1010,20 +843,17 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
             offset.x = round % data->winsize.width;
             offset.y = round / data->winsize.width;
 
-            offset.x = MIN( offset.x, img->width - data->winsize.width );
-            offset.y = MIN( offset.y, img->height - data->winsize.height );
+            offset.x = MIN( offset.x, img.cols - data->winsize.width );
+            offset.y = MIN( offset.y, img.rows - data->winsize.height );
 
-            if( img != NULL && img->depth == IPL_DEPTH_8U && img->nChannels == 1 &&
-                offset.x >= 0 && offset.y >= 0 )
+            if( !img.empty() && img.type() == CV_8UC1 && offset.x >= 0 && offset.y >= 0 )
             {
                 break;
             }
-            if( img != NULL )
-                cvReleaseImage( &img );
-            img = NULL;
+            img = Mat();
         }
     }
-    if( img == NULL )
+    if( img.empty() )
     {
         /* no appropriate image */
 
@@ -1031,14 +861,11 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         printf( "Invalid background description file.\n" );
 #endif /* CV_VERBOSE */
 
-        assert( 0 );
+        CV_Assert( 0 );
         exit( 1 );
     }
-    datasize = sizeof( uchar ) * img->width * img->height;
-    reader->src = cvMat( img->height, img->width, CV_8UC1, (void*) cvAlloc( datasize ) );
-    cvCopy( img, &reader->src, NULL );
-    cvReleaseImage( &img );
-    img = NULL;
+
+    reader->src = img;
 
     //reader->offset.x = round % data->winsize.width;
     //reader->offset.y = round / data->winsize.width;
@@ -1048,10 +875,8 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
         ((float) data->winsize.width + reader->point.x) / ((float) reader->src.cols),
         ((float) data->winsize.height + reader->point.y) / ((float) reader->src.rows) );
 
-    reader->img = cvMat( (int) (reader->scale * reader->src.rows + 0.5F),
-                         (int) (reader->scale * reader->src.cols + 0.5F),
-                          CV_8UC1, (void*) cvAlloc( datasize ) );
-    cvResize( &(reader->src), &(reader->img) );
+    resize( reader->src, reader->img,
+            Size((int)(reader->scale * reader->src.cols + 0.5F), (int)(reader->scale * reader->src.rows + 0.5F)), 0, 0, INTER_LINEAR_EXACT);
 }
 
 /*
@@ -1075,25 +900,17 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
 static
 void icvGetBackgroundImage( CvBackgroundData* data,
                             CvBackgroundReader* reader,
-                            CvMat* img )
+                            Mat& img )
 {
-    CvMat mat;
+    CV_Assert( data != NULL && reader != NULL );
 
-    assert( data != NULL && reader != NULL && img != NULL );
-    assert( CV_MAT_TYPE( img->type ) == CV_8UC1 );
-    assert( img->cols == data->winsize.width );
-    assert( img->rows == data->winsize.height );
-
-    if( reader->img.data.ptr == NULL )
+    if( reader->img.empty() )
     {
         icvGetNextFromBackgroundData( data, reader );
     }
 
-    mat = cvMat( data->winsize.height, data->winsize.width, CV_8UC1 );
-    cvSetData( &mat, (void*) (reader->img.data.ptr + reader->point.y * reader->img.step
-                              + reader->point.x * sizeof( uchar )), reader->img.step );
+    img = reader->img(Rect(reader->point.x, reader->point.y, data->winsize.height, data->winsize.width)).clone();
 
-    cvCopy( &mat, img, 0 );
     if( (int) ( reader->point.x + (1.0F + reader->stepfactor ) * data->winsize.width )
             < reader->img.cols )
     {
@@ -1113,10 +930,8 @@ void icvGetBackgroundImage( CvBackgroundData* data,
             reader->scale *= reader->scalefactor;
             if( reader->scale <= 1.0F )
             {
-                reader->img = cvMat( (int) (reader->scale * reader->src.rows),
-                                     (int) (reader->scale * reader->src.cols),
-                                      CV_8UC1, (void*) (reader->img.data.ptr) );
-                cvResize( &(reader->src), &(reader->img) );
+                resize(reader->src, reader->img,
+                       Size((int)(reader->scale * reader->src.cols), (int)(reader->scale * reader->src.rows)), 0, 0, INTER_LINEAR_EXACT);
             }
             else
             {
@@ -1138,7 +953,7 @@ void icvGetBackgroundImage( CvBackgroundData* data,
  *
  * return 1 on success, 0 otherwise.
  */
-static int icvInitBackgroundReaders( const char* filename, CvSize winsize )
+static int icvInitBackgroundReaders( const char* filename, Size winsize )
 {
     if( cvbgdata == NULL && filename != NULL )
     {
@@ -1187,7 +1002,7 @@ void icvDestroyBackgroundReaders()
         {
             if( cvbgreader != NULL )
             {
-                icvReleaseBackgroundReader( &cvbgreader );
+                delete cvbgreader;
                 cvbgreader = NULL;
             }
         }
@@ -1195,7 +1010,7 @@ void icvDestroyBackgroundReaders()
 
     if( cvbgdata != NULL )
     {
-        icvReleaseBackgroundData( &cvbgdata );
+        fastFree(cvbgdata);
         cvbgdata = NULL;
     }
 }
@@ -1210,8 +1025,8 @@ void cvCreateTrainingSamples( const char* filename,
 {
     CvSampleDistortionData data;
 
-    assert( filename != NULL );
-    assert( imgfilename != NULL );
+    CV_Assert( filename != NULL );
+    CV_Assert( imgfilename != NULL );
 
     if( !icvMkDir( filename ) )
     {
@@ -1227,21 +1042,19 @@ void cvCreateTrainingSamples( const char* filename,
         {
             int hasbg;
             int i;
-            CvMat sample;
             int inverse;
 
             hasbg = 0;
             hasbg = (bgfilename != NULL && icvInitBackgroundReaders( bgfilename,
-                     cvSize( winwidth,winheight ) ) );
+                     Size( winwidth,winheight ) ) );
 
-            sample = cvMat( winheight, winwidth, CV_8UC1, cvAlloc( sizeof( uchar ) *
-                            winheight * winwidth ) );
+            Mat sample( winheight, winwidth, CV_8UC1 );
 
             icvWriteVecHeader( output, count, sample.cols, sample.rows );
 
             if( showsamples )
             {
-                cvNamedWindow( "Sample", CV_WINDOW_AUTOSIZE );
+                namedWindow( "Sample", WINDOW_AUTOSIZE );
             }
 
             inverse = invert;
@@ -1249,18 +1062,18 @@ void cvCreateTrainingSamples( const char* filename,
             {
                 if( hasbg )
                 {
-                    icvGetBackgroundImage( cvbgdata, cvbgreader, &sample );
+                    icvGetBackgroundImage( cvbgdata, cvbgreader, sample );
                 }
                 else
                 {
-                    cvSet( &sample, cvScalar( bgcolor ) );
+                    sample = bgcolor;
                 }
 
                 if( invert == CV_RANDOM_INVERT )
                 {
-                    inverse = (rand() > (RAND_MAX/2));
+                    inverse = theRNG().uniform( 0, 2 );
                 }
-                icvPlaceDistortedSample( &sample, inverse, maxintensitydev,
+                icvPlaceDistortedSample( sample, inverse, maxintensitydev,
                     maxxangle, maxyangle, maxzangle,
                     0   /* nonzero means placing image without cut offs */,
                     0.0 /* nozero adds random shifting                  */,
@@ -1269,14 +1082,14 @@ void cvCreateTrainingSamples( const char* filename,
 
                 if( showsamples )
                 {
-                    cvShowImage( "Sample", &sample );
-                    if( (cvWaitKey( 0 ) & 0xFF) == 27 )
+                    imshow( "Sample", sample );
+                    if( (waitKey( 0 ) & 0xFF) == 27 )
                     {
                         showsamples = 0;
                     }
                 }
 
-                icvWriteVecSample( output, &sample );
+                icvWriteVecSample( output, sample );
 
 #ifdef CV_VERBOSE
                 if( i % 500 == 0 )
@@ -1286,11 +1099,8 @@ void cvCreateTrainingSamples( const char* filename,
 #endif /* CV_VERBOSE */
             }
             icvDestroyBackgroundReaders();
-            cvFree( &(sample.data.ptr) );
             fclose( output );
         } /* if( output != NULL ) */
-
-        icvEndSampleDistortion( &data );
     }
 
 #ifdef CV_VERBOSE
@@ -1311,9 +1121,9 @@ void cvCreateTestSamples( const char* infoname,
 {
     CvSampleDistortionData data;
 
-    assert( infoname != NULL );
-    assert( imgfilename != NULL );
-    assert( bgfilename != NULL );
+    CV_Assert( infoname != NULL );
+    CV_Assert( imgfilename != NULL );
+    CV_Assert( bgfilename != NULL );
 
     if( !icvMkDir( infoname ) )
     {
@@ -1328,10 +1138,9 @@ void cvCreateTestSamples( const char* infoname,
     {
         char fullname[PATH_MAX];
         char* filename;
-        CvMat win;
         FILE* info;
 
-        if( icvInitBackgroundReaders( bgfilename, cvSize( 10, 10 ) ) )
+        if( icvInitBackgroundReaders( bgfilename, Size( 10, 10 ) ) )
         {
             int i;
             int x, y, width, height;
@@ -1340,7 +1149,7 @@ void cvCreateTestSamples( const char* infoname,
 
             if( showsamples )
             {
-                cvNamedWindow( "Image", CV_WINDOW_AUTOSIZE );
+                namedWindow( "Image", WINDOW_AUTOSIZE );
             }
 
             info = fopen( infoname, "w" );
@@ -1372,19 +1181,18 @@ void cvCreateTestSamples( const char* infoname,
 
                 if( maxscale < 1.0F ) continue;
 
-                scale = ((float)maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
+                scale = theRNG().uniform( 1.0F, (float)maxscale );
 
                 width = (int) (scale * winwidth);
                 height = (int) (scale * winheight);
-                x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
-                y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
+                x = (int) ( theRNG().uniform( 0.1, 0.8 ) * (cvbgreader->src.cols - width));
+                y = (int) ( theRNG().uniform( 0.1, 0.8 ) * (cvbgreader->src.rows - height));
 
-                cvGetSubArr( &cvbgreader->src, &win, cvRect( x, y ,width, height ) );
                 if( invert == CV_RANDOM_INVERT )
                 {
-                    inverse = (rand() > (RAND_MAX/2));
+                    inverse = theRNG().uniform( 0, 2 );
                 }
-                icvPlaceDistortedSample( &win, inverse, maxintensitydev,
+                icvPlaceDistortedSample( cvbgreader->src(Rect(x, y, width, height)), inverse, maxintensitydev,
                                          maxxangle, maxyangle, maxzangle,
                                          1, 0.0, 0.0, &data );
 
@@ -1398,11 +1206,11 @@ void cvCreateTestSamples( const char* infoname,
                         filename, 1, x, y, width, height );
                 }
 
-                cvSaveImage( fullname, &cvbgreader->src );
+                imwrite( fullname, cvbgreader->src );
                 if( showsamples )
                 {
-                    cvShowImage( "Image", &cvbgreader->src );
-                    if( (cvWaitKey( 0 ) & 0xFF) == 27 )
+                    imshow( "Image", cvbgreader->src );
+                    if( (waitKey( 0 ) & 0xFF) == 27 )
                     {
                         showsamples = 0;
                     }
@@ -1411,7 +1219,6 @@ void cvCreateTestSamples( const char* infoname,
             if( info ) fclose( info );
             icvDestroyBackgroundReaders();
         }
-        icvEndSampleDistortion( &data );
     }
 }
 
@@ -1426,16 +1233,14 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
 
     FILE* info;
     FILE* vec;
-    IplImage* src=0;
-    IplImage* sample;
     int line;
     int error;
     int i;
     int x, y, width, height;
     int total;
 
-    assert( infoname != NULL );
-    assert( vecfilename != NULL );
+    CV_Assert( infoname != NULL );
+    CV_Assert( vecfilename != NULL );
 
     total = 0;
     if( !icvMkDir( vecfilename ) )
@@ -1472,13 +1277,11 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
         return total;
     }
 
-    sample = cvCreateImage( cvSize( winwidth, winheight ), IPL_DEPTH_8U, 1 );
-
-    icvWriteVecHeader( vec, num, sample->width, sample->height );
+    icvWriteVecHeader( vec, num, winwidth, winheight );
 
     if( showsamples )
     {
-        cvNamedWindow( "Sample", CV_WINDOW_AUTOSIZE );
+        namedWindow( "Sample", WINDOW_AUTOSIZE );
     }
 
     strcpy( fullname, infoname );
@@ -1498,14 +1301,13 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
 
     for( line = 1, error = 0, total = 0; total < num ;line++ )
     {
+        Mat src;
         int count;
 
-        error = ( fscanf( info, "%s %d", filename, &count ) != 2 );
-        if( !error )
+        if(fscanf(info, "%s %d", filename, &count) == 2)
         {
-            src = cvLoadImage( fullname, 0 );
-            error = ( src == NULL );
-            if( error )
+            src = imread( fullname, IMREAD_GRAYSCALE );
+            if(src.empty())
             {
 
 #if CV_VERBOSE
@@ -1518,24 +1320,19 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
         {
             error = ( fscanf( info, "%d %d %d %d", &x, &y, &width, &height ) != 4 );
             if( error ) break;
-            cvSetImageROI( src, cvRect( x, y, width, height ) );
-            cvResize( src, sample, width >= sample->width &&
-                      height >= sample->height ? CV_INTER_AREA : CV_INTER_LINEAR );
+            Mat sample;
+            resize( src(Rect(x, y, width, height)), sample, Size(winwidth, winheight), 0, 0,
+                    width >= winwidth && height >= winheight ? INTER_AREA : INTER_LINEAR_EXACT );
 
             if( showsamples )
             {
-                cvShowImage( "Sample", sample );
-                if( (cvWaitKey( 0 ) & 0xFF) == 27 )
+                imshow( "Sample", sample );
+                if( (waitKey( 0 ) & 0xFF) == 27 )
                 {
                     showsamples = 0;
                 }
             }
             icvWriteVecSample( vec, sample );
-        }
-
-        if( src )
-        {
-            cvReleaseImage( &src );
         }
 
         if( error )
@@ -1547,11 +1344,6 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
 
             break;
         }
-    }
-
-    if( sample )
-    {
-        cvReleaseImage( &sample );
     }
 
     fclose( vec );
@@ -1566,36 +1358,33 @@ typedef struct CvVecFile
     int    count;
     int    vecsize;
     int    last;
-    short* vector;
 } CvVecFile;
 
 static
-int icvGetTraininDataFromVec( CvMat* img, void* userdata )
+int icvGetTraininDataFromVec( Mat& img, CvVecFile& userdata )
 {
+    AutoBuffer<short> vector(userdata.vecsize);
     uchar tmp = 0;
     int r = 0;
     int c = 0;
 
-    assert( img->rows * img->cols == ((CvVecFile*) userdata)->vecsize );
+    CV_Assert( img.rows * img.cols == userdata.vecsize );
 
-    size_t elements_read = fread( &tmp, sizeof( tmp ), 1, ((CvVecFile*) userdata)->input );
+    size_t elements_read = fread( &tmp, sizeof( tmp ), 1, userdata.input );
     CV_Assert(elements_read == 1);
-    elements_read = fread( ((CvVecFile*) userdata)->vector, sizeof( short ),
-           ((CvVecFile*) userdata)->vecsize, ((CvVecFile*) userdata)->input );
-    CV_Assert(elements_read == (size_t)((CvVecFile*) userdata)->vecsize);
+    elements_read = fread( vector, sizeof( short ), userdata.vecsize, userdata.input );
+    CV_Assert(elements_read == (size_t)userdata.vecsize);
 
-    if( feof( ((CvVecFile*) userdata)->input ) ||
-        (((CvVecFile*) userdata)->last)++ >= ((CvVecFile*) userdata)->count )
+    if( feof( userdata.input ) || userdata.last++ >= userdata.count )
     {
         return 0;
     }
 
-    for( r = 0; r < img->rows; r++ )
+    for( r = 0; r < img.rows; r++ )
     {
-        for( c = 0; c < img->cols; c++ )
+        for( c = 0; c < img.cols; c++ )
         {
-            CV_MAT_ELEM( *img, uchar, r, c ) =
-                (uchar) ( ((CvVecFile*) userdata)->vector[r * img->cols + c] );
+            img.at<uchar>(r, c) = (uchar) ( vector[r * img.cols + c] );
         }
     }
 
@@ -1607,7 +1396,6 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
     CvVecFile file;
     short tmp;
     int i;
-    CvMat* sample;
 
     tmp = 0;
     file.input = fopen( filename, "rb" );
@@ -1655,28 +1443,18 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
 
         if( !feof( file.input ) && scale > 0 )
         {
-            CvMat* scaled_sample = 0;
-
             file.last = 0;
-            file.vector = (short*) cvAlloc( sizeof( *file.vector ) * file.vecsize );
-            sample = scaled_sample = cvCreateMat( winheight, winwidth, CV_8UC1 );
-            if( scale != 1.0 )
-            {
-                scaled_sample = cvCreateMat( MAX( 1, cvCeil( scale * winheight ) ),
-                                             MAX( 1, cvCeil( scale * winwidth ) ),
-                                             CV_8UC1 );
-            }
-            cvNamedWindow( "Sample", CV_WINDOW_AUTOSIZE );
+            namedWindow( "Sample", WINDOW_AUTOSIZE );
             for( i = 0; i < file.count; i++ )
             {
-                icvGetTraininDataFromVec( sample, &file );
-                if( scale != 1.0 ) cvResize( sample, scaled_sample, CV_INTER_LINEAR);
-                cvShowImage( "Sample", scaled_sample );
-                if( (cvWaitKey( 0 ) & 0xFF) == 27 ) break;
+                Mat sample(winheight, winwidth, CV_8UC1);
+                icvGetTraininDataFromVec( sample, file );
+                if( scale != 1.0 )
+                    resize( sample, sample,
+                            Size(MAX(1, cvCeil(scale * winwidth)), MAX(1, cvCeil(scale * winheight))), 0, 0, INTER_LINEAR_EXACT);
+                imshow( "Sample", sample );
+                if( waitKey( 0 ) == 27 ) break;
             }
-            if( scaled_sample && scaled_sample != sample ) cvReleaseMat( &scaled_sample );
-            cvReleaseMat( &sample );
-            cvFree( &file.vector );
         }
         fclose( file.input );
     }

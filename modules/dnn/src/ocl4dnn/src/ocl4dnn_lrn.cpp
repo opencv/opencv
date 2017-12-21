@@ -92,7 +92,6 @@ bool OCL4DNNLRN<Dtype>::Forward(const UMat& bottom, UMat& top)
 template<typename Dtype>
 bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
 {
-    ocl::Queue queue = ocl::Queue::getDefault();
     CHECK_EQ(phase_test_, true) << "Only support forward inference.";
 
     cl_uint argIdx = 0;

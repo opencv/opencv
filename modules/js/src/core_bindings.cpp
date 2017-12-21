@@ -73,11 +73,13 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/objdetect.hpp"
+#include "opencv2/dnn.hpp"
 
 #include <emscripten/bind.h>
 
 using namespace emscripten;
 using namespace cv;
+using namespace dnn;
 
 namespace binding_utils
 {
@@ -339,12 +341,12 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .constructor<int, int, int, const Scalar&>()
         .constructor(&binding_utils::createMat, allow_raw_pointers())
 
-        .class_function("eye", select_overload<Mat(int, int, int)>(&binding_utils::matEye))
         .class_function("eye", select_overload<Mat(Size, int)>(&binding_utils::matEye))
-        .class_function("ones", select_overload<Mat(int, int, int)>(&binding_utils::matOnes))
+        .class_function("eye", select_overload<Mat(int, int, int)>(&binding_utils::matEye))
         .class_function("ones", select_overload<Mat(Size, int)>(&binding_utils::matOnes))
-        .class_function("zeros", select_overload<Mat(int, int, int)>(&binding_utils::matZeros))
+        .class_function("ones", select_overload<Mat(int, int, int)>(&binding_utils::matOnes))
         .class_function("zeros", select_overload<Mat(Size, int)>(&binding_utils::matZeros))
+        .class_function("zeros", select_overload<Mat(int, int, int)>(&binding_utils::matZeros))
 
         .property("rows", &cv::Mat::rows)
         .property("cols", &cv::Mat::cols)

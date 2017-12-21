@@ -83,7 +83,6 @@ template<typename Dtype>
 bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
 {
     bool ret = false;
-    ocl::Queue queue = ocl::Queue::getDefault();
     bool intel_subgroup = ocl::Device::getDefault().intelSubgroupsSupport();
     if (intel_subgroup && inner_num_ < 128)
     {

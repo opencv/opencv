@@ -42,6 +42,8 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/ts/ocl_test.hpp>
 
 namespace cvtest
 {
@@ -53,6 +55,24 @@ template<typename TString>
 static std::string _tf(TString filename)
 {
     return (getOpenCVExtraDir() + "/dnn/") + filename;
+}
+
+TEST(Test_Caffe, memory_read)
+{
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
+
+    string dataProto;
+    ASSERT_TRUE(readFileInMemory(proto, dataProto));
+    string dataModel;
+    ASSERT_TRUE(readFileInMemory(model, dataModel));
+
+    Net net = readNetFromCaffe(dataProto.c_str(), dataProto.size());
+    ASSERT_FALSE(net.empty());
+
+    Net net2 = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
+                                dataModel.c_str(), dataModel.size());
+    ASSERT_FALSE(net2.empty());
 }
 
 TEST(Test_Caffe, read_gtsrb)
@@ -67,13 +87,26 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
-TEST(Reproducibility_AlexNet, Accuracy)
+typedef testing::TestWithParam<tuple<bool> > Reproducibility_AlexNet;
+TEST_P(Reproducibility_AlexNet, Accuracy)
 {
+    bool readFromMemory = get<0>(GetParam());
     Net net;
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
-        net = readNetFromCaffe(proto, model);
+        if (readFromMemory)
+        {
+            string dataProto;
+            ASSERT_TRUE(readFileInMemory(proto, dataProto));
+            string dataModel;
+            ASSERT_TRUE(readFileInMemory(model, dataModel));
+
+            net = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
+                                   dataModel.c_str(), dataModel.size());
+        }
+        else
+            net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
 
@@ -85,6 +118,45 @@ TEST(Reproducibility_AlexNet, Accuracy)
     Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
     normAssert(ref, out);
 }
+
+INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_AlexNet, testing::Values(true, false));
+
+typedef testing::TestWithParam<tuple<bool> > Reproducibility_OCL_AlexNet;
+OCL_TEST_P(Reproducibility_OCL_AlexNet, Accuracy)
+{
+    bool readFromMemory = get<0>(GetParam());
+    Net net;
+    {
+        const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+        const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
+        if (readFromMemory)
+        {
+            string dataProto;
+            ASSERT_TRUE(readFileInMemory(proto, dataProto));
+            string dataModel;
+            ASSERT_TRUE(readFileInMemory(model, dataModel));
+
+            net = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
+                                   dataModel.c_str(), dataModel.size());
+        }
+        else
+            net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
+    }
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    Mat sample = imread(_tf("grace_hopper_227.png"));
+    ASSERT_TRUE(!sample.empty());
+
+    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false), "data");
+    Mat out = net.forward("prob");
+    Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
+    normAssert(ref, out);
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_OCL_AlexNet, testing::Values(true, false));
 
 #if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
@@ -168,6 +240,38 @@ TEST(Reproducibility_MobileNet_SSD, Accuracy)
     }
 }
 
+OCL_TEST(Reproducibility_MobileNet_SSD, Accuracy)
+{
+    const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
+    const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
+    Net net = readNetFromCaffe(proto, model);
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    Mat sample = imread(_tf("street.png"));
+
+    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
+    normAssert(ref, out);
+
+    // Check that detections aren't preserved.
+    inp.setTo(0.0f);
+    net.setInput(inp);
+    out = net.forward();
+
+    const int numDetections = out.size[2];
+    ASSERT_NE(numDetections, 0);
+    for (int i = 0; i < numDetections; ++i)
+    {
+        float confidence = out.ptr<float>(0, 0, i)[2];
+        ASSERT_EQ(confidence, 0);
+    }
+}
+
 TEST(Reproducibility_ResNet50, Accuracy)
 {
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
@@ -183,10 +287,46 @@ TEST(Reproducibility_ResNet50, Accuracy)
     normAssert(ref, out);
 }
 
+OCL_TEST(Reproducibility_ResNet50, Accuracy)
+{
+    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
+                               findDataFile("dnn/ResNet-50-model.caffemodel", false));
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(224,224), Scalar(), false);
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
+    normAssert(ref, out);
+}
+
 TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
 {
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
+    normAssert(ref, out);
+}
+
+OCL_TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
+{
+    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
+                               findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
 
     Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
     ASSERT_TRUE(!input.empty());
@@ -278,6 +418,33 @@ TEST(Reproducibility_DenseNet_121, Accuracy)
     Mat out = net.forward();
 
     normAssert(out, ref);
+}
+
+TEST(Test_Caffe, multiple_inputs)
+{
+    const string proto = findDataFile("dnn/layers/net_input.prototxt", false);
+    Net net = readNetFromCaffe(proto);
+
+    Mat first_image(10, 11, CV_32FC3);
+    Mat second_image(10, 11, CV_32FC3);
+    randu(first_image, -1, 1);
+    randu(second_image, -1, 1);
+
+    first_image = blobFromImage(first_image);
+    second_image = blobFromImage(second_image);
+
+    Mat first_image_blue_green = slice(first_image, Range::all(), Range(0, 2), Range::all(), Range::all());
+    Mat first_image_red = slice(first_image, Range::all(), Range(2, 3), Range::all(), Range::all());
+    Mat second_image_blue_green = slice(second_image, Range::all(), Range(0, 2), Range::all(), Range::all());
+    Mat second_image_red = slice(second_image, Range::all(), Range(2, 3), Range::all(), Range::all());
+
+    net.setInput(first_image_blue_green, "old_style_input_blue_green");
+    net.setInput(first_image_red, "different_name_for_red");
+    net.setInput(second_image_blue_green, "input_layer_blue_green");
+    net.setInput(second_image_red, "old_style_input_red");
+    Mat out = net.forward();
+
+    normAssert(out, first_image + second_image);
 }
 
 }

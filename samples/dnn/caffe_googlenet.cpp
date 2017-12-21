@@ -83,13 +83,29 @@ static std::vector<String> readClassNames(const char *filename = "synset_words.t
     return classNames;
 }
 
+const char* params
+    = "{ help           | false | Sample app for loading googlenet model }"
+      "{ proto          | bvlc_googlenet.prototxt | model configuration }"
+      "{ model          | bvlc_googlenet.caffemodel | model weights }"
+      "{ image          | space_shuttle.jpg | path to image file }"
+      "{ opencl         | false | enable OpenCL }"
+;
+
 int main(int argc, char **argv)
 {
     CV_TRACE_FUNCTION();
 
-    String modelTxt = "bvlc_googlenet.prototxt";
-    String modelBin = "bvlc_googlenet.caffemodel";
-    String imageFile = (argc > 1) ? argv[1] : "space_shuttle.jpg";
+    CommandLineParser parser(argc, argv, params);
+
+    if (parser.get<bool>("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+
+    String modelTxt = parser.get<string>("proto");
+    String modelBin = parser.get<string>("model");
+    String imageFile = parser.get<String>("image");
 
     Net net;
     try {
@@ -112,6 +128,11 @@ int main(int argc, char **argv)
         //! [Check that network was read successfully]
     }
 
+    if (parser.get<bool>("opencl"))
+    {
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
+    }
+
     //! [Prepare blob]
     Mat img = imread(imageFile);
     if (img.empty())
@@ -124,8 +145,9 @@ int main(int argc, char **argv)
     Mat inputBlob = blobFromImage(img, 1.0f, Size(224, 224),
                                   Scalar(104, 117, 123), false);   //Convert Mat to batch of images
     //! [Prepare blob]
+    net.setInput(inputBlob, "data");        //set the network input
+    Mat prob = net.forward("prob");         //compute output
 
-    Mat prob;
     cv::TickMeter t;
     for (int i = 0; i < 10; i++)
     {

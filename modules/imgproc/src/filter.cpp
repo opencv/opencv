@@ -4333,7 +4333,7 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     return k.run(2, gt2, lt2, false);
 }
 
-static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
+bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {

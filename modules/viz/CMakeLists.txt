@@ -1,4 +1,4 @@
-if(NOT WITH_VTK OR NOT DEFINED HAVE_VTK OR NOT HAVE_VTK)
+if(NOT HAVE_VTK)
   ocv_module_disable(viz)
 endif()
 

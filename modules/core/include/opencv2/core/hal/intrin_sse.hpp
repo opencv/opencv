@@ -1024,24 +1024,28 @@ OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint64x2, v_int64x2, epi64, v_srai_epi64)
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec &a)
 {
-    return _Tpvec(_mm_srli_si128(a.val, imm*(sizeof(typename _Tpvec::lane_type))));
+    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_srli_si128(a.val, CV_SHIFT));
 }
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_left(const _Tpvec &a)
 {
-    return _Tpvec(_mm_slli_si128(a.val, imm*(sizeof(typename _Tpvec::lane_type))));
+    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_slli_si128(a.val, CV_SHIFT));
 }
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec &a, const _Tpvec &b)
 {
-    const int cWidth = sizeof(typename _Tpvec::lane_type);
-    return _Tpvec(_mm_or_si128(_mm_srli_si128(a.val, imm*cWidth), _mm_slli_si128(b.val, (16 - imm*cWidth))));
+    enum { CV_SHIFT1 = imm*(sizeof(typename _Tpvec::lane_type)) };
+    enum { CV_SHIFT2 = 16 - imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_or_si128(_mm_srli_si128(a.val, CV_SHIFT1), _mm_slli_si128(b.val, CV_SHIFT2)));
 }
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_left(const _Tpvec &a, const _Tpvec &b)
 {
-    const int cWidth = sizeof(typename _Tpvec::lane_type);
-    return _Tpvec(_mm_or_si128(_mm_slli_si128(a.val, imm*cWidth), _mm_srli_si128(b.val, (16 - imm*cWidth))));
+    enum { CV_SHIFT1 = imm*(sizeof(typename _Tpvec::lane_type)) };
+    enum { CV_SHIFT2 = 16 - imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_or_si128(_mm_slli_si128(a.val, CV_SHIFT1), _mm_srli_si128(b.val, CV_SHIFT2)));
 }
 
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INT_OP(_Tpvec, _Tp) \

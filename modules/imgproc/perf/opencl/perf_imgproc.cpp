@@ -311,7 +311,7 @@ OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF
     ASSERT_TRUE(!_img.empty()) << "can't open aloe-L.png";
 
     UMat img;
-    cv::resize(_img, img, imgSize);
+    cv::resize(_img, img, imgSize, 0, 0, INTER_LINEAR_EXACT);
     UMat edges(img.size(), CV_8UC1);
 
     declare.in(img).out(edges);

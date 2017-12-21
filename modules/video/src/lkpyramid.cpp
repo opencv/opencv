@@ -1226,7 +1226,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
 {
     CV_INSTRUMENT_REGION()
 
-    CV_OCL_RUN(ocl::useOpenCL() &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() &&
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))

@@ -65,8 +65,6 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
                                           int padded_width, int height,
                                           int width, int ld)
 {
-    ocl::Context ctx = ocl::Context::getDefault();
-    ocl::Queue queue = ocl::Queue::getDefault();
     ocl::Image2D image;
 
     if (!is_matrix_a && transpose)
@@ -191,9 +189,6 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
     // we have to pad the image if it's not multiple of tile.
     // just padding one line is enough as the sub group block read
     // will clamp to edge according to the spec.
-
-    ocl::Context ctx = ocl::Context::getDefault();
-    ocl::Queue queue = ocl::Queue::getDefault();
 
     ocl::Image2D ImA;
     ocl::Image2D ImB;
@@ -446,7 +441,6 @@ bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
                  const int32_t offx, const float beta, UMat y,
                  const int32_t offy)
 {
-    ocl::Queue queue = ocl::Queue::getDefault();
     bool ret = false;
 
     if (TransA == CblasNoTrans)
@@ -507,8 +501,6 @@ bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
                  const UMat X, const int32_t offX, UMat Y,
                  const int32_t offY)
 {
-    ocl::Context ctx = ocl::Context::getDefault();
-
     ocl::Kernel oclk_axpy(CL_KERNEL_SELECT("axpy"), cv::ocl::dnn::math_oclsrc);
     if (oclk_axpy.empty())
         return false;

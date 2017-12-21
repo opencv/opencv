@@ -68,5 +68,5 @@ this contour approximation method.
 If you pass cv.ContourApproximationModes.CHAIN_APPROX_NONE.value, all the boundary points are stored. But actually do we need all
 the points? For eg, you found the contour of a straight line. Do you need all the points on the line
 to represent that line? No, we need just two end points of that line. This is what
-cv2.CHAIN_APPROX_SIMPLE does. It removes all redundant points and compresses the contour, thereby
+cv.CHAIN_APPROX_SIMPLE does. It removes all redundant points and compresses the contour, thereby
 saving memory.

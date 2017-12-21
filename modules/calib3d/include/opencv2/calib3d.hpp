@@ -306,6 +306,12 @@ optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
+/** @example pose_from_homography.cpp
+  An example program about pose estimation from coplanar points
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details
+ */
+
 /** @brief Finds a perspective transformation between two planes.
 
 @param srcPoints Coordinates of the points in the original plane, a matrix of the type CV_32FC2
@@ -364,12 +370,6 @@ cannot be estimated, an empty one will be returned.
 @sa
 getAffineTransform, estimateAffine2D, estimateAffinePartial2D, getPerspectiveTransform, warpPerspective,
 perspectiveTransform
-
-
-@note
-   -   A example on calculating a homography for image matching can be found at
-        opencv_source_code/samples/cpp/video_homography.cpp
-
  */
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method = 0, double ransacReprojThreshold = 3,
@@ -525,6 +525,12 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  OutputArray jacobian = noArray(),
                                  double aspectRatio = 0 );
 
+/** @example homography_from_camera_displacement.cpp
+  An example program about homography from the camera displacement
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details
+ */
+
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
@@ -563,11 +569,101 @@ Estimation" (@cite penate2013exhaustive). In this case the function also estimat
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
 -   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
-"An Efficient Algebraic Solution to the Perspective-Three-Point Problem". In this case the
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17). In this case the
 function requires exactly four object and image points.
 
 The function estimates the object pose given a set of object points, their corresponding image
-projections, as well as the camera matrix and the distortion coefficients.
+projections, as well as the camera matrix and the distortion coefficients, see the figure below
+(more precisely, the X-axis of the camera frame is pointing to the right, the Y-axis downward
+and the Z-axis forward).
+
+![](pnp.jpg)
+
+Points expressed in the world frame \f$ \bf{X}_w \f$ are projected into the image plane \f$ \left[ u, v \right] \f$
+using the perspective projection model \f$ \Pi \f$ and the camera intrinsic parameters matrix \f$ \bf{A} \f$:
+
+\f[
+  \begin{align*}
+  \begin{bmatrix}
+  u \\
+  v \\
+  1
+  \end{bmatrix} &=
+  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{M}_w
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix} \\
+  \begin{bmatrix}
+  u \\
+  v \\
+  1
+  \end{bmatrix} &=
+  \begin{bmatrix}
+  f_x & 0 & c_x \\
+  0 & f_y & c_y \\
+  0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  1 & 0 & 0 & 0 \\
+  0 & 1 & 0 & 0 \\
+  0 & 0 & 1 & 0
+  \end{bmatrix}
+  \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} & t_x \\
+  r_{21} & r_{22} & r_{23} & t_y \\
+  r_{31} & r_{32} & r_{33} & t_z \\
+  0 & 0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix}
+  \end{align*}
+\f]
+
+The estimated pose is thus the rotation (`rvec`) and the translation (`tvec`) vectors that allow to transform
+a 3D point expressed in the world frame into the camera frame:
+
+\f[
+  \begin{align*}
+  \begin{bmatrix}
+  X_c \\
+  Y_c \\
+  Z_c \\
+  1
+  \end{bmatrix} &=
+  \hspace{0.2em} ^{c}\bf{M}_w
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix} \\
+  \begin{bmatrix}
+  X_c \\
+  Y_c \\
+  Z_c \\
+  1
+  \end{bmatrix} &=
+  \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} & t_x \\
+  r_{21} & r_{22} & r_{23} & t_y \\
+  r_{31} & r_{32} & r_{33} & t_z \\
+  0 & 0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix}
+  \end{align*}
+\f]
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
@@ -585,9 +681,12 @@ projections, as well as the camera matrix and the distortion coefficients.
    -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
        unstable and sometimes give completely wrong results. If you pass one of these two
        flags, **SOLVEPNP_EPNP** method will be used instead.
-   -   The minimum number of points is 4. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
+   -   The minimum number of points is 4 in the general case. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
+   -   With **SOLVEPNP_ITERATIVE** method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
+       are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
+       global solution to converge.
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -658,9 +757,9 @@ the model coordinate system to the camera coordinate system. A P3P problem has u
 @param tvecs Output translation vectors.
 @param flags Method for solving a P3P problem:
 -   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem".
+"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
 -   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
-"An Efficient Algebraic Solution to the Perspective-Three-Point Problem".
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 
 The function estimates the object pose given 3 object points, their corresponding image
 projections, as well as the camera matrix and the distortion coefficients.
@@ -1785,6 +1884,12 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   int method = RANSAC, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
+
+/** @example decompose_homography.cpp
+  An example program with homography decomposition.
+
+  Check @ref tutorial_homography "the corresponding tutorial" for more details.
+ */
 
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 

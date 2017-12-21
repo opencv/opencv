@@ -51,10 +51,6 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267) # vs2008 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456) # vs2015
 
-if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 if(MSVC AND CV_ICC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qrestrict")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qrestrict")

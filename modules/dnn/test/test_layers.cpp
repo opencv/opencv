@@ -274,6 +274,48 @@ OCL_TEST(Layer_Test_Concat, Accuracy)
     testLayerUsingCaffeModels("layer_concat", DNN_TARGET_OPENCL);
 }
 
+TEST(Layer_Test_Fused_Concat, Accuracy)
+{
+    // Test case
+    // input
+    //   |
+    //   v
+    // some_layer
+    // |   |
+    // v   v
+    // concat
+    Net net;
+    int interLayer;
+    {
+        LayerParams lp;
+        lp.type = "AbsVal";
+        lp.name = "someLayer";
+        interLayer = net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.set("axis", 1);
+        lp.type = "Concat";
+        lp.name = "testConcat";
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(interLayer, 0, id, 0);
+        net.connect(interLayer, 0, id, 1);
+    }
+    int shape[] = {1, 2, 3, 4};
+    Mat input(4, shape, CV_32F);
+    randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input);
+    normAssert(slice(out, Range::all(), Range(2, 4), Range::all(), Range::all()), input);
+
+    //
+
+    testLayerUsingCaffeModels("layer_concat_optim", DNN_TARGET_CPU, true, false);
+}
+
 TEST(Layer_Test_Eltwise, Accuracy)
 {
     testLayerUsingCaffeModels("layer_eltwise");
@@ -516,6 +558,45 @@ TEST(Layer_Test_Region, Accuracy)
 TEST(Layer_Test_Reorg, Accuracy)
 {
     testLayerUsingDarknetModels("reorg", false, false);
+}
+
+TEST(Layer_Test_ROIPooling, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
+
+    Mat inp = blobFromNPY(_tf("net_roi_pooling.input.npy"));
+    Mat rois = blobFromNPY(_tf("net_roi_pooling.rois.npy"));
+    Mat ref = blobFromNPY(_tf("net_roi_pooling.npy"));
+
+    net.setInput(inp, "input");
+    net.setInput(rois, "rois");
+
+    Mat out = net.forward();
+
+    normAssert(out, ref);
+}
+
+TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+
+    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
+    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
+    Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
+    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
+
+    net.setInput(scores, "rpn_cls_prob_reshape");
+    net.setInput(deltas, "rpn_bbox_pred");
+    net.setInput(imInfo, "im_info");
+
+    Mat out = net.forward();
+
+    const int numDets = ref.size[0];
+    EXPECT_LE(numDets, out.size[0]);
+    normAssert(out.rowRange(0, numDets), ref);
+
+    if (numDets < out.size[0])
+        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
 }
 
 }

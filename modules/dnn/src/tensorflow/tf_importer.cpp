@@ -446,11 +446,13 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
         net.mutable_node()->DeleteSubrange(layer_index, 1);
 }
 
-class TFImporter : public Importer {
+class TFImporter {
 public:
     TFImporter(const char *model, const char *config = NULL);
+    TFImporter(const char *dataModel, size_t lenModel,
+               const char *dataConfig = NULL, size_t lenConfig = 0);
+
     void populateNet(Net dstNet);
-    ~TFImporter() {}
 
 private:
     void kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob);
@@ -477,6 +479,15 @@ TFImporter::TFImporter(const char *model, const char *config)
         ReadTFNetParamsFromBinaryFileOrDie(model, &netBin);
     if (config && config[0])
         ReadTFNetParamsFromTextFileOrDie(config, &netTxt);
+}
+
+TFImporter::TFImporter(const char *dataModel, size_t lenModel,
+                       const char *dataConfig, size_t lenConfig)
+{
+    if (dataModel != NULL && lenModel > 0)
+        ReadTFNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBin);
+    if (dataConfig != NULL && lenConfig > 0)
+        ReadTFNetParamsFromTextBufferOrDie(dataConfig, lenConfig, &netTxt);
 }
 
 void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
@@ -1303,24 +1314,20 @@ void TFImporter::populateNet(Net dstNet)
 
 } // namespace
 
-Ptr<Importer> createTensorflowImporter(const String &model)
-{
-    return Ptr<Importer>(new TFImporter(model.c_str()));
-}
-
-#else //HAVE_PROTOBUF
-
-Ptr<Importer> createTensorflowImporter(const String&)
-{
-    CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from TensorFlow models");
-    return Ptr<Importer>();
-}
-
 #endif //HAVE_PROTOBUF
 
 Net readNetFromTensorflow(const String &model, const String &config)
 {
     TFImporter importer(model.c_str(), config.c_str());
+    Net net;
+    importer.populateNet(net);
+    return net;
+}
+
+Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
+                          const char* bufferConfig, size_t lenConfig)
+{
+    TFImporter importer(bufferModel, lenModel, bufferConfig, lenConfig);
     Net net;
     importer.populateNet(net);
     return net;

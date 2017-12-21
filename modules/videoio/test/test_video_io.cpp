@@ -54,6 +54,7 @@ class Videoio_Test_Base
 protected:
     string ext;
     string video_file;
+    int apiPref;
 protected:
     Videoio_Test_Base() {}
     virtual ~Videoio_Test_Base() {}
@@ -81,13 +82,25 @@ protected:
 public:
     void doTest()
     {
-        VideoCapture cap(video_file);
-        if (!cap.isOpened())
+        if (apiPref == CAP_AVFOUNDATION)
         {
-            std::cout << "SKIP test: Can't open video: " << video_file << std::endl;
+            // TODO: fix this backend
+            std::cout << "SKIP test: AVFoundation backend returns invalid frame count" << std::endl;
+            return;
+        }
+        else if (apiPref == CAP_VFW)
+        {
+            // TODO: fix this backend
+            std::cout << "SKIP test: Video for Windows backend not open files" << std::endl;
             return;
         }
 
+        VideoCapture cap(video_file, apiPref);
+        if (!cap.isOpened())
+        {
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+            return;
+        }
         int n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT);
         if (n_frames > 0)
         {
@@ -107,7 +120,6 @@ public:
                 checkFrameRead(k, cap);
             }
         }
-
         bool canSeek = cap.set(CAP_PROP_POS_FRAMES, 0);
         if (!canSeek)
         {
@@ -138,21 +150,37 @@ public:
 };
 
 //==================================================================================================
+typedef tuple<string, int> Backend_Type_Params;
 
-class Videoio_Bunny : public Videoio_Test_Base, public testing::TestWithParam<string>
+class Videoio_Bunny : public Videoio_Test_Base, public testing::TestWithParam<Backend_Type_Params>
 {
 public:
     Videoio_Bunny()
     {
-        ext = GetParam();
+        ext = get<0>(GetParam());
+        apiPref = get<1>(GetParam());
+
         video_file = cvtest::TS::ptr()->get_data_path() + "video/big_buck_bunny." + ext;
     }
     void doFrameCountTest()
     {
-        VideoCapture cap(video_file);
+        if (apiPref == CAP_AVFOUNDATION)
+        {
+            // TODO: fix this backend
+            std::cout << "SKIP test: AVFoundation backend returns invalid frame count" << std::endl;
+            return;
+        }
+        else if (apiPref == CAP_VFW)
+        {
+            // TODO: fix this backend
+            std::cout << "SKIP test: Video for Windows backend not open files" << std::endl;
+            return;
+        }
+
+        VideoCapture cap(video_file, apiPref);
         if (!cap.isOpened())
         {
-            std::cout << "SKIP test: Can't open video: " << video_file << std::endl;
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
             return;
         }
 
@@ -171,8 +199,8 @@ public:
         else
             std::cout << "FPS is not available. SKIP check." << std::endl;
 
-        int count_prop = (int)cap.get(CAP_PROP_FRAME_COUNT);
-
+        int count_prop = 0;
+        count_prop = (int)cap.get(CAP_PROP_FRAME_COUNT);
         // mpg file reports 5.08 sec * 24 fps => property returns 122 frames
         // but actual number of frames returned is 125
         if (ext != "mpg")
@@ -203,7 +231,7 @@ public:
     }
 };
 
-typedef tuple<string, string, float> Ext_Fourcc_PSNR;
+typedef tuple<string, string, float, int> Ext_Fourcc_PSNR;
 typedef tuple<Size, Ext_Fourcc_PSNR> Size_Ext_Fourcc_PSNR;
 
 class Videoio_Synthetic : public Videoio_Test_Base, public testing::TestWithParam<Size_Ext_Fourcc_PSNR>
@@ -224,11 +252,25 @@ public:
         video_file = cv::tempfile((fourccToString(fourcc) + "." + ext).c_str());
         frame_count = 100;
         fps = 25.;
+        apiPref = get<3>(param);
     }
     void SetUp()
     {
+
+        if (apiPref == CAP_AVFOUNDATION)
+        {
+            // TODO: fix this backend
+            std::cout << "SKIP test: AVFoundation backend can not write video" << std::endl;
+            return;
+        }
+        else if (apiPref == CAP_VFW)
+        {
+            // TODO: fix this backend
+            std::cout << "SKIP test: Video for Windows backend not open files" << std::endl;
+            return;
+        }
         Mat img(frame_size, CV_8UC3);
-        VideoWriter writer(video_file, fourcc, fps, frame_size, true);
+        VideoWriter writer(video_file, apiPref, fourcc, fps, frame_size, true);
         ASSERT_TRUE(writer.isOpened());
         for(int i = 0; i < frame_count; ++i )
         {
@@ -261,11 +303,6 @@ public:
         if (fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && ext == "mkv")
             expected_frame_count.end += 1;
 
-        // Hack! Some GStreamer encoding pipelines drop last frame in the video
-#ifdef HAVE_GSTREAMER
-        expected_frame_count.start -= 1;
-#endif
-
         ASSERT_LE(expected_frame_count.start, actual);
         ASSERT_GE(expected_frame_count.end, actual);
 
@@ -275,14 +312,41 @@ public:
 
 //==================================================================================================
 
+int backend_params[] = {
+#ifdef HAVE_QUICKTIME
+    CAP_QT,
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+    CAP_AVFOUNDATION,
+#endif
+
+#ifdef HAVE_MSMF
+    CAP_MSMF,
+#endif
+
+#ifdef HAVE_VFW
+    CAP_VFW,
+#endif
+
+#ifdef HAVE_GSTREAMER
+    CAP_GSTREAMER,
+#endif
+
+#ifdef HAVE_FFMPEG
+    CAP_FFMPEG,
+#endif
+    CAP_OPENCV_MJPEG
+    // CAP_INTEL_MFX
+};
 
 string bunny_params[] = {
 #ifdef HAVE_VIDEO_INPUT
-    string("avi"),
+    string("wmv"),
     string("mov"),
     string("mp4"),
     string("mpg"),
-    string("wmv"),
+    string("avi"),
 #endif
     string("mjpg.avi")
 };
@@ -292,48 +356,92 @@ TEST_P(Videoio_Bunny, read_position) { doTest(); }
 TEST_P(Videoio_Bunny, frame_count) { doFrameCountTest(); }
 
 INSTANTIATE_TEST_CASE_P(videoio, Videoio_Bunny,
-                        testing::ValuesIn(bunny_params));
+                          testing::Combine(
+                              testing::ValuesIn(bunny_params),
+                              testing::ValuesIn(backend_params)));
 
 
 //==================================================================================================
 
-inline Ext_Fourcc_PSNR makeParam(const char * ext, const char * fourcc, float psnr)
+inline Ext_Fourcc_PSNR makeParam(const char * ext, const char * fourcc, float psnr, int apipref)
 {
-    return make_tuple(string(ext), string(fourcc), (float)psnr);
+    return make_tuple(string(ext), string(fourcc), (float)psnr, (int)apipref);
 }
 
 Ext_Fourcc_PSNR synthetic_params[] = {
 
-#if defined(HAVE_VIDEO_INPUT) && defined(HAVE_VIDEO_OUTPUT) && !defined(__APPLE__)
-
 #ifdef HAVE_MSMF
-
 #if !defined(_M_ARM)
-    makeParam("wmv", "WMV1", 30.f),
-    makeParam("wmv", "WMV2", 30.f),
+    makeParam("wmv", "WMV1", 30.f, CAP_MSMF),
+    makeParam("wmv", "WMV2", 30.f, CAP_MSMF),
 #endif
-    makeParam("wmv", "WMV3", 30.f),
-    makeParam("avi", "H264", 30.f),
-    makeParam("wmv", "WVC1", 30.f),
-
-#else // HAVE_MSMF
-
-    makeParam("avi", "XVID", 30.f),
-    makeParam("avi", "MPEG", 30.f),
-    makeParam("avi", "IYUV", 30.f),
-    makeParam("mkv", "XVID", 30.f),
-    makeParam("mkv", "MPEG", 30.f),
-    makeParam("mkv", "MJPG", 30.f),
-#ifndef HAVE_GSTREAMER
-    makeParam("mov", "mp4v", 30.f),
+    makeParam("wmv", "WMV3", 30.f, CAP_MSMF),
+    makeParam("wmv", "WVC1", 30.f, CAP_MSMF),
+    makeParam("avi", "H264", 30.f, CAP_MSMF),
+    makeParam("avi", "MJPG", 30.f, CAP_MSMF),
 #endif
 
-#endif // HAVE_MSMF
+#ifdef HAVE_VFW
+#if !defined(_M_ARM)
+    makeParam("wmv", "WMV1", 30.f, CAP_VFW),
+    makeParam("wmv", "WMV2", 30.f, CAP_VFW),
+#endif
+    makeParam("wmv", "WMV3", 30.f, CAP_VFW),
+    makeParam("wmv", "WVC1", 30.f, CAP_VFW),
+    makeParam("avi", "H264", 30.f, CAP_VFW),
+    makeParam("avi", "MJPG", 30.f, CAP_VFW),
+#endif
 
-#endif // HAVE_VIDEO_INPUT && HAVE_VIDEO_OUTPUT ...
+#ifdef HAVE_QUICKTIME
+    makeParam("mov", "mp4v", 30.f, CAP_QT),
+    makeParam("avi", "XVID", 30.f, CAP_QT),
+    makeParam("avi", "MPEG", 30.f, CAP_QT),
+    makeParam("avi", "IYUV", 30.f, CAP_QT),
+    makeParam("avi", "MJPG", 30.f, CAP_QT),
 
-    makeParam("avi", "MJPG", 30.f)
+    makeParam("mkv", "XVID", 30.f, CAP_QT),
+    makeParam("mkv", "MPEG", 30.f, CAP_QT),
+    makeParam("mkv", "MJPG", 30.f, CAP_QT),
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+    makeParam("mov", "mp4v", 30.f, CAP_AVFOUNDATION),
+    makeParam("avi", "XVID", 30.f, CAP_AVFOUNDATION),
+    makeParam("avi", "MPEG", 30.f, CAP_AVFOUNDATION),
+    makeParam("avi", "IYUV", 30.f, CAP_AVFOUNDATION),
+    makeParam("avi", "MJPG", 30.f, CAP_AVFOUNDATION),
+
+    makeParam("mkv", "XVID", 30.f, CAP_AVFOUNDATION),
+    makeParam("mkv", "MPEG", 30.f, CAP_AVFOUNDATION),
+    makeParam("mkv", "MJPG", 30.f, CAP_AVFOUNDATION),
+#endif
+
+#ifdef HAVE_FFMPEG
+    makeParam("avi", "XVID", 30.f, CAP_FFMPEG),
+    makeParam("avi", "MPEG", 30.f, CAP_FFMPEG),
+    makeParam("avi", "IYUV", 30.f, CAP_FFMPEG),
+    makeParam("avi", "MJPG", 30.f, CAP_FFMPEG),
+
+    makeParam("mkv", "XVID", 30.f, CAP_FFMPEG),
+    makeParam("mkv", "MPEG", 30.f, CAP_FFMPEG),
+    makeParam("mkv", "MJPG", 30.f, CAP_FFMPEG),
+#endif
+
+#ifdef HAVE_GSTREAMER
+    // makeParam("avi", "XVID", 30.f, CAP_GSTREAMER), - corrupted frames, broken indexes
+    makeParam("avi", "MPEG", 30.f, CAP_GSTREAMER),
+    makeParam("avi", "IYUV", 30.f, CAP_GSTREAMER),
+    makeParam("avi", "MJPG", 30.f, CAP_GSTREAMER),
+    makeParam("avi", "H264", 30.f, CAP_GSTREAMER),
+
+    // makeParam("mkv", "XVID", 30.f, CAP_GSTREAMER),
+    makeParam("mkv", "MPEG", 30.f, CAP_GSTREAMER),
+    makeParam("mkv", "MJPG", 30.f, CAP_GSTREAMER),
+
+#endif
+    makeParam("avi", "MJPG", 30.f, CAP_OPENCV_MJPEG),
 };
+
 
 Size all_sizes[] = {
     Size(640, 480),

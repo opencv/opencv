@@ -15,11 +15,11 @@ Brute-Force matcher is simple. It takes the descriptor of one feature in first s
 with all other features in second set using some distance calculation. And the closest one is
 returned.
 
-For BF matcher, first we have to create the BFMatcher object using **cv2.BFMatcher()**. It takes two
+For BF matcher, first we have to create the BFMatcher object using **cv.BFMatcher()**. It takes two
 optional params. First one is normType. It specifies the distance measurement to be used. By
-default, it is cv2.NORM_L2. It is good for SIFT, SURF etc (cv2.NORM_L1 is also there). For binary
-string based descriptors like ORB, BRIEF, BRISK etc, cv2.NORM_HAMMING should be used, which used
-Hamming distance as measurement. If ORB is using WTA_K == 3 or 4, cv2.NORM_HAMMING2 should be
+default, it is cv.NORM_L2. It is good for SIFT, SURF etc (cv.NORM_L1 is also there). For binary
+string based descriptors like ORB, BRIEF, BRISK etc, cv.NORM_HAMMING should be used, which used
+Hamming distance as measurement. If ORB is using WTA_K == 3 or 4, cv.NORM_HAMMING2 should be
 used.
 
 Second param is boolean variable, crossCheck which is false by default. If it is true, Matcher
@@ -32,9 +32,9 @@ Once it is created, two important methods are *BFMatcher.match()* and *BFMatcher
 one returns the best match. Second method returns k best matches where k is specified by the user.
 It may be useful when we need to do additional work on that.
 
-Like we used cv2.drawKeypoints() to draw keypoints, **cv2.drawMatches()** helps us to draw the
+Like we used cv.drawKeypoints() to draw keypoints, **cv.drawMatches()** helps us to draw the
 matches. It stacks two images horizontally and draw lines from first image to second image showing
-best matches. There is also **cv2.drawMatchesKnn** which draws all the k best matches. If k=2, it
+best matches. There is also **cv.drawMatchesKnn** which draws all the k best matches. If k=2, it
 will draw two match-lines for each keypoint. So we have to pass a mask if we want to selectively
 draw it.
 
@@ -50,27 +50,27 @@ We are using ORB descriptors to match features. So let's start with loading imag
 descriptors etc.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 import matplotlib.pyplot as plt
 
-img1 = cv2.imread('box.png',0)          # queryImage
-img2 = cv2.imread('box_in_scene.png',0) # trainImage
+img1 = cv.imread('box.png',0)          # queryImage
+img2 = cv.imread('box_in_scene.png',0) # trainImage
 
 # Initiate ORB detector
-orb = cv2.ORB_create()
+orb = cv.ORB_create()
 
 # find the keypoints and descriptors with ORB
 kp1, des1 = orb.detectAndCompute(img1,None)
 kp2, des2 = orb.detectAndCompute(img2,None)
 @endcode
-Next we create a BFMatcher object with distance measurement cv2.NORM_HAMMING (since we are using
+Next we create a BFMatcher object with distance measurement cv.NORM_HAMMING (since we are using
 ORB) and crossCheck is switched on for better results. Then we use Matcher.match() method to get the
 best matches in two images. We sort them in ascending order of their distances so that best matches
 (with low distance) come to front. Then we draw only first 10 matches (Just for sake of visibility.
 You can increase it as you like)
 @code{.py}
 # create BFMatcher object
-bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
 
 # Match descriptors.
 matches = bf.match(des1,des2)
@@ -79,7 +79,7 @@ matches = bf.match(des1,des2)
 matches = sorted(matches, key = lambda x:x.distance)
 
 # Draw first 10 matches.
-img3 = cv2.drawMatches(img1,kp1,img2,kp2,matches[:10], flags=2)
+img3 = cv.drawMatches(img1,kp1,img2,kp2,matches[:10], flags=2)
 
 plt.imshow(img3),plt.show()
 @endcode
@@ -103,21 +103,21 @@ This time, we will use BFMatcher.knnMatch() to get k best matches. In this examp
 so that we can apply ratio test explained by D.Lowe in his paper.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img1 = cv2.imread('box.png',0)          # queryImage
-img2 = cv2.imread('box_in_scene.png',0) # trainImage
+img1 = cv.imread('box.png',0)          # queryImage
+img2 = cv.imread('box_in_scene.png',0) # trainImage
 
 # Initiate SIFT detector
-sift = cv2.SIFT()
+sift = cv.SIFT()
 
 # find the keypoints and descriptors with SIFT
 kp1, des1 = sift.detectAndCompute(img1,None)
 kp2, des2 = sift.detectAndCompute(img2,None)
 
 # BFMatcher with default params
-bf = cv2.BFMatcher()
+bf = cv.BFMatcher()
 matches = bf.knnMatch(des1,des2, k=2)
 
 # Apply ratio test
@@ -126,8 +126,8 @@ for m,n in matches:
     if m.distance < 0.75*n.distance:
         good.append([m])
 
-# cv2.drawMatchesKnn expects list of lists as matches.
-img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,flags=2)
+# cv.drawMatchesKnn expects list of lists as matches.
+img3 = cv.drawMatchesKnn(img1,kp1,img2,kp2,good,flags=2)
 
 plt.imshow(img3),plt.show()
 @endcode
@@ -167,14 +167,14 @@ you want to change the value, pass search_params = dict(checks=100).
 With these informations, we are good to go.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img1 = cv2.imread('box.png',0)          # queryImage
-img2 = cv2.imread('box_in_scene.png',0) # trainImage
+img1 = cv.imread('box.png',0)          # queryImage
+img2 = cv.imread('box_in_scene.png',0) # trainImage
 
 # Initiate SIFT detector
-sift = cv2.SIFT()
+sift = cv.SIFT()
 
 # find the keypoints and descriptors with SIFT
 kp1, des1 = sift.detectAndCompute(img1,None)
@@ -185,7 +185,7 @@ FLANN_INDEX_KDTREE = 1
 index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
 search_params = dict(checks=50)   # or pass empty dictionary
 
-flann = cv2.FlannBasedMatcher(index_params,search_params)
+flann = cv.FlannBasedMatcher(index_params,search_params)
 
 matches = flann.knnMatch(des1,des2,k=2)
 
@@ -202,7 +202,7 @@ draw_params = dict(matchColor = (0,255,0),
                    matchesMask = matchesMask,
                    flags = 0)
 
-img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
+img3 = cv.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
 
 plt.imshow(img3,),plt.show()
 @endcode

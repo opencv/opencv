@@ -6,7 +6,7 @@
 #
 # Also TensorFlow model from TensorFlow object detection model zoo may be used to
 # detect objects from 90 classes:
-# https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+# http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz
 # Text graph definition must be taken from opencv_extra:
 # https://github.com/opencv/opencv_extra/tree/master/testdata/dnn/ssd_mobilenet_v1_coco.pbtxt
 import numpy as np
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_classes", default=20, type=int,
                         help="Number of classes. It's 20 for Caffe model from "
                              "https://github.com/chuanqi305/MobileNet-SSD/ and 90 for "
-                             "TensorFlow model from https://github.com/tensorflow/models/tree/master/research/object_detection")
+                             "TensorFlow model from http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz")
     parser.add_argument("--thr", default=0.2, type=float, help="confidence threshold to filter out weak detections")
     args = parser.parse_args()
 

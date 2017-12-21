@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include <float.h>
 #include <algorithm>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -173,6 +174,24 @@ public:
         CV_Assert((int)_numAxes == inp0.dims);
 
         computeStrides(shape(*inputs[0]), shape(outputs[0]));
+
+#ifdef HAVE_OPENCL
+        if (uorder.empty())
+        {
+            std::vector<int> orderVec(_order.begin(), _order.end());;
+            Mat morder(1, orderVec.size(), CV_32SC1, &orderVec[0]);
+
+            std::vector<int> oldStrideVec(_oldStride.begin(), _oldStride.end());
+            Mat mold_stride(1, _oldStride.size(), CV_32SC1, &oldStrideVec[0]);
+
+            std::vector<int> newStrideVec(_newStride.begin(), _newStride.end());
+            Mat mnew_stride(1, newStrideVec.size(), CV_32SC1, &newStrideVec[0]);
+
+            morder.copyTo(uorder);
+            mold_stride.copyTo(uold_stride);
+            mnew_stride.copyTo(unew_stride);
+        }
+#endif
     }
 
     class PermuteInvoker : public ParallelLoopBody
@@ -247,10 +266,46 @@ public:
         }
     };
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        if (!_needsPermute)
+            return false;
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc);
+
+            kernel.set(0, (int)_count);
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(inputs[i]));
+            kernel.set(2, ocl::KernelArg::PtrReadOnly(uorder));
+            kernel.set(3, ocl::KernelArg::PtrReadOnly(uold_stride));
+            kernel.set(4, ocl::KernelArg::PtrReadOnly(unew_stride));
+            kernel.set(5, (int)_numAxes);
+            kernel.set(6, ocl::KernelArg::PtrWriteOnly(outputs[i]));
+
+            if (!kernel.run(1, &_count, NULL, false))
+                return false;
+        }
+
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
@@ -324,6 +379,10 @@ public:
     std::vector<size_t> _oldStride;
     std::vector<size_t> _newStride;
     bool _needsPermute;
+
+#ifdef HAVE_OPENCL
+    UMat uorder, uold_stride, unew_stride;
+#endif
 
     size_t _numAxes;
 };

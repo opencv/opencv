@@ -7,7 +7,7 @@ Goal
 Learn to
     -   Find histograms, using both OpenCV and Numpy functions
     -   Plot histograms, using OpenCV and Matplotlib functions
-    -   You will see these functions : **cv2.calcHist()**, **np.histogram()** etc.
+    -   You will see these functions : **cv.calcHist()**, **np.histogram()** etc.
 
 Theory
 ------
@@ -57,10 +57,10 @@ intensity values.
 
 ### 1. Histogram Calculation in OpenCV
 
-So now we use **cv2.calcHist()** function to find the histogram. Let's familiarize with the function
+So now we use **cv.calcHist()** function to find the histogram. Let's familiarize with the function
 and its parameters :
 
-<center><em>cv2.calcHist(images, channels, mask, histSize, ranges[, hist[, accumulate]])</em></center>
+<center><em>cv.calcHist(images, channels, mask, histSize, ranges[, hist[, accumulate]])</em></center>
 
 -#  images : it is the source image of type uint8 or float32. it should be given in square brackets,
     ie, "[img]".
@@ -78,8 +78,8 @@ and its parameters :
 So let's start with a sample image. Simply load an image in grayscale mode and find its full
 histogram.
 @code{.py}
-img = cv2.imread('home.jpg',0)
-hist = cv2.calcHist([img],[0],None,[256],[0,256])
+img = cv.imread('home.jpg',0)
+hist = cv.calcHist([img],[0],None,[256],[0,256])
 @endcode
 hist is a 256x1 array, each value corresponds to number of pixels in that image with its
 corresponding pixel value.
@@ -118,11 +118,11 @@ Matplotlib comes with a histogram plotting function : matplotlib.pyplot.hist()
 It directly finds the histogram and plot it. You need not use calcHist() or np.histogram() function
 to find the histogram. See the code below:
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('home.jpg',0)
+img = cv.imread('home.jpg',0)
 plt.hist(img.ravel(),256,[0,256]); plt.show()
 @endcode
 You will get a plot as below :
@@ -132,14 +132,14 @@ You will get a plot as below :
 Or you can use normal plot of matplotlib, which would be good for BGR plot. For that, you need to
 find the histogram data first. Try below code:
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('home.jpg')
+img = cv.imread('home.jpg')
 color = ('b','g','r')
 for i,col in enumerate(color):
-    histr = cv2.calcHist([img],[i],None,[256],[0,256])
+    histr = cv.calcHist([img],[i],None,[256],[0,256])
     plt.plot(histr,color = col)
     plt.xlim([0,256])
 plt.show()
@@ -154,28 +154,28 @@ should be due to the sky)
 ### 2. Using OpenCV
 
 Well, here you adjust the values of histograms along with its bin values to look like x,y
-coordinates so that you can draw it using cv2.line() or cv2.polyline() function to generate same
+coordinates so that you can draw it using cv.line() or cv.polyline() function to generate same
 image as above. This is already available with OpenCV-Python2 official samples. Check the
 code at samples/python/hist.py.
 
 Application of Mask
 -------------------
 
-We used cv2.calcHist() to find the histogram of the full image. What if you want to find histograms
+We used cv.calcHist() to find the histogram of the full image. What if you want to find histograms
 of some regions of an image? Just create a mask image with white color on the region you want to
 find histogram and black otherwise. Then pass this as the mask.
 @code{.py}
-img = cv2.imread('home.jpg',0)
+img = cv.imread('home.jpg',0)
 
 # create a mask
 mask = np.zeros(img.shape[:2], np.uint8)
 mask[100:300, 100:400] = 255
-masked_img = cv2.bitwise_and(img,img,mask = mask)
+masked_img = cv.bitwise_and(img,img,mask = mask)
 
 # Calculate histogram with mask and without mask
 # Check third argument for mask
-hist_full = cv2.calcHist([img],[0],None,[256],[0,256])
-hist_mask = cv2.calcHist([img],[0],mask,[256],[0,256])
+hist_full = cv.calcHist([img],[0],None,[256],[0,256])
+hist_mask = cv.calcHist([img],[0],mask,[256],[0,256])
 
 plt.subplot(221), plt.imshow(img, 'gray')
 plt.subplot(222), plt.imshow(mask,'gray')

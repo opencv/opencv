@@ -1,36 +1,33 @@
+// Brief Sample of using OpenCV dnn module in real time with device capture, video and image.
+// VIDEO DEMO: https://www.youtube.com/watch?v=NHtRlndE2cg
+
 #include <opencv2/dnn.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-using namespace cv;
-using namespace cv::dnn;
-
 #include <fstream>
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+
 using namespace std;
+using namespace cv;
+using namespace cv::dnn;
 
-const size_t network_width = 416;
-const size_t network_height = 416;
+static const char* about =
+"This sample uses You only look once (YOLO)-Detector (https://arxiv.org/abs/1612.08242) to detect objects on camera/video/image.\n"
+"Models can be downloaded here: https://pjreddie.com/darknet/yolo/\n"
+"Default network is 416x416.\n"
+"Class names can be downloaded here: https://github.com/pjreddie/darknet/tree/master/data\n";
 
-const char* about = "This sample uses You only look once (YOLO)-Detector "
-                    "(https://arxiv.org/abs/1612.08242) "
-                    "to detect objects on camera/video/image.\n"
-                    "Models can be downloaded here: "
-                    "https://pjreddie.com/darknet/yolo/\n"
-                    "Default network is 416x416.\n"
-                    "Class names can be downloaded here: "
-                    "https://github.com/pjreddie/darknet/tree/master/data\n";
-
-const char* params
-    = "{ help           | false | print usage         }"
-      "{ cfg            |       | model configuration }"
-      "{ model          |       | model weights       }"
-      "{ camera_device  | 0     | camera device number}"
-      "{ video          |       | video or image for detection}"
-      "{ min_confidence | 0.24  | min confidence      }"
-      "{ class_names    |       | class names         }";
+static const char* params =
+"{ help           | false | print usage         }"
+"{ cfg            |       | model configuration }"
+"{ model          |       | model weights       }"
+"{ camera_device  | 0     | camera device number}"
+"{ source         |       | video or image for detection}"
+"{ min_confidence | 0.24  | min confidence      }"
+"{ class_names    |       | File with class names, [PATH-TO-DARKNET]/data/coco.names }";
 
 int main(int argc, char** argv)
 {
@@ -61,7 +58,7 @@ int main(int argc, char** argv)
     }
 
     VideoCapture cap;
-    if (parser.get<String>("video").empty())
+    if (parser.get<String>("source").empty())
     {
         int cameraDevice = parser.get<int>("camera_device");
         cap = VideoCapture(cameraDevice);
@@ -73,7 +70,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        cap.open(parser.get<String>("video"));
+        cap.open(parser.get<String>("source"));
         if(!cap.isOpened())
         {
             cout << "Couldn't open image or video: " << parser.get<String>("video") << endl;
@@ -86,7 +83,7 @@ int main(int argc, char** argv)
     if (classNamesFile.is_open())
     {
         string className = "";
-        while (classNamesFile >> className)
+        while (std::getline(classNamesFile, className))
             classNamesVec.push_back(className);
     }
 
@@ -104,13 +101,8 @@ int main(int argc, char** argv)
         if (frame.channels() == 4)
             cvtColor(frame, frame, COLOR_BGRA2BGR);
 
-        //! [Resizing without keeping aspect ratio]
-        Mat resized;
-        resize(frame, resized, Size(network_width, network_height));
-        //! [Resizing without keeping aspect ratio]
-
         //! [Prepare blob]
-        Mat inputBlob = blobFromImage(resized, 1 / 255.F); //Convert Mat to batch of images
+        Mat inputBlob = blobFromImage(frame, 1 / 255.F, Size(416, 416), Scalar(), true, false); //Convert Mat to batch of images
         //! [Prepare blob]
 
         //! [Set input blob]
@@ -119,14 +111,14 @@ int main(int argc, char** argv)
 
         //! [Make forward pass]
         Mat detectionMat = net.forward("detection_out");   //compute output
-       //! [Make forward pass]
+        //! [Make forward pass]
 
-       vector<double> layersTimings;
-       double freq = getTickFrequency() / 1000;
-       double time = net.getPerfProfile(layersTimings) / freq;
-       ostringstream ss;
-       ss << "FPS: " << 1000/time << " ; time: " << time << " ms";
-       putText(frame, ss.str(), Point(20,20), 0, 0.5, Scalar(0,0,255));
+        vector<double> layersTimings;
+        double freq = getTickFrequency() / 1000;
+        double time = net.getPerfProfile(layersTimings) / freq;
+        ostringstream ss;
+        ss << "FPS: " << 1000/time << " ; time: " << time << " ms";
+        putText(frame, ss.str(), Point(20,20), 0, 0.5, Scalar(0,0,255));
 
         float confidenceThreshold = parser.get<float>("min_confidence");
         for (int i = 0; i < detectionMat.rows; i++)
@@ -163,10 +155,10 @@ int main(int argc, char** argv)
                     String label = String(classNamesVec[objectClass]) + ": " + conf;
                     int baseLine = 0;
                     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-                    rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom - labelSize.height),
+                    rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom ),
                                           Size(labelSize.width, labelSize.height + baseLine)),
                               Scalar(255, 255, 255), CV_FILLED);
-                    putText(frame, label, Point(xLeftBottom, yLeftBottom),
+                    putText(frame, label, Point(xLeftBottom, yLeftBottom+labelSize.height),
                             FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
                 }
                 else
@@ -181,7 +173,7 @@ int main(int argc, char** argv)
             }
         }
 
-        imshow("detections", frame);
+        imshow("YOLO: Detections", frame);
         if (waitKey(1) >= 0) break;
     }
 

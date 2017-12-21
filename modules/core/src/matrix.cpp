@@ -424,12 +424,12 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if(!a)
             a = a0;
-        try
+        CV_TRY
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
-        catch(...)
+        CV_CATCH_ALL
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
@@ -484,7 +484,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    try
+    CV_TRY
     {
         if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
         {
@@ -505,10 +505,10 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
         release();
-        throw;
+        CV_RETHROW();
     }
 
     if( rows == 1 )
@@ -3045,6 +3045,82 @@ void _OutputArray::assign(const Mat& m) const
     else if (k == MATX)
     {
         m.copyTo(getMat());
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::assign(const std::vector<UMat>& v) const
+{
+    int k = kind();
+    if (k == STD_VECTOR_UMAT)
+    {
+        std::vector<UMat>& this_v = *(std::vector<UMat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const UMat& m = v[i];
+            UMat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
+    }
+    else if (k == STD_VECTOR_MAT)
+    {
+        std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const UMat& m = v[i];
+            Mat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::assign(const std::vector<Mat>& v) const
+{
+    int k = kind();
+    if (k == STD_VECTOR_UMAT)
+    {
+        std::vector<UMat>& this_v = *(std::vector<UMat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const Mat& m = v[i];
+            UMat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
+    }
+    else if (k == STD_VECTOR_MAT)
+    {
+        std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const Mat& m = v[i];
+            Mat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
     }
     else
     {

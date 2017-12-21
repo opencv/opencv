@@ -104,7 +104,7 @@ macro(ocv_add_dependencies full_modname)
   list(FIND OPENCV_MODULE_${full_modname}_WRAPPERS "python" __python_idx)
   if (NOT __python_idx EQUAL -1)
     list(REMOVE_ITEM OPENCV_MODULE_${full_modname}_WRAPPERS "python")
-    list(APPEND OPENCV_MODULE_${full_modname}_WRAPPERS "python2" "python3")
+    list(APPEND OPENCV_MODULE_${full_modname}_WRAPPERS "python_bindings_generator" "python2" "python3")
   endif()
   unset(__python_idx)
 
@@ -415,6 +415,41 @@ function(__ocv_resolve_dependencies)
   foreach(m ${OPENCV_MODULES_BUILD})
     set(HAVE_${m} ON CACHE INTERNAL "Module ${m} will be built in current configuration")
   endforeach()
+
+  # Whitelist feature
+  if(BUILD_LIST)
+    # Prepare the list
+    string(REGEX REPLACE "[ ,:]+" ";" whitelist "${BUILD_LIST}" )
+    if(BUILD_opencv_world)
+      list(APPEND whitelist world)
+    endif()
+    ocv_list_add_prefix(whitelist "opencv_")
+    ocv_list_sort(whitelist)
+    ocv_list_unique(whitelist)
+    message(STATUS "Using whitelist: ${whitelist}")
+    # Expand the list
+    foreach(depth RANGE 10)
+      set(new_whitelist ${whitelist})
+      foreach(m ${whitelist})
+        list(APPEND new_whitelist ${OPENCV_MODULE_${m}_REQ_DEPS})
+        list(APPEND new_whitelist ${OPENCV_MODULE_${m}_PRIVATE_REQ_DEPS})
+      endforeach()
+      ocv_list_sort(new_whitelist)
+      ocv_list_unique(new_whitelist)
+      if("${whitelist}" STREQUAL "${new_whitelist}")
+        break()
+      endif()
+      set(whitelist "${new_whitelist}")
+    endforeach()
+    # Disable modules not in whitelist
+    foreach(m ${OPENCV_MODULES_BUILD})
+      list(FIND whitelist ${m} idx)
+      if(idx EQUAL -1)
+        message(STATUS "Module ${m} disabled by whitelist")
+        __ocv_module_turn_off(${m})
+      endif()
+    endforeach()
+  endif()
 
   # disable MODULES with unresolved dependencies
   set(has_changes ON)
@@ -817,7 +852,6 @@ macro(_ocv_create_module)
     ${${the_module}_pch}
     ${_VS_VERSION_FILE}
   )
-
   set_target_properties(${the_module} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
   set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
     PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
@@ -827,6 +861,11 @@ macro(_ocv_create_module)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_HAL_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
   if (HAVE_CUDA)
     ocv_target_link_libraries(${the_module} LINK_PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  endif()
+
+  if(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS)
+    target_compile_definitions(${the_module} ${OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS})
+    unset(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS CACHE)
   endif()
 
   add_dependencies(opencv_modules ${the_module})
@@ -844,7 +883,12 @@ macro(_ocv_create_module)
     COMPILE_PDB_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+    DEFINE_SYMBOL CVAPI_EXPORTS
   )
+
+  if(ANDROID AND BUILD_FAT_JAVA_LIB)
+    target_compile_definitions(${the_module} PRIVATE CVAPI_EXPORTS)
+  endif()
 
   # For dynamic link numbering convenions
   if(NOT ANDROID)
@@ -854,11 +898,6 @@ macro(_ocv_create_module)
       VERSION ${OPENCV_LIBVERSION}
       SOVERSION ${OPENCV_SOVERSION}
     )
-  endif()
-
-  if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
-      OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
-    set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
   endif()
 
   if (ENABLE_GNU_STL_DEBUG)

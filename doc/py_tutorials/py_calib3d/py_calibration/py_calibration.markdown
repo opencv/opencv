@@ -80,7 +80,7 @@ pass in terms of square size).
 
 ### Setup
 
-So to find pattern in chess board, we use the function, **cv2.findChessboardCorners()**. We also
+So to find pattern in chess board, we use the function, **cv.findChessboardCorners()**. We also
 need to pass what kind of pattern we are looking, like 8x8 grid, 5x5 grid etc. In this example, we
 use 7x6 grid. (Normally a chess board has 8x8 squares and 7x7 internal corners). It returns the
 corner points and retval which will be True if pattern is obtained. These corners will be placed in
@@ -95,19 +95,19 @@ are not sure out of 14 images given, how many are good. So we read all the image
 ones.
 
 @sa Instead of chess board, we can use some circular grid, but then use the function
-**cv2.findCirclesGrid()** to find the pattern. It is said that less number of images are enough when
+**cv.findCirclesGrid()** to find the pattern. It is said that less number of images are enough when
 using circular grid.
 
-Once we find the corners, we can increase their accuracy using **cv2.cornerSubPix()**. We can also
-draw the pattern using **cv2.drawChessboardCorners()**. All these steps are included in below code:
+Once we find the corners, we can increase their accuracy using **cv.cornerSubPix()**. We can also
+draw the pattern using **cv.drawChessboardCorners()**. All these steps are included in below code:
 
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 import glob
 
 # termination criteria
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = np.zeros((6*7,3), np.float32)
@@ -120,25 +120,25 @@ imgpoints = [] # 2d points in image plane.
 images = glob.glob('*.jpg')
 
 for fname in images:
-    img = cv2.imread(fname)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv.imread(fname)
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
     # Find the chess board corners
-    ret, corners = cv2.findChessboardCorners(gray, (7,6), None)
+    ret, corners = cv.findChessboardCorners(gray, (7,6), None)
 
     # If found, add object points, image points (after refining them)
     if ret == True:
         objpoints.append(objp)
 
-        corners2=cv2.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
+        corners2 = cv.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
         imgpoints.append(corners)
 
         # Draw and display the corners
-        cv2.drawChessboardCorners(img, (7,6), corners2, ret)
-        cv2.imshow('img', img)
-        cv2.waitKey(500)
+        cv.drawChessboardCorners(img, (7,6), corners2, ret)
+        cv.imshow('img', img)
+        cv.waitKey(500)
 
-cv2.destroyAllWindows()
+cv.destroyAllWindows()
 @endcode
 One image with pattern drawn on it is shown below:
 
@@ -147,37 +147,37 @@ One image with pattern drawn on it is shown below:
 ### Calibration
 
 So now we have our object points and image points we are ready to go for calibration. For that we
-use the function, **cv2.calibrateCamera()**. It returns the camera matrix, distortion coefficients,
+use the function, **cv.calibrateCamera()**. It returns the camera matrix, distortion coefficients,
 rotation and translation vectors etc.
 @code{.py}
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 @endcode
 ### Undistortion
 
 We have got what we were trying. Now we can take an image and undistort it. OpenCV comes with two
 methods, we will see both. But before that, we can refine the camera matrix based on a free scaling
-parameter using **cv2.getOptimalNewCameraMatrix()**. If the scaling parameter alpha=0, it returns
+parameter using **cv.getOptimalNewCameraMatrix()**. If the scaling parameter alpha=0, it returns
 undistorted image with minimum unwanted pixels. So it may even remove some pixels at image corners.
 If alpha=1, all pixels are retained with some extra black images. It also returns an image ROI which
 can be used to crop the result.
 
 So we take a new image (left12.jpg in this case. That is the first image in this chapter)
 @code{.py}
-img = cv2.imread('left12.jpg')
+img = cv.imread('left12.jpg')
 h,  w = img.shape[:2]
-newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
+newcameramtx, roi = cv.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
 @endcode
-#### 1. Using **cv2.undistort()**
+#### 1. Using **cv.undistort()**
 
 This is the shortest path. Just call the function and use ROI obtained above to crop the result.
 @code{.py}
 # undistort
-dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+dst = cv.undistort(img, mtx, dist, None, newcameramtx)
 
 # crop the image
 x, y, w, h = roi
 dst = dst[y:y+h, x:x+w]
-cv2.imwrite('calibresult.png', dst)
+cv.imwrite('calibresult.png', dst)
 @endcode
 #### 2. Using **remapping**
 
@@ -185,13 +185,13 @@ This is curved path. First find a mapping function from distorted image to undis
 use the remap function.
 @code{.py}
 # undistort
-mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w,h), 5)
-dst = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
+mapx, mapy = cv.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w,h), 5)
+dst = cv.remap(img, mapx, mapy, cv.INTER_LINEAR)
 
 # crop the image
 x, y, w, h = roi
 dst = dst[y:y+h, x:x+w]
-cv2.imwrite('calibresult.png', dst)
+cv.imwrite('calibresult.png', dst)
 @endcode
 Both the methods give the same result. See the result below:
 
@@ -207,15 +207,15 @@ Re-projection Error
 
 Re-projection error gives a good estimation of just how exact is the found parameters. This should
 be as close to zero as possible. Given the intrinsic, distortion, rotation and translation matrices,
-we first transform the object point to image point using **cv2.projectPoints()**. Then we calculate
+we first transform the object point to image point using **cv.projectPoints()**. Then we calculate
 the absolute norm between what we got with our transformation and the corner finding algorithm. To
 find the average error we calculate the arithmetical mean of the errors calculate for all the
 calibration images.
 @code{.py}
 mean_error = 0
 for i in xrange(len(objpoints)):
-    imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-    error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+    imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+    error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
     mean_error += error
 
 print( "total error: {}".format(mean_error/len(objpoints)) )

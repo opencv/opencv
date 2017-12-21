@@ -623,7 +623,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
         }
         else if(param_verify_sanity)
         {
-            ADD_FAILURE() << "  No regression data for " << name << " argument";
+            ADD_FAILURE() << "  No regression data for " << name << " argument, test node: " << nodename;
         }
     }
     else
@@ -999,6 +999,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
         "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
+        "{ skip_unstable                 |false    |skip unstable tests }"
     ;
 
     cv::CommandLineParser args(argc, argv, command_line_keys);
@@ -1096,6 +1097,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     if (printOnly)
         exit(0);
 #endif
+
+    skipUnstableTests = args.get<bool>("skip_unstable");
 
     if (available_impls.size() > 1)
         printf("[----------]\n[   INFO   ] \tImplementation variant: %s.\n[----------]\n", param_impl.c_str()), fflush(stdout);

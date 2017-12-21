@@ -374,25 +374,25 @@ bool  PAMDecoder::readHeader()
     }
     else if( !m_strm.open( m_filename ))
         return false;
-    try
+    CV_TRY
     {
         byte = m_strm.getByte();
         if( byte != 'P' )
-            throw RBS_BAD_HEADER;
+            CV_THROW( RBS_BAD_HEADER );
 
         byte = m_strm.getByte();
         if (byte != '7')
-            throw RBS_BAD_HEADER;
+            CV_THROW( RBS_BAD_HEADER );
 
         byte = m_strm.getByte();
         if (byte != '\n' && byte != '\r')
-            throw RBS_BAD_HEADER;
+            CV_THROW( RBS_BAD_HEADER );
 
         uint i;
         memset (&flds, 0x00, sizeof (struct parsed_fields));
         do {
             if (!ReadPAMHeaderLine(m_strm, fieldtype, value))
-                throw RBS_BAD_HEADER;
+                CV_THROW( RBS_BAD_HEADER );
             switch (fieldtype) {
                 case PAM_HEADER_NONE:
                 case PAM_HEADER_COMMENT:
@@ -402,32 +402,32 @@ bool  PAMDecoder::readHeader()
                     break;
                 case PAM_HEADER_HEIGHT:
                     if (flds.height)
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     if (!ParseNumber (value, &m_height))
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     flds.height = true;
                     break;
                 case PAM_HEADER_WIDTH:
                     if (flds.width)
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     if (!ParseNumber (value, &m_width))
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     flds.width = true;
                     break;
                 case PAM_HEADER_DEPTH:
                     if (flds.depth)
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     if (!ParseNumber (value, &m_channels))
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     flds.depth = true;
                     break;
                 case PAM_HEADER_MAXVAL:
                     if (flds.maxval)
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     if (!ParseNumber (value, &m_maxval))
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     if ( m_maxval > 65535 )
-                        throw RBS_BAD_HEADER;
+                        CV_THROW( RBS_BAD_HEADER );
                     if ( m_maxval > 255 ) {
                         m_sampledepth = CV_16U;
                     }
@@ -446,7 +446,7 @@ bool  PAMDecoder::readHeader()
                     }
                     break;
                 default:
-                    throw RBS_BAD_HEADER;
+                    CV_THROW( RBS_BAD_HEADER );
             }
         } while (fieldtype != PAM_HEADER_ENDHDR);
 
@@ -464,7 +464,7 @@ bool  PAMDecoder::readHeader()
 
             return true;
         }
-    } catch(...)
+    } CV_CATCH_ALL
     {
     }
 
@@ -511,7 +511,7 @@ bool  PAMDecoder::readData( Mat& img )
         layout.graychan = 0;
     }
 
-    try
+    CV_TRY
     {
         m_strm.setPos( m_offset );
 
@@ -612,7 +612,7 @@ bool  PAMDecoder::readData( Mat& img )
         }
 
         res = true;
-    } catch(...)
+    } CV_CATCH_ALL
     {
     }
 

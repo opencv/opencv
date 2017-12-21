@@ -302,18 +302,15 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
     if (num_of_solutions != (int) rvecs.size() || num_of_solutions != (int) tvecs.size() || num_of_solutions == 0)
       return false;
 
-    double min_rvecDiff = DBL_MAX, min_tvecDiff = DBL_MAX;
-    for (unsigned int i = 0; i < rvecs.size(); ++i) {
+    bool isTestSuccess = false;
+    double error = DBL_MAX;
+    for (unsigned int i = 0; i < rvecs.size() && !isTestSuccess; ++i) {
       double rvecDiff = norm(rvecs[i]-trueRvec);
-      min_rvecDiff = std::min(rvecDiff, min_rvecDiff);
-    }
-    for (unsigned int i = 0; i < tvecs.size(); ++i) {
       double tvecDiff = norm(tvecs[i]-trueTvec);
-      min_tvecDiff = std::min(tvecDiff, min_tvecDiff);
+      isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
+      error = std::min(error, std::max(rvecDiff, tvecDiff));
     }
-    bool isTestSuccess = min_rvecDiff < epsilon[method] && min_tvecDiff < epsilon[method];
 
-    double error = std::max(min_rvecDiff, min_tvecDiff);
     if (error > maxError)
       maxError = error;
 
@@ -324,7 +321,7 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
   {
     ts->set_failed_test_info(cvtest::TS::OK);
 
-    vector<Point3f> points, points_dls;
+    vector<Point3f> points;
     points.resize(pointsCount);
     generate3DPointCloud(points);
 
@@ -528,4 +525,69 @@ TEST(Calib3d_SolvePnP, translation)
     solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, false);
     EXPECT_TRUE(checkRange(rvec));
     EXPECT_TRUE(checkRange(tvec));
+}
+
+TEST(Calib3d_SolvePnP, iterativeInitialGuess3pts)
+{
+    {
+        Matx33d intrinsics(605.4, 0.0, 317.35,
+                           0.0, 601.2, 242.63,
+                           0.0, 0.0, 1.0);
+
+        double L = 0.1;
+        vector<Point3d> p3d;
+        p3d.push_back(Point3d(-L, -L, 0.0));
+        p3d.push_back(Point3d(L, -L, 0.0));
+        p3d.push_back(Point3d(L, L, 0.0));
+
+        Mat rvec_ground_truth = (Mat_<double>(3,1) << 0.3, -0.2, 0.75);
+        Mat tvec_ground_truth = (Mat_<double>(3,1) << 0.15, -0.2, 1.5);
+
+        vector<Point2d> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        Mat rvec_est = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
+        Mat tvec_est = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
+
+        solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, true, SOLVEPNP_ITERATIVE);
+
+        std::cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+        std::cout << "rvec_est: " << rvec_est.t() << std::endl;
+        std::cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+        std::cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+        EXPECT_LE(norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+        EXPECT_LE(norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+    }
+
+    {
+        Matx33f intrinsics(605.4f, 0.0f, 317.35f,
+                           0.0f, 601.2f, 242.63f,
+                           0.0f, 0.0f, 1.0f);
+
+        float L = 0.1f;
+        vector<Point3f> p3d;
+        p3d.push_back(Point3f(-L, -L, 0.0f));
+        p3d.push_back(Point3f(L, -L, 0.0f));
+        p3d.push_back(Point3f(L, L, 0.0f));
+
+        Mat rvec_ground_truth = (Mat_<float>(3,1) << -0.75f, 0.4f, 0.34f);
+        Mat tvec_ground_truth = (Mat_<float>(3,1) << -0.15f, 0.35f, 1.58f);
+
+        vector<Point2f> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        Mat rvec_est = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
+        Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
+
+        solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, true, SOLVEPNP_ITERATIVE);
+
+        std::cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+        std::cout << "rvec_est: " << rvec_est.t() << std::endl;
+        std::cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+        std::cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+        EXPECT_LE(norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+        EXPECT_LE(norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+    }
 }

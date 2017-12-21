@@ -12,7 +12,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     //![load]
-    const char* filename = argc >=2 ? argv[1] : "../../../data/smarties.png";
+    const char* filename = argc >=2 ? argv[1] : "../data/smarties.png";
 
     // Loads an image
     Mat src = imread( filename, IMREAD_COLOR );

@@ -1406,13 +1406,14 @@ public:
     /** Available training methods */
     enum TrainingMethods {
         BACKPROP=0, //!< The back-propagation algorithm.
-        RPROP=1 //!< The RPROP algorithm. See @cite RPROP93 for details.
+        RPROP = 1, //!< The RPROP algorithm. See @cite RPROP93 for details.
+        ANNEAL = 2 //!< The simulated annealing algorithm. See @cite Kirkpatrick83 for details.
     };
 
     /** Sets training method and common parameters.
     @param method Default value is ANN_MLP::RPROP. See ANN_MLP::TrainingMethods.
-    @param param1 passed to setRpropDW0 for ANN_MLP::RPROP and to setBackpropWeightScale for ANN_MLP::BACKPROP
-    @param param2 passed to setRpropDWMin for ANN_MLP::RPROP and to setBackpropMomentumScale for ANN_MLP::BACKPROP.
+    @param param1 passed to setRpropDW0 for ANN_MLP::RPROP and to setBackpropWeightScale for ANN_MLP::BACKPROP and to initialT for ANN_MLP::ANNEAL.
+    @param param2 passed to setRpropDWMin for ANN_MLP::RPROP and to setBackpropMomentumScale for ANN_MLP::BACKPROP and to finalT for ANN_MLP::ANNEAL.
     */
     CV_WRAP virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0) = 0;
 
@@ -1499,18 +1500,53 @@ public:
     /** @copybrief getRpropDWMax @see getRpropDWMax */
     CV_WRAP virtual void setRpropDWMax(double val) = 0;
 
+    /** ANNEAL: Update initial temperature.
+    It must be \>=0. Default value is 10.*/
+    /** @see setAnnealInitialT */
+    CV_WRAP double getAnnealInitialT() const;
+    /** @copybrief getAnnealInitialT @see getAnnealInitialT */
+    CV_WRAP void setAnnealInitialT(double val);
+
+    /** ANNEAL: Update final temperature.
+    It must be \>=0 and less than initialT. Default value is 0.1.*/
+    /** @see setAnnealFinalT */
+    CV_WRAP double getAnnealFinalT() const;
+    /** @copybrief getAnnealFinalT @see getAnnealFinalT */
+    CV_WRAP void setAnnealFinalT(double val);
+
+    /** ANNEAL: Update cooling ratio.
+    It must be \>0 and less than 1. Default value is 0.95.*/
+    /** @see setAnnealCoolingRatio */
+    CV_WRAP double getAnnealCoolingRatio() const;
+    /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
+    CV_WRAP void setAnnealCoolingRatio(double val);
+
+    /** ANNEAL: Update iteration per step.
+    It must be \>0 . Default value is 10.*/
+    /** @see setAnnealItePerStep */
+    CV_WRAP int getAnnealItePerStep() const;
+    /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
+    CV_WRAP void setAnnealItePerStep(int val);
+
+    /** @brief Set/initialize anneal RNG */
+    void setAnnealEnergyRNG(const RNG& rng);
+
     /** possible activation functions */
     enum ActivationFunctions {
         /** Identity function: \f$f(x)=x\f$ */
         IDENTITY = 0,
-        /** Symmetrical sigmoid: \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}\f$
+        /** Symmetrical sigmoid: \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x})\f$
         @note
         If you are using the default sigmoid activation function with the default parameter values
         fparam1=0 and fparam2=0 then the function used is y = 1.7159\*tanh(2/3 \* x), so the output
         will range from [-1.7159, 1.7159], instead of [0,1].*/
         SIGMOID_SYM = 1,
         /** Gaussian function: \f$f(x)=\beta e^{-\alpha x*x}\f$ */
-        GAUSSIAN = 2
+        GAUSSIAN = 2,
+        /** ReLU function: \f$f(x)=max(0,x)\f$ */
+        RELU = 3,
+        /** Leaky ReLU function: for x>0 \f$f(x)=x \f$ and x<=0 \f$f(x)=\alpha x \f$*/
+        LEAKYRELU= 4
     };
 
     /** Train options */
@@ -1833,6 +1869,112 @@ CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, Out
 /** @brief Creates test set */
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
+
+/** @brief Artificial Neural Networks - Multi-Layer Perceptrons.
+
+@sa @ref ml_intro_ann
+*/
+class CV_EXPORTS_W ANN_MLP_ANNEAL : public ANN_MLP
+{
+public:
+    /** @see setAnnealInitialT */
+    CV_WRAP virtual double getAnnealInitialT() const = 0;
+    /** @copybrief getAnnealInitialT @see getAnnealInitialT */
+    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
+
+    /** ANNEAL: Update final temperature.
+    It must be \>=0 and less than initialT. Default value is 0.1.*/
+    /** @see setAnnealFinalT */
+    CV_WRAP  virtual double getAnnealFinalT() const = 0;
+    /** @copybrief getAnnealFinalT @see getAnnealFinalT */
+    CV_WRAP  virtual void setAnnealFinalT(double val) = 0;
+
+    /** ANNEAL: Update cooling ratio.
+    It must be \>0 and less than 1. Default value is 0.95.*/
+    /** @see setAnnealCoolingRatio */
+    CV_WRAP  virtual double getAnnealCoolingRatio() const = 0;
+    /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
+    CV_WRAP  virtual void setAnnealCoolingRatio(double val) = 0;
+
+    /** ANNEAL: Update iteration per step.
+    It must be \>0 . Default value is 10.*/
+    /** @see setAnnealItePerStep */
+    CV_WRAP virtual int getAnnealItePerStep() const = 0;
+    /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
+    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
+
+    /** @brief Set/initialize anneal RNG */
+    virtual void setAnnealEnergyRNG(const RNG& rng) = 0;
+};
+
+
+/****************************************************************************************\
+*                                   Simulated annealing solver                             *
+\****************************************************************************************/
+
+/** @brief The class defines interface for system state used in simulated annealing optimization algorithm.
+
+@cite Kirkpatrick83 for details
+*/
+class CV_EXPORTS SimulatedAnnealingSolverSystem
+{
+protected:
+    inline SimulatedAnnealingSolverSystem() {}
+public:
+    virtual ~SimulatedAnnealingSolverSystem() {}
+
+    /** Give energy value for a state of system.*/
+    virtual double energy() const = 0;
+    /** Function which change the state of system (random pertubation).*/
+    virtual void changeState() = 0;
+    /** Function to reverse to the previous state. Can be called once only after changeState(). */
+    virtual void reverseState() = 0;
+};
+
+/** @brief The class implements simulated annealing for optimization.
+ *
+@cite Kirkpatrick83 for details
+*/
+class CV_EXPORTS SimulatedAnnealingSolver : public Algorithm
+{
+public:
+    SimulatedAnnealingSolver(const Ptr<SimulatedAnnealingSolverSystem>& system);
+    inline ~SimulatedAnnealingSolver() { release(); }
+
+    /** Simulated annealing procedure. */
+    int run();
+    /** Set/initialize RNG (energy).
+    @param rng new RNG
+    */
+    void setEnergyRNG(const RNG& rng);
+    /** Set initial temperature of simulated annealing procedure.
+    @param x new initial temperature. x\>0
+    */
+    void setInitialTemperature(double x);
+    /** Set final temperature of simulated annealing procedure.
+    @param x new final temperature value. 0\<x\<initial temperature
+    */
+    void setFinalTemperature(double x);
+    /** Get final temperature of simulated annealing procedure. */
+    double getFinalTemperature();
+    /** Set setCoolingRatio of simulated annealing procedure : T(t) = coolingRatio * T(t-1).
+    @param x new cooling ratio value. 0\<x\<1
+    */
+    void setCoolingRatio(double x);
+    /** Set number iteration per temperature step.
+    @param ite number of iteration per temperature step ite \> 0
+    */
+    void setIterPerStep(int ite);
+
+    void release();
+    SimulatedAnnealingSolver(const SimulatedAnnealingSolver&);
+    SimulatedAnnealingSolver& operator=(const SimulatedAnnealingSolver&);
+
+    struct Impl; friend struct Impl;
+protected:
+    Impl* impl;
+};
+
 
 //! @} ml
 

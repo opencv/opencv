@@ -1762,14 +1762,14 @@ OPENCV_HAL_IMPL_C_RSHIFTR(v_int64x2, int64)
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_PACK(_Tpvec, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_PACK(_Tpvec, _Tpnvec, _Tpn, pack_suffix, cast) \
 inline _Tpnvec v_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 { \
     _Tpnvec c; \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
     { \
-        c.s[i] = saturate_cast<_Tpn>(a.s[i]); \
-        c.s[i+_Tpvec::nlanes] = saturate_cast<_Tpn>(b.s[i]); \
+        c.s[i] = cast<_Tpn>(a.s[i]); \
+        c.s[i+_Tpvec::nlanes] = cast<_Tpn>(b.s[i]); \
     } \
     return c; \
 }
@@ -1783,26 +1783,28 @@ inline _Tpnvec v_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_PACK(v_uint16x8, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_PACK(v_uint32x4, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_PACK(v_uint64x2, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int64x2, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_PACK(v_uint16x8, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_uint32x4, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_uint64x2, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int64x2, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_RSHR_PACK(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_RSHR_PACK(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix, cast) \
 template<int n> inline _Tpnvec v_rshr_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 { \
     _Tpnvec c; \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
     { \
-        c.s[i] = saturate_cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
-        c.s[i+_Tpvec::nlanes] = saturate_cast<_Tpn>((b.s[i] + ((_Tp)1 << (n - 1))) >> n); \
+        c.s[i] = cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
+        c.s[i+_Tpvec::nlanes] = cast<_Tpn>((b.s[i] + ((_Tp)1 << (n - 1))) >> n); \
     } \
     return c; \
 }
@@ -1816,51 +1818,55 @@ template<int n> inline _Tpnvec v_rshr_##pack_suffix(const _Tpvec& a, const _Tpve
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint16x8, ushort, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint32x4, unsigned, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint64x2, uint64, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int64x2, int64, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint16x8, ushort, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint32x4, unsigned, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint64x2, uint64, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int64x2, int64, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix, cast) \
 inline void v_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
 { \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
-        ptr[i] = saturate_cast<_Tpn>(a.s[i]); \
+        ptr[i] = cast<_Tpn>(a.s[i]); \
 }
 
 //! @name Pack and store
 //! @{
 //! @brief Store values from the input vector into memory with pack
 //!
-//! Values will be stored into memory with saturating conversion to narrower type.
+//! Values will be stored into memory with conversion to narrower type.
 //! Variant with _u_ suffix converts to corresponding unsigned type.
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix, cast) \
 template<int n> inline void v_rshr_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
 { \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
-        ptr[i] = saturate_cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
+        ptr[i] = cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
 }
 
 //! @name Pack and store with rounding shift
@@ -1872,14 +1878,16 @@ template<int n> inline void v_rshr_##pack_suffix##_store(_Tpn* ptr, const _Tpvec
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 /** @brief Matrix multiplication

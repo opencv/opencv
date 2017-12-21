@@ -1,7 +1,3 @@
-if(NOT WITH_VTK)
-  return()
-endif()
-
 # VTK 6.x components
 find_package(VTK QUIET COMPONENTS vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
 IF(VTK_FOUND)
