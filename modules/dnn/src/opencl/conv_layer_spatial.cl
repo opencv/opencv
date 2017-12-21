@@ -189,10 +189,8 @@ __kernel void ConvolveBasic(
 // NDRange:  (output_width+pad)/ OUT_BLOCK_WIDTH, (output_height+pad)/OUT_BLOCK_HEIGHT, NUM_FILTERS/OUT_BLOCK_DEPTH
 
 // NOTE: for beignet this reqd_work_group_size does not guarantee that SIMD16 mode will be used, the compiler could choose to use two SIMD8 threads, and if that happens the code will break.
-#ifndef __BEIGNET__
 __attribute__((reqd_work_group_size(1, 1, SIMD_SIZE)))
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
-#endif
 __kernel void
 convolve_simd(
     ELTWISE_DATA_ARG
@@ -232,12 +230,12 @@ convolve_simd(
 
   int curr_local_y = ( lid / ( TILE_X / 4 ) );
   int curr_local_x = ( lid % ( TILE_X / 4 ) ) * 4;
-  int curr_y = or * STRIDE_Y + INPUT_START_Y + curr_local_y;
-  int curr_x = oc * STRIDE_X + INPUT_START_X + curr_local_x;
+  int curr_y = or * STRIDE_Y + curr_local_y;
+  int curr_x = oc * STRIDE_X + curr_local_x;
 #if INPUT_PAD_W != 0 || INPUT_PAD_H != 0
   int saved_y = curr_y;
 #endif
-  in_addr = input_batch_offset + INPUT_START_Z * input_height * input_width
+  in_addr = input_batch_offset
             +  (curr_y - INPUT_PAD_H) * input_width             // y tile offset
             +   curr_x - INPUT_PAD_W;                        // x tile offset
   union {
@@ -363,7 +361,7 @@ convolve_simd(
   fm = fm % ALIGNED_NUM_FILTERS;
 
   if ((ALIGNED_NUM_FILTERS == NUM_FILTERS || fm < NUM_FILTERS)) {
-  unsigned int out_addr = OUT_BUFF_OFFSET + ( num_in_batch * TOTAL_OUTPUT_DEPTH + fm ) * output_width * output_height;
+  unsigned int out_addr = ( num_in_batch * TOTAL_OUTPUT_DEPTH + fm ) * output_width * output_height;
   out_addr += or * output_width + oc;
   // we need this address calculation for biases because we support views and batching
 #if APPLY_BIAS
