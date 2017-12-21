@@ -877,7 +877,11 @@ __kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
             {
                 __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
                 __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
+#if scn == 3
+                DATA_TYPE_3 src_pix = vload3(0, src);
+#else
                 DATA_TYPE_4 src_pix = vload4(0, src);
+#endif
 
 #ifdef REVERSE
                 dst[0] = src_pix.z;
