@@ -1912,74 +1912,48 @@ public:
 *                                   Simulated annealing solver                             *
 \****************************************************************************************/
 
-/** @brief The class defines interface for system state used in simulated annealing optimization algorithm.
+#ifdef CV_DOXYGEN
+/** @brief This class declares example interface for system state used in simulated annealing optimization algorithm.
 
-@cite Kirkpatrick83 for details
+@note This class is not defined in C++ code and can't be use directly - you need your own implementation with the same methods.
 */
-class CV_EXPORTS SimulatedAnnealingSolverSystem
+struct SimulatedAnnealingSolverSystem
 {
-protected:
-    inline SimulatedAnnealingSolverSystem() {}
-public:
-    virtual ~SimulatedAnnealingSolverSystem() {}
-
     /** Give energy value for a state of system.*/
-    virtual double energy() const = 0;
+    double energy() const;
     /** Function which change the state of system (random pertubation).*/
-    virtual void changeState() = 0;
+    void changeState();
     /** Function to reverse to the previous state. Can be called once only after changeState(). */
-    virtual void reverseState() = 0;
+    void reverseState();
 };
+#endif // CV_DOXYGEN
 
 /** @brief The class implements simulated annealing for optimization.
- *
+
 @cite Kirkpatrick83 for details
+
+@param solverSystem optimization system (see SimulatedAnnealingSolverSystem)
+@param initialTemperature initial temperature
+@param finalTemperature final temperature
+@param coolingRatio temperature step multiplies
+@param iterationsPerStep number of iterations per temperature changing step
+@param lastTemperature optional output for last used temperature
+@param rngEnergy specify custom random numbers generator (cv::theRNG() by default)
 */
-class CV_EXPORTS SimulatedAnnealingSolver : public Algorithm
-{
-public:
-    SimulatedAnnealingSolver(const Ptr<SimulatedAnnealingSolverSystem>& system);
-    inline ~SimulatedAnnealingSolver() { release(); }
-
-    /** Simulated annealing procedure. */
-    int run();
-    /** Set/initialize RNG (energy).
-    @param rng new RNG
-    */
-    void setEnergyRNG(const RNG& rng);
-    /** Set initial temperature of simulated annealing procedure.
-    @param x new initial temperature. x\>0
-    */
-    void setInitialTemperature(double x);
-    /** Set final temperature of simulated annealing procedure.
-    @param x new final temperature value. 0\<x\<initial temperature
-    */
-    void setFinalTemperature(double x);
-    /** Get final temperature of simulated annealing procedure. */
-    double getFinalTemperature();
-    /** Set setCoolingRatio of simulated annealing procedure : T(t) = coolingRatio * T(t-1).
-    @param x new cooling ratio value. 0\<x\<1
-    */
-    void setCoolingRatio(double x);
-    /** Set number iteration per temperature step.
-    @param ite number of iteration per temperature step ite \> 0
-    */
-    void setIterPerStep(int ite);
-
-    void release();
-    SimulatedAnnealingSolver(const SimulatedAnnealingSolver&);
-    SimulatedAnnealingSolver& operator=(const SimulatedAnnealingSolver&);
-
-    struct Impl; friend struct Impl;
-protected:
-    Impl* impl;
-};
-
+template<class SimulatedAnnealingSolverSystem>
+int simulatedAnnealingSolver(SimulatedAnnealingSolverSystem& solverSystem,
+     double initialTemperature, double finalTemperature, double coolingRatio,
+     size_t iterationsPerStep,
+     CV_OUT double* lastTemperature = NULL,
+     cv::RNG& rngEnergy = cv::theRNG()
+);
 
 //! @} ml
 
 }
 }
+
+#include <opencv2/ml/ml.inl.hpp>
 
 #endif // __cplusplus
 #endif // OPENCV_ML_HPP
