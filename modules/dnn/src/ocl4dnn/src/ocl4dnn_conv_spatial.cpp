@@ -1432,6 +1432,7 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
         generate_gemmlike_tuneritems(tunerItems, 1, 8, 32);
         generate_gemmlike_tuneritems(tunerItems, 2, 8, 32);
         generate_gemmlike_tuneritems(tunerItems, 1, 16, 32);
+        generate_gemmlike_tuneritems(tunerItems, 2, 16, 32);
 
         // idlf kernel
         for (int simd_size = 8; simd_size <= 16; simd_size += 8)
