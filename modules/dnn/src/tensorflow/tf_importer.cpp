@@ -930,7 +930,7 @@ void TFImporter::populateNet(Net dstNet)
                         data_layouts[name] = DATA_LAYOUT_NHWC;
                     }
                     else
-                        CV_Assert(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
+                        CV_Error(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
                 }
                 else if (data_layouts[layer.input(0)] == DATA_LAYOUT_NCHW)
                 {
@@ -947,7 +947,7 @@ void TFImporter::populateNet(Net dstNet)
                         data_layouts[name] = DATA_LAYOUT_NCHW;
                     }
                     else
-                        CV_Assert(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
+                        CV_Error(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
                 }
                 int id = dstNet.addLayer(name, "Identity", layerParams);
                 layer_id[name] = id;
