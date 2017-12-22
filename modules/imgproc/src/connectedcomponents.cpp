@@ -3939,7 +3939,9 @@ namespace cv{
         const int numberOfCPUs = cv::getNumberOfCPUs();
 
         CV_Assert(iDepth == CV_8U || iDepth == CV_8S);
-
+        if (lDepth == CV_16U) {
+            CV_Assert((I.total()/2+1) < UINT16_MAX);
+        }
         //Run parallel labeling only if the rows of the image are at least twice the number returned by getNumberOfCPUs
         const bool is_parallel = currentParallelFramework != NULL && numberOfCPUs > 1 && L.rows / numberOfCPUs >= 2;
 
