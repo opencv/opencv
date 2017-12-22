@@ -253,8 +253,8 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         }
     }
 
-    boolean cacPreviewSize(final int width, final int height) {
-        Log.i(LOGTAG, "cacPreviewSize: "+width+"x"+height);
+    boolean calcPreviewSize(final int width, final int height) {
+        Log.i(LOGTAG, "calcPreviewSize: "+width+"x"+height);
         if(mCameraID == null) {
             Log.e(LOGTAG, "Camera isn't initialized!");
             return false;
@@ -285,11 +285,11 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 return true;
             }
         } catch (CameraAccessException e) {
-            Log.e(LOGTAG, "cacPreviewSize - Camera Access Exception");
+            Log.e(LOGTAG, "calcPreviewSize - Camera Access Exception");
         } catch (IllegalArgumentException e) {
-            Log.e(LOGTAG, "cacPreviewSize - Illegal Argument Exception");
+            Log.e(LOGTAG, "calcPreviewSize - Illegal Argument Exception");
         } catch (SecurityException e) {
-            Log.e(LOGTAG, "cacPreviewSize - Security Exception");
+            Log.e(LOGTAG, "calcPreviewSize - Security Exception");
         }
         return false;
     }
@@ -302,7 +302,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         try {
             mCameraOpenCloseLock.acquire();
 
-            boolean needReconfig = cacPreviewSize(width, height);
+            boolean needReconfig = calcPreviewSize(width, height);
             mFrameWidth  = mPreviewSize.getWidth();
             mFrameHeight = mPreviewSize.getHeight();
 
