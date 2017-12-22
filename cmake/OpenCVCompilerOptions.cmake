@@ -309,9 +309,6 @@ if(MSVC)
     if(MSVC_VERSION EQUAL 1400)
       ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
     endif()
-    if(MSVC_VERSION LESS 1900) # MSVS2015
-      ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # warning C4127: conditional expression is constant
-    endif()
   endif()
 
   # allow extern "C" functions throw exceptions
@@ -323,6 +320,7 @@ if(MSVC)
   endforeach()
 
   if(NOT ENABLE_NOISY_WARNINGS)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # conditional expression is constant
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4251) # class 'std::XXX' needs to have dll-interface to be used by clients of YYY
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
