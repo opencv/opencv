@@ -37,7 +37,22 @@ def writeBlob(data, name):
         # Save raw data.
         np.save(name + '.npy', data.astype(np.float32))
 
-def save(inp, out, name):
+def runModel(inp, out, name):
+    with tf.Session(graph=tf.Graph()) as localSession:
+        localSession.graph.as_default()
+
+        with tf.gfile.FastGFile(name + '_net.pb') as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+        tf.import_graph_def(graph_def, name='')
+
+        inputData = gen_data(inp)
+        outputData = localSession.run(localSession.graph.get_tensor_by_name(out.name),
+                                      feed_dict={localSession.graph.get_tensor_by_name(inp.name): inputData})
+        writeBlob(inputData, name + '_in')
+        writeBlob(outputData, name + '_out')
+
+def save(inp, out, name, quantize=False):
     sess.run(tf.global_variables_initializer())
 
     inputData = gen_data(inp)
@@ -46,12 +61,12 @@ def save(inp, out, name):
     writeBlob(outputData, name + '_out')
 
     saver = tf.train.Saver()
-    saver.save(sess, './tmp.ckpt')
+    saver.save(sess, os.path.join('.', 'tmp.ckpt'))
     tf.train.write_graph(sess.graph.as_graph_def(), "", "graph.pb")
     prepare_for_dnn('graph.pb', 'tmp.ckpt', args.freeze_graph_tool,
                     args.optimizer_tool, args.transform_graph_tool,
                     inp.name[:inp.name.rfind(':')], out.name[:out.name.rfind(':')],
-                    name + '_net.pb', inp.dtype)
+                    name + '_net.pb', inp.dtype, quantize=quantize)
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
@@ -266,21 +281,21 @@ with tf.gfile.FastGFile('../ssd_mobilenet_v1_coco.pb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
-with tf.Session() as sess:
+with tf.Session() as localSession:
     # Restore session
-    sess.graph.as_default()
+    localSession.graph.as_default()
     tf.import_graph_def(graph_def, name='')
 
     # Receive output
     inp = cv.imread('../street.png')
     inp = cv.resize(inp, (300, 300))
     inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
-    out = sess.run([sess.graph.get_tensor_by_name('concat:0'),    # All detections
-                    sess.graph.get_tensor_by_name('concat_1:0'),  # Classification
-                    sess.graph.get_tensor_by_name('num_detections:0'),     # Postprocessed output
-                    sess.graph.get_tensor_by_name('detection_scores:0'),   #
-                    sess.graph.get_tensor_by_name('detection_boxes:0'),    #
-                    sess.graph.get_tensor_by_name('detection_classes:0')], #
+    out = localSession.run([localSession.graph.get_tensor_by_name('concat:0'),    # All detections
+                            localSession.graph.get_tensor_by_name('concat_1:0'),  # Classification
+                            localSession.graph.get_tensor_by_name('num_detections:0'),     # Postprocessed output
+                            localSession.graph.get_tensor_by_name('detection_scores:0'),   #
+                            localSession.graph.get_tensor_by_name('detection_boxes:0'),    #
+                            localSession.graph.get_tensor_by_name('detection_classes:0')], #
                    feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
     np.save('ssd_mobilenet_v1_coco.concat.npy', out[0])
     np.save('ssd_mobilenet_v1_coco.concat_1.npy', out[1])
@@ -316,6 +331,13 @@ biases = tf.Variable(tf.random_normal([10]), name='matmul_biases')
 weights = tf.Variable(tf.random_normal([2*3*5, 10]), name='matmul_weights')
 mm = tf.matmul(flattened, weights) + biases
 save(inp, flattened, 'nhwc_transpose_reshape_matmul')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 6, 5, 3], 'input')
+conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
+                        activation=tf.nn.relu,
+                        bias_initializer=tf.random_normal_initializer())
+save(inp, conv, 'uint8_single_conv', quantize=True)
+runModel(inp, conv, 'uint8_single_conv')
 ################################################################################
 
 # Uncomment to print the final graph.

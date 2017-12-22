@@ -20,18 +20,22 @@ def optimize_for_inference(dtype, tool, in_node, out_node, out_graph='optimized_
               ' --output_names ' + out_node +
               ' --placeholder_type_enum ' + str(dtype.as_datatype_enum))
 
-def fuse_constants(tool, in_graph, out_graph, in_node, out_node):
+def fuse_constants(tool, in_graph, out_graph, in_node, out_node, quantize):
+    transforms = "fold_constants(ignore_errors=True)"
+    if quantize:
+        transforms += " quantize_weights(minimum_size=0)"
+    transforms += " sort_by_execution_order"
     os.system(tool + ' --in_graph=' + out_graph + \
                      ' --out_graph=' + out_graph + \
                      ' --inputs=' + in_node + \
                      ' --outputs=' + out_node + \
-                     ' --transforms="fold_constants(ignore_errors=True) sort_by_execution_order"')
+                     ' --transforms="%s"' % transforms)
 
 def prepare_for_dnn(net, ckpt, freeze_graph_tool, optimizer_tool, transform_graph_tool,
-                    input_node_name, output_node_name, out_graph, dtype):
+                    input_node_name, output_node_name, out_graph, dtype, quantize=False):
     freeze_graph(net, ckpt, freeze_graph_tool, output_node_name)
     optimize_for_inference(dtype, optimizer_tool, input_node_name, output_node_name, out_graph)
-    fuse_constants(transform_graph_tool, out_graph, out_graph, input_node_name, output_node_name)
+    fuse_constants(transform_graph_tool, out_graph, out_graph, input_node_name, output_node_name, quantize)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for preparing serialized '
