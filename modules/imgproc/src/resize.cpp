@@ -3847,7 +3847,7 @@ void resize(int src_type,
         if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
             interpolation = INTER_AREA;
 
-        // true "area" interpolation is only implemented for the case (scale_x <= 1 && scale_y <= 1).
+        // true "area" interpolation is only implemented for the case (scale_x >= 1 && scale_y >= 1).
         // In other cases it is emulated using some variant of bilinear interpolation
         if( interpolation == INTER_AREA && scale_x >= 1 && scale_y >= 1 )
         {
