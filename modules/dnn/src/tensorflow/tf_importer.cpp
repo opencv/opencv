@@ -146,6 +146,11 @@ static Mat getTensorContent(const tensorflow::TensorProto &tensor)
             convertFp16(halfsSigned, floats);
             return floats;
         }
+        case tensorflow::DT_QUINT8:
+        {
+            CV_Assert(!content.empty());
+            return Mat(1, content.size(), CV_8UC1, (void*)content.c_str()).clone();
+        }
         default:
             CV_Error(Error::StsError, "Tensor's data type is not supported");
             break;
@@ -596,7 +601,7 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
     }
 }
 
-static void addConstNodes(const tensorflow::GraphDef& net, std::map<String, int>& const_layers,
+static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& const_layers,
                           std::set<String>& layers_to_ignore)
 {
     for (int li = 0; li < net.node_size(); li++)
@@ -605,7 +610,52 @@ static void addConstNodes(const tensorflow::GraphDef& net, std::map<String, int>
         String name = layer.name();
         String type = layer.op();
 
-        if (type != "Const")
+        if (type == "Dequantize")
+        {
+            // Example of Dequantize node:
+            //   name: "conv2d_1/bias"
+            //   op: "Dequantize"
+            //   input: "conv2d_1/bias_quantized_const" (tensor of dtype DT_QUINT8)
+            //   input: "conv2d_1/bias_quantized_min"
+            //   input: "conv2d_1/bias_quantized_max"
+            //   attr { key: "T" value { type: DT_QUINT8 } }   (quantized type)
+            //   attr { key: "mode" value { s: "MIN_FIRST" } } (quantization technique)
+            CV_Assert(layer.input_size() == 3);
+            for (int i = 0; i < 3; ++i)
+                CV_Assert(const_layers.find(layer.input(i)) != const_layers.end());
+            CV_Assert(hasLayerAttr(layer, "mode") &&
+                      getLayerAttr(layer, "mode").s() == "MIN_FIRST");
+
+            int tensorId = const_layers[layer.input(0)];
+            int minId = const_layers[layer.input(1)];
+            int maxId = const_layers[layer.input(2)];
+
+            tensorflow::TensorProto* tensor = net.mutable_node(tensorId)
+                                                ->mutable_attr()->at("value")
+                                                 .mutable_tensor();
+            CV_Assert(tensor->dtype() == tensorflow::DT_QUINT8);
+
+            Mat qMin = getTensorContent(net.node(minId).attr().at("value").tensor());
+            Mat qMax = getTensorContent(net.node(maxId).attr().at("value").tensor());
+            CV_Assert(qMin.total() == 1, qMin.type() == CV_32FC1,
+                      qMax.total() == 1, qMax.type() == CV_32FC1);
+
+            Mat content = getTensorContent(*tensor);
+
+            float minVal = qMin.at<float>(0);
+            float rangeScale = (qMax.at<float>(0) - minVal) / 255;
+            CV_Assert(rangeScale >= 0);
+            content.convertTo(content, CV_32FC1, rangeScale,
+                              rangeScale * cvRound(minVal / rangeScale));
+
+            tensor->set_dtype(tensorflow::DT_FLOAT);
+            tensor->set_tensor_content(content.data, content.total() * content.elemSize1());
+
+            ExcludeLayer(net, li, 0, false);
+            layers_to_ignore.insert(name);
+            continue;
+        }
+        else if (type != "Const")
             continue;  // only Const parameters are supported
 
         if (layer.attr().find("value") != layer.attr().end())

@@ -190,6 +190,11 @@ TEST(Test_TensorFlow, fp16)
     runTensorFlowNet("fp16_padding_same", false, l1, lInf);
 }
 
+TEST(Test_TensorFlow, quantized)
+{
+    runTensorFlowNet("uint8_single_conv");
+}
+
 TEST(Test_TensorFlow, MobileNet_SSD)
 {
     std::string netPath = findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false);
