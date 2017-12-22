@@ -185,8 +185,21 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 public void onImageAvailable(ImageReader reader) {
                     Image image = reader.acquireLatestImage();
                     if (image == null) return;
-                    ByteBuffer plane = image.getPlanes()[0].getBuffer();
-                    Mat yuv = new Mat( h * 3/2, w, CvType.CV_8UC1, plane );
+
+                    // sanity checks - 3 planes
+                    Image.Plane[] planes = image.getPlanes();
+                    assert(planes.length == 3);
+
+                    // see also https://developer.android.com/reference/android/graphics/ImageFormat.html#YUV_420_888
+                    // Y plane (0) non-interleaved => stride == 1; U/V plane interleaved => stride == 2
+                    assert(planes[0].getPixelStride() == 1);
+                    assert(planes[1].getPixelStride() == 2);
+                    assert(planes[2].getPixelStride() == 2);
+
+                    ByteBuffer y_plane = planes[0].getBuffer();
+                    // FIXME: need new Mat constructor that can take separate y and uv planes
+                    // ByteBuffer uv_plane = planes[1].getBuffer();
+                    Mat yuv = new Mat( h * 3/2, w, CvType.CV_8UC1, y_plane );
                     JavaCamera2Frame tempFrame = new JavaCamera2Frame(yuv,w,h);
                     deliverAndDrawFrame(tempFrame);
                     image.close();
