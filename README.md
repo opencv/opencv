@@ -6,6 +6,7 @@
 * Docs: <http://docs.opencv.org/master/>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
+* Android Studio Package: <https://github.com/floe/opencv-android>
 
 ### Contributing
 
