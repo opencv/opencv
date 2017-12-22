@@ -3897,8 +3897,8 @@ void resize(int src_type,
         resize_bitExact<ushort, interpolationLinear<ushort> >,
         resize_bitExact<short, interpolationLinear<short> >,
         resize_bitExact<int, interpolationLinear<int> >,
-        resize_bitExact<int, interpolationLinear<int> >,
-        resize_bitExact<int, interpolationLinear<int> >,
+        0,
+        0,
         0
     };
 
