@@ -948,7 +948,7 @@ public:
         trained = true; // Enable call to CalcError
         int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);
         trained =false;
-        return iter;
+        return iter + 1; // ensure that 'train()' call is always successful
     }
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )
