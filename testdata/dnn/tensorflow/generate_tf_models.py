@@ -46,7 +46,7 @@ def save(inp, out, name):
     writeBlob(outputData, name + '_out')
 
     saver = tf.train.Saver()
-    saver.save(sess, 'tmp.ckpt')
+    saver.save(sess, './tmp.ckpt')
     tf.train.write_graph(sess.graph.as_graph_def(), "", "graph.pb")
     prepare_for_dnn('graph.pb', 'tmp.ckpt', args.freeze_graph_tool,
                     args.optimizer_tool, args.transform_graph_tool,
@@ -295,6 +295,27 @@ with tf.Session() as sess:
     # to make OpenCV test more simple.
     detections = sorted(detections[0, 0, :, :], cmp=lambda x, y: -1 if x[1] < y[1] and x[2] < y[2] else 0)
     np.save('ssd_mobilenet_v1_coco.detection_out.npy', detections)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
+                        activation=tf.nn.relu,
+                        bias_initializer=tf.random_normal_initializer())
+flattened = tf.reshape(conv, [1, -1], 'reshaped')
+biases = tf.Variable(tf.random_normal([10]), name='matmul_biases')
+weights = tf.Variable(tf.random_normal([2*3*5, 10]), name='matmul_weights')
+mm = tf.matmul(flattened, weights) + biases
+save(inp, mm, 'nhwc_reshape_matmul')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
+                        activation=tf.nn.relu,
+                        bias_initializer=tf.random_normal_initializer())
+transposed = tf.transpose(conv, [0, 1, 2, 3])
+flattened = tf.reshape(transposed, [1, -1], 'reshaped')
+biases = tf.Variable(tf.random_normal([10]), name='matmul_biases')
+weights = tf.Variable(tf.random_normal([2*3*5, 10]), name='matmul_weights')
+mm = tf.matmul(flattened, weights) + biases
+save(inp, flattened, 'nhwc_transpose_reshape_matmul')
 ################################################################################
 
 # Uncomment to print the final graph.
