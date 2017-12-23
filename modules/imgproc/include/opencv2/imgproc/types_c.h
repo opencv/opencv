@@ -613,7 +613,7 @@ enum
     CV_HOUGH_MULTI_SCALE =2,
     CV_HOUGH_GRADIENT =3
 };
-  
+
 /* Hough transform param */
 typedef struct {
     int min;
@@ -629,8 +629,8 @@ typedef struct {
 
 /* Hough peak */
 typedef struct {
-    int votes;		
-    int tha_deg;    
+    int votes;
+    int tha_deg;
     int rho;
 } CvHoughPeak;
 
