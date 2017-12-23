@@ -1687,8 +1687,8 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
     return circles;
 }
 
-static void 
-CreateHoughPlane( const CvHoughPoints *points, 
+static void
+CreateHoughPlane( const CvHoughPoints *points,
                   const CvHoughParam *rho_param, const CvHoughParam *tha_param,
                   short *plane )
 {
@@ -1698,10 +1698,10 @@ CreateHoughPlane( const CvHoughPoints *points,
     long point_cnt = points->point_cnt;
     double rad = 0.0f, rho = 0.0f;
     int rho_index = 0, tha_index = 0;
-	
-    int rho_size = (rho_param->max - rho_param->min) / rho_param->step; 
+
+    int rho_size = (rho_param->max - rho_param->min) / rho_param->step;
     int tha_size = (tha_param->max - tha_param->min) / tha_param->step;
-    
+
     for (long cnt = 0; cnt < point_cnt; cnt++)
     {
         for (int tha = tha_param->min; tha < tha_param->max; tha+=tha_param->step)
@@ -1718,15 +1718,15 @@ CreateHoughPlane( const CvHoughPoints *points,
             }
             else
             {
-	        /* Do nothing... */
+                /* Do nothing... */
             }
         }
         point++;
     }
 }
 
-static void 
-SelectHoughPeak( const short   *plane, 
+static void
+SelectHoughPeak( const short *plane,
                  int rho_size, int tha_size,
                  CvHoughData *data )
 {
@@ -1779,7 +1779,7 @@ cvHoughUsingSetOfPoints( const CvHoughPoints *points,
     if ( data->peak_cnt > 0)
     {
         InitHoughPeak(data);
-        
+
         if ( ((rho_param->max - rho_param->min) > 0) &&
              ((tha_param->max - tha_param->min) > 0) &&
              ((rho_param->step > 0))                 &&
@@ -1787,13 +1787,13 @@ cvHoughUsingSetOfPoints( const CvHoughPoints *points,
         {
             int rho_size = (rho_param->max - rho_param->min) / rho_param->step;
             int tha_size = (tha_param->max - tha_param->min) / tha_param->step;
-        
+
             short *plane = (short*)malloc(sizeof(short) * rho_size * tha_size);
 
             CreateHoughPlane(points, rho_param, tha_param, plane);
-        
+
             SelectHoughPeak(plane, rho_size, tha_size, data);
-        
+
             free(plane);
         }
         else
