@@ -1781,7 +1781,7 @@ InitHoughPeak( CvHoughData *data )
 
 CV_IMPL void
 cvHoughUsingSetOfPoints( const CvHoughPoints *points,
-                         const CvHoughParam *param, const CvHoughParam *tha_param,
+                         const CvHoughParam *rho_param, const CvHoughParam *tha_param,
                          CvHoughData *data )
 {
     if ( data->peak_cnt > 0)
@@ -1810,12 +1810,12 @@ cvHoughUsingSetOfPoints( const CvHoughPoints *points,
         }
         else
         {
-            Cv_Error( CV_StsBadArg, "max must be greater than min, and step must be greater than 0" );
+            CV_Error( CV_StsBadArg, "max must be greater than min, and step must be greater than 0" );
         }
     }
     else
     {
-        Cv_Error( CV_StsBadArg, "peak_cnt must be greater than 0" );
+        CV_Error( CV_StsBadArg, "peak_cnt must be greater than 0" );
     }
 }
 
