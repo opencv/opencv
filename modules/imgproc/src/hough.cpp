@@ -1702,18 +1702,13 @@ CreateHoughPlane( const CvHoughPoints *points,
     int rho_size = (rho_param->max - rho_param->min) / rho_param->step; 
     int tha_size = (tha_param->max - tha_param->min) / tha_param->step;
     
-    /* Create hough plane */
     for (long cnt = 0; cnt < point_cnt; cnt++)
     {
         for (int tha = tha_param->min; tha < tha_param->max; tha+=tha_param->step)
         {
-            /* deg -> rad */
             rad = CONVERT_DEG_TO_RAD(tha);
-            /* Calc rho */
-			rho = point->x * cos(rad) + point->y * sin(rad);
-            /* Rho index */
+            rho = point->x * cos(rad) + point->y * sin(rad);
             rho_index = (int)((rho - (double)rho_param->min) / (double)rho_param->step);
-            /* Theta index */
             tha_index = (int)(((double)tha - (double)tha_param->min) / (double)tha_param->step);
 
             if (((0 <= rho_index) && (rho_index < rho_size)) &&
@@ -1723,9 +1718,9 @@ CreateHoughPlane( const CvHoughPoints *points,
             }
             else
             {
+	        /* Do nothing... */
             }
         }
-        /* Pointer increment */
         point++;
     }
 }
@@ -1748,11 +1743,9 @@ SelectHoughPeak( const short   *plane,
 
             if(votes > max_votes)
             {
-                /* Update hough peak */
                 (peak_addr + cnt)->votes   = votes;
                 (peak_addr + cnt)->tha_deg = tha;
                 (peak_addr + cnt)->rho     = rho;
-                /* Update max votes */
                 max_votes = votes;
                 cnt++;
                 if (cnt >= data->peak_cnt){ cnt = 0; }
@@ -1774,7 +1767,6 @@ InitHoughPeak( CvHoughData *data )
         peak->votes = 0;
         peak->tha_deg = 0;
         peak->rho = 0;
-        /* Pointer increment */
         peak++;
     }
 }
@@ -1796,16 +1788,12 @@ cvHoughUsingSetOfPoints( const CvHoughPoints *points,
             int rho_size = (rho_param->max - rho_param->min) / rho_param->step;
             int tha_size = (tha_param->max - tha_param->min) / tha_param->step;
         
-            /* malloc */
             short *plane = (short*)malloc(sizeof(short) * rho_size * tha_size);
 
-            /* Create hough plane */
             CreateHoughPlane(points, rho_param, tha_param, plane);
         
-            /* Select hough peak */
             SelectHoughPeak(plane, rho_size, tha_size, data);
         
-            /* free */
             free(plane);
         }
         else
