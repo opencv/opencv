@@ -51,7 +51,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     private static final String LOGTAG = "JavaCamera2View";
 
     private ImageReader mImageReader;
-    private int mPreviewFormat = ImageFormat.NV21;
+    private int mPreviewFormat = ImageFormat.YUV_420_888;
 
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
@@ -179,7 +179,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 return;
             }
 
-            mImageReader = ImageReader.newInstance(w,h,ImageFormat.YUV_420_888,2);
+            mImageReader = ImageReader.newInstance(w,h,mPreviewFormat,2);
             mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
@@ -189,6 +189,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                     // sanity checks - 3 planes
                     Image.Plane[] planes = image.getPlanes();
                     assert(planes.length == 3);
+                    assert(image.getFormat() == mPreviewFormat);
 
                     // see also https://developer.android.com/reference/android/graphics/ImageFormat.html#YUV_420_888
                     // Y plane (0) non-interleaved => stride == 1; U/V plane interleaved => stride == 2
@@ -347,12 +348,10 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
         @Override
         public Mat rgba() {
-            if (mPreviewFormat == ImageFormat.NV21)
+            if ((mPreviewFormat == ImageFormat.NV21) || (mPreviewFormat == ImageFormat.YUV_420_888))
                 Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
             else if (mPreviewFormat == ImageFormat.YV12)
                 Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4);  // COLOR_YUV2RGBA_YV12 produces inverted colors
-            else if (mPreviewFormat == ImageFormat.YUV_420_888)
-                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_YV12, 4);
             else
                 throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
 
