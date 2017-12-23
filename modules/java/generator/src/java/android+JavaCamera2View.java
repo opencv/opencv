@@ -203,6 +203,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                     Mat yuv = new Mat( h * 3/2, w, CvType.CV_8UC1, y_plane );
                     JavaCamera2Frame tempFrame = new JavaCamera2Frame(yuv,w,h);
                     deliverAndDrawFrame(tempFrame);
+                    tempFrame.release();
                     image.close();
                 }
             }, mBackgroundHandler);
