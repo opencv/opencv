@@ -616,33 +616,28 @@ enum
   
 /* Hough transform param */
 typedef struct {
-    /* Theta parameter */
-    int m_min_tha;
-    int m_max_tha;
-    int m_tha_step;
-    /* Rho parameter */
-    int m_min_rho;
-    int m_max_rho;
-    int m_rho_step;
-} CvHoughParam_t;
+    int min;
+    int max;
+    int step;
+} CvHoughParam;
 
 /* Hough transform input */
 typedef struct {
-    CvPoint *m_p_points;
-    long    m_points_cnt;
-} CvHoughPoints_t;
+    CvPoint *p_point;
+    long point_cnt;
+} CvHoughPoints;
 
 /* Hough peak */
 typedef struct {
-	int   m_votes;		
-	int   m_tha_deg;    
-	int   m_rho;
-} CvHoughPeak_t;
+    int votes;		
+    int tha_deg;    
+    int rho;
+} CvHoughPeak;
 
 typedef struct {
-    CvHoughPeak_t   *m_p_peak;
-    long             m_peak_cnt;
-}CvHoughData_t;
+    CvHoughPeak *p_peak;
+    long peak_cnt;
+}CvHoughData;
 
 
 /* Fast search data structures  */
