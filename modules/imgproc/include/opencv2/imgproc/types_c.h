@@ -637,7 +637,7 @@ typedef struct {
 typedef struct {
     CvHoughPeak *p_peak;
     long peak_cnt;
-}CvHoughData;
+} CvHoughData;
 
 
 /* Fast search data structures  */
