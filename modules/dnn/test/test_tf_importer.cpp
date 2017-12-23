@@ -159,6 +159,8 @@ TEST(Test_TensorFlow, deconvolution)
 TEST(Test_TensorFlow, matmul)
 {
     runTensorFlowNet("matmul");
+    runTensorFlowNet("nhwc_reshape_matmul");
+    runTensorFlowNet("nhwc_transpose_reshape_matmul");
 }
 
 TEST(Test_TensorFlow, defun)
@@ -186,6 +188,11 @@ TEST(Test_TensorFlow, fp16)
     runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
     runTensorFlowNet("fp16_max_pool_even", false, l1, lInf);
     runTensorFlowNet("fp16_padding_same", false, l1, lInf);
+}
+
+TEST(Test_TensorFlow, quantized)
+{
+    runTensorFlowNet("uint8_single_conv");
 }
 
 TEST(Test_TensorFlow, MobileNet_SSD)

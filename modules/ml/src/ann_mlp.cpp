@@ -42,41 +42,6 @@
 
 namespace cv { namespace ml {
 
-struct SimulatedAnnealingSolver::Impl
-{
-    int refcount;
-
-    const Ptr<SimulatedAnnealingSolverSystem> systemPtr;
-    SimulatedAnnealingSolverSystem& system;
-    RNG rEnergy;
-    double coolingRatio;
-    double initialT;
-    double finalT;
-    int iterPerStep;
-
-    Impl(const Ptr<SimulatedAnnealingSolverSystem>& s) :
-        refcount(1),
-        systemPtr(s),
-        system(*(s.get())),
-        rEnergy(12345)
-    {
-        CV_Assert(!systemPtr.empty());
-        initialT = 2;
-        finalT = 0.1;
-        coolingRatio = 0.95;
-        iterPerStep = 100;
-    }
-
-    inline double energy() { return system.energy(); }
-    inline void changeState() { system.changeState(); }
-    inline void reverseState() { system.reverseState(); }
-
-    void addref() { CV_XADD(&refcount, 1); }
-    void release() { if (CV_XADD(&refcount, -1) == 1) delete this; }
-protected:
-    virtual ~Impl() { CV_Assert(refcount==0); }
-};
-
 struct AnnParams
 {
     AnnParams()
@@ -115,103 +80,7 @@ inline T inBounds(T val, T min_val, T max_val)
     return std::min(std::max(val, min_val), max_val);
 }
 
-SimulatedAnnealingSolver::SimulatedAnnealingSolver(const Ptr<SimulatedAnnealingSolverSystem>& system)
-{
-    impl = new Impl(system);
-}
-
-SimulatedAnnealingSolver::SimulatedAnnealingSolver(const SimulatedAnnealingSolver& b)
-{
-    if (b.impl) b.impl->addref();
-    release();
-    impl = b.impl;
-}
-
-void SimulatedAnnealingSolver::release()
-{
-    if (impl) { impl->release(); impl = NULL; }
-}
-
-void SimulatedAnnealingSolver::setIterPerStep(int ite)
-{
-    CV_Assert(impl);
-    CV_Assert(ite>0);
-    impl->iterPerStep = ite;
-}
-
-int SimulatedAnnealingSolver::run()
-{
-    CV_Assert(impl);
-    CV_Assert(impl->initialT>impl->finalT);
-    double Ti = impl->initialT;
-    double previousEnergy = impl->energy();
-    int exchange = 0;
-    while (Ti > impl->finalT)
-    {
-        for (int i = 0; i < impl->iterPerStep; i++)
-        {
-            impl->changeState();
-            double newEnergy = impl->energy();
-            if (newEnergy < previousEnergy)
-            {
-                previousEnergy = newEnergy;
-                exchange++;
-            }
-            else
-            {
-                double r = impl->rEnergy.uniform(0.0, 1.0);
-                if (r < std::exp(-(newEnergy - previousEnergy) / Ti))
-                {
-                    previousEnergy = newEnergy;
-                    exchange++;
-                }
-                else
-                {
-                    impl->reverseState();
-                }
-            }
-
-        }
-        Ti *= impl->coolingRatio;
-    }
-    impl->finalT = Ti;
-    return exchange;
-}
-
-void SimulatedAnnealingSolver::setEnergyRNG(const RNG& rng)
-{
-    CV_Assert(impl);
-    impl->rEnergy = rng;
-}
-
-void SimulatedAnnealingSolver::setInitialTemperature(double x)
-{
-    CV_Assert(impl);
-    CV_Assert(x>0);
-    impl->initialT = x;
-}
-
-void SimulatedAnnealingSolver::setFinalTemperature(double x)
-{
-    CV_Assert(impl);
-    CV_Assert(x>0);
-    impl->finalT = x;
-}
-
-double SimulatedAnnealingSolver::getFinalTemperature()
-{
-    CV_Assert(impl);
-    return impl->finalT;
-}
-
-void SimulatedAnnealingSolver::setCoolingRatio(double x)
-{
-    CV_Assert(impl);
-    CV_Assert(x>0 && x<1);
-    impl->coolingRatio = x;
-}
-
-class SimulatedAnnealingANN_MLP : public SimulatedAnnealingSolverSystem
+class SimulatedAnnealingANN_MLP
 {
 protected:
     ml::ANN_MLP& nn;
@@ -228,7 +97,7 @@ public:
         initVarMap();
     }
     ~SimulatedAnnealingANN_MLP() {}
-protected:
+
     void changeState()
     {
         index = rIndex.uniform(0, nbVariables);
@@ -1075,16 +944,11 @@ public:
     }
     int train_anneal(const Ptr<TrainData>& trainData)
     {
-        SimulatedAnnealingSolver t(Ptr<SimulatedAnnealingANN_MLP>(new SimulatedAnnealingANN_MLP(*this, trainData)));
-        t.setEnergyRNG(params.rEnergy);
-        t.setFinalTemperature(params.finalT);
-        t.setInitialTemperature(params.initialT);
-        t.setCoolingRatio(params.coolingRatio);
-        t.setIterPerStep(params.itePerStep);
+        SimulatedAnnealingANN_MLP s(*this, trainData);
         trained = true; // Enable call to CalcError
-        int iter =  t.run();
+        int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);
         trained =false;
-        return iter;
+        return iter + 1; // ensure that 'train()' call is always successful
     }
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )

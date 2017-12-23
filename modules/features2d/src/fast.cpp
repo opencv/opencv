@@ -48,9 +48,6 @@ The references are:
 #include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
-#if defined _MSC_VER
-# pragma warning( disable : 4127)
-#endif
 
 namespace cv
 {

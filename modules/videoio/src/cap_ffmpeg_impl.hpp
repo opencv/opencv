@@ -51,7 +51,7 @@
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4244 4510 4512 4610 )
+#pragma warning( disable: 4244 4510 4610 )
 #endif
 
 #ifdef __GNUC__
@@ -83,7 +83,7 @@ extern "C" {
 #endif
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( default: 4244 4510 4512 4610 )
+#pragma warning( default: 4244 4510 4610 )
 #endif
 
 #ifdef NDEBUG

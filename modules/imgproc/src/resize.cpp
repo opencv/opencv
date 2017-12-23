@@ -443,104 +443,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
     }
 }
 template <>
-void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 3>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
-{
-    int i = 0;
-    ufixedpoint16 srccn[3] = { src[0], src[1], src[2] };
-    v_uint16x8 v_srccn0 = v_setall_u16(((uint16_t*)srccn)[0]);
-    v_uint16x8 v_srccn1 = v_setall_u16(((uint16_t*)srccn)[1]);
-    v_uint16x8 v_srccn2 = v_setall_u16(((uint16_t*)srccn)[2]);
-    for (; i < dst_min - 7; i += 8, m += 16, dst += 24) // Points that fall left from src image so became equal to leftmost src point
-    {
-        v_store_interleave((uint16_t*)dst, v_srccn0, v_srccn1, v_srccn2);
-    }
-    for (; i < dst_min; i++, m += 2)
-    {
-        *(dst++) = srccn[0];
-        *(dst++) = srccn[1];
-        *(dst++) = srccn[2];
-    }
-    for (; i < dst_max - 7 && ofst[i + 7] + 15 <= ofst[dst_width - 1]; i += 8, m += 16, dst += 24)
-    {
-        v_uint8x16 v_src0_c1, v_src0_c2, v_src0_c3;
-        v_load_deinterleave(src + 3 * ofst[i    ], v_src0_c1, v_src0_c2, v_src0_c3);
-        v_uint8x16 v_src1_c1, v_src1_c2, v_src1_c3;
-        v_load_deinterleave(src + 3 * ofst[i + 1], v_src1_c1, v_src1_c2, v_src1_c3);
-        v_uint8x16 v_src2_c1, v_src2_c2, v_src2_c3;
-        v_load_deinterleave(src + 3 * ofst[i + 2], v_src2_c1, v_src2_c2, v_src2_c3);
-        v_uint8x16 v_src3_c1, v_src3_c2, v_src3_c3;
-        v_load_deinterleave(src + 3 * ofst[i + 3], v_src3_c1, v_src3_c2, v_src3_c3);
-
-        v_uint16x8 v_tmp0, v_tmp1, v_tmp2;
-        v_uint16x8 v_src0123_c1, v_src0123_c2, v_src0123_c3;
-        v_zip(v_reinterpret_as_u16(v_src0_c1), v_reinterpret_as_u16(v_src2_c1), v_tmp0, v_tmp1);
-        v_zip(v_reinterpret_as_u16(v_src1_c1), v_reinterpret_as_u16(v_src3_c1), v_tmp1, v_tmp2);
-        v_zip(v_tmp0, v_tmp1, v_src0123_c1, v_tmp2);
-        v_zip(v_reinterpret_as_u16(v_src0_c2), v_reinterpret_as_u16(v_src2_c2), v_tmp0, v_tmp1);
-        v_zip(v_reinterpret_as_u16(v_src1_c2), v_reinterpret_as_u16(v_src3_c2), v_tmp1, v_tmp2);
-        v_zip(v_tmp0, v_tmp1, v_src0123_c2, v_tmp2);
-        v_zip(v_reinterpret_as_u16(v_src0_c3), v_reinterpret_as_u16(v_src2_c3), v_tmp0, v_tmp1);
-        v_zip(v_reinterpret_as_u16(v_src1_c3), v_reinterpret_as_u16(v_src3_c3), v_tmp1, v_tmp2);
-        v_zip(v_tmp0, v_tmp1, v_src0123_c3, v_tmp2);
-
-        v_load_deinterleave(src + 3 * ofst[i + 4], v_src0_c1, v_src0_c2, v_src0_c3);
-        v_load_deinterleave(src + 3 * ofst[i + 5], v_src1_c1, v_src1_c2, v_src1_c3);
-        v_load_deinterleave(src + 3 * ofst[i + 6], v_src2_c1, v_src2_c2, v_src2_c3);
-        v_load_deinterleave(src + 3 * ofst[i + 7], v_src3_c1, v_src3_c2, v_src3_c3);
-
-        v_uint16x8 v_src4567_c1, v_src4567_c2, v_src4567_c3;
-        v_zip(v_reinterpret_as_u16(v_src0_c1), v_reinterpret_as_u16(v_src2_c1), v_tmp0, v_tmp1);
-        v_zip(v_reinterpret_as_u16(v_src1_c1), v_reinterpret_as_u16(v_src3_c1), v_tmp1, v_tmp2);
-        v_zip(v_tmp0, v_tmp1, v_src4567_c1, v_tmp2);
-        v_zip(v_reinterpret_as_u16(v_src0_c2), v_reinterpret_as_u16(v_src2_c2), v_tmp0, v_tmp1);
-        v_zip(v_reinterpret_as_u16(v_src1_c2), v_reinterpret_as_u16(v_src3_c2), v_tmp1, v_tmp2);
-        v_zip(v_tmp0, v_tmp1, v_src4567_c2, v_tmp2);
-        v_zip(v_reinterpret_as_u16(v_src0_c3), v_reinterpret_as_u16(v_src2_c3), v_tmp0, v_tmp1);
-        v_zip(v_reinterpret_as_u16(v_src1_c3), v_reinterpret_as_u16(v_src3_c3), v_tmp1, v_tmp2);
-        v_zip(v_tmp0, v_tmp1, v_src4567_c3, v_tmp2);
-
-        v_expand(v_reinterpret_as_u8(v_combine_low(v_src0123_c1, v_src4567_c1)),
-            v_src0123_c1, v_src4567_c1
-        );
-        v_expand(v_reinterpret_as_u8(v_combine_low(v_src0123_c2, v_src4567_c2)),
-            v_src0123_c2, v_src4567_c2
-        );
-        v_expand(v_reinterpret_as_u8(v_combine_low(v_src0123_c3, v_src4567_c3)),
-            v_src0123_c3, v_src4567_c3
-        );
-        v_int16x8 v_mul0123 = v_load((int16_t*)m);
-        v_int16x8 v_mul4567 = v_load((int16_t*)m+8);
-        v_uint32x4 v_res0123_c1 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0123_c1), v_mul0123));
-        v_uint32x4 v_res0123_c2 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0123_c2), v_mul0123));
-        v_uint32x4 v_res0123_c3 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0123_c3), v_mul0123));
-        v_uint32x4 v_res4567_c1 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src4567_c1), v_mul4567));
-        v_uint32x4 v_res4567_c2 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src4567_c2), v_mul4567));
-        v_uint32x4 v_res4567_c3 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src4567_c3), v_mul4567));
-
-        v_store_interleave((uint16_t*)dst , v_pack(v_res0123_c1, v_res4567_c1), v_pack(v_res0123_c2, v_res4567_c2), v_pack(v_res0123_c3, v_res4567_c3));
-    }
-    for (; i < dst_max; i += 1, m += 2)
-    {
-        uint8_t* px = src + 3 * ofst[i];
-        *(dst++) = m[0] * px[0] + m[1] * px[3];
-        *(dst++) = m[0] * px[1] + m[1] * px[4];
-        *(dst++) = m[0] * px[2] + m[1] * px[5];
-    }
-    srccn[0] = (src + 3 * ofst[dst_width - 1])[0]; v_srccn0 = v_setall_u16(((uint16_t*)srccn)[0]);
-    srccn[1] = (src + 3 * ofst[dst_width - 1])[1]; v_srccn1 = v_setall_u16(((uint16_t*)srccn)[1]);
-    srccn[2] = (src + 3 * ofst[dst_width - 1])[2]; v_srccn2 = v_setall_u16(((uint16_t*)srccn)[2]);
-    for (; i < dst_width - 7; i += 8, dst += 24) // Points that fall left from src image so became equal to leftmost src point
-    {
-        v_store_interleave((uint16_t*)dst, v_srccn0, v_srccn1, v_srccn2);
-    }
-    for (; i < dst_width; i++)
-    {
-        *(dst++) = srccn[0];
-        *(dst++) = srccn[1];
-        *(dst++) = srccn[2];
-    }
-}
-template <>
 void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
 {
     int i = 0;
@@ -4152,6 +4054,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_x = (double)dsize.width/ssize.width;
         inv_scale_y = (double)dsize.height/ssize.height;
     }
+
+    if (interpolation == INTER_LINEAR_EXACT && (_src.depth() == CV_32F || _src.depth() == CV_64F))
+        interpolation = INTER_LINEAR; // If depth isn't supported fallback to generic resize
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))

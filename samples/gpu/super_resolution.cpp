@@ -55,7 +55,7 @@ static Ptr<cv::superres::DenseOpticalFlowExt> createOptFlow(const string& name, 
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
-        "{ v video      |           | Input video }"
+        "{ v video      |           | Input video (mandatory)}"
         "{ o output     |           | Output video }"
         "{ s scale      | 4         | Scale factor }"
         "{ i iterations | 180       | Iteration count }"
@@ -65,14 +65,14 @@ int main(int argc, const char* argv[])
         "{ h help       | false     | Print help message }"
     );
 
-    if (cmd.get<bool>("help"))
+    const string inputVideoName = cmd.get<string>("video");
+    if (cmd.get<bool>("help") || inputVideoName.empty())
     {
         cout << "This sample demonstrates Super Resolution algorithms for video sequence" << endl;
         cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
-    const string inputVideoName = cmd.get<string>("video");
     const string outputVideoName = cmd.get<string>("output");
     const int scale = cmd.get<int>("scale");
     const int iterations = cmd.get<int>("iterations");
