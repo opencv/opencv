@@ -964,7 +964,7 @@ CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,
 
 /* Hough transformation using set of points */
 CVAPI(void) cvHoughUsingSetOfPoints( const CvHoughPoints *points,
-                                     const CvHoughParam rho_*param, const CvHoughParam *tha_param,
+                                     const CvHoughParam *rho_param, const CvHoughParam *tha_param,
                                      CvHoughData *data );
 
 /** @brief Fits a line into set of 2d or 3d points in a robust way (M-estimator technique)
