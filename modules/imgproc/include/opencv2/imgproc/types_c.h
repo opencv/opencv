@@ -614,6 +614,7 @@ enum
     CV_HOUGH_GRADIENT =3
 };
 
+
 /* Fast search data structures  */
 struct CvFeatureTree;
 struct CvLSH;
