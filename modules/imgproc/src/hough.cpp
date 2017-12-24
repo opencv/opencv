@@ -49,11 +49,11 @@ namespace cv
 {
 
 // Classical Hough Transform
-struct LinePolar
-{
-    float rho;
-    float angle;
-};
+//struct LinePolar
+//{
+//    float rho;
+//    float angle;
+//};
 
 
 struct hough_cmp_gt
@@ -1537,7 +1537,7 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
                   double min_theta, double max_theta, double theta_step,
                   short *plane )
 {
-    double rad = 0,0f, rho = 0.0f;
+    double rad = 0.0f, rho = 0.0f;
     int rho_index = 0, theta_index = 0;
     int deg_min=CONVERT_RAD_TO_DEG(min_theta);
     int deg_max=CONVERT_RAD_TO_DEG(max_theta);
@@ -1588,7 +1588,7 @@ static void SelectHoughPeak( const short *plane,
 
             if( votes > max_votes )
             {
-                hough_polar[cnt].rad = CONVERT_TO_DEG_RAD(deg) * theta_step + min_theta;
+                hough_polar[cnt].angle = CONVERT_DEG_TO_RAD(deg) * theta_step + min_theta;
                 hough_polar[cnt].rho = (double)rho * rho_step + min_rho;
                 max_votes = votes;
                 cnt++ ;
@@ -1602,10 +1602,10 @@ static void SelectHoughPeak( const short *plane,
     }
 }
 
-void HoughLinesUsingSetOfPoints( const Point2f point[], int point_cnt,
+void HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                                  double min_rho, double max_rho, double rho_step,
                                  double min_theta, double max_theta, double theta_step,
-                                 long polar_cnt, LinePolar hough_polar[] );
+                                 int polar_cnt, LinePolar hough_polar[] )
 {
     if( polar_cnt > 0)
     {

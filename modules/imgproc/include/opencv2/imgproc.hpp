@@ -2150,6 +2150,12 @@ Must fall between 0 and max_theta.
 @param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
 Must fall between min_theta and CV_PI.
  */
+// Classical Hough Transform
+struct LinePolar
+{
+    float rho;
+    float angle;
+};
 
 CV_EXPORTS_W void HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                                               double min_rho, double max_rho, double rho_step,
