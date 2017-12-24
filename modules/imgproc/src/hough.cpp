@@ -49,11 +49,11 @@ namespace cv
 {
 
 // Classical Hough Transform
-//struct LinePolar
-//{
-//    float rho;
-//    float angle;
-//};
+struct LinePolar
+{
+    float rho;
+    float angle;
+};
 
 
 struct hough_cmp_gt
@@ -1573,7 +1573,7 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
 static void SelectHoughPeak( const short *plane,
                              double min_rho, double max_rho, double rho_step,
                              double min_theta, double max_theta, double theta_step,
-                             int polar_cnt, LinePolar hough_polar[] )
+                             int polar_cnt, HoughLinePolar hough_polar[] )
 {
     short votes = 0, max_votes = 0;
     long cnt = 0;
@@ -1588,8 +1588,9 @@ static void SelectHoughPeak( const short *plane,
 
             if( votes > max_votes )
             {
-                hough_polar[cnt].angle = CONVERT_DEG_TO_RAD(deg) * theta_step + min_theta;
-                hough_polar[cnt].rho = (double)rho * rho_step + min_rho;
+                hough_polar[cnt].setVotes(votes);
+                hough_polar[cnt].setAngle(CONVERT_DEG_TO_RAD(deg) * theta_step + min_theta);
+                hough_polar[cnt].setRho((double)rho * rho_step + min_rho);
                 max_votes = votes;
                 cnt++ ;
                 if( cnt >= polar_cnt ){ cnt = 0; }
@@ -1605,15 +1606,16 @@ static void SelectHoughPeak( const short *plane,
 void HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                                  double min_rho, double max_rho, double rho_step,
                                  double min_theta, double max_theta, double theta_step,
-                                 int polar_cnt, LinePolar hough_polar[] )
+                                 int polar_cnt, HoughLinePolar hough_polar[] )
 {
     if( polar_cnt > 0)
     {
         // Init output data
         for( int cnt = 0; cnt < polar_cnt; cnt++ )
         {
-            hough_polar[cnt].rho = 0.0f;
-            hough_polar[cnt].angle = 0.0f;
+            hough_polar[cnt].setVotes(0);
+            hough_polar[cnt].setRho(0.0f);
+            hough_polar[cnt].setAngle(0.0f);
         }
 
         if( ((max_rho - min_rho) > 0)     &&
