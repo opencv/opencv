@@ -2119,6 +2119,43 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
                                double param1 = 100, double param2 = 100,
                                int minRadius = 0, int maxRadius = 0 );
 
+
+/** TODO Add discription...@example houghlines.cpp
+An example using the Hough line detector
+![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
+*/
+
+/** @brief Finds lines in a binary image using the standard Hough transform.
+
+The function implements the standard or standard multi-scale Hough transform algorithm for line
+detection. See <http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm> for a good explanation of Hough
+transform.
+
+@param image 8-bit, single-channel binary source image. The image may be modified by the function.
+@param lines Output vector of lines. Each line is represented by a two-element vector
+\f$(\rho, \theta)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+the image). \f$\theta\f$ is the line rotation angle in radians (
+\f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
+@param rho Distance resolution of the accumulator in pixels.
+@param theta Angle resolution of the accumulator in radians.
+@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+votes ( \f$>\texttt{threshold}\f$ ).
+@param srn For the multi-scale Hough transform, it is a divisor for the distance resolution rho .
+The coarse accumulator distance resolution is rho and the accurate accumulator resolution is
+rho/srn . If both srn=0 and stn=0 , the classical Hough transform is used. Otherwise, both these
+parameters should be positive.
+@param stn For the multi-scale Hough transform, it is a divisor for the distance resolution theta.
+@param min_theta For standard and multi-scale Hough transform, minimum angle to check for lines.
+Must fall between 0 and max_theta.
+@param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
+Must fall between min_theta and CV_PI.
+ */
+
+CV_EXPORTS_W void HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
+                                              double min_rho, double max_rho, double rho_step,
+                                              double min_theta, double max_theta, double theta_step,
+                                              int polar_cnt, LinePolar hough_polar[] );
+
 //! @} imgproc_feature
 
 //! @addtogroup imgproc_filter

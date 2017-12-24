@@ -1529,6 +1529,125 @@ void HoughCircles( InputArray _image, OutputArray _circles,
     HoughCircles(_image, _circles, method, dp, minDist, param1, param2, minRadius, maxRadius, -1, 3);
 }
 
+#define CONVERT_RAD_TO_DEG(rad)  ((double)rad * 180.0f / CV_PI)
+#define CONVERT_DEG_TO_RAD(deg)  ((double)deg * CV_PI / 180.0f)
+static void
+CreateHoughPlane( int point_cnt, const Point2f point[],
+                  double min_rho, double max_rho, double rho_step,
+                  double min_theta, double max_theta, double theta_step,
+                  short *plane )
+{
+    double rad = 0,0f, rho = 0.0f;
+    int rho_index = 0, theta_index = 0;
+    int deg_min=CONVERT_RAD_TO_DEG(min_theta);
+    int deg_max=CONVERT_RAD_TO_DEG(max_theta);
+    int deg_step=CONVERT_RAD_TO_DEG(theta_step);
+
+    int rho_size = (max_rho - min_rho) / rho_step;
+    int theta_size = (int)((deg_max - deg_min) / deg_step);
+
+    for( int cnt = 0; cnt < point_cnt; cnt++ )
+    {
+        for( int deg = deg_min; deg < deg_max; deg+=deg_step )
+        {
+            // Calc rho
+            rad = CONVERT_DEG_TO_RAD(deg);
+            rho = point[cnt].x * cos(rad) + point[cnt].y * sin(rad);
+            // Calc index
+            rho_index = (int)((rho - min_rho) / rho_step);
+            theta_index = (int)(((double)deg - (double)deg_min) / (double)deg_step);
+
+            if( ((0 <= rho_index)   && (rho_index < rho_size)) &&
+                ((0 <= theta_index) && (theta_index < theta_size)) )
+            {
+                *(plane + (rho_index * theta_size) + theta_index) += 1;
+            }
+            else
+            {
+                /* Do nothing... */
+            }
+        }
+    }
+}
+
+static void SelectHoughPeak( const short *plane,
+                             double min_rho, double max_rho, double rho_step,
+                             double min_theta, double max_theta, double theta_step,
+                             int polar_cnt, LinePolar hough_polar[] )
+{
+    short votes = 0, max_votes = 0;
+    long cnt = 0;
+    int rho_size = (max_rho - min_rho) / rho_step;
+    int theta_size = (int)((CONVERT_RAD_TO_DEG(max_theta) - CONVERT_RAD_TO_DEG(min_theta)) / CONVERT_RAD_TO_DEG(theta_step));
+
+    for( int rho = 0; rho < rho_size; rho++ )
+    {
+        for( int deg = 0; deg < theta_size; deg++ )
+        {
+            votes = *(plane + (rho * theta_size) + deg);
+
+            if( votes > max_votes )
+            {
+                hough_polar[cnt].rad = CONVERT_TO_DEG_RAD(deg) * theta_step + min_theta;
+                hough_polar[cnt].rho = (double)rho * rho_step + min_rho;
+                max_votes = votes;
+                cnt++ ;
+                if( cnt >= polar_cnt ){ cnt = 0; }
+            }
+            else
+            {
+                /* Do nothing... */
+            }
+        }
+    }
+}
+
+void HoughLinesUsingSetOfPoints( const Point2f point[], int point_cnt,
+                                 double min_rho, double max_rho, double rho_step,
+                                 double min_theta, double max_theta, double theta_step,
+                                 long polar_cnt, LinePolar hough_polar[] );
+{
+    if( polar_cnt > 0)
+    {
+        // Init output data
+        for( int cnt = 0; cnt < polar_cnt; cnt++ )
+        {
+            hough_polar[cnt].rho = 0.0f;
+            hough_polar[cnt].angle = 0.0f;
+        }
+
+        if( ((max_rho - min_rho) > 0)     &&
+            ((max_theta - min_theta) > 0) &&
+            ((rho_step > 0))              &&
+            ((theta_step > 0)) )
+        {
+            int rho_size = (max_rho - min_rho) / rho_step;
+            int theta_size = (int)((CONVERT_RAD_TO_DEG(max_theta) - CONVERT_RAD_TO_DEG(min_theta)) / CONVERT_RAD_TO_DEG(theta_step));
+
+            short *plane = (short*)malloc(sizeof(short) * rho_size * theta_size);
+
+            CreateHoughPlane( point_cnt, point,
+                              min_rho, max_rho, rho_step,
+                              min_theta, max_theta, theta_step,
+                              plane );
+
+            SelectHoughPeak( plane,
+                             min_rho, max_rho, rho_step,
+                             min_theta, max_theta, theta_step,
+                             polar_cnt, hough_polar );
+
+            free(plane);
+        }
+        else
+        {
+            CV_Error( CV_StsBadArg, "max must be greater than min, and step must be greater than 0" );
+        }
+    }
+    else
+    {
+        CV_Error( CV_StsBadArg, "peak_cnt must be greater than 0" );
+    }
+}
 } // \namespace cv
 
 
@@ -1685,126 +1804,6 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
     cv::HoughCircles(src, circles_mat, method, dp, min_dist, param1, param2, min_radius, max_radius, circles_max, 3);
     cvSeqPushMulti(circles, circles_mat.data, (int)circles_mat.total());
     return circles;
-}
-
-static void
-CreateHoughPlane( const CvHoughPoints *points,
-                  const CvHoughParam *rho_param, const CvHoughParam *tha_param,
-                  short *plane )
-{
-#define CONVERT_DEG_TO_RAD(deg)  (deg * CV_PI / 180.0f)
-
-    CvPoint *point = points->p_point;
-    long point_cnt = points->point_cnt;
-    double rad = 0.0f, rho = 0.0f;
-    int rho_index = 0, tha_index = 0;
-
-    int rho_size = (rho_param->max - rho_param->min) / rho_param->step;
-    int tha_size = (tha_param->max - tha_param->min) / tha_param->step;
-
-    for (long cnt = 0; cnt < point_cnt; cnt++)
-    {
-        for (int tha = tha_param->min; tha < tha_param->max; tha+=tha_param->step)
-        {
-            rad = CONVERT_DEG_TO_RAD(tha);
-            rho = point->x * cos(rad) + point->y * sin(rad);
-            rho_index = (int)((rho - (double)rho_param->min) / (double)rho_param->step);
-            tha_index = (int)(((double)tha - (double)tha_param->min) / (double)tha_param->step);
-
-            if (((0 <= rho_index) && (rho_index < rho_size)) &&
-                ((0 <= tha_index) && (tha_index < tha_size)))
-            {
-                *(plane + (rho_index * tha_size) + tha_index) += 1;
-            }
-            else
-            {
-                /* Do nothing... */
-            }
-        }
-        point++;
-    }
-}
-
-static void
-SelectHoughPeak( const short *plane,
-                 int rho_size, int tha_size,
-                 CvHoughData *data )
-{
-    int rho, tha;
-    short votes = 0, max_votes = 0;
-    long  cnt = 0;
-    CvHoughPeak *peak_addr = data->p_peak;
-
-    for(rho = 0; rho < rho_size; rho++)
-    {
-        for(tha= 0; tha < tha_size; tha++)
-        {
-            votes = *(plane + (rho * tha_size) + tha);
-
-            if(votes > max_votes)
-            {
-                (peak_addr + cnt)->votes   = votes;
-                (peak_addr + cnt)->tha_deg = tha;
-                (peak_addr + cnt)->rho     = rho;
-                max_votes = votes;
-                cnt++;
-                if (cnt >= data->peak_cnt){ cnt = 0; }
-            }
-            else
-            {
-                /* Do nothing... */
-            }
-        }
-    }
-}
-
-static void
-InitHoughPeak( CvHoughData *data )
-{
-    CvHoughPeak *peak = data->p_peak;
-    for(long cnt = 0; cnt < data->peak_cnt; cnt++)
-    {
-        peak->votes = 0;
-        peak->tha_deg = 0;
-        peak->rho = 0;
-        peak++;
-    }
-}
-
-CV_IMPL void
-cvHoughUsingSetOfPoints( const CvHoughPoints *points,
-                         const CvHoughParam *rho_param, const CvHoughParam *tha_param,
-                         CvHoughData *data )
-{
-    if ( data->peak_cnt > 0)
-    {
-        InitHoughPeak(data);
-
-        if ( ((rho_param->max - rho_param->min) > 0) &&
-             ((tha_param->max - tha_param->min) > 0) &&
-             ((rho_param->step > 0))                 &&
-             ((tha_param->step > 0)) )
-        {
-            int rho_size = (rho_param->max - rho_param->min) / rho_param->step;
-            int tha_size = (tha_param->max - tha_param->min) / tha_param->step;
-
-            short *plane = (short*)malloc(sizeof(short) * rho_size * tha_size);
-
-            CreateHoughPlane(points, rho_param, tha_param, plane);
-
-            SelectHoughPeak(plane, rho_size, tha_size, data);
-
-            free(plane);
-        }
-        else
-        {
-            CV_Error( CV_StsBadArg, "max must be greater than min, and step must be greater than 0" );
-        }
-    }
-    else
-    {
-        CV_Error( CV_StsBadArg, "peak_cnt must be greater than 0" );
-    }
 }
 
 /* End of file. */

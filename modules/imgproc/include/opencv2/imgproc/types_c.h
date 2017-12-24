@@ -614,32 +614,6 @@ enum
     CV_HOUGH_GRADIENT =3
 };
 
-/* Hough transform param */
-typedef struct {
-    int min;
-    int max;
-    int step;
-} CvHoughParam;
-
-/* Hough transform input */
-typedef struct {
-    CvPoint *p_point;
-    long point_cnt;
-} CvHoughPoints;
-
-/* Hough peak */
-typedef struct {
-    int votes;
-    int tha_deg;
-    int rho;
-} CvHoughPeak;
-
-typedef struct {
-    CvHoughPeak *p_peak;
-    long peak_cnt;
-} CvHoughData;
-
-
 /* Fast search data structures  */
 struct CvFeatureTree;
 struct CvLSH;
