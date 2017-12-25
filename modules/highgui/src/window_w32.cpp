@@ -426,7 +426,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
 CvRect cvGetWindowRect_W32(const char* name)
 {
     CvRect result = cvRect(-1, -1, -1, -1);
-    	
+
     CV_FUNCNAME( "cvGetWindowRect_W32" );
 
     __BEGIN__;
