@@ -161,6 +161,50 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
+    case CV_WND_PROP_RO_WIDTH:
+        #if defined (HAVE_QT)
+            return cvGetWindowRect_QT(name).width;
+        #elif defined(HAVE_WIN32UI)
+            return cvGetWindowRect_W32(name).width;
+        #elif defined (HAVE_GTK)
+            return cvGetWindowRect_GTK(name).width;
+        #else
+            return -1;
+        #endif
+    break;
+    case CV_WND_PROP_RO_HEIGHT:
+        #if defined (HAVE_QT)
+            return cvGetWindowRect_QT(name).height;
+        #elif defined(HAVE_WIN32UI)
+            return cvGetWindowRect_W32(name).height;
+        #elif defined (HAVE_GTK)
+            return cvGetWindowRect_GTK(name).height;
+        #else
+            return -1;
+        #endif
+    break;
+    case CV_WND_PROP_RO_XPOS:
+        #if defined (HAVE_QT)
+            return cvGetWindowRect_QT(name).x;
+        #elif defined(HAVE_WIN32UI)
+            return cvGetWindowRect_W32(name).x;
+        #elif defined (HAVE_GTK)
+            return cvGetWindowRect_GTK(name).x;
+        #else
+            return -1;
+        #endif
+    break;
+    case CV_WND_PROP_RO_YPOS:
+        #if defined (HAVE_QT)
+            return cvGetWindowRect_QT(name).y;
+        #elif defined(HAVE_WIN32UI)
+            return cvGetWindowRect_W32(name).y;
+        #elif defined (HAVE_GTK)
+            return cvGetWindowRect_GTK(name).y;
+        #else
+            return -1;
+        #endif
+    break;
     default:
         return -1;
     }
