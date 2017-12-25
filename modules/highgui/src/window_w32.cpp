@@ -423,9 +423,9 @@ icvSaveWindowPos( const char* name, CvRect rect )
     RegCloseKey(hkey);
 }
 
-cvRect cvGetWindowRect_W32(const char* name)
+CvRect cvGetWindowRect_W32(const char* name)
 {
-    cvRect result = cvRect(-1, -1, -1, -1);
+    CvRect result = cvRect(-1, -1, -1, -1);
     	
     CV_FUNCNAME( "cvGetWindowRect_W32" );
 
