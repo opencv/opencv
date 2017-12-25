@@ -166,7 +166,6 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-
 double cvGetPropWindow_QT(const char* name)
 {
     if (!guiMainThread)
@@ -220,7 +219,7 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
         Q_ARG(double, prop_value));
 }
 
-cvRect cvGetWindowRect_QT(const char* name)
+CvRect cvGetWindowRect_QT(const char* name)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -230,7 +229,7 @@ cvRect cvGetWindowRect_QT(const char* name)
     QMetaObject::invokeMethod(guiMainThread,
         "getWindowRect",
         autoBlockingConnection(),
-        Q_RETURN_ARG(cvRect, result),
+        Q_RETURN_ARG(CvRect, result),
         Q_ARG(QString, QString(name)));
 
     return result;
@@ -961,7 +960,7 @@ void GuiReceiver::setWindowTitle(QString name, QString title)
     w->setWindowTitle(title);
 }
 
-cvRect GuiReceiver::getWindowRect(QString name)
+CvRect GuiReceiver::getWindowRect(QString name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
