@@ -303,6 +303,14 @@ OCL_TEST(Reproducibility_ResNet50, Accuracy)
 
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
     normAssert(ref, out);
+
+    UMat out_umat;
+    net.forward(out_umat);
+    normAssert(ref, out_umat, "out_umat");
+
+    std::vector<UMat> out_umats;
+    net.forward(out_umats);
+    normAssert(ref, out_umats[0], "out_umat_vector");
 }
 
 TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
