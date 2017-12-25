@@ -705,6 +705,21 @@ static CvWindow* icvWindowByWidget( GtkWidget* widget )
     return NULL;
 }
 
+cvRect cvGetWindowRect_GTK(const char* name)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error( CV_StsNullPtr, "NULL window" );
+
+		gint wx, wy;
+		gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
+    cvRect result = cvRect(wx, wy, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
+    return result;
+}
+
 double cvGetModeWindow_GTK(const char* name)//YV
 {
     CV_Assert(name && "NULL name string");
