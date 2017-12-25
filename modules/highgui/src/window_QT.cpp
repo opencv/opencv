@@ -220,6 +220,21 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
         Q_ARG(double, prop_value));
 }
 
+cvRect cvGetWindowRect_QT(const char* name)
+{
+    if (!guiMainThread)
+        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+    double result = -1;
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "getWindowRect",
+        autoBlockingConnection(),
+        Q_RETURN_ARG(cvRect, result),
+        Q_ARG(QString, QString(name)));
+
+    return result;
+}
 
 double cvGetModeWindow_QT(const char* name)
 {
@@ -946,6 +961,15 @@ void GuiReceiver::setWindowTitle(QString name, QString title)
     w->setWindowTitle(title);
 }
 
+cvRect GuiReceiver::getWindowRect(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (!w)
+        return -1;
+
+    return cvRect(w->pos().x(), w->pos().y(), w->size().width(), w->size().height());
+}
 
 double GuiReceiver::isFullScreen(QString name)
 {
