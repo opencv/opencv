@@ -112,6 +112,10 @@ enum
     CV_WND_PROP_ASPECTRATIO= 2, //to change/get window's aspectratio property
     CV_WND_PROP_OPENGL     = 3, //to change/get window's opengl support
     CV_WND_PROP_VISIBLE    = 4,
+    CV_WND_PROP_RO_WIDTH   = 5, //to get pixel width of window
+    CV_WND_PROP_RO_HEIGHT  = 6, //to get pixel height of window
+    CV_WND_PROP_RO_XPOS    = 7, //to get absolute X position of window
+    CV_WND_PROP_RO_YPOS    = 8  //to get absolute Y position of window
 
     //These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
     CV_WINDOW_NORMAL       = 0x00000000, //the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
