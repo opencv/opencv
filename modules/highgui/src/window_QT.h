@@ -99,7 +99,6 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
         shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
     };
-
 //end enum
 
 class CvWindow;
@@ -133,7 +132,7 @@ public slots:
     void displayStatusBar( QString name, QString text, int delayms );
     void timeOut();
     void toggleFullScreen(QString name, double flags );
-    cvRect getWindowRect(QString name);
+    CvRect getWindowRect(QString name);
     double isFullScreen(QString name);
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
