@@ -415,16 +415,14 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
 #endif
 
-namespace hal
+static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
-inline int FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
-{
-    if (type != FastFeatureDetector::TYPE_9_16 || threshold > 20)
+    if (threshold > 20)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     cv::Mat scores(src.size(), src.type());
 
-    int error = cv_hal_FAST_9_16(src.data, src.step, scores.data, scores.step, src.cols, src.rows);
+    int error = cv_hal_FAST_dense(src.data, src.step, scores.data, scores.step, src.cols, src.rows, type);
 
     if (error != CV_HAL_ERROR_OK)
         return error;
@@ -451,7 +449,7 @@ inline int FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, b
 
     int ofs = 3;
 
-    int stride = suppressedScores.step;
+    int stride = (int)suppressedScores.step;
     const uint8_t* pscore = suppressedScores.data;
 
     keypoints.clear();
@@ -473,7 +471,6 @@ inline int FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, b
 
     return CV_HAL_ERROR_OK;
 }
-}
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
@@ -483,7 +480,11 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
 
     cv::Mat img = _img.getMat();
-    CALL_HAL(fast, hal::FAST, img, keypoints, threshold, nonmax_suppression, type);
+    CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
+
+    size_t keypoints_count;
+    CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
+             (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
 
     CV_OVX_RUN(true,
                openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
