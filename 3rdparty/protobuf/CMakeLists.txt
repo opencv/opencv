@@ -20,6 +20,7 @@ else()
                                        -Wunused-parameter -Wunused-local-typedefs -Wsign-compare -Wsign-promo
                                        -Wundef -Wtautological-undefined-compare -Wignored-qualifiers -Wextra
                                        -Wunused-function -Wunused-const-variable -Wshorten-64-to-32 -Wno-invalid-offsetof
+                                       -Wenum-compare-switch
   )
 endif()
 if(CV_ICC)

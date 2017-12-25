@@ -3577,7 +3577,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
 
     IppDataType           ippDataType = ippiGetDataType(depth);
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
-    if(ippInter < 0)
+    if((int)ippInter < 0)
         return false;
 
     // Resize which doesn't match OpenCV exactly

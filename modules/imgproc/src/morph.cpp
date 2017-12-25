@@ -1181,7 +1181,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
 
     CV_UNUSED(isSubmatrix);
 
-    if(morphType < 0)
+    if((int)morphType < 0)
         return false;
 
     if(iterations > 1 && morphType != iwiMorphErode && morphType != iwiMorphDilate)
