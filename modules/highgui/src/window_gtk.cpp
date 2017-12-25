@@ -714,9 +714,13 @@ CvRect cvGetWindowRect_GTK(const char* name)
     if (!window)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
-		gint wx, wy;
-		gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
+    gint wx, wy;
+    gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
+#if defined (GTK_VERSION3)
     CvRect result = cvRect(wx, wy, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
+#else
+    CvRect result = cvRect(wx, wy, window->widget->allocation.width, window->widget->allocation.height);
+#endif // GTK_VERSION3
     return result;
 }
 
