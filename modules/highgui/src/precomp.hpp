@@ -94,6 +94,9 @@ void cvSetModeWindow_CARBON(const char* name, double prop_value);
 void cvSetModeWindow_COCOA(const char* name, double prop_value);
 void cvSetModeWindow_WinRT(const char* name, double prop_value);
 
+double cvGetWindowRect_W32(const char* name);
+double cvGetWindowRect_GTK(const char* name);
+
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
 double cvGetModeWindow_CARBON(const char* name);
@@ -111,6 +114,7 @@ double cvGetOpenGlProp_GTK(const char* name);
 
 //for QT
 #if defined (HAVE_QT)
+double cvGetWindowRect_QT(const char* name);
 double cvGetModeWindow_QT(const char* name);
 void cvSetModeWindow_QT(const char* name, double prop_value);
 
