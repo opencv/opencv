@@ -705,7 +705,7 @@ static CvWindow* icvWindowByWidget( GtkWidget* widget )
     return NULL;
 }
 
-cvRect cvGetWindowRect_GTK(const char* name)
+CvRect cvGetWindowRect_GTK(const char* name)
 {
     CV_Assert(name && "NULL name string");
 
@@ -716,7 +716,7 @@ cvRect cvGetWindowRect_GTK(const char* name)
 
 		gint wx, wy;
 		gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
-    cvRect result = cvRect(wx, wy, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
+    CvRect result = cvRect(wx, wy, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
     return result;
 }
 
