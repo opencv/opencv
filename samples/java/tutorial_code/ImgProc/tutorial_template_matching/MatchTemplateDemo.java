@@ -45,7 +45,13 @@ class MatchTemplateDemoRun implements ChangeListener{
             mask = Imgcodecs.imread( args[2], Imgcodecs.IMREAD_COLOR );
         }
 
-        if(img.empty() || templ.empty() || (use_mask && mask.empty()))
+        // || checks both LHS and RHS, even if LHS is true
+        // if LHS is true then | won't check for the RHS
+        
+        // && checks for both LHS and RHS even if LHS is false
+        // & checks RHS only if LHS is true
+        
+        if(img.empty() | templ.empty() | (use_mask & mask.empty()))
         {
             System.out.println("Can't read one of the images");
             System.exit(-1);
@@ -76,9 +82,15 @@ class MatchTemplateDemoRun implements ChangeListener{
 
         //! [match_template]
         /// Do the Matching and Normalize
-        Boolean method_accepts_mask = (Imgproc.TM_SQDIFF == match_method ||
+        
+        // || checks both LHS and RHS, even if LHS is true
+        // if LHS is true then | won't check for the RHS
+        Boolean method_accepts_mask = (Imgproc.TM_SQDIFF == match_method |
                 match_method == Imgproc.TM_CCORR_NORMED);
-        if (use_mask && method_accepts_mask)
+        
+        // && checks for both LHS and RHS even if LHS is false
+        // & checks RHS only if LHS is true
+        if (use_mask & method_accepts_mask)
         { Imgproc.matchTemplate( img, templ, result, match_method, mask); }
         else
         { Imgproc.matchTemplate( img, templ, result, match_method); }
@@ -99,7 +111,10 @@ class MatchTemplateDemoRun implements ChangeListener{
         //! [match_loc]
         /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values.
         //  For all the other methods, the higher the better
-        if( match_method  == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED )
+        
+        // || checks both LHS and RHS, even if LHS is true
+        // if LHS is true then | won't check for the RHS
+        if( match_method  == Imgproc.TM_SQDIFF | match_method == Imgproc.TM_SQDIFF_NORMED )
         { matchLoc = mmr.minLoc; }
         else
         { matchLoc = mmr.maxLoc; }
