@@ -314,6 +314,7 @@ TEST(Layer_Test_Fused_Concat, Accuracy)
     //
 
     testLayerUsingCaffeModels("layer_concat_optim", DNN_TARGET_CPU, true, false);
+    testLayerUsingCaffeModels("layer_concat_shared_input", DNN_TARGET_CPU, true, false);
 }
 
 TEST(Layer_Test_Eltwise, Accuracy)
