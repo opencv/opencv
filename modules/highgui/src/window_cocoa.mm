@@ -606,6 +606,32 @@ CV_IMPL int cvWaitKey (int maxWait)
     return returnCode;
 }
 
+CvRect cvGetWindowRect_COCOA( const char* name )
+{
+    CvRect result = cvRect(-1, -1, -1, -1);
+    CVWindow *window = nil;
+
+    CV_FUNCNAME( "cvGetWindowRect_COCOA" );
+
+    __BEGIN__;
+    if( name == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+    }
+
+    window = cvGetWindow( name );
+    if ( window == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+    }
+
+    NSRect rect = [window frame];
+    result = cvRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+
+    __END__;
+    return result;
+}
+
 double cvGetModeWindow_COCOA( const char* name )
 {
     double result = -1;
