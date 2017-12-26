@@ -715,12 +715,27 @@ CvRect cvGetWindowRect_GTK(const char* name)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
     gint wx, wy;
-    gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
+    CvImageWidget * image_widget = CV_IMAGE_WIDGET( window->widget );
+    gtk_widget_translate_coordinates(image_widget->widget, gtk_widget_get_toplevel(image_widget->widget), 0, 0, &wx, &wy);
+    CvRect result = cvRect(-1, -1, -1, -1);
+    if (image_widget->scaled_image) {
 #if defined (GTK_VERSION3)
-    CvRect result = cvRect(wx, wy, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
+      CvRect result = cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(widget)),
+          MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(widget)));
 #else
-    CvRect result = cvRect(wx, wy, window->widget->allocation.width, window->widget->allocation.height);
-#endif // GTK_VERSION3
+      CvRect result = cvRect(wx, wy, MIN(image_widget->scaled_image->cols, widget->allocation.width),
+          MIN(image_widget->scaled_image->rows, widget->allocation.height));
+#endif //GTK_VERSION3
+    } else if (image_widget->original_image) {
+#if defined (GTK_VERSION3)
+      CvRect result = cvRect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(widget)),
+          MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(widget)));
+#else
+      CvRect result = cvRect(wx, wy, MIN(image_widget->original_image->cols, widget->allocation.width),
+          MIN(image_widget->original_image->rows, widget->allocation.height));
+#endif //GTK_VERSION3
+    }
+
     return result;
 }
 
@@ -910,21 +925,40 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
 
   if( image_widget->scaled_image ){
       // center image in available region
+#if defined (GTK_VERSION3)
       int x0 = (gtk_widget_get_allocated_width(widget) - image_widget->scaled_image->cols)/2;
       int y0 = (gtk_widget_get_allocated_height(widget) - image_widget->scaled_image->rows)/2;
+#else
+      int x0 = (widget->allocation.width - image_widget->scaled_image->cols)/2;
+      int y0 = (widget->allocation.height - image_widget->scaled_image->rows)/2;
+#endif //GTK_VERSION3
 
+#if defined (GTK_VERSION3)
       pixbuf = gdk_pixbuf_new_from_data(image_widget->scaled_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(widget)),
           MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(widget)),
           image_widget->scaled_image->step, NULL, NULL);
+#else
+      pixbuf = gdk_pixbuf_new_from_data(image_widget->scaled_image->data.ptr, GDK_COLORSPACE_RGB, false,
+          8, MIN(image_widget->scaled_image->cols, widget->allocation.width),
+          MIN(image_widget->scaled_image->rows, widget->allocation.height),
+          image_widget->scaled_image->step, NULL, NULL);
+#endif //GTK_VERSION3
 
       gdk_cairo_set_source_pixbuf(cr, pixbuf, x0, y0);
   }
   else if( image_widget->original_image ){
+#if defined (GTK_VERSION3)
       pixbuf = gdk_pixbuf_new_from_data(image_widget->original_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(widget)),
           MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(widget)),
           image_widget->original_image->step, NULL, NULL);
+#else
+      pixbuf = gdk_pixbuf_new_from_data(image_widget->original_image->data.ptr, GDK_COLORSPACE_RGB, false,
+          8, MIN(image_widget->original_image->cols, widget->allocation.width),
+          MIN(image_widget->original_image->rows, widget->allocation.height),
+          image_widget->original_image->step, NULL, NULL);
+#endif //GTK_VERSION3
       gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
   }
 
