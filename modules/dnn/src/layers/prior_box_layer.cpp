@@ -308,7 +308,7 @@ public:
             aspectRatios.copyTo(umat_aspectRatios);
             variance.copyTo(umat_variance);
 
-            int real_numPriors = _numPriors / pow(2, _offsetsX.size() - 1);
+            int real_numPriors = _numPriors >> (_offsetsX.size() - 1);
             umat_scales = UMat(1, &real_numPriors, CV_32F, 1.0f);
         }
 
@@ -383,7 +383,7 @@ public:
 
         CV_Assert(inputs.size() == 2);
 
-        size_t real_numPriors = _numPriors / pow(2, _offsetsX.size() - 1);
+        size_t real_numPriors = _numPriors >> (_offsetsX.size() - 1);
         if (_scales.empty())
             _scales.resize(real_numPriors, 1.0f);
         else
