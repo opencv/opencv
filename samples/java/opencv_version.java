@@ -6,6 +6,9 @@ class opencv_version {
 
   public static void main(String[] args) {
 
+  
+    // && checks for both LHS and RHS even if lhs is false.
+    // & checks RHS only if lhs is true.
     if ((1==args.length) & (0==args[0].compareTo("--build"))) {
 
         System.out.println(Core.getBuildInformation());
