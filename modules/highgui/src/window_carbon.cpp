@@ -738,6 +738,8 @@ CvRect cvGetWindowRect_CARBON(const char* name)
 
     Rect portrect;
     GetWindowPortBounds(window->window, &portrect);
+    LocalToGlobal(&topLeft(portrect));
+    LocalToGlobal(&botRight(portrect));
     if(!( window->flags & CV_WINDOW_AUTOSIZE) )
     {
         result = cvRect(portrect.left, portrect.top, portrect.right-portrect.left,
