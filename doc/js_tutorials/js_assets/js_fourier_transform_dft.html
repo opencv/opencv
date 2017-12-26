@@ -56,7 +56,7 @@ let plane0 = new cv.Mat();
 padded.convertTo(plane0, cv.CV_32F);
 let planes = new cv.MatVector();
 let complexI = new cv.Mat();
-let plane1 = new cv.Mat.zeros(padded.cols, padded.rows, cv.CV_32F);
+let plane1 = new cv.Mat.zeros(padded.rows, padded.cols, cv.CV_32F);
 planes.push_back(plane0);
 planes.push_back(plane1);
 cv.merge(planes, complexI);
