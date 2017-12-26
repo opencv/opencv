@@ -1398,7 +1398,8 @@ struct Net::Impl
                         LayerPin pin = ld.inputBlobsId[i];
                         LayerData* inp_i_data = &layers[pin.lid];
                         while(inp_i_data->skipFlags[DNN_BACKEND_DEFAULT] &&
-                              inp_i_data->inputBlobsId.size() == 1)
+                              inp_i_data->inputBlobsId.size() == 1 &&
+                              inp_i_data->consumers.size() == 1)
                         {
                             pin = inp_i_data->inputBlobsId[0];
                             inp_i_data = &layers[pin.lid];
@@ -1428,15 +1429,11 @@ struct Net::Impl
                             Mat output_slice = output(chrange);
                             Mat& curr_output = inp_i_data->outputBlobs[pin.oid];
                             CV_Assert(output_slice.isContinuous() && output_slice.size == curr_output.size);
+                            Mat* oldPtr = &curr_output;
                             curr_output = output_slice;
-
-                            pin = ld.inputBlobsId[i];
-                            inp_i_data = &layers[pin.lid];
-                            for (int j = 0; j < inp_i_data->consumers.size(); ++j)
-                            {
-                                LayerPin consumer = inp_i_data->consumers[j];
-                                layers[consumer.lid].inputBlobs[consumer.oid] = &curr_output;
-                            }
+                            // Layers that refer old input Mat will refer to the
+                            // new data but the same Mat object.
+                            CV_Assert(curr_output.data == output_slice.data, oldPtr == &curr_output);
                         }
                         ld.skipFlags[DNN_BACKEND_DEFAULT] = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
