@@ -967,12 +967,13 @@ CvRect GuiReceiver::getWindowRect(QString name)
     if (!w)
         return cvRect(-1, -1, -1, -1);
 
+    QPoint org = w->myView->mapToGlobal(new QPoint(0, 0));
 #ifdef HAVE_QT_OPENGL
-    if (isOpenGl())
-        return cvRect(w->myView->pos().x(), w->myView->pos().y(), w->myView->width(), w->myView->height());
-    else
+    if (isOpenGl()) {
+        return cvRect(w->myView->pos().x() + org.x, w->myView->pos().y() + org.y, w->myView->width(), w->myView->height());
+    } else
 #endif
-    return cvRect(w->myView->viewport()->pos().x(), w->myView->viewport()->pos().y(), w->myView->viewport()->width(), w->myView->viewport()->height());
+    return cvRect(w->myView->viewport()->pos().x() + org.x, w->myView->viewport()->pos().y() + org.y, w->myView->viewport()->width(), w->myView->viewport()->height());
 }
 
 double GuiReceiver::isFullScreen(QString name)
