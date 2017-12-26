@@ -715,28 +715,34 @@ CvRect cvGetWindowRect_GTK(const char* name)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
     gint wx, wy;
+#ifdef HAVE_OPENGL
+    if (window->useGl) {
+        gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
+        return cvRect(wx, wy, window->widget->allocation.width, window->widget->allocation.height);
+    }
+#endif
+
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( window->widget );
     gtk_widget_translate_coordinates(image_widget->widget, gtk_widget_get_toplevel(image_widget->widget), 0, 0, &wx, &wy);
-    CvRect result = cvRect(-1, -1, -1, -1);
     if (image_widget->scaled_image) {
 #if defined (GTK_VERSION3)
-      CvRect result = cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(widget)),
+      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(widget)),
           MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(widget)));
 #else
-      CvRect result = cvRect(wx, wy, MIN(image_widget->scaled_image->cols, widget->allocation.width),
+      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, widget->allocation.width),
           MIN(image_widget->scaled_image->rows, widget->allocation.height));
 #endif //GTK_VERSION3
     } else if (image_widget->original_image) {
 #if defined (GTK_VERSION3)
-      CvRect result = cvRect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(widget)),
+      return cvRect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(widget)),
           MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(widget)));
 #else
-      CvRect result = cvRect(wx, wy, MIN(image_widget->original_image->cols, widget->allocation.width),
+      return cvRect(wx, wy, MIN(image_widget->original_image->cols, widget->allocation.width),
           MIN(image_widget->original_image->rows, widget->allocation.height));
 #endif //GTK_VERSION3
     }
 
-    return result;
+    return cvRect(-1, -1, -1, -1);
 }
 
 double cvGetModeWindow_GTK(const char* name)//YV
