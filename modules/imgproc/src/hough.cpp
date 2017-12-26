@@ -1539,11 +1539,11 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
 {
     double rad = 0.0f, rho = 0.0f;
     int rho_index = 0, theta_index = 0;
-    int deg_min=CONVERT_RAD_TO_DEG(min_theta);
-    int deg_max=CONVERT_RAD_TO_DEG(max_theta);
-    int deg_step=CONVERT_RAD_TO_DEG(theta_step);
+    int deg_min=(int)CONVERT_RAD_TO_DEG(min_theta);
+    int deg_max=(int)CONVERT_RAD_TO_DEG(max_theta);
+    int deg_step=(int)CONVERT_RAD_TO_DEG(theta_step);
 
-    int rho_size = (max_rho - min_rho) / rho_step;
+    int rho_size = (int)((max_rho - min_rho) / rho_step);
     int theta_size = (int)((deg_max - deg_min) / deg_step);
 
     for( int cnt = 0; cnt < point_cnt; cnt++ )
@@ -1577,7 +1577,7 @@ static void SelectHoughPeak( const short *plane,
 {
     short votes = 0, max_votes = 0;
     long cnt = 0;
-    int rho_size = (max_rho - min_rho) / rho_step;
+    int rho_size = (int)((max_rho - min_rho) / rho_step);
     int theta_size = (int)((CONVERT_RAD_TO_DEG(max_theta) - CONVERT_RAD_TO_DEG(min_theta)) / CONVERT_RAD_TO_DEG(theta_step));
 
     for( int rho = 0; rho < rho_size; rho++ )

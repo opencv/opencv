@@ -2151,7 +2151,7 @@ Must fall between 0 and max_theta.
 Must fall between min_theta and CV_PI.
  */
 
-class CV_EXPORTS HoughLinePolar
+class CV_EXPORTS HoughLinePolar : public Algorithm
 {
 public:
     void   setVotes( int votes ){ votes_ = votes; }
