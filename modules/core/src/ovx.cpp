@@ -14,6 +14,38 @@
 namespace cv
 {
 
+namespace ovx
+{
+#ifdef HAVE_OPENVX
+
+// Simple TLSData<ivx::Context> doesn't work, because default constructor doesn't create any OpenVX context.
+struct OpenVXTLSData
+{
+    OpenVXTLSData() : ctx(ivx::Context::create()) {}
+    ivx::Context ctx;
+};
+
+static TLSData<OpenVXTLSData>& getOpenVXTLSData()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<OpenVXTLSData>, new TLSData<OpenVXTLSData>())
+}
+
+struct OpenVXCleanupFunctor
+{
+    ~OpenVXCleanupFunctor() { getOpenVXTLSData().cleanup(); }
+};
+static OpenVXCleanupFunctor g_openvx_cleanup_functor;
+
+ivx::Context& getOpenVXContext()
+{
+    return getOpenVXTLSData().get()->ctx;
+}
+
+#endif
+
+} // namespace
+
+
 bool haveOpenVX()
 {
 #ifdef HAVE_OPENVX
@@ -22,7 +54,7 @@ bool haveOpenVX()
     {
         try
         {
-        ivx::Context context = ivx::Context::create();
+        ivx::Context context = ovx::getOpenVXContext();
         vx_uint16 vComp = ivx::compiledWithVersion();
         vx_uint16 vCurr = context.version();
         g_haveOpenVX =

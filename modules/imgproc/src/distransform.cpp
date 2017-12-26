@@ -681,6 +681,8 @@ namespace cv
 {
 static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
 
     CV_Assert( src.type() == CV_8UC1);
@@ -745,7 +747,9 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 #ifdef HAVE_IPP
         CV_IPP_CHECK()
         {
-            if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<14)))
+#if IPP_DISABLE_PERF_TRUE_DIST_MT
+            if(cv::getNumThreads()<=1 || (src.total()<(int)(1<<14)))
+#endif
             {
                 IppStatus status;
                 IppiSize roi = { src.cols, src.rows };
@@ -755,7 +759,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                 status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
                 if (status>=0)
                 {
-                    pBuffer = (Ipp8u *)ippMalloc( bufSize );
+                    pBuffer = (Ipp8u *)CV_IPP_MALLOC( bufSize );
                     status = CV_INSTRUMENT_FUN_IPP(ippiTrueDistanceTransform_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
                     ippFree( pBuffer );
                     if (status>=0)

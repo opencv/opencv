@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_TIFF
+
 namespace cv
 {
 
@@ -87,10 +89,7 @@ enum TiffFieldType
 };
 
 
-#ifdef HAVE_TIFF
-
 // libtiff based TIFF codec
-
 class TiffDecoder : public BaseImageDecoder
 {
 public:
@@ -111,9 +110,12 @@ protected:
     int normalizeChannelsNumber(int channels) const;
     bool readHdrData(Mat& img);
     bool m_hdr;
-};
+    size_t m_buf_pos;
 
-#endif
+private:
+    TiffDecoder(const TiffDecoder &); // copy disabled
+    TiffDecoder& operator=(const TiffDecoder &); // assign disabled
+};
 
 // ... and writer
 class TiffEncoder : public BaseImageEncoder
@@ -134,8 +136,14 @@ protected:
 
     bool writeLibTiff( const Mat& img, const std::vector<int>& params );
     bool writeHdr( const Mat& img );
+
+private:
+    TiffEncoder(const TiffEncoder &); // copy disabled
+    TiffEncoder& operator=(const TiffEncoder &); // assign disabled
 };
 
 }
+
+#endif // HAVE_TIFF
 
 #endif/*_GRFMT_TIFF_H_*/

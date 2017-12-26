@@ -10,11 +10,11 @@
 using namespace std;
 using namespace cv;
 
-int main(int, char** argv)
+int main()
 {
 //! [load_image]
     // Load the image
-    Mat src = imread(argv[1]);
+    Mat src = imread("../data/cards.png");
 
     // Check if everything was fine
     if (!src.data)

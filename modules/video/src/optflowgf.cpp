@@ -43,7 +43,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_video.hpp"
 
-#if defined __APPLE__ || defined ANDROID
+#if defined __APPLE__ || defined __ANDROID__
 #define SMALL_LOCALSIZE
 #endif
 

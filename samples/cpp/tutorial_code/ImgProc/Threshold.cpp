@@ -30,10 +30,15 @@ void Threshold_Demo( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   //! [load]
-  src = imread( argv[1], IMREAD_COLOR ); // Load an image
+  String imageName("../data/stuff.jpg"); // by default
+  if (argc > 1)
+  {
+      imageName = argv[1];
+  }
+  src = imread( imageName, IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
     { return -1; }

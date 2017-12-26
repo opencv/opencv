@@ -62,6 +62,7 @@ namespace cv
 WebPDecoder::WebPDecoder()
 {
     m_buf_supported = true;
+    channels = 0;
 }
 
 WebPDecoder::~WebPDecoder() {}
@@ -116,7 +117,7 @@ bool WebPDecoder::readHeader()
             return false;
         }
 
-        data.create(1, wfile_size, CV_8U);
+        data.create(1, (int)wfile_size, CV_8U);
 
         size_t data_size = fread(data.ptr(), 1, wfile_size, wfile);
 
@@ -162,6 +163,8 @@ bool WebPDecoder::readData(Mat &img)
 {
     if( m_width > 0 && m_height > 0 )
     {
+        bool convert_grayscale = (img.type() == CV_8UC1); // IMREAD_GRAYSCALE requested
+
         if (img.cols != m_width || img.rows != m_height || img.type() != m_type)
         {
             img.create(m_height, m_width, m_type);
@@ -184,6 +187,10 @@ bool WebPDecoder::readData(Mat &img)
 
         if(res_ptr == out_data)
         {
+            if (convert_grayscale)
+            {
+                cvtColor(img, img, COLOR_BGR2GRAY);
+            }
             return true;
         }
     }

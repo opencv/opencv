@@ -41,6 +41,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     protected Camera mCamera;
     protected JavaCameraFrame[] mCameraFrame;
     private SurfaceTexture mSurfaceTexture;
+    private int mPreviewFormat = ImageFormat.NV21;
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
 
@@ -145,7 +146,21 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                     /* Select the size that fits surface considering maximum size allowed */
                     Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
 
-                    params.setPreviewFormat(ImageFormat.NV21);
+                    /* Image format NV21 causes issues in the Android emulators */
+                    if (Build.FINGERPRINT.startsWith("generic")
+                            || Build.FINGERPRINT.startsWith("unknown")
+                            || Build.MODEL.contains("google_sdk")
+                            || Build.MODEL.contains("Emulator")
+                            || Build.MODEL.contains("Android SDK built for x86")
+                            || Build.MANUFACTURER.contains("Genymotion")
+                            || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                            || "google_sdk".equals(Build.PRODUCT))
+                        params.setPreviewFormat(ImageFormat.YV12);  // "generic" or "android" = android emulator
+                    else
+                        params.setPreviewFormat(ImageFormat.NV21);
+
+                    mPreviewFormat = params.getPreviewFormat();
+
                     Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
                     params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
 
@@ -267,7 +282,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             synchronized (this) {
                 this.notify();
             }
-            Log.d(TAG, "Wating for thread");
+            Log.d(TAG, "Waiting for thread");
             if (mThread != null)
                 mThread.join();
         } catch (InterruptedException e) {
@@ -303,7 +318,13 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
         @Override
         public Mat rgba() {
-            Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+            if (mPreviewFormat == ImageFormat.NV21)
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+            else if (mPreviewFormat == ImageFormat.YV12)
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4);  // COLOR_YUV2RGBA_YV12 produces inverted colors
+            else
+                throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
+
             return mRgba;
         }
 

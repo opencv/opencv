@@ -69,6 +69,7 @@ extern "C" {
     (((const CvHaarClassifierCascade*)(haar))->flags & CV_MAGIC_MASK)==CV_HAAR_MAGIC_VAL)
 
 #define CV_HAAR_FEATURE_MAX  3
+#define CV_HAAR_STAGE_MAX 1000
 
 typedef struct CvHaarFeature
 {

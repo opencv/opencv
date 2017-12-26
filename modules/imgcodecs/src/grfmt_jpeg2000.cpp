@@ -47,7 +47,7 @@
 #include "grfmt_jpeg2000.hpp"
 #include "opencv2/imgproc.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define JAS_WIN_MSVC_BUILD 1
 #ifdef __GNUC__
 #define HAVE_STDINT_H 1
@@ -156,11 +156,11 @@ bool  Jpeg2KDecoder::readData( Mat& img )
     bool result = false;
     int color = img.channels() > 1;
     uchar* data = img.ptr();
-    int step = (int)img.step;
+    size_t step = img.step;
     jas_stream_t* stream = (jas_stream_t*)m_stream;
     jas_image_t* image = (jas_image_t*)m_image;
 
-#ifndef WIN32
+#ifndef _WIN32
     // At least on some Linux instances the
     // system libjasper segfaults when
     // converting color to grey.
@@ -252,9 +252,9 @@ bool  Jpeg2KDecoder::readData( Mat& img )
                         if( !jas_image_readcmpt( image, cmptlut[i], 0, 0, xend / xstep, yend / ystep, buffer ))
                         {
                             if( img.depth() == CV_8U )
-                                result = readComponent8u( data + i, buffer, step, cmptlut[i], maxval, offset, ncmpts );
+                                result = readComponent8u( data + i, buffer, validateToInt(step), cmptlut[i], maxval, offset, ncmpts );
                             else
-                                result = readComponent16u( ((unsigned short *)data) + i, buffer, step / 2, cmptlut[i], maxval, offset, ncmpts );
+                                result = readComponent16u( ((unsigned short *)data) + i, buffer, validateToInt(step / 2), cmptlut[i], maxval, offset, ncmpts );
                             if( !result )
                             {
                                 i = ncmpts;
@@ -272,7 +272,7 @@ bool  Jpeg2KDecoder::readData( Mat& img )
 
     close();
 
-#ifndef WIN32
+#ifndef _WIN32
     if (!clr.empty())
     {
         cv::cvtColor(clr, img, COLOR_BGR2GRAY);

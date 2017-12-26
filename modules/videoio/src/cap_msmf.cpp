@@ -39,7 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
-#if (defined WIN32 || defined _WIN32) && defined HAVE_MSMF
+#if defined _WIN32 && defined HAVE_MSMF
 /*
    Media Foundation-based Video Capturing module is based on
    videoInput library by Evgeny Pereguda:

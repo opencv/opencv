@@ -114,10 +114,15 @@ enum VideoCaptureAPIs {
        CAP_GSTREAMER    = 1800,         //!< GStreamer
        CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
        CAP_IMAGES       = 2000,         //!< OpenCV Image Sequence (e.g. img_%02d.jpg)
-       CAP_ARAVIS       = 2100          //!< Aravis SDK
+       CAP_ARAVIS       = 2100,         //!< Aravis SDK
+       CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
+       CAP_INTEL_MFX    = 2300          //!< Intel MediaSDK
      };
 
 /** @brief %VideoCapture generic properties identifier.
+
+ Reading / writing properties involves many layers. Some unexpected result might happens along this chain.
+ Effective behaviour depends from device hardware, driver and API Backend.
  @sa videoio_flags_others, VideoCapture::get(), VideoCapture::set()
 */
 enum VideoCaptureProperties {
@@ -131,12 +136,12 @@ enum VideoCaptureProperties {
        CAP_PROP_FRAME_COUNT    =7, //!< Number of frames in the video file.
        CAP_PROP_FORMAT         =8, //!< Format of the %Mat objects returned by VideoCapture::retrieve().
        CAP_PROP_MODE           =9, //!< Backend-specific value indicating the current capture mode.
-       CAP_PROP_BRIGHTNESS    =10, //!< Brightness of the image (only for cameras).
+       CAP_PROP_BRIGHTNESS    =10, //!< Brightness of the image (only for those cameras that support).
        CAP_PROP_CONTRAST      =11, //!< Contrast of the image (only for cameras).
        CAP_PROP_SATURATION    =12, //!< Saturation of the image (only for cameras).
        CAP_PROP_HUE           =13, //!< Hue of the image (only for cameras).
-       CAP_PROP_GAIN          =14, //!< Gain of the image (only for cameras).
-       CAP_PROP_EXPOSURE      =15, //!< Exposure (only for cameras).
+       CAP_PROP_GAIN          =14, //!< Gain of the image (only for those cameras that support).
+       CAP_PROP_EXPOSURE      =15, //!< Exposure (only for those cameras that support).
        CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to RGB.
        CAP_PROP_WHITE_BALANCE_BLUE_U =17, //!< Currently unsupported.
        CAP_PROP_RECTIFICATION =18, //!< Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently).
@@ -157,7 +162,7 @@ enum VideoCaptureProperties {
        CAP_PROP_TILT          =34,
        CAP_PROP_ROLL          =35,
        CAP_PROP_IRIS          =36,
-       CAP_PROP_SETTINGS      =37, //! Pop up video/camera filter dialog (note: only supported by DSHOW backend currently. Property value is ignored)
+       CAP_PROP_SETTINGS      =37, //!< Pop up video/camera filter dialog (note: only supported by DSHOW backend currently. The property value is ignored)
        CAP_PROP_BUFFERSIZE    =38,
        CAP_PROP_AUTOFOCUS     =39
      };
@@ -668,9 +673,9 @@ public:
 
     @overload
 
-    This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts.
     Parameters are similar as the constructor VideoCapture(int index),except it takes an additional argument apiPreference.
-    @return open(cameraNum + apiPreference).
+    Definitely, is same as open(int index) where `index=cameraNum + apiPreference`
+    @return `true` if the camera has been successfully opened.
     */
     CV_WRAP bool open(int cameraNum, int apiPreference);
 
@@ -803,12 +808,12 @@ protected:
 
 class IVideoWriter;
 
+/** @example videowriter_basic.cpp
+An example using VideoCapture and VideoWriter class
+ */
 /** @brief Video writer class.
 
 The class provides C++ API for writing video files or image sequences.
-
-Here is how the class can be used:
-@include samples/cpp/videowriter_basic.cpp
  */
 class CV_EXPORTS_W VideoWriter
 {
@@ -846,6 +851,13 @@ public:
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
+    /** @overload
+    The `apiPreference` parameter allows to specify API backends to use. Can be used to enforce a specific reader implementation
+    if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_GSTREAMER.
+     */
+    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
+                Size frameSize, bool isColor = true);
+
     /** @brief Default destructor
 
     The method first calls VideoWriter::release to close the already opened file.
@@ -861,6 +873,11 @@ public:
     The method first calls VideoWriter::release to close the already opened file.
      */
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
+                      Size frameSize, bool isColor = true);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
 
     /** @brief Returns true if video writer has been successfully initialized.

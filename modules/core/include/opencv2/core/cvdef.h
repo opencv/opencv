@@ -48,9 +48,37 @@
 //! @addtogroup core_utils
 //! @{
 
-#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
-#  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
+#if !defined CV_DOXYGEN && !defined CV_IGNORE_DEBUG_BUILD_GUARD
+#if (defined(_MSC_VER) && (defined(DEBUG) || defined(_DEBUG))) || \
+    (defined(_GLIBCXX_DEBUG) || defined(_GLIBCXX_DEBUG_PEDANTIC))
+// Guard to prevent using of binary incompatible binaries / runtimes
+// https://github.com/opencv/opencv/pull/9161
+#define CV__DEBUG_NS_BEGIN namespace debug_build_guard {
+#define CV__DEBUG_NS_END }
+namespace cv { namespace debug_build_guard { } using namespace debug_build_guard; }
 #endif
+#endif
+
+#ifndef CV__DEBUG_NS_BEGIN
+#define CV__DEBUG_NS_BEGIN
+#define CV__DEBUG_NS_END
+#endif
+
+
+#ifdef __OPENCV_BUILD
+#include "cvconfig.h"
+#endif
+
+#ifndef __CV_EXPAND
+#define __CV_EXPAND(x) x
+#endif
+
+#ifndef __CV_CAT
+#define __CV_CAT__(x, y) x ## y
+#define __CV_CAT_(x, y) __CV_CAT__(x, y)
+#define __CV_CAT(x, y) __CV_CAT_(x, y)
+#endif
+
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
@@ -58,10 +86,6 @@
 #undef max
 #undef abs
 #undef Complex
-
-#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
-#  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
-#endif
 
 #include <limits.h>
 #include "opencv2/core/hal/interface.h"
@@ -88,7 +112,7 @@
 #  endif
 #endif
 
-#if defined CV_ICC && !defined CV_ENABLE_UNROLLED
+#if defined CV_DISABLE_OPTIMIZATION || (defined CV_ICC && !defined CV_ENABLE_UNROLLED)
 #  define CV_ENABLE_UNROLLED 0
 #else
 #  define CV_ENABLE_UNROLLED 1
@@ -129,6 +153,8 @@
 
 #define CV_CPU_NEON   100
 
+#define CV_CPU_VSX 200
+
 // when adding to this list remember to update the following enum
 #define CV_HARDWARE_MAX_FEATURE 255
 
@@ -158,149 +184,18 @@ enum CpuFeatures {
     CPU_AVX_512VBMI     = 20,
     CPU_AVX_512VL       = 21,
 
-    CPU_NEON            = 100
+    CPU_NEON            = 100,
+
+    CPU_VSX             = 200
 };
 
-// do not include SSE/AVX/NEON headers for NVCC compiler
-#ifndef __CUDACC__
 
-#if defined __SSE2__ || defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 2)
-#  include <emmintrin.h>
-#  define CV_MMX 1
-#  define CV_SSE 1
-#  define CV_SSE2 1
-#  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <pmmintrin.h>
-#    define CV_SSE3 1
-#  endif
-#  if defined __SSSE3__  || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <tmmintrin.h>
-#    define CV_SSSE3 1
-#  endif
-#  if defined __SSE4_1__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <smmintrin.h>
-#    define CV_SSE4_1 1
-#  endif
-#  if defined __SSE4_2__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <nmmintrin.h>
-#    define CV_SSE4_2 1
-#  endif
-#  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    ifdef _MSC_VER
-#      include <nmmintrin.h>
-#    else
-#      include <popcntintrin.h>
-#    endif
-#    define CV_POPCNT 1
-#  endif
-#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600 && 0)
-// MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
-// See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
-#    include <immintrin.h>
-#    define CV_AVX 1
-#    if defined(_XCR_XFEATURE_ENABLED_MASK)
-#      define __xgetbv() _xgetbv(_XCR_XFEATURE_ENABLED_MASK)
-#    else
-#      define __xgetbv() 0
-#    endif
-#  endif
-#  if defined __AVX2__ || (defined _MSC_VER && _MSC_VER >= 1800 && 0)
-#    include <immintrin.h>
-#    define CV_AVX2 1
-#    if defined __FMA__
-#      define CV_FMA3 1
-#    endif
-#  endif
-#endif
+#include "cv_cpu_dispatch.h"
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
-# include <Intrin.h>
-# include <arm_neon.h>
-# define CV_NEON 1
-# define CPU_HAS_NEON_FEATURE (true)
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
-#  include <arm_neon.h>
-#  define CV_NEON 1
-#endif
-
-#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
-#  define CV_VFP 1
-#endif
-
-#endif // __CUDACC__
-
-#ifndef CV_POPCNT
-#define CV_POPCNT 0
-#endif
-#ifndef CV_MMX
-#  define CV_MMX 0
-#endif
-#ifndef CV_SSE
-#  define CV_SSE 0
-#endif
-#ifndef CV_SSE2
-#  define CV_SSE2 0
-#endif
-#ifndef CV_SSE3
-#  define CV_SSE3 0
-#endif
-#ifndef CV_SSSE3
-#  define CV_SSSE3 0
-#endif
-#ifndef CV_SSE4_1
-#  define CV_SSE4_1 0
-#endif
-#ifndef CV_SSE4_2
-#  define CV_SSE4_2 0
-#endif
-#ifndef CV_AVX
-#  define CV_AVX 0
-#endif
-#ifndef CV_AVX2
-#  define CV_AVX2 0
-#endif
-#ifndef CV_FMA3
-#  define CV_FMA3 0
-#endif
-#ifndef CV_AVX_512F
-#  define CV_AVX_512F 0
-#endif
-#ifndef CV_AVX_512BW
-#  define CV_AVX_512BW 0
-#endif
-#ifndef CV_AVX_512CD
-#  define CV_AVX_512CD 0
-#endif
-#ifndef CV_AVX_512DQ
-#  define CV_AVX_512DQ 0
-#endif
-#ifndef CV_AVX_512ER
-#  define CV_AVX_512ER 0
-#endif
-#ifndef CV_AVX_512IFMA512
-#  define CV_AVX_512IFMA512 0
-#endif
-#ifndef CV_AVX_512PF
-#  define CV_AVX_512PF 0
-#endif
-#ifndef CV_AVX_512VBMI
-#  define CV_AVX_512VBMI 0
-#endif
-#ifndef CV_AVX_512VL
-#  define CV_AVX_512VL 0
-#endif
-
-#ifndef CV_NEON
-#  define CV_NEON 0
-#endif
-
-#ifndef CV_VFP
-#  define CV_VFP 0
-#endif
 
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795
-#define CV_2PI 6.283185307179586476925286766559
+#define CV_2PI  6.283185307179586476925286766559
 #define CV_LOG2 0.69314718055994530941723212145818
 
 #if defined __ARM_FP16_FORMAT_IEEE \
@@ -353,12 +248,32 @@ Cv64suf;
 #  define DISABLE_OPENCV_24_COMPATIBILITY
 #endif
 
-#if (defined WIN32 || defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined CVAPI_EXPORTS
-#  define CV_EXPORTS __declspec(dllexport)
-#elif defined __GNUC__ && __GNUC__ >= 4
-#  define CV_EXPORTS __attribute__ ((visibility ("default")))
+#ifdef CVAPI_EXPORTS
+# if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#   define CV_EXPORTS __declspec(dllexport)
+# elif defined __GNUC__ && __GNUC__ >= 4
+#   define CV_EXPORTS __attribute__ ((visibility ("default")))
+# endif
+#endif
+
+#ifndef CV_EXPORTS
+# define CV_EXPORTS
+#endif
+
+#ifdef _MSC_VER
+#   define CV_EXPORTS_TEMPLATE
 #else
-#  define CV_EXPORTS
+#   define CV_EXPORTS_TEMPLATE CV_EXPORTS
+#endif
+
+#ifndef CV_DEPRECATED
+#  if defined(__GNUC__)
+#    define CV_DEPRECATED __attribute__ ((deprecated))
+#  elif defined(_MSC_VER)
+#    define CV_DEPRECATED __declspec(deprecated)
+#  else
+#    define CV_DEPRECATED
+#  endif
 #endif
 
 #ifndef CV_EXTERN_C
@@ -398,7 +313,7 @@ Cv64suf;
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
 /** Size of each channel item,
-   0x124489 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
+   0x8442211 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
 #define CV_ELEM_SIZE1(type) \
     ((((sizeof(size_t)<<28)|0x8442211) >> CV_MAT_DEPTH(type)*4) & 15)
 
@@ -415,12 +330,35 @@ Cv64suf;
 #endif
 
 /****************************************************************************************\
+*                                    static analysys                                     *
+\****************************************************************************************/
+
+// In practice, some macro are not processed correctly (noreturn is not detected).
+// We need to use simplified definition for them.
+#ifndef CV_STATIC_ANALYSIS
+# if defined(__KLOCWORK__) || defined(__clang_analyzer__) || defined(__COVERITY__)
+#   define CV_STATIC_ANALYSIS
+# endif
+#endif
+
+/****************************************************************************************\
+*                                    Thread sanitizer                                    *
+\****************************************************************************************/
+#ifndef CV_THREAD_SANITIZER
+# if defined(__has_feature)
+#   if __has_feature(thread_sanitizer)
+#     define CV_THREAD_SANITIZER
+#   endif
+# endif
+#endif
+
+/****************************************************************************************\
 *          exchange-add operation for atomic operations on reference counters            *
 \****************************************************************************************/
 
 #ifdef CV_XADD
   // allow to use user-defined macro
-#elif defined __GNUC__
+#elif defined __GNUC__ || defined __clang__
 #  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
 #    ifdef __ATOMIC_ACQ_REL
 #      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
@@ -459,11 +397,25 @@ Cv64suf;
 
 
 /****************************************************************************************\
+*                                    C++ 11                                              *
+\****************************************************************************************/
+#ifndef CV_CXX11
+#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
+#    define CV_CXX11 1
+#  endif
+#else
+#  if CV_CXX11 == 0
+#    undef CV_CXX11
+#  endif
+#endif
+
+
+/****************************************************************************************\
 *                                    C++ Move semantics                                  *
 \****************************************************************************************/
 
 #ifndef CV_CXX_MOVE_SEMANTICS
-#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || defined(_MSC_VER) && _MSC_VER >= 1600
+#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(_MSC_VER) && _MSC_VER >= 1600)
 #    define CV_CXX_MOVE_SEMANTICS 1
 #  elif defined(__clang)
 #    if __has_feature(cxx_rvalue_references)
@@ -473,6 +425,21 @@ Cv64suf;
 #else
 #  if CV_CXX_MOVE_SEMANTICS == 0
 #    undef CV_CXX_MOVE_SEMANTICS
+#  endif
+#endif
+
+/****************************************************************************************\
+*                                    C++11 std::array                                    *
+\****************************************************************************************/
+
+#ifndef CV_CXX_STD_ARRAY
+#  if __cplusplus >= 201103L
+#    define CV_CXX_STD_ARRAY 1
+#    include <array>
+#  endif
+#else
+#  if CV_CXX_STD_ARRAY == 0
+#    undef CV_CXX_STD_ARRAY
 #  endif
 #endif
 

@@ -50,10 +50,8 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
-#ifdef HAVE_OPENCV_IMGCODECS
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgcodecs/imgcodecs_c.h"
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,7 +60,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-#if defined WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
     #undef min

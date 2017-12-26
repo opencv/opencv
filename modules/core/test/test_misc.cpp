@@ -138,3 +138,19 @@ TEST(Core_String, find_last_of__with__empty_string)
     // npos is not exported: EXPECT_EQ(cv::String::npos, p);
     EXPECT_EQ(std::string::npos, p);
 }
+
+TEST(Core_String, end_method_regression)
+{
+    cv::String old_string = "012345";
+    cv::String new_string(old_string.begin(), old_string.end());
+    EXPECT_EQ(6u, new_string.size());
+}
+
+TEST(Core_Copy, repeat_regression_8972)
+{
+    Mat src = (Mat_<int>(1, 4) << 1, 2, 3, 4);
+
+    ASSERT_ANY_THROW({
+                         repeat(src, 5, 1, src);
+                     });
+}

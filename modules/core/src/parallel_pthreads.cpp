@@ -112,7 +112,7 @@ class ForThread
 {
 public:
 
-    ForThread(): m_task_start(false), m_parent(0), m_state(eFTNotStarted), m_id(0)
+    ForThread(): m_posix_thread(0), m_task_start(false), m_parent(0), m_state(eFTNotStarted), m_id(0)
     {
     }
 
@@ -141,10 +141,10 @@ private:
     pthread_t       m_posix_thread;
     pthread_mutex_t m_thread_mutex;
     pthread_cond_t  m_cond_thread_task;
-    bool            m_task_start;
+    volatile bool   m_task_start;
 
     ThreadManager*  m_parent;
-    ForThreadState  m_state;
+    volatile ForThreadState m_state;
     size_t          m_id;
 };
 
@@ -206,7 +206,6 @@ private:
     pthread_mutex_t m_manager_access_mutex;
 
     static const char m_env_name[];
-    static const unsigned int m_default_number_of_threads;
 
     work_load m_work_load;
 
@@ -222,14 +221,6 @@ private:
 };
 
 const char ThreadManager::m_env_name[] = "OPENCV_FOR_THREADS_NUM";
-
-#ifdef ANDROID
-// many modern phones/tables have 4-core CPUs. Let's use no more
-// than 2 threads by default not to overheat the devices
-const unsigned int ThreadManager::m_default_number_of_threads = 2;
-#else
-const unsigned int ThreadManager::m_default_number_of_threads = 8;
-#endif
 
 ForThread::~ForThread()
 {
@@ -318,6 +309,8 @@ void ForThread::execute()
 
 void ForThread::thread_body()
 {
+    (void)cv::utils::getThreadID(); // notify OpenCV about new thread
+
     m_parent->m_is_work_thread.get()->value = true;
 
     pthread_mutex_lock(&m_thread_mutex);
@@ -534,7 +527,15 @@ void ThreadManager::setNumOfThreads(size_t n)
 
 size_t ThreadManager::defaultNumberOfThreads()
 {
-    unsigned int result = m_default_number_of_threads;
+#ifdef __ANDROID__
+    // many modern phones/tables have 4-core CPUs. Let's use no more
+    // than 2 threads by default not to overheat the devices
+    const unsigned int default_number_of_threads = 2;
+#else
+    const unsigned int default_number_of_threads = (unsigned int)std::max(1, cv::getNumberOfCPUs());
+#endif
+
+    unsigned int result = default_number_of_threads;
 
     char * env = getenv(m_env_name);
 

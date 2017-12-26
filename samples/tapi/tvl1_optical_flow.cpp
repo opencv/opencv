@@ -37,7 +37,7 @@ template <typename T> inline T clamp (T x, T a, T b)
 
 template <typename T> inline T mapValue(T x, T a, T b, T c, T d)
 {
-    x = clamp(x, a, b);
+    x = ::clamp(x, a, b);
     return c + (d - c) * (x - a) / (b - a);
 }
 
@@ -105,7 +105,7 @@ int main(int argc, const char* argv[])
     string fname1 = cmd.get<string>("r");
     string vdofile = cmd.get<string>("v");
     string outpath = cmd.get<string>("o");
-    bool useCPU = cmd.get<bool>("s");
+    bool useCPU = cmd.get<bool>("m");
     bool useCamera = cmd.get<bool>("c");
     int inputName = cmd.get<int>("c");
 

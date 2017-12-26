@@ -1,0 +1,13 @@
+<project default="compile">
+
+    <property name="lib.dir"     value="${ocvJarDir}"/>
+    <path id="classpath">
+        <fileset dir="${lib.dir}" includes="**/*.jar"/>
+    </path>
+
+    <target name="compile">
+        <mkdir dir="${dstDir}"/>
+        <javac includeantruntime="false" srcdir="${srcDir}" destdir="${dstDir}" classpathref="classpath"/>
+    </target>
+
+</project>

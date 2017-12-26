@@ -83,6 +83,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         return cvEndWriteSeq( &writer );
     }
 
+    reader.code = 0;
     cvStartReadChainPoints( chain, &reader );
 
     temp.next = 0;

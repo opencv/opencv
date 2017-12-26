@@ -19,15 +19,17 @@ using namespace cv;
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
 const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
-int main(void)
+int main(int argc, char* argv[])
 {
-    Mat img1 = imread("../data/graf1.png", IMREAD_GRAYSCALE);
-    Mat img2 = imread("../data/graf3.png", IMREAD_GRAYSCALE);
-
+    CommandLineParser parser(argc, argv,
+                             "{@img1 | ../data/graf1.png | input image 1}"
+                             "{@img2 | ../data/graf3.png | input image 2}"
+                             "{@homography | ../data/H1to3p.xml | homography matrix}");
+    Mat img1 = imread(parser.get<String>("@img1"), IMREAD_GRAYSCALE);
+    Mat img2 = imread(parser.get<String>("@img2"), IMREAD_GRAYSCALE);
 
     Mat homography;
-    FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
-
+    FileStorage fs(parser.get<String>("@homography"), FileStorage::READ);
     fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;
@@ -81,7 +83,7 @@ int main(void)
 
     Mat res;
     drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
-    imwrite("../../samples/data/latch_res.png", res);
+    imwrite("latch_result.png", res);
 
 
     double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
@@ -93,6 +95,10 @@ int main(void)
     cout << "# Inliers:                            \t" << inliers1.size() << endl;
     cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
     cout << endl;
+
+    imshow("result", res);
+    waitKey();
+
     return 0;
 }
 

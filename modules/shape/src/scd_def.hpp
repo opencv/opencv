@@ -61,6 +61,7 @@ public:
         setInnerRadius(_innerRadius);
         setOuterRadius(_outerRadius);
         setRotationInvariant(_rotationInvariant);
+        meanDistance = 0;
     }
 
     void extractSCD(cv::Mat& contour, cv::Mat& descriptors,
@@ -107,7 +108,7 @@ class SCDMatcher
 {
 public:
     // the full constructor
-    SCDMatcher()
+    SCDMatcher() : minMatchCost(0)
     {
     }
 

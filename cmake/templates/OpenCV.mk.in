@@ -94,6 +94,8 @@ LOCAL_CFLAGS     += $(OPENCV_LOCAL_CFLAGS)
 ifeq ($(OPENCV_INSTALL_MODULES),on)
     LOCAL_$(OPENCV_LIB_TYPE)_LIBRARIES += $(foreach mod, $(OPENCV_LIBS), opencv_$(mod))
 else
+    $(call __ndk_info,OpenCV: You should ignore warning about 'non-system libraries in linker flags' and 'opencv_java' library.)
+    $(call __ndk_info,        'OPENCV_INSTALL_MODULES:=on' can be used to build APK with included OpenCV binaries)
     LOCAL_LDLIBS += -L$(call host-path,$(LOCAL_PATH)/$(OPENCV_LIBS_DIR)) $(foreach lib, $(OPENCV_LIBS), -lopencv_$(lib))
 endif
 

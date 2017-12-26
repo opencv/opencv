@@ -2,6 +2,8 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/opencv_modules.hpp"
 
+#include "opencv2/core/ocl.hpp"
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -16,9 +18,9 @@ typedef TestBaseWithParam<string> stitch;
 typedef TestBaseWithParam<tuple<string, string> > stitchDatasets;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
-#define TEST_DETECTORS testing::Values("surf", "orb")
+#define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
 #else
-#define TEST_DETECTORS testing::Values<string>("orb")
+#define TEST_DETECTORS testing::Values("orb", "akaze")
 #endif
 #define AFFINE_DATASETS testing::Values("s", "budapest", "newspaper", "prague")
 
@@ -31,9 +33,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -68,9 +68,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -91,8 +89,8 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stopTimer();
     }
 
-    EXPECT_NEAR(pano.size().width, 1117, 50);
-    EXPECT_NEAR(pano.size().height, 642, 30);
+    EXPECT_NEAR(pano.size().width, 1117, GetParam() == "surf" ? 100 : 50);
+    EXPECT_NEAR(pano.size().height, 642, GetParam() == "surf" ? 60 : 30);
 
     SANITY_CHECK_NOTHING();
 }
@@ -104,13 +102,8 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
 
     Mat pano;
     vector<Mat> imgs;
-    int width, height, allowed_diff = 10;
-    Ptr<detail::FeaturesFinder> featuresFinder;
-
-    if(detector == "orb")
-        featuresFinder = makePtr<detail::OrbFeaturesFinder>();
-    else
-        featuresFinder = makePtr<detail::SurfFeaturesFinder>();
+    int width, height, allowed_diff = 20;
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(detector);
 
     if(dataset == "budapest")
     {
@@ -124,7 +117,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
         height = 1158;
         // this dataset is big, the results between surf and orb differ slightly,
         // but both are still good
-        allowed_diff = 27;
+        allowed_diff = 50;
     }
     else if (dataset == "newspaper")
     {
@@ -160,6 +153,9 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
     {
         Ptr<Stitcher> stitcher = Stitcher::create(Stitcher::SCANS, false);
         stitcher->setFeaturesFinder(featuresFinder);
+
+        if (cv::ocl::useOpenCL())
+            cv::theRNG() = cv::RNG(12345); // prevent fails of Windows OpenCL builds (see #8294)
 
         startTimer();
         stitcher->stitch(imgs, pano);

@@ -110,17 +110,6 @@ PARAM_TEST_CASE(IPPAsyncShared, Channels, hppAccelType)
 
         sts = hppQueryMatrixAllocParams(accel, (hpp32u)(matrix_Size.width*cn), (hpp32u)matrix_Size.height, HPP_DATA_TYPE_8U, &pitch, &size);
 
-        if (pitch!=0 && size!=0)
-        {
-            uchar *pData = (uchar*)_aligned_malloc(size, 4096);
-
-            for (int j=0; j<matrix_Size.height; j++)
-                for(int i=0; i<matrix_Size.width*cn; i++)
-                    pData[i+j*pitch] = rand()%upValue;
-
-            matrix = Mat(matrix_Size.height, matrix_Size.width, type, pData, pitch);
-        }
-
         matrix = randomMat(matrix_Size, type, 0, upValue);
     }
 

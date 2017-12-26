@@ -96,6 +96,7 @@ ImageDecoder BaseImageDecoder::newDecoder() const
 
 BaseImageEncoder::BaseImageEncoder()
 {
+    m_buf = 0;
     m_buf_supported = false;
 }
 

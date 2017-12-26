@@ -1,5 +1,9 @@
-set(the_description "High-level GUI and Media I/O")
-ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
+set(the_description "High-level GUI")
+if(ANDROID)
+  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+else()
+  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
+endif()
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -22,6 +26,7 @@ set(highgui_hdrs
 
 set(highgui_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
     )
 
 file(GLOB highgui_ext_hdrs
@@ -33,13 +38,17 @@ file(GLOB highgui_ext_hdrs
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
 if(HAVE_QT5)
-  set(CMAKE_AUTOMOC ON)
+  # "Automoc" doesn't work properly with opencv_world build, use QT5_WRAP_CPP() directly
+  #set(CMAKE_AUTOMOC ON)
+
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
   QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
   list(APPEND highgui_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h
+       ${_MOC_OUTFILES}
        ${_RCC_OUTFILES})
 
   foreach(dt5_dep Core Gui Widgets Test Concurrent)
@@ -65,7 +74,7 @@ elseif(HAVE_QT)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES})
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
-  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
+  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag "")
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
@@ -138,17 +147,8 @@ if(APPLE)
   add_apple_compiler_options(the_module)
 endif()
 
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DHIGHGUI_EXPORTS)
-endif()
-
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
-endif()
-
-if(NOT BUILD_opencv_world)
-  #stop automatic dependencies propagation for this module
-  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)

@@ -4,6 +4,8 @@ import datetime
 from run_utils import *
 from run_long import LONG_TESTS_DEBUG_VALGRIND, longTestFilter
 
+timestamp = datetime.datetime.now()
+
 class TestSuite(object):
     def __init__(self, options, cache):
         self.options = options
@@ -20,7 +22,8 @@ class TestSuite(object):
             res.append("CUDA")
         return res
 
-    def getLogName(self, app, timestamp):
+    def getLogBaseName(self, app):
+        global timestamp
         app = self.getAlias(app)
         rev = self.cache.getGitVersion()
         if isinstance(timestamp, datetime.datetime):
@@ -34,7 +37,10 @@ class TestSuite(object):
             lname = "_".join([p for p in pieces if p])
             lname = re.sub(r'[\(\)\[\]\s,]', '_', lname)
             l = re.sub(r'_+', '_', lname)
-        return l + ".xml"
+        return l
+
+    def getLogName(self, app):
+        return self.getLogBaseName(app) + '.xml'
 
     def listTests(self, short = False, main = False):
         if len(self.tests) == 0:
@@ -97,10 +103,15 @@ class TestSuite(object):
     def wrapInValgrind(self, cmd = []):
         if self.options.valgrind:
             res = ['valgrind']
-            if self.options.valgrind_supp:
-                res.append("--suppressions=%s" % self.options.valgrind_supp)
+            supp = self.options.valgrind_supp or []
+            for f in supp:
+                if os.path.isfile(f):
+                    res.append("--suppressions=%s" % f)
+                else:
+                    print("WARNING: Valgrind suppression file is missing, SKIP: %s" % f)
             res.extend(self.options.valgrind_opt)
-            return res + cmd + [longTestFilter(LONG_TESTS_DEBUG_VALGRIND)]
+            has_gtest_filter = next((True for x in cmd if x.startswith('--gtest_filter=')), False)
+            return res + cmd + ([longTestFilter(LONG_TESTS_DEBUG_VALGRIND)] if not has_gtest_filter else [])
         return cmd
 
     def tryCommand(self, cmd):
@@ -138,10 +149,25 @@ class TestSuite(object):
             if isColorEnabled(args):
                 args.append("--gtest_color=yes")
             cmd = self.wrapInValgrind([exe] + args)
+            env = {}
+            if not self.options.valgrind and self.options.trace:
+                env['OPENCV_TRACE'] = '1'
+                env['OPENCV_TRACE_LOCATION'] = 'OpenCVTrace-{}'.format(self.getLogBaseName(exe))
+                env['OPENCV_TRACE_SYNC_OPENCL'] = '1'
             tempDir = TempEnvDir('OPENCV_TEMP_PATH', "__opencv_temp.")
             tempDir.init()
             log.warning("Run: %s" % " ".join(cmd))
-            ret = execute(cmd, cwd = workingDir)
+            ret = execute(cmd, cwd = workingDir, env=env)
+            try:
+                if not self.options.valgrind and self.options.trace and int(self.options.trace_dump) >= 0:
+                    import trace_profiler
+                    trace = trace_profiler.Trace(env['OPENCV_TRACE_LOCATION']+'.txt')
+                    trace.process()
+                    trace.dump(max_entries=int(self.options.trace_dump))
+            except:
+                import traceback
+                traceback.print_exc()
+                pass
             tempDir.clean()
             hostlogpath = os.path.join(workingDir, logfile)
             if os.path.isfile(hostlogpath):
@@ -157,7 +183,6 @@ class TestSuite(object):
         args = args[:]
         logs = []
         test_list = self.getTestList(tests, black)
-        date = datetime.datetime.now()
         if len(test_list) != 1:
             args = [a for a in args if not a.startswith("--gtest_output=")]
         ret = 0
@@ -170,7 +195,7 @@ class TestSuite(object):
             else:
                 userlog = [a for a in args if a.startswith("--gtest_output=")]
                 if len(userlog) == 0:
-                    logname = self.getLogName(exe, date)
+                    logname = self.getLogName(exe)
                     more_args.append("--gtest_output=xml:" + logname)
                 else:
                     logname = userlog[0][userlog[0].find(":")+1:]

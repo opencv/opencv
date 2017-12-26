@@ -246,6 +246,12 @@ public:
         return assign(x);
     }
 
+    /// Assignment operator. Template-based version above doesn't work as expected. We need regular assignment operator here.
+    any& operator=(const any& x)
+    {
+        return assign(x);
+    }
+
     /// Assignment operator, specialed for literal strings.
     /// They have types like const char [6] which don't work as expected.
     any& operator=(const char* x)

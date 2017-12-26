@@ -139,7 +139,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                                 double acceptanceRatioBreakValue )
 {
     // Start recording clock ticks for training time output
-    const clock_t begin_time = clock();
+    double time = (double)getTickCount();
 
     if( _cascadeDirName.empty() || _posFilename.empty() || _negFilename.empty() )
         CV_Error( CV_StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is NULL" );
@@ -267,7 +267,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         fs << "}";
 
         // Output training time up till now
-        float seconds = float( clock () - begin_time ) / CLOCKS_PER_SEC;
+        double seconds = ( (double)getTickCount() - time)/ getTickFrequency();
         int days = int(seconds) / 60 / 60 / 24;
         int hours = (int(seconds) / 60 / 60) % 24;
         int minutes = (int(seconds) / 60) % 60;
@@ -534,7 +534,7 @@ bool CvCascadeClassifier::load( const string cascadeDirName )
     featureEvaluator->init( featureParams, numPos + numNeg, cascadeParams.winSize );
     fs.release();
 
-    char buf[10];
+    char buf[16] = {0};
     for ( int si = 0; si < numStages; si++ )
     {
         sprintf( buf, "%s%d", "stage", si);

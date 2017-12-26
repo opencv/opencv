@@ -138,7 +138,7 @@ struct CV_EXPORTS ProjectorBase
 /** @brief Base class for rotation-based warper using a detail::ProjectorBase_ derived class.
  */
 template <class P>
-class CV_EXPORTS RotationWarperBase : public RotationWarper
+class CV_EXPORTS_TEMPLATE RotationWarperBase : public RotationWarper
 {
 public:
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R);
@@ -243,7 +243,7 @@ struct CV_EXPORTS SphericalProjector : ProjectorBase
 /** @brief Warper that maps an image onto the unit sphere located at the origin.
 
  Projects image onto unit sphere with origin at (0, 0, 0) and radius scale, measured in pixels.
- A 360° panorama would therefore have a resulting width of 2 * scale * PI pixels.
+ A 360 panorama would therefore have a resulting width of 2 * scale * PI pixels.
  Poles are located at (0, -1, 0) and (0, 1, 0) points.
 */
 class CV_EXPORTS SphericalWarper : public RotationWarperBase<SphericalProjector>
@@ -550,7 +550,7 @@ private:
 };
 
 
-struct SphericalPortraitProjector : ProjectorBase
+struct CV_EXPORTS SphericalPortraitProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -568,7 +568,7 @@ protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br);
 };
 
-struct CylindricalPortraitProjector : ProjectorBase
+struct CV_EXPORTS CylindricalPortraitProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -587,7 +587,7 @@ protected:
     }
 };
 
-struct PlanePortraitProjector : ProjectorBase
+struct CV_EXPORTS PlanePortraitProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);

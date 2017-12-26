@@ -42,6 +42,8 @@
 #ifndef OPENCV_TS_OCL_PERF_HPP
 #define OPENCV_TS_OCL_PERF_HPP
 
+#include "opencv2/ts.hpp"
+
 #include "ocl_test.hpp"
 #include "ts_perf.hpp"
 
@@ -49,9 +51,6 @@ namespace cvtest {
 namespace ocl {
 
 using namespace perf;
-
-using std::tr1::get;
-using std::tr1::tuple;
 
 #define OCL_PERF_STRATEGY PERF_STRATEGY_SIMPLE
 
@@ -67,7 +66,7 @@ using std::tr1::tuple;
     protected: \
         virtual void PerfTestBody(); \
     }; \
-    TEST_F(OCL##_##fixture##_##name, name) { declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
+    TEST_F(OCL##_##fixture##_##name, name) { CV_TRACE_REGION("PERF_TEST: " #fixture "_" #name); declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
     void OCL##_##fixture##_##name::PerfTestBody()
 
 #define SIMPLE_PERF_TEST_P(fixture, name, params) \
@@ -79,7 +78,7 @@ using std::tr1::tuple;
     protected: \
         virtual void PerfTestBody(); \
     }; \
-    TEST_P(OCL##_##fixture##_##name, name) { declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
+    TEST_P(OCL##_##fixture##_##name, name) { CV_TRACE_REGION("PERF_TEST_P: " #fixture "_" #name); declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
     INSTANTIATE_TEST_CASE_P(/*none*/, OCL##_##fixture##_##name, params); \
     void OCL##_##fixture##_##name::PerfTestBody()
 
@@ -95,26 +94,36 @@ using std::tr1::tuple;
 
 #define OCL_PERF_ENUM ::testing::Values
 
-// TODO Replace finish call to dstUMat.wait()
+//! deprecated
 #define OCL_TEST_CYCLE() \
     for (cvtest::ocl::perf::safeFinish(); next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer())
-
+//! deprecated
 #define OCL_TEST_CYCLE_N(n) \
     for (declare.iterations(n), cvtest::ocl::perf::safeFinish(); next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer())
-
+//! deprecated
 #define OCL_TEST_CYCLE_MULTIRUN(runsNum) \
     for (declare.runs(runsNum), cvtest::ocl::perf::safeFinish(); next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
         for (int r = 0; r < runsNum; cvtest::ocl::perf::safeFinish(), ++r)
+
+#undef PERF_SAMPLE_BEGIN
+#undef PERF_SAMPLE_END
+#define PERF_SAMPLE_BEGIN() \
+    cvtest::ocl::perf::safeFinish(); \
+    for(; next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
+    { \
+        CV_TRACE_REGION("iteration");
+#define PERF_SAMPLE_END() \
+    }
 
 
 namespace perf {
 
 // Check for current device limitation
-CV_EXPORTS void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1);
+void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1);
 
 // Initialize Mat with random numbers. Range is depends on the data type.
 // TODO Parameter type is actually OutputArray
-CV_EXPORTS void randu(InputOutputArray dst);
+void randu(InputOutputArray dst);
 
 inline void safeFinish()
 {

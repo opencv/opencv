@@ -127,4 +127,32 @@ TEST_P(EstimateAffine2D, testNPoints)
     }
 }
 
+// test conversion from other datatypes than float
+TEST_P(EstimateAffine2D, testConversion)
+{
+    Mat aff(2, 3, CV_32S);
+    cv::randu(aff, 1., 3.);
+
+    std::vector<Point> fpts(3);
+    std::vector<Point> tpts(3);
+
+    // setting points that are not in the same line
+    fpts[0] = Point2f( rngIn(1,2), rngIn(5,6) );
+    fpts[1] = Point2f( rngIn(3,4), rngIn(3,4) );
+    fpts[2] = Point2f( rngIn(1,2), rngIn(3,4) );
+
+    transform(fpts, tpts, aff);
+
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffine2D(fpts, tpts, inliers, GetParam() /* method */);
+
+    ASSERT_FALSE(aff_est.empty());
+
+    aff.convertTo(aff, CV_64F); // need to convert before compare
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
+
+    // all must be inliers
+    EXPECT_EQ(countNonZero(inliers), 3);
+}
+
 INSTANTIATE_TEST_CASE_P(Calib3d, EstimateAffine2D, Method::all());

@@ -42,6 +42,33 @@ PERF_TEST_P( TestFilter2d, Filter2d,
     SANITY_CHECK(dst, 1);
 }
 
+PERF_TEST_P(TestFilter2d, Filter2d_ovx,
+            Combine(
+                Values(Size(320, 240), sz1080p),
+                Values(3, 5),
+                Values(BORDER_CONSTANT, BORDER_REPLICATE)
+            )
+)
+{
+    Size sz;
+    int borderMode, kSize;
+    sz = get<0>(GetParam());
+    kSize = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
+
+    Mat src(sz, CV_8UC1);
+    Mat dst(sz, CV_16SC1);
+
+    Mat kernel(kSize, kSize, CV_16SC1);
+    randu(kernel, -3, 10);
+
+    declare.in(src, WARMUP_RNG).out(dst).time(20);
+
+    TEST_CYCLE() filter2D(src, dst, CV_16SC1, kernel, Point(kSize / 2, kSize / 2), 0., borderMode);
+
+    SANITY_CHECK(dst, 1);
+}
+
 PERF_TEST_P( Image_KernelSize, GaborFilter2d,
              Combine(
                  Values("stitching/a1.png", "cv/shared/pic5.png"),

@@ -282,9 +282,10 @@ public:
     cudaStream_t stream;
     bool ownStream;
 
-    Ptr<StackAllocator> stackAllocator;
+    Ptr<GpuMat::Allocator> allocator;
 
     Impl();
+    Impl(const Ptr<GpuMat::Allocator>& allocator);
     explicit Impl(cudaStream_t stream);
 
     ~Impl();
@@ -295,17 +296,23 @@ cv::cuda::Stream::Impl::Impl() : stream(0), ownStream(false)
     cudaSafeCall( cudaStreamCreate(&stream) );
     ownStream = true;
 
-    stackAllocator = makePtr<StackAllocator>(stream);
+    allocator = makePtr<StackAllocator>(stream);
+}
+
+cv::cuda::Stream::Impl::Impl(const Ptr<GpuMat::Allocator>& allocator) : stream(0), ownStream(false), allocator(allocator)
+{
+    cudaSafeCall( cudaStreamCreate(&stream) );
+    ownStream = true;
 }
 
 cv::cuda::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_), ownStream(false)
 {
-    stackAllocator = makePtr<StackAllocator>(stream);
+    allocator = makePtr<StackAllocator>(stream);
 }
 
 cv::cuda::Stream::Impl::~Impl()
 {
-    stackAllocator.release();
+    allocator.release();
 
     if (stream && ownStream)
     {
@@ -414,6 +421,16 @@ cv::cuda::Stream::Stream()
     throw_no_cuda();
 #else
     impl_ = makePtr<Impl>();
+#endif
+}
+
+cv::cuda::Stream::Stream(const Ptr<GpuMat::Allocator>& allocator)
+{
+#ifndef HAVE_CUDA
+    (void) allocator;
+    throw_no_cuda();
+#else
+    impl_ = makePtr<Impl>(allocator);
 #endif
 }
 
@@ -668,20 +685,33 @@ void cv::cuda::setBufferPoolConfig(int deviceId, size_t stackSize, int stackCoun
 #endif
 }
 
-#ifdef HAVE_CUDA
-
-cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator.get())
+#ifndef HAVE_CUDA
+cv::cuda::BufferPool::BufferPool(Stream& stream)
+{
+    (void) stream;
+    throw_no_cuda();
+}
+#else
+cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->allocator)
 {
 }
+#endif
 
 GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, int type)
 {
+#ifndef HAVE_CUDA
+    (void) rows;
+    (void) cols;
+    (void) type;
+    throw_no_cuda();
+    return GpuMat();
+#else
     GpuMat buf(allocator_);
     buf.create(rows, cols, type);
     return buf;
+#endif
 }
 
-#endif
 
 ////////////////////////////////////////////////////////////////
 // Event

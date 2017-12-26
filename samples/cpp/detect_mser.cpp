@@ -6,7 +6,7 @@
 #include <map>
 #include <iostream>
 #ifdef HAVE_OPENGL
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN 1
 #define NOMINMAX 1
 #include <windows.h>
@@ -271,7 +271,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     data->tex.bind();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvi(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     glDisable(GL_CULL_FACE);
     setOpenGlDrawCallback("OpenGL", draw, data);

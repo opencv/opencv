@@ -43,7 +43,7 @@ In this tutorial we will study the *corner* features, specifically.
 -   Let's look for corners. Since corners represents a variation in the gradient in the image, we
     will look for this "variation".
 -   Consider a grayscale image \f$I\f$. We are going to sweep a window \f$w(x,y)\f$ (with displacements \f$u\f$
-    in the x direction and \f$v\f$ in the right direction) \f$I\f$ and will calculate the variation of
+    in the x direction and \f$v\f$ in the y direction) \f$I\f$ and will calculate the variation of
     intensity.
 
     \f[E(u,v) = \sum _{x,y} w(x,y)[ I(x+u,y+v) - I(x,y)]^{2}\f]

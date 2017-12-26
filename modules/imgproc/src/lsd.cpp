@@ -398,8 +398,9 @@ CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetector(
 
 LineSegmentDetectorImpl::LineSegmentDetectorImpl(int _refine, double _scale, double _sigma_scale, double _quant,
         double _ang_th, double _log_eps, double _density_th, int _n_bins)
-        :SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),
-        ANG_TH(_ang_th), LOG_EPS(_log_eps), DENSITY_TH(_density_th), N_BINS(_n_bins)
+        : img_width(0), img_height(0), LOG_NT(0), w_needed(false), p_needed(false), n_needed(false),
+          SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),
+          ANG_TH(_ang_th), LOG_EPS(_log_eps), DENSITY_TH(_density_th), N_BINS(_n_bins)
 {
     CV_Assert(_scale > 0 && _sigma_scale > 0 && _quant >= 0 &&
               _ang_th > 0 && _ang_th < 180 && _density_th >= 0 && _density_th < 1 &&
@@ -429,6 +430,9 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(w_needed) Mat(w).copyTo(_width);
     if(p_needed) Mat(p).copyTo(_prec);
     if(n_needed) Mat(n).copyTo(_nfa);
+
+    // Clear used structures
+    list.clear();
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
@@ -449,7 +453,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
-        resize(gaussian_img, scaled_image, Size(), SCALE, SCALE);
+        resize(gaussian_img, scaled_image, Size(), SCALE, SCALE, INTER_LINEAR_EXACT);
         ll_angle(rho, N_BINS);
     }
     else
@@ -999,6 +1003,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(leftmost != NULL);
     leftmost->taken = true;
 
     // Find rightmost untaken point;
@@ -1017,6 +1022,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(rightmost != NULL);
     rightmost->taken = true;
 
     // Find last untaken point;
@@ -1035,6 +1041,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(tailp != NULL);
     tailp->taken = true;
 
     double flstep = (min_y->p.y != leftmost->p.y) ?
@@ -1142,23 +1149,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
     CV_Assert(!_image.empty() && (_image.channels() == 1 || _image.channels() == 3));
 
-    Mat gray;
     if (_image.channels() == 1)
     {
-        gray = _image.getMatRef();
+        cvtColor(_image, _image, COLOR_GRAY2BGR);
     }
-    else if (_image.channels() == 3)
-    {
-        cvtColor(_image, gray, CV_BGR2GRAY);
-    }
-
-    // Create a 3 channel image in order to draw colored lines
-    std::vector<Mat> planes;
-    planes.push_back(gray);
-    planes.push_back(gray);
-    planes.push_back(gray);
-
-    merge(planes, _image);
 
     Mat _lines;
     _lines = lines.getMat();
@@ -1170,7 +1164,7 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
         const Vec4f& v = _lines.at<Vec4f>(i);
         Point2f b(v[0], v[1]);
         Point2f e(v[2], v[3]);
-        line(_image.getMatRef(), b, e, Scalar(0, 0, 255), 1);
+        line(_image, b, e, Scalar(0, 0, 255), 1);
     }
 }
 

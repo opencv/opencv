@@ -10,9 +10,9 @@ Theory
 ------
 
 In the last few articles on contours, we have worked with several functions related to contours
-provided by OpenCV. But when we found the contours in image using **cv2.findContours()** function,
-we have passed an argument, **Contour Retrieval Mode**. We usually passed **cv2.RETR_LIST** or
-**cv2.RETR_TREE** and it worked nice. But what does it actually mean ?
+provided by OpenCV. But when we found the contours in image using **cv.findContours()** function,
+we have passed an argument, **Contour Retrieval Mode**. We usually passed **cv.RETR_LIST** or
+**cv.RETR_TREE** and it worked nice. But what does it actually mean ?
 
 Also, in the output, we got three arrays, first is the image, second is our contours, and one more
 output which we named as **hierarchy** (Please checkout the codes in previous articles). But we
@@ -23,7 +23,7 @@ That is what we are going to deal in this article.
 
 ### What is Hierarchy?
 
-Normally we use the **cv2.findContours()** function to detect objects in an image, right ? Sometimes
+Normally we use the **cv.findContours()** function to detect objects in an image, right ? Sometimes
 objects are in different locations. But in some cases, some shapes are inside other shapes. Just
 like nested figures. In this case, we call outer one as **parent** and inner one as **child**. This
 way, contours in an image has some relationship to each other. And we can specify how one contour is
@@ -82,8 +82,8 @@ contour-3a. For contour-3a, it is contour-3 and so on.
 @note If there is no child or parent, that field is taken as -1
 
 So now we know about the hierarchy style used in OpenCV, we can check into Contour Retrieval Modes
-in OpenCV with the help of same image given above. ie what do flags like cv2.RETR_LIST,
-cv2.RETR_TREE, cv2.RETR_CCOMP, cv2.RETR_EXTERNAL etc mean?
+in OpenCV with the help of same image given above. ie what do flags like cv.RETR_LIST,
+cv.RETR_TREE, cv.RETR_CCOMP, cv.RETR_EXTERNAL etc mean?
 
 Contour Retrieval Mode
 ----------------------
@@ -99,7 +99,7 @@ will have their corresponding values. Just check it yourself and verify it.
 
 Below is the result I got, and each row is hierarchy details of corresponding contour. For eg, first
 row corresponds to contour 0. Next contour is contour 1. So Next = 1. There is no previous contour,
-so Previous = 0. And the remaining two, as told before, it is -1.
+so Previous = -1. And the remaining two, as told before, it is -1.
 @code{.py}
 >>> hierarchy
 array([[[ 1, -1, -1, -1],
@@ -185,7 +185,7 @@ array([[[ 3, -1,  1, -1],
 And this is the final guy, Mr.Perfect. It retrieves all the contours and creates a full family
 hierarchy list. **It even tells, who is the grandpa, father, son, grandson and even beyond... :)**.
 
-For examle, I took above image, rewrite the code for cv2.RETR_TREE, reorder the contours as per the
+For examle, I took above image, rewrite the code for cv.RETR_TREE, reorder the contours as per the
 result given by OpenCV and analyze it. Again, red letters give the contour number and green letters
 give the hierarchy order.
 
@@ -195,7 +195,7 @@ Take contour-0 : It is in hierarchy-0. Next contour in same hierarchy is contour
 contours. Child is contour-1. And no parent. So array is [7,-1,1,-1].
 
 Take contour-2 : It is in hierarchy-1. No contour in same level. No previous one. Child is
-contour-2. Parent is contour-0. So array is [-1,-1,2,0].
+contour-3. Parent is contour-1. So array is [-1,-1,3,1].
 
 And remaining, try yourself. Below is the full answer:
 @code{.py}

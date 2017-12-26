@@ -91,6 +91,7 @@ PngDecoder::PngDecoder()
     m_f = 0;
     m_buf_supported = true;
     m_buf_pos = 0;
+    m_bit_depth = 0;
 }
 
 

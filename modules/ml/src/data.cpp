@@ -403,7 +403,7 @@ public:
             Mat(tempCatMap).copyTo(catMap);
         }
 
-        if( varType.at<uchar>(ninputvars) == VAR_CATEGORICAL )
+        if( noutputvars > 0 && varType.at<uchar>(ninputvars) == VAR_CATEGORICAL )
         {
             preprocessCategorical(responses, &normCatResponses, labels, &counters, sortbuf);
             Mat(labels).copyTo(classLabels);
@@ -1028,6 +1028,7 @@ Ptr<TrainData> TrainData::loadFromCSV(const String& filename,
                                       const String& varTypeSpec,
                                       char delimiter, char missch)
 {
+    CV_TRACE_FUNCTION_SKIP_NESTED();
     Ptr<TrainDataImpl> td = makePtr<TrainDataImpl>();
     if(!td->loadCSV(filename, headerLines, responseStartIdx, responseEndIdx, varTypeSpec, delimiter, missch))
         td.release();
@@ -1038,6 +1039,7 @@ Ptr<TrainData> TrainData::create(InputArray samples, int layout, InputArray resp
                                  InputArray varIdx, InputArray sampleIdx, InputArray sampleWeights,
                                  InputArray varType)
 {
+    CV_TRACE_FUNCTION_SKIP_NESTED();
     Ptr<TrainDataImpl> td = makePtr<TrainDataImpl>();
     td->setData(samples, layout, responses, varIdx, sampleIdx, sampleWeights, varType, noArray());
     return td;

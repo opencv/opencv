@@ -109,7 +109,7 @@ public:
             }
             else
             {
-                if (readStringList(input, imageList))
+                if (isListOfImages(input) && readStringList(input, imageList))
                 {
                     inputType = IMAGE_LIST;
                     nrFrames = (nrFrames < (int)imageList.size()) ? nrFrames : (int)imageList.size();
@@ -143,10 +143,11 @@ public:
         if (useFisheye) {
             // the fisheye model has its own enum, so overwrite the flags
             flag = fisheye::CALIB_FIX_SKEW | fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-            if(fixK1)                  flag |= fisheye::CALIB_FIX_K1;
-            if(fixK2)                  flag |= fisheye::CALIB_FIX_K2;
-            if(fixK3)                  flag |= fisheye::CALIB_FIX_K3;
-            if(fixK4)                  flag |= fisheye::CALIB_FIX_K4;
+            if(fixK1)                   flag |= fisheye::CALIB_FIX_K1;
+            if(fixK2)                   flag |= fisheye::CALIB_FIX_K2;
+            if(fixK3)                   flag |= fisheye::CALIB_FIX_K3;
+            if(fixK4)                   flag |= fisheye::CALIB_FIX_K4;
+            if (calibFixPrincipalPoint) flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
         }
 
         calibrationPattern = NOT_EXISTING;
@@ -189,6 +190,16 @@ public:
         for( ; it != it_end; ++it )
             l.push_back((string)*it);
         return true;
+    }
+
+    static bool isListOfImages( const string& filename)
+    {
+        string s(filename);
+        // Look for file extension
+        if( s.find(".xml") == string::npos && s.find(".yaml") == string::npos && s.find(".yml") == string::npos )
+            return false;
+        else
+            return true;
     }
 public:
     Size boardSize;              // The size of the board -> Number of items by width and height

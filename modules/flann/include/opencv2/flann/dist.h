@@ -43,7 +43,7 @@ typedef unsigned __int64 uint64_t;
 
 #include "defines.h"
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#if defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 #endif
 
@@ -698,7 +698,7 @@ struct KL_Divergence
     typedef typename Accumulator<T>::Type ResultType;
 
     /**
-     *  Compute the Kullback–Leibler divergence
+     *  Compute the Kullback-Leibler divergence
      */
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const

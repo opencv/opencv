@@ -239,7 +239,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_LIBV4L
+#if !defined _WIN32 && defined HAVE_LIBV4L
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
@@ -312,6 +312,7 @@ typedef struct CvCaptureCAM_V4L
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;
+    bool returnFrame;
 
     int width; int height;
     int mode;
@@ -392,27 +393,27 @@ static int xioctl( int fd, int request, void *arg)
    Returns the global numCameras with the correct value (we hope) */
 
 static void icvInitCapture_V4L() {
-   int deviceHandle;
-   int CameraNumber;
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
+    int deviceHandle;
+    int CameraNumber;
+    char deviceName[MAX_DEVICE_DRIVER_NAME];
 
-   CameraNumber = 0;
-   while(CameraNumber < MAX_CAMERAS) {
-      /* Print the CameraNumber at the end of the string with a width of one character */
-      sprintf(deviceName, "/dev/video%1d", CameraNumber);
-      /* Test using an open to see if this new device name really does exists. */
-      deviceHandle = open(deviceName, O_RDONLY);
-      if (deviceHandle != -1) {
-         /* This device does indeed exist - add it to the total so far */
-    // add indexList
-    indexList|=(1 << CameraNumber);
-        numCameras++;
-    }
-    if (deviceHandle != -1)
-      close(deviceHandle);
-      /* Set up to test the next /dev/video source in line */
-      CameraNumber++;
-   } /* End while */
+    CameraNumber = 0;
+    while(CameraNumber < MAX_CAMERAS) {
+        /* Print the CameraNumber at the end of the string with a width of one character */
+        sprintf(deviceName, "/dev/video%1d", CameraNumber);
+        /* Test using an open to see if this new device name really does exists. */
+        deviceHandle = open(deviceName, O_RDONLY);
+        if (deviceHandle != -1) {
+            /* This device does indeed exist - add it to the total so far */
+            numCameras++;
+            // add indexList
+            indexList|=(1 << CameraNumber);
+        }
+        if (deviceHandle != -1)
+            close(deviceHandle);
+        /* Set up to test the next /dev/video source in line */
+        CameraNumber++;
+    } /* End while */
 
 }; /* End icvInitCapture_V4L */
 
@@ -1094,6 +1095,8 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName)
        capture->is_v4l2_device = 1;
    }
 
+   capture->returnFrame = true;
+
    return capture;
 }; /* End icvOpenCAM_V4L */
 
@@ -1119,6 +1122,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
         default:
             /* display the error and stop processing */
+            capture->returnFrame = false;
             perror ("VIDIOC_DQBUF");
             return -1;
         }
@@ -1360,7 +1364,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
   }
 
-   return(&capture->frame);
+  if (capture->returnFrame)
+    return(&capture->frame);
+  else
+    return 0;
 }
 
 static int zeroPropertyQuietly(CvCaptureCAM_V4L* capture, int property_id, int value)

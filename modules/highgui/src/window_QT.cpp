@@ -351,7 +351,7 @@ CV_IMPL int cvWaitKey(int delay)
 
                 //to decrease CPU usage
                 //sleep 1 millisecond
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined _WIN32
                 Sleep(1);
 #else
                 usleep(1000);
@@ -673,30 +673,20 @@ CV_IMPL void cvSetTrackbarPos(const char* name_bar, const char* window_name, int
 
 CV_IMPL void cvSetTrackbarMax(const char* name_bar, const char* window_name, int maxval)
 {
-    if (maxval >= 0)
+    QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
+    if (t)
     {
-        QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
-        if (t)
-        {
-            int minval = t->slider->minimum();
-            maxval = (maxval>minval)?maxval:minval;
-            t->slider->setMaximum(maxval);
-        }
+        t->slider->setMaximum(maxval);
     }
 }
 
 
 CV_IMPL void cvSetTrackbarMin(const char* name_bar, const char* window_name, int minval)
 {
-    if (minval >= 0)
+    QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
+    if (t)
     {
-        QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
-        if (t)
-        {
-            int maxval = t->slider->maximum();
-            minval = (maxval<minval)?maxval:minval;
-            t->slider->setMinimum(minval);
-        }
+        t->slider->setMinimum(minval);
     }
 }
 
@@ -994,6 +984,7 @@ void GuiReceiver::createWindow(QString name, int flags)
 
     nb_windows++;
     new CvWindow(name, flags);
+    cvWaitKey(1);
 }
 
 
@@ -1409,7 +1400,7 @@ void CvTrackbar::update(int myvalue)
 
 void CvTrackbar::setLabel(int myvalue)
 {
-    QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
+    QString nameNormalized = name_bar.leftJustified( 10, ' ', false );
     QString valueMaximum = QString("%1").arg(slider->maximum());
     QString str = QString("%1 (%2/%3)").arg(nameNormalized).arg(myvalue,valueMaximum.length(),10,QChar('0')).arg(valueMaximum);
     label->setText(str);
@@ -3024,6 +3015,7 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
 
 
     for (int j=-1;j<height()/pixel_height;j++)//-1 because display the pixels top rows left columns
+    {
         for (int i=-1;i<width()/pixel_width;i++)//-1
         {
             // Calculate top left of the pixel's position in the viewport (screen space)
@@ -3076,15 +3068,15 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
                     Qt::AlignCenter, val);
             }
         }
+    }
 
-        painter->setPen(QPen(Qt::black, 1));
-        painter->drawLines(linesX.data(), linesX.size());
-        painter->drawLines(linesY.data(), linesY.size());
+    painter->setPen(QPen(Qt::black, 1));
+    painter->drawLines(linesX.data(), linesX.size());
+    painter->drawLines(linesY.data(), linesY.size());
 
-        //restore font size
-        f.setPointSize(original_font_size);
-        painter->setFont(f);
-
+    //restore font size
+    f.setPointSize(original_font_size);
+    painter->setFont(f);
 }
 
 void DefaultViewPort::drawViewOverview(QPainter *painter)

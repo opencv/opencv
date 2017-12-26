@@ -594,7 +594,7 @@ public:
     bool checkSubset( InputArray _ms1, InputArray, int count ) const
     {
         Mat ms1 = _ms1.getMat();
-        // check colinearity and also check that points are too close
+        // check collinearity and also check that points are too close
         // only ms1 affects actual estimation stability
         return !haveCollinearPoints(ms1, count);
     }
@@ -802,11 +802,11 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
 
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
-        Mat tmp;
-        from.convertTo(tmp, CV_32FC2);
-        from = tmp;
-        to.convertTo(tmp, CV_32FC2);
-        to = tmp;
+        Mat tmp1, tmp2;
+        from.convertTo(tmp1, CV_32FC2);
+        from = tmp1;
+        to.convertTo(tmp2, CV_32FC2);
+        to = tmp2;
     }
     // convert to N x 1 vectors
     from = from.reshape(2, count);
@@ -869,11 +869,11 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
 
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
-        Mat tmp;
-        from.convertTo(tmp, CV_32FC2);
-        from = tmp;
-        to.convertTo(tmp, CV_32FC2);
-        to = tmp;
+        Mat tmp1, tmp2;
+        from.convertTo(tmp1, CV_32FC2);
+        from = tmp1;
+        to.convertTo(tmp2, CV_32FC2);
+        to = tmp2;
     }
     // convert to N x 1 vectors
     from = from.reshape(2, count);

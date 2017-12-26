@@ -53,12 +53,14 @@ public:
     {
         fullAffine = true;
         name_ = "ShapeTransformer.AFF";
+        transformCost = 0;
     }
 
     AffineTransformerImpl(bool _fullAffine)
     {
         fullAffine = _fullAffine;
         name_ = "ShapeTransformer.AFF";
+        transformCost = 0;
     }
 
     /* Destructor */

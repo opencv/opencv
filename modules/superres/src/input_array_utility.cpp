@@ -200,10 +200,11 @@ namespace
 
     void convertToDepth(InputArray src, OutputArray dst, int depth)
     {
-        CV_Assert( src.depth() <= CV_64F );
+        const int sdepth = src.depth();
+        CV_Assert( sdepth <= CV_64F );
         CV_Assert( depth == CV_8U || depth == CV_32F );
 
-        static const double maxVals[] =
+        static const double maxVals[CV_64F + 1] =
         {
             (double)std::numeric_limits<uchar>::max(),
             (double)std::numeric_limits<schar>::max(),
@@ -214,7 +215,7 @@ namespace
             1.0,
         };
 
-        const double scale = maxVals[depth] / maxVals[src.depth()];
+        const double scale = maxVals[depth] / maxVals[sdepth];
 
         switch (src.kind())
         {

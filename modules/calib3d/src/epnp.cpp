@@ -60,7 +60,7 @@ void epnp::choose_control_points(void)
   // Take C1, C2, and C3 from PCA on the reference points:
   CvMat * PW0 = cvCreateMat(number_of_correspondences, 3, CV_64F);
 
-  double pw0tpw0[3 * 3], dc[3], uct[3 * 3];
+  double pw0tpw0[3 * 3], dc[3] = {0}, uct[3 * 3] = {0};
   CvMat PW0tPW0 = cvMat(3, 3, CV_64F, pw0tpw0);
   CvMat DC      = cvMat(3, 1, CV_64F, dc);
   CvMat UCt     = cvMat(3, 3, CV_64F, uct);
@@ -240,7 +240,7 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
     pw0[j] /= number_of_correspondences;
   }
 
-  double abt[3 * 3], abt_d[3], abt_u[3 * 3], abt_v[3 * 3];
+  double abt[3 * 3] = {0}, abt_d[3], abt_u[3 * 3], abt_v[3 * 3];
   CvMat ABt   = cvMat(3, 3, CV_64F, abt);
   CvMat ABt_D = cvMat(3, 1, CV_64F, abt_d);
   CvMat ABt_U = cvMat(3, 3, CV_64F, abt_u);
@@ -332,7 +332,7 @@ double epnp::reprojection_error(const double R[3][3], const double t[3])
 void epnp::find_betas_approx_1(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x4[6 * 4], b4[4];
+  double l_6x4[6 * 4], b4[4] = {0};
   CvMat L_6x4 = cvMat(6, 4, CV_64F, l_6x4);
   CvMat B4    = cvMat(4, 1, CV_64F, b4);
 
@@ -364,7 +364,7 @@ void epnp::find_betas_approx_1(const CvMat * L_6x10, const CvMat * Rho,
 void epnp::find_betas_approx_2(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x3[6 * 3], b3[3];
+  double l_6x3[6 * 3], b3[3] = {0};
   CvMat L_6x3  = cvMat(6, 3, CV_64F, l_6x3);
   CvMat B3     = cvMat(3, 1, CV_64F, b3);
 
@@ -396,7 +396,7 @@ void epnp::find_betas_approx_2(const CvMat * L_6x10, const CvMat * Rho,
 void epnp::find_betas_approx_3(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x5[6 * 5], b5[5];
+  double l_6x5[6 * 5], b5[5] = {0};
   CvMat L_6x5 = cvMat(6, 5, CV_64F, l_6x5);
   CvMat B5    = cvMat(5, 1, CV_64F, b5);
 
@@ -506,7 +506,7 @@ void epnp::gauss_newton(const CvMat * L_6x10, const CvMat * Rho, double betas[4]
 {
   const int iterations_number = 5;
 
-  double a[6*4], b[6], x[4];
+  double a[6*4], b[6], x[4] = {0};
   CvMat A = cvMat(6, 4, CV_64F, a);
   CvMat B = cvMat(6, 1, CV_64F, b);
   CvMat X = cvMat(4, 1, CV_64F, x);
@@ -525,6 +525,8 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
 {
   const int nr = A->rows;
   const int nc = A->cols;
+  if (nc <= 0 || nr <= 0)
+      return;
 
   if (max_nr != 0 && max_nr < nr)
   {

@@ -9,15 +9,13 @@ reads distorted images, calculates the calibration and write undistorted images
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from tests_common import NewOpenCVTests
 
 class calibration_test(NewOpenCVTests):
 
     def test_calibration(self):
-
-        from glob import glob
         img_names = []
         for i in range(1, 15):
             if i < 10:
@@ -34,17 +32,16 @@ class calibration_test(NewOpenCVTests):
         obj_points = []
         img_points = []
         h, w = 0, 0
-        img_names_undistort = []
         for fn in img_names:
             img = self.get_sample(fn, 0)
             if img is None:
                 continue
 
             h, w = img.shape[:2]
-            found, corners = cv2.findChessboardCorners(img, pattern_size)
+            found, corners = cv.findChessboardCorners(img, pattern_size)
             if found:
-                term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 30, 0.1)
-                cv2.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
+                term = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_COUNT, 30, 0.1)
+                cv.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
 
             if not found:
                 continue
@@ -53,7 +50,7 @@ class calibration_test(NewOpenCVTests):
             obj_points.append(pattern_points)
 
         # calculate camera distortion
-        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None, flags = 0)
+        rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None, flags = 0)
 
         eps = 0.01
         normCamEps = 10.0
@@ -67,5 +64,10 @@ class calibration_test(NewOpenCVTests):
            1.21234330e-03,  -1.40825372e-04, 1.54865844e-01]
 
         self.assertLess(abs(rms - 0.196334638034), eps)
-        self.assertLess(cv2.norm(camera_matrix - cameraMatrixTest, cv2.NORM_L1), normCamEps)
-        self.assertLess(cv2.norm(dist_coefs - distCoeffsTest, cv2.NORM_L1), normDistEps)
+        self.assertLess(cv.norm(camera_matrix - cameraMatrixTest, cv.NORM_L1), normCamEps)
+        self.assertLess(cv.norm(dist_coefs - distCoeffsTest, cv.NORM_L1), normDistEps)
+
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

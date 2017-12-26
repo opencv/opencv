@@ -392,9 +392,11 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
 {
     CV_INSTRUMENT_REGION()
 
+#ifndef __APPLE__
     CV_OCL_RUN(_flow.isUMat() &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                calc_ocl(_I0, _I1, _flow))
+#endif
 
     Mat I0 = _I0.getMat();
     Mat I1 = _I1.getMat();
@@ -463,8 +465,8 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        resize(dm.I0s[s - 1], dm.I0s[s], Size(), scaleStep, scaleStep);
-        resize(dm.I1s[s - 1], dm.I1s[s], Size(), scaleStep, scaleStep);
+        resize(dm.I0s[s - 1], dm.I0s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
+        resize(dm.I1s[s - 1], dm.I1s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
 
         if (dm.I0s[s].cols < 16 || dm.I0s[s].rows < 16)
         {
@@ -474,8 +476,8 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
 
         if (useInitialFlow)
         {
-            resize(dm.u1s[s - 1], dm.u1s[s], Size(), scaleStep, scaleStep);
-            resize(dm.u2s[s - 1], dm.u2s[s], Size(), scaleStep, scaleStep);
+            resize(dm.u1s[s - 1], dm.u1s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
+            resize(dm.u2s[s - 1], dm.u2s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
 
             multiply(dm.u1s[s], Scalar::all(scaleStep), dm.u1s[s]);
             multiply(dm.u2s[s], Scalar::all(scaleStep), dm.u2s[s]);
@@ -506,9 +508,9 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
         // otherwise, upsample the optical flow
 
         // zoom the optical flow for the next finer scale
-        resize(dm.u1s[s], dm.u1s[s - 1], dm.I0s[s - 1].size());
-        resize(dm.u2s[s], dm.u2s[s - 1], dm.I0s[s - 1].size());
-        if (use_gamma) resize(dm.u3s[s], dm.u3s[s - 1], dm.I0s[s - 1].size());
+        resize(dm.u1s[s], dm.u1s[s - 1], dm.I0s[s - 1].size(), 0, 0, INTER_LINEAR);
+        resize(dm.u2s[s], dm.u2s[s - 1], dm.I0s[s - 1].size(), 0, 0, INTER_LINEAR);
+        if (use_gamma) resize(dm.u3s[s], dm.u3s[s - 1], dm.I0s[s - 1].size(), 0, 0, INTER_LINEAR);
 
         // scale the optical flow with the appropriate zoom factor (don't scale u3!)
         multiply(dm.u1s[s - 1], Scalar::all(1 / scaleStep), dm.u1s[s - 1]);
@@ -573,8 +575,8 @@ bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputA
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        resize(dum.I0s[s - 1], dum.I0s[s], Size(), scaleStep, scaleStep);
-        resize(dum.I1s[s - 1], dum.I1s[s], Size(), scaleStep, scaleStep);
+        resize(dum.I0s[s - 1], dum.I0s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
+        resize(dum.I1s[s - 1], dum.I1s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
 
         if (dum.I0s[s].cols < 16 || dum.I0s[s].rows < 16)
         {
@@ -584,8 +586,8 @@ bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputA
 
         if (useInitialFlow)
         {
-            resize(dum.u1s[s - 1], dum.u1s[s], Size(), scaleStep, scaleStep);
-            resize(dum.u2s[s - 1], dum.u2s[s], Size(), scaleStep, scaleStep);
+            resize(dum.u1s[s - 1], dum.u1s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
+            resize(dum.u2s[s - 1], dum.u2s[s], Size(), scaleStep, scaleStep, INTER_LINEAR);
 
             //scale by scale factor
             multiply(dum.u1s[s], Scalar::all(scaleStep), dum.u1s[s]);
@@ -605,8 +607,8 @@ bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputA
             break;
 
         // zoom the optical flow for the next finer scale
-        resize(dum.u1s[s], dum.u1s[s - 1], dum.I0s[s - 1].size());
-        resize(dum.u2s[s], dum.u2s[s - 1], dum.I0s[s - 1].size());
+        resize(dum.u1s[s], dum.u1s[s - 1], dum.I0s[s - 1].size(), 0, 0, INTER_LINEAR);
+        resize(dum.u2s[s], dum.u2s[s - 1], dum.I0s[s - 1].size(), 0, 0, INTER_LINEAR);
 
         // scale the optical flow with the appropriate zoom factor
         multiply(dum.u1s[s - 1], Scalar::all(1 / scaleStep), dum.u1s[s - 1]);

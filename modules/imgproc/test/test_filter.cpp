@@ -715,7 +715,7 @@ void CV_SmoothBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 double CV_SmoothBaseTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = test_mat[INPUT][0].depth();
-    return depth <= CV_8S ? 1 : 1e-5;
+    return depth < CV_32F ? 1 : 1e-5;
 }
 
 
@@ -1982,6 +1982,27 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
 }
 
+TEST(Imgproc_GaussianBlur, borderTypes)
+{
+    Size kernelSize(3, 3);
+
+    Mat src_16(16, 16, CV_8UC1, cv::Scalar::all(42)), dst_16;
+    Mat src_roi_16 = src_16(Rect(1, 1, 14, 14));
+    src_roi_16.setTo(cv::Scalar::all(3));
+
+    cv::GaussianBlur(src_roi_16, dst_16, kernelSize, 0, 0, BORDER_REPLICATE);
+
+    EXPECT_EQ(20, dst_16.at<uchar>(0, 0));
+
+    Mat src(3, 12, CV_8UC1, cv::Scalar::all(42)), dst;
+    Mat src_roi = src(Rect(1, 1, 10, 1));
+    src_roi.setTo(cv::Scalar::all(2));
+
+    cv::GaussianBlur(src_roi, dst, kernelSize, 0, 0, BORDER_REPLICATE);
+
+    EXPECT_EQ(27, dst.at<uchar>(0, 0));
+}
+
 TEST(Imgproc_Morphology, iterated)
 {
     RNG& rng = theRNG();
@@ -2064,4 +2085,37 @@ TEST(Imgproc_Sobel, borderTypes)
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+}
+
+TEST(Imgproc_MorphEx, hitmiss_regression_8957)
+{
+    Mat_<uchar> src(3, 3);
+    src << 0, 255, 0,
+           0,   0, 0,
+           0, 255, 0;
+
+    Mat_<uchar> kernel = src / 255;
+
+    Mat dst;
+    morphologyEx(src, dst, MORPH_HITMISS, kernel);
+
+    Mat ref = Mat::zeros(3, 3, CV_8U);
+    ref.at<uchar>(1, 1) = 255;
+
+    ASSERT_DOUBLE_EQ(norm(dst, ref, NORM_INF), 0.);
+}
+
+TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
+{
+    Mat_<uchar> src(3, 3);
+    src << 0, 255, 0,
+           0,   0, 0,
+           0, 255, 0;
+
+    Mat_<uchar> kernel = Mat_<uchar>::zeros(3, 3);
+
+    Mat dst;
+    morphologyEx(src, dst, MORPH_HITMISS, kernel);
+
+    ASSERT_DOUBLE_EQ(norm(dst, src, NORM_INF), 0.);
 }

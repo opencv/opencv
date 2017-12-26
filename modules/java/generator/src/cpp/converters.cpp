@@ -3,9 +3,6 @@
 
 using namespace cv;
 
-#define CHECK_MAT(cond) if(!(cond)){ LOGD("FAILED: " #cond); return; }
-
-
 // vector_int
 
 void Mat_to_vector_int(Mat& mat, std::vector<int>& v_int)
@@ -92,6 +89,19 @@ void vector_Rect_to_Mat(std::vector<Rect>& v_rect, Mat& mat)
     mat = Mat(v_rect, true);
 }
 
+//vector_Rect2d
+
+void Mat_to_vector_Rect2d(Mat& mat, std::vector<Rect2d>& v_rect)
+{
+    v_rect.clear();
+    CHECK_MAT(mat.type()==CV_64FC4 && mat.cols==1);
+    v_rect = (std::vector<Rect2d>) mat;
+}
+
+void vector_Rect2d_to_Mat(std::vector<Rect2d>& v_rect, Mat& mat)
+{
+    mat = Mat(v_rect, true);
+}
 
 //vector_Point
 void Mat_to_vector_Point(Mat& mat, std::vector<Point>& v_point)

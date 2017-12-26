@@ -74,6 +74,7 @@
     @{
         @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
+        @defgroup core_utils_softfloat Softfloat support
     @}
     @defgroup core_opengl OpenGL interoperability
     @defgroup core_ipp Intel IPP Asynchronous C/C++ Converters
@@ -114,7 +115,7 @@ public:
      */
     Exception();
     /*!
-     Full constructor. Normally the constuctor is not called explicitly.
+     Full constructor. Normally the constructor is not called explicitly.
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
     Exception(int _code, const String& _err, const String& _func, const String& _file, int _line);
@@ -131,8 +132,8 @@ public:
     int code; ///< error code @see CVStatus
     String err; ///< error description
     String func; ///< function name. Available only when the compiler supports getting it
-    String file; ///< source file name where the error has occured
-    int line; ///< line number in the source file where the error has occured
+    String file; ///< source file name where the error has occurred
+    int line; ///< line number in the source file where the error has occurred
 };
 
 /*! @brief Signals an error and raises the exception.
@@ -273,6 +274,9 @@ of p and len.
 */
 CV_EXPORTS_W int borderInterpolate(int p, int len, int borderType);
 
+/** @example copyMakeBorder_demo.cpp
+An example using copyMakeBorder function
+ */
 /** @brief Forms a border around an image.
 
 The function copies the source image into the middle of the destination image. The areas to the
@@ -471,6 +475,9 @@ The function can also be emulated with a matrix expression, for example:
 */
 CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
 
+/** @example AddingImagesTrackbar.cpp
+
+ */
 /** @brief Calculates the weighted sum of two arrays.
 
 The function addWeighted calculates the weighted sum of two arrays as follows:
@@ -626,42 +633,44 @@ then pass the matrix to calcCovarMatrix .
 @param src input array that should have from 1 to 4 channels so that the results can be stored in
 Scalar_ 's.
 @param mean output parameter: calculated mean value.
-@param stddev output parameter: calculateded standard deviation.
+@param stddev output parameter: calculated standard deviation.
 @param mask optional operation mask.
 @sa  countNonZero, mean, norm, minMaxLoc, calcCovarMatrix
 */
 CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stddev,
                              InputArray mask=noArray());
 
-/** @brief Calculates an absolute array norm, an absolute difference norm, or a
-relative difference norm.
+/** @brief Calculates the  absolute norm of an array.
 
-The function cv::norm calculates an absolute norm of src1 (when there is no
-src2 ):
+This version of cv::norm calculates the absolute norm of src1. The type of norm to calculate is specified using cv::NormTypes.
 
-\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
-
-or an absolute or relative difference norm if src2 is there:
-
-\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
-
-or
-
-\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_INF}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L1}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L2}\) }\f]
-
-The function cv::norm returns the calculated norm.
+As example for one array consider the function \f$r(x)= \begin{pmatrix} x \\ 1-x \end{pmatrix}, x \in [-1;1]\f$.
+The \f$ L_{1}, L_{2} \f$ and \f$ L_{\infty} \f$ norm for the sample value \f$r(-1) = \begin{pmatrix} -1 \\ 2 \end{pmatrix}\f$
+is calculated as follows
+\f{align*}
+    \| r(-1) \|_{L_1} &= |-1| + |2| = 3 \\
+    \| r(-1) \|_{L_2} &= \sqrt{(-1)^{2} + (2)^{2}} = \sqrt{5} \\
+    \| r(-1) \|_{L_\infty} &= \max(|-1|,|2|) = 2
+\f}
+and for \f$r(0.5) = \begin{pmatrix} 0.5 \\ 0.5 \end{pmatrix}\f$ the calculation is
+\f{align*}
+    \| r(0.5) \|_{L_1} &= |0.5| + |0.5| = 1 \\
+    \| r(0.5) \|_{L_2} &= \sqrt{(0.5)^{2} + (0.5)^{2}} = \sqrt{0.5} \\
+    \| r(0.5) \|_{L_\infty} &= \max(|0.5|,|0.5|) = 0.5.
+\f}
+The following graphic shows all values for the three norm functions \f$\| r(x) \|_{L_1}, \| r(x) \|_{L_2}\f$ and \f$\| r(x) \|_{L_\infty}\f$.
+It is notable that the \f$ L_{1} \f$ norm forms the upper and the \f$ L_{\infty} \f$ norm forms the lower border for the example function \f$ r(x) \f$.
+![Graphs for the different norm functions from the above example](pics/NormTypes_OneArray_1-2-INF.png)
 
 When the mask parameter is specified and it is not empty, the norm is
+
+If normType is not specified, NORM_L2 is used.
 calculated only over the region specified by the mask.
 
-A multi-channel input arrays are treated as a single-channel, that is,
+Multi-channel input arrays are treated as single-channel arrays, that is,
 the results for all channels are combined.
+
+Hamming norms can only be calculated with CV_8U depth arrays.
 
 @param src1 first input array.
 @param normType type of the norm (see cv::NormTypes).
@@ -669,7 +678,12 @@ the results for all channels are combined.
 */
 CV_EXPORTS_W double norm(InputArray src1, int normType = NORM_L2, InputArray mask = noArray());
 
-/** @overload
+/** @brief Calculates an absolute difference norm or a relative difference norm.
+
+This version of cv::norm calculates the absolute difference norm
+or the relative difference norm of arrays src1 and src2.
+The type of norm to calculate is specified using cv::NormTypes.
+
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param normType type of the norm (cv::NormTypes).
@@ -683,10 +697,21 @@ CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
 */
 CV_EXPORTS double norm( const SparseMat& src, int normType );
 
-/** @brief computes PSNR image/video quality metric
+/** @brief Computes the Peak Signal-to-Noise Ratio (PSNR) image quality metric.
 
-see http://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio for details
-@todo document
+This function calculates the Peak Signal-to-Noise Ratio (PSNR) image quality metric in decibels (dB), between two input arrays src1 and src2. Arrays must have depth CV_8U.
+
+The PSNR is calculated as follows:
+
+\f[
+\texttt{PSNR} = 10 \cdot \log_{10}{\left( \frac{R^2}{MSE} \right) }
+\f]
+
+where R is the maximum integer value of depth CV_8U (255) and MSE is the mean squared error between the two arrays.
+
+@param src1 first input array.
+@param src2 second input array of the same size as src1.
+
   */
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
@@ -840,6 +865,13 @@ obtained. For example, the function can be used to compute horizontal and vertic
 raster image. In case of REDUCE_MAX and REDUCE_MIN , the output image should have the same type as the source one.
 In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
 And multi-channel arrays are also supported in these two reduction modes.
+
+The following code demonstrates its usage for a single channel matrix.
+@snippet snippets/core_reduce.cpp example
+
+And the following code demonstrates its usage for a two-channel matrix.
+@snippet snippets/core_reduce.cpp example2
+
 @param src input 2D matrix.
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
@@ -859,6 +891,10 @@ elements of i-th input array are treated as mv[i].channels()-element vectors.
 
 The function cv::split does the reverse operation. If you need to shuffle channels in some other
 advanced way, use cv::mixChannels.
+
+The following example shows how to merge 3 single channel matrices into a single 3-channel matrix.
+@snippet snippets/core_merge.cpp example
+
 @param mv input array of matrices to be merged; all the matrices in mv must have the same
 size and the same depth.
 @param count number of input matrices when mv is a plain C array; it must be greater than zero.
@@ -882,6 +918,10 @@ The function cv::split splits a multi-channel array into separate single-channel
 \f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
 If you need to extract a single channel or do some other sophisticated channel permutation, use
 mixChannels .
+
+The following example demonstrates how to split a 3-channel matrix into 3 single channel matrices.
+@snippet snippets/core_split.cpp example
+
 @param src input multi-channel array.
 @param mvbegin output array; the number of arrays must match src.channels(); the arrays themselves are
 reallocated, if needed.
@@ -1639,7 +1679,7 @@ CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
 
 The function cv::transpose transposes the matrix src :
 \f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
-@note No complex conjugation is done in case of a complex matrix. It it
+@note No complex conjugation is done in case of a complex matrix. It
 should be done separately if needed.
 @param src input array.
 @param dst output array of the same type as src.
@@ -1873,8 +1913,9 @@ matrix src:
 @code
     src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
 @endcode
-@note in the new and the old interfaces different ordering of eigenvalues and eigenvectors
-parameters is used.
+
+@note Use cv::eigenNonSymmetric for calculation of real eigenvalues and eigenvectors of non-symmetric matrix.
+
 @param src input matrix that must have CV_32FC1 or CV_64FC1 type, square size and be symmetrical
 (src ^T^ == src).
 @param eigenvalues output vector of eigenvalues of the same type as src; the eigenvalues are stored
@@ -1882,10 +1923,27 @@ in the descending order.
 @param eigenvectors output matrix of eigenvectors; it has the same size and type as src; the
 eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding
 eigenvalues.
-@sa completeSymm , PCA
+@sa eigenNonSymmetric, completeSymm , PCA
 */
 CV_EXPORTS_W bool eigen(InputArray src, OutputArray eigenvalues,
                         OutputArray eigenvectors = noArray());
+
+/** @brief Calculates eigenvalues and eigenvectors of a non-symmetric matrix (real eigenvalues only).
+
+@note Assumes real eigenvalues.
+
+The function calculates eigenvalues and eigenvectors (optional) of the square matrix src:
+@code
+    src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
+@endcode
+
+@param src input matrix (CV_32FC1 or CV_64FC1 type).
+@param eigenvalues output vector of eigenvalues (type is the same type as src).
+@param eigenvectors output matrix of eigenvectors (type is the same type as src). The eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding eigenvalues.
+@sa eigen
+*/
+CV_EXPORTS_W void eigenNonSymmetric(InputArray src, OutputArray eigenvalues,
+                                    OutputArray eigenvectors);
 
 /** @brief Calculates the covariance matrix of a set of vectors.
 
@@ -2762,7 +2820,7 @@ public:
     double a1 = rng.uniform((double)0, (double)1);
 
     // produces float from [0, 1)
-    double b = rng.uniform(0.f, 1.f);
+    float b = rng.uniform(0.f, 1.f);
 
     // produces double from [0, 1)
     double c = rng.uniform(0., 1.);
@@ -2778,8 +2836,8 @@ public:
     want a floating-point random number, but the range boundaries are
     integer numbers, either put dots in the end, if they are constants, or
     use explicit type cast operators, as in the a1 initialization above.
-    @param a lower inclusive boundary of the returned random numbers.
-    @param b upper non-inclusive boundary of the returned random numbers.
+    @param a lower inclusive boundary of the returned random number.
+    @param b upper non-inclusive boundary of the returned random number.
       */
     int uniform(int a, int b);
     /** @overload */
@@ -2834,6 +2892,8 @@ public:
     double gaussian(double sigma);
 
     uint64 state;
+
+    bool operator ==(const RNG& other) const;
 };
 
 /** @brief Mersenne Twister random number generator
@@ -3033,13 +3093,18 @@ public:
     */
     virtual void write(FileStorage& fs) const { (void)fs; }
 
+    /** @brief simplified API for language bindings
+     * @overload
+     */
+    CV_WRAP void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
+
     /** @brief Reads algorithm parameters from a file storage
     */
-    virtual void read(const FileNode& fn) { (void)fn; }
+    CV_WRAP virtual void read(const FileNode& fn) { (void)fn; }
 
     /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
      */
-    virtual bool empty() const { return false; }
+    CV_WRAP virtual bool empty() const { return false; }
 
     /** @brief Reads algorithm from the file node
 
@@ -3074,6 +3139,7 @@ public:
     template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
     {
         FileStorage fs(filename, FileStorage::READ);
+        CV_Assert(fs.isOpened());
         FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
         if (fn.empty()) return Ptr<_Tp>();
         Ptr<_Tp> obj = _Tp::create();

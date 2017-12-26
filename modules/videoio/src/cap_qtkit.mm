@@ -270,8 +270,6 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
 
 CvCaptureCAM::~CvCaptureCAM() {
     stopCaptureDevice();
-
-    std::cout << "Cleaned up camera." << std::endl;
 }
 
 int CvCaptureCAM::didStart() {

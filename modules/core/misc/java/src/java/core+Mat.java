@@ -1,5 +1,7 @@
 package org.opencv.core;
 
+import java.nio.ByteBuffer;
+
 // C++: class Mat
 //javadoc: Mat
 public class Mat {
@@ -35,6 +37,19 @@ public class Mat {
     {
 
         nativeObj = n_Mat(rows, cols, type);
+
+        return;
+    }
+
+    //
+    // C++: Mat::Mat(int rows, int cols, int type, void* data)
+    //
+
+    // javadoc: Mat::Mat(rows, cols, type, data)
+    public Mat(int rows, int cols, int type, ByteBuffer data)
+    {
+
+        nativeObj = n_Mat(rows, cols, type, data);
 
         return;
     }
@@ -1100,6 +1115,9 @@ public class Mat {
 
     // C++: Mat::Mat(int rows, int cols, int type)
     private static native long n_Mat(int rows, int cols, int type);
+
+    // C++: Mat::Mat(int rows, int cols, int type, void* data)
+    private static native long n_Mat(int rows, int cols, int type, ByteBuffer data);
 
     // C++: Mat::Mat(Size size, int type)
     private static native long n_Mat(double size_width, double size_height, int type);

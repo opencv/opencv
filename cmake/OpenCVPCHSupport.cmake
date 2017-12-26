@@ -65,6 +65,9 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+               item MATCHES "/usr/include$")
+          # workaround for GCC 6.x bug
         else()
           LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
         endif()
@@ -75,6 +78,9 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+               item MATCHES "/usr/include$")
+          # workaround for GCC 6.x bug
         else()
           LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
         endif()
@@ -91,8 +97,8 @@ MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
 
     set(${_dephelp} "${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch_dephelp.cxx")
     set(_content "")
-    if(EXISTS "${_dephelp}")
-      file(READ "${_dephelp}" _content)
+    if(EXISTS "${${_dephelp}}")
+      file(READ "${${_dephelp}}" _content)
     endif()
     set(_dummy_str
 "#include \"${_include_file}\"
@@ -190,18 +196,20 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     _PCH_GET_TARGET_COMPILE_FLAGS(_target_cflags ${_name} ${_pch_output_to_use} ${_dowarn})
     #MESSAGE("Add flags ${_target_cflags} to ${_targetName} " )
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      set(_target_cflags "${_target_cflags} -include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
+    endif()
 
     GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
     FOREACH(src ${_sources})
       if(NOT "${src}" MATCHES "\\.mm$")
         get_source_file_property(_flags "${src}" COMPILE_FLAGS)
-        if(_flags)
-          set(_flags "${_flags} ${_target_cflags}")
+        get_source_file_property(_flags2 "${src}" COMPILE_DEFINITIONS)
+        if(NOT _flags AND NOT _flags2)
+          set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${_target_cflags}")
         else()
-          set(_flags "${_target_cflags}")
+          #ocv_debug_message("Skip PCH, flags: ${oldProps} defines: ${oldProps2}, file: ${src}")
         endif()
-
-        set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${_flags}")
       endif()
     ENDFOREACH()
 
@@ -253,6 +261,24 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
         endif()
     endif()
 
+    if(type STREQUAL "SHARED_LIBRARY" OR type STREQUAL "STATIC_LIBRARY")
+      get_target_property(__pic ${_targetName} POSITION_INDEPENDENT_CODE)
+      if(__pic AND CMAKE_CXX_COMPILE_OPTIONS_PIC
+          AND NOT OPENCV_SKIP_PCH_PIC_HANDLING
+          AND NOT OPENCV_SKIP_PCH_PIC_HANDLING_${_targetName}
+      )
+        list(APPEND _compile_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_PIC}")
+      endif()
+    elseif(type STREQUAL "EXECUTABLE")
+      get_target_property(__pie ${_targetName} POSITION_INDEPENDENT_CODE)
+      if(__pie AND CMAKE_CXX_COMPILE_OPTIONS_PIE
+          AND NOT OPENCV_SKIP_PCH_PIE_HANDLING
+          AND NOT OPENCV_SKIP_PCH_PIE_HANDLING_${_targetName}
+      )
+        list(APPEND _compile_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_PIE}")
+      endif()
+    endif()
+
     get_target_property(DIRINC ${_targetName} INCLUDE_DIRECTORIES)
     set_target_properties(${_targetName}_pch_dephelp PROPERTIES INCLUDE_DIRECTORIES "${DIRINC}")
 
@@ -278,19 +304,6 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       DEPENDS ${_targetName}_pch_dephelp
       )
 
-    get_target_property(_sources ${_targetName} SOURCES)
-    foreach(src ${_sources})
-      if(NOT "${src}" MATCHES "\\.mm$")
-        get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
-        if(NOT oldProps)
-          set(newProperties "-include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
-          set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${newProperties}")
-        else()
-          ocv_debug_message("Skip PCH, flags: ${oldProps} , file: ${src}")
-        endif()
-      endif()
-    endforeach()
-
     ADD_PRECOMPILED_HEADER_TO_TARGET(${_targetName} ${_input}  ${_output} ${_dowarn})
 
 ENDMACRO(ADD_PRECOMPILED_HEADER)
@@ -303,9 +316,11 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 MACRO(GET_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
+  if(ENABLE_PRECOMPILED_HEADERS)
     if(CMAKE_GENERATOR MATCHES "^Visual.*$")
         set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
     endif()
+  endif()
 
 ENDMACRO(GET_NATIVE_PRECOMPILED_HEADER)
 
@@ -326,13 +341,14 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
         get_target_property(_sources ${_targetName} SOURCES)
         foreach(src ${_sources})
-          if(NOT "${src}" MATCHES "\\.mm$")
+          if("${src}" MATCHES "\\.c(pp|xx)?$")
             get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
-            if(NOT oldProps)
+            get_source_file_property(oldProps2 "${src}" COMPILE_DEFINITIONS)
+            if(NOT oldProps AND NOT oldProps2)
               set(newProperties "/Yu\"${_input}\" /FI\"${_input}\"")
               set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${newProperties}")
             else()
-              ocv_debug_message("Skip PCH, flags: ${oldProps} , file: ${src}")
+              ocv_debug_message("Skip PCH, flags: ${oldProps} defines: ${oldProps2}, file: ${src}")
             endif()
           endif()
         endforeach()

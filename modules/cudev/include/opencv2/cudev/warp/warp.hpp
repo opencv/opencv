@@ -64,7 +64,7 @@ struct Warp
     __device__ __forceinline__ static uint laneId()
     {
         uint ret;
-        asm("mov.u32 %0, %laneid;" : "=r"(ret));
+        asm("mov.u32 %0, %%laneid;" : "=r"(ret));
         return ret;
     }
 

@@ -76,6 +76,7 @@ RBaseStream::RBaseStream()
 {
     m_start = m_end = m_current = 0;
     m_file = 0;
+    m_block_pos = 0;
     m_block_size = BS_DEF_BLOCK_SIZE;
     m_is_opened = false;
     m_allocated = false;
@@ -97,7 +98,7 @@ void  RBaseStream::readBlock()
     {
         if( m_block_pos == 0 && m_current < m_end )
             return;
-        throw RBS_THROW_EOS;
+        CV_THROW (RBS_THROW_EOS);
     }
 
     fseek( m_file, m_block_pos, SEEK_SET );
@@ -106,7 +107,7 @@ void  RBaseStream::readBlock()
     m_current = m_start;
 
     if( readed == 0 || m_current >= m_end )
-        throw RBS_THROW_EOS;
+        CV_THROW (RBS_THROW_EOS);
 }
 
 
@@ -207,6 +208,8 @@ int  RLByteStream::getByte()
         readBlock();
         current = m_current;
     }
+
+    CV_Assert(current < m_end);
 
     val = *((uchar*)current);
     m_current = current + 1;
@@ -336,6 +339,7 @@ WBaseStream::WBaseStream()
 {
     m_start = m_end = m_current = 0;
     m_file = 0;
+    m_block_pos = 0;
     m_block_size = BS_DEF_BLOCK_SIZE;
     m_is_opened = false;
     m_buf = 0;

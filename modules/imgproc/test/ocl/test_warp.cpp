@@ -414,7 +414,7 @@ OCL_TEST_P(Remap_INTER_LINEAR, Mat)
         random_roi();
 
         double eps = 2.0;
-#ifdef ANDROID
+#ifdef __ANDROID__
         // TODO investigate accuracy
         if (cv::ocl::Device::getDefault().isNVidia())
             eps = 8.0;
@@ -458,6 +458,14 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
                             Values(0.5, 1.5, 2.0, 0.2),
                             Values(0.5, 1.5, 2.0, 0.2),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
+                            Bool(),
+                            Values(1, 16)));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpLinearExact, Resize, Combine(
+                            Values(CV_8UC1, CV_8UC4, CV_16UC2),
+                            Values(0.5, 1.5, 2.0, 0.2),
+                            Values(0.5, 1.5, 2.0, 0.2),
+                            Values((Interpolation)INTER_LINEAR_EXACT),
                             Bool(),
                             Values(1, 16)));
 

@@ -218,7 +218,7 @@ void EllipticKeyPoint::calcProjection( const std::vector<EllipticKeyPoint>& src,
         dst.resize(src.size());
         std::vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
         std::vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
-        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
+        for( ; srcIt != src.end() && dstIt != dst.end(); ++srcIt, ++dstIt )
             srcIt->calcProjection(H, *dstIt);
     }
 }
@@ -481,7 +481,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
 struct DMatchForEvaluation : public DMatch
 {
     uchar isCorrect;
-    DMatchForEvaluation( const DMatch &dm ) : DMatch( dm ) {}
+    DMatchForEvaluation( const DMatch &dm ) : DMatch( dm ), isCorrect(0) {}
 };
 
 static inline float recall( int correctMatchCount, int correspondenceCount )

@@ -58,8 +58,8 @@ Param(
     [parameter(Mandatory=$False)]
     [String]
     [ValidateNotNull()]
-    [ValidateSet("Visual Studio 12 2013","Visual Studio 11 2012")]
-    $GENERATOR = "Visual Studio 12 2013",
+    [ValidateSet("Visual Studio 15 2017","Visual Studio 14 2015","Visual Studio 12 2013","Visual Studio 11 2012")]
+    $GENERATOR = "Visual Studio 15 2017",
 
     [parameter(Mandatory=$False)]
     [String]
@@ -168,11 +168,11 @@ Function Execute() {
     $versions = New-Object System.Collections.ArrayList
     $VERSIONS_IN.Split("," ,[System.StringSplitOptions]::RemoveEmptyEntries) | ForEach {
         $_ = $_.Trim()
-        if ("8.0","8.1" -Contains $_) {
+        if ("8.0","8.1","10.0" -Contains $_) {
             [void]$versions.Add($_)
             D "$_ is valid"
         } else {
-            Throw "$($_) is not valid! Please use 8.0, 8.1"
+            Throw "$($_) is not valid! Please use 8.0, 8.1, 10.0"
         }
     }
     D "Processed Versions: $versions"
@@ -345,7 +345,7 @@ Function ShowHelp() {
     Write-Host "     setup_winrt -b 'WP' 'x86,ARM' -test PERF "
     Write-Host "     setup_winrt -architecture x86 -platform WP "
     Write-Host "     setup_winrt -arc x86 -plat 'WP,WS' "
-    Write-Host "     setup_winrt -a x86 -g 'Visual Studio 11 2012' -pl WP "
+    Write-Host "     setup_winrt -a x86 -g 'Visual Studio 15 2017' -pl WP "
     Write-Host " WHERE: "
     Write-Host "     options -  Options to call "
     Write-Host "                 -h: diplays command line help "
@@ -358,7 +358,7 @@ Function ShowHelp() {
     Write-Host "     version - Array of platform versions. "
     Write-Host "                 Default: 8.1 "
     Write-Host "                 Example: '8.0,8.1' "
-    Write-Host "                 Options: 8.0, 8.1. Available options may be limited depending on your local setup (e.g. SDK availability). "
+    Write-Host "                 Options: 8.0, 8.1, 10.0. Available options may be limited depending on your local setup (e.g. SDK availability). "
     Write-Host "                 Note that you'll need to use quotes to specify more than one version. "
     Write-Host "     architecture - Array of target architectures to build for. "
     Write-Host "                 Default: x86 "

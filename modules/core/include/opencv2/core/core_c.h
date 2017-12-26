@@ -359,7 +359,7 @@ CVAPI(CvMat*) cvGetSubRect( const CvArr* arr, CvMat* submat, CvRect rect );
 
 /** @brief Returns array row or row span.
 
-The functions return the header, corresponding to a specified row/row span of the input array.
+The function returns the header, corresponding to a specified row/row span of the input array.
 cvGetRow(arr, submat, row) is a shortcut for cvGetRows(arr, submat, row, row+1).
 @param arr Input array
 @param submat Pointer to the resulting sub-array header
@@ -385,7 +385,7 @@ CV_INLINE  CvMat*  cvGetRow( const CvArr* arr, CvMat* submat, int row )
 
 /** @brief Returns one of more array columns.
 
-The functions return the header, corresponding to a specified column span of the input array. That
+The function returns the header, corresponding to a specified column span of the input array. That
 
 is, no data is copied. Therefore, any modifications of the submatrix will affect the original array.
 If you need to copy the columns, use cvCloneMat. cvGetCol(arr, submat, col) is a shortcut for
@@ -2654,7 +2654,7 @@ CVAPI(int)  cvGetErrMode( void );
 /** Sets error processing mode, returns previously used mode */
 CVAPI(int) cvSetErrMode( int mode );
 
-/** Sets error status and performs some additonal actions (displaying message box,
+/** Sets error status and performs some additional actions (displaying message box,
  writing message to stderr, terminating application etc.)
  depending on the current error mode */
 CVAPI(void) cvError( int status, const char* func_name,
@@ -2663,7 +2663,7 @@ CVAPI(void) cvError( int status, const char* func_name,
 /** Retrieves textual description of the error given its code */
 CVAPI(const char*) cvErrorStr( int status );
 
-/** Retrieves detailed information about the last error occured */
+/** Retrieves detailed information about the last error occurred */
 CVAPI(int) cvGetErrInfo( const char** errcode_desc, const char** description,
                         const char** filename, int* line );
 

@@ -142,6 +142,10 @@ private:
     Rect dst_roi_final_;
     bool can_use_gpu_;
     int weight_type_; //CV_32F or CV_16S
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
+    std::vector<cuda::GpuMat> gpu_dst_pyr_laplace_;
+    std::vector<cuda::GpuMat> gpu_dst_band_weights_;
+#endif
 };
 
 

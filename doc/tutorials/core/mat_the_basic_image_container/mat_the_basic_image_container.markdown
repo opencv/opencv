@@ -192,9 +192,11 @@ object in multiple ways:
 
     ![](images/MatBasicContainerOut3.png)
 
--   For small matrices you may use comma separated initializers:
+-   For small matrices you may use comma separated initializers or initializer lists (C++11 support is required in the last case):
 
     @snippet mat_the_basic_image_container.cpp comma
+
+    @snippet mat_the_basic_image_container.cpp list
 
     ![](images/MatBasicContainerOut6.png)
 
@@ -264,8 +266,4 @@ or in the core section of the cpp samples.
 You can also find a quick video demonstration of this on
 [YouTube](https://www.youtube.com/watch?v=1tibU7vGWpk).
 
-\htmlonly
-<div align="center">
-<iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="http://www.youtube.com/embed/1tibU7vGWpk?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{1tibU7vGWpk}

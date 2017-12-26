@@ -1076,7 +1076,7 @@ CUDA_TEST_P(Integral, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Integral, testing::Combine(
     ALL_DEVICES,
-    testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(768, 1066)),
+    testing::Values(cv::Size(16, 16), cv::Size(128, 128), cv::Size(113, 113), cv::Size(768, 1066)),
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

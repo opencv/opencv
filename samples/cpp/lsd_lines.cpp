@@ -1,38 +1,50 @@
-#include <iostream>
-
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
+#include <iostream>
 
 using namespace std;
 using namespace cv;
 
 int main(int argc, char** argv)
 {
-    std::string in;
-    cv::CommandLineParser parser(argc, argv, "{@input|../data/building.jpg|input image}{help h||show help message}");
-    if (parser.has("help"))
+    cv::CommandLineParser parser(argc, argv,
+                                 "{input   i|../data/building.jpg|input image}"
+                                 "{refine  r|false|if true use LSD_REFINE_STD method, if false use LSD_REFINE_NONE method}"
+                                 "{canny   c|false|use Canny edge detector}"
+                                 "{overlay o|false|show result on input image}"
+                                 "{help    h|false|show help message}");
+
+    if (parser.get<bool>("help"))
     {
         parser.printMessage();
         return 0;
     }
-    in = parser.get<string>("@input");
 
-    Mat image = imread(in, IMREAD_GRAYSCALE);
+    parser.printMessage();
+
+    String filename = parser.get<String>("input");
+    bool useRefine = parser.get<bool>("refine");
+    bool useCanny = parser.get<bool>("canny");
+    bool overlay = parser.get<bool>("overlay");
+
+    Mat image = imread(filename, IMREAD_GRAYSCALE);
 
     if( image.empty() )
-    { return -1; }
+    {
+        cout << "Unable to load " << filename;
+        return 1;
+    }
 
-#if 0
-    Canny(image, image, 50, 200, 3); // Apply canny edge
-#endif
+    imshow("Source Image", image);
+
+    if (useCanny)
+    {
+        Canny(image, image, 50, 200, 3); // Apply Canny edge detector
+    }
 
     // Create and LSD detector with standard or no refinement.
-#if 1
-    Ptr<LineSegmentDetector> ls = createLineSegmentDetector(LSD_REFINE_STD);
-#else
-    Ptr<LineSegmentDetector> ls = createLineSegmentDetector(LSD_REFINE_NONE);
-#endif
+    Ptr<LineSegmentDetector> ls = useRefine ? createLineSegmentDetector(LSD_REFINE_STD) : createLineSegmentDetector(LSD_REFINE_NONE);
 
     double start = double(getTickCount());
     vector<Vec4f> lines_std;
@@ -44,9 +56,17 @@ int main(int argc, char** argv)
     std::cout << "It took " << duration_ms << " ms." << std::endl;
 
     // Show found lines
-    Mat drawnLines(image);
-    ls->drawSegments(drawnLines, lines_std);
-    imshow("Standard refinement", drawnLines);
+    if (!overlay || useCanny)
+    {
+        image = Scalar(0, 0, 0);
+    }
+
+    ls->drawSegments(image, lines_std);
+
+    String window_name = useRefine ? "Result - standard refinement" : "Result - no refinement";
+    window_name += useCanny ? " - Canny edge detector used" : "";
+
+    imshow(window_name, image);
 
     waitKey();
     return 0;

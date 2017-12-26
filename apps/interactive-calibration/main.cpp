@@ -4,9 +4,12 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
-#include <opencv2/aruco/charuco.hpp>
 #include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
+
+#ifdef HAVE_OPENCV_ARUCO
+#include <opencv2/aruco/charuco.hpp>
+#endif
 
 #include <string>
 #include <vector>
@@ -50,31 +53,27 @@ bool calib::showOverlayMessage(const std::string& message)
 #endif
 }
 
-static void deleteButton(int state, void* data)
+static void deleteButton(int, void* data)
 {
-    state++; //to avoid gcc warnings
     (static_cast<cv::Ptr<calibDataController>*>(data))->get()->deleteLastFrame();
     calib::showOverlayMessage("Last frame deleted");
 }
 
-static void deleteAllButton(int state, void* data)
+static void deleteAllButton(int, void* data)
 {
-    state++;
     (static_cast<cv::Ptr<calibDataController>*>(data))->get()->deleteAllData();
     calib::showOverlayMessage("All frames deleted");
 }
 
-static void saveCurrentParamsButton(int state, void* data)
+static void saveCurrentParamsButton(int, void* data)
 {
-    state++;
     if((static_cast<cv::Ptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters())
         calib::showOverlayMessage("Calibration parameters saved");
 }
 
 #ifdef HAVE_QT
-static void switchVisualizationModeButton(int state, void* data)
+static void switchVisualizationModeButton(int, void* data)
 {
-    state++;
     ShowProcessor* processor = static_cast<ShowProcessor*>(((cv::Ptr<FrameProcessor>*)data)->get());
     processor->switchVisualizationMode();
 }
@@ -103,6 +102,11 @@ int main(int argc, char** argv)
 
     captureParameters capParams = paramsController.getCaptureParameters();
     internalParameters intParams = paramsController.getInternalParameters();
+#ifndef HAVE_OPENCV_ARUCO
+    if(capParams.board == chAruco)
+        CV_Error(cv::Error::StsNotImplemented, "Aruco module is disabled in current build configuration."
+                                               " Consider usage of another calibration pattern\n");
+#endif
 
     cv::TermCriteria solverTermCrit = cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
                                                        intParams.solverMaxIters, intParams.solverEps);
@@ -172,6 +176,7 @@ int main(int argc, char** argv)
                                                     calibrationFlags, solverTermCrit);
                 }
                 else {
+#ifdef HAVE_OPENCV_ARUCO
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
                             cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
@@ -183,6 +188,7 @@ int main(int argc, char** argv)
                                                            globalData->cameraMatrix, globalData->distCoeffs,
                                                            cv::noArray(), cv::noArray(), globalData->stdDeviations, cv::noArray(),
                                                            globalData->perViewErrors, calibrationFlags, solverTermCrit);
+#endif
                 }
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);

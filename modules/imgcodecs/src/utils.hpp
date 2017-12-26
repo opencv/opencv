@@ -42,6 +42,8 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+int validateToInt(size_t step);
+
 struct PaletteEntry
 {
     unsigned char b, g, r, a;

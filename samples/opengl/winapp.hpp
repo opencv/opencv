@@ -1,4 +1,4 @@
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
 #elif defined(__linux__)
@@ -10,13 +10,13 @@
 #include <string>
 
 #include <GL/gl.h>
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 # include <GL/glu.h>
 #elif defined(__linux__)
 # include <GL/glx.h>
 #endif
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 # define WINCLASS "WinAppWnd"
 #endif
 
@@ -78,21 +78,21 @@ public:
         m_width       = width;
         m_height      = height;
         m_window_name = window_name;
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         m_hInstance   = ::GetModuleHandle(NULL);
 #endif
     }
 
     virtual ~WinApp()
     {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         ::UnregisterClass(WINCLASS, m_hInstance);
 #endif
     }
 
     int create()
     {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         WNDCLASSEX wcex;
 
         wcex.cbSize        = sizeof(WNDCLASSEX);
@@ -166,7 +166,7 @@ public:
 
     virtual void cleanup()
     {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         ::DestroyWindow(m_hWnd);
 #elif defined(__linux__)
         XDestroyWindow(m_display, m_window);
@@ -174,13 +174,13 @@ public:
 #endif
     }
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) = 0;
 #endif
 
     int run()
     {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
         MSG msg;
 
         ::ZeroMemory(&msg, sizeof(msg));
@@ -217,7 +217,7 @@ public:
 
 protected:
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     static LRESULT CALLBACK StaticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         WinApp* pWnd;
@@ -252,7 +252,7 @@ protected:
 
     virtual void idle() = 0;
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     HINSTANCE    m_hInstance;
     HWND         m_hWnd;
 #elif defined(__linux__)

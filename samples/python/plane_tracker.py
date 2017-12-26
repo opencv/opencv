@@ -30,7 +30,7 @@ if PY3:
     xrange = range
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 # built-in modules
 from collections import namedtuple
@@ -64,14 +64,14 @@ PlanarTarget = namedtuple('PlaneTarget', 'image, rect, keypoints, descrs, data')
   p0     - matched points coords in target image
   p1     - matched points coords in input frame
   H      - homography matrix from p0 to p1
-  quad   - target bounary quad in input frame
+  quad   - target boundary quad in input frame
 '''
 TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
 class PlaneTracker:
     def __init__(self):
-        self.detector = cv2.ORB_create( nfeatures = 1000 )
-        self.matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
+        self.detector = cv.ORB_create( nfeatures = 1000 )
+        self.matcher = cv.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
         self.targets = []
         self.frame_points = []
 
@@ -115,7 +115,7 @@ class PlaneTracker:
             p0 = [target.keypoints[m.trainIdx].pt for m in matches]
             p1 = [self.frame_points[m.queryIdx].pt for m in matches]
             p0, p1 = np.float32((p0, p1))
-            H, status = cv2.findHomography(p0, p1, cv2.RANSAC, 3.0)
+            H, status = cv.findHomography(p0, p1, cv.RANSAC, 3.0)
             status = status.ravel() != 0
             if status.sum() < MIN_MATCH_COUNT:
                 continue
@@ -123,7 +123,7 @@ class PlaneTracker:
 
             x0, y0, x1, y1 = target.rect
             quad = np.float32([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
-            quad = cv2.perspectiveTransform(quad.reshape(1, -1, 2), H).reshape(-1, 2)
+            quad = cv.perspectiveTransform(quad.reshape(1, -1, 2), H).reshape(-1, 2)
 
             track = TrackedTarget(target=target, p0=p0, p1=p1, H=H, quad=quad)
             tracked.append(track)
@@ -145,7 +145,7 @@ class App:
         self.paused = False
         self.tracker = PlaneTracker()
 
-        cv2.namedWindow('plane')
+        cv.namedWindow('plane')
         self.rect_sel = common.RectSelector('plane', self.on_rect)
 
     def on_rect(self, rect):
@@ -164,13 +164,13 @@ class App:
             if playing:
                 tracked = self.tracker.track(self.frame)
                 for tr in tracked:
-                    cv2.polylines(vis, [np.int32(tr.quad)], True, (255, 255, 255), 2)
+                    cv.polylines(vis, [np.int32(tr.quad)], True, (255, 255, 255), 2)
                     for (x, y) in np.int32(tr.p1):
-                        cv2.circle(vis, (x, y), 2, (255, 255, 255))
+                        cv.circle(vis, (x, y), 2, (255, 255, 255))
 
             self.rect_sel.draw(vis)
-            cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1)
+            cv.imshow('plane', vis)
+            ch = cv.waitKey(1)
             if ch == ord(' '):
                 self.paused = not self.paused
             if ch == ord('c'):

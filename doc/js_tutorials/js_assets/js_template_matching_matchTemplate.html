@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Template Match Example</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Template Match Example</h2>
+<p>
+    &lt;canvas&gt; elements named <b>imageCanvasInput</b>, <b>templateCanvasInput</b>
+    and <b>canvasOutput</b> have been prepared.<br>
+    Click <b>Try it</b> button to see the result. You can choose another image.<br>
+    You can change the code in the &lt;textarea&gt; to investigate more.
+</p>
+<div>
+<div class="control"><button id="tryIt" disabled>Try it</button></div>
+<textarea class="code" rows="9" cols="100" id="codeEditor" spellcheck="false">
+</textarea>
+<p class="err" id="errorMessage"></p>
+</div>
+<div>
+    <table cellpadding="0" cellspacing="0" width="0" border="0">
+    <tr>
+        <td>
+            <canvas id="imageCanvasInput"></canvas>
+        </td>
+        <td>
+            <canvas id="canvasOutput"></canvas>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="caption">imageCanvasInput <input type="file" id="fileInput" name="file" accept="image/*" /></div>
+        </td>
+        <td>
+            <div class="caption">canvasOutput</div>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <canvas id="templateCanvasInput"></canvas>
+        </td>
+        <td>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="caption">templateCanvasInput <input type="file" id="templateFileInput" name="file" accept="image/*" /></div>
+        </td>
+        <td>
+        </td>
+    </tr>
+    </table>
+</div>
+<script src="utils.js" type="text/javascript"></script>
+<script id="codeSnippet" type="text/code-snippet">
+let src = cv.imread('imageCanvasInput');
+let templ = cv.imread('templateCanvasInput');
+let dst = new cv.Mat();
+let mask = new cv.Mat();
+cv.matchTemplate(src, templ, dst, cv.TM_CCOEFF, mask);
+let result = cv.minMaxLoc(dst, mask);
+let maxPoint = result.maxLoc;
+let color = new cv.Scalar(255, 0, 0, 255);
+let point = new cv.Point(maxPoint.x + templ.cols, maxPoint.y + templ.rows);
+cv.rectangle(src, maxPoint, point, color, 2, cv.LINE_8, 0);
+cv.imshow('canvasOutput', src);
+src.delete(); dst.delete(); mask.delete();
+</script>
+<script type="text/javascript">
+let utils = new Utils('errorMessage');
+
+utils.loadCode('codeSnippet', 'codeEditor');
+utils.loadImageToCanvas('lena.jpg', 'imageCanvasInput');
+utils.loadImageToCanvas('lenaFace.png', 'templateCanvasInput');
+utils.addFileInputHandler('fileInput', 'canvasInput');
+
+let tryIt = document.getElementById('tryIt');
+tryIt.addEventListener('click', () => {
+    utils.executeCode('codeEditor');
+});
+
+utils.loadOpenCv(() => {
+    tryIt.removeAttribute('disabled');
+});
+</script>
+</body>
+</html>

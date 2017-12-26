@@ -67,7 +67,7 @@ $("h2").each(function() {
     $smallerHeadings = $(this).nextUntil("h2").filter("h3").add($(this).nextUntil("h2").find("h3"));
     if ($smallerHeadings.length) {
         $smallerHeadings.each(function() {
-            var $elements = $(this).nextUntil("h3").filter("div.newInnerHTML");
+            var $elements = $(this).nextUntil("h2,h3").filter("div.newInnerHTML");
             buttonsToAdd($elements, $(this), "h3");
         });
     } else {

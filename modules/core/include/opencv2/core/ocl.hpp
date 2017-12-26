@@ -91,6 +91,7 @@ public:
 
     String name() const;
     String extensions() const;
+    bool isExtensionSupported(const String& extensionName) const;
     String version() const;
     String vendorName() const;
     String OpenCL_C_Version() const;
@@ -159,6 +160,9 @@ public:
     bool imageFromBufferSupport() const;
     uint imagePitchAlignment() const;
     uint imageBaseAddressAlignment() const;
+
+    /// deprecated, use isExtensionSupported() method (probably with "cl_khr_subgroups" value)
+    bool intelSubgroupsSupport() const;
 
     size_t image2DMaxWidth() const;
     size_t image2DMaxHeight() const;
@@ -246,6 +250,7 @@ public:
     const Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
+    void unloadProg(Program& prog);
 
     static Context& getDefault(bool initialize = true);
     void* ptr() const;
@@ -256,6 +261,8 @@ public:
     void setUseSVM(bool enabled);
 
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+//protected:
     Impl* p;
 };
 
@@ -276,55 +283,38 @@ protected:
     Impl* p;
 };
 
-/*
-//! @brief Attaches OpenCL context to OpenCV
-//
-//! @note Note:
-//    OpenCV will check if available OpenCL platform has platformName name,
-//    then assign context to OpenCV and call clRetainContext function.
-//    The deviceID device will be used as target device and new command queue
-//    will be created.
-//
-// Params:
-//! @param platformName - name of OpenCL platform to attach,
-//!                       this string is used to check if platform is available
-//!                       to OpenCV at runtime
-//! @param platfromID   - ID of platform attached context was created for
-//! @param context      - OpenCL context to be attached to OpenCV
-//! @param deviceID     - ID of device, must be created from attached context
+/** @brief Attaches OpenCL context to OpenCV
+@note
+  OpenCV will check if available OpenCL platform has platformName name, then assign context to
+  OpenCV and call `clRetainContext` function. The deviceID device will be used as target device and
+  new command queue will be created.
+@param platformName name of OpenCL platform to attach, this string is used to check if platform is available to OpenCV at runtime
+@param platformID ID of platform attached context was created for
+@param context OpenCL context to be attached to OpenCV
+@param deviceID ID of device, must be created from attached context
 */
 CV_EXPORTS void attachContext(const String& platformName, void* platformID, void* context, void* deviceID);
 
-/*
-//! @brief Convert OpenCL buffer to UMat
-//
-//! @note Note:
-//   OpenCL buffer (cl_mem_buffer) should contain 2D image data, compatible with OpenCV.
-//   Memory content is not copied from clBuffer to UMat. Instead, buffer handle assigned
-//   to UMat and clRetainMemObject is called.
-//
-// Params:
-//! @param  cl_mem_buffer - source clBuffer handle
-//! @param  step          - num of bytes in single row
-//! @param  rows          - number of rows
-//! @param  cols          - number of cols
-//! @param  type          - OpenCV type of image
-//! @param  dst           - destination UMat
+/** @brief Convert OpenCL buffer to UMat
+@note
+  OpenCL buffer (cl_mem_buffer) should contain 2D image data, compatible with OpenCV. Memory
+  content is not copied from `clBuffer` to UMat. Instead, buffer handle assigned to UMat and
+  `clRetainMemObject` is called.
+@param cl_mem_buffer source clBuffer handle
+@param step num of bytes in single row
+@param rows number of rows
+@param cols number of cols
+@param type OpenCV type of image
+@param dst destination UMat
 */
 CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst);
 
-/*
-//! @brief Convert OpenCL image2d_t to UMat
-//
-//! @note Note:
-//   OpenCL image2d_t (cl_mem_image), should be compatible with OpenCV
-//   UMat formats.
-//   Memory content is copied from image to UMat with
-//   clEnqueueCopyImageToBuffer function.
-//
-// Params:
-//! @param  cl_mem_image - source image2d_t handle
-//! @param  dst          - destination UMat
+/** @brief Convert OpenCL image2d_t to UMat
+@note
+  OpenCL `image2d_t` (cl_mem_image), should be compatible with OpenCV UMat formats. Memory content
+  is copied from image to UMat with `clEnqueueCopyImageToBuffer` function.
+@param cl_mem_image source image2d_t handle
+@param dst destination UMat
 */
 CV_EXPORTS void convertFromImage(void* cl_mem_image, UMat& dst);
 
@@ -345,8 +335,12 @@ public:
     void* ptr() const;
     static Queue& getDefault();
 
+    /// @brief Returns OpenCL command queue with enable profiling mode support
+    const Queue& getProfilingQueue() const;
+
+    struct Impl; friend struct Impl;
+    inline Impl* getImpl() const { return p; }
 protected:
-    struct Impl;
     Impl* p;
 };
 
@@ -567,14 +561,12 @@ public:
         i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
         i = set(i, a12); i = set(i, a13); i = set(i, a14); set(i, a15); return *this;
     }
-    /*
-    Run the OpenCL kernel.
+    /** @brief Run the OpenCL kernel.
     @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
-    @param globalsize work items for each dimension.
-    It is not the final globalsize passed to OpenCL.
-    Each dimension will be adjusted to the nearest integer divisible by the corresponding value in localsize.
-    If localsize is NULL, it will still be adjusted depending on dims.
-    The adjusted values are greater than or equal to the original values.
+    @param globalsize work items for each dimension. It is not the final globalsize passed to
+      OpenCL. Each dimension will be adjusted to the nearest integer divisible by the corresponding
+      value in localsize. If localsize is NULL, it will still be adjusted depending on dims. The
+      adjusted values are greater than or equal to the original values.
     @param localsize work-group size for each dimension.
     @param sync specify whether to wait for OpenCL computation to finish before return.
     @param q command queue
@@ -582,6 +574,12 @@ public:
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
+
+    /** @brief Similar to synchronized run() call with returning of kernel execution time
+     * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
+     * @return Execution time in nanoseconds or negative number on error
+     */
+    int64 runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q=Queue());
 
     size_t workGroupSize() const;
     size_t preferedWorkGroupSizeMultiple() const;
@@ -601,7 +599,6 @@ public:
     Program();
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
-    explicit Program(const String& buf);
     Program(const Program& prog);
 
     Program& operator = (const Program& prog);
@@ -609,38 +606,104 @@ public:
 
     bool create(const ProgramSource& src,
                 const String& buildflags, String& errmsg);
-    bool read(const String& buf, const String& buildflags);
-    bool write(String& buf) const;
 
-    const ProgramSource& source() const;
     void* ptr() const;
 
-    String getPrefix() const;
-    static String getPrefix(const String& buildflags);
+    /**
+     * @brief Query device-specific program binary.
+     *
+     * Returns RAW OpenCL executable binary without additional attachments.
+     *
+     * @sa ProgramSource::fromBinary
+     *
+     * @param[out] binary output buffer
+     */
+    void getBinary(std::vector<char>& binary) const;
 
+    struct Impl; friend struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
 protected:
-    struct Impl;
     Impl* p;
+public:
+#ifndef OPENCV_REMOVE_DEPRECATED_API
+    // TODO Remove this
+    CV_DEPRECATED bool read(const String& buf, const String& buildflags); // removed, use ProgramSource instead
+    CV_DEPRECATED bool write(String& buf) const; // removed, use getBinary() method instead (RAW OpenCL binary)
+    CV_DEPRECATED const ProgramSource& source() const; // implementation removed
+    CV_DEPRECATED String getPrefix() const; // deprecated, implementation replaced
+    CV_DEPRECATED static String getPrefix(const String& buildflags); // deprecated, implementation replaced
+#endif
 };
 
 
 class CV_EXPORTS ProgramSource
 {
 public:
-    typedef uint64 hash_t;
+    typedef uint64 hash_t; // deprecated
 
     ProgramSource();
-    explicit ProgramSource(const String& prog);
-    explicit ProgramSource(const char* prog);
+    explicit ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash);
+    explicit ProgramSource(const String& prog); // deprecated
+    explicit ProgramSource(const char* prog); // deprecated
     ~ProgramSource();
     ProgramSource(const ProgramSource& prog);
     ProgramSource& operator = (const ProgramSource& prog);
 
-    const String& source() const;
-    hash_t hash() const;
+    const String& source() const; // deprecated
+    hash_t hash() const; // deprecated
 
+
+    /** @brief Describe OpenCL program binary.
+     * Do not call clCreateProgramWithBinary() and/or clBuildProgram().
+     *
+     * Caller should guarantee binary buffer lifetime greater than ProgramSource object (and any of its copies).
+     *
+     * This kind of binary is not portable between platforms in general - it is specific to OpenCL vendor / device / driver version.
+     *
+     * @param module name of program owner module
+     * @param name unique name of program (module+name is used as key for OpenCL program caching)
+     * @param binary buffer address. See buffer lifetime requirement in description.
+     * @param size buffer size
+     * @param buildOptions additional program-related build options passed to clBuildProgram()
+     * @return created ProgramSource object
+     */
+    static ProgramSource fromBinary(const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions = cv::String());
+
+    /** @brief Describe OpenCL program in SPIR format.
+     * Do not call clCreateProgramWithBinary() and/or clBuildProgram().
+     *
+     * Supports SPIR 1.2 by default (pass '-spir-std=X.Y' in buildOptions to override this behavior)
+     *
+     * Caller should guarantee binary buffer lifetime greater than ProgramSource object (and any of its copies).
+     *
+     * Programs in this format are portable between OpenCL implementations with 'khr_spir' extension:
+     * https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/cl_khr_spir.html
+     * (but they are not portable between different platforms: 32-bit / 64-bit)
+     *
+     * Note: these programs can't support vendor specific extensions, like 'cl_intel_subgroups'.
+     *
+     * @param module name of program owner module
+     * @param name unique name of program (module+name is used as key for OpenCL program caching)
+     * @param binary buffer address. See buffer lifetime requirement in description.
+     * @param size buffer size
+     * @param buildOptions additional program-related build options passed to clBuildProgram()
+     *        (these options are added automatically: '-x spir' and '-spir-std=1.2')
+     * @return created ProgramSource object.
+     */
+    static ProgramSource fromSPIR(const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions = cv::String());
+
+    //OpenCL 2.1+ only
+    //static Program fromSPIRV(const String& module, const String& name,
+    //        const unsigned char* binary, const size_t size,
+    //        const cv::String& buildOptions = cv::String());
+
+    struct Impl; friend struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
 protected:
-    struct Impl;
     Impl* p;
 };
 
@@ -669,6 +732,7 @@ CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS const char* vecopTypeToStr(int t);
+CV_EXPORTS const char* getOpenCLErrorString(int errorCode);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
 
@@ -708,22 +772,25 @@ class CV_EXPORTS Image2D
 public:
     Image2D();
 
-    // src:     The UMat from which to get image properties and data
-    // norm:    Flag to enable the use of normalized channel data types
-    // alias:   Flag indicating that the image should alias the src UMat.
-    //          If true, changes to the image or src will be reflected in
-    //          both objects.
+    /**
+    @param src UMat object from which to get image properties and data
+    @param norm flag to enable the use of normalized channel data types
+    @param alias flag indicating that the image should alias the src UMat. If true, changes to the
+        image or src will be reflected in both objects.
+    */
     explicit Image2D(const UMat &src, bool norm = false, bool alias = false);
     Image2D(const Image2D & i);
     ~Image2D();
 
     Image2D & operator = (const Image2D & i);
 
-    // Indicates if creating an aliased image should succeed.  Depends on the
-    // underlying platform and the dimensions of the UMat.
+    /** Indicates if creating an aliased image should succeed.
+    Depends on the underlying platform and the dimensions of the UMat.
+    */
     static bool canCreateAlias(const UMat &u);
 
-    // Indicates if the image format is supported.
+    /** Indicates if the image format is supported.
+    */
     static bool isFormatSupported(int depth, int cn, bool norm);
 
     void* ptr() const;
@@ -732,6 +799,24 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS Timer
+{
+public:
+    Timer(const Queue& q);
+    ~Timer();
+    void start();
+    void stop();
+
+    uint64 durationNS() const; //< duration in nanoseconds
+
+protected:
+    struct Impl;
+    Impl* const p;
+
+private:
+    Timer(const Timer&); // disabled
+    Timer& operator=(const Timer&); // disabled
+};
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 

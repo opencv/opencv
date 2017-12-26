@@ -720,10 +720,16 @@
 #  include <io.h>
 # endif
 // In order to avoid having to include <windows.h>, use forward declaration
-// assuming CRITICAL_SECTION is a typedef of _RTL_CRITICAL_SECTION.
-// This assumption is verified by
-// WindowsTypesTest.CRITICAL_SECTIONIs_RTL_CRITICAL_SECTION.
-struct _RTL_CRITICAL_SECTION;
+#if GTEST_OS_WINDOWS_MINGW && !defined(__MINGW64_VERSION_MAJOR)
+   // MinGW defined _CRITICAL_SECTION and _RTL_CRITICAL_SECTION as two
+   // separate (equivalent) structs, instead of using typedef
+   typedef struct _CRITICAL_SECTION GTEST_CRITICAL_SECTION;
+# else
+   // assuming CRITICAL_SECTION is a typedef of _RTL_CRITICAL_SECTION.
+   // This assumption is verified by
+   // WindowsTypesTest.CRITICAL_SECTIONIs_RTL_CRITICAL_SECTION.
+   typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
+# endif
 #else
 // This assumes that non-Windows OSes provide unistd.h. For OSes where this
 // is not the case, we need to include headers that provide the functions
@@ -2289,7 +2295,7 @@ using ::std::tuple_size;
 #endif // _MSC_VER
 
 #ifndef GTEST_API_
-# define GTEST_API_ CV_EXPORTS
+# define GTEST_API_
 #endif
 
 #ifdef __GNUC__
@@ -3057,7 +3063,7 @@ class GTEST_API_ Mutex {
   // by the linker.
   MutexType type_;
   long critical_section_init_phase_;  // NOLINT
-  _RTL_CRITICAL_SECTION* critical_section_;
+  GTEST_CRITICAL_SECTION* critical_section_;
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(Mutex);
 };
@@ -7970,19 +7976,10 @@ GTEST_API_ std::string AppendUserMessage(
 // std::runtime_error inherits from std::exception, many testing
 // frameworks know how to extract and print the message inside it.
 
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4275)  // Temporarily disables warning 4275.
-#endif  // _MSC_VER
-
 class GTEST_API_ GoogleTestFailureException : public ::std::runtime_error {
  public:
   explicit GoogleTestFailureException(const TestPartResult& failure);
 };
-
-#ifdef _MSC_VER
-# pragma warning(pop)           // Restores the warning state.
-#endif  // _MSC_VER
 
 #endif  // GTEST_HAS_EXCEPTIONS
 
@@ -8009,7 +8006,7 @@ namespace edit_distance {
 // Returns the optimal edits to go from 'left' to 'right'.
 // All edits cost the same, with replace having lower priority than
 // add/remove.
-// Simple implementation of the Wagner–Fischer algorithm.
+// Simple implementation of the Wagner-Fischer algorithm.
 // See http://en.wikipedia.org/wiki/Wagner-Fischer_algorithm
 enum EditType { kMatch, kAdd, kRemove, kReplace };
 GTEST_API_ std::vector<EditType> CalculateOptimalEdits(
@@ -10328,7 +10325,7 @@ class TypeWithoutFormatter<T, kConvertibleToInteger> {
   // T is not an enum, printing it as an integer is the best we can do
   // given that it has no user-defined printer.
   static void PrintValue(const T& value, ::std::ostream* os) {
-    const internal::BiggestInt kBigInt = value;
+    const internal::BiggestInt kBigInt = static_cast<internal::BiggestInt>(value);
     *os << kBigInt;
   }
 };

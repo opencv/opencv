@@ -3,7 +3,7 @@
 using namespace cv;
 using namespace std;
 
-void tutorial2()
+static void tutorial2()
 {
     /// Create a window
     viz::Viz3d myWindow("Coordinate Frame");

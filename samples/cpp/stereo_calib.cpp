@@ -100,7 +100,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
                 if( scale == 1 )
                     timg = img;
                 else
-                    resize(img, timg, Size(), scale, scale);
+                    resize(img, timg, Size(), scale, scale, INTER_LINEAR_EXACT);
                 found = findChessboardCorners(timg, boardSize, corners,
                     CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
                 if( found )
@@ -120,7 +120,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
                 cvtColor(img, cimg, COLOR_GRAY2BGR);
                 drawChessboardCorners(cimg, boardSize, corners, found);
                 double sf = 640./MAX(img.rows, img.cols);
-                resize(cimg, cimg1, Size(), sf, sf);
+                resize(cimg, cimg1, Size(), sf, sf, INTER_LINEAR_EXACT);
                 imshow("corners", cimg1);
                 char c = (char)waitKey(500);
                 if( c == 27 || c == 'q' || c == 'Q' ) //Allow ESC to quit

@@ -105,6 +105,72 @@ namespace hist
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
+
+    __global__ void histogram256Kernel(const uchar* src, int cols, int rows, size_t srcStep, const uchar* mask, size_t maskStep, int* hist)
+    {
+        __shared__ int shist[256];
+
+        const int y = blockIdx.x * blockDim.y + threadIdx.y;
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        shist[tid] = 0;
+        __syncthreads();
+
+        if (y < rows)
+        {
+            const unsigned int* rowPtr = (const unsigned int*) (src + y * srcStep);
+            const unsigned int* maskRowPtr = (const unsigned int*) (mask + y * maskStep);
+
+            const int cols_4 = cols / 4;
+            for (int x = threadIdx.x; x < cols_4; x += blockDim.x)
+            {
+                unsigned int data = rowPtr[x];
+                unsigned int m = maskRowPtr[x];
+
+                if ((m >>  0) & 0xFFU)
+                    Emulation::smem::atomicAdd(&shist[(data >>  0) & 0xFFU], 1);
+
+                if ((m >>  8) & 0xFFU)
+                    Emulation::smem::atomicAdd(&shist[(data >>  8) & 0xFFU], 1);
+
+                if ((m >>  16) & 0xFFU)
+                    Emulation::smem::atomicAdd(&shist[(data >> 16) & 0xFFU], 1);
+
+                if ((m >>  24) & 0xFFU)
+                    Emulation::smem::atomicAdd(&shist[(data >> 24) & 0xFFU], 1);
+            }
+
+            if (cols % 4 != 0 && threadIdx.x == 0)
+            {
+                for (int x = cols_4 * 4; x < cols; ++x)
+                {
+                    unsigned int data = ((const uchar*)rowPtr)[x];
+                    unsigned int m = ((const uchar*)maskRowPtr)[x];
+
+                    if (m)
+                        Emulation::smem::atomicAdd(&shist[data], 1);
+                }
+            }
+        }
+
+        __syncthreads();
+
+        const int histVal = shist[tid];
+        if (histVal > 0)
+            ::atomicAdd(hist + tid, histVal);
+    }
+
+    void histogram256(PtrStepSzb src, PtrStepSzb mask, int* hist, cudaStream_t stream)
+    {
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(src.rows, block.y));
+
+        histogram256Kernel<<<grid, block, 0, stream>>>(src.data, src.cols, src.rows, src.step, mask.data, mask.step, hist);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////

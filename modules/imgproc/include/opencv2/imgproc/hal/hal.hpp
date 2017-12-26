@@ -10,52 +10,92 @@ namespace cv { namespace hal {
 //! @addtogroup imgproc_hal_functions
 //! @{
 
+//---------------------------
+//! @cond IGNORED
+
 struct CV_EXPORTS Filter2D
 {
-    static Ptr<hal::Filter2D> create(uchar * kernel_data, size_t kernel_step, int kernel_type,
-                                     int kernel_width, int kernel_height,
-                                     int max_width, int max_height,
-                                     int stype, int dtype,
-                                     int borderType, double delta,
-                                     int anchor_x, int anchor_y,
-                                     bool isSubmatrix, bool isInplace);
-    virtual void apply(uchar * src_data, size_t src_step,
-                       uchar * dst_data, size_t dst_step,
-                       int width, int height,
-                       int full_width, int full_height,
-                       int offset_x, int offset_y) = 0;
+    CV_DEPRECATED static Ptr<hal::Filter2D> create(uchar * , size_t , int ,
+                                     int , int ,
+                                     int , int ,
+                                     int , int ,
+                                     int , double ,
+                                     int , int ,
+                                     bool , bool );
+    virtual void apply(uchar * , size_t ,
+                       uchar * , size_t ,
+                       int , int ,
+                       int , int ,
+                       int , int ) = 0;
     virtual ~Filter2D() {}
 };
 
 struct CV_EXPORTS SepFilter2D
 {
-    static Ptr<hal::SepFilter2D> create(int stype, int dtype, int ktype,
-                                        uchar * kernelx_data, int kernelx_len,
-                                        uchar * kernely_data, int kernely_len,
-                                        int anchor_x, int anchor_y,
-                                        double delta, int borderType);
-    virtual void apply(uchar * src_data, size_t src_step,
-                       uchar * dst_data, size_t dst_step,
-                       int width, int height,
-                       int full_width, int full_height,
-                       int offset_x, int offset_y) = 0;
+    CV_DEPRECATED static Ptr<hal::SepFilter2D> create(int , int , int ,
+                                        uchar * , int ,
+                                        uchar * , int ,
+                                        int , int ,
+                                        double , int );
+    virtual void apply(uchar * , size_t ,
+                       uchar * , size_t ,
+                       int , int ,
+                       int , int ,
+                       int , int ) = 0;
     virtual ~SepFilter2D() {}
 };
 
 
-struct  CV_EXPORTS Morph
+struct CV_EXPORTS Morph
 {
-    static Ptr<Morph> create(int op, int src_type, int dst_type, int max_width, int max_height,
-                                    int kernel_type, uchar * kernel_data, size_t kernel_step,
-                                    int kernel_width, int kernel_height,
-                                    int anchor_x, int anchor_y,
-                                    int borderType, const double borderValue[4],
-                                    int iterations, bool isSubmatrix, bool allowInplace);
-    virtual void apply(uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height,
-                       int roi_width, int roi_height, int roi_x, int roi_y,
-                       int roi_width2, int roi_height2, int roi_x2, int roi_y2) = 0;
+    CV_DEPRECATED static Ptr<hal::Morph> create(int , int , int , int , int ,
+                                    int , uchar * , size_t ,
+                                    int , int ,
+                                    int , int ,
+                                    int , const double *,
+                                    int , bool , bool );
+    virtual void apply(uchar * , size_t , uchar * , size_t , int , int ,
+                       int , int , int , int ,
+                       int , int , int , int ) = 0;
     virtual ~Morph() {}
 };
+
+//! @endcond
+//---------------------------
+
+CV_EXPORTS void filter2D(int stype, int dtype, int kernel_type,
+                         uchar * src_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int width, int height,
+                         int full_width, int full_height,
+                         int offset_x, int offset_y,
+                         uchar * kernel_data, size_t kernel_step,
+                         int kernel_width, int kernel_height,
+                         int anchor_x, int anchor_y,
+                         double delta, int borderType,
+                         bool isSubmatrix);
+
+CV_EXPORTS void sepFilter2D(int stype, int dtype, int ktype,
+                            uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int full_width, int full_height,
+                            int offset_x, int offset_y,
+                            uchar * kernelx_data, int kernelx_len,
+                            uchar * kernely_data, int kernely_len,
+                            int anchor_x, int anchor_y,
+                            double delta, int borderType);
+
+CV_EXPORTS void morph(int op, int src_type, int dst_type,
+                      uchar * src_data, size_t src_step,
+                      uchar * dst_data, size_t dst_step,
+                      int width, int height,
+                      int roi_width, int roi_height, int roi_x, int roi_y,
+                      int roi_width2, int roi_height2, int roi_x2, int roi_y2,
+                      int kernel_type, uchar * kernel_data, size_t kernel_step,
+                      int kernel_width, int kernel_height, int anchor_x, int anchor_y,
+                      int borderType, const double borderValue[4],
+                      int iterations, bool isSubmatrix);
 
 
 CV_EXPORTS void resize(int src_type,
@@ -152,6 +192,12 @@ CV_EXPORTS void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                     int dst_width, int dst_height,
                                     int dcn, bool swapBlue, int uIdx);
 
+//! Separate Y and UV planes
+CV_EXPORTS void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
+                                    uchar * dst_data, size_t dst_step,
+                                    int dst_width, int dst_height,
+                                    int dcn, bool swapBlue, int uIdx);
+
 CV_EXPORTS void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                       uchar * dst_data, size_t dst_step,
                                       int dst_width, int dst_height,
@@ -161,6 +207,12 @@ CV_EXPORTS void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                                       uchar * dst_data, size_t dst_step,
                                       int width, int height,
                                       int scn, bool swapBlue, int uIdx);
+
+//! Separate Y and UV planes
+CV_EXPORTS void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
+                                    uchar * y_data, uchar * uv_data, size_t dst_step,
+                                    int width, int height,
+                                    int scn, bool swapBlue, int uIdx);
 
 CV_EXPORTS void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                     uchar * dst_data, size_t dst_step,

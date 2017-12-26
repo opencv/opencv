@@ -169,7 +169,7 @@ Mat cv::ChessBoardGenerator::generateChessBoard(const Mat& bg, const Mat& camMat
     else
     {
         Mat tmp;
-        resize(bg, tmp, bg.size() * rendererResolutionMultiplier);
+        resize(bg, tmp, bg.size() * rendererResolutionMultiplier, 0, 0, INTER_LINEAR_EXACT);
         drawContours(tmp, whole_contour, -1, Scalar::all(255), FILLED, LINE_AA);
         drawContours(tmp, squares_black, -1, Scalar::all(0), FILLED, LINE_AA);
         resize(tmp, result, bg.size(), 0, 0, INTER_AREA);

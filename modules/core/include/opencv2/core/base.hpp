@@ -66,38 +66,38 @@ namespace cv
 namespace Error {
 //! error codes
 enum Code {
-    StsOk=                       0,  //!< everithing is ok
+    StsOk=                       0,  //!< everything is ok
     StsBackTrace=               -1,  //!< pseudo error for back trace
     StsError=                   -2,  //!< unknown /unspecified error
     StsInternal=                -3,  //!< internal error (bad state)
     StsNoMem=                   -4,  //!< insufficient memory
     StsBadArg=                  -5,  //!< function arg/param is bad
     StsBadFunc=                 -6,  //!< unsupported function
-    StsNoConv=                  -7,  //!< iter. didn't converge
+    StsNoConv=                  -7,  //!< iteration didn't converge
     StsAutoTrace=               -8,  //!< tracing
     HeaderIsNull=               -9,  //!< image header is NULL
     BadImageSize=              -10,  //!< image size is invalid
     BadOffset=                 -11,  //!< offset is invalid
     BadDataPtr=                -12,  //!<
-    BadStep=                   -13,  //!<
+    BadStep=                   -13,  //!< image step is wrong, this may happen for a non-continuous matrix.
     BadModelOrChSeq=           -14,  //!<
-    BadNumChannels=            -15,  //!<
+    BadNumChannels=            -15,  //!< bad number of channels, for example, some functions accept only single channel matrices.
     BadNumChannel1U=           -16,  //!<
-    BadDepth=                  -17,  //!<
+    BadDepth=                  -17,  //!< input image depth is not supported by the function
     BadAlphaChannel=           -18,  //!<
-    BadOrder=                  -19,  //!<
-    BadOrigin=                 -20,  //!<
-    BadAlign=                  -21,  //!<
+    BadOrder=                  -19,  //!< number of dimensions is out of range
+    BadOrigin=                 -20,  //!< incorrect input origin
+    BadAlign=                  -21,  //!< incorrect input align
     BadCallBack=               -22,  //!<
     BadTileSize=               -23,  //!<
-    BadCOI=                    -24,  //!<
-    BadROISize=                -25,  //!<
+    BadCOI=                    -24,  //!< input COI is not supported
+    BadROISize=                -25,  //!< incorrect input roi
     MaskIsTiled=               -26,  //!<
     StsNullPtr=                -27,  //!< null pointer
     StsVecLengthErr=           -28,  //!< incorrect vector length
-    StsFilterStructContentErr= -29,  //!< incorr. filter structure content
-    StsKernelStructContentErr= -30,  //!< incorr. transform kernel content
-    StsFilterOffsetErr=        -31,  //!< incorrect filter ofset value
+    StsFilterStructContentErr= -29,  //!< incorrect filter structure content
+    StsKernelStructContentErr= -30,  //!< incorrect transform kernel content
+    StsFilterOffsetErr=        -31,  //!< incorrect filter offset value
     StsBadSize=                -201, //!< the input/output structure size is incorrect
     StsDivByZero=              -202, //!< division by zero
     StsInplaceNotSupported=    -203, //!< in-place operation is not supported
@@ -113,13 +113,13 @@ enum Code {
     StsNotImplemented=         -213, //!< the requested function/feature is not implemented
     StsBadMemBlock=            -214, //!< an allocated block has been corrupted
     StsAssert=                 -215, //!< assertion failed
-    GpuNotSupported=           -216,
-    GpuApiCallError=           -217,
-    OpenGlNotSupported=        -218,
-    OpenGlApiCallError=        -219,
-    OpenCLApiCallError=        -220,
+    GpuNotSupported=           -216, //!< no CUDA support
+    GpuApiCallError=           -217, //!< GPU API call error
+    OpenGlNotSupported=        -218, //!< no OpenGL support
+    OpenGlApiCallError=        -219, //!< OpenGL API call error
+    OpenCLApiCallError=        -220, //!< OpenCL API call error
     OpenCLDoubleNotSupported=  -221,
-    OpenCLInitError=           -222,
+    OpenCLInitError=           -222, //!< OpenCL initialization error
     OpenCLNoAMDBlasFft=        -223
 };
 } //Error
@@ -152,46 +152,57 @@ enum DecompTypes {
 };
 
 /** norm types
-- For one array:
-\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
 
-- Absolute norm for two arrays
-\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
+src1 and src2 denote input arrays.
+*/
 
-- Relative norm for two arrays
-\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_INF}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L1}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L2}\) }\f]
-
-As example for one array consider the function \f$r(x)= \begin{pmatrix} x \\ 1-x \end{pmatrix}, x \in [-1;1]\f$.
-The \f$ L_{1}, L_{2} \f$ and \f$ L_{\infty} \f$ norm for the sample value \f$r(-1) = \begin{pmatrix} -1 \\ 2 \end{pmatrix}\f$
-is calculated as follows
-\f{align*}
-    \| r(-1) \|_{L_1} &= |-1| + |2| = 3 \\
-    \| r(-1) \|_{L_2} &= \sqrt{(-1)^{2} + (2)^{2}} = \sqrt{5} \\
-    \| r(-1) \|_{L_\infty} &= \max(|-1|,|2|) = 2
-\f}
-and for \f$r(0.5) = \begin{pmatrix} 0.5 \\ 0.5 \end{pmatrix}\f$ the calculation is
-\f{align*}
-    \| r(0.5) \|_{L_1} &= |0.5| + |0.5| = 1 \\
-    \| r(0.5) \|_{L_2} &= \sqrt{(0.5)^{2} + (0.5)^{2}} = \sqrt{0.5} \\
-    \| r(0.5) \|_{L_\infty} &= \max(|0.5|,|0.5|) = 0.5.
-\f}
-The following graphic shows all values for the three norm functions \f$\| r(x) \|_{L_1}, \| r(x) \|_{L_2}\f$ and \f$\| r(x) \|_{L_\infty}\f$.
-It is notable that the \f$ L_{1} \f$ norm forms the upper and the \f$ L_{\infty} \f$ norm forms the lower border for the example function \f$ r(x) \f$.
-![Graphs for the different norm functions from the above example](pics/NormTypes_OneArray_1-2-INF.png)
- */
-enum NormTypes { NORM_INF       = 1,
+enum NormTypes {
+                /**
+                \f[
+                norm =  \forkthree
+                {\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+                {\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+                {\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_INF}\) }
+                \f]
+                */
+                NORM_INF       = 1,
+                /**
+                \f[
+                norm =  \forkthree
+                {\| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\)}
+                { \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+                { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L1}\) }
+                \f]*/
                  NORM_L1        = 2,
+                 /**
+                 \f[
+                 norm =  \forkthree
+                 { \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
+                 { \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
+                 { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }
+                 \f]
+                 */
                  NORM_L2        = 4,
+                 /**
+                 \f[
+                 norm =  \forkthree
+                 { \| \texttt{src1} \| _{L_2} ^{2} = \sum_I \texttt{src1}(I)^2} {if  \(\texttt{normType} = \texttt{NORM_L2SQR}\)}
+                 { \| \texttt{src1} - \texttt{src2} \| _{L_2} ^{2} =  \sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2 }{if  \(\texttt{normType} = \texttt{NORM_L2SQR}\) }
+                 { \left(\frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}}\right)^2 }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }
+                 \f]
+                 */
                  NORM_L2SQR     = 5,
+                 /**
+                 In the case of one input array, calculates the Hamming distance of the array from zero,
+                 In the case of two input arrays, calculates the Hamming distance between the arrays.
+                 */
                  NORM_HAMMING   = 6,
+                 /**
+                 Similar to NORM_HAMMING, but in the calculation, each two bits of the input sequence will
+                 be added and treated as a single bit to be used in the same calculation as NORM_HAMMING.
+                 */
                  NORM_HAMMING2  = 7,
-                 NORM_TYPE_MASK = 7,
+                 NORM_TYPE_MASK = 7, //!< bit-mask which can be used to separate norm type from norm flags
                  NORM_RELATIVE  = 8, //!< flag
                  NORM_MINMAX    = 32 //!< flag
                };
@@ -239,6 +250,10 @@ enum DftFlags {
         into a real array and inverse transformation is executed, the function treats the input as a
         packed complex-conjugate symmetrical array, and the output will also be a real array). */
     DFT_REAL_OUTPUT    = 32,
+    /** specifies that input is complex input. If this flag is set, the input must have 2 channels.
+        On the other hand, for backwards compatibility reason, if input has 2 channels, input is
+        already considered complex. */
+    DFT_COMPLEX_INPUT  = 64,
     /** performs an inverse 1D or 2D transform instead of the default forward transform. */
     DCT_INVERSE        = DFT_INVERSE,
     /** performs a forward or inverse transform of every individual row of the input
@@ -327,7 +342,23 @@ enum BorderTypes {
 #define CV_SUPPRESS_DEPRECATED_START
 #define CV_SUPPRESS_DEPRECATED_END
 #endif
+
 #define CV_UNUSED(name) (void)name
+
+#if defined __GNUC__ && !defined __EXCEPTIONS
+#define CV_TRY
+#define CV_CATCH(A, B) for (A B; false; )
+#define CV_CATCH_ALL if (false)
+#define CV_THROW(A) abort()
+#define CV_RETHROW() abort()
+#else
+#define CV_TRY try
+#define CV_CATCH(A, B) catch(const A & B)
+#define CV_CATCH_ALL catch(...)
+#define CV_THROW(A) throw A
+#define CV_RETHROW() throw
+#endif
+
 //! @endcond
 
 /*! @brief Signals an error and raises the exception.
@@ -338,8 +369,8 @@ It is possible to alternate error processing by using redirectError().
 @param _code - error code (Error::Code)
 @param _err - error description
 @param _func - function name. Available only when the compiler supports getting it
-@param _file - source file name where the error has occured
-@param _line - line number in the source file where the error has occured
+@param _file - source file name where the error has occurred
+@param _line - line number in the source file where the error has occurred
 @see CV_Error, CV_Error_, CV_ErrorNoReturn, CV_ErrorNoReturn_, CV_Assert, CV_DbgAssert
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
@@ -377,6 +408,17 @@ CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const ch
 #define CV_Func ""
 #endif
 
+#ifdef CV_STATIC_ANALYSIS
+// In practice, some macro are not processed correctly (noreturn is not detected).
+// We need to use simplified definition for them.
+#define CV_Error(...) do { abort(); } while (0)
+#define CV_Error_(...) do { abort(); } while (0)
+#define CV_Assert(cond) do { if (!(cond)) abort(); } while (0)
+#define CV_ErrorNoReturn(...) do { abort(); } while (0)
+#define CV_ErrorNoReturn_(...) do { abort(); } while (0)
+
+#else // CV_STATIC_ANALYSIS
+
 /** @brief Call the error handler.
 
 Currently, the error handler prints the error code and the error message to the standard
@@ -409,13 +451,30 @@ The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression.
 raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
 configurations while CV_DbgAssert is only retained in the Debug configuration.
 */
-#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+
+#define CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...)    N
+#define CV_VA_NUM_ARGS(...)      CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+#define CV_Assert_1( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+#define CV_Assert_2( expr1, expr2 ) CV_Assert_1(expr1); CV_Assert_1(expr2)
+#define CV_Assert_3( expr1, expr2, expr3 ) CV_Assert_2(expr1, expr2); CV_Assert_1(expr3)
+#define CV_Assert_4( expr1, expr2, expr3, expr4 ) CV_Assert_3(expr1, expr2, expr3); CV_Assert_1(expr4)
+#define CV_Assert_5( expr1, expr2, expr3, expr4, expr5 ) CV_Assert_4(expr1, expr2, expr3, expr4); CV_Assert_1(expr5)
+#define CV_Assert_6( expr1, expr2, expr3, expr4, expr5, expr6 ) CV_Assert_5(expr1, expr2, expr3, expr4, expr5); CV_Assert_1(expr6)
+#define CV_Assert_7( expr1, expr2, expr3, expr4, expr5, expr6, expr7 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6 ); CV_Assert_1(expr7)
+#define CV_Assert_8( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ) CV_Assert_7(expr1, expr2, expr3, expr4, expr5, expr6, expr7 ); CV_Assert_1(expr8)
+#define CV_Assert_9( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ) CV_Assert_8(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ); CV_Assert_1(expr9)
+#define CV_Assert_10( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10 ) CV_Assert_9(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ); CV_Assert_1(expr10)
+
+#define CV_Assert(...)               CVAUX_CONCAT(CV_Assert_, CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)
 
 /** same as CV_Error(code,msg), but does not return */
 #define CV_ErrorNoReturn( code, msg ) cv::errorNoReturn( code, msg, CV_Func, __FILE__, __LINE__ )
 
 /** same as CV_Error_(code,args), but does not return */
 #define CV_ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+
+#endif // CV_STATIC_ANALYSIS
 
 /** replaced with CV_Assert(expr) in Debug configuration */
 #ifdef _DEBUG
@@ -667,13 +726,23 @@ namespace cudev
 
 namespace ipp
 {
-CV_EXPORTS int getIppFeatures();
-CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
+#if OPENCV_ABI_COMPATIBILITY > 300
+CV_EXPORTS   unsigned long long getIppFeatures();
+#else
+CV_EXPORTS   int getIppFeatures();
+#endif
+CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
-CV_EXPORTS int getIppStatus();
-CV_EXPORTS String getIppErrorLocation();
-CV_EXPORTS bool useIPP();
-CV_EXPORTS void setUseIPP(bool flag);
+CV_EXPORTS   int getIppStatus();
+CV_EXPORTS   String getIppErrorLocation();
+CV_EXPORTS_W bool   useIPP();
+CV_EXPORTS_W void   setUseIPP(bool flag);
+CV_EXPORTS_W String getIppVersion();
+
+// IPP Not-Exact mode. This function may force use of IPP then both IPP and OpenCV provide proper results
+// but have internal accuracy differences which have to much direct or indirect impact on accuracy tests.
+CV_EXPORTS_W bool useIPP_NE();
+CV_EXPORTS_W void setUseIPP_NE(bool flag);
 
 } // ipp
 
@@ -687,5 +756,6 @@ CV_EXPORTS void setUseIPP(bool flag);
 } // cv
 
 #include "opencv2/core/neon_utils.hpp"
+#include "opencv2/core/vsx_utils.hpp"
 
 #endif //OPENCV_CORE_BASE_HPP

@@ -236,6 +236,7 @@ public:
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    Mat estimate(InputArray frame0, InputArray frame1, bool *ok = 0);
 
 private:
     Ptr<MotionEstimatorBase> motionEstimator_;
@@ -287,7 +288,7 @@ private:
 @param from Source frame index.
 @param to Destination frame index.
 @param motions Pair-wise motions. motions[i] denotes motion from the frame i to the frame i+1
-@return Motion from the frame from to the frame to.
+@return Motion from the Source frame to the Destination frame.
  */
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 

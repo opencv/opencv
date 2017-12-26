@@ -51,6 +51,8 @@
 #include "opencv2/core/cuda/filters.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
 
+#include <iostream>
+
 using namespace cv::cuda;
 using namespace cv::cuda::device;
 
@@ -923,15 +925,15 @@ namespace pyrlk
                 float x = xBase - c_halfWin_x + j + 0.5f;
                 float y = yBase - c_halfWin_y + i + 0.5f;
 
-                I_patch[i * patchWidth + j] = tex2D(tex_Ib, x, y);
+                I_patch[i * patchWidth + j] = tex2D(tex_If, x, y);
 
                 // Sharr Deriv
 
-                dIdx_patch[i * patchWidth + j] = 3 * tex2D(tex_Ib, x+1, y-1) + 10 * tex2D(tex_Ib, x+1, y) + 3 * tex2D(tex_Ib, x+1, y+1) -
-                                                (3 * tex2D(tex_Ib, x-1, y-1) + 10 * tex2D(tex_Ib, x-1, y) + 3 * tex2D(tex_Ib, x-1, y+1));
+                dIdx_patch[i * patchWidth + j] = 3 * tex2D(tex_If, x+1, y-1) + 10 * tex2D(tex_If, x+1, y) + 3 * tex2D(tex_If, x+1, y+1) -
+                                                (3 * tex2D(tex_If, x-1, y-1) + 10 * tex2D(tex_If, x-1, y) + 3 * tex2D(tex_If, x-1, y+1));
 
-                dIdy_patch[i * patchWidth + j] = 3 * tex2D(tex_Ib, x-1, y+1) + 10 * tex2D(tex_Ib, x, y+1) + 3 * tex2D(tex_Ib, x+1, y+1) -
-                                                (3 * tex2D(tex_Ib, x-1, y-1) + 10 * tex2D(tex_Ib, x, y-1) + 3 * tex2D(tex_Ib, x+1, y-1));
+                dIdy_patch[i * patchWidth + j] = 3 * tex2D(tex_If, x-1, y+1) + 10 * tex2D(tex_If, x, y+1) + 3 * tex2D(tex_If, x+1, y+1) -
+                                                (3 * tex2D(tex_If, x-1, y-1) + 10 * tex2D(tex_If, x, y-1) + 3 * tex2D(tex_If, x+1, y-1));
             }
         }
 
@@ -942,6 +944,7 @@ namespace pyrlk
 
         if (x >= cols || y >= rows)
             return;
+
 
         int A11i = 0;
         int A12i = 0;
@@ -970,7 +973,6 @@ namespace pyrlk
         {
             if (calcErr)
                 err(y, x) = numeric_limits<float>::max();
-
             return;
         }
 
@@ -1014,6 +1016,7 @@ namespace pyrlk
                 }
             }
 
+
             float2 delta;
             delta.x = A12 * b2 - A22 * b1;
             delta.y = A12 * b1 - A11 * b2;
@@ -1047,16 +1050,45 @@ namespace pyrlk
         }
     }
 
-    void loadConstants(int2 winSize, int iters, cudaStream_t stream)
+    void loadWinSize(int* winSize, int* halfWinSize, cudaStream_t stream)
     {
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x, &winSize.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y, &winSize.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x, winSize, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y, winSize + 1, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
 
-        int2 halfWin = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_x, &halfWin.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y, &halfWin.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_x, halfWinSize, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y, halfWinSize + 1, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+    }
 
-        cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters, &iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+    void loadIters(int* iters, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters, iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+    }
+
+    void loadConstants(int2 winSize_, int iters_, cudaStream_t stream)
+    {
+        static int2 winSize = make_int2(0,0);
+        if(winSize.x != winSize_.x || winSize.y != winSize_.y)
+        {
+            winSize = winSize_;
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x, &winSize.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y, &winSize.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        }
+
+        static int2 halfWin = make_int2(0,0);
+        int2 half = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);
+        if(halfWin.x != half.x || halfWin.y != half.y)
+        {
+            halfWin = half;
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_x, &halfWin.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y, &halfWin.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        }
+
+        static int iters = 0;
+        if(iters != iters_)
+        {
+            iters = iters_;
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters, &iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
+        }
     }
 
     template<typename T, int cn> struct pyrLK_caller
@@ -1083,11 +1115,11 @@ namespace pyrlk
             funcs[patch.y - 1][patch.x - 1](I, J, I.rows, I.cols, prevPts, nextPts, status, err, ptcount,
                 level, block, stream);
         }
-        static void dense(PtrStepSzb I, PtrStepSz<T> J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV, PtrStepSzf err, int2 winSize, cudaStream_t stream)
+        static void dense(PtrStepSz<T> I, PtrStepSz<T> J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV, PtrStepSzf err, int2 winSize, cudaStream_t stream)
         {
             dim3 block(16, 16);
             dim3 grid(divUp(I.cols, block.x), divUp(I.rows, block.y));
-            Tex_I<1, uchar>::bindTexture_(I);
+            Tex_I<1, T>::bindTexture_(I);
             Tex_J<1, T>::bindTexture_(J);
 
             int2 halfWin = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);

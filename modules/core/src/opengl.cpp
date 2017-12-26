@@ -1590,7 +1590,7 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 #endif // HAVE_OPENCL
 
 #if defined(HAVE_OPENGL)
-#  if defined(ANDROID)
+#  if defined(__ANDROID__)
 #    include <EGL/egl.h>
 #  elif defined(__linux__)
 #    include <GL/glx.h>
@@ -1655,11 +1655,11 @@ Context& initializeContextFromGL()
 
         cl_context_properties properties[] =
         {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-#elif defined(ANDROID)
+#elif defined(__ANDROID__)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),

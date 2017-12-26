@@ -60,6 +60,25 @@
 // access from within opencv code more accessible
 namespace cv {
 
+#ifndef CV_DOXYGEN
+
+#ifdef CV_CPU_DISPATCH_MODE
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE __CV_CAT(hal_, CV_CPU_DISPATCH_MODE)
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace __CV_CAT(hal_, CV_CPU_DISPATCH_MODE) {
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+#else
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE hal_baseline
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace hal_baseline {
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+#endif
+
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
+
 //! @addtogroup core_hal_intrin
 //! @{
 
@@ -281,11 +300,15 @@ template <typename T> struct V_SIMD128Traits
 
 //! @}
 
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
 }
 
 #ifdef CV_DOXYGEN
 #   undef CV_SSE2
 #   undef CV_NEON
+#   undef CV_VSX
 #endif
 
 #if CV_SSE2
@@ -295,6 +318,10 @@ template <typename T> struct V_SIMD128Traits
 #elif CV_NEON
 
 #include "opencv2/core/hal/intrin_neon.hpp"
+
+#elif CV_VSX
+
+#include "opencv2/core/hal/intrin_vsx.hpp"
 
 #else
 
@@ -322,6 +349,10 @@ template <typename T> struct V_SIMD128Traits
 //! @cond IGNORED
 
 namespace cv {
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
 
 template <typename R> struct V_RegTrait128;
 
@@ -405,6 +436,33 @@ template <> struct V_RegTrait128<double> {
     static v_float64x2 zero() { return v_setzero_f64(); }
     static v_float64x2 all(double val) { return v_setall_f64(val); }
 };
+#endif
+
+inline unsigned int trailingZeros32(unsigned int value) {
+#if defined(_MSC_VER)
+#if (_MSC_VER < 1700) || defined(_M_ARM)
+    unsigned long index = 0;
+    _BitScanForward(&index, value);
+    return (unsigned int)index;
+#else
+    return _tzcnt_u32(value);
+#endif
+#elif defined(__GNUC__) || defined(__GNUG__)
+    return __builtin_ctz(value);
+#elif defined(__ICC) || defined(__INTEL_COMPILER)
+    return _bit_scan_forward(value);
+#elif defined(__clang__)
+    return llvm.cttz.i32(value, true);
+#else
+    static const int MultiplyDeBruijnBitPosition[32] = {
+        0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
+    return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
+#endif
+}
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 
 } // cv::

@@ -16,19 +16,18 @@
   The binaries are opencv_ffmpeg.dll (version for 32-bit Windows) and
   opencv_ffmpeg_64.dll (version for 64-bit Windows).
 
-  See build_win32.txt for the build instructions, if you want to rebuild opencv_ffmpeg*.dll from scratch.
-
   The pre-built opencv_ffmpeg*.dll is:
   * LGPL library, not BSD libraries.
   * Loaded at runtime by opencv_videoio module.
     If it succeeds, ffmpeg can be used to decode/encode videos;
     otherwise, other API is used.
 
-  FFMPEG build contains H264 encoder based on the OpenH264 library, that should be installed separatelly.
+  FFMPEG build includes support for H264 encoder based on the OpenH264 library.
   OpenH264 Video Codec provided by Cisco Systems, Inc.
   See https://github.com/cisco/openh264/releases for details and OpenH264 license.
-  Downloaded binary file can be placed into global system path (System32 or SysWOW64) or near application binaries.
-  You can also specify location of binary file via OPENH264_LIBRARY_PATH environment variable.
+  OpenH264 library should be installed separatelly. Downloaded binary file can be placed into global system path
+  (System32 or SysWOW64) or near application binaries (check documentation of "LoadLibrary" Win32 function from MSDN).
+  Or you can specify location of binary file via OPENH264_LIBRARY environment variable.
 
   If LGPL/GPL software can not be supplied with your OpenCV-based product, simply exclude
   opencv_ffmpeg*.dll from your distribution; OpenCV will stay fully functional except for the ability to

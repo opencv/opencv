@@ -2,20 +2,7 @@
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
-
-#if defined(HAVE_XINE)     || \
-defined(HAVE_GSTREAMER)    || \
-defined(HAVE_QUICKTIME)    || \
-defined(HAVE_AVFOUNDATION) || \
-defined(HAVE_FFMPEG)       || \
-defined(WIN32)
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#ifdef HAVE_VIDEO_INPUT
 
 namespace cvtest {
 namespace ocl {
@@ -111,10 +98,10 @@ OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Combine(Values("gpu/video/768x576
         }
         mog2->getBackgroundImage(u_background);
     }
-    SANITY_CHECK(u_background);
+    SANITY_CHECK_NOTHING();
 }
 
 }}// namespace cvtest::ocl
 
-    #endif
+#endif
 #endif

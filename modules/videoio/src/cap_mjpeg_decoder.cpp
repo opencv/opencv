@@ -553,6 +553,7 @@ bool AviMjpegStream::parseHdrlList(MjpegInputStream& in_str)
         {
             m_is_indx_present = ((avi_hdr.dwFlags & 0x10) != 0);
             DWORD number_of_streams = avi_hdr.dwStreams;
+            CV_Assert(number_of_streams < 0xFF);
             m_width = avi_hdr.dwWidth;
             m_height = avi_hdr.dwHeight;
 
@@ -821,7 +822,7 @@ bool MotionJpegCapture::retrieveFrame(int, OutputArray output_frame)
 
         if(data.size())
         {
-            m_current_frame = imdecode(data, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_COLOR);
+            m_current_frame = imdecode(data, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_COLOR | IMREAD_IGNORE_ORIENTATION);
         }
 
         m_current_frame.copyTo(output_frame);

@@ -28,7 +28,7 @@ int main( int argc, char** argv )
  char* imageName = argv[1];
 
  Mat image;
- image = imread( imageName, 1 );
+ image = imread( imageName, IMREAD_COLOR );
 
  if( argc != 2 || !image.data )
  {

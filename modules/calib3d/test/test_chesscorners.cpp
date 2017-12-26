@@ -268,14 +268,6 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
 #ifndef WRITE_POINTS
             double err = calcError(v, expected);
-#if 0
-            if( err > rough_success_error_level )
-            {
-                ts.printf( cvtest::TS::LOG, "bad accuracy of corner guesses\n" );
-                ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-                continue;
-            }
-#endif
             max_rough_error = MAX( max_rough_error, err );
 #endif
             if( pattern == CHESSBOARD )
@@ -287,14 +279,12 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             err = calcError(v, expected);
             sum_error += err;
             count++;
-#if 1
             if( err > precise_success_error_level )
             {
                 ts->printf( cvtest::TS::LOG, "Image %s: bad accuracy of adjusted corners %f\n", img_file.c_str(), err );
                 ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
                 return;
             }
-#endif
             ts->printf(cvtest::TS::LOG, "Error on %s is %f\n", img_file.c_str(), err);
             max_precise_error = MAX( max_precise_error, err );
 #endif
@@ -478,6 +468,8 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 TEST(Calib3d_ChessboardDetector, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD ); test.safe_run(); }
 TEST(Calib3d_CirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( CIRCLES_GRID ); test.safe_run(); }
 TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID ); test.safe_run(); }
+#ifdef HAVE_OPENCV_FLANN
 TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
+#endif
 
 /* End of file. */

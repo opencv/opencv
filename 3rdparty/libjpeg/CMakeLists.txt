@@ -28,17 +28,11 @@ endif()
 
 add_library(${JPEG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 
-if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  endif()
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCXX)
   set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused -Wshift-negative-value)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4244 /wd4267) # vs2005
 

@@ -1,4 +1,7 @@
-set(OPENCV_INTERACTIVECALIBRATION_DEPS opencv_core opencv_imgproc opencv_features2d opencv_aruco opencv_highgui opencv_calib3d opencv_videoio)
+set(OPENCV_INTERACTIVECALIBRATION_DEPS opencv_core opencv_imgproc opencv_features2d opencv_highgui opencv_calib3d opencv_videoio)
+if(${BUILD_opencv_aruco})
+    list(APPEND OPENCV_INTERACTIVECALIBRATION_DEPS opencv_aruco)
+endif()
 ocv_check_dependencies(${OPENCV_INTERACTIVECALIBRATION_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)
@@ -23,7 +26,6 @@ set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
                       ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-                      INSTALL_NAME_DIR lib
                     OUTPUT_NAME "opencv_interactive-calibration")
 
 if(ENABLE_SOLUTION_FOLDERS)

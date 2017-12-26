@@ -239,7 +239,7 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 #define set_preprocess_func cvSetPreprocessFuncWin32
 #define set_postprocess_func cvSetPostprocessFuncWin32
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 
 CVAPI(void) cvSetPreprocessFuncWin32_(const void* callback);
 CVAPI(void) cvSetPostprocessFuncWin32_(const void* callback);

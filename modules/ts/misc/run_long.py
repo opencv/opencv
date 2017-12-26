@@ -7,7 +7,14 @@ from pprint import PrettyPrinter as PP
 
 LONG_TESTS_DEBUG_VALGRIND = [
     ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
-    ('features2d', 'Features2d_Feature2d.no_crash', 1235.68),
+    ('dnn', 'Reproducibility*', 1000), # large DNN models
+    ('features2d', 'Features2d/DescriptorImage.no_crash/3', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/4', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/5', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/6', 1000),
+    ('features2d', 'Features2d/DescriptorImage.no_crash/7', 1000),
+    ('imgcodecs', 'Imgcodecs_Png.write_big', 1000), # memory limit
+    ('imgcodecs', 'Imgcodecs_Tiff.decode_tile16384x16384', 1000), # memory limit
     ('ml', 'ML_RTrees.regression', 1423.47),
     ('optflow', 'DenseOpticalFlow_DeepFlow.ReferenceAccuracy', 1360.95),
     ('optflow', 'DenseOpticalFlow_DeepFlow_perf.perf/0', 1881.59),
@@ -23,6 +30,7 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('shape', 'Shape_SCD.regression', 3311.46),
     ('tracking', 'AUKF.br_mean_squared_error', 10764.6),
     ('tracking', 'UKF.br_mean_squared_error', 5228.27),
+    ('videoio', 'Videoio_Video.ffmpeg_writebig', 1000),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_BoostDesc_LBGM.regression', 1124.51),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG120.regression', 2198.1),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG48.regression', 1958.52),
@@ -43,10 +51,8 @@ LONG_TESTS_DEBUG_VALGRIND = [
 ]
 
 
-def longTestFilter(data):
-    res = ['*', '-']
-    for _, v, _ in data:
-        res.append(v)
+def longTestFilter(data, module = None):
+    res = ['*', '-'] + [v for _, v, m in data if module is None or m == module]
     return '--gtest_filter={}'.format(':'.join(res))
 
 

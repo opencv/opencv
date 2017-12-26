@@ -106,7 +106,8 @@ bool isResizeLinearOpenCVSupported(const Size2D &ssize, const Size2D &dsize, u32
             && !(ssize.width > 0xffffFFFF || ssize.height > 0xffffFFFF)// Restrict image size since internal index evaluation
                                                                        // is performed with u32
 #endif
-            && dsize.width >= 2 && dsize.height >= 8)
+            && dsize.width >= 2 && dsize.height >= 8
+            && (2*dsize.width != ssize.width || 2*dsize.height != ssize.height)) // 2x downscaling is performed as area in OpenCV which differs from this implementation
             return isSupportedConfiguration();
     default:
         return false;
@@ -359,7 +360,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
         }
         else //if ((wr == 4.0f) && (hr == 4.0f)) //the only scale that lasts after isSupported check
         {
-#ifndef ANDROID
+#ifndef __ANDROID__
             size_t roiw16 = dsize.width >= 15 ? dsize.width - 15 : 0;
 #endif
             size_t roiw8 = dsize.width >= 7 ? dsize.width - 7 : 0;
@@ -373,7 +374,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                 u8 * dst_row = internal::getRowPtr(dstBase, dstStride, i);
                 size_t sj = 0, dj = 0;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
                 for ( ; dj < roiw16; dj += 16, sj += 64)
                 {
                     internal::prefetch(src0_row + sj);
@@ -450,7 +451,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
     {
         if ((wr == 2.0f) && (hr == 2.0f))
         {
-#ifndef ANDROID
+#ifndef __ANDROID__
             size_t roiw4 = dsize.width >= 3 ? (dsize.width - 3) << 2 : 0;
 #endif
             size_t roiw2 = dsize.width >= 1 ? (dsize.width - 1) << 2 : 0;
@@ -462,7 +463,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                 u8 * dst_row = internal::getRowPtr(dstBase, dstStride, i);
                 size_t sj = 0, dj = 0;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
                 for ( ; dj < roiw4; dj += 16, sj += 32)
                 {
                     internal::prefetch(src0_row + sj);
@@ -537,7 +538,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
         }
         else if ((wr == 0.5f) && (hr == 0.5f))
         {
-#ifndef ANDROID
+#ifndef __ANDROID__
             size_t roiw32 = dsize.width >= 31 ? (dsize.width - 31) << 2 : 0;
 #endif
             size_t roiw16 = dsize.width >= 15 ? (dsize.width - 15) << 2 : 0;
@@ -549,7 +550,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                 u8 * dst1_row = internal::getRowPtr(dstBase, dstStride, std::min(i + 1, dsize.height - 1));
                 size_t sj = 0, dj = 0;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
                 for ( ; dj < roiw32; dj += 128, sj += 64)
                 {
                     internal::prefetch(src_row + sj);
@@ -758,7 +759,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
     {
         if ((wr == 2.0f) && (wr == 2.0f))
         {
-#ifndef ANDROID
+#ifndef __ANDROID__
             size_t roiw16 = dsize.width >= 15 ? (dsize.width - 15) * 3 : 0;
 #endif
             size_t roiw8 = dsize.width >= 7 ? (dsize.width - 7) * 3 : 0;
@@ -770,7 +771,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                 u8 * dst_row = internal::getRowPtr(dstBase, dstStride, i);
                 size_t sj = 0, dj = 0;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
                 for ( ; dj < roiw16; dj += 48, sj += 96)
                 {
                     internal::prefetch(src0_row + sj);
@@ -856,7 +857,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
         }
         else if ((wr == 0.5f) && (hr == 0.5f))
         {
-#ifndef ANDROID
+#ifndef __ANDROID__
             size_t roiw32 = dsize.width >= 31 ? (dsize.width - 31) * 3 : 0;
 #endif
             size_t roiw16 = dsize.width >= 15 ? (dsize.width - 15) * 3 : 0;
@@ -868,7 +869,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                 u8 * dst1_row = internal::getRowPtr(dstBase, dstStride, std::min(i + 1, dsize.height - 1));
                 size_t sj = 0, dj = 0;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
                 for ( ; dj < roiw32; dj += 96, sj += 48)
                 {
                     internal::prefetch(src_row + sj);
@@ -928,7 +929,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
         }
         else //if ((hr == 4.0f) && (wr == 4.0f)) //the only scale that lasts after isSupported check
         {
-#ifndef ANDROID
+#ifndef __ANDROID__
             size_t roiw8 = dsize.width >= 7 ? (dsize.width - 7) * 3 : 0;
 #endif
 
@@ -941,7 +942,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                 u8 * dst_row = internal::getRowPtr(dstBase, dstStride, i);
                 size_t sj = 0, dj = 0;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
                 for ( ; dj < roiw8; dj += 24, sj += 96)
                 {
                     internal::prefetch(src0_row + sj);

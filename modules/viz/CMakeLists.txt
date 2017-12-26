@@ -1,13 +1,36 @@
-if(NOT WITH_VTK OR NOT DEFINED HAVE_VTK OR NOT HAVE_VTK)
+if(NOT HAVE_VTK)
   ocv_module_disable(viz)
 endif()
 
-include(${VTK_USE_FILE})
 set(the_description "Viz")
-ocv_define_module(viz opencv_core ${VTK_LIBRARIES} WRAP python)
+include(${VTK_USE_FILE})
+
+if(NOT BUILD_SHARED_LIBS)
+  # We observed conflict between builtin 3rdparty libraries and
+  # system-wide similar libraries (but with different versions) from VTK dependencies
+  set(_conflicts "")
+  foreach(dep ${VTK_LIBRARIES})
+    if(("${dep}" MATCHES "libz\\." AND BUILD_ZLIB)
+      OR ("${dep}" MATCHES "libjpeg\\." AND BUILD_JPEG)
+      OR ("${dep}" MATCHES "libpng\\." AND BUILD_PNG)
+      OR ("${dep}" MATCHES "libtiff\\." AND BUILD_TIFF)
+    )
+      list(APPEND _conflicts "${dep}")
+    endif()
+  endforeach()
+  if(_conflicts)
+    message(STATUS "Disabling VIZ module due conflicts with VTK dependencies: ${_conflicts}")
+    ocv_module_disable(viz)
+  endif()
+endif()
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Winconsistent-missing-override)
+
+ocv_define_module(viz opencv_core WRAP python)
+ocv_target_link_libraries(${the_module} LINK_PRIVATE ${VTK_LIBRARIES})
 
 if(APPLE AND BUILD_opencv_viz)
-  ocv_target_link_libraries(opencv_viz "-framework Cocoa")
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "-framework Cocoa")
 endif()
 
 if(TARGET opencv_test_viz)

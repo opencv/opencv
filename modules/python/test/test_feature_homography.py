@@ -13,7 +13,7 @@ PlaneTracker class in plane_tracker.py
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -28,8 +28,8 @@ def intersectionRate(s1, s2):
     x1, y1, x2, y2 = s1
     s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
-    area, intersection = cv2.intersectConvexConvex(s1, np.array(s2))
-    return 2 * area / (cv2.contourArea(s1) + cv2.contourArea(np.array(s2)))
+    area, _intersection = cv.intersectConvexConvex(s1, np.array(s2))
+    return 2 * area / (cv.contourArea(s1) + cv.contourArea(np.array(s2)))
 
 from tests_common import NewOpenCVTests
 
@@ -86,14 +86,14 @@ PlanarTarget = namedtuple('PlaneTarget', 'image, rect, keypoints, descrs, data')
   p0     - matched points coords in target image
   p1     - matched points coords in input frame
   H      - homography matrix from p0 to p1
-  quad   - target bounary quad in input frame
+  quad   - target boundary quad in input frame
 '''
 TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
 class PlaneTracker:
     def __init__(self):
-        self.detector = cv2.AKAZE_create(threshold = 0.003)
-        self.matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
+        self.detector = cv.AKAZE_create(threshold = 0.003)
+        self.matcher = cv.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
         self.targets = []
         self.frame_points = []
 
@@ -137,7 +137,7 @@ class PlaneTracker:
             p0 = [target.keypoints[m.trainIdx].pt for m in matches]
             p1 = [self.frame_points[m.queryIdx].pt for m in matches]
             p0, p1 = np.float32((p0, p1))
-            H, status = cv2.findHomography(p0, p1, cv2.RANSAC, 3.0)
+            H, status = cv.findHomography(p0, p1, cv.RANSAC, 3.0)
             status = status.ravel() != 0
             if status.sum() < MIN_MATCH_COUNT:
                 continue
@@ -145,7 +145,7 @@ class PlaneTracker:
 
             x0, y0, x1, y1 = target.rect
             quad = np.float32([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
-            quad = cv2.perspectiveTransform(quad.reshape(1, -1, 2), H).reshape(-1, 2)
+            quad = cv.perspectiveTransform(quad.reshape(1, -1, 2), H).reshape(-1, 2)
 
             track = TrackedTarget(target=target, p0=p0, p1=p1, H=H, quad=quad)
             tracked.append(track)
@@ -158,3 +158,7 @@ class PlaneTracker:
         if descrs is None:  # detectAndCompute returns descs=None if no keypoints found
             descrs = []
         return keypoints, descrs
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

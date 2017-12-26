@@ -111,7 +111,7 @@ PARAM_TEST_CASE(BruteForceMatcher, int, int)
     }
 };
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 OCL_TEST_P(BruteForceMatcher, DISABLED_Match_Single)
 #else
 OCL_TEST_P(BruteForceMatcher, Match_Single)
@@ -135,7 +135,7 @@ OCL_TEST_P(BruteForceMatcher, Match_Single)
     ASSERT_EQ(0, badCount);
 }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 OCL_TEST_P(BruteForceMatcher, DISABLED_KnnMatch_2_Single)
 #else
 OCL_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
@@ -171,7 +171,7 @@ OCL_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     ASSERT_EQ(0, badCount);
 }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 OCL_TEST_P(BruteForceMatcher, DISABLED_RadiusMatch_Single)
 #else
 OCL_TEST_P(BruteForceMatcher, RadiusMatch_Single)

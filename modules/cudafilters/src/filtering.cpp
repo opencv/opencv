@@ -312,9 +312,8 @@ Ptr<Filter> cv::cuda::createLaplacianFilter(int srcType, int dstType, int ksize,
         {2.0f, 0.0f, 2.0f, 0.0f, -8.0f, 0.0f, 2.0f, 0.0f, 2.0f}
     };
 
-    Mat kernel(3, 3, CV_32FC1, (void*)K[ksize == 3]);
-    if (scale != 1)
-        kernel *= scale;
+    Mat kernel1(3, 3, CV_32FC1, (void*)K[ksize == 3]);
+    Mat kernel = (scale == 1) ? kernel1 : (kernel1 * scale);
 
     return cuda::createLinearFilter(srcType, dstType, kernel, Point(-1,-1), borderMode, borderVal);
 }
@@ -1068,6 +1067,8 @@ namespace
     private:
         int windowSize;
         int partitions;
+        GpuMat devHist;
+        GpuMat devCoarseHist;
     };
 
     MedianFilter::MedianFilter(int srcType, int _windowSize, int _partitions) :
@@ -1099,9 +1100,8 @@ namespace
         // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
         int histSize=256, histCoarseSize=8;
 
-        BufferPool pool(_stream);
-        GpuMat devHist = pool.getBuffer(1, src.cols*histSize*partitions,CV_32SC1);
-        GpuMat devCoarseHist = pool.getBuffer(1,src.cols*histCoarseSize*partitions,CV_32SC1);
+        devHist.create(1, src.cols*histSize*partitions, CV_32SC1);
+        devCoarseHist.create(1, src.cols*histCoarseSize*partitions, CV_32SC1);
 
         devHist.setTo(0, _stream);
         devCoarseHist.setTo(0, _stream);

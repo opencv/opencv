@@ -33,8 +33,6 @@ int flag1 = 0;
 
 int minx,miny,maxx,maxy,lenx,leny;
 
-int channel;
-
 void mouseHandler(int, int, int, int, void*);
 
 void mouseHandler(int event, int x, int y, int, void*)
@@ -121,14 +119,22 @@ void mouseHandler(int event, int x, int y, int, void*)
     }
 }
 
+static void help()
+{
+    cout << "\nThis program demonstrates using mouse events"
+        "\nCall:\n"
+        "./create_mask <image_name>\n"
+        "\n"
+        "\tleft mouse button - set a point to create mask shape"
+        "\n"
+        "\tright mouse button - create mask from points\n"
+        "\tmiddle mouse button - reset\n" << endl;
+}
+
 int main(int argc, char **argv)
 {
-    cv::CommandLineParser parser(argc, argv, "{help h | | show help message}{@input | | input image}");
-    if (parser.has("help"))
-    {
-        parser.printMessage();
-        return 0;
-    }
+    cv::CommandLineParser parser(argc, argv, "{@input | ../data/lena.jpg | input image}");
+    help();
     string input_image = parser.get<string>("@input");
     if (input_image.empty())
     {
@@ -143,8 +149,6 @@ int main(int argc, char **argv)
 
     img0 = src;
 
-    channel = img0.channels();
-
     res1 = Mat::zeros(img0.size(),CV_8UC1);
     final = Mat::zeros(img0.size(),CV_8UC3);
     //////////// source image ///////////////////
@@ -154,6 +158,5 @@ int main(int argc, char **argv)
     imshow("Source", img0);
     waitKey(0);
 
-    img0.release();
-    img1.release();
+    return 0;
 }

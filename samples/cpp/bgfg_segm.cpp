@@ -70,7 +70,7 @@ int main(int argc, const char** argv)
         if( img0.empty() )
             break;
 
-        resize(img0, img, Size(640, 640*img0.rows/img0.cols), INTER_LINEAR);
+        resize(img0, img, Size(640, 640*img0.rows/img0.cols), 0, 0, INTER_LINEAR_EXACT);
 
         if( fgimg.empty() )
           fgimg.create(img.size(), img.type());

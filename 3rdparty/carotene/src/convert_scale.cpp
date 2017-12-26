@@ -135,7 +135,7 @@ namespace CAROTENE_NS {
 
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC1(u8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -220,7 +220,7 @@ CVTS_FUNC1(u8, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC(u8, s8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -305,7 +305,7 @@ CVTS_FUNC(u8, s8, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC(u8, u16, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -389,7 +389,7 @@ CVTS_FUNC(u8, u16, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC(u8, s16, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -473,7 +473,7 @@ CVTS_FUNC(u8, s16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u8, s32, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -562,7 +562,7 @@ CVTS_FUNC(u8, s32, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u8, f32, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta);,
@@ -643,7 +643,7 @@ CVTS_FUNC(u8, f32, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC(s8, u8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -728,7 +728,7 @@ CVTS_FUNC(s8, u8, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC1(s8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -813,7 +813,7 @@ CVTS_FUNC1(s8, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC(s8, u16, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -899,7 +899,7 @@ CVTS_FUNC(s8, u16, 16,
 })
 #endif
 
-#if defined(__GNUC__) && defined(__arm__)
+#if !defined(__aarch64__) && defined(__GNUC__) && defined(__arm__)
 CVTS_FUNC(s8, s16, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -985,7 +985,7 @@ CVTS_FUNC(s8, s16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s8, s32, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1074,7 +1074,7 @@ CVTS_FUNC(s8, s32, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s8, f32, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta);,
@@ -1155,7 +1155,7 @@ CVTS_FUNC(s8, f32, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u16, u8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1214,7 +1214,7 @@ CVTS_FUNC(u16, u8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u16, s8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1273,7 +1273,7 @@ CVTS_FUNC(u16, s8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC1(u16, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1330,7 +1330,7 @@ CVTS_FUNC1(u16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u16, s16, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1387,7 +1387,7 @@ CVTS_FUNC(u16, s16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u16, s32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1443,7 +1443,7 @@ CVTS_FUNC(u16, s32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(u16, f32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta);,
@@ -1495,7 +1495,7 @@ CVTS_FUNC(u16, f32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s16, u8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1554,7 +1554,7 @@ CVTS_FUNC(s16, u8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s16, s8, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1613,7 +1613,7 @@ CVTS_FUNC(s16, s8, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s16, u16, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1670,7 +1670,7 @@ CVTS_FUNC(s16, u16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC1(s16, 16,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1727,7 +1727,7 @@ CVTS_FUNC1(s16, 16,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s16, s32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1783,7 +1783,7 @@ CVTS_FUNC(s16, s32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s16, f32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta);,
@@ -1835,7 +1835,7 @@ CVTS_FUNC(s16, f32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s32, u8, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1893,7 +1893,7 @@ CVTS_FUNC(s32, u8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s32, s8, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -1951,7 +1951,7 @@ CVTS_FUNC(s32, s8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s32, u16, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2007,7 +2007,7 @@ CVTS_FUNC(s32, u16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s32, s16, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2063,7 +2063,7 @@ CVTS_FUNC(s32, s16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC1(s32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2118,7 +2118,7 @@ CVTS_FUNC1(s32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(s32, f32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta);,
@@ -2169,7 +2169,7 @@ CVTS_FUNC(s32, f32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(f32, u8, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)((1 << 16)*alpha));
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)((1 << 16)*beta));
@@ -2239,7 +2239,7 @@ CVTS_FUNC(f32, u8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(f32, s8, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2293,7 +2293,7 @@ CVTS_FUNC(f32, s8, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(f32, u16, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2345,7 +2345,7 @@ CVTS_FUNC(f32, u16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(f32, s16, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2397,7 +2397,7 @@ CVTS_FUNC(f32, s16, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC(f32, s32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta + 0.5f);,
@@ -2448,7 +2448,7 @@ CVTS_FUNC(f32, s32, 8,
 })
 #endif
 
-#if __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
 CVTS_FUNC1(f32, 8,
     register float32x4_t vscale asm ("q0") = vdupq_n_f32((f32)alpha);
     register float32x4_t vshift asm ("q1") = vdupq_n_f32((f32)beta);,

@@ -28,17 +28,28 @@ file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
 
-if(ENABLE_NEON)
-  list(APPEND lib_srcs arm/arm_init.c arm/filter_neon.S arm/filter_neon_intrinsics.c)
-  add_definitions(-DPNG_ARM_NEON_OPT=2)
-elseif(AARCH64)
-  add_definitions(-DPNG_ARM_NEON_OPT=0) # NEON assembler is not supported
+if(ARM OR AARCH64)
+  if(ENABLE_NEON AND NOT AARCH64)
+    list(APPEND lib_srcs arm/arm_init.c arm/filter_neon.S arm/filter_neon_intrinsics.c)
+    add_definitions(-DPNG_ARM_NEON_OPT=2)
+  else()
+    add_definitions(-DPNG_ARM_NEON_OPT=0) # NEON assembler is not supported
+  endif()
 endif()
 
-if(ENABLE_SSE
+if(";${CPU_BASELINE_FINAL};" MATCHES "SSE2"
     AND (NOT MSVC OR (MSVC_VERSION GREATER 1799))) # MSVS2013+ (issue #7232)
-  list(APPEND lib_srcs contrib/intel/intel_init.c contrib/intel/filter_sse2_intrinsics.c)
+  list(APPEND lib_srcs intel/intel_init.c intel/filter_sse2_intrinsics.c)
   add_definitions(-DPNG_INTEL_SSE)
+endif()
+
+if(PPC64LE OR PPC64)
+  if(ENABLE_VSX AND NOT PPC64)
+    list(APPEND lib_srcs powerpc/powerpc_init.c powerpc/filter_vsx_intrinsics.c)
+    add_definitions(-DPNG_POWERPC_VSX_OPT=2)
+  else()
+    add_definitions(-DPNG_POWERPC_VSX_OPT=0)    
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------------
@@ -51,12 +62,6 @@ endif(MSVC)
 
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
-
-if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  endif()
-endif()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align)
 

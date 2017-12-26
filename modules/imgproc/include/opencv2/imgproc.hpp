@@ -117,6 +117,8 @@ f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$
 interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
 resize for details.
 
+@note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
+
     @defgroup imgproc_misc Miscellaneous Image Transformations
     @defgroup imgproc_draw Drawing Functions
 
@@ -198,8 +200,8 @@ int main(int argc, const char *argv[])
 
 The Subdiv2D class described in this section is used to perform various planar subdivision on
 a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
-using the Delaunay’s algorithm, which corresponds to the dual graph of the Voronoi diagram.
-In the figure below, the Delaunay’s triangulation is marked with black lines and the Voronoi
+using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
+In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
 diagram with red lines.
 
 ![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
@@ -277,6 +279,8 @@ enum InterpolationFlags{
     INTER_AREA           = 3,
     /** Lanczos interpolation over 8x8 neighborhood */
     INTER_LANCZOS4       = 4,
+    /** Bit exact bilinear interpolation */
+    INTER_LINEAR_EXACT = 5,
     /** mask for interpolation codes */
     INTER_MAX            = 7,
     /** flag, fills all of the destination image pixels. If some of them correspond to outliers in the
@@ -416,7 +420,7 @@ enum ConnectedComponentsTypes {
 //! connected components algorithm
 enum ConnectedComponentsAlgorithmsTypes {
     CCL_WU      = 0,  //!< SAUF algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
-    CCL_DEFAULT = -1, //!< BBDT algortihm for 8-way connectivity, SAUF algorithm for 4-way connectivity
+    CCL_DEFAULT = -1, //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
     CCL_GRANA   = 1   //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
 };
 
@@ -450,6 +454,20 @@ enum ContourApproximationModes {
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_KCOS = 4
+};
+
+/** @brief Shape matching methods
+
+\f$A\f$ denotes object1,\f$B\f$ denotes object2
+
+\f$\begin{array}{l} m^A_i =  \mathrm{sign} (h^A_i)  \cdot \log{h^A_i} \\ m^B_i =  \mathrm{sign} (h^B_i)  \cdot \log{h^B_i} \end{array}\f$
+
+and \f$h^A_i, h^B_i\f$ are the Hu moments of \f$A\f$ and \f$B\f$ , respectively.
+*/
+enum ShapeMatchModes {
+    CONTOURS_MATCH_I1  =1, //!< \f[I_1(A,B) =  \sum _{i=1...7}  \left |  \frac{1}{m^A_i} -  \frac{1}{m^B_i} \right |\f]
+    CONTOURS_MATCH_I2  =2, //!< \f[I_2(A,B) =  \sum _{i=1...7}  \left | m^A_i - m^B_i  \right |\f]
+    CONTOURS_MATCH_I3  =3  //!< \f[I_3(A,B) =  \max _{i=1...7}  \frac{ \left| m^A_i - m^B_i \right| }{ \left| m^A_i \right| }\f]
 };
 
 //! @} imgproc_shape
@@ -769,8 +787,18 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
     COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
 
+    //! Demosaicing with alpha channel
+    COLOR_BayerBG2BGRA = 139,
+    COLOR_BayerGB2BGRA = 140,
+    COLOR_BayerRG2BGRA = 141,
+    COLOR_BayerGR2BGRA = 142,
 
-    COLOR_COLORCVT_MAX  = 139
+    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA,
+    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA,
+    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA,
+    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA,
+
+    COLOR_COLORCVT_MAX  = 143
 };
 
 /** types of intersection between rectangles
@@ -816,7 +844,7 @@ public:
 };
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without traslation and rotation
+//! Detects position only without translation and rotation
 class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
@@ -830,7 +858,7 @@ public:
 };
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, traslation and rotation
+//! Detects position, translation and rotation
 class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
@@ -931,7 +959,7 @@ public:
 
     /** @overload
 
-    @param rect – Rectangle that includes all of the 2D points that are to be added to the subdivision.
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
     The function creates an empty Delaunay subdivision where 2D points can be added using the function
     insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
@@ -941,14 +969,14 @@ public:
 
     /** @brief Creates a new empty Delaunay subdivision
 
-    @param rect – Rectangle that includes all of the 2D points that are to be added to the subdivision.
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
      */
     CV_WRAP void initDelaunay(Rect rect);
 
     /** @brief Insert a single point into a Delaunay triangulation.
 
-    @param pt – Point to insert.
+    @param pt Point to insert.
 
     The function inserts a single point into a subdivision and modifies the subdivision topology
     appropriately. If a point with the same coordinates exists already, no new point is added.
@@ -960,7 +988,7 @@ public:
 
     /** @brief Insert multiple points into a Delaunay triangulation.
 
-    @param ptvec – Points to insert.
+    @param ptvec Points to insert.
 
     The function inserts a vector of points into a subdivision and modifies the subdivision topology
     appropriately.
@@ -969,9 +997,9 @@ public:
 
     /** @brief Returns the location of a point within a Delaunay triangulation.
 
-    @param pt – Point to locate.
-    @param edge – Output edge that the point belongs to or is located to the right of it.
-    @param vertex – Optional output vertex the input point coincides with.
+    @param pt Point to locate.
+    @param edge Output edge that the point belongs to or is located to the right of it.
+    @param vertex Optional output vertex the input point coincides with.
 
     The function locates the input point within the subdivision and gives one of the triangle edges
     or vertices.
@@ -984,15 +1012,15 @@ public:
        vertex will contain a pointer to the vertex.
     -  The point is outside the subdivision reference rectangle. The function returns PTLOC_OUTSIDE_RECT
        and no pointers are filled.
-    -  One of input arguments is invalid. A runtime error is raised or, if silent or “parent” error
-       processing mode is selected, CV_PTLOC_ERROR is returnd.
+    -  One of input arguments is invalid. A runtime error is raised or, if silent or "parent" error
+       processing mode is selected, CV_PTLOC_ERROR is returned.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
     /** @brief Finds the subdivision vertex closest to the given point.
 
-    @param pt – Input point.
-    @param nearestPt – Output subdivision vertex point.
+    @param pt Input point.
+    @param nearestPt Output subdivision vertex point.
 
     The function is another function that locates the input point within the subdivision. It finds the
     subdivision vertex that is the closest to the input point. It is not necessarily one of vertices
@@ -1005,7 +1033,7 @@ public:
 
     /** @brief Returns a list of all edges.
 
-    @param edgeList – Output vector.
+    @param edgeList Output vector.
 
     The function gives each edge as a 4 numbers vector, where each two are one of the edge
     vertices. i.e. org_x = v[0], org_y = v[1], dst_x = v[2], dst_y = v[3].
@@ -1014,7 +1042,7 @@ public:
 
     /** @brief Returns a list of the leading edge ID connected to each triangle.
 
-    @param leadingEdgeList – Output vector.
+    @param leadingEdgeList Output vector.
 
     The function gives one edge ID for each triangle.
      */
@@ -1022,7 +1050,7 @@ public:
 
     /** @brief Returns a list of all triangles.
 
-    @param triangleList – Output vector.
+    @param triangleList Output vector.
 
     The function gives each triangle as a 6 numbers vector, where each two are one of the triangle
     vertices. i.e. p1_x = v[0], p1_y = v[1], p2_x = v[2], p2_y = v[3], p3_x = v[4], p3_y = v[5].
@@ -1031,9 +1059,9 @@ public:
 
     /** @brief Returns a list of all Voroni facets.
 
-    @param idx – Vector of vertices IDs to consider. For all vertices you can pass empty vector.
-    @param facetList – Output vector of the Voroni facets.
-    @param facetCenters – Output vector of the Voroni facets center points.
+    @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
+    @param facetList Output vector of the Voroni facets.
+    @param facetCenters Output vector of the Voroni facets center points.
 
      */
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
@@ -1041,8 +1069,8 @@ public:
 
     /** @brief Returns vertex location from vertex ID.
 
-    @param vertex – vertex ID.
-    @param firstEdge – Optional. The first edge ID which is connected to the vertex.
+    @param vertex vertex ID.
+    @param firstEdge Optional. The first edge ID which is connected to the vertex.
     @returns vertex (x,y)
 
      */
@@ -1050,8 +1078,8 @@ public:
 
     /** @brief Returns one of the edges related to the given edge.
 
-    @param edge – Subdivision edge ID.
-    @param nextEdgeType - Parameter specifying which of the related edges to return.
+    @param edge Subdivision edge ID.
+    @param nextEdgeType Parameter specifying which of the related edges to return.
     The following values are possible:
     -   NEXT_AROUND_ORG next around the edge origin ( eOnext on the picture below if e is the input edge)
     -   NEXT_AROUND_DST next around the edge vertex ( eDnext )
@@ -1070,7 +1098,7 @@ public:
 
     /** @brief Returns next edge around the edge origin.
 
-    @param edge – Subdivision edge ID.
+    @param edge Subdivision edge ID.
 
     @returns an integer which is next edge ID around the edge origin: eOnext on the
     picture above if e is the input edge).
@@ -1079,8 +1107,8 @@ public:
 
     /** @brief Returns another edge of the same quad-edge.
 
-    @param edge – Subdivision edge ID.
-    @param rotate - Parameter specifying which of the edges of the same quad-edge as the input
+    @param edge Subdivision edge ID.
+    @param rotate Parameter specifying which of the edges of the same quad-edge as the input
     one to return. The following values are possible:
     -   0 - the input edge ( e on the picture below if e is the input edge)
     -   1 - the rotated edge ( eRot )
@@ -1094,8 +1122,8 @@ public:
 
     /** @brief Returns the edge origin.
 
-    @param edge – Subdivision edge ID.
-    @param orgpt – Output vertex location.
+    @param edge Subdivision edge ID.
+    @param orgpt Output vertex location.
 
     @returns vertex ID.
      */
@@ -1103,8 +1131,8 @@ public:
 
     /** @brief Returns the edge destination.
 
-    @param edge – Subdivision edge ID.
-    @param dstpt – Output vertex location.
+    @param edge Subdivision edge ID.
+    @param dstpt Output vertex location.
 
     @returns vertex ID.
      */
@@ -1168,6 +1196,7 @@ protected:
 
 /** @example lsd_lines.cpp
 An example using the LineSegmentDetector
+\image html building_lsd.png "Sample output image" width=434 height=300
 */
 
 /** @brief Line segment detector class
@@ -1203,7 +1232,7 @@ public:
                         OutputArray nfa = noArray()) = 0;
 
     /** @brief Draws the line segments on a given image.
-    @param _image The image, where the liens will be drawn. Should be bigger or equal to the image,
+    @param _image The image, where the lines will be drawn. Should be bigger or equal to the image,
     where the lines were found.
     @param lines A vector of the lines that needed to be drawn.
      */
@@ -1232,7 +1261,7 @@ to edit those, as to tailor it for their own application.
 @param _sigma_scale Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
 @param _quant Bound to the quantization error on the gradient norm.
 @param _ang_th Gradient angle tolerance in degrees.
-@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advancent refinement
+@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement
 is chosen.
 @param _density_th Minimal density of aligned region points in the enclosing rectangle.
 @param _n_bins Number of bins in pseudo-ordering of gradient modulus.
@@ -1261,7 +1290,7 @@ smoothing kernels (a symmetrical kernel with sum of weights equal to 1) and hand
 You may also use the higher-level GaussianBlur.
 @param ksize Aperture size. It should be odd ( \f$\texttt{ksize} \mod 2 = 1\f$ ) and positive.
 @param sigma Gaussian standard deviation. If it is non-positive, it is computed from ksize as
-`sigma = 0.3\*((ksize-1)\*0.5 - 1) + 0.8`.
+`sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8`.
 @param ktype Type of filter coefficients. It can be CV_32F or CV_64F .
 @sa  sepFilter2D, getDerivKernels, getStructuringElement, GaussianBlur
  */
@@ -1323,6 +1352,11 @@ operation is shifted.
  */
 CV_EXPORTS_W Mat getStructuringElement(int shape, Size ksize, Point anchor = Point(-1,-1));
 
+/** @example Smoothing.cpp
+Sample code for simple filters
+![Sample screenshot](Smoothing_Tutorial_Result_Median_Filter.jpg)
+Check @ref tutorial_gausian_median_blur_bilateral_filter "the corresponding tutorial" for more details
+ */
 /** @brief Blurs an image using the median filter.
 
 The function smoothes an image using the median filter with the \f$\texttt{ksize} \times
@@ -1397,7 +1431,7 @@ CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
 
 /** @brief Blurs an image using the box filter.
 
-The function smoothes an image using the kernel:
+The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \alpha \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1 \end{bmatrix}\f]
 
@@ -1449,7 +1483,7 @@ CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
 /** @brief Blurs an image using the normalized box filter.
 
-The function smoothes an image using the kernel:
+The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \frac{1}{\texttt{ksize.width*ksize.height}} \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \end{bmatrix}\f]
 
@@ -1525,6 +1559,11 @@ CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
 
+/** @example Sobel_Demo.cpp
+Sample code using Sobel and/or Scharr OpenCV functions to make a simple Edge Detector
+![Sample screenshot](Sobel_Derivatives_Tutorial_Result.jpg)
+Check @ref tutorial_sobel_derivatives "the corresponding tutorial" for more details
+ */
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
 In all cases except one, the \f$\texttt{ksize} \times \texttt{ksize}\f$ separable kernel is used to
@@ -1657,12 +1696,14 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @{
 
 /** @example edge.cpp
-  An example on using the canny edge detector
+  This program demonstrates usage of the Canny edge detector
+
+  Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
 */
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
-The function finds edges in the input image image and marks them in the output map edges using the
+The function finds edges in the input image and marks them in the output map edges using the
 Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
@@ -1877,13 +1918,20 @@ or cornerMinEigenVal.
 
 @sa  cornerMinEigenVal, cornerHarris, calcOpticalFlowPyrLK, estimateRigidTransform,
  */
+
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      InputArray mask = noArray(), int blockSize = 3,
                                      bool useHarrisDetector = false, double k = 0.04 );
 
+CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
+                                     int maxCorners, double qualityLevel, double minDistance,
+                                     InputArray mask, int blockSize,
+                                     int gradientSize, bool useHarrisDetector = false,
+                                     double k = 0.04 );
 /** @example houghlines.cpp
 An example using the Hough line detector
+![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
 
 /** @brief Finds lines in a binary image using the standard Hough transform.
@@ -2046,7 +2094,7 @@ Example: :
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
-you know it. Or, you may ignore the returned radius, use only the center, and find the correct
+you know it. Or, you may set maxRadius to 0 to return centers only without radius search, and find the correct
 radius using an additional procedure.
 
 @param image 8-bit, single-channel, grayscale input image.
@@ -2081,7 +2129,9 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
 //! @{
 
 /** @example morphology2.cpp
-  An example using the morphological operations
+Advanced morphology Transformations sample code
+![Sample screenshot](Morphology_2_Tutorial_Result.jpg)
+Check @ref tutorial_opening_closing_hats "the corresponding tutorial" for more details
 */
 
 /** @brief Erodes an image by using a specific structuring element.
@@ -2111,6 +2161,11 @@ CV_EXPORTS_W void erode( InputArray src, OutputArray dst, InputArray kernel,
                          int borderType = BORDER_CONSTANT,
                          const Scalar& borderValue = morphologyDefaultBorderValue() );
 
+/** @example Morphology_1.cpp
+Erosion and Dilation sample code
+![Sample Screenshot-Erosion](Morphology_1_Tutorial_Erosion_Result.jpg)![Sample Screenshot-Dilation](Morphology_1_Tutorial_Dilation_Result.jpg)
+Check @ref tutorial_erosion_dilatation "the corresponding tutorial" for more details
+ */
 /** @brief Dilates an image by using a specific structuring element.
 
 The function dilates the source image using the specified structuring element that determines the
@@ -2157,6 +2212,9 @@ kernel center.
 @param borderValue Border value in case of a constant border. The default value has a special
 meaning.
 @sa  dilate, erode, getStructuringElement
+@note The number of iterations is the number of times erosion or dilatation operation will be applied.
+For instance, an opening operation (#MORPH_OPEN) with two iterations is equivalent to apply
+successively: erode -> erode -> dilate -> dilate (and not erode -> dilate -> erode -> dilate).
  */
 CV_EXPORTS_W void morphologyEx( InputArray src, OutputArray dst,
                                 int op, InputArray kernel,
@@ -2237,6 +2295,9 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               int borderMode = BORDER_CONSTANT,
                               const Scalar& borderValue = Scalar());
 
+/** @example warpPerspective_demo.cpp
+An example program shows using cv::findHomography and cv::warpPerspective for image warping
+ */
 /** @brief Applies a perspective transformation to an image.
 
 The function warpPerspective transforms the source image using the specified matrix:
@@ -2295,7 +2356,7 @@ borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
 @note
-Due to current implementaion limitations the size of an input and output images should be less than 32767x32767.
+Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
@@ -2413,13 +2474,12 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
 The function getRectSubPix extracts pixels from src:
 
-\f[dst(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
+\f[patch(x, y) = src(x +  \texttt{center.x} - ( \texttt{dst.cols} -1)*0.5, y +  \texttt{center.y} - ( \texttt{dst.rows} -1)*0.5)\f]
 
 where the values of the pixels at non-integer coordinates are retrieved using bilinear
-interpolation. Every channel of multi-channel images is processed independently. While the center of
-the rectangle must be inside the image, parts of the rectangle may be outside. In this case, the
-replication border mode (see cv::BorderTypes) is used to extrapolate the pixel values outside of
-the image.
+interpolation. Every channel of multi-channel images is processed independently. Also
+the image should be a single channel or three channel image. While the center of the
+rectangle must be inside the image, parts of the rectangle may be outside.
 
 @param image Source image.
 @param patchSize Size of the extracted patch.
@@ -2567,7 +2627,7 @@ CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
 //! @addtogroup imgproc_motion
 //! @{
 
-/** @brief Adds an image to the accumulator.
+/** @brief Adds an image to the accumulator image.
 
 The function adds src or some of its elements to dst :
 
@@ -2575,12 +2635,11 @@ The function adds src or some of its elements to dst :
 
 The function supports multi-channel images. Each channel is processed independently.
 
-The functions accumulate\* can be used, for example, to collect statistics of a scene background
+The function cv::accumulate can be used, for example, to collect statistics of a scene background
 viewed by a still camera and for the further foreground-background segmentation.
 
-@param src Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
-@param dst %Accumulator image with the same number of channels as input image, 32-bit or 64-bit
-floating-point.
+@param src Input image of type CV_8UC(n), CV_16UC(n), CV_32FC(n) or CV_64FC(n), where n is a positive integer.
+@param dst %Accumulator image with the same number of channels as input image, and a depth of CV_32F or CV_64F.
 @param mask Optional operation mask.
 
 @sa  accumulateSquare, accumulateProduct, accumulateWeighted
@@ -2588,7 +2647,7 @@ floating-point.
 CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
                               InputArray mask = noArray() );
 
-/** @brief Adds the square of a source image to the accumulator.
+/** @brief Adds the square of a source image to the accumulator image.
 
 The function adds the input image src or its selected region, raised to a power of 2, to the
 accumulator dst :
@@ -2607,7 +2666,7 @@ floating-point.
 CV_EXPORTS_W void accumulateSquare( InputArray src, InputOutputArray dst,
                                     InputArray mask = noArray() );
 
-/** @brief Adds the per-element product of two input images to the accumulator.
+/** @brief Adds the per-element product of two input images to the accumulator image.
 
 The function adds the product of two images or their selected regions to the accumulator dst :
 
@@ -2617,7 +2676,7 @@ The function supports multi-channel images. Each channel is processed independen
 
 @param src1 First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 @param src2 Second input image of the same type and the same size as src1 .
-@param dst %Accumulator with the same number of channels as input images, 32-bit or 64-bit
+@param dst %Accumulator image with the same number of channels as input images, 32-bit or 64-bit
 floating-point.
 @param mask Optional operation mask.
 
@@ -2697,7 +2756,7 @@ An example is shown below:
     createHanningWindow(hann, Size(100, 100), CV_32F);
 @endcode
 @param dst Destination array to place Hann coefficients in
-@param winSize The window size specifications
+@param winSize The window size specifications (both width and height must be > 1)
 @param type Created array type
  */
 CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
@@ -2709,7 +2768,7 @@ CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
 /** @brief Applies a fixed-level threshold to each array element.
 
-The function applies fixed-level thresholding to a single-channel array. The function is typically
+The function applies fixed-level thresholding to a multiple-channel array. The function is typically
 used to get a bi-level (binary) image out of a grayscale image ( cv::compare could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
 values. There are several types of thresholding supported by the function. They are determined by
@@ -2721,8 +2780,10 @@ or Triangle algorithm and uses it instead of the specified thresh . The function
 computed threshold value. Currently, the Otsu's and Triangle methods are implemented only for 8-bit
 images.
 
-@param src input array (single-channel, 8-bit or 32-bit floating point).
-@param dst output array of the same size and type as src.
+@note Input image should be single channel only in case of CV_THRESH_OTSU or CV_THRESH_TRIANGLE flags
+
+@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param dst output array of the same size  and type and the same number of channels as src.
 @param thresh threshold value.
 @param maxval maximum value to use with the THRESH_BINARY and THRESH_BINARY_INV thresholding
 types.
@@ -2748,7 +2809,8 @@ The function can process the image in-place.
 @param src Source 8-bit single-channel image.
 @param dst Destination image of the same size and the same type as src.
 @param maxValue Non-zero value assigned to the pixels for which the condition is satisfied
-@param adaptiveMethod Adaptive thresholding algorithm to use, see cv::AdaptiveThresholdTypes
+@param adaptiveMethod Adaptive thresholding algorithm to use, see cv::AdaptiveThresholdTypes.
+The BORDER_REPLICATE | BORDER_ISOLATED is used to process boundaries.
 @param thresholdType Thresholding type that must be either THRESH_BINARY or THRESH_BINARY_INV,
 see cv::ThresholdTypes.
 @param blockSize Size of a pixel neighborhood that is used to calculate a threshold value for the
@@ -2767,6 +2829,9 @@ CV_EXPORTS_W void adaptiveThreshold( InputArray src, OutputArray dst,
 //! @addtogroup imgproc_filter
 //! @{
 
+/** @example Pyramids.cpp
+An example using pyrDown and pyrUp functions
+ */
 /** @brief Blurs an image and downsamples it.
 
 By default, size of the output image is computed as `Size((src.cols+1)/2, (src.rows+1)/2)`, but in
@@ -2920,7 +2985,7 @@ computed by stereoRectify can be passed here. If the matrix is empty, the identi
 is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
 @param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
 @param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2, see cv::convertMaps
+@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see cv::convertMaps
 @param map1 The first output map.
 @param map2 The second output map.
  */
@@ -3002,6 +3067,13 @@ cv::stereoRectify can be passed here. If the matrix is empty, the identity new c
 CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
                                    InputArray R = noArray(), InputArray P = noArray());
+/** @overload
+    @note Default version of cv::undistortPoints does 5 iterations to compute undistorted points.
+
+ */
+CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
+                                   InputArray cameraMatrix, InputArray distCoeffs,
+                                   InputArray R, InputArray P, TermCriteria criteria);
 
 //! @} imgproc_transform
 
@@ -3255,6 +3327,10 @@ CV_EXPORTS float EMD( InputArray signature1, InputArray signature2,
                       int distType, InputArray cost=noArray(),
                       float* lowerBound = 0, OutputArray flow = noArray() );
 
+CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature2,
+                      int distType, InputArray cost=noArray(),
+                      CV_IN_OUT Ptr<float> lowerBound = Ptr<float>(), OutputArray flow = noArray() );
+
 //! @} imgproc_hist
 
 /** @example watershed.cpp
@@ -3339,6 +3415,7 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( InputArray src, OutputArray dst,
 
 /** @example grabcut.cpp
 An example using the GrabCut algorithm
+![Sample Screenshot](grabcut_output1.jpg)
  */
 
 /** @brief Runs the GrabCut algorithm.
@@ -3498,7 +3575,8 @@ taller than image. Since this is both an input and output parameter, you must ta
 of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
 mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
-as described below. It is therefore possible to use the same mask in multiple calls to the function
+as described below. Additionally, the function fills the border of the mask with ones to simplify
+internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
 @param seedPoint Starting point.
 @param newVal New value of the repainted domain pixels.
@@ -3572,7 +3650,7 @@ CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn
 
 //! @} imgproc_misc
 
-// main function for all demosaicing procceses
+// main function for all demosaicing processes
 CV_EXPORTS_W void demosaicing(InputArray _src, OutputArray _dst, int code, int dcn = 0);
 
 //! @addtogroup imgproc_shape
@@ -3637,6 +3715,9 @@ enum TemplateMatchModes {
     TM_CCOEFF_NORMED = 5  //!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }\f]
 };
 
+/** @example MatchTemplate_Demo.cpp
+An example using Template Matching algorithm
+ */
 /** @brief Compares a template against overlapped image regions.
 
 The function slides through image , compares the overlapped patches of size \f$w \times h\f$ against
@@ -3658,7 +3739,7 @@ data type.
 is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \times (H-h+1)\f$ .
 @param method Parameter specifying the comparison method, see cv::TemplateMatchModes
 @param mask Mask of searched template. It must have the same datatype and size with templ. It is
-not set by default.
+not set by default. Currently, only the TM_SQDIFF and TM_CCORR_NORMED methods are supported.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method, InputArray mask = noArray() );
@@ -3674,8 +3755,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana's (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
+Grana (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
 for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
+This function uses parallel version of both Grana and Wu's algorithms if at least one allowed
+parallel framework is enabled and if the rows of the image are at least twice the number returned by getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
@@ -3706,7 +3789,8 @@ consideration based on the total number of labels or alternatively the total num
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
 Grana's (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
 for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-
+This function uses parallel version of both Grana and Wu's algorithms (statistics included) if at least one allowed
+parallel framework is enabled and if the rows of the image are at least twice the number returned by getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
@@ -3744,6 +3828,7 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
 are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
+@note Since opencv 3.2 source image is not modified by this function.
 
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
 pixels remain 0's, so the image is treated as binary . You can use cv::compare, cv::inRange, cv::threshold ,
@@ -3753,7 +3838,7 @@ If mode equals to cv::RETR_CCOMP or cv::RETR_FLOODFILL, the input can also be a 
 std::vector<std::vector<cv::Point> >).
 @param hierarchy Optional output vector (e.g. std::vector<cv::Vec4i>), containing information about the image topology. It has
 as many elements as the number of contours. For each i-th contour contours[i], the elements
-hierarchy[i][0] , hiearchy[i][1] , hiearchy[i][2] , and hiearchy[i][3] are set to 0-based indices
+hierarchy[i][0] , hierarchy[i][1] , hierarchy[i][2] , and hierarchy[i][3] are set to 0-based indices
 in contours of the next and previous contours at the same hierarchical level, the first child
 contour and the parent contour, respectively. If for the contour i there are no next, previous,
 parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
@@ -3840,9 +3925,8 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 /** @brief Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
-specified point set. See the OpenCV sample minarea.cpp . Developer should keep in mind that the
-returned rotatedRect can contain negative indices when data is close to the containing Mat element
-boundary.
+specified point set. Developer should keep in mind that the returned RotatedRect can contain negative
+indices when data is close to the containing Mat element boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
  */
@@ -3863,8 +3947,7 @@ CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
 
 /** @brief Finds a circle of the minimum area enclosing a 2D point set.
 
-The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm. See
-the OpenCV sample minarea.cpp .
+The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
 @param center Output center of the circle.
@@ -3903,7 +3986,7 @@ The function compares two shapes. All three implemented methods use the Hu invar
 
 @param contour1 First contour or grayscale image.
 @param contour2 Second contour or grayscale image.
-@param method Comparison method, see ::ShapeMatchModes
+@param method Comparison method, see cv::ShapeMatchModes
 @param parameter Method-specific parameter (not supported now).
  */
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
@@ -3932,6 +4015,8 @@ returns convex hull points. Otherwise, it returns indices of the convex hull poi
 output array is std::vector, the flag is ignored, and the output depends on the type of the
 vector: std::vector\<int\> implies returnPoints=false, std::vector\<Point\> implies
 returnPoints=true.
+
+@note `points` and `hull` should be different arrays, inplace processing isn't supported.
  */
 CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull,
                               bool clockwise = false, bool returnPoints = true );
@@ -3983,6 +4068,88 @@ border of the containing Mat element.
 @param points Input 2D point set, stored in std::vector\<\> or Mat
  */
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
+
+/** @brief Fits an ellipse around a set of 2D points.
+
+ The function calculates the ellipse that fits a set of 2D points.
+ It returns the rotated rectangle in which the ellipse is inscribed.
+ The Approximate Mean Square (AMS) proposed by @cite Taubin1991 is used.
+
+ For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
+ which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
+ However, to specify an ellipse, all that is needed is five numbers; the major and minor axes lengths \f$ (a,b) \f$,
+ the position \f$ (x_0,y_0) \f$, and the orientation \f$ \theta \f$. This is because the basis set includes lines,
+ quadratics, parabolic and hyperbolic functions as well as elliptical functions as possible fits.
+ If the fit is found to be a parabolic or hyperbolic function then the standard fitEllipse method is used.
+ The AMS method restricts the fit to parabolic, hyperbolic and elliptical curves
+ by imposing the condition that \f$ A^T ( D_x^T D_x  +   D_y^T D_y) A = 1 \f$ where
+ the matrices \f$ Dx \f$ and \f$ Dy \f$ are the partial derivatives of the design matrix \f$ D \f$ with
+ respect to x and y. The matrices are formed row by row applying the following to
+ each of the points in the set:
+ \f{align*}{
+ D(i,:)&=\left\{x_i^2, x_i y_i, y_i^2, x_i, y_i, 1\right\} &
+ D_x(i,:)&=\left\{2 x_i,y_i,0,1,0,0\right\} &
+ D_y(i,:)&=\left\{0,x_i,2 y_i,0,1,0\right\}
+ \f}
+ The AMS method minimizes the cost function
+ \f{equation*}{
+ \epsilon ^2=\frac{ A^T D^T D A }{ A^T (D_x^T D_x +  D_y^T D_y) A^T }
+ \f}
+
+ The minimum cost is found by solving the generalized eigenvalue problem.
+
+ \f{equation*}{
+ D^T D A = \lambda  \left( D_x^T D_x +  D_y^T D_y\right) A
+ \f}
+
+ @param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
+
+
+/** @brief Fits an ellipse around a set of 2D points.
+
+ The function calculates the ellipse that fits a set of 2D points.
+ It returns the rotated rectangle in which the ellipse is inscribed.
+ The Direct least square (Direct) method by @cite Fitzgibbon1999 is used.
+
+ For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
+ which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
+ However, to specify an ellipse, all that is needed is five numbers; the major and minor axes lengths \f$ (a,b) \f$,
+ the position \f$ (x_0,y_0) \f$, and the orientation \f$ \theta \f$. This is because the basis set includes lines,
+ quadratics, parabolic and hyperbolic functions as well as elliptical functions as possible fits.
+ The Direct method confines the fit to ellipses by ensuring that \f$ 4 A_{xx} A_{yy}- A_{xy}^2 > 0 \f$.
+ The condition imposed is that \f$ 4 A_{xx} A_{yy}- A_{xy}^2=1 \f$ which satisfies the inequality
+ and as the coefficients can be arbitrarily scaled is not overly restrictive.
+
+ \f{equation*}{
+ \epsilon ^2= A^T D^T D A \quad \text{with} \quad A^T C A =1 \quad \text{and} \quad C=\left(\begin{matrix}
+ 0 & 0  & 2  & 0  & 0  &  0  \\
+ 0 & -1  & 0  & 0  & 0  &  0 \\
+ 2 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0 \\
+ 0 & 0  & 0  & 0  & 0  &  0
+ \end{matrix} \right)
+ \f}
+
+ The minimum cost is found by solving the generalized eigenvalue problem.
+
+ \f{equation*}{
+ D^T D A = \lambda  \left( C\right) A
+ \f}
+
+ The system produces only one positive eigenvalue \f$ \lambda\f$ which is chosen as the solution
+ with its eigenvector \f$\mathbf{u}\f$. These are used to find the coefficients
+
+ \f{equation*}{
+ A = \sqrt{\frac{1}{\mathbf{u}^T C \mathbf{u}}}  \mathbf{u}
+ \f}
+ The scaling factor guarantees that  \f$A^T C A =1\f$.
+
+ @param points Input 2D point set, stored in std::vector\<\> or Mat
+ */
+CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
 
 /** @brief Fits a line to a 2D or 3D point set.
 
@@ -4041,7 +4208,7 @@ CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measu
 
 /** @brief Finds out if there is any intersection between two rotated rectangles.
 
-If there is then the vertices of the interesecting region are returned as well.
+If there is then the vertices of the intersecting region are returned as well.
 
 Below are some examples of intersection configurations. The hatched pattern indicates the
 intersecting region and the red vertices are returned by the function.
@@ -4050,7 +4217,7 @@ intersecting region and the red vertices are returned by the function.
 
 @param rect1 First rectangle
 @param rect2 Second rectangle
-@param intersectingRegion The output array of the verticies of the intersecting region. It returns
+@param intersectingRegion The output array of the vertices of the intersecting region. It returns
 at most 8 vertices. Stored as std::vector\<cv::Point2f\> or cv::Mat as Mx1 of type CV_32FC2.
 @returns One of cv::RectanglesIntersectTypes
  */
@@ -4061,14 +4228,20 @@ CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const R
 CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without traslation and rotation
+//! Detects position only without translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, traslation and rotation
+//! Detects position, translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
-//! Performs linear blending of two images
+//! Performs linear blending of two images:
+//! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
+//! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
+//! @param src2 It has the same type and size as src1.
+//! @param weights1 It has a type of CV_32FC1 and the same size with src1.
+//! @param weights2 It has a type of CV_32FC1 and the same size with src1.
+//! @param dst It is created if it does not have the same size and type with src1.
 CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
 
 //! @addtogroup imgproc_colormap
@@ -4092,13 +4265,24 @@ enum ColormapTypes
     COLORMAP_PARULA = 12 //!< ![parula](pics/colormaps/colorscale_parula.jpg)
 };
 
+/** @example falsecolor.cpp
+An example using applyColorMap function
+*/
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
 @param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see cv::ColormapTypes
- */
+*/
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
+
+/** @brief Applies a user colormap on a given image.
+
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
+@param dst The result is the colormapped source image. Note: Mat::create is called on dst.
+@param userColor The colormap to apply of type CV_8UC1 or CV_8UC3 and size 256
+*/
+CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray userColor);
 
 //! @} imgproc_colormap
 
@@ -4166,6 +4350,9 @@ CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
+/** @example Drawing_2.cpp
+An example using drawing functions
+ */
 /** @brief Draws a circle.
 
 The function circle draws a simple or filled circle with a given center and radius.
@@ -4184,14 +4371,16 @@ CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
 
 /** @brief Draws a simple or thick elliptic arc or fills an ellipse sector.
 
-The function cv::ellipse with less parameters draws an ellipse outline, a filled ellipse, an elliptic
-arc, or a filled ellipse sector. A piecewise-linear curve is used to approximate the elliptic arc
+The function cv::ellipse with more parameters draws an ellipse outline, a filled ellipse, an elliptic
+arc, or a filled ellipse sector. The drawing code uses general parametric form.
+A piecewise-linear curve is used to approximate the elliptic arc
 boundary. If you need more control of the ellipse rendering, you can retrieve the curve using
-ellipse2Poly and then render it with polylines or fill it with fillPoly . If you use the first
-variant of the function and want to draw the whole ellipse, not an arc, pass startAngle=0 and
-endAngle=360 . The figure below explains the meaning of the parameters.
+cv::ellipse2Poly and then render it with polylines or fill it with cv::fillPoly. If you use the first
+variant of the function and want to draw the whole ellipse, not an arc, pass `startAngle=0` and
+`endAngle=360`. If `startAngle` is greater than `endAngle`, they are swapped. The figure below explains
+the meaning of the parameters to draw the blue arc.
 
-![Parameters of Elliptic Arc](pics/ellipse.png)
+![Parameters of Elliptic Arc](pics/ellipse.svg)
 
 @param img Image.
 @param center Center of the ellipse.
@@ -4287,6 +4476,9 @@ CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
                          const Scalar& color, int lineType = LINE_8, int shift = 0,
                          Point offset = Point() );
 
+/** @example Drawing_1.cpp
+An example using drawing functions
+ */
 /** @brief Fills the area bounded by one or more polygons.
 
 The function fillPoly fills an area bounded by several polygonal contours. The function can fill
@@ -4327,7 +4519,8 @@ CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 /** @example contours2.cpp
-  An example using the drawContour functionality
+  An example program illustrates the use of cv::findContours and cv::drawContours
+  \image html WindowsQtContoursOutput.png "Screenshot of the program"
 */
 
 /** @example segment_objects.cpp
@@ -4396,6 +4589,11 @@ draws the contours, all the nested contours, all the nested-to-nested contours, 
 parameter is only taken into account when there is hierarchy available.
 @param offset Optional contour shift parameter. Shift all the drawn contours by the specified
 \f$\texttt{offset}=(dx,dy)\f$ .
+@note When thickness=CV_FILLED, the function is designed to handle connected components with holes correctly
+even when no hierarchy date is provided. This is done by analyzing all the outlines together
+using even-odd rule. This may give incorrect results if you have a joint collection of separately retrieved
+contours. In order to solve this problem, you need to call drawContours separately for each sub-group
+of contours, or iterate over the collection using contourIdx parameter.
  */
 CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,
@@ -4431,7 +4629,7 @@ CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_
 /** @brief Approximates an elliptic arc with a polyline.
 
 The function ellipse2Poly computes the vertices of a polyline that approximates the specified
-elliptic arc. It is used by cv::ellipse.
+elliptic arc. It is used by cv::ellipse. If `arcStart` is greater than `arcEnd`, they are swapped.
 
 @param center Center of the arc.
 @param axes Half of the size of the ellipse main axes. See the ellipse for details.

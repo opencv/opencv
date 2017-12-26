@@ -50,23 +50,10 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
-#if defined(HAVE_XINE)         || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_FFMPEG)       || \
-    defined(WIN32) /* assume that we have ffmpeg */
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
 //////////////////////////////////////////////////////
 // FGDStatModel
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#ifdef HAVE_VIDEO_INPUT
 
 DEF_PARAM_TEST_1(Video, string);
 
@@ -136,7 +123,7 @@ PERF_TEST_P(Video, FGDStatModel,
 //////////////////////////////////////////////////////
 // GMG
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#ifdef HAVE_VIDEO_INPUT
 
 DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, MatCn, int);
 

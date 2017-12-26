@@ -1,4 +1,4 @@
-set(the_description "Image codecs")
+set(the_description "Image I/O")
 ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
 
 # ----------------------------------------------------------------------------
@@ -23,7 +23,7 @@ if(HAVE_JPEG)
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
-if(WITH_WEBP)
+if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
   ocv_include_directories(${WEBP_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
@@ -92,6 +92,9 @@ if(IOS)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/ios_conversions.mm)
   list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework QuartzCore" "-framework AssetsLibrary")
 endif()
+if(APPLE_FRAMEWORK)
+  list(APPEND IMGCODECS_LIBRARIES "-framework UIKit")
+endif()
 
 if(UNIX)
   #these variables are set by CHECK_MODULE macro
@@ -116,16 +119,9 @@ if(APPLE)
   add_apple_compiler_options(the_module)
 endif()
 
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DIMGCODECS_EXPORTS)
-endif()
-
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
-
-#stop automatic dependencies propagation for this module
-set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 endmacro()

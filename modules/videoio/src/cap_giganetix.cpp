@@ -48,7 +48,7 @@
 #include <GigEVisionSDK.h>
 #include <GigEVisionSDK.cpp>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <io.h>
 #else
 #include <stdio.h>

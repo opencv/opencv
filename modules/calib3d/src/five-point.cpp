@@ -458,8 +458,9 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     return cv::findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
 }
 
-int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, InputArray _cameraMatrix,
-                     OutputArray _R, OutputArray _t, InputOutputArray _mask)
+int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
+                            InputArray _cameraMatrix, OutputArray _R, OutputArray _t, double distanceThresh,
+                     InputOutputArray _mask, OutputArray triangulatedPoints)
 {
     CV_INSTRUMENT_REGION()
 
@@ -506,51 +507,60 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Inp
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // there depth may vary between postive and negtive.
-    double dist = 50.0;
+    std::vector<Mat> allTriangulations(4);
     Mat Q;
+
     triangulatePoints(P0, P1, points1, points2, Q);
+    if(triangulatedPoints.needed())
+        Q.copyTo(allTriangulations[0]);
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
     Q.row(3) /= Q.row(3);
-    mask1 = (Q.row(2) < dist) & mask1;
+    mask1 = (Q.row(2) < distanceThresh) & mask1;
     Q = P1 * Q;
     mask1 = (Q.row(2) > 0) & mask1;
-    mask1 = (Q.row(2) < dist) & mask1;
+    mask1 = (Q.row(2) < distanceThresh) & mask1;
 
     triangulatePoints(P0, P2, points1, points2, Q);
+    if(triangulatedPoints.needed())
+        Q.copyTo(allTriangulations[1]);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
     Q.row(3) /= Q.row(3);
-    mask2 = (Q.row(2) < dist) & mask2;
+    mask2 = (Q.row(2) < distanceThresh) & mask2;
     Q = P2 * Q;
     mask2 = (Q.row(2) > 0) & mask2;
-    mask2 = (Q.row(2) < dist) & mask2;
+    mask2 = (Q.row(2) < distanceThresh) & mask2;
 
     triangulatePoints(P0, P3, points1, points2, Q);
+    if(triangulatedPoints.needed())
+        Q.copyTo(allTriangulations[2]);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
     Q.row(3) /= Q.row(3);
-    mask3 = (Q.row(2) < dist) & mask3;
+    mask3 = (Q.row(2) < distanceThresh) & mask3;
     Q = P3 * Q;
     mask3 = (Q.row(2) > 0) & mask3;
-    mask3 = (Q.row(2) < dist) & mask3;
+    mask3 = (Q.row(2) < distanceThresh) & mask3;
 
     triangulatePoints(P0, P4, points1, points2, Q);
+    if(triangulatedPoints.needed())
+        Q.copyTo(allTriangulations[3]);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
     Q.row(3) /= Q.row(3);
-    mask4 = (Q.row(2) < dist) & mask4;
+    mask4 = (Q.row(2) < distanceThresh) & mask4;
     Q = P4 * Q;
     mask4 = (Q.row(2) > 0) & mask4;
-    mask4 = (Q.row(2) < dist) & mask4;
+    mask4 = (Q.row(2) < distanceThresh) & mask4;
 
     mask1 = mask1.t();
     mask2 = mask2.t();
@@ -583,6 +593,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Inp
 
     if (good1 >= good2 && good1 >= good3 && good1 >= good4)
     {
+        if(triangulatedPoints.needed()) allTriangulations[0].copyTo(triangulatedPoints);
         R1.copyTo(_R);
         t.copyTo(_t);
         if (_mask.needed()) mask1.copyTo(_mask);
@@ -590,6 +601,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Inp
     }
     else if (good2 >= good1 && good2 >= good3 && good2 >= good4)
     {
+        if(triangulatedPoints.needed()) allTriangulations[1].copyTo(triangulatedPoints);
         R2.copyTo(_R);
         t.copyTo(_t);
         if (_mask.needed()) mask2.copyTo(_mask);
@@ -597,6 +609,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Inp
     }
     else if (good3 >= good1 && good3 >= good2 && good3 >= good4)
     {
+        if(triangulatedPoints.needed()) allTriangulations[2].copyTo(triangulatedPoints);
         t = -t;
         R1.copyTo(_R);
         t.copyTo(_t);
@@ -605,12 +618,19 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Inp
     }
     else
     {
+        if(triangulatedPoints.needed()) allTriangulations[3].copyTo(triangulatedPoints);
         t = -t;
         R2.copyTo(_R);
         t.copyTo(_t);
         if (_mask.needed()) mask4.copyTo(_mask);
         return good4;
     }
+}
+
+int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, InputArray _cameraMatrix,
+                     OutputArray _R, OutputArray _t, InputOutputArray _mask)
+{
+    return cv::recoverPose(E, _points1, _points2, _cameraMatrix, _R, _t, 50, _mask);
 }
 
 int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, OutputArray _R,

@@ -43,7 +43,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#ifdef HAVE_VIDEO_INPUT
 
 class AllignedFrameSource : public cv::superres::FrameSource
 {
@@ -295,4 +295,4 @@ OCL_TEST_F(SuperResolution, BTVL1)
 
 #endif
 
-#endif // BUILD_WITH_VIDEO_INPUT_SUPPORT
+#endif // HAVE_VIDEO_INPUT

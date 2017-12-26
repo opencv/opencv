@@ -173,7 +173,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         for (size_t i = 0; i < imgs.size(); ++i)
         {
             imgs_[i] = imgs[i];
-            resize(imgs[i], img, Size(), seam_scale_, seam_scale_);
+            resize(imgs[i], img, Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
             seam_est_imgs_[i] = img.clone();
         }
 
@@ -261,6 +261,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
     double compose_scale = 1;
     bool is_compose_scale_set = false;
 
+    std::vector<detail::CameraParams> cameras_scaled(cameras_);
+
     UMat full_img, img;
     for (size_t img_idx = 0; img_idx < imgs_.size(); ++img_idx)
     {
@@ -282,16 +284,16 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
             compose_work_aspect = compose_scale / work_scale_;
 
             // Update warped image scale
-            warped_image_scale_ *= static_cast<float>(compose_work_aspect);
-            w = warper_->create((float)warped_image_scale_);
+            float warp_scale = static_cast<float>(warped_image_scale_ * compose_work_aspect);
+            w = warper_->create(warp_scale);
 
             // Update corners and sizes
             for (size_t i = 0; i < imgs_.size(); ++i)
             {
                 // Update intrinsics
-                cameras_[i].focal *= compose_work_aspect;
-                cameras_[i].ppx *= compose_work_aspect;
-                cameras_[i].ppy *= compose_work_aspect;
+                cameras_scaled[i].ppx *= compose_work_aspect;
+                cameras_scaled[i].ppy *= compose_work_aspect;
+                cameras_scaled[i].focal *= compose_work_aspect;
 
                 // Update corner and size
                 Size sz = full_img_sizes_[i];
@@ -302,8 +304,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
                 }
 
                 Mat K;
-                cameras_[i].K().convertTo(K, CV_32F);
-                Rect roi = w->warpRoi(sz, K, cameras_[i].R);
+                cameras_scaled[i].K().convertTo(K, CV_32F);
+                Rect roi = w->warpRoi(sz, K, cameras_scaled[i].R);
                 corners[i] = roi.tl();
                 sizes[i] = roi.size();
             }
@@ -313,7 +315,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #if ENABLE_LOG
             int64 resize_t = getTickCount();
 #endif
-            resize(full_img, img, Size(), compose_scale, compose_scale);
+            resize(full_img, img, Size(), compose_scale, compose_scale, INTER_LINEAR_EXACT);
             LOGLN("  resize time: " << ((getTickCount() - resize_t) / getTickFrequency()) << " sec");
         }
         else
@@ -324,7 +326,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         LOGLN(" after resize time: " << ((getTickCount() - compositing_t) / getTickFrequency()) << " sec");
 
         Mat K;
-        cameras_[img_idx].K().convertTo(K, CV_32F);
+        cameras_scaled[img_idx].K().convertTo(K, CV_32F);
 
 #if ENABLE_LOG
         int64 pt = getTickCount();
@@ -359,7 +361,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
         // Make sure seam mask has proper size
         dilate(masks_warped[img_idx], dilated_mask, Mat());
-        resize(dilated_mask, seam_mask, mask_warped.size());
+        resize(dilated_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
 
         bitwise_and(seam_mask, mask_warped, mask_warped);
 
@@ -469,7 +471,7 @@ Stitcher::Status Stitcher::matchImages()
                 work_scale_ = std::min(1.0, std::sqrt(registr_resol_ * 1e6 / full_img.size().area()));
                 is_work_scale_set = true;
             }
-            resize(full_img, img, Size(), work_scale_, work_scale_);
+            resize(full_img, img, Size(), work_scale_, work_scale_, INTER_LINEAR_EXACT);
         }
         if (!is_seam_scale_set)
         {
@@ -494,7 +496,7 @@ Stitcher::Status Stitcher::matchImages()
         features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
-        resize(full_img, img, Size(), seam_scale_, seam_scale_);
+        resize(full_img, img, Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
         seam_est_imgs_[i] = img.clone();
     }
 

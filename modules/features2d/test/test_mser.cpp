@@ -159,3 +159,26 @@ TEST(Features2d_MSER, cases)
         ASSERT_GE(maxRegs, nmsers);
     }
 }
+
+TEST(Features2d_MSER, history_update_regression)
+{
+    String dataPath = cvtest::TS::ptr()->get_data_path() + "mser/";
+    vector<Mat> tstImages;
+    tstImages.push_back(imread(dataPath + "mser_test.png", IMREAD_GRAYSCALE));
+    tstImages.push_back(imread(dataPath + "mser_test2.png", IMREAD_GRAYSCALE));
+
+    for(size_t j = 0; j < tstImages.size(); j++)
+    {
+        size_t previous_size = 0;
+        for(int minArea = 100; minArea > 10; minArea--)
+        {
+            Ptr<MSER> mser = MSER::create(1, minArea, (int)(tstImages[j].cols * tstImages[j].rows * 0.2));
+            mser->setPass2Only(true);
+            vector<vector<Point> > mserContours;
+            vector<Rect> boxRects;
+            mser->detectRegions(tstImages[j], mserContours, boxRects);
+            ASSERT_LE(previous_size, mserContours.size());
+            previous_size = mserContours.size();
+        }
+    }
+}

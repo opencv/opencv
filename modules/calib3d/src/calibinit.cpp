@@ -431,7 +431,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     cv::Ptr<CvMemStorage> storage;
 
-    try
+    CV_TRY
     {
     int k = 0;
     const int min_dilations = 0;
@@ -442,7 +442,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     Mat img = cvarrToMat((CvMat*)arr).clone();
 
-    if( img.depth() != CV_8U || (img.channels() != 1 && img.channels() != 3) )
+    if( img.depth() != CV_8U || (img.channels() != 1 && img.channels() != 3 && img.channels() != 4) )
        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit grayscale or color images are supported" );
 
     if( pattern_size.width <= 2 || pattern_size.height <= 2 )
@@ -617,11 +617,11 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                             cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
     }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
         cvFree(&quads);
         cvFree(&corners);
-        throw;
+        CV_RETHROW();
     }
     cvFree(&quads);
     cvFree(&corners);
@@ -1836,7 +1836,9 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
         assert( src_contour->total == 4 );
         for( i = 0; i < 4; i++ )
         {
-            CvPoint2D32f pt = cvPointTo32f(*(CvPoint*)cvGetSeqElem(src_contour, i));
+            CvPoint * onePoint = (CvPoint*)cvGetSeqElem(src_contour, i);
+            CV_Assert(onePoint != NULL);
+            CvPoint2D32f pt = cvPointTo32f(*onePoint);
             CvCBCorner* corner = &(*out_corners)[quad_count*4 + i];
 
             memset( corner, 0, sizeof(*corner) );
@@ -2092,8 +2094,19 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
                              nelems, patternWasFound );
 }
 
-bool cv::findCirclesGrid( InputArray _image, Size patternSize,
-                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector )
+bool cv::findCirclesGrid( InputArray image, Size patternSize,
+                                   OutputArray centers, int flags,
+                                   const Ptr<FeatureDetector> &blobDetector,
+                                   CirclesGridFinderParameters parameters)
+{
+    CirclesGridFinderParameters2 parameters2;
+    *((CirclesGridFinderParameters*)&parameters2) = parameters;
+    return cv::findCirclesGrid2(image, patternSize, centers, flags, blobDetector, parameters2);
+}
+
+bool cv::findCirclesGrid2( InputArray _image, Size patternSize,
+                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
+                          CirclesGridFinderParameters2 parameters)
 {
     CV_INSTRUMENT_REGION()
 
@@ -2112,25 +2125,18 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       points.push_back (keypoints[i].pt);
     }
 
-    if(flags & CALIB_CB_CLUSTERING)
-    {
-      CirclesGridClusterFinder circlesGridClusterFinder(isAsymmetricGrid);
-      circlesGridClusterFinder.findGrid(points, patternSize, centers);
-      Mat(centers).copyTo(_centers);
-      return !centers.empty();
-    }
-
-    CirclesGridFinderParameters parameters;
-    parameters.vertexPenalty = -0.6f;
-    parameters.vertexGain = 1;
-    parameters.existingVertexGain = 10000;
-    parameters.edgeGain = 1;
-    parameters.edgePenalty = -0.6f;
-
     if(flags & CALIB_CB_ASYMMETRIC_GRID)
       parameters.gridType = CirclesGridFinderParameters::ASYMMETRIC_GRID;
     if(flags & CALIB_CB_SYMMETRIC_GRID)
       parameters.gridType = CirclesGridFinderParameters::SYMMETRIC_GRID;
+
+    if(flags & CALIB_CB_CLUSTERING)
+    {
+      CirclesGridClusterFinder circlesGridClusterFinder(parameters);
+      circlesGridClusterFinder.findGrid(points, patternSize, centers);
+      Mat(centers).copyTo(_centers);
+      return !centers.empty();
+    }
 
     const int attempts = 2;
     const size_t minHomographyPoints = 4;
@@ -2145,13 +2151,13 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       void* oldCbkData;
       ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData);
 #endif
-      try
+      CV_TRY
       {
         isFound = boxFinder.findHoles();
       }
-      catch (const cv::Exception &)
+      CV_CATCH(Exception, e)
       {
-
+          CV_UNUSED(e);
       }
 #if BE_QUIET
       redirectError(oldCbk, oldCbkData);
@@ -2190,6 +2196,12 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
     }
     Mat(centers).copyTo(_centers);
     return false;
+}
+
+bool cv::findCirclesGrid( InputArray _image, Size patternSize,
+                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector)
+{
+    return cv::findCirclesGrid2(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters2());
 }
 
 /* End of file. */

@@ -90,6 +90,14 @@ public:
         binsDim3 = 0;
         dimension = 0;
         nMaxIt = 500;
+
+        m_pLeave = 0;
+        m_iEnter = 0;
+        nNBV = 0;
+        m_nItr = 0;
+        m_iTo = 0;
+        m_iFrom = 0;
+        m_pEnter = 0;
     }
 
     ~EmdL1()

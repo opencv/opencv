@@ -29,7 +29,7 @@ Getting the Source Code {#tutorial_building_tegra_cuda_getting_the_code}
 
 There are two (2) ways to get the OpenCV source code:
 
-* Direct download from the [OpenCV downloads](http://opencv.org/downloads.html) page
+* Direct download from the [OpenCV downloads](http://opencv.org/releases.html) page
 * Cloning the git repositories hosted on [GitHub](https://github.com/opencv)
 
 For this guide, the focus is on using the git repositories. This is because the 3.1.0 version of OpenCV will not build with CUDA 8.0 without applying a few small upstream changes from the git repository.

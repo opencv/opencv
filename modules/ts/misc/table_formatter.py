@@ -2,7 +2,7 @@
 
 import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
-from color import getColorizer
+from color import getColorizer, dummyColorizer
 
 class tblCell(object):
     def __init__(self, text, value = None, props = None):
@@ -34,7 +34,9 @@ class table(object):
     def_italic = False
     def_text="-"
 
-    def __init__(self, caption = None):
+    def __init__(self, caption = None, format=None):
+        self.format = format
+        self.is_markdown = self.format == 'markdown'
         self.columns = {}
         self.rows = []
         self.ridx = -1;
@@ -248,7 +250,7 @@ class table(object):
 
     def consolePrintTable(self, out):
         columns = self.layoutTable()
-        colrizer = getColorizer(out)
+        colrizer = getColorizer(out) if not self.is_markdown else dummyColorizer(out)
 
         if self.caption:
             out.write("%s%s%s" % ( os.linesep,  os.linesep.join(self.reformatTextValue(self.caption)), os.linesep * 2))
@@ -288,19 +290,40 @@ class table(object):
             i += colspan
 
         #print content
-        for ln in range(row.minheight):
-            i = 0
-            while i < len(row.cells):
-                if i > 0:
-                    out.write(" ")
-                cell = row.cells[i]
-                column = columns[i]
-                if cell is None:
-                    out.write(" " * column.minwidth)
-                    i += 1
+        if self.is_markdown:
+            out.write("|")
+            for c in row.cells:
+                text = ' '.join(self.getValue('text', c) or [])
+                out.write(text + "|")
+            out.write(os.linesep)
+        else:
+            for ln in range(row.minheight):
+                i = 0
+                while i < len(row.cells):
+                    if i > 0:
+                        out.write(" ")
+                    cell = row.cells[i]
+                    column = columns[i]
+                    if cell is None:
+                        out.write(" " * column.minwidth)
+                        i += 1
+                    else:
+                        self.consolePrintLine(cell, row, column, out)
+                        i += self.getValue("colspan", cell)
+                    if self.is_markdown:
+                        out.write("|")
+                out.write(os.linesep)
+
+        if self.is_markdown and row.props.get('header', False):
+            out.write("|")
+            for th in row.cells:
+                align = self.getValue("align", th)
+                if align == 'center':
+                    out.write(":-:|")
+                elif align == 'right':
+                    out.write("--:|")
                 else:
-                    self.consolePrintLine(cell, row, column, out)
-                    i += self.getValue("colspan", cell)
+                    out.write("---|")
             out.write(os.linesep)
 
     def consolePrintLine(self, cell, row, column, out):
@@ -588,7 +611,7 @@ def getStdoutFilename():
         return ""
 
 def detectHtmlOutputType(requestedType):
-    if requestedType == "txt":
+    if requestedType in ['txt', 'markdown']:
         return False
     elif requestedType in ["html", "moinwiki"]:
         return True
@@ -701,7 +724,7 @@ if __name__ == "__main__":
         exit(0)
 
     parser = OptionParser()
-    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
+    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
     parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
     (options, args) = parser.parse_args()
@@ -750,7 +773,7 @@ if __name__ == "__main__":
 
     for arg in args:
         tests = testlog_parser.parseLogFile(arg)
-        tbl = table(arg)
+        tbl = table(arg, format=options.format)
         tbl.newColumn("name", "Name of Test", align = "left")
         tbl.newColumn("value", metrix_table[options.metric][0], align = "center", bold = "true")
 

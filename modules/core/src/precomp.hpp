@@ -63,6 +63,7 @@
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,7 +76,7 @@
 #include <cstring>
 #include <cassert>
 
-#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE))
+#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE2))
 #define USE_SSE4_2  (cv::checkHardwareSupport(CV_CPU_SSE4_2))
 #define USE_AVX  (cv::checkHardwareSupport(CV_CPU_AVX))
 #define USE_AVX2  (cv::checkHardwareSupport(CV_CPU_AVX2))
@@ -84,7 +85,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/sse_utils.hpp"
 #include "opencv2/core/neon_utils.hpp"
-
+#include "opencv2/core/vsx_utils.hpp"
 #include "arithm_core.hpp"
 #include "hal_replacement.hpp"
 
@@ -135,7 +136,6 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFuncFp16(int ddepth);
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
@@ -147,10 +147,6 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
-
-#if defined WIN32 || defined _WIN32
-void deleteThreadAllocData();
-#endif
 
 inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
 {
@@ -261,7 +257,8 @@ struct CoreTLSData
 //#ifdef HAVE_OPENCL
         device(0), useOpenCL(-1),
 //#endif
-        useIPP(-1)
+        useIPP(-1),
+        useIPP_NE(-1)
 #ifdef HAVE_TEGRA_OPTIMIZATION
         ,useTegra(-1)
 #endif
@@ -272,11 +269,12 @@ struct CoreTLSData
 
     RNG rng;
 //#ifdef HAVE_OPENCL
-    int device;
-    ocl::Queue oclQueue;
+    int device; // device index of an array of devices in a context, see also Device::getDefault
+    ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
-    int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_TEGRA_OPTIMIZATION
     int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif
@@ -288,7 +286,7 @@ struct CoreTLSData
 TLSData<CoreTLSData>& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 #define CL_RUNTIME_EXPORT __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
@@ -318,6 +316,8 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+int cv_snprintf(char* buf, int len, const char* fmt, ...);
+int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/

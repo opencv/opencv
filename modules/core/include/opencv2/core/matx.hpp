@@ -53,6 +53,10 @@
 #include "opencv2/core/traits.hpp"
 #include "opencv2/core/saturate.hpp"
 
+#ifdef CV_CXX11
+#include <initializer_list>
+#endif
+
 namespace cv
 {
 
@@ -77,21 +81,33 @@ If you need a more flexible type, use Mat . The elements of the matrix M are acc
 M(i,j) notation. Most of the common matrix operations (see also @ref MatrixExpressions ) are
 available. To do an operation on Matx that is not implemented, you can easily convert the matrix to
 Mat and backwards:
-@code
+@code{.cpp}
     Matx33f m(1, 2, 3,
               4, 5, 6,
               7, 8, 9);
     cout << sum(Mat(m*m.t())) << endl;
- @endcode
+@endcode
+Except of the plain constructor which takes a list of elements, Matx can be initialized from a C-array:
+@code{.cpp}
+    float values[] = { 1, 2, 3};
+    Matx31f m(values);
+@endcode
+In case if C++11 features are avaliable, std::initializer_list can be also used to initizlize Matx:
+@code{.cpp}
+    Matx31f m = { 1, 2, 3};
+@endcode
  */
 template<typename _Tp, int m, int n> class Matx
 {
 public:
-    enum { depth    = DataType<_Tp>::depth,
+    enum {
            rows     = m,
            cols     = n,
            channels = rows*cols,
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           depth    = traits::Type<_Tp>::value,
            type     = CV_MAKETYPE(depth, channels),
+#endif
            shortdim = (m < n ? m : n)
          };
 
@@ -124,6 +140,10 @@ public:
          _Tp v8, _Tp v9, _Tp v10, _Tp v11,
          _Tp v12, _Tp v13, _Tp v14, _Tp v15); //!< 1x16, 4x4 or 16x1 matrix
     explicit Matx(const _Tp* vals); //!< initialize from a plain array
+
+#ifdef CV_CXX11
+    Matx(std::initializer_list<_Tp>); //!< initialize from an initializer list
+#endif
 
     static Matx all(_Tp alpha);
     static Matx zeros();
@@ -242,12 +262,22 @@ public:
     typedef value_type                                    vec_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = m * n,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           ,depth        = DataType<channel_type>::depth
+           ,type         = CV_MAKETYPE(depth, channels)
+#endif
          };
 };
+
+namespace traits {
+template<typename _Tp, int m, int n>
+struct Depth< Matx<_Tp, m, n> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp, int m, int n>
+struct Type< Matx<_Tp, m, n> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, n*m) }; };
+} // namespace
+
 
 /** @brief  Comma-separated Matrix Initializer
 */
@@ -306,9 +336,13 @@ template<typename _Tp, int cn> class Vec : public Matx<_Tp, cn, 1>
 {
 public:
     typedef _Tp value_type;
-    enum { depth    = Matx<_Tp, cn, 1>::depth,
+    enum {
            channels = cn,
-           type     = CV_MAKETYPE(depth, channels)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           depth    = Matx<_Tp, cn, 1>::depth,
+           type     = CV_MAKETYPE(depth, channels),
+#endif
+           _dummy_enum_finalizer = 0
          };
 
     //! default constructor
@@ -326,6 +360,10 @@ public:
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9); //!< 10-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13); //!< 14-element vector constructor
     explicit Vec(const _Tp* values);
+
+#ifdef CV_CXX11
+    Vec(std::initializer_list<_Tp>);
+#endif
 
     Vec(const Vec<_Tp, cn>& v);
 
@@ -401,12 +439,23 @@ public:
     typedef value_type                                 vec_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
            channels     = cn,
            fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+           depth        = DataType<channel_type>::depth,
+           type         = CV_MAKETYPE(depth, channels),
+#endif
+           _dummy_enum_finalizer = 0
          };
 };
+
+namespace traits {
+template<typename _Tp, int cn>
+struct Depth< Vec<_Tp, cn> > { enum { value = Depth<_Tp>::value }; };
+template<typename _Tp, int cn>
+struct Type< Vec<_Tp, cn> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, cn) }; };
+} // namespace
+
 
 /** @brief  Comma-separated Vec Initializer
 */
@@ -590,11 +639,12 @@ Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13)
 {
-    CV_StaticAssert(channels == 14, "Matx should have at least 14 elements.");
+    CV_StaticAssert(channels >= 14, "Matx should have at least 14 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
     val[12] = v12; val[13] = v13;
+    for (int i = 14; i < channels; i++) val[i] = _Tp(0);
 }
 
 
@@ -614,6 +664,19 @@ Matx<_Tp, m, n>::Matx(const _Tp* values)
 {
     for( int i = 0; i < channels; i++ ) val[i] = values[i];
 }
+
+#ifdef CV_CXX11
+template<typename _Tp, int m, int n> inline
+Matx<_Tp, m, n>::Matx(std::initializer_list<_Tp> list)
+{
+    CV_DbgAssert(list.size() == channels);
+    int i = 0;
+    for(const auto& elem : list)
+    {
+        val[i++] = elem;
+    }
+}
+#endif
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> Matx<_Tp, m, n>::all(_Tp alpha)
@@ -956,6 +1019,12 @@ template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const _Tp* values)
     : Matx<_Tp, cn, 1>(values) {}
 
+#ifdef CV_CXX11
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn>::Vec(std::initializer_list<_Tp> list)
+    : Matx<_Tp, cn, 1>(list) {}
+#endif
+
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m)
     : Matx<_Tp, cn, 1>(m.val) {}
@@ -1080,7 +1149,7 @@ Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v)
 
 
 
-//////////////////////////////// matx comma initializer //////////////////////////////////
+//////////////////////////////// vec comma initializer //////////////////////////////////
 
 
 template<typename _Tp, typename _T2, int cn> static inline

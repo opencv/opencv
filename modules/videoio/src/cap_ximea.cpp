@@ -1,7 +1,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <xiApi.h>
 #else
 #include <m3api/xiApi.h>
@@ -18,6 +18,7 @@ public:
     virtual ~CvCaptureCAM_XIMEA() { close(); }
 
     virtual bool open( int index );
+    bool open( const char* deviceName );
     virtual void close();
     virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
@@ -26,6 +27,7 @@ public:
     virtual int getCaptureDomain() { return CV_CAP_XIAPI; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
 private:
+    bool _open();
     void init();
     void errMsg(const char* msg, int errNum) const;
     void resetCvImage();
@@ -51,11 +53,22 @@ CvCapture* cvCreateCameraCapture_XIMEA( int index )
     return 0;
 }
 
+CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber )
+{
+    CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
+
+    if( capture->open( serialNumber ))
+        return capture;
+
+    delete capture;
+    return 0;
+}
+
 /**********************************************************************************/
 // Enumerate connected devices
 void CvCaptureCAM_XIMEA::init()
 {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
     xiGetNumberDevices( &numDevices);
 #else
     // try second re-enumeration if first one fails
@@ -75,16 +88,13 @@ void CvCaptureCAM_XIMEA::init()
 // Initialize camera input
 bool CvCaptureCAM_XIMEA::open( int wIndex )
 {
-#define HandleXiResult(res) if (res!=XI_OK)  goto error;
-
-    int mvret = XI_OK;
-
     if(numDevices == 0)
         return false;
 
+    int mvret = XI_OK;
     if((mvret = xiOpenDevice( wIndex, &hmv)) != XI_OK)
     {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
         errMsg("Open XI_DEVICE failed", mvret);
         return false;
 #else
@@ -97,12 +107,33 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 #endif
     }
 
+    return _open();
+}
+
+bool CvCaptureCAM_XIMEA::open( const char* serialNumber )
+{
+    if(numDevices == 0)
+        return false;
+
+    int mvret = XI_OK;
+    if((mvret = xiOpenDeviceBy(XI_OPEN_BY_SN, serialNumber, &hmv)) != XI_OK)
+    {
+        errMsg("Open XI_DEVICE failed", mvret);
+        return false;
+    }
+
+    return _open();
+}
+
+bool CvCaptureCAM_XIMEA::_open()
+{
+#define HandleXiResult(res) if (res!=XI_OK)  goto error;
     int width   = 0;
     int height  = 0;
     int isColor = 0;
 
     // always use auto exposure/gain
-    mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
+    int mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
     HandleXiResult(mvret);
 
     mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
@@ -1751,7 +1782,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
         error_message = "Unknown error value";
     }
 
-    #if defined WIN32 || defined _WIN32
+    #if defined _WIN32
     char buf[512]="";
     sprintf( buf, "%s : %d, %s\n", msg, errNum, error_message.c_str());
     OutputDebugString(buf);

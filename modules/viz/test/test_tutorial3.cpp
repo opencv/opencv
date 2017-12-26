@@ -6,7 +6,7 @@ using namespace std;
 /**
  * @function main
  */
-void tutorial3(bool camera_pov)
+static void tutorial3(bool camera_pov)
 {
     /// Create a window
     viz::Viz3d myWindow("Coordinate Frame");

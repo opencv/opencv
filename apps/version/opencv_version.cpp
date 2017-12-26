@@ -5,9 +5,15 @@
 #include <iostream>
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/utils/trace.hpp>
 
 int main(int argc, const char** argv)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG(argc);
+    CV_TRACE_ARG_VALUE(argv0, "argv0", argv[0]);
+    CV_TRACE_ARG_VALUE(argv1, "argv1", argv[1]);
+
     cv::CommandLineParser parser(argc, argv,
         "{ help h usage ? |      | show this help message }"
         "{ verbose v      |      | show build configuration log }"

@@ -89,6 +89,9 @@ public:
     nShadowDetection =  defaultnShadowDetection2;
     fTau = defaultfTau;// Tau - shadow threshold
     name_ = "BackgroundSubtractor.KNN";
+    nLongCounter = 0;
+    nMidCounter = 0;
+    nShortCounter = 0;
     }
     //! the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -113,6 +116,9 @@ public:
     nShadowDetection =  defaultnShadowDetection2;
     fTau = defaultfTau;
     name_ = "BackgroundSubtractor.KNN";
+    nLongCounter = 0;
+    nMidCounter = 0;
+    nShortCounter = 0;
     }
     //! the destructor
     ~BackgroundSubtractorKNNImpl() {}
@@ -122,7 +128,7 @@ public:
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const;
 
-    //! re-initiaization method
+    //! re-initialization method
     void initialize(Size _frameSize, int _frameType)
     {
     frameSize = _frameSize;
@@ -137,6 +143,7 @@ public:
     // for each sample of 3 speed pixel models each pixel bg model we store ...
     // values + flag (nchannels+1 values)
     bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8U);
+    bgmodel = Scalar::all(0);
 
     //index through the three circular lists
     aModelIndexShort.create(1,size,CV_8U);
@@ -235,7 +242,7 @@ protected:
     // Tau - shadow threshold. The shadow is detected if the pixel is darker
     //version of the background. Tau is a threshold on how much darker the shadow can be.
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
-    //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+    //See: Prati,Mikic,Trivedi,Cucchiara,"Detecting Moving Shadows...",IEEE PAMI,2003.
 
     //model data
     int nLongCounter;//circular counter

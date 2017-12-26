@@ -556,7 +556,55 @@ unsigned rhoHest(Ptr<RHO_HEST> p,       /* Homography estimation context. */
  */
 
 RHO_HEST_REFC::RHO_HEST_REFC() : initialized(0){
+    arg.src = 0;
+    arg.dst = 0;
+    arg.inl = 0;
+    arg.N = 0;
+    arg.maxD = 0;
+    arg.maxI = 0;
+    arg.rConvg = 0;
+    arg.cfd = 0;
+    arg.minInl = 0;
+    arg.beta = 0;
+    arg.flags = 0;
+    arg.guessH = 0;
+    arg.finalH = 0;
 
+    ctrl.i = 0;
+    ctrl.phNum = 0;
+    ctrl.phEndI = 0;
+    ctrl.phEndFpI = 0;
+    ctrl.phMax = 0;
+    ctrl.phNumInl = 0;
+    ctrl.numModels = 0;
+    ctrl.smpl = 0;
+
+    curr.pkdPts = 0;
+    curr.H = 0;
+    curr.inl = 0;
+    curr.numInl = 0;
+
+    best.H = 0;
+    best.inl = 0;
+    best.numInl = 0;
+
+    nr.size = 0;
+    nr.beta = 0;
+
+    eval.t_M = 0;
+    eval.m_S = 0;
+    eval.epsilon = 0;
+    eval.delta = 0;
+    eval.A = 0;
+    eval.Ntested = 0;
+    eval.Ntestedtotal = 0;
+    eval.good = 0;
+    eval.lambdaAccept = 0;
+    eval.lambdaReject = 0;
+
+    lm.JtJ = 0;
+    lm.tmp1 = 0;
+    lm.Jte = 0;
 }
 
 /**
@@ -1200,11 +1248,11 @@ inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
         /**
          * Selection Sampling:
          *
-         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n ≤ N.
-         * S1. [Initialize.] Set t ← 0, m ← 0. (During this algorithm, m represents the number of records selected so far,
+         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n <= N.
+         * S1. [Initialize.] Set t = 0, m = 0. (During this algorithm, m represents the number of records selected so far,
          *                                      and t is the total number of input records that we have dealt with.)
          * S2. [Generate U.] Generate a random number U, uniformly distributed between zero and one.
-         * S3. [Test.] If (N – t)U ≥ n – m, go to step S5.
+         * S3. [Test.] If (N - t)U >= n - m, go to step S5.
          * S4. [Select.] Select the next record for the sample, and increase m and t by 1. If m < n, go to step S2;
          *               otherwise the sample is complete and the algorithm terminates.
          * S5. [Skip.] Skip the next record (do not include it in the sample), increase t by 1, and go back to step S2.

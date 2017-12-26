@@ -250,6 +250,33 @@ CUDA_TEST_P(Dft, C2C)
     }
 }
 
+CUDA_TEST_P(Dft, Algorithm)
+{
+    int cols = randomInt(2, 100);
+    int rows = randomInt(2, 100);
+
+    int flags = 0;
+    cv::Ptr<cv::cuda::DFT> dft = cv::cuda::createDFT(cv::Size(cols, rows), flags);
+
+    for (int i = 0; i < 5; ++i)
+    {
+        SCOPED_TRACE("dft algorithm");
+
+        cv::Mat a = randomMat(cv::Size(cols, rows), CV_32FC2, 0.0, 10.0);
+
+        cv::cuda::GpuMat d_b;
+        cv::cuda::GpuMat d_b_data;
+        dft->compute(loadMat(a), d_b);
+
+        cv::Mat b_gold;
+        cv::dft(a, b_gold, flags);
+
+        ASSERT_EQ(CV_32F, d_b.depth());
+        ASSERT_EQ(2, d_b.channels());
+        EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), rows * cols * 1e-4);
+    }
+}
+
 namespace
 {
     void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inplace)

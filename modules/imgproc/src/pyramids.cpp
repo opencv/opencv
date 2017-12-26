@@ -1200,7 +1200,7 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 {
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
     Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
@@ -1235,7 +1235,7 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
                 CV_SUPPRESS_DEPRECATED_END
                 if (ok >= 0)
                 {
-                    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                    Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
                     ok = pyrUpFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
                     ippsFree(buffer);
 
@@ -1265,6 +1265,9 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
     Mat srcMat = _src.getMat();
 
+    if (ovx::skipSmallImages<VX_KERNEL_HALFSCALE_GAUSSIAN>(srcMat.cols, srcMat.rows))
+        return false;
+
     CV_Assert(!srcMat.empty());
 
     Size ssize = _src.size();
@@ -1290,7 +1293,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
     try
     {
-        Context context = Context::create();
+        Context context = ovx::getOpenVXContext();
         if(context.vendorID() == VX_ID_KHRONOS)
         {
             // This implementation performs floor-like rounding
@@ -1350,6 +1353,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     Mat dst = _dst.getMat();
     int depth = src.depth();
 
+    CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrDown(src, dst))
         return;
@@ -1388,7 +1393,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 {
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
     Size dsz = _dsz.area() == 0 ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
 
@@ -1421,7 +1426,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
                 CV_SUPPRESS_DEPRECATED_END
                 if (ok >= 0)
                 {
-                    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                    Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
                     ok = pyrUpFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
                     ippsFree(buffer);
 
@@ -1496,7 +1501,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
 {
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_BUILD
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
@@ -1626,7 +1631,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
 
     int i=1;
 
-    CV_IPP_RUN(((IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
+    CV_IPP_RUN(((IPP_VERSION_X100 >= 810) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
         ipp_buildpyramid( _src,  _dst,  maxlevel,  borderType));
 
     for( ; i <= maxlevel; i++ )

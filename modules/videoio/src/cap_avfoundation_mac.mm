@@ -293,7 +293,7 @@ void CvCaptureCAM::stopCaptureDevice() {
 
     [mCaptureSession release];
     [mCaptureDeviceInput release];
-    [mCaptureDevice release];
+    // [mCaptureDevice release]; fix #7833
 
     [mCaptureVideoDataOutput release];
     [mCapture release];
@@ -305,7 +305,8 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
     // get capture device
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo];
+    NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
+            arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
 
     if ( devices.count == 0 ) {
         fprintf(stderr, "OpenCV: AVFoundation didn't find any attached Video Input Devices!\n");
@@ -693,7 +694,15 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
         return;
     }
 
-    mAssetTrack = [[mAsset tracksWithMediaType: AVMediaTypeVideo][0] retain];
+    NSArray *tracks = [mAsset tracksWithMediaType:AVMediaTypeVideo];
+    if ([tracks count] == 0) {
+        fprintf(stderr, "OpenCV: Couldn't read video stream from file \"%s\"\n", filename);
+        [localpool drain];
+        started = 0;
+        return;
+    }
+
+    mAssetTrack = [tracks[0] retain];
 
     if ( ! setupReadingAt(kCMTimeZero) ) {
         fprintf(stderr, "OpenCV: Couldn't read movie file \"%s\"\n", filename);

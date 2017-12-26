@@ -276,12 +276,9 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||}{@input||}");
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
+    cv::CommandLineParser parser(argc, argv, "{@input| ../data/messi5.jpg |}");
+    help();
+
     string filename = parser.get<string>("@input");
     if( filename.empty() )
     {
@@ -294,8 +291,6 @@ int main( int argc, char** argv )
         cout << "\n Durn, couldn't read image filename " << filename << endl;
         return 1;
     }
-
-    help();
 
     const string winName = "image";
     namedWindow( winName, WINDOW_AUTOSIZE );

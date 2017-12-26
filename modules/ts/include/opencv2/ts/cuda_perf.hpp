@@ -43,12 +43,9 @@
 #ifndef OPENCV_CUDA_PERF_UTILITY_HPP
 #define OPENCV_CUDA_PERF_UTILITY_HPP
 
-#include "opencv2/core.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv2/ts.hpp"
+
 #include "opencv2/ts/ts_perf.hpp"
-#include "cvconfig.h"
 
 namespace perf
 {
@@ -65,9 +62,9 @@ namespace perf
     #define CUDA_CHANNELS_1_3_4 testing::Values(MatCn(Gray), MatCn(BGR), MatCn(BGRA))
     #define CUDA_CHANNELS_1_3 testing::Values(MatCn(Gray), MatCn(BGR))
 
-    #define GET_PARAM(k) std::tr1::get< k >(GetParam())
+    #define GET_PARAM(k) testing::get< k >(GetParam())
 
-    #define DEF_PARAM_TEST(name, ...) typedef ::perf::TestBaseWithParam< std::tr1::tuple< __VA_ARGS__ > > name
+    #define DEF_PARAM_TEST(name, ...) typedef ::perf::TestBaseWithParam< testing::tuple< __VA_ARGS__ > > name
     #define DEF_PARAM_TEST_1(name, param_type) typedef ::perf::TestBaseWithParam< param_type > name
 
     DEF_PARAM_TEST_1(Sz, cv::Size);
@@ -91,7 +88,7 @@ namespace perf
             SANITY_CHECK(cpu_##mat, ## __VA_ARGS__); \
         } while(0)
 
-    CV_EXPORTS cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
+    cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 
     struct CvtColorInfo
     {
@@ -102,11 +99,11 @@ namespace perf
         CvtColorInfo() {}
         explicit CvtColorInfo(int scn_, int dcn_, int code_) : scn(scn_), dcn(dcn_), code(code_) {}
     };
-    CV_EXPORTS void PrintTo(const CvtColorInfo& info, std::ostream* os);
+    void PrintTo(const CvtColorInfo& info, std::ostream* os);
 
-    CV_EXPORTS void printCudaInfo();
+    void printCudaInfo();
 
-    CV_EXPORTS void sortKeyPoints(std::vector<cv::KeyPoint>& keypoints, cv::InputOutputArray _descriptors = cv::noArray());
+    void sortKeyPoints(std::vector<cv::KeyPoint>& keypoints, cv::InputOutputArray _descriptors = cv::noArray());
 
 #ifdef HAVE_CUDA
     #define CV_PERF_TEST_CUDA_MAIN(modulename) \

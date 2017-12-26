@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Image Bitwise Example</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Image Bitwise Example</h2>
+<p>
+    &lt;canvas&gt; elements named <b>imageCanvasInput</b>, <b>logoCanvasInput</b> and <b>CanvasOutput</b> have been prepared.<br>
+    Click <b>Try it</b> button to see the result. You can choose another image.<br>
+    You can change the code in the &lt;textarea&gt; to investigate more.
+</p>
+<div>
+<div class="control"><button id="tryIt" disabled>Try it</button></div>
+<textarea class="code" rows="9" cols="100" id="codeEditor" spellcheck="false">
+</textarea>
+<p class="err" id="errorMessage"></p>
+</div>
+<div>
+    <table cellpadding="0" cellspacing="0" width="0" border="0">
+    <tr>
+        <td>
+            <canvas id="imageCanvasInput"></canvas>
+        </td>
+        <td>
+            <canvas id="canvasOutput"></canvas>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="caption">imageCanvasInput <input type="file" id="imageFileInput" name="file" accept="image/*" /></div>
+        </td>
+        <td>
+            <div class="caption">canvasOutput</div>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <canvas id="logoCanvasInput"></canvas>
+        </td>
+        <td>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="caption">logoCanvasInput <input type="file" id="logoFileInput" name="file" accept="image/*" /></div>
+        </td>
+        <td>
+        </td>
+    </tr>
+    </table>
+</div>
+<script src="utils.js" type="text/javascript"></script>
+<script id="codeSnippet" type="text/code-snippet">
+let src = cv.imread('imageCanvasInput');
+let logo = cv.imread('logoCanvasInput');
+let dst = new cv.Mat();
+let roi = new cv.Mat();
+let mask = new cv.Mat();
+let maskInv = new cv.Mat();
+let imgBg = new cv.Mat();
+let imgFg = new cv.Mat();
+let sum = new cv.Mat();
+let rect = new cv.Rect(0, 0, logo.cols, logo.rows);
+
+// I want to put logo on top-left corner, So I create a ROI
+roi = src.roi(rect);
+
+// Create a mask of logo and create its inverse mask also
+cv.cvtColor(logo, mask, cv.COLOR_RGBA2GRAY, 0);
+cv.threshold(mask, mask, 100, 255, cv.THRESH_BINARY);
+cv.bitwise_not(mask, maskInv);
+
+// Black-out the area of logo in ROI
+cv.bitwise_and(roi, roi, imgBg, maskInv);
+
+// Take only region of logo from logo image
+cv.bitwise_and(logo, logo, imgFg, mask);
+
+// Put logo in ROI and modify the main image
+cv.add(imgBg, imgFg, sum);
+
+dst = src.clone();
+for (let i = 0; i < logo.rows; i++) {
+    for (let j = 0; j < logo.cols; j++) {
+        dst.ucharPtr(i, j)[0] = sum.ucharPtr(i, j)[0];
+    }
+}
+cv.imshow('canvasOutput', dst);
+src.delete(); dst.delete(); logo.delete(); roi.delete(); mask.delete();
+maskInv.delete(); imgBg.delete(); imgFg.delete(); sum.delete();
+</script>
+<script type="text/javascript">
+let utils = new Utils('errorMessage');
+
+utils.loadCode('codeSnippet', 'codeEditor');
+utils.loadImageToCanvas('lena.jpg', 'imageCanvasInput');
+utils.loadImageToCanvas('lenaFace.png', 'logoCanvasInput');
+utils.addFileInputHandler('imageFileInput', 'imageCanvasInput');
+utils.addFileInputHandler('logoFileInput', 'logoCanvasInput');
+
+let tryIt = document.getElementById('tryIt');
+tryIt.addEventListener('click', () => {
+    utils.executeCode('codeEditor');
+});
+
+utils.loadOpenCv(() => {
+    tryIt.removeAttribute('disabled');
+});
+</script>
+</body>
+</html>

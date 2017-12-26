@@ -4,7 +4,11 @@
 
 @CL_REMAP_ORIGIN@
 
+#if defined __APPLE__
+#include <OpenCL/cl_gl.h>
+#else
 #include <CL/cl_gl.h>
+#endif
 
 @CL_REMAP_DYNAMIC@
 

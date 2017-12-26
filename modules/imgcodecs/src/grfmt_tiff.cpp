@@ -46,20 +46,24 @@
 \****************************************************************************************/
 
 #include "precomp.hpp"
+
+#ifdef HAVE_TIFF
 #include "grfmt_tiff.hpp"
-#include <opencv2/imgproc.hpp>
 #include <limits>
+
+// TODO FIXIT Conflict declarations for common types like int64/uint64
+namespace tiff_dummy_namespace {
+#include "tiff.h"
+#include "tiffio.h"
+}
+using namespace tiff_dummy_namespace;
 
 namespace cv
 {
+
+
 static const char fmtSignTiffII[] = "II\x2a\x00";
-
-#ifdef HAVE_TIFF
-
 static const char fmtSignTiffMM[] = "MM\x00\x2a";
-
-#include "tiff.h"
-#include "tiffio.h"
 
 static int grfmt_tiff_err_handler_init = 0;
 static void GrFmtSilentTIFFErrorHandler( const char*, const char*, va_list ) {}
@@ -75,6 +79,8 @@ TiffDecoder::TiffDecoder()
         TIFFSetWarningHandler( GrFmtSilentTIFFErrorHandler );
     }
     m_hdr = false;
+    m_buf_supported = true;
+    m_buf_pos = 0;
 }
 
 
@@ -115,6 +121,82 @@ ImageDecoder TiffDecoder::newDecoder() const
     return makePtr<TiffDecoder>();
 }
 
+class TiffDecoderBufHelper
+{
+    Mat& m_buf;
+    size_t& m_buf_pos;
+public:
+    TiffDecoderBufHelper(Mat& buf, size_t& buf_pos) :
+        m_buf(buf), m_buf_pos(buf_pos)
+    {}
+    static tmsize_t read( thandle_t handle, void* buffer, tmsize_t n )
+    {
+        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
+        const Mat& buf = helper->m_buf;
+        const tmsize_t size = buf.cols*buf.rows*buf.elemSize();
+        tmsize_t pos = helper->m_buf_pos;
+        if ( n > (size - pos) )
+        {
+            n = size - pos;
+        }
+        memcpy(buffer, buf.ptr() + pos, n);
+        helper->m_buf_pos += n;
+        return n;
+    }
+
+    static tmsize_t write( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    {
+        // Not used for decoding.
+        return 0;
+    }
+
+    static toff_t seek( thandle_t handle, toff_t offset, int whence )
+    {
+        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
+        const Mat& buf = helper->m_buf;
+        const toff_t size = buf.cols*buf.rows*buf.elemSize();
+        toff_t new_pos = helper->m_buf_pos;
+        switch (whence)
+        {
+            case SEEK_SET:
+                new_pos = offset;
+                break;
+            case SEEK_CUR:
+                new_pos += offset;
+                break;
+            case SEEK_END:
+                new_pos = size + offset;
+                break;
+        }
+        new_pos = std::min(new_pos, size);
+        helper->m_buf_pos = (size_t)new_pos;
+        return new_pos;
+    }
+
+    static int map( thandle_t handle, void** base, toff_t* size )
+    {
+        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
+        Mat& buf = helper->m_buf;
+        *base = buf.ptr();
+        *size = buf.cols*buf.rows*buf.elemSize();
+        return 0;
+    }
+
+    static toff_t size( thandle_t handle )
+    {
+        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
+        const Mat& buf = helper->m_buf;
+        return buf.cols*buf.rows*buf.elemSize();
+    }
+
+    static int close( thandle_t handle )
+    {
+        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
+        delete helper;
+        return 0;
+    }
+};
+
 bool TiffDecoder::readHeader()
 {
     bool result = false;
@@ -124,7 +206,19 @@ bool TiffDecoder::readHeader()
     {
         // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
         // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-        tif = TIFFOpen(m_filename.c_str(), "r");
+        if ( !m_buf.empty() )
+        {
+            m_buf_pos = 0;
+            TiffDecoderBufHelper* buf_helper = new TiffDecoderBufHelper(this->m_buf, this->m_buf_pos);
+            tif = TIFFClientOpen( "", "r", reinterpret_cast<thandle_t>(buf_helper), &TiffDecoderBufHelper::read,
+                                  &TiffDecoderBufHelper::write, &TiffDecoderBufHelper::seek,
+                                  &TiffDecoderBufHelper::close, &TiffDecoderBufHelper::size,
+                                  &TiffDecoderBufHelper::map, /*unmap=*/0 );
+        }
+        else
+        {
+            tif = TIFFOpen(m_filename.c_str(), "r");
+        }
     }
 
     if( tif )
@@ -152,7 +246,7 @@ bool TiffDecoder::readHeader()
             m_hdr = false;
 
             if( bpp > 8 &&
-               ((photometric != 2 && photometric != 1) ||
+               ((photometric > 2) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
@@ -465,18 +559,12 @@ bool TiffDecoder::readHdrData(Mat& img)
     return true;
 }
 
-#endif
-
 //////////////////////////////////////////////////////////////////////////////////////////
 
 TiffEncoder::TiffEncoder()
 {
     m_description = "TIFF Files (*.tiff;*.tif)";
-#ifdef HAVE_TIFF
-    m_buf_supported = false;
-#else
     m_buf_supported = true;
-#endif
 }
 
 TiffEncoder::~TiffEncoder()
@@ -490,11 +578,7 @@ ImageEncoder TiffEncoder::newEncoder() const
 
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
-#ifdef HAVE_TIFF
     return depth == CV_8U || depth == CV_16U || depth == CV_32F;
-#else
-    return depth == CV_8U || depth == CV_16U;
-#endif
 }
 
 void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
@@ -507,7 +591,80 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
     strm.putDWord( value );
 }
 
-#ifdef HAVE_TIFF
+class TiffEncoderBufHelper
+{
+public:
+
+    TiffEncoderBufHelper(std::vector<uchar> *buf)
+            : m_buf(buf), m_buf_pos(0)
+    {}
+
+    TIFF* open ()
+    {
+        return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
+                               &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
+                               &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
+                               /*map=*/0, /*unmap=*/0 );
+    }
+
+    static tmsize_t read( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    {
+        // Not used for encoding.
+        return 0;
+    }
+
+    static tmsize_t write( thandle_t handle, void* buffer, tmsize_t n )
+    {
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        size_t begin = (size_t)helper->m_buf_pos;
+        size_t end = begin + n;
+        if ( helper->m_buf->size() < end )
+        {
+            helper->m_buf->resize(end);
+        }
+        memcpy(&(*helper->m_buf)[begin], buffer, n);
+        helper->m_buf_pos = end;
+        return n;
+    }
+
+    static toff_t seek( thandle_t handle, toff_t offset, int whence )
+    {
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        const toff_t size = helper->m_buf->size();
+        toff_t new_pos = helper->m_buf_pos;
+        switch (whence)
+        {
+            case SEEK_SET:
+                new_pos = offset;
+                break;
+            case SEEK_CUR:
+                new_pos += offset;
+                break;
+            case SEEK_END:
+                new_pos = size + offset;
+                break;
+        }
+        helper->m_buf_pos = new_pos;
+        return new_pos;
+    }
+
+    static toff_t size( thandle_t handle )
+    {
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        return helper->m_buf->size();
+    }
+
+    static int close( thandle_t /*handle*/ )
+    {
+        // Do nothing.
+        return 0;
+    }
+
+private:
+
+    std::vector<uchar>* m_buf;
+    toff_t m_buf_pos;
+};
 
 static void readParam(const std::vector<int>& params, int key, int& value)
 {
@@ -559,7 +716,17 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
 
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
     // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-    TIFF* pTiffHandle = TIFFOpen(m_filename.c_str(), "w");
+    TIFF* pTiffHandle;
+
+    TiffEncoderBufHelper buf_helper(m_buf);
+    if ( m_buf )
+    {
+        pTiffHandle = buf_helper.open();
+    }
+    else
+    {
+        pTiffHandle = TIFFOpen(m_filename.c_str(), "w");
+    }
     if (!pTiffHandle)
     {
         return false;
@@ -655,7 +822,19 @@ bool TiffEncoder::writeHdr(const Mat& _img)
 {
     Mat img;
     cvtColor(_img, img, COLOR_BGR2XYZ);
-    TIFF* tif = TIFFOpen(m_filename.c_str(), "w");
+
+    TIFF* tif;
+
+    TiffEncoderBufHelper buf_helper(m_buf);
+    if ( m_buf )
+    {
+        tif = buf_helper.open();
+    }
+    else
+    {
+        tif = TIFFOpen(m_filename.c_str(), "w");
+    }
+
     if (!tif)
     {
         return false;
@@ -678,204 +857,20 @@ bool TiffEncoder::writeHdr(const Mat& _img)
     return true;
 }
 
-#endif
-
-#ifdef HAVE_TIFF
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
-#else
-bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
-#endif
 {
-    int channels = img.channels();
-    int width = img.cols, height = img.rows;
     int depth = img.depth();
-#ifdef HAVE_TIFF
+
     if(img.type() == CV_32FC3)
     {
-        return writeHdr(img);
-    }
-#endif
-
-    if (depth != CV_8U && depth != CV_16U)
-        return false;
-
-    int bytesPerChannel = depth == CV_8U ? 1 : 2;
-    int fileStep = width * channels * bytesPerChannel;
-
-    WLByteStream strm;
-
-    if( m_buf )
-    {
-        if( !strm.open(*m_buf) )
-            return false;
-    }
-    else
-    {
-#ifdef HAVE_TIFF
-      return writeLibTiff(img, params);
-#else
-      if( !strm.open(m_filename) )
-          return false;
-#endif
+        return writeHdr(img); // TODO Rename
     }
 
-    int rowsPerStrip = (1 << 13)/fileStep;
+    CV_Assert(depth == CV_8U || depth == CV_16U);
 
-    if( rowsPerStrip < 1 )
-        rowsPerStrip = 1;
-
-    if( rowsPerStrip > height )
-        rowsPerStrip = height;
-
-    int i, stripCount = (height + rowsPerStrip - 1) / rowsPerStrip;
-
-    if( m_buf )
-        m_buf->reserve( alignSize(stripCount*8 + fileStep*height + 256, 256) );
-
-/*#if defined _DEBUG || !defined WIN32
-    int uncompressedRowSize = rowsPerStrip * fileStep;
-#endif*/
-    int directoryOffset = 0;
-
-    AutoBuffer<int> stripOffsets(stripCount);
-    AutoBuffer<short> stripCounts(stripCount);
-    AutoBuffer<uchar> _buffer(fileStep+32);
-    uchar* buffer = _buffer;
-    int  stripOffsetsOffset = 0;
-    int  stripCountsOffset = 0;
-    int  bitsPerSample = 8 * bytesPerChannel;
-    int  y = 0;
-
-    strm.putBytes( fmtSignTiffII, 4 );
-    strm.putDWord( directoryOffset );
-
-    // write an image data first (the most reasonable way
-    // for compressed images)
-    for( i = 0; i < stripCount; i++ )
-    {
-        int limit = y + rowsPerStrip;
-
-        if( limit > height )
-            limit = height;
-
-        stripOffsets[i] = strm.getPos();
-
-        for( ; y < limit; y++ )
-        {
-            if( channels == 3 )
-            {
-                if (depth == CV_8U)
-                    icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
-                else
-                    icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
-            }
-            else
-            {
-              if( channels == 4 )
-              {
-                if (depth == CV_8U)
-                    icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
-                else
-                    icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
-              }
-            }
-
-            strm.putBytes( channels > 1 ? buffer : img.ptr(y), fileStep );
-        }
-
-        stripCounts[i] = (short)(strm.getPos() - stripOffsets[i]);
-        /*assert( stripCounts[i] == uncompressedRowSize ||
-                stripCounts[i] < uncompressedRowSize &&
-                i == stripCount - 1);*/
-    }
-
-    if( stripCount > 2 )
-    {
-        stripOffsetsOffset = strm.getPos();
-        for( i = 0; i < stripCount; i++ )
-            strm.putDWord( stripOffsets[i] );
-
-        stripCountsOffset = strm.getPos();
-        for( i = 0; i < stripCount; i++ )
-            strm.putWord( stripCounts[i] );
-    }
-    else if(stripCount == 2)
-    {
-        stripOffsetsOffset = strm.getPos();
-        for (i = 0; i < stripCount; i++)
-        {
-            strm.putDWord (stripOffsets [i]);
-        }
-        stripCountsOffset = stripCounts [0] + (stripCounts [1] << 16);
-    }
-    else
-    {
-        stripOffsetsOffset = stripOffsets[0];
-        stripCountsOffset = stripCounts[0];
-    }
-
-    if( channels > 1 )
-    {
-        int bitsPerSamplePos = strm.getPos();
-        strm.putWord(bitsPerSample);
-        strm.putWord(bitsPerSample);
-        strm.putWord(bitsPerSample);
-        if( channels == 4 )
-            strm.putWord(bitsPerSample);
-        bitsPerSample = bitsPerSamplePos;
-    }
-
-    directoryOffset = strm.getPos();
-
-    // write header
-    strm.putWord( 9 );
-
-    /* warning: specification 5.0 of Tiff want to have tags in
-       ascending order. This is a non-fatal error, but this cause
-       warning with some tools. So, keep this in ascending order */
-
-    writeTag( strm, TIFF_TAG_WIDTH, TIFF_TYPE_LONG, 1, width );
-    writeTag( strm, TIFF_TAG_HEIGHT, TIFF_TYPE_LONG, 1, height );
-    writeTag( strm, TIFF_TAG_BITS_PER_SAMPLE,
-              TIFF_TYPE_SHORT, channels, bitsPerSample );
-    writeTag( strm, TIFF_TAG_COMPRESSION, TIFF_TYPE_LONG, 1, TIFF_UNCOMP );
-    writeTag( strm, TIFF_TAG_PHOTOMETRIC, TIFF_TYPE_SHORT, 1, channels > 1 ? 2 : 1 );
-
-    writeTag( strm, TIFF_TAG_STRIP_OFFSETS, TIFF_TYPE_LONG,
-              stripCount, stripOffsetsOffset );
-
-    writeTag( strm, TIFF_TAG_SAMPLES_PER_PIXEL, TIFF_TYPE_SHORT, 1, channels );
-    writeTag( strm, TIFF_TAG_ROWS_PER_STRIP, TIFF_TYPE_LONG, 1, rowsPerStrip );
-
-    writeTag( strm, TIFF_TAG_STRIP_COUNTS,
-              stripCount > 1 ? TIFF_TYPE_SHORT : TIFF_TYPE_LONG,
-              stripCount, stripCountsOffset );
-
-    strm.putDWord(0);
-    strm.close();
-
-    if( m_buf )
-    {
-        (*m_buf)[4] = (uchar)directoryOffset;
-        (*m_buf)[5] = (uchar)(directoryOffset >> 8);
-        (*m_buf)[6] = (uchar)(directoryOffset >> 16);
-        (*m_buf)[7] = (uchar)(directoryOffset >> 24);
-    }
-    else
-    {
-        // write directory offset
-        FILE* f = fopen( m_filename.c_str(), "r+b" );
-        buffer[0] = (uchar)directoryOffset;
-        buffer[1] = (uchar)(directoryOffset >> 8);
-        buffer[2] = (uchar)(directoryOffset >> 16);
-        buffer[3] = (uchar)(directoryOffset >> 24);
-
-        fseek( f, 4, SEEK_SET );
-        fwrite( buffer, 1, 4, f );
-        fclose(f);
-    }
-
-    return true;
+    return writeLibTiff(img, params);
 }
 
-}
+} // namespace
+
+#endif

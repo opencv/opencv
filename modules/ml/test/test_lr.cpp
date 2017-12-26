@@ -64,6 +64,7 @@ using namespace cv::ml;
 
 static bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error)
 {
+    CV_TRACE_FUNCTION();
     error = 0.0f;
     float accuracy = 0.0f;
     Mat _p_labels_temp;
@@ -91,9 +92,15 @@ protected:
 
 void CV_LRTest::run( int /*start_from*/ )
 {
+    CV_TRACE_FUNCTION();
     // initialize varibles from the popular Iris Dataset
     string dataFileName = ts->get_data_path() + "iris.data";
     Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
+
+    if (tdata.empty()) {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        return;
+    }
 
     // run LR classifier train classifier
     Ptr<LogisticRegression> p = LogisticRegression::create();
@@ -145,6 +152,7 @@ protected:
 
 void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 {
+    CV_TRACE_FUNCTION();
     int code = cvtest::TS::OK;
 
     // initialize varibles from the popular Iris Dataset

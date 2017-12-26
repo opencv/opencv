@@ -58,6 +58,16 @@
 #ifdef HAVE_CUDA
 #  include <cuda.h>
 #  include <cuda_runtime.h>
+#  if defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
+#    if defined (__GNUC__) && !defined(__CUDACC__)
+#     pragma GCC diagnostic push
+#     pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#     include <cuda_fp16.h>
+#     pragma GCC diagnostic pop
+#    else
+#     include <cuda_fp16.h>
+#    endif
+#  endif // defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
 #  include <npp.h>
 #  include "opencv2/core/cuda_stream_accessor.hpp"
 #  include "opencv2/core/cuda/common.hpp"
@@ -102,20 +112,6 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The
 
 namespace cv { namespace cuda
 {
-    class CV_EXPORTS BufferPool
-    {
-    public:
-        explicit BufferPool(Stream& stream);
-
-        GpuMat getBuffer(int rows, int cols, int type);
-        GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
-
-        GpuMat::Allocator* getAllocator() const { return allocator_; }
-
-    private:
-        GpuMat::Allocator* allocator_;
-    };
-
     static inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
         if (code < 0)

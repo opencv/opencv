@@ -96,6 +96,8 @@ public:
         m_end = m_start + DEFAULT_BLOCK_SIZE;
         m_is_opened = false;
         m_f = 0;
+        m_current = 0;
+        m_pos = 0;
     }
 
     ~BitStream()
@@ -384,7 +386,7 @@ public:
         }
         else
         {
-            data[m_pos] |= (tempval << bits_free);
+            data[m_pos] |= (bits_free == 32) ? tempval : (tempval << bits_free);
         }
     }
 
@@ -591,6 +593,12 @@ public:
     {
         rawstream = false;
         nstripes = -1;
+        height = 0;
+        width = 0;
+        moviPointer = 0;
+        channels = 0;
+        outfps = 0;
+        quality = 0;
     }
 
     MotionJpegWriter(const String& filename, double fps, Size size, bool iscolor)
@@ -720,7 +728,7 @@ public:
         strm.putInt(height);
         strm.putShort(1); // planes (1 means interleaved data (after decompression))
 
-        strm.putShort(channels); // bits per pixel
+        strm.putShort(8 * channels); // bits per pixel
         strm.putInt(fourCC('M', 'J', 'P', 'G'));
         strm.putInt(width * height * channels);
         strm.putInt(0);

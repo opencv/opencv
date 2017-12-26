@@ -41,6 +41,8 @@
 
 #include "test_precomp.hpp"
 
+//#define GENERATE_TESTDATA
+
 using namespace cv;
 using namespace std;
 
@@ -79,14 +81,33 @@ int str_to_ann_train_method( String& str )
 {
     if( !str.compare("BACKPROP") )
         return ANN_MLP::BACKPROP;
-    if( !str.compare("RPROP") )
+    if (!str.compare("RPROP"))
         return ANN_MLP::RPROP;
+    if (!str.compare("ANNEAL"))
+        return ANN_MLP::ANNEAL;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
+    return -1;
+}
+
+int str_to_ann_activation_function(String& str)
+{
+    if (!str.compare("IDENTITY"))
+        return ANN_MLP::IDENTITY;
+    if (!str.compare("SIGMOID_SYM"))
+        return ANN_MLP::SIGMOID_SYM;
+    if (!str.compare("GAUSSIAN"))
+        return ANN_MLP::GAUSSIAN;
+    if (!str.compare("RELU"))
+        return ANN_MLP::RELU;
+    if (!str.compare("LEAKYRELU"))
+        return ANN_MLP::LEAKYRELU;
+    CV_Error(CV_StsBadArg, "incorrect ann activation function string");
     return -1;
 }
 
 void ann_check_data( Ptr<TrainData> _data )
 {
+    CV_TRACE_FUNCTION();
     Mat values = _data->getSamples();
     Mat var_idx = _data->getVarIdx();
     int nvars = (int)var_idx.total();
@@ -99,6 +120,7 @@ void ann_check_data( Ptr<TrainData> _data )
 // unroll the categorical responses to binary vectors
 Mat ann_get_new_responses( Ptr<TrainData> _data, map<int, int>& cls_map )
 {
+    CV_TRACE_FUNCTION();
     Mat train_sidx = _data->getTrainSampleIdx();
     int* train_sidx_ptr = train_sidx.ptr<int>();
     Mat responses = _data->getResponses();
@@ -130,6 +152,7 @@ Mat ann_get_new_responses( Ptr<TrainData> _data, map<int, int>& cls_map )
 
 float ann_calc_error( Ptr<StatModel> ann, Ptr<TrainData> _data, map<int, int>& cls_map, int type, vector<float> *resp_labels )
 {
+    CV_TRACE_FUNCTION();
     float err = 0;
     Mat samples = _data->getSamples();
     Mat responses = _data->getResponses();
@@ -173,6 +196,144 @@ float ann_calc_error( Ptr<StatModel> ann, Ptr<TrainData> _data, map<int, int>& c
     err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
     return err;
 }
+
+TEST(ML_ANN, ActivationFunction)
+{
+    String folder = string(cvtest::TS::ptr()->get_data_path());
+    String original_path = folder + "waveform.data";
+    String dataname = folder + "waveform";
+
+    Ptr<TrainData> tdata = TrainData::loadFromCSV(original_path, 0);
+
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 1027401484159173092;
+    tdata->setTrainTestSplit(500);
+
+    vector<int> activationType;
+    activationType.push_back(ml::ANN_MLP::IDENTITY);
+    activationType.push_back(ml::ANN_MLP::SIGMOID_SYM);
+    activationType.push_back(ml::ANN_MLP::GAUSSIAN);
+    activationType.push_back(ml::ANN_MLP::RELU);
+    activationType.push_back(ml::ANN_MLP::LEAKYRELU);
+    vector<String> activationName;
+    activationName.push_back("_identity");
+    activationName.push_back("_sigmoid_sym");
+    activationName.push_back("_gaussian");
+    activationName.push_back("_relu");
+    activationName.push_back("_leakyrelu");
+    for (size_t i = 0; i < activationType.size(); i++)
+    {
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
+        Mat_<int> layerSizes(1, 4);
+        layerSizes(0, 0) = tdata->getNVars();
+        layerSizes(0, 1) = 100;
+        layerSizes(0, 2) = 100;
+        layerSizes(0, 3) = tdata->getResponses().cols;
+        x->setLayerSizes(layerSizes);
+        x->setActivationFunction(activationType[i]);
+        x->setTrainMethod(ml::ANN_MLP::RPROP, 0.01, 0.1);
+        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 300, 0.01));
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << activationName[i];
+#ifdef GENERATE_TESTDATA
+        x->save(dataname + activationName[i] + ".yml");
+#else
+        Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(dataname + activationName[i] + ".yml");
+        ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + activationName[i] + ".yml";
+        Mat testSamples = tdata->getTestSamples();
+        Mat rx, ry, dst;
+        x->predict(testSamples, rx);
+        y->predict(testSamples, ry);
+        double n = cvtest::norm(rx, ry, NORM_INF);
+        EXPECT_LT(n,FLT_EPSILON) << "Predict are not equal for " << dataname + activationName[i] + ".yml and " << activationName[i];
+#endif
+    }
+}
+
+TEST(ML_ANN, Method)
+{
+    String folder = string(cvtest::TS::ptr()->get_data_path());
+    String original_path = folder + "waveform.data";
+    String dataname = folder + "waveform";
+
+    Ptr<TrainData> tdata2 = TrainData::loadFromCSV(original_path, 0);
+    Mat responses(tdata2->getResponses().rows, 3, CV_32FC1, Scalar(0));
+    for (int i = 0; i<tdata2->getResponses().rows; i++)
+        responses.at<float>(i, static_cast<int>(tdata2->getResponses().at<float>(i, 0))) = 1;
+    Ptr<TrainData> tdata = TrainData::create(tdata2->getSamples(), ml::ROW_SAMPLE, responses);
+
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 0;
+    tdata->setTrainTestSplitRatio(0.8);
+
+    vector<int> methodType;
+    methodType.push_back(ml::ANN_MLP::RPROP);
+    methodType.push_back(ml::ANN_MLP::ANNEAL);
+//    methodType.push_back(ml::ANN_MLP::BACKPROP); -----> NO BACKPROP TEST
+    vector<String> methodName;
+    methodName.push_back("_rprop");
+    methodName.push_back("_anneal");
+//    methodName.push_back("_backprop"); -----> NO BACKPROP TEST
+#ifdef GENERATE_TESTDATA
+    {
+    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP_ANNEAL::create();
+    Mat_<int> layerSizesXX(1, 4);
+    layerSizesXX(0, 0) = tdata->getNVars();
+    layerSizesXX(0, 1) = 30;
+    layerSizesXX(0, 2) = 30;
+    layerSizesXX(0, 3) = tdata->getResponses().cols;
+    xx->setLayerSizes(layerSizesXX);
+    xx->setActivationFunction(ml::ANN_MLP::SIGMOID_SYM);
+    xx->setTrainMethod(ml::ANN_MLP::RPROP);
+    xx->setTermCriteria(TermCriteria(TermCriteria::COUNT, 1, 0.01));
+    xx->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE + ml::ANN_MLP::NO_INPUT_SCALE);
+    FileStorage fs;
+    fs.open(dataname + "_init_weight.yml.gz", FileStorage::WRITE + FileStorage::BASE64);
+    xx->write(fs);
+    fs.release();
+    }
+#endif
+    for (size_t i = 0; i < methodType.size(); i++)
+    {
+        FileStorage fs;
+        fs.open(dataname + "_init_weight.yml.gz", FileStorage::READ + FileStorage::BASE64);
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP_ANNEAL::create();
+        x->read(fs.root());
+        x->setTrainMethod(methodType[i]);
+        if (methodType[i] == ml::ANN_MLP::ANNEAL)
+        {
+            x->setAnnealEnergyRNG(RNG(CV_BIG_INT(0xffffffff)));
+            x->setAnnealInitialT(12);
+            x->setAnnealFinalT(0.15);
+            x->setAnnealCoolingRatio(0.96);
+            x->setAnnealItePerStep(11);
+        }
+        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 100, 0.01));
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE + ml::ANN_MLP::NO_INPUT_SCALE + ml::ANN_MLP::UPDATE_WEIGHTS);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << methodName[i];
+#ifdef  GENERATE_TESTDATA
+        x->save(dataname + methodName[i] + ".yml.gz");
+#endif
+        Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(dataname + methodName[i] + ".yml.gz");
+        ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + methodName[i] + ".yml";
+        Mat testSamples = tdata->getTestSamples();
+        Mat rx, ry, dst;
+        for (int j = 0; j < 4; j++)
+        {
+            rx = x->getWeights(j);
+            ry = y->getWeights(j);
+            double n = cvtest::norm(rx, ry, NORM_INF);
+            EXPECT_LT(n, FLT_EPSILON) << "Weights are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i] << " layer : " << j;
+        }
+        x->predict(testSamples, rx);
+        y->predict(testSamples, ry);
+        double n = cvtest::norm(rx, ry, NORM_INF);
+        EXPECT_LT(n, FLT_EPSILON) << "Predict are not equal for " << dataname + methodName[i] + ".yml and " << methodName[i];
+    }
+}
+
 
 // 6. dtree
 // 7. boost
@@ -241,6 +402,7 @@ CV_MLBaseTest::~CV_MLBaseTest()
 
 int CV_MLBaseTest::read_params( CvFileStorage* __fs )
 {
+    CV_TRACE_FUNCTION();
     FileStorage _fs(__fs, false);
     if( !_fs.isOpened() )
         test_case_count = -1;
@@ -265,6 +427,7 @@ int CV_MLBaseTest::read_params( CvFileStorage* __fs )
 
 void CV_MLBaseTest::run( int )
 {
+    CV_TRACE_FUNCTION();
     string filename = ts->get_data_path();
     filename += get_validation_filename();
     validationFS.open( filename, FileStorage::READ );
@@ -273,6 +436,7 @@ void CV_MLBaseTest::run( int )
     int code = cvtest::TS::OK;
     for (int i = 0; i < test_case_count; i++)
     {
+        CV_TRACE_REGION("iteration");
         int temp_code = run_test_case( i );
         if (temp_code == cvtest::TS::OK)
             temp_code = validate_test_results( i );
@@ -289,6 +453,7 @@ void CV_MLBaseTest::run( int )
 
 int CV_MLBaseTest::prepare_test_case( int test_case_idx )
 {
+    CV_TRACE_FUNCTION();
     clear();
 
     string dataPath = ts->get_data_path();
@@ -331,6 +496,7 @@ string& CV_MLBaseTest::get_validation_filename()
 
 int CV_MLBaseTest::train( int testCaseIdx )
 {
+    CV_TRACE_FUNCTION();
     bool is_trained = false;
     FileNode modelParamsNode =
         validationFS.getFirstTopLevelNode()["validation"][modelName][dataSetNames[testCaseIdx]]["model_params"];
@@ -489,6 +655,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
 
 float CV_MLBaseTest::get_test_error( int /*testCaseIdx*/, vector<float> *resp )
 {
+    CV_TRACE_FUNCTION();
     int type = CV_TEST_ERROR;
     float err = 0;
     Mat _resp;
@@ -506,11 +673,13 @@ float CV_MLBaseTest::get_test_error( int /*testCaseIdx*/, vector<float> *resp )
 
 void CV_MLBaseTest::save( const char* filename )
 {
+    CV_TRACE_FUNCTION();
     model->save( filename );
 }
 
 void CV_MLBaseTest::load( const char* filename )
 {
+    CV_TRACE_FUNCTION();
     if( modelName == CV_NBAYES )
         model = Algorithm::load<NormalBayesClassifier>( filename );
     else if( modelName == CV_KNEAREST )

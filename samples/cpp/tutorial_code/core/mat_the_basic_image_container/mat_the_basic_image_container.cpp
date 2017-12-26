@@ -58,7 +58,13 @@ int main(int,char**)
     Mat C = (Mat_<double>(3,3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
     cout << "C = " << endl << " " << C << endl << endl;
     //! [comma]
-
+    // do the same with initializer_list
+#ifdef CV_CXX11
+    //! [list]
+    C = (Mat_<double>({0, -1, 0, -1, 5, -1, 0, -1, 0})).reshape(3);
+    cout << "C = " << endl << " " << C << endl << endl;
+    //! [list]
+#endif
     //! [clone]
     Mat RowClone = C.row(1).clone();
     cout << "RowClone = " << endl << " " << RowClone << endl << endl;
