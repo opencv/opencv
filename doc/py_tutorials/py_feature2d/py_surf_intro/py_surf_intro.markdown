@@ -147,7 +147,7 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
  False
 
 # So we make it to True to get 128-dim descriptors.
->>> surf.extended = True
+>>> surf.setExtended(True)
 >>> kp, des = surf.detectAndCompute(img,None)
 >>> print( surf.descriptorSize() )
 128
