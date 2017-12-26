@@ -623,10 +623,10 @@ CvRect cvGetWindowRect_COCOA( const char* name )
     if ( window == NULL )
     {
         CV_ERROR( CV_StsNullPtr, "NULL window" );
+    } else {
+        NSRect rect = [window frame];
+        result = cvRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
     }
-
-    NSRect rect = [window frame];
-    result = cvRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 
     __END__;
     return result;
