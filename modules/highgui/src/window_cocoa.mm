@@ -624,8 +624,9 @@ CvRect cvGetWindowRect_COCOA( const char* name )
     {
         CV_ERROR( CV_StsNullPtr, "NULL window" );
     } else {
-        NSRect rect = [window frame];
-        result = cvRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+        NSRect rect = [window convertRectToScreen:frame];
+        NSSize sz = [[[window contentView] image] size];
+        result = cvRect(rect.origin.x, rect.origin.y, sz.width, sz.height);
     }
 
     __END__;
