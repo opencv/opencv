@@ -6,11 +6,14 @@ class opencv_version {
 
   public static void main(String[] args) {
 
-    if ((1==args.length) && (0==args[0].compareTo("--build"))) {
+  
+    // && checks for both LHS and RHS even if lhs is false.
+    // & checks RHS only if lhs is true...
+    if ((1==args.length) & (0==args[0].compareTo("--build"))) {
 
         System.out.println(Core.getBuildInformation());
     } else
-    if ((1==args.length) && (0==args[0].compareTo("--help"))) {
+    if ((1==args.length) & (0==args[0].compareTo("--help"))) {
 
         System.out.println("\t--build\n\t\tprint complete build info");
         System.out.println("\t--help\n\t\tprint this help");
