@@ -441,10 +441,11 @@ CvRect cvGetWindowRect_W32(const char* name)
 
     RECT rect;
     GetClientRect(window->hwnd, &rect);
+    {
     POINT pt = {rect.left, rect.top};
     ClientToScreen(window->hwnd, &pt);
     result = cvRect(pt.x, pt.y, rect.right - rect.left, rect.bottom - rect.top);
-
+    }
     __END__;
     return result;
 }
