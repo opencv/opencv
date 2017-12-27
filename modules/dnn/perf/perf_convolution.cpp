@@ -60,8 +60,6 @@ PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     std::vector<Mat*> inpBlobs(1, &inpBlob);
     std::vector<Mat> outBlobs, internalBlobs;
 
-    cv::setNumThreads(cv::getNumberOfCPUs());
-
     Ptr<Layer> layer = cv::dnn::LayerFactory::createLayerInstance("Convolution", lp);
     std::vector<MatShape> inputShapes(1, shape(inpBlob)), outShapes, internals;
     layer->getMemoryShapes(inputShapes, 0, outShapes, internals);
@@ -81,7 +79,7 @@ PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     Mat inpBlob2D = inpBlob.reshape(1, outCn);
     Mat wgtBlob2D = wgtBlob.reshape(1, outCn*(inpCn/groups));
     Mat outBlob2D = outBlobs[0].reshape(1, outBlobs[0].size[0]);
-    declare.in(inpBlob2D, wgtBlob2D, WARMUP_RNG).out(outBlob2D).tbb_threads(cv::getNumThreads());
+    declare.in(inpBlob2D, wgtBlob2D, WARMUP_RNG).out(outBlob2D);
 
     layer->forward(inpBlobs, outBlobs, internalBlobs); /// warmup
 
