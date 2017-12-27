@@ -1123,13 +1123,13 @@ struct Net::Impl
         {
             if (use_umat)
             {
+                std::vector<Mat> input_mats(ld.umat_inputBlobs.size());;
                 std::vector<Mat*> inputs(ld.umat_inputBlobs.size());;
                 std::vector<Mat> outputs(ld.umat_outputBlobs.size());
-                Mat mat;
                 for (int i = 0; i < inputs.size(); i++)
                 {
-                    mat = ld.umat_inputBlobs[i].getMat(ACCESS_READ);
-                    inputs[i] = &mat;
+                    input_mats[i] = ld.umat_inputBlobs[i].getMat(ACCESS_READ);
+                    inputs[i] = &input_mats[i];
                 }
                 for (int i = 0; i < outputs.size(); i++)
                 {
