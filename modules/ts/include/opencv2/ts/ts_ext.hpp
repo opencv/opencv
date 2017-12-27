@@ -11,11 +11,13 @@
 namespace cvtest {
 void checkIppStatus();
 extern bool skipUnstableTests;
+extern int testThreads;
 }
 
 #define CV__TEST_INIT \
     cv::ipp::setIppStatus(0); \
-    cv::theRNG().state = cvtest::param_seed;
+    cv::theRNG().state = cvtest::param_seed; \
+    cv::setNumThreads(cvtest::testThreads);
 #define CV__TEST_CLEANUP ::cvtest::checkIppStatus();
 #define CV__TEST_BODY_IMPL(name) \
     { \
