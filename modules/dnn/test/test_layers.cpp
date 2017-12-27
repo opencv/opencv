@@ -107,8 +107,6 @@ void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
     String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
     String outfile = _tf(basename + ".npy");
 
-    cv::setNumThreads(cv::getNumberOfCPUs());
-
     Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
     ASSERT_FALSE(net.empty());
 
@@ -535,8 +533,6 @@ void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, 
 
     String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
     String outfile = _tf(basename + ".npy");
-
-    cv::setNumThreads(cv::getNumberOfCPUs());
 
     Net net = readNetFromDarknet(cfg, (useDarknetModel) ? weights : String());
     ASSERT_FALSE(net.empty());
