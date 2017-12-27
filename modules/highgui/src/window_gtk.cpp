@@ -723,7 +723,7 @@ CvRect cvGetWindowRect_GTK(const char* name)
 #endif
 
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( window->widget );
-    gtk_widget_translate_coordinates(image_widget->widget, gtk_widget_get_toplevel(image_widget->widget), 0, 0, &wx, &wy);
+    gtk_widget_translate_coordinates(&image_widget->widget, gtk_widget_get_toplevel(&image_widget->widget), 0, 0, &wx, &wy);
     if (image_widget->scaled_image) {
 #if defined (GTK_VERSION3)
       return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(window->widget)),
