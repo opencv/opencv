@@ -726,19 +726,19 @@ CvRect cvGetWindowRect_GTK(const char* name)
     gtk_widget_translate_coordinates(image_widget->widget, gtk_widget_get_toplevel(image_widget->widget), 0, 0, &wx, &wy);
     if (image_widget->scaled_image) {
 #if defined (GTK_VERSION3)
-      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(widget)),
-          MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(widget)));
+      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(window->widget)),
+          MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(window->widget)));
 #else
-      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, widget->allocation.width),
-          MIN(image_widget->scaled_image->rows, widget->allocation.height));
+      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, window->widget->allocation.width),
+          MIN(image_widget->scaled_image->rows, window->widget->allocation.height));
 #endif //GTK_VERSION3
     } else if (image_widget->original_image) {
 #if defined (GTK_VERSION3)
-      return cvRect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(widget)),
-          MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(widget)));
+      return cvRect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(window->widget)),
+          MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(window->widget)));
 #else
-      return cvRect(wx, wy, MIN(image_widget->original_image->cols, widget->allocation.width),
-          MIN(image_widget->original_image->rows, widget->allocation.height));
+      return cvRect(wx, wy, MIN(image_widget->original_image->cols, window->widget->allocation.width),
+          MIN(image_widget->original_image->rows, window->widget->allocation.height));
 #endif //GTK_VERSION3
     }
 
