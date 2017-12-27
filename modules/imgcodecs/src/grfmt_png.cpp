@@ -228,12 +228,12 @@ bool  PngDecoder::readData( Mat& img )
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
 
+    png_structp png_ptr = (png_structp)m_png_ptr;
+    png_infop info_ptr = (png_infop)m_info_ptr;
+    png_infop end_info = (png_infop)m_end_info;
+
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
-        png_structp png_ptr = (png_structp)m_png_ptr;
-        png_infop info_ptr = (png_infop)m_info_ptr;
-        png_infop end_info = (png_infop)m_end_info;
-
         if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
         {
             int y;
