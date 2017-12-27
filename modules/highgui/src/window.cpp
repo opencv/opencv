@@ -168,6 +168,10 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetWindowRect_W32(name).width;
         #elif defined (HAVE_GTK)
             return cvGetWindowRect_GTK(name).width;
+        #elif defined (HAVE_CARBON)
+            return cvGetWindowRect_CARBON(name).width;
+        #elif defined (HAVE_COCOA)
+            return cvGetWindowRect_COCOA(name).width;
         #else
             return -1;
         #endif
@@ -179,6 +183,10 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetWindowRect_W32(name).height;
         #elif defined (HAVE_GTK)
             return cvGetWindowRect_GTK(name).height;
+        #elif defined (HAVE_CARBON)
+            return cvGetWindowRect_CARBON(name).height;
+        #elif defined (HAVE_COCOA)
+            return cvGetWindowRect_COCOA(name).height;
         #else
             return -1;
         #endif
@@ -190,6 +198,10 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetWindowRect_W32(name).x;
         #elif defined (HAVE_GTK)
             return cvGetWindowRect_GTK(name).x;
+        #elif defined (HAVE_CARBON)
+            return cvGetWindowRect_CARBON(name).x;
+        #elif defined (HAVE_COCOA)
+            return cvGetWindowRect_COCOA(name).x;
         #else
             return -1;
         #endif
@@ -201,6 +213,10 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetWindowRect_W32(name).y;
         #elif defined (HAVE_GTK)
             return cvGetWindowRect_GTK(name).y;
+        #elif defined (HAVE_CARBON)
+            return cvGetWindowRect_CARBON(name).y;
+        #elif defined (HAVE_COCOA)
+            return cvGetWindowRect_COCOA(name).y;
         #else
             return -1;
         #endif
