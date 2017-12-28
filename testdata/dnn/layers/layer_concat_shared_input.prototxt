@@ -1,0 +1,81 @@
+# input
+# conv1 ------+---+
+# conv2       |   |
+# concat1 <---+   |
+# conv3           |
+# conv4           |
+# concat2 <-------+
+name: "test_Concat_shared_input"
+input: "input"
+
+input_dim: 1
+input_dim: 2
+input_dim: 3
+input_dim: 4
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "input"
+  top: "conv1"
+  convolution_param {
+    num_output: 128
+    pad: 0
+    kernel_size: 1
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "gaussian" std: 0.01 }
+  }
+}
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "conv1"
+  top: "conv2"
+  convolution_param {
+    num_output: 22
+    pad: 0
+    kernel_size: 1
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "gaussian" std: 0.01 }
+  }
+}
+layer {
+  name: "concat1"
+  type: "Concat"
+  bottom: "conv2"
+  bottom: "conv1"
+  top: "concat1"
+}
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "concat1"
+  top: "conv3"
+  convolution_param {
+    num_output: 128
+    pad: 0
+    kernel_size: 1
+    weight_filler { type: "gaussian" std: 0.1 }
+    bias_filler { type: "gaussian" std: 0.1 }
+  }
+}
+layer {
+  name: "conv4"
+  type: "Convolution"
+  bottom: "conv3"
+  top: "conv4"
+  convolution_param {
+    num_output: 128
+    pad: 0
+    kernel_size: 1
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "gaussian" std: 0.01 }
+  }
+}
+layer {
+  name: "output"
+  type: "Concat"
+  bottom: "conv4"
+  bottom: "conv1"
+  top: "output"
+}
