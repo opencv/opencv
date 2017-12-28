@@ -152,7 +152,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    line(frame, Point(xLeftBottom,yLeftBottom), Point(xLeftBottom+((width / 2)*frame.cols),yLeftBottom+((height / 2)*frame.rows )  ),Scalar(0, 255, 0),1);
+                    line(frame, Point(xLeftBottom,yLeftBottom), Point(xLeftBottom+(((int)width / 2)*frame.cols),yLeftBottom+(((int)height / 2)*frame.rows )  ),Scalar(0, 255, 0),1);
                 }
 
                 if (objectClass < classNamesVec.size())
