@@ -91,7 +91,9 @@ cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetInputConnection( reader->GetOutputPort() );
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->GetProperty()->SetInterpolationToFlat();
@@ -113,7 +115,11 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
         case POINT_SIZE:          actor->GetProperty()->SetPointSize(float(value)); break;
         case OPACITY:             actor->GetProperty()->SetOpacity(value);          break;
         case LINE_WIDTH:          actor->GetProperty()->SetLineWidth(float(value)); break;
+#if VTK_MAJOR_VERSION < 8
         case IMMEDIATE_RENDERING: actor->GetMapper()->SetImmediateModeRendering(int(value)); break;
+#else
+        case IMMEDIATE_RENDERING: std::cerr << "this property has no effect" << std::endl; break;
+#endif
         case AMBIENT:             actor->GetProperty()->SetAmbient(float(value)); break;
         case LIGHTING:
         {
@@ -191,8 +197,11 @@ double cv::viz::Widget::getRenderingProperty(int property) const
         case POINT_SIZE: value = actor->GetProperty()->GetPointSize(); break;
         case OPACITY:    value = actor->GetProperty()->GetOpacity();   break;
         case LINE_WIDTH: value = actor->GetProperty()->GetLineWidth(); break;
+#if VTK_MAJOR_VERSION < 8
         case IMMEDIATE_RENDERING:  value = actor->GetMapper()->GetImmediateModeRendering();  break;
-
+#else
+        case IMMEDIATE_RENDERING: std::cerr << "this property has no effect" << std::endl; break;
+#endif
         case FONT_SIZE:
         {
             vtkTextActor* text_actor = vtkTextActor::SafeDownCast(actor);
