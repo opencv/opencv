@@ -152,7 +152,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    line(frame, Point(xLeftBottom,yLeftBottom), Point(xLeftBottom+((width / 2)*frame.cols),yLeftBottom+((height / 2)*frame.rows )  ),Scalar(0, 255, 0),1);				
+                    line(frame, Point(xLeftBottom,yLeftBottom), Point(xLeftBottom+((width / 2)*frame.cols),yLeftBottom+((height / 2)*frame.rows )  ),Scalar(0, 255, 0),1);
                 }
 
                 if (objectClass < classNamesVec.size())
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
                     int baseLine = 0;
                     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
                     rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom ),
-                              Size(labelSize.width, labelSize.height + baseLine)),
+                                          Size(labelSize.width, labelSize.height + baseLine)),
                               Scalar(0, 255, 0), CV_FILLED);
 
                     putText(frame, label, Point(xLeftBottom, yLeftBottom+labelSize.height),
