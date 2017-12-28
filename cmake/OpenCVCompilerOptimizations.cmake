@@ -2,7 +2,7 @@
 # SSE / SSE2 (always available on 64-bit CPUs)
 # SSE3 / SSSE3
 # SSE4_1 / SSE4_2 / POPCNT
-# AVX / AVX2 / AVX512
+# AVX / AVX2 / AVX_512F
 # FMA3
 
 # CPU_{opt}_SUPPORTED=ON/OFF - compiler support (possibly with additional flag)
@@ -26,7 +26,7 @@
 #
 # CPU_DISPATCH_FLAGS_${opt} - flags for source files compiled separately (<name>.avx2.cpp)
 
-set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX512")
+set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX_512F")
 list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16)
 list(APPEND CPU_ALL_OPTIMIZATIONS VSX)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
@@ -145,7 +145,7 @@ elseif(" ${CMAKE_CXX_FLAGS} " MATCHES " -march=native | -xHost | /QxHost ")
 endif()
 
 if(X86 OR X86_64)
-  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;FP16;FMA3;AVX;AVX2;AVX512")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;FP16;FMA3;AVX;AVX2;AVX_512F")
 
   ocv_update(CPU_SSE_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sse.cpp")
   ocv_update(CPU_SSE2_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sse2.cpp")
@@ -157,11 +157,11 @@ if(X86 OR X86_64)
   ocv_update(CPU_AVX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx.cpp")
   ocv_update(CPU_AVX2_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx2.cpp")
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
-  ocv_update(CPU_AVX512_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512.cpp")
+  ocv_update(CPU_AVX_512F_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512.cpp")
 
   if(NOT OPENCV_CPU_OPT_IMPLIES_IGNORE)
-    ocv_update(CPU_AVX512_IMPLIES "AVX2")
-    ocv_update(CPU_AVX512_FORCE "") # Don't force other optimizations
+    ocv_update(CPU_AVX_512F_IMPLIES "AVX2")
+    ocv_update(CPU_AVX_512F_FORCE "") # Don't force other optimizations
     ocv_update(CPU_AVX2_IMPLIES "AVX;FMA3;FP16")
     ocv_update(CPU_FMA3_IMPLIES "AVX2")
     ocv_update(CPU_FMA3_FORCE "") # Don't force other optimizations
@@ -205,7 +205,7 @@ if(X86 OR X86_64)
     if(NOT X86_64) # x64 compiler doesn't support /arch:sse
       ocv_intel_compiler_optimization_option(SSE "-msse" "/arch:SSE")
     endif()
-    #ocv_intel_compiler_optimization_option(AVX512   "-march=core-avx512")
+    ocv_intel_compiler_optimization_option(AVX_512F "-march=common-avx512" "/arch:COMMON-AVX512")
   elseif(CMAKE_COMPILER_IS_GNUCXX)
     ocv_update(CPU_AVX2_FLAGS_ON "-mavx2")
     ocv_update(CPU_FP16_FLAGS_ON "-mf16c")
@@ -219,7 +219,8 @@ if(X86 OR X86_64)
     ocv_update(CPU_SSE2_FLAGS_ON "-msse2")
     ocv_update(CPU_SSE_FLAGS_ON "-msse")
     if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
-      ocv_update(CPU_AVX512_FLAGS_ON "-mavx512f -mavx512pf -mavx512er -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx512ifma -mavx512vbmi")
+      # -mavx512f -mavx512pf -mavx512er -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx512ifma -mavx512vbmi
+      ocv_update(CPU_AVX_512F_FLAGS_ON "-mavx512f")
     endif()
   elseif(MSVC)
     ocv_update(CPU_AVX2_FLAGS_ON "/arch:AVX2")

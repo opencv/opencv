@@ -384,7 +384,7 @@ public:
             p.is1x1_ = kernel == Size(0,0) && pad == Size(0, 0);
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
-            p.useAVX512 = checkHardwareSupport(CPU_AVX_512DQ);
+            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX_512F;
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
             p.ofstab_.resize(kernel.width*kernel.height*ncn);
@@ -564,10 +564,10 @@ public:
                         // now compute dot product of the weights
                         // and im2row-transformed part of the tensor
                         int bsz = ofs1 - ofs0;
-                    #if CV_TRY_AVX512
+                    #if CV_TRY_AVX_512F
                         /* AVX512 convolution requires an alignment of 16, and ROI is only there for larger vector sizes */
                         if(useAVX512)
-                            opt_AVX512::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                            opt_AVX_512F::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
                         else
                     #endif
@@ -1102,7 +1102,7 @@ public:
             nstripes_ = nstripes;
             useAVX = checkHardwareSupport(CPU_AVX);
             useAVX2 = checkHardwareSupport(CPU_AVX2);
-            useAVX512 = checkHardwareSupport(CPU_AVX_512DQ);
+            useAVX512 = CV_CPU_HAS_SUPPORT_AVX_512F;
         }
 
         void operator()(const Range& range_) const
@@ -1120,9 +1120,9 @@ public:
             size_t bstep = b_->step1();
             size_t cstep = c_->step1();
 
-        #if CV_TRY_AVX512
+        #if CV_TRY_AVX_512F
             if( useAVX512 )
-                opt_AVX512::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
+                opt_AVX_512F::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             else
         #endif
         #if CV_TRY_AVX2

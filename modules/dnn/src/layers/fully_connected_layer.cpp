@@ -161,7 +161,7 @@ public:
             p.activ = activ;
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
-            p.useAVX512 = checkHardwareSupport(CPU_AVX_512DQ);
+            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX_512F;
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -196,9 +196,9 @@ public:
 
                 memcpy(sptr, sptr_, vecsize*sizeof(sptr[0]));
 
-            #if CV_TRY_AVX512
+            #if CV_TRY_AVX_512F
                 if( useAVX512 )
-                    opt_AVX512::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
+                    opt_AVX_512F::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
             #endif
             #if CV_TRY_AVX2
