@@ -49,6 +49,14 @@
 namespace cv
 {
 
+enum PxMMode
+{
+    PXM_TYPE_AUTO = 0, // "auto"
+    PXM_TYPE_PBM = 1, // monochrome format (single channel)
+    PXM_TYPE_PGM = 2, // gray format (single channel)
+    PXM_TYPE_PPM = 3  // color format
+};
+
 class PxMDecoder : public BaseImageDecoder
 {
 public:
@@ -74,17 +82,21 @@ protected:
     int             m_maxval;
 };
 
-
 class PxMEncoder : public BaseImageEncoder
 {
 public:
-    PxMEncoder();
+    PxMEncoder(PxMMode mode);
     virtual ~PxMEncoder();
 
     bool  isFormatSupported( int depth ) const;
     bool  write( const Mat& img, const std::vector<int>& params );
 
-    ImageEncoder newEncoder() const;
+    ImageEncoder newEncoder() const
+    {
+        return makePtr<PxMEncoder>(mode_);
+    }
+
+    const PxMMode mode_;
 };
 
 }
