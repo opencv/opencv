@@ -268,19 +268,25 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
+    Mat tmp0, tmp;
+    int bs_half = block_size / 2;
+    int ap_half = aperture_size / 2;
+    copyMakeBorder(src, tmp0, bs_half+ap_half, bs_half+ap_half, bs_half+ap_half, bs_half+ap_half, borderType);
+    tmp = tmp0(Rect(ap_half, ap_half, src.cols+2*bs_half, src.rows+2*bs_half));
+
     Mat Dx, Dy;
     if( aperture_size > 0 )
     {
-        Sobel( src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
-        Sobel( src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
+        Sobel( tmp, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
+        Sobel( tmp, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
     }
     else
     {
-        Scharr( src, Dx, CV_32F, 1, 0, scale, 0, borderType );
-        Scharr( src, Dy, CV_32F, 0, 1, scale, 0, borderType );
+        Scharr( tmp, Dx, CV_32F, 1, 0, scale, 0, borderType );
+        Scharr( tmp, Dy, CV_32F, 0, 1, scale, 0, borderType );
     }
 
-    Size size = src.size();
+    Size size = tmp.size();
     Mat cov( size, CV_32FC3 );
     int i, j;
 
@@ -326,15 +332,17 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         }
     }
 
-    boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
+    Mat cov_subm = cov(Rect(bs_half, bs_half, src.cols, src.rows));
+
+    boxFilter(cov_subm, cov_subm, cov.depth(), Size(block_size, block_size),
         Point(-1,-1), false, borderType );
 
     if( op_type == MINEIGENVAL )
-        calcMinEigenVal( cov, eigenv );
+        calcMinEigenVal( cov_subm, eigenv );
     else if( op_type == HARRIS )
-        calcHarris( cov, eigenv, k );
+        calcHarris( cov_subm, eigenv, k );
     else if( op_type == EIGENVALSVECS )
-        calcEigenValsVecs( cov, eigenv );
+        calcEigenValsVecs( cov_subm, eigenv );
 }
 
 #ifdef HAVE_OPENCL
