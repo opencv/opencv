@@ -239,6 +239,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     {
         CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
+        covar_flags |= CV_COVAR_USE_AVG;
     }
 
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );
