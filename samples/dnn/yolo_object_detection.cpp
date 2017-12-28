@@ -26,6 +26,7 @@ static const char* params =
 "{ model          |       | model weights       }"
 "{ camera_device  | 0     | camera device number}"
 "{ source         |       | video or image for detection}"
+"{ style          | box   | box or line style draw }"
 "{ min_confidence | 0.24  | min confidence      }"
 "{ class_names    |       | File with class names, [PATH-TO-DARKNET]/data/coco.names }";
 
@@ -145,7 +146,14 @@ int main(int argc, char** argv)
                             xRightTop - xLeftBottom,
                             yRightTop - yLeftBottom);
 
-                rectangle(frame, object, Scalar(0, 255, 0));
+                if((parser.get<String>("style")=="box") || (objectClass >= classNamesVec.size()) )
+                {
+                    rectangle(frame, object, Scalar(0, 255, 0));
+                }
+                else
+                {
+                    line(frame, Point(xLeftBottom,yLeftBottom), Point(xLeftBottom+((width / 2)*frame.cols),yLeftBottom+((height / 2)*frame.rows )  ),Scalar(0, 255, 0),1);				
+                }
 
                 if (objectClass < classNamesVec.size())
                 {
@@ -156,8 +164,9 @@ int main(int argc, char** argv)
                     int baseLine = 0;
                     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
                     rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom ),
-                                          Size(labelSize.width, labelSize.height + baseLine)),
-                              Scalar(255, 255, 255), CV_FILLED);
+                              Size(labelSize.width, labelSize.height + baseLine)),
+                              Scalar(0, 255, 0), CV_FILLED);
+
                     putText(frame, label, Point(xLeftBottom, yLeftBottom+labelSize.height),
                             FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
                 }
