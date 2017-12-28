@@ -695,12 +695,14 @@ void checkIppStatus()
 }
 
 bool skipUnstableTests = false;
+int testThreads = 0;
 
 void parseCustomOptions(int argc, char **argv)
 {
     const char * const command_line_keys =
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
         "{ test_seed          |809564   |seed for random numbers generator }"
+        "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ h   help           |false    |print help info                          }";
 
@@ -720,6 +722,8 @@ void parseCustomOptions(int argc, char **argv)
 #endif
 
     param_seed = parser.get<unsigned int>("test_seed");
+
+    testThreads = parser.get<int>("test_threads");
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
 }
