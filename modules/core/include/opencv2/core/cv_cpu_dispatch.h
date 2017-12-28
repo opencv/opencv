@@ -82,6 +82,10 @@
 #  include <immintrin.h>
 #  define CV_AVX2 1
 #endif
+#ifdef CV_CPU_COMPILE_AVX_512F
+#  include <immintrin.h>
+#  define CV_AVX_512F 1
+#endif
 #ifdef CV_CPU_COMPILE_FMA3
 #  define CV_FMA3 1
 #endif
