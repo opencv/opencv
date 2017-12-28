@@ -301,7 +301,7 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 {
     int n = 0;
 
-#ifdef CV_AVX512
+#if CV_AVX_512F
     for( ; n <= nb - 32; n += 32 )
     {
         for( int m = 0; m < ma; m += 4 )
