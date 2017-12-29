@@ -301,7 +301,7 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 {
     int n = 0;
 
-#if CV_AVX_512F
+#if CV_AVX512_SKX // AVX512VL is necessary to avoid register spilling
     for( ; n <= nb - 32; n += 32 )
     {
         for( int m = 0; m < ma; m += 4 )

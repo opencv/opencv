@@ -86,6 +86,10 @@
 #  include <immintrin.h>
 #  define CV_AVX_512F 1
 #endif
+#ifdef CV_CPU_COMPILE_AVX512_SKX
+#  include <immintrin.h>
+#  define CV_AVX512_SKX 1
+#endif
 #ifdef CV_CPU_COMPILE_FMA3
 #  define CV_FMA3 1
 #endif
@@ -221,6 +225,9 @@ struct VZeroUpperGuard {
 #endif
 #ifndef CV_AVX_512VL
 #  define CV_AVX_512VL 0
+#endif
+#ifndef CV_AVX512_SKX
+#  define CV_AVX512_SKX 0
 #endif
 
 #ifndef CV_NEON
