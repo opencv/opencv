@@ -300,7 +300,7 @@ macro(add_android_project target path)
     if(android_proj_IGNORE_JAVA)
       set(android_proj_extra_deps "")
     else()
-      list(APPEND android_proj_extra_deps "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java)
+      list(APPEND android_proj_extra_deps opencv_java_android)
     endif()
     add_custom_command(
         OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
@@ -333,10 +333,6 @@ macro(add_android_project target path)
       ocv_copyfiles_add_target(${target}_copy_libs NATIVE_COPY "Copy native libs for project: ${target}" ${_native_deps})
 
       add_dependencies(${target} ${target}_copy_libs)
-
-      if (ANDROID_EXAMPLES_WITH_LIBS)
-        add_dependencies(${target}_copy_libs opencv_java)
-      endif()
     endif()
 
     # There is some strange problem with concurrent Android .APK builds:

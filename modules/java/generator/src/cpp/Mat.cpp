@@ -1,10 +1,11 @@
-#define LOG_TAG "org.opencv.core.Mat"
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 
-#include <stdexcept>
-#include <string>
-
-#include "common.h"
 #include "opencv2/core.hpp"
+
+#define LOG_TAG "org.opencv.core.Mat"
+#include "common.h"
 
 using namespace cv;
 
@@ -1777,67 +1778,6 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1delete
     delete (Mat*) self;
 }
 
-// unlike other nPut()-s this one (with double[]) should convert input values to correct type
-#define PUT_ITEM(T, R, C) { T*dst = (T*)me->ptr(R, C); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals);
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals)
-{
-    static const char method_name[] = "Mat::nPutD()";
-    try {
-        LOGD("%s", method_name);
-        cv::Mat* me = (cv::Mat*) self;
-        if(!me || !me->data) return 0;  // no native object behind
-        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-
-        int rest = ((me->rows - row) * me->cols - col) * me->channels();
-        if(count>rest) count = rest;
-        int res = count;
-        double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
-        double* src = values;
-        int r, c;
-        for(c=col; c<me->cols && count>0; c++)
-        {
-            switch(me->depth()) {
-                case CV_8U:  PUT_ITEM(uchar,  row, c); break;
-                case CV_8S:  PUT_ITEM(schar,  row, c); break;
-                case CV_16U: PUT_ITEM(ushort, row, c); break;
-                case CV_16S: PUT_ITEM(short,  row, c); break;
-                case CV_32S: PUT_ITEM(int,    row, c); break;
-                case CV_32F: PUT_ITEM(float,  row, c); break;
-                case CV_64F: PUT_ITEM(double, row, c); break;
-            }
-        }
-
-        for(r=row+1; r<me->rows && count>0; r++)
-            for(c=0; c<me->cols && count>0; c++)
-            {
-                switch(me->depth()) {
-                    case CV_8U:  PUT_ITEM(uchar,  r, c); break;
-                    case CV_8S:  PUT_ITEM(schar,  r, c); break;
-                    case CV_16U: PUT_ITEM(ushort, r, c); break;
-                    case CV_16S: PUT_ITEM(short,  r, c); break;
-                    case CV_32S: PUT_ITEM(int,    r, c); break;
-                    case CV_32F: PUT_ITEM(float,  r, c); break;
-                    case CV_64F: PUT_ITEM(double, r, c); break;
-                }
-            }
-
-        env->ReleasePrimitiveArrayCritical(vals, values, 0);
-        return res;
-    } catch(const std::exception &e) {
-        throwJavaException(env, &e, method_name);
-    } catch (...) {
-        throwJavaException(env, 0, method_name);
-    }
-
-    return 0;
-}
-
-
 } // extern "C"
 
 namespace {
@@ -1961,6 +1901,66 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
   return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
+// unlike other nPut()-s this one (with double[]) should convert input values to correct type
+#define PUT_ITEM(T, R, C) { T*dst = (T*)me->ptr(R, C); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals)
+{
+    static const char* method_name = JavaOpenCVTrait<jdoubleArray>::put;
+    try {
+        LOGD("%s", method_name);
+        cv::Mat* me = (cv::Mat*) self;
+        if(!me || !me->data) return 0;  // no native object behind
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+
+        int rest = ((me->rows - row) * me->cols - col) * me->channels();
+        if(count>rest) count = rest;
+        int res = count;
+        double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
+        double* src = values;
+        int r, c;
+        for(c=col; c<me->cols && count>0; c++)
+        {
+            switch(me->depth()) {
+                case CV_8U:  PUT_ITEM(uchar,  row, c); break;
+                case CV_8S:  PUT_ITEM(schar,  row, c); break;
+                case CV_16U: PUT_ITEM(ushort, row, c); break;
+                case CV_16S: PUT_ITEM(short,  row, c); break;
+                case CV_32S: PUT_ITEM(int,    row, c); break;
+                case CV_32F: PUT_ITEM(float,  row, c); break;
+                case CV_64F: PUT_ITEM(double, row, c); break;
+            }
+        }
+
+        for(r=row+1; r<me->rows && count>0; r++)
+            for(c=0; c<me->cols && count>0; c++)
+            {
+                switch(me->depth()) {
+                    case CV_8U:  PUT_ITEM(uchar,  r, c); break;
+                    case CV_8S:  PUT_ITEM(schar,  r, c); break;
+                    case CV_16U: PUT_ITEM(ushort, r, c); break;
+                    case CV_16S: PUT_ITEM(short,  r, c); break;
+                    case CV_32S: PUT_ITEM(int,    r, c); break;
+                    case CV_32F: PUT_ITEM(float,  r, c); break;
+                    case CV_64F: PUT_ITEM(double, r, c); break;
+                }
+            }
+
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
 }
 
 } // extern "C"

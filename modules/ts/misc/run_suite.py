@@ -127,7 +127,7 @@ class TestSuite(object):
         exe = os.path.abspath(path)
         if path == "java":
             cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type, "buildAndTest"]
-            ret = execute(cmd, cwd = self.cache.java_test_binary_dir + "/.build")
+            ret = execute(cmd, cwd = self.cache.java_test_dir)
             return None, ret
         elif path in ['python2', 'python3']:
             executable = os.getenv('OPENCV_PYTHON_BINARY', None)
