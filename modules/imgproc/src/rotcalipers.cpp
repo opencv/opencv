@@ -74,7 +74,7 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //                    In case CV_CALIPERS_MINAREARECT
  //                    ((CvPoint2D32f*)out)[0] - corner
  //                    ((CvPoint2D32f*)out)[1] - vector1
- //                    ((CvPoint2D32f*)out)[0] - corner2
+ //                    ((CvPoint2D32f*)out)[2] - vector2
  //
  //                      ^
  //                      |
