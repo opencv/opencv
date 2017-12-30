@@ -78,18 +78,11 @@ extern "C" {
 namespace cv
 {
 
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable:4324) //structure was padded due to __declspec(align())
-#endif
 struct JpegErrorMgr
 {
     struct jpeg_error_mgr pub;
     jmp_buf setjmp_buffer;
 };
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
 
 struct JpegSource
 {

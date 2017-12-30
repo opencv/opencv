@@ -257,11 +257,7 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("INPUT_DEPTH", channels_ / group_);
         addDef("TOTAL_INPUT_DEPTH_SIZE", channels_);
         addDef("TOTAL_OUTPUT_DEPTH", num_output_);
-        addDef("INPUT_START_X", 0);
-        addDef("INPUT_START_Y", 0);
-        addDef("INPUT_START_Z", 0);
         addDef("NUM_FILTERS", M_);
-        addDef("OUT_BUFF_OFFSET", 0);
         addDef("TILE_X", tile_x);
         addDef("TILE_Y", tile_y);
         addDef("TILE_Y_STRIDE", tile_y_stride);
@@ -1331,75 +1327,128 @@ bool OCL4DNNConvSpatial<float>::createConvolutionKernel(int32_t kernelType,
 }
 
 template<>
+void OCL4DNNConvSpatial<float>::generate_gemmlike_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
+                                                             int blockM, int blockK, int blockN)
+{
+    if (group_ != 1 || ((M_ % 8 != 0) || (M_ % 32 == 24)))
+        return;
+
+    if (blockM != 1 && blockM != 2)
+        return;
+
+    if (blockN != 32)
+        return;
+
+    if (blockK != 8 && blockK != 16)
+        return;
+
+    if (blockK == 16)
+    {
+        if ((blockM == 1 && (kernel_w_ > 4)) || M_ % 32 != 0)
+            return;
+        if ((blockM == 2) || M_ % 32 != 0)
+            return;
+    }
+
+    tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, blockM, blockK, blockN));
+}
+
+template<>
+void OCL4DNNConvSpatial<float>::generate_idlf_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
+                                                         int blockM, int blockK, int simd_size)
+{
+    int max_compute_units = ocl::Device::getDefault().maxComputeUnits();
+
+    if (simd_size != 8 && simd_size != 16)
+        return;
+
+    if (simd_size == 8 && !((group_ == 1 || M_ % 8 == 0)))
+        return;
+
+    if (simd_size == 16 && !(group_ == 1 || M_ % 16 == 0))
+        return;
+
+    int width_max, height_max, block_size_max;
+    width_max = 14;
+    height_max = 14;
+    block_size_max = 32;
+
+    if (blockM > width_max)
+        return;
+    if (blockK > height_max)
+        return;
+
+    if (blockM > output_w_)
+        return;
+    if (blockK > output_h_)
+        return;
+
+    // Only when the work items count is less than the device
+    // max work items or the M_ is less than 16, we will tune
+    // for simd 8.
+    if (simd_size == 8 &&  M_ >= 16 &&
+        ((num_ * M_ * output_w_ * output_h_ / static_cast<float>(blockM * blockK)) >=
+        max_compute_units * 7 * 16))
+        return;
+
+    int actual_tile_x = kernel_w_ * dilation_w_ + (blockM - 1) * stride_w_ ;
+    int tile_x = alignSize(actual_tile_x, 4);
+    int tile_y = kernel_h_ * dilation_h_ + (blockK - 1) * stride_h_;
+    if (tile_x > (4 * simd_size))
+        return;
+
+    if ((blockM * blockK + divUp(tile_x * tile_y, simd_size)) > block_size_max)
+        return;
+
+    int tile_y_stride = (4 * simd_size) / tile_x;
+    int invec_size = divUp(tile_y, tile_y_stride);
+    if (invec_size > 4)
+        return;
+
+    tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_INTEL_IDLF, blockM, blockK, simd_size));
+}
+
+template<>
+void OCL4DNNConvSpatial<float>::generate_dwconv_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
+                                                           int blockM, int blockK, int blockN)
+{
+    if (!dwconv_)
+        return;
+
+    tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_DWCONV, blockM, blockK, blockN));
+}
+
+template<>
 void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerParam> > &tunerItems)
 {
     if (ocl::Device::getDefault().intelSubgroupsSupport())
     {
-        //depth_wise kernels
-        if (dwconv_)
+        // depthwise kernel
+        generate_dwconv_tuneritems(tunerItems, 1, 1, 1);
+        if (tunerItems.size() > 0 && group_ > 8)
+            return;
+
+        // gemm like kernel
+        generate_gemmlike_tuneritems(tunerItems, 1, 8, 32);
+        generate_gemmlike_tuneritems(tunerItems, 2, 8, 32);
+        generate_gemmlike_tuneritems(tunerItems, 1, 16, 32);
+        generate_gemmlike_tuneritems(tunerItems, 2, 16, 32);
+
+        // idlf kernel
+        for (int simd_size = 8; simd_size <= 16; simd_size += 8)
         {
-            tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_DWCONV, 1, 1, 1));
-            if (group_ > 8)
-                return;
-        }
-
-        /* IDLF kernels are using Intel specific extension which make
-           them intel only. */
-        // Generates static key_
-        int max_compute_units = ocl::Device::getDefault().maxComputeUnits();
-        int kernelCnt = 0;
-        if (group_ == 1 && ((M_ % 8 == 0) && (M_ % 32 != 24))) {
-            tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, 1, 8, 32));
-            tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, 2, 8, 32));
-
-            if (kernel_w_ < 4 && M_ % 32 == 0)
-                tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, 1, 16, 32));
-        }
-
-        for (int simd_size = 8; simd_size <= 16; simd_size += 8) {
-            if (simd_size == 8 && !((group_ == 1 || M_ % 8 == 0)))
-                continue;
-            if (simd_size == 16 && !(group_ == 1 || M_ % 16 == 0))
-                continue;
-            const int width_max = 14, height_max = 8, block_size_max = 32;
-            for (uint32_t width = width_max; width > 0; width--) {
-                int candidate = 0;
-                if (width > output_w_)
-                    continue;
-                for (uint32_t height = height_max; height > 0; height--) {
-                    if (width * height > block_size_max || height > output_h_)
-                        continue;
-                    // Only when the work items count is less than the device
-                    // max work items or the M_ is less than 16, we will tune
-                    // for simd 8.
-                    if (simd_size == 8 &&
-                        M_ >= 16 &&
-                        ((num_ * M_ * output_w_ * output_h_ / static_cast<float>(width * height)) >=
-                        max_compute_units * 7 * 16))
-                        continue;
-                    int actual_tile_x = kernel_w_ * dilation_w_ + (width - 1) * stride_w_;
-                    int tile_x = alignSize(actual_tile_x, 4);
-                    int tile_y = kernel_h_ * dilation_h_ + (height - 1) * stride_h_;
-                    if (tile_x > (4 * simd_size))
-                        continue;
-                    // If actual_tile_x is multiple of 4, we may waste some IO bandwidth.
-                    // This could reduce 75% tuning candidates. It has slightly performance
-                    // impact for the final tuning result, less than 2% for most cases.
-                    if (actual_tile_x % 4 != 0)
-                        continue;
-                    if ((width * height + divUp(tile_x * tile_y, simd_size)) > block_size_max)
-                        continue;
-                    int tile_y_stride = (4 * simd_size) / tile_x;
-
-                    if (divUp(tile_y, tile_y_stride) < 4) {
-                        tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_INTEL_IDLF, width, height, simd_size));
-                        candidate++;
-                    }
-                    if (candidate >= 4 && height == 2)
+            int width_max, height_max;
+            width_max = 14;
+            height_max = 14;
+            for (uint32_t width = width_max; width > 0; width--)
+            {
+                for (uint32_t height = height_max; height > 0; height--)
+                {
+                    generate_idlf_tuneritems(tunerItems, width, height, simd_size);
+                    if (tunerItems.size() >= 8 && height == 2)
                         break;
                 }
-                kernelCnt += candidate;
-                if (kernelCnt >= 12 && width == 2)
+                if (tunerItems.size() >= 12 && width == 2)
                     break;
             }
         }

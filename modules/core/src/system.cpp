@@ -301,7 +301,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512CD] = "AVX512CD";
         g_hwFeatureNames[CPU_AVX_512DQ] = "AVX512DQ";
         g_hwFeatureNames[CPU_AVX_512ER] = "AVX512ER";
-        g_hwFeatureNames[CPU_AVX_512IFMA512] = "AVX512IFMA";
+        g_hwFeatureNames[CPU_AVX_512IFMA] = "AVX512IFMA";
         g_hwFeatureNames[CPU_AVX_512PF] = "AVX512PF";
         g_hwFeatureNames[CPU_AVX_512VBMI] = "AVX512VBMI";
         g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
@@ -309,6 +309,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_NEON] = "NEON";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
+
+        g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
     }
 
     void initialize(void)
@@ -455,6 +457,11 @@ struct HWFeatures
                 have[CV_CPU_AVX_512PF] = false;
                 have[CV_CPU_AVX_512VBMI] = false;
                 have[CV_CPU_AVX_512VL] = false;
+            }
+
+            if (have[CV_CPU_AVX_512F])
+            {
+                have[CV_CPU_AVX512_SKX] = have[CV_CPU_AVX_512F] & have[CV_CPU_AVX_512CD] & have[CV_CPU_AVX_512BW] & have[CV_CPU_AVX_512DQ] & have[CV_CPU_AVX_512VL];
             }
         }
     #else

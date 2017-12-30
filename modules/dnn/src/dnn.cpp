@@ -367,43 +367,42 @@ public:
         }
     }
 
-    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool force)
+    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst)
     {
+#ifdef REUSE_DNN_MEMORY
         Mat bestBlob;
         LayerPin bestBlobPin;
 
-        if( !force )
+        std::map<LayerPin, Mat>::iterator hostIt;
+        std::map<LayerPin, int>::iterator refIt;
+
+        const int targetTotal = total(shape);
+        int bestBlobTotal = INT_MAX;
+
+        for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
         {
-            std::map<LayerPin, Mat>::iterator hostIt;
-            std::map<LayerPin, int>::iterator refIt;
-
-            const int targetTotal = total(shape);
-            int bestBlobTotal = INT_MAX;
-
-            for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
+            refIt = refCounter.find(hostIt->first);
+            // Use only blobs that had references before because if not,
+            // it might be used as output.
+            if (refIt != refCounter.end() && refIt->second == 0)
             {
-                refIt = refCounter.find(hostIt->first);
-                // Use only blobs that had references before because if not,
-                // it might be used as output.
-                if (refIt != refCounter.end() && refIt->second == 0)
+                Mat& unusedBlob = hostIt->second;
+                if (unusedBlob.total() >= targetTotal &&
+                    unusedBlob.total() < bestBlobTotal)
                 {
-                    Mat& unusedBlob = hostIt->second;
-                    if (unusedBlob.total() >= targetTotal &&
-                        unusedBlob.total() < bestBlobTotal)
-                    {
-                        bestBlobPin = hostIt->first;
-                        bestBlob = unusedBlob;
-                        bestBlobTotal = unusedBlob.total();
-                    }
+                    bestBlobPin = hostIt->first;
+                    bestBlob = unusedBlob;
+                    bestBlobTotal = unusedBlob.total();
                 }
             }
         }
         if (!bestBlob.empty())
         {
             reuse(bestBlobPin, lp);
-            dst = Mat(shape, CV_32F, bestBlob.data);
+            dst = bestBlob.reshape(1, 1).colRange(0, targetTotal).reshape(1, shape);
         }
         else
+#endif  // REUSE_DNN_MEMORY
         {
             // if dst already has been allocated with total(shape) elements,
             // it won't be recrreated and pointer of dst.data remains the same.
@@ -412,34 +411,32 @@ public:
         }
     }
 
-    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, UMat &umat_dst, bool force)
+    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, UMat &umat_dst)
     {
+#ifdef REUSE_DNN_MEMORY
         UMat bestBlob;
         LayerPin bestBlobPin;
 
-        if( !force )
+        std::map<LayerPin, UMat>::iterator hostIt;
+        std::map<LayerPin, int>::iterator refIt;
+
+        const int targetTotal = total(shape);
+        int bestBlobTotal = INT_MAX;
+
+        for (hostIt = umat_memHosts.begin(); hostIt != umat_memHosts.end(); ++hostIt)
         {
-            std::map<LayerPin, UMat>::iterator hostIt;
-            std::map<LayerPin, int>::iterator refIt;
-
-            const int targetTotal = total(shape);
-            int bestBlobTotal = INT_MAX;
-
-            for (hostIt = umat_memHosts.begin(); hostIt != umat_memHosts.end(); ++hostIt)
+            refIt = refCounter.find(hostIt->first);
+            // Use only blobs that had references before because if not,
+            // it might be used as output.
+            if (refIt != refCounter.end() && refIt->second == 0)
             {
-                refIt = refCounter.find(hostIt->first);
-                // Use only blobs that had references before because if not,
-                // it might be used as output.
-                if (refIt != refCounter.end() && refIt->second == 0)
+                UMat& unusedBlob = hostIt->second;
+                if (unusedBlob.total() >= targetTotal &&
+                    unusedBlob.total() < bestBlobTotal)
                 {
-                    UMat& unusedBlob = hostIt->second;
-                    if (unusedBlob.total() >= targetTotal &&
-                        unusedBlob.total() < bestBlobTotal)
-                    {
-                        bestBlobPin = hostIt->first;
-                        bestBlob = unusedBlob;
-                        bestBlobTotal = unusedBlob.total();
-                    }
+                    bestBlobPin = hostIt->first;
+                    bestBlob = unusedBlob;
+                    bestBlobTotal = unusedBlob.total();
                 }
             }
         }
@@ -449,6 +446,7 @@ public:
             umat_dst.create(shape, CV_32F);
         }
         else
+#endif  // REUSE_DNN_MEMORY
         {
             // if dst already has been allocated with total(shape) elements,
             // it won't be recrreated and pointer of dst.data remains the same.
@@ -458,8 +456,7 @@ public:
     }
 
     void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes,
-                               std::vector<LayerPin>& pinsForInternalBlobs,
-                               bool maximizeReuse)
+                               std::vector<LayerPin>& pinsForInternalBlobs)
     {
         CV_TRACE_FUNCTION();
         bool use_umat = (preferableBackend == DNN_BACKEND_DEFAULT &&
@@ -530,7 +527,6 @@ public:
         }
 
         std::map<int, std::vector<int> >::reverse_iterator it;
-        bool force = !maximizeReuse && ld.inputBlobsId.size() > 1;
         for(it = idxSizes.rbegin(); it != idxSizes.rend(); it++)
         {
             for(int j = 0; j < it->second.size(); j++)
@@ -539,7 +535,7 @@ public:
                 if (total(shapes[index]))
                 {
                     LayerPin blobPin(ld.id, index);
-                    if (index < outShapes.size() && inPlace && !force)
+                    if (index < outShapes.size() && inPlace)
                     {
                         if (use_umat)
                         {
@@ -558,9 +554,9 @@ public:
                     else
                     {
                         if (use_umat)
-                            reuseOrCreate(shapes[index], blobPin, *umat_blobs[index], force);
+                            reuseOrCreate(shapes[index], blobPin, *umat_blobs[index]);
                         else
-                            reuseOrCreate(shapes[index], blobPin, *blobs[index], force);
+                            reuseOrCreate(shapes[index], blobPin, *blobs[index]);
                     }
                 }
             }
@@ -1111,8 +1107,7 @@ struct Net::Impl
         CV_Assert(layerShapesIt != layersShapes.end());
 
         std::vector<LayerPin> pinsForInternalBlobs;
-        bool maximizeReuse = preferableBackend == DNN_BACKEND_HALIDE;
-        blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs, maximizeReuse);
+        blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
         for (int i = 0; i < ld.outputBlobs.size(); ++i)
         {
@@ -1123,13 +1118,13 @@ struct Net::Impl
         {
             if (use_umat)
             {
+                std::vector<Mat> input_mats(ld.umat_inputBlobs.size());;
                 std::vector<Mat*> inputs(ld.umat_inputBlobs.size());;
                 std::vector<Mat> outputs(ld.umat_outputBlobs.size());
-                Mat mat;
                 for (int i = 0; i < inputs.size(); i++)
                 {
-                    mat = ld.umat_inputBlobs[i].getMat(ACCESS_READ);
-                    inputs[i] = &mat;
+                    input_mats[i] = ld.umat_inputBlobs[i].getMat(ACCESS_READ);
+                    inputs[i] = &input_mats[i];
                 }
                 for (int i = 0; i < outputs.size(); i++)
                 {
@@ -1398,7 +1393,8 @@ struct Net::Impl
                         LayerPin pin = ld.inputBlobsId[i];
                         LayerData* inp_i_data = &layers[pin.lid];
                         while(inp_i_data->skipFlags[DNN_BACKEND_DEFAULT] &&
-                              inp_i_data->inputBlobsId.size() == 1)
+                              inp_i_data->inputBlobsId.size() == 1 &&
+                              inp_i_data->consumers.size() == 1)
                         {
                             pin = inp_i_data->inputBlobsId[0];
                             inp_i_data = &layers[pin.lid];
@@ -1414,6 +1410,9 @@ struct Net::Impl
 
                     if( i >= ninputs )
                     {
+                        // Allocate new memory to prevent collisions during memory
+                        // reusing (see https://github.com/opencv/opencv/pull/10456).
+                        output = output.clone();
                         Range chrange[] = { Range::all(), Range::all(), Range::all(), Range::all() };
                         int ofs = 0;
                         for( i = 0; i < ninputs; i++ )
@@ -1428,15 +1427,11 @@ struct Net::Impl
                             Mat output_slice = output(chrange);
                             Mat& curr_output = inp_i_data->outputBlobs[pin.oid];
                             CV_Assert(output_slice.isContinuous() && output_slice.size == curr_output.size);
+                            Mat* oldPtr = &curr_output;
                             curr_output = output_slice;
-
-                            pin = ld.inputBlobsId[i];
-                            inp_i_data = &layers[pin.lid];
-                            for (int j = 0; j < inp_i_data->consumers.size(); ++j)
-                            {
-                                LayerPin consumer = inp_i_data->consumers[j];
-                                layers[consumer.lid].inputBlobs[consumer.oid] = &curr_output;
-                            }
+                            // Layers that refer old input Mat will refer to the
+                            // new data but the same Mat object.
+                            CV_Assert(curr_output.data == output_slice.data, oldPtr == &curr_output);
                         }
                         ld.skipFlags[DNN_BACKEND_DEFAULT] = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));

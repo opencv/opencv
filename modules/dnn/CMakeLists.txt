@@ -13,7 +13,7 @@ endif()
 
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
-ocv_add_dispatched_file("layers/layers_common" AVX AVX2)
+ocv_add_dispatched_file("layers/layers_common" AVX AVX2 AVX512_SKX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java js)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninitialized -Wsign-promo
@@ -96,4 +96,9 @@ if(BUILD_PERF_TESTS)
       ocv_target_link_libraries(opencv_perf_dnn caffe)
     endif()
   endif()
+endif()
+
+ocv_option(${the_module}_REUSE_MEMORY "Enable reusing strategy of memory management" ON)
+if (${the_module}_REUSE_MEMORY)
+  add_definitions(-DREUSE_DNN_MEMORY=1)
 endif()

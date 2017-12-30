@@ -165,6 +165,36 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_FMA3(fn, args, mode, ...)  CV_CPU_CALL_FMA3(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX_512F
+#  define CV_TRY_AVX_512F 1
+#  define CV_CPU_HAS_SUPPORT_AVX_512F 1
+#  define CV_CPU_CALL_AVX_512F(fn, args) return (opt_AVX_512F::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX_512F
+#  define CV_TRY_AVX_512F 1
+#  define CV_CPU_HAS_SUPPORT_AVX_512F (cv::checkHardwareSupport(CV_CPU_AVX_512F))
+#  define CV_CPU_CALL_AVX_512F(fn, args) if (CV_CPU_HAS_SUPPORT_AVX_512F) return (opt_AVX_512F::fn args)
+#else
+#  define CV_TRY_AVX_512F 0
+#  define CV_CPU_HAS_SUPPORT_AVX_512F 0
+#  define CV_CPU_CALL_AVX_512F(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX_512F(fn, args, mode, ...)  CV_CPU_CALL_AVX_512F(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_SKX
+#  define CV_TRY_AVX512_SKX 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_SKX 1
+#  define CV_CPU_CALL_AVX512_SKX(fn, args) return (opt_AVX512_SKX::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_SKX
+#  define CV_TRY_AVX512_SKX 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_SKX (cv::checkHardwareSupport(CV_CPU_AVX512_SKX))
+#  define CV_CPU_CALL_AVX512_SKX(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_SKX) return (opt_AVX512_SKX::fn args)
+#else
+#  define CV_TRY_AVX512_SKX 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_SKX 0
+#  define CV_CPU_CALL_AVX512_SKX(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_SKX(fn, args, mode, ...)  CV_CPU_CALL_AVX512_SKX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON
 #  define CV_TRY_NEON 1
 #  define CV_CPU_HAS_SUPPORT_NEON 1

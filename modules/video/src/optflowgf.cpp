@@ -767,7 +767,7 @@ private:
                 {
                     if (!gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]))
                         return false;
-                    resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR_EXACT);
+                    resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR);
                     if (!polynomialExpansionOcl(pyrLevel[i], R[i]))
                         return false;
                 }
@@ -1153,7 +1153,7 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
         }
         else
         {
-            resize( prevFlow, flow, Size(width, height), 0, 0, INTER_LINEAR);
+            resize( prevFlow, flow, Size(width, height), 0, 0, INTER_LINEAR );
             flow *= 1./pyrScale_;
         }
 
@@ -1162,7 +1162,7 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
         {
             img[i]->convertTo(fimg, CV_32F);
             GaussianBlur(fimg, fimg, Size(smooth_sz, smooth_sz), sigma, sigma);
-            resize( fimg, I, Size(width, height), INTER_LINEAR);
+            resize( fimg, I, Size(width, height), INTER_LINEAR );
             FarnebackPolyExp( I, R[i], polyN_, polySigma_ );
         }
 

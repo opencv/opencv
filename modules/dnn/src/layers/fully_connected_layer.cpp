@@ -139,7 +139,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false) {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)
@@ -161,6 +161,7 @@ public:
             p.activ = activ;
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
+            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -195,6 +196,11 @@ public:
 
                 memcpy(sptr, sptr_, vecsize*sizeof(sptr[0]));
 
+            #if CV_TRY_AVX512_SKX
+                if( useAVX512 )
+                    opt_AVX512_SKX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
+                else
+            #endif
             #if CV_TRY_AVX2
                 if( useAVX2 )
                     opt_AVX2::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
@@ -255,6 +261,7 @@ public:
         int nstripes;
         bool useAVX;
         bool useAVX2;
+        bool useAVX512;
     };
 
 #ifdef HAVE_OPENCL

@@ -47,10 +47,6 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
-#ifdef _MSC_VER
-#pragma warning( disable: 4127 ) // conditional expression is constant
-#endif
-
 #if CV_SIMD128
 #define CV_MALLOC_SIMD128 16
 #endif
