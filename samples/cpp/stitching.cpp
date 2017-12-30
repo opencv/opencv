@@ -54,7 +54,7 @@ void printUsage(char** argv)
          "      for stitching materials under affine transformation, such as scans.\n"
          "  --output <result_img>\n"
          "      The default is 'result.jpg'.\n\n"
-         "Example usage :\n" << argv[0] << " --d3 --try_use_gpu yes --mode scans img1.jpg img2.jpg";
+         "Example usage :\n" << argv[0] << " --d3 --try_use_gpu yes --mode scans img1.jpg img2.jpg\n";
 }
 
 
