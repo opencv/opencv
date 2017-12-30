@@ -44,7 +44,7 @@ void printUsage(char** argv)
          "Images stitcher.\n\n" << "Usage :\n" << argv[0] <<" [Flags] img1 img2 [...imgN]\n\n"
          "Flags:\n"
          "  --d3\n"
-         "      internally creates three chunks of each image to increase stitching success"
+         "      internally creates three chunks of each image to increase stitching success\n"
          "  --try_use_gpu (yes|no)\n"
          "      Try to use GPU. The default value is 'no'. All default values\n"
          "      are for CPU mode.\n"
