@@ -1815,7 +1815,7 @@ static std::vector<T> getFixedpointGaussianKernel( int n, double sigma )
 };
 
 template <typename ET, typename FT>
-static void hlineSmooth(ET* src, int cn, FT* m, int n, FT* dst, int len, int borderType)
+void hlineSmooth(ET* src, int cn, FT* m, int n, FT* dst, int len, int borderType)
 {
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
@@ -1868,8 +1868,133 @@ static void hlineSmooth(ET* src, int cn, FT* m, int n, FT* dst, int len, int bor
             }
     }
 }
+template <>
+void hlineSmooth<uint8_t, ufixedpoint16>(uint8_t* src, int cn, ufixedpoint16* m, int n, ufixedpoint16* dst, int len, int borderType)
+{
+    if (n == 1)
+    {
+        CV_Assert((m[0] - ufixedpoint16::one()).isZero()); //Assert that there actually is no smoothing
+        int i = 0;
+        for (; i < len*cn - 15; i += 16)
+        {
+            v_uint8x16 v_src = v_load(src + i);
+            v_uint16x8 v_tmp0, v_tmp1;
+            v_expand(v_src, v_tmp0, v_tmp1);
+            v_store((uint16_t*)dst+i, v_shl<8>(v_tmp0));
+            v_store((uint16_t*)dst+i+8, v_shl<8>(v_tmp1));
+        }
+        if(i < len*cn - 7)
+        {
+            v_uint16x8 v_src = v_load_expand(src + i);
+            v_store((uint16_t*)dst+i, v_shl<8>(v_src));
+            i += 8;
+        }
+        for (; i < len*cn; i++)
+            dst[i] = src[i];
+    }
+    else
+    {
+        int pre_shift = n / 2;
+        int post_shift = n - pre_shift;
+        int i = 0;
+        for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+        {
+            for (int k = 0; k < cn; k++)
+                dst[k] = m[pre_shift - i] * src[k];
+            if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+                for (int j = i - pre_shift, mid = 0; j < 0; j++, mid++)
+                {
+                    int src_idx = borderInterpolate(j, len, borderType);
+                    for (int k = 0; k < cn; k++)
+                        dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+                }
+            int j, mid;
+            for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[j*cn + k];
+            if (borderType != BORDER_CONSTANT)
+                for (; j < i + post_shift; j++, mid++)
+                {
+                    int src_idx = borderInterpolate(j, len, borderType);
+                    for (int k = 0; k < cn; k++)
+                        dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+                }
+        }
+        i *= cn;
+        int lencn = (len - post_shift + 1)*cn;
+        for (; i < lencn - 15; i+=16, src+=16, dst+=16)
+        {
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11;
+            v_int16x8 v_tmp0, v_tmp1;
+
+            v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+
+            v_expand(v_load(src), v_src00, v_src01);
+            v_expand(v_load(src+cn), v_src10, v_src11);
+            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
+            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
+            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul);
+            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul);
+
+            int j = 2;
+            for (; j < n - 1; j += 2)
+            {
+                v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + j))));
+
+                v_expand(v_load(src + j * cn), v_src00, v_src01);
+                v_expand(v_load(src + (j + 1) * cn), v_src10, v_src11);
+                v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+                v_res0 += v_dotprod(v_tmp0, v_mul);
+                v_res1 += v_dotprod(v_tmp1, v_mul);
+                v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+                v_res2 += v_dotprod(v_tmp0, v_mul);
+                v_res3 += v_dotprod(v_tmp1, v_mul);
+            }
+            if (j < n)
+            {
+                v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
+                v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
+                v_expand(v_load(src + j * cn), v_src00, v_src01);
+                v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul, v_resj0, v_resj1);
+                v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul, v_resj2, v_resj3);
+                v_res0 += v_resj0;
+                v_res1 += v_resj1;
+                v_res2 += v_resj2;
+                v_res3 += v_resj3;
+            }
+
+            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
+            v_store((uint16_t*)dst+8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+        }
+        for (; i < lencn; i++, src++, dst++)
+        {
+                *dst = m[0] * src[0];
+                for (int j = 1; j < n; j++)
+                    *dst = *dst + m[j] * src[j*cn];
+        }
+        i /= cn;
+        for (i -= pre_shift; i < len - pre_shift; i++, src += cn, dst += cn) // Points that fall right from border
+        {
+            for (int k = 0; k < cn; k++)
+                dst[k] = m[0] * src[k];
+            int j = 1;
+            for (; j < len - i; j++)
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[j] * src[j*cn + k];
+            if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+                for (; j < n; j++)
+                {
+                    int src_idx = borderInterpolate(i + j, len, borderType) - i;
+                    for (int k = 0; k < cn; k++)
+                        dst[k] = dst[k] + m[j] * src[src_idx*cn + k];
+                }
+        }
+    }
+}
 template <typename ET, typename FT>
-static void vlineSmooth(FT** src, FT* m, int n, ET* dst, int len)
+void vlineSmooth(FT** src, FT* m, int n, ET* dst, int len)
 {
     for (int i = 0; i < len; i++)
     {
@@ -1877,6 +2002,100 @@ static void vlineSmooth(FT** src, FT* m, int n, ET* dst, int len)
         for (int j = 1; j < n; j++)
             val = val + m[j] * src[j][i];
         dst[i] = val;
+    }
+}
+template <>
+void vlineSmooth<uint8_t, ufixedpoint16>(ufixedpoint16** src, ufixedpoint16* m, int n, uint8_t* dst, int len)
+{
+    if (n == 1)
+    {
+        ufixedpoint16* src0 = src[0];
+        if((m[0] - ufixedpoint16::one()).isZero())
+        {
+            int i = 0;
+            for (; i < len-7; i+=8)
+                v_rshr_pack_store<8>(dst + i, v_load((uint16_t*)(src0 + i)));
+            for (; i < len; i++)
+                dst[i] = src0[i];
+        }
+        else
+        {
+            v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
+            int i = 0;
+            for (; i < len - 7; i += 8)
+            {
+                v_uint16x8 v_src0 = v_load((uint16_t*)src0 + i);
+                v_uint32x4 v_res0, v_res1;
+                v_mul_expand(v_src0, v_mul, v_res0, v_res1);
+                v_pack_store(dst + i, v_rshr_pack<16>(v_res0, v_res1));
+            }
+            for (; i < len; i++)
+                dst[i] = m[0] * src0[i];
+        }
+    }
+    else
+    {
+        static const v_int16x8 v_128 = v_reinterpret_as_s16(v_setall_u16((uint16_t)1 << 15));
+
+        v_int32x4 v_128_4 = v_setall_s32(128 << 16);
+        if (len > 7)
+        {
+            ufixedpoint16 msum = m[0] + m[1];
+            for (int j = 2; j < n; j++)
+                msum = msum + m[j];
+            ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
+            v_128_4 = v_setall_s32(*((int32_t*)val));
+        }
+
+        int i = 0;
+        for (; i < len - 7; i += 8)
+        {
+            v_int16x8 v_src0, v_src1;
+            v_int16x8 v_tmp0, v_tmp1;
+
+            v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+
+            v_src0 = v_load((int16_t*)(src[0]) + i);
+            v_src1 = v_load((int16_t*)(src[1]) + i);
+            v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
+            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
+
+            int j = 2;
+            for (; j < n - 1; j+=2)
+            {
+                v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m+j))));
+
+                v_src0 = v_load((int16_t*)(src[j]) + i);
+                v_src1 = v_load((int16_t*)(src[j+1]) + i);
+                v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+                v_res0 += v_dotprod(v_tmp0, v_mul);
+                v_res1 += v_dotprod(v_tmp1, v_mul);
+            }
+            if(j < n)
+            {
+                v_int32x4 v_resj0, v_resj1;
+                v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
+                v_src0 = v_load((int16_t*)(src[j]) + i);
+                v_mul_expand(v_add_wrap(v_src0, v_128), v_mul, v_resj0, v_resj1);
+                v_res0 += v_resj0;
+                v_res1 += v_resj1;
+            }
+            v_res0 += v_128_4;
+            v_res1 += v_128_4;
+
+            v_uint16x8 v_res = v_reinterpret_as_u16(v_rshr_pack<16>(v_res0, v_res1));
+            v_pack_store(dst + i, v_res);
+        }
+        for (; i < len; i++)
+        {
+            ufixedpoint32 val = m[0] * src[0][i];
+            for (int j = 1; j < n; j++)
+            {
+                val = val + m[j] * src[j][i];
+            }
+            dst[i] = val;
+        }
     }
 }
 template <typename ET, typename FT>

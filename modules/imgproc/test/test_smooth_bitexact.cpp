@@ -35,7 +35,7 @@ namespace
         {
             int64_t lineval = 0;
             for (size_t i = 0; i < kernelx.size(); i++)
-                lineval += src.at<T>(j, i) * kernelx[i];
+                lineval += src.at<T>((int)j, (int)i) * kernelx[i];
             val += lineval * kernely[j];
         }
         return saturate_cast<T>((val + fixedRound) >> (fixedShift * 2));
