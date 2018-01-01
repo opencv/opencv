@@ -171,6 +171,118 @@ OCL_TEST_P(HoughLinesP, RealImage)
     Near(0.25);
 }
 
+//////////////////////// HoughLinesUsingSetOfPoints ///////////////////////////
+PARAM_TEST_CASE(HoughLinesUsingSetOfPoints, int, double, double, double, double, int)
+{
+    int point_cnt, polar_cnt;
+    Point2f *point = NULL;
+    HoughLinePolar *hough_polar = NULL;
+    HoughDetectParam rho_param, theta_param;
+
+    Size src_size;
+    Mat src, dst;
+    UMat usrc, udst;
+
+    virtual void SetUp()
+    {
+        point_cnt = GET_PARAM(0);
+        rho_param.min = GET_PARAM(1);
+        rho_param.max = GET_PARAM(2);
+        rho_param.step = (rho_param.max - rho_param.min) / 180.0f;
+        theta_param.min = GET_PARAM(3);
+        theta_param.max = GET_PARAM(4);
+        theta_param.step = (theta_param.max - theta_param.min) / 256.0f;
+        polar_cnt = GET_PARAM(5);
+    }
+
+    void detectEdge()
+    {
+        float edge = 0.0f;
+        int point_cnt_temp = 0;
+        Point2f *point_work = point;
+        for (int y = 0; y < src.rows; y++)
+        {
+            for (int x = 0; x < src.cols; x++)
+            {
+                edge = src.at<float>(y, x);
+                if ((point_cnt_temp < point_cnt) && (edge > 150))
+                {
+                    point_work->x = (float)x;
+                    point_work->y = (float)y;
+                    point_cnt_temp++;
+                    // Pointer increment
+                    point_work++;
+                }
+            }
+        }
+    }
+
+    void mallocPoints()
+    {
+        if (point_cnt > 0)
+        {
+            point = (Point2f*)fastMalloc(sizeof(Point2f) * point_cnt);
+        }
+        else
+        {
+            point = NULL;
+        }
+    }
+
+    void freePoints()
+    {
+        if (point != NULL)
+        {
+            fastFree(point);
+        }
+    }
+
+    void mallocHoughPolar()
+    {
+        if (polar_cnt > 0)
+        {
+            hough_polar = (HoughLinePolar*)fastMalloc(sizeof(HoughLinePolar) * polar_cnt);
+        }
+        else
+        {
+            hough_polar = NULL;
+        }
+    }
+
+    void freeHoughPolar()
+    {
+        if (hough_polar != NULL)
+        {
+            fastFree(hough_polar);
+        }
+    }
+
+    void readTestData()
+    {
+        Mat img = readImage("shared/pic5.png", IMREAD_GRAYSCALE);
+        Canny(img, src, 50, 200, 3);
+        src.copyTo(usrc);
+    }
+};
+
+OCL_TEST_P(HoughLinesUsingSetOfPoints, RealImage)
+{
+    readTestData();
+
+    mallocPoints();
+
+    mallocHoughPolar();
+
+    detectEdge();
+
+    OCL_OFF(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
+    OCL_ON(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
+
+
+    freePoints();
+    freeHoughPolar();
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
                                                          Values(CV_PI / 180.0, CV_PI / 360.0),  // thetaStep
                                                          Values(80, 150)));                     // threshold
@@ -178,6 +290,14 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),        
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesP, Combine(Values(100, 150),                     // threshold
                                                           Values(50, 100),                      // minLineLength
                                                           Values(5, 10)));                      // maxLineGap
+
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesUsingSetOfPoints, Combine(Values(256, 512),               // pointCnt
+                                                                         Values(0.0f, 0.0f),             // rhoMin
+                                                                         Values(180.0f, 320.0f),         // rhoMax
+                                                                         Values(0, 0),                   // thetaMin
+                                                                         Values(CV_PI / 2.0f, CV_PI),    // thetaMax
+                                                                         Values(10, 20)));               // polarCnt
+
 
 } } // namespace cvtest::ocl
 

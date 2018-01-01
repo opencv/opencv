@@ -140,6 +140,37 @@ public:
     }
 };
 
+typedef std::tr1::tuple<double, double, double, double, int> HoughLinesUsingSetOfPointsInput_t;
+class HoughLinesUsingSetOfPointsTest : public testing::TestWithParam<HoughLinesUsingSetOfPointsInput_t>
+{
+protected:
+    void run_test();
+    double Rho;
+    double Theta;
+    int polarCnt;
+    HoughDetectParam paramRho, paramTheta;
+    HoughLinePolar *houghPolar;
+public:
+    HoughLinesUsingSetOfPointsTest()
+    {
+        paramRho.min = std::tr1::get<0>(GetParam());
+        paramRho.max = std::tr1::get<1>(GetParam());
+        paramRho.step = (paramRho.max - paramRho.min) / 180.0f;
+        paramTheta.min = std::tr1::get<2>(GetParam());
+        paramTheta.max = std::tr1::get<3>(GetParam());
+        paramTheta.step = (paramTheta.max - paramTheta.min) / 256.0f;
+        polarCnt = std::tr1::get<4>(GetParam());
+        houghPolar = (HoughLinePolar*)fastMalloc(sizeof(HoughLinePolar) * polarCnt);
+        Rho = 320.0f;
+        Theta = 1.047198f;
+    }
+
+    ~HoughLinesUsingSetOfPointsTest()
+    {
+        fastFree(houghPolar);
+    }
+};
+
 void BaseHoughLineTest::run_test(int type)
 {
     string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
@@ -196,6 +227,30 @@ void BaseHoughLineTest::run_test(int type)
 #endif
 }
 
+void HoughLinesUsingSetOfPointsTest::run_test(void)
+{
+    static const float Points[20][2] = {
+    { 0.0f,   369.50417f }, { 10.0f,  363.73067f }, { 20.0f,  357.95717f }, { 30.0f,  352.18366f },
+    { 40.0f,  346.41016f }, { 50.0f,  340.63666f }, { 60.0f,  334.86316f }, { 70.0f,  329.08965f },
+    { 80.0f,  323.31615f }, { 90.0f,  317.54265f }, { 100.0f, 311.76915f }, { 110.0f, 305.99564f },
+    { 120.0f, 300.22214f }, { 130.0f, 294.44864f }, { 140.0f, 288.67514f }, { 150.0f, 282.90163f },
+    { 160.0f, 277.12813f }, { 170.0f, 271.35463f }, { 180.0f, 265.58112f }, { 190.0f, 259.80762f }
+    };
+
+    Point2f point[20];
+    int polar_index = 0;
+    for (int i = 0; i < 20; i++)
+    {
+        point[i].x = Points[i][0];
+        point[i].y = Points[i][1];
+    }
+
+    polar_index = HoughLinesUsingSetOfPoints(20, point, &paramRho, &paramTheta, polarCnt, houghPolar);
+
+    EXPECT_EQ((int) ((houghPolar + polar_index)->rho * 10.0f), (int) (Rho * 10.0f));
+    EXPECT_EQ((int) ((houghPolar + polar_index)->angle * 100000.0f), (int) (Theta * 100000.0f));
+}
+
 TEST_P(StandartHoughLinesTest, regression)
 {
     run_test(STANDART);
@@ -204,6 +259,11 @@ TEST_P(StandartHoughLinesTest, regression)
 TEST_P(ProbabilisticHoughLinesTest, regression)
 {
     run_test(PROBABILISTIC);
+}
+
+TEST_P(HoughLinesUsingSetOfPointsTest, regression)
+{
+    run_test();
 }
 
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
@@ -219,3 +279,10 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 10 ),
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
+
+INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 0.0f ),             // rhoMin
+                                                                                   testing::Values( 320.0f, 480.0f ),         // rhoMax
+                                                                                   testing::Values( 0, 0 ),                   // thetaMin
+                                                                                   testing::Values( (CV_PI / 2.0f), CV_PI ),  // thetaMax
+                                                                                   testing::Values( 10, 20 )                  // polarCnt
+                                                                                   ));
