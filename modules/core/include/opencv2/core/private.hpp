@@ -327,6 +327,7 @@ static inline IppDataType ippiGetDataType(int depth)
         depth == CV_16U ? ipp16u :
         depth == CV_16S ? ipp16s :
         depth == CV_32S ? ipp32s :
+        depth == CV_16F ? ipp16s :
         depth == CV_32F ? ipp32f :
         depth == CV_64F ? ipp64f :
         (IppDataType)-1;

@@ -585,6 +585,9 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
         case CV_32S:
             inRange_((const int*)sptr, (const int*)aptr, (const int*)bptr, dptr, total, cn);
             break;
+            case CV_16F:
+                inRange_((const float16*)sptr, (const float16*)aptr, (const float16*)bptr, dptr, total, cn);
+                break;
         case CV_32F:
             inRange_((const float*)sptr, (const float*)aptr, (const float*)bptr, dptr, total, cn);
             break;
@@ -755,7 +758,7 @@ struct ConvertScaleFp16Op : public BaseElemWiseOp
     {
         // 0: FP32 -> FP16 -> FP32
         // 1: FP16 -> FP32 -> FP16
-        int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16S;
+        int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16F;
         return srctype;
     }
     void getValueRange(int, double& minval, double& maxval)

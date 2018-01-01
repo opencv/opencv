@@ -73,6 +73,7 @@ typedef signed char schar;
 #define CV_16U  2
 #define CV_16S  3
 #define CV_32S  4
+#define CV_16F  7
 #define CV_32F  5
 #define CV_64F  6
 #define CV_USRTYPE1 7
@@ -124,6 +125,13 @@ typedef signed char schar;
 #define CV_64FC3 CV_MAKETYPE(CV_64F,3)
 #define CV_64FC4 CV_MAKETYPE(CV_64F,4)
 #define CV_64FC(n) CV_MAKETYPE(CV_64F,(n))
+
+#define CV_16FC1 CV_MAKETYPE(CV_16F, 1)
+#define CV_16FC2 CV_MAKETYPE(CV_16F, 2)
+#define CV_16FC3 CV_MAKETYPE(CV_16F, 3)
+#define CV_16FC4 CV_MAKETYPE(CV_16F, 4)
+#define CV_16FC(n) CV_MAKETYPE(CV_16F, (n))
+
 //! @}
 
 //! @name Comparison operation

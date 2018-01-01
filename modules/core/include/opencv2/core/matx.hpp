@@ -212,43 +212,26 @@ public:
     _Tp val[m*n]; //< matrix elements
 };
 
-typedef Matx<float, 1, 2> Matx12f;
-typedef Matx<double, 1, 2> Matx12d;
-typedef Matx<float, 1, 3> Matx13f;
-typedef Matx<double, 1, 3> Matx13d;
-typedef Matx<float, 1, 4> Matx14f;
-typedef Matx<double, 1, 4> Matx14d;
-typedef Matx<float, 1, 6> Matx16f;
-typedef Matx<double, 1, 6> Matx16d;
+#define MATX_TYPEDEF(dim1, dim2) \
+        typedef Matx<float16, dim1, dim2> Matx##dim1##dim2##h; \
+    typedef Matx<float, dim1, dim2> Matx##dim1##dim2##f; \
+    typedef Matx<double, dim1, dim2> Matx##dim1##dim2##d
 
-typedef Matx<float, 2, 1> Matx21f;
-typedef Matx<double, 2, 1> Matx21d;
-typedef Matx<float, 3, 1> Matx31f;
-typedef Matx<double, 3, 1> Matx31d;
-typedef Matx<float, 4, 1> Matx41f;
-typedef Matx<double, 4, 1> Matx41d;
-typedef Matx<float, 6, 1> Matx61f;
-typedef Matx<double, 6, 1> Matx61d;
-
-typedef Matx<float, 2, 2> Matx22f;
-typedef Matx<double, 2, 2> Matx22d;
-typedef Matx<float, 2, 3> Matx23f;
-typedef Matx<double, 2, 3> Matx23d;
-typedef Matx<float, 3, 2> Matx32f;
-typedef Matx<double, 3, 2> Matx32d;
-
-typedef Matx<float, 3, 3> Matx33f;
-typedef Matx<double, 3, 3> Matx33d;
-
-typedef Matx<float, 3, 4> Matx34f;
-typedef Matx<double, 3, 4> Matx34d;
-typedef Matx<float, 4, 3> Matx43f;
-typedef Matx<double, 4, 3> Matx43d;
-
-typedef Matx<float, 4, 4> Matx44f;
-typedef Matx<double, 4, 4> Matx44d;
-typedef Matx<float, 6, 6> Matx66f;
-typedef Matx<double, 6, 6> Matx66d;
+    MATX_TYPEDEF(1,2);
+    MATX_TYPEDEF(1,3);
+    MATX_TYPEDEF(1,6);
+    MATX_TYPEDEF(2,1);
+    MATX_TYPEDEF(3,1);
+    MATX_TYPEDEF(4,1);
+    MATX_TYPEDEF(6,1);
+    MATX_TYPEDEF(2,2);
+    MATX_TYPEDEF(2,3);
+    MATX_TYPEDEF(3,2);
+    MATX_TYPEDEF(3,3);
+    MATX_TYPEDEF(3,4);
+    MATX_TYPEDEF(4,3);
+    MATX_TYPEDEF(4,4);
+    MATX_TYPEDEF(6,6);
 
 /*!
   traits
@@ -415,6 +398,10 @@ typedef Vec<int, 3> Vec3i;
 typedef Vec<int, 4> Vec4i;
 typedef Vec<int, 6> Vec6i;
 typedef Vec<int, 8> Vec8i;
+typedef Vec<float16, 2> Vec2h;
+typedef Vec<float16, 3> Vec3h;
+typedef Vec<float16, 4> Vec4h;
+typedef Vec<float16, 6> Vec6h;
 
 typedef Vec<float, 2> Vec2f;
 typedef Vec<float, 3> Vec3f;

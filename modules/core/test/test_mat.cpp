@@ -78,6 +78,7 @@ void getMatTypeStr( int type, string& str)
     type == CV_16UC1 ? "CV_16UC1" :
     type == CV_16SC1 ? "CV_16SC1" :
     type == CV_32SC1 ? "CV_32SC1" :
+    type == CV_16FC1 ? "CV_16FC1" :
     type == CV_32FC1 ? "CV_32FC1" :
     type == CV_64FC1 ? "CV_64FC1" : "unsupported matrix type";
 }
@@ -989,8 +990,8 @@ int calcDiffElemCount(const vector<Mat>& mv, const Mat& m)
         return calcDiffElemCountImpl<short int>(mv, m);
     case CV_32S:
         return calcDiffElemCountImpl<int>(mv, m);
-    case CV_32F:
-        return calcDiffElemCountImpl<float>(mv, m);
+        case CV_16F:
+            return calcDiffElemCountImpl<float16>(mv, m);
     case CV_64F:
         return calcDiffElemCountImpl<double>(mv, m);
     }
@@ -1029,6 +1030,9 @@ protected:
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_32S, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_16F, mvSize, mSize, rng);
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_32F, mvSize, mSize, rng);
@@ -1179,6 +1183,8 @@ TEST(Core_IOArray, submat_assignment)
 
 void OutputArray_create1(OutputArray m) { m.create(1, 2, CV_32S); }
 void OutputArray_create2(OutputArray m) { m.create(1, 3, CV_32F); }
+void OutputArray_create3(OutputArray m) { m.create(1, 3, CV_16F); }
+
 
 TEST(Core_IOArray, submat_create)
 {
@@ -1186,6 +1192,7 @@ TEST(Core_IOArray, submat_create)
 
     EXPECT_THROW( OutputArray_create1(A.row(0)), cv::Exception );
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
+    EXPECT_THROW( OutputArray_create3(A.row(0)), cv::Exception );
 }
 
 TEST(Core_Mat, issue4457_pass_null_ptr)

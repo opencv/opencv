@@ -87,6 +87,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #undef abs
 #undef Complex
 
+#include <new>
 #include <limits.h>
 #include "opencv2/core/hal/interface.h"
 
@@ -209,25 +210,29 @@ enum CpuFeatures {
 
 #if defined __ARM_FP16_FORMAT_IEEE \
     && !defined __CUDACC__
+typedef __fp16 half;
 #  define CV_FP16_TYPE 1
 #else
 #  define CV_FP16_TYPE 0
 #endif
 
-typedef union Cv16suf
+union Cv16suf
 {
     short i;
+    unsigned short u;
 #if CV_FP16_TYPE
     __fp16 h;
 #endif
+#ifdef  __CUDA_FP16_H__
+    __half  hf;
+#endif  
     struct _fp16Format
     {
         unsigned int significand : 10;
         unsigned int exponent    : 5;
         unsigned int sign        : 1;
     } fmt;
-}
-Cv16suf;
+};
 
 typedef union Cv32suf
 {
@@ -366,7 +371,7 @@ Cv64suf;
 \****************************************************************************************/
 
 #ifdef CV_XADD
-  // allow to use user-defined macro
+// allow to use user-defined macro
 #elif defined __GNUC__ || defined __clang__
 #  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
 #    ifdef __ATOMIC_ACQ_REL
@@ -376,7 +381,7 @@ Cv64suf;
 #    endif
 #  else
 #    if defined __ATOMIC_ACQ_REL && !defined __clang__
-       // version for gcc >= 4.7
+// version for gcc >= 4.7
 #      define CV_XADD(addr, delta) (int)__atomic_fetch_add((unsigned*)(addr), (unsigned)(delta), __ATOMIC_ACQ_REL)
 #    else
 #      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
@@ -452,6 +457,27 @@ Cv64suf;
 #  endif
 #endif
 
+namespace cv {
+// This is a placeholer for upcoming "short float"
+#if CV_FP16_TYPE
+   typedef __fp16 float16;
+#else
+struct CV_EXPORTS float16 {
+        float16() {}
+
+        explicit float16(float x);
+
+        float16 &operator=(float x) {
+            new(this) float16(x);
+            return *this;
+        }
+
+        operator float() const;
+
+        unsigned short u;
+    };
+#endif
+}
 //! @}
 
 #endif // OPENCV_CORE_CVDEF_H

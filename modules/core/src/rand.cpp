@@ -47,6 +47,7 @@
 // */
 
 #include "precomp.hpp"
+#include "convert.hpp"
 
 #if defined _WIN32 || defined WINCE
     #include <windows.h>
@@ -293,6 +294,13 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
     *state = temp;
 }
 
+static void randf_16f( float16* arr, int len, uint64* state, const Vec2h* p, bool b)
+{
+    Vec2f fp;
+    std::vector<float> farr(len);
+    randf_32f(&farr[0], len, state, &fp, b);
+    std::copy(farr.begin(), farr.end(), arr);
+}
 
 static void
 randf_64f( double* arr, int len, uint64* state, const Vec2d* p, bool )
@@ -339,7 +347,7 @@ static RandFunc randTab[][8] =
 {
     {
         (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u, (RandFunc)randi_16s,
-        (RandFunc)randi_32s, (RandFunc)randf_32f, (RandFunc)randf_64f, 0
+        (RandFunc)randi_32s, (RandFunc)randf_32f, (RandFunc)randf_64f, (RandFunc)randf_16f
     },
     {
         (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u, (RandFunc)randBits_16s,
