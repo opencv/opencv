@@ -198,10 +198,10 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                     assert(planes[2].getPixelStride() == 2);
 
                     ByteBuffer y_plane = planes[0].getBuffer();
-                    // FIXME: need new Mat constructor that can take separate y and uv planes
-                    // ByteBuffer uv_plane = planes[1].getBuffer();
-                    Mat yuv = new Mat( h * 3/2, w, CvType.CV_8UC1, y_plane );
-                    JavaCamera2Frame tempFrame = new JavaCamera2Frame(yuv,w,h);
+                    ByteBuffer uv_plane = planes[1].getBuffer();
+                    Mat y_mat = new Mat( h, w, CvType.CV_8UC1, y_plane );
+                    Mat uv_mat = new Mat( h/2, w, CvType.CV_8UC1, uv_plane );
+                    JavaCamera2Frame tempFrame = new JavaCamera2Frame(y_mat,uv_mat,w,h);
                     deliverAndDrawFrame(tempFrame);
                     tempFrame.release();
                     image.close();
@@ -349,11 +349,15 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
         @Override
         public Mat rgba() {
-            if ((mPreviewFormat == ImageFormat.NV21) || (mPreviewFormat == ImageFormat.YUV_420_888))
+            if (mPreviewFormat == ImageFormat.NV21)
                 Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
             else if (mPreviewFormat == ImageFormat.YV12)
                 Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4);  // COLOR_YUV2RGBA_YV12 produces inverted colors
-            else
+            else if (mPreviewFormat == ImageFormat.YUV_420_888) {
+                assert(mUVFrameData != null);
+                // FIXME: needs a C wrapper around cvtTwoPlaneYUVtoBGR
+                //Imgproc.cvtTwoPlaneYUVtoBGR(mYuvFrameData,mUVFrameData,1,mRgba,1,w,h,0,0,0);
+            } else
                 throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
 
             return mRgba;
@@ -364,6 +368,16 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             mWidth = width;
             mHeight = height;
             mYuvFrameData = Yuv420sp;
+            mUVFrameData = null;
+            mRgba = new Mat();
+        }
+
+        public JavaCamera2Frame(Mat Y, Mat UV, int width, int height) {
+            super();
+            mWidth = width;
+            mHeight = height;
+            mYuvFrameData = Y;
+            mUVFrameData = UV;
             mRgba = new Mat();
         }
 
@@ -372,6 +386,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         }
 
         private Mat mYuvFrameData;
+        private Mat mUVFrameData;
         private Mat mRgba;
         private int mWidth;
         private int mHeight;
