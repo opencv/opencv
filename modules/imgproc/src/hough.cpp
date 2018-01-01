@@ -1573,7 +1573,7 @@ static int SelectHoughPeak( const short *plane,
                             const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
                             int polar_cnt, HoughLinePolar hough_polar[] )
 {
-	int ret = 0;
+    int ret = 0;
     short votes = 0, max_votes = 0;
     long cnt = 0;
     int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
@@ -1591,7 +1591,7 @@ static int SelectHoughPeak( const short *plane,
                 hough_polar[cnt].angle = _TO_RADIAN_OF(deg) * theta_param->step + theta_param->min;
                 hough_polar[cnt].rho = (double)rho * rho_param->step + rho_param->min;
                 max_votes = votes;
-				ret = cnt;
+                ret = cnt;
                 cnt++ ;
                 if( cnt >= polar_cnt ){ cnt = 0; }
             }
@@ -1602,14 +1602,14 @@ static int SelectHoughPeak( const short *plane,
         }
     }
 
-	return ret;
+    return ret;
 }
 
 int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                                  const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
                                  int polar_cnt, HoughLinePolar hough_polar[] )
 {
-	int ret = 0;
+    int ret = 0;
     if( polar_cnt > 0)
     {
         // Init output data
@@ -1634,7 +1634,7 @@ int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                               rho_param, theta_param,
                               plane );
 
-			ret = SelectHoughPeak( plane,
+            ret = SelectHoughPeak( plane,
                                    rho_param, theta_param,
                                    polar_cnt, hough_polar );
 
@@ -1649,7 +1649,7 @@ int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
     {
         CV_Error( Error::StsBadArg, "peak_cnt must be greater than 0" );
     }
-	return ret;
+    return ret;
 }
 } // \namespace cv
 
