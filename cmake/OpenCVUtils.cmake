@@ -667,6 +667,21 @@ macro(ocv_list_filterout lst regex)
   endforeach()
 endmacro()
 
+# filter matching elements from the list
+macro(ocv_list_filter lst regex)
+  set(dst ${ARGN})
+  if(NOT dst)
+    set(dst ${lst})
+  endif()
+  set(__result ${${lst}})
+  foreach(item ${__result})
+    if(NOT item MATCHES "${regex}")
+      list(REMOVE_ITEM __result "${item}")
+    endif()
+  endforeach()
+  set(${dst} ${__result})
+endmacro()
+
 
 # stable & safe duplicates removal macro
 macro(ocv_list_unique __lst)
