@@ -30,9 +30,9 @@ public class MatOfByte extends Mat {
         //FIXME: do we need release() here?
     }
 
-    public MatOfByte(byte...a) {
+    public MatOfByte(int offset, int length, byte...a) {
         super();
-        fromArray(a);
+        fromArray(offset, length, a);
     }
 
     public void alloc(int elemNumber) {
@@ -40,12 +40,12 @@ public class MatOfByte extends Mat {
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
     }
 
-    public void fromArray(byte...a) {
-        if(a==null || a.length==0)
+    public void fromArray(int offset, int length, byte...a) {
+        if(a==null || a.length==0 || a.length - (length + offset) < 0)
             return;
-        int num = a.length / _channels;
+        int num = length / _channels;
         alloc(num);
-        put(0, 0, a); //TODO: check ret val!
+        put(0, 0, a, offset, length); //TODO: check ret val!
     }
 
     public byte[] toArray() {
@@ -66,7 +66,7 @@ public class MatOfByte extends Mat {
         byte a[] = new byte[ab.length];
         for(int i=0; i<ab.length; i++)
             a[i] = ab[i];
-        fromArray(a);
+        fromArray(0, a.length, a);
     }
 
     public List<Byte> toList() {

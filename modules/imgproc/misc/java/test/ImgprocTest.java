@@ -2086,7 +2086,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         assertMatEqual(new Mat(matSize, matSize, CvType.CV_8U) {
             {
-                put(0, 0, truth);
+                put(0, 0, truth, 0, truth.length);
             }
         }, gray0);
     }

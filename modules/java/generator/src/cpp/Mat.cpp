@@ -1863,7 +1863,7 @@ namespace {
 #undef JOCvT
 }
 
-template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, char* buff)
+template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, int offset, char* buff)
 {
     if(! m) return 0;
     if(! buff) return 0;
@@ -1875,14 +1875,14 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
 
     if( m->isContinuous() )
     {
-        memcpy(m->ptr(row, col), buff, count);
+        memcpy(m->ptr(row, col), buff + offset, count);
     } else {
         // row by row
         int num = (m->cols - col) * (int)m->elemSize(); // 1st partial row
         if(count<num) num = count;
         uchar* data = m->ptr(row++, col);
         while(count>0){
-            memcpy(data, buff, num);
+            memcpy(data, buff + offset, num);
             count -= num;
             buff += num;
             num = m->cols * (int)m->elemSize();
@@ -1893,7 +1893,7 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
     return res;
 }
 
-template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, ARRAY vals)
+template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, jint offset, ARRAY vals)
 {
     static const char *method_name = JavaOpenCVTrait<ARRAY>::put;
     try {
@@ -1904,7 +1904,7 @@ template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row
         if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-        int res = mat_put<typename JavaOpenCVTrait<ARRAY>::value_type>(me, row, col, count, values);
+        int res = mat_put<typename JavaOpenCVTrait<ARRAY>::value_type>(me, row, col, count, offset, values);
         env->ReleasePrimitiveArrayCritical(vals, values, JNI_ABORT);
         return res;
     } catch(const std::exception &e) {
@@ -1919,12 +1919,12 @@ template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row
 extern "C" {
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals);
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals)
 {
-  return java_mat_put(env, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, offset, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
@@ -1933,7 +1933,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals)
 {
-  return java_mat_put(env, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, 0, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
@@ -1942,7 +1942,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals)
 {
-  return java_mat_put(env, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, 0, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
@@ -1951,7 +1951,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
-  return java_mat_put(env, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, 0, vals);
 }
 
 } // extern "C"

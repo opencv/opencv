@@ -311,7 +311,7 @@ public class Converters {
                 byte b = bs.get(i);
                 buff[i] = b;
             }
-            res.put(0, 0, buff);
+            res.put(0, 0, buff, 0, buff.length);
         } else {
             res = new Mat();
         }
@@ -344,7 +344,7 @@ public class Converters {
                 byte b = bs.get(i);
                 buff[i] = b;
             }
-            res.put(0, 0, buff);
+            res.put(0, 0, buff, 0, buff.length);
         } else {
             res = new Mat();
         }
