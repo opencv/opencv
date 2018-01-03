@@ -1151,7 +1151,10 @@ if __name__ == "__main__":
         if os.path.exists(java_test_files_dir):
             copy_java_files(java_test_files_dir, java_test_base_path)
 
-        generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers)
+        if len(srcfiles) > 0:
+            generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers)
+        else:
+            logging.info("No generated code for module: %s", module)
     generator.finalize(jni_path)
 
     print('Generated files: %d (updated %d)' % (total_files, updated_files))
