@@ -13,3 +13,6 @@ public class $jname {
     protected $jname(long addr) { nativeObj = addr; }
 
     public long getNativeObjAddr() { return nativeObj; }
+
+    // internal usage only
+    public static $jname __fromPtr__(long addr) { return new $jname(addr); }
