@@ -219,6 +219,7 @@ public:
 
     MATX_TYPEDEF(1,2);
     MATX_TYPEDEF(1,3);
+    MATX_TYPEDEF(1,4);
     MATX_TYPEDEF(1,6);
     MATX_TYPEDEF(2,1);
     MATX_TYPEDEF(3,1);
