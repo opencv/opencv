@@ -450,7 +450,11 @@ option(CUDA_HOST_COMPILATION_CPP "Generated file extension" ON)
 set(CUDA_NVCC_FLAGS "" CACHE STRING "Semi-colon delimit multiple arguments.")
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  set(CUDA_HOST_COMPILER "$(VCInstallDir)bin" CACHE FILEPATH "Host side compiler used by NVCC")
+  if(NOT (MSVC_VERSION LESS 1910))
+    set(CUDA_HOST_COMPILER "$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" CACHE FILEPATH "Host side compiler used by NVCC")
+  else()
+    set(CUDA_HOST_COMPILER "$(VCInstallDir)bin" CACHE FILEPATH "Host side compiler used by NVCC")
+  endif()
 else()
   # Using cc which is symlink to clang may let NVCC think it is GCC and issue
   # unhandled -dumpspecs option to clang. Also in case neither
@@ -1136,7 +1140,11 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
   # -ccbin or --compiler-bindir isn't used and CUDA_HOST_COMPILER matches
   # $(VCInstallDir)/bin.
   if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    set(ccbin_flags -D "\"CCBIN:PATH=$(VCInstallDir)bin\"" )
+    if(NOT (MSVC_VERSION LESS 1910))
+      set(ccbin_flags -D "\"CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)\"" )
+     else()
+      set(ccbin_flags -D "\"CCBIN:PATH=$(VCInstallDir)bin\"" )
+    endif()
   else()
     set(ccbin_flags)
   endif()
