@@ -148,10 +148,88 @@ public:
         deltasPermute->finalize(layerInputs, layerOutputs);
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+        std::vector<UMat> internals;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        internals_.getUMatVector(internals);
+
+        CV_Assert(inputs.size() == 3);
+        CV_Assert(internals.size() == 3);
+        const UMat& scores = inputs[0];
+        const UMat& bboxDeltas = inputs[1];
+        const UMat& imInfo = inputs[2];
+        UMat& priorBoxes = internals[0];
+        UMat& permuttedScores = internals[1];
+        UMat& permuttedDeltas = internals[2];
+
+        CV_Assert(imInfo.total() >= 2);
+        // We've chosen the smallest data type because we need just a shape from it.
+        Mat szMat;
+        imInfo.copyTo(szMat);
+        int rows = (int)szMat.at<float>(0);
+        int cols = (int)szMat.at<float>(1);
+        umat_fakeImageBlob.create(shape(1, 1, rows, cols), CV_8UC1);
+        umat_fakeImageBlob.setTo(0);
+
+        // Generate prior boxes.
+        std::vector<UMat> layerInputs(2), layerOutputs(1, priorBoxes);
+        layerInputs[0] = scores;
+        layerInputs[1] = umat_fakeImageBlob;
+        priorBoxLayer->forward(layerInputs, layerOutputs, internals);
+
+        // Permute scores.
+        layerInputs.assign(1, getObjectScores(scores));
+        layerOutputs.assign(1, permuttedScores);
+        scoresPermute->forward(layerInputs, layerOutputs, internals);
+
+        // Permute deltas.
+        layerInputs.assign(1, bboxDeltas);
+        layerOutputs.assign(1, permuttedDeltas);
+        deltasPermute->forward(layerInputs, layerOutputs, internals);
+
+        // Sort predictions by scores and apply NMS. DetectionOutputLayer allocates
+        // output internally because of different number of objects after NMS.
+        layerInputs.resize(4);
+        layerInputs[0] = permuttedDeltas;
+        layerInputs[1] = permuttedScores;
+        layerInputs[2] = priorBoxes;
+        layerInputs[3] = umat_fakeImageBlob;
+
+        layerOutputs[0] = UMat();
+        detectionOutputLayer->forward(layerInputs, layerOutputs, internals);
+
+        // DetectionOutputLayer produces 1x1xNx7 output where N might be less or
+        // equal to keepTopAfterNMS. We fill the rest by zeros.
+        const int numDets = layerOutputs[0].total() / 7;
+        CV_Assert(numDets <= keepTopAfterNMS);
+
+        MatShape s = shape(numDets, 7);
+        UMat src = layerOutputs[0].reshape(1, s.size(), &s[0]).colRange(3, 7);
+        UMat dst = outputs[0].rowRange(0, numDets);
+        src.copyTo(dst.colRange(1, 5));
+        dst.col(0).setTo(0);  // First column are batch ids. Keep it zeros too.
+
+        if (numDets < keepTopAfterNMS)
+            outputs[0].rowRange(numDets, keepTopAfterNMS).setTo(0);
+
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
@@ -226,6 +304,20 @@ private:
         return slice(m, Range::all(), Range(channels / 2, channels));
     }
 
+#ifdef HAVE_OPENCL
+    static UMat getObjectScores(const UMat& m)
+    {
+        CV_Assert(m.dims == 4);
+        CV_Assert(m.size[0] == 1);
+        int channels = m.size[1];
+        CV_Assert((channels & 1) == 0);
+
+        Range r = Range(channels / 2, channels);
+        Range ranges[4] = { Range::all(), r, Range::all(), Range::all() };
+        return m(&ranges[0]);
+    }
+#endif
+
     Ptr<PriorBoxLayer> priorBoxLayer;
     Ptr<DetectionOutputLayer> detectionOutputLayer;
 
@@ -233,6 +325,9 @@ private:
     Ptr<PermuteLayer> scoresPermute;
     uint32_t keepTopAfterNMS;
     Mat fakeImageBlob;
+#ifdef HAVE_OPENCL
+    UMat umat_fakeImageBlob;
+#endif
 };
 
 
