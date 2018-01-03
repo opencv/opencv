@@ -16,6 +16,8 @@ endforeach()
 set(__type MODULE)
 if(BUILD_FAT_JAVA_LIB)
   set(__type SHARED) # samples link to libopencv_java
+elseif(APPLE)
+  set(CMAKE_SHARED_MODULE_SUFFIX ".dylib")  # Java is not able to load .so files
 endif()
 ocv_add_library(${the_module} ${__type}
     ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
