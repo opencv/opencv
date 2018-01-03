@@ -60,6 +60,39 @@ def determine_opencv_version(version_hpp_path):
         version_status = re.search(r'^#define\W+CV_VERSION_STATUS\W+"([^"]*)"$', data, re.MULTILINE).group(1)
         return "%(major)s.%(minor)s.%(revision)s%(version_status)s" % locals()
 
+# shutil.move fails if dst exists
+def move_smart(src, dst):
+    def move_recurse(subdir):
+        s = os.path.join(src, subdir)
+        d = os.path.join(dst, subdir)
+        if os.path.exists(d):
+            if os.path.isdir(d):
+                for item in os.listdir(s):
+                    move_recurse(os.path.join(subdir, item))
+            elif os.path.isfile(s):
+                shutil.move(s, d)
+        else:
+            shutil.move(s, d)
+    move_recurse('')
+
+# shutil.copytree fails if dst exists
+def copytree_smart(src, dst):
+    def copy_recurse(subdir):
+        s = os.path.join(src, subdir)
+        d = os.path.join(dst, subdir)
+        if os.path.exists(d):
+            if os.path.isdir(d):
+                for item in os.listdir(s):
+                    copy_recurse(os.path.join(subdir, item))
+            elif os.path.isfile(s):
+                shutil.copy2(s, d)
+        else:
+            if os.path.isdir(s):
+                shutil.copytree(s, d)
+            elif os.path.isfile(s):
+                shutil.copy2(s, d)
+    copy_recurse('')
+
 #===================================================================================================
 
 class ABI:
@@ -88,13 +121,14 @@ ABIs = [
 #===================================================================================================
 
 class Builder:
-    def __init__(self, workdir, opencvdir):
+    def __init__(self, workdir, opencvdir, config):
         self.workdir = check_dir(workdir, create=True)
         self.opencvdir = check_dir(opencvdir)
+        self.config = config
         self.extra_modules_path = None
         self.libdest = check_dir(os.path.join(self.workdir, "o4a"), create=True, clean=True)
-        self.docdest = check_dir(os.path.join(self.workdir, "javadoc"), create=True, clean=True)
-        self.resultdest = check_dir(os.path.join(self.workdir, "OpenCV-android-sdk"), create=True, clean=True)
+        self.resultdest = check_dir(os.path.join(self.workdir, 'OpenCV-android-sdk'), create=True, clean=True)
+        self.docdest = check_dir(os.path.join(self.workdir, 'OpenCV-android-sdk', 'sdk', 'java', 'javadoc'), create=True, clean=True)
         self.extra_packs = []
         self.opencv_version = determine_opencv_version(os.path.join(self.opencvdir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
         self.engine_version = determine_engine_version(os.path.join(self.opencvdir, "platforms", "android", "service", "engine", "AndroidManifest.xml"))
@@ -168,6 +202,7 @@ class Builder:
         ]
         execute(cmd)
         apkdest = self.get_engine_apk_dest(engdest)
+        assert os.path.exists(apkdest), apkdest
         # Add extra data
         apkxmldest = check_dir(os.path.join(apkdest, "res", "xml"), create=True)
         apklibdest = check_dir(os.path.join(apkdest, "libs", abi.name), create=True)
@@ -194,7 +229,7 @@ class Builder:
         # TODO: Sign apk
 
     def build_javadoc(self):
-        classpaths = [os.path.join(self.libdest, "bin", "classes")]
+        classpaths = []
         for dir, _, files in os.walk(os.environ["ANDROID_SDK"]):
             for f in files:
                 if f == "android.jar" or f == "annotations.jar":
@@ -205,37 +240,42 @@ class Builder:
             "-nodeprecated",
             "-footer", '<a href="http://docs.opencv.org">OpenCV %s Documentation</a>' % self.opencv_version,
             "-public",
-            "-sourcepath", os.path.join(self.libdest, "src"),
+            '-sourcepath', os.path.join(self.resultdest, 'sdk', 'java', 'src'),
             "-d", self.docdest,
-            "-classpath", ":".join(classpaths)
+            "-classpath", ":".join(classpaths),
+            '-subpackages', 'org.opencv',
         ]
-        for _, dirs, _ in os.walk(os.path.join(self.libdest, "src", "org", "opencv")):
-            cmd.extend(["org.opencv." + d for d in dirs])
         execute(cmd)
 
     def gather_results(self, engines):
         # Copy all files
         root = os.path.join(self.libdest, "install")
         for item in os.listdir(root):
-            name = item
-            item = os.path.join(root, item)
-            if os.path.isdir(item):
+            src = os.path.join(root, item)
+            dst = os.path.join(self.resultdest, item)
+            if os.path.isdir(src):
                 log.info("Copy dir: %s", item)
-                shutil.copytree(item, os.path.join(self.resultdest, name))
-            elif os.path.isfile(item):
+                if self.config.force_copy:
+                    copytree_smart(src, dst)
+                else:
+                    move_smart(src, dst)
+            elif os.path.isfile(src):
                 log.info("Copy file: %s", item)
-                shutil.copy2(item, os.path.join(self.resultdest, name))
+                if self.config.force_copy:
+                    shutil.copy2(src, dst)
+                else:
+                    shutil.move(src, dst)
 
         # Copy engines for all platforms
         for abi, engdest in engines:
             log.info("Copy engine: %s (%s)", abi, engdest)
             f = os.path.join(self.get_engine_apk_dest(engdest), "bin", "opencv_engine-debug.apk")
             resname = "OpenCV_%s_Manager_%s_%s.apk" % (self.opencv_version, self.engine_version, abi)
-            shutil.copy2(f, os.path.join(self.resultdest, "apk", resname))
-
-        # Copy javadoc
-        log.info("Copy docs: %s", self.docdest)
-        shutil.copytree(self.docdest, os.path.join(self.resultdest, "sdk", "java", "javadoc"))
+            dst = os.path.join(self.resultdest, "apk", resname)
+            if self.config.force_copy:
+                shutil.copy2(f, dst)
+            else:
+                shutil.move(f, dst)
 
         # Clean samples
         path = os.path.join(self.resultdest, "samples")
@@ -259,6 +299,7 @@ if __name__ == "__main__":
     parser.add_argument('--build_doc', action="store_true", help="Build javadoc")
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
     parser.add_argument('--extra_pack', action='append', help="provide extra OpenCV libraries for Manager apk in form <version>:<path-to-native-libs>, for example '2.4.11:unpacked/sdk/native/libs'")
+    parser.add_argument('--force_copy', action="store_true", help="Do not use file move during library build (useful for debug)")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -272,7 +313,7 @@ if __name__ == "__main__":
     log.info("Android NDK path: %s", os.environ["ANDROID_NDK"])
     log.info("Android SDK path: %s", os.environ["ANDROID_SDK"])
 
-    builder = Builder(args.work_dir, args.opencv_dir)
+    builder = Builder(args.work_dir, args.opencv_dir, args)
 
     if args.extra_modules_path is not None:
         builder.extra_modules_path = os.path.abspath(args.extra_modules_path)
@@ -312,10 +353,10 @@ if __name__ == "__main__":
         builder.build_engine(abi, engdest)
         engines.append((abi.name, engdest))
 
+    builder.gather_results(engines)
+
     if args.build_doc:
         builder.build_javadoc()
-
-    builder.gather_results(engines)
 
     log.info("=====")
     log.info("===== Build finished")
