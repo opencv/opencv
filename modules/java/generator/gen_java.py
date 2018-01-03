@@ -350,16 +350,22 @@ class JavaWrapperGenerator(object):
         if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
             return
-        type_dict[name] = \
+        type_dict.setdefault(name, {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "(*("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
-              "suffix" : "J" }
-        type_dict[name+'*'] = \
+              "suffix" : "J",
+              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+            }
+        )
+        type_dict.setdefault(name+'*', {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj", "jni_type" : "jlong",
-              "suffix" : "J" }
+              "suffix" : "J",
+              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+            }
+        )
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
         if name in missing_consts:
@@ -379,11 +385,14 @@ class JavaWrapperGenerator(object):
 
         if classinfo.base:
             classinfo.addImports(classinfo.base)
-        type_dict["Ptr_"+name] = \
+        type_dict.setdefault("Ptr_"+name, {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : "*((Ptr<"+classinfo.fullName(isCPP=True)+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
-              "suffix" : "J" }
+              "suffix" : "J",
+              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+            }
+        )
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -713,7 +722,7 @@ class JavaWrapperGenerator(object):
                         j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
                         j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
             elif ret_type.startswith("Ptr_"):
-                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = " + type_dict[ret_type]["j_type"] + ".__fromPtr__("
                 tail = ")"
             elif ret_type == "void":
                 ret_val = ""
