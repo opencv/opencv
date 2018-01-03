@@ -19,8 +19,8 @@ macro(ocv_remap_files files_list_var)
   set(target_dir "${OpenCV_BINARY_DIR}/configured")
   foreach(f ${${files_list_var}})
     if(NOT "${f}" MATCHES "^(.*)\\.in$")
-      continue()
-    endif()
+      #continue()  # since CMake 3.2+
+    else()
     set(f_ "${CMAKE_MATCH_1}")
     file(RELATIVE_PATH rel_path0 "${OpenCV_SOURCE_DIR}" "${f}")
     file(RELATIVE_PATH rel_path1 "${OpenCV_SOURCE_DIR}" "${f_}")
@@ -31,6 +31,7 @@ macro(ocv_remap_files files_list_var)
     endif()
     set(__remap_config "${__remap_config}    { \"src\": \"${rel_path0}\", \"target\": \"${__target_file}\" }")
     list(APPEND __remap_targets "${__target_file}")
+    endif()
   endforeach()
 endmacro()
 
@@ -56,8 +57,8 @@ foreach(m ${OPENCV_JAVA_MODULES})
 endforeach(m)
 
 set(CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/gen_java.json")
-set(__config_str "\
-{
+set(__config_str
+"{
   \"rootdir\": \"${OpenCV_SOURCE_DIR}\",
   \"modules\": [
 ${__modules_config}
