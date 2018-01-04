@@ -225,6 +225,11 @@ TEST(Torch_Importer, net_normalize)
     runTorchNet("net_normalize", DNN_TARGET_CPU, "", false, true);
 }
 
+OCL_TEST(Torch_Importer, net_normalize)
+{
+    runTorchNet("net_normalize", DNN_TARGET_OPENCL, "", false, true);
+}
+
 TEST(Torch_Importer, net_padding)
 {
     runTorchNet("net_padding", DNN_TARGET_CPU, "", false, true);
