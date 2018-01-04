@@ -668,14 +668,14 @@ public class MatTest extends OpenCVTestCase {
         byte[] buff0 = new byte[] { 10, 20, 30, 40, 50, 60 };
         byte[] buff1 = new byte[] { -1, -2, -3, -4, -5, -6 };
 
-        int bytesNum = m.put(1, 2, buff0, 0, buff0.length);
+        int bytesNum = m.put(1, 2, buff0);
 
         assertEquals(6, bytesNum);
         bytesNum = m.get(1, 2, buff);
         assertEquals(6, bytesNum);
         assertTrue(Arrays.equals(buff, buff0));
 
-        bytesNum = sm.put(0, 0, buff1, 0, buff1.length);
+        bytesNum = sm.put(0, 0, buff1);
 
         assertEquals(6, bytesNum);
         bytesNum = sm.get(0, 0, buff);
@@ -692,7 +692,7 @@ public class MatTest extends OpenCVTestCase {
 
         try {
             byte[] bytes2 = new byte[] { 10, 20, 30, 40, 50 };
-            m.put(2, 2, bytes2, 0, bytes2.length);
+            m.put(2, 2, bytes2);
             fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
         } catch (UnsupportedOperationException e) {
             // expected

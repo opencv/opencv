@@ -499,7 +499,7 @@ public class CoreTest extends OpenCVTestCase {
 
         assertMatEqual(new Mat(gray0.size(), CvType.CV_8U) {
             {
-                put(0, 0, truth, 0, truth.length);
+                put(0, 0, truth);
             }
         }, gray0);
     }
