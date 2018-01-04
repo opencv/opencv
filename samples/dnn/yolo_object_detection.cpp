@@ -26,6 +26,8 @@ static const char* params =
 "{ model          |       | model weights       }"
 "{ camera_device  | 0     | camera device number}"
 "{ source         |       | video or image for detection}"
+"{ save           |       | file name output}"
+"{ fps            | 10    | frame per second }"
 "{ style          | box   | box or line style draw }"
 "{ min_confidence | 0.24  | min confidence      }"
 "{ class_names    |       | File with class names, [PATH-TO-DARKNET]/data/coco.names }";
@@ -59,6 +61,11 @@ int main(int argc, char** argv)
     }
 
     VideoCapture cap;
+    VideoWriter writer;
+    int codec = CV_FOURCC('M', 'J', 'P', 'G');
+    double fps = parser.get<float>("fps");
+    Mat frame;
+    
     if (parser.get<String>("source").empty())
     {
         int cameraDevice = parser.get<int>("camera_device");
@@ -79,6 +86,13 @@ int main(int argc, char** argv)
         }
     }
 
+    if(!parser.get<String>("save").empty())
+    {
+        cap >> frame;
+        writer.open(parser.get<String>("save"), codec, fps, frame.size(),  (frame.type() == CV_8UC3));
+    }
+
+
     vector<String> classNamesVec;
     ifstream classNamesFile(parser.get<String>("class_names").c_str());
     if (classNamesFile.is_open())
@@ -92,7 +106,6 @@ int main(int argc, char** argv)
 
     for(;;)
     {
-        Mat frame;
         cap >> frame; // get a new frame from camera/video or read image
 
         if (frame.empty())
@@ -163,6 +176,10 @@ int main(int argc, char** argv)
                 putText(frame, label, p1 + Point(0, labelSize.height),
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
             }
+        }
+        if(writer.isOpened())
+        {
+            writer.write(frame);
         }
 
         imshow("YOLO: Detections", frame);
