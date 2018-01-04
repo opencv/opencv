@@ -65,7 +65,6 @@ int main(int argc, char** argv)
     int codec = CV_FOURCC('M', 'J', 'P', 'G');
     double fps = parser.get<float>("fps");
     Mat frame;
-    
     if (parser.get<String>("source").empty())
     {
         int cameraDevice = parser.get<int>("camera_device");
