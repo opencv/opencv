@@ -150,7 +150,7 @@ TEST(Imgcodecs_Tiff, readWrite_32FC1)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC1.tiff";
-    const string filenameOutput = root + "readwrite/test32FC1Output.tiff";
+    const string filenameOutput = cv::tempfile(".tiff");
     const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC1,img.type());
@@ -159,6 +159,7 @@ TEST(Imgcodecs_Tiff, readWrite_32FC1)
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(),img.type());
     ASSERT_EQ(img2.size(),img.size());
+    EXPECT_GE(1e-3, cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE));
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 

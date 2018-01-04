@@ -575,12 +575,21 @@ bool TiffDecoder::readData_32FC1(Mat& img)
     uint32 img_width, img_height;
     TIFFGetField(tif,TIFFTAG_IMAGEWIDTH, &img_width);
     TIFFGetField(tif,TIFFTAG_IMAGELENGTH, &img_height);
+    if(img.size() != Size(img_width,img_height))
+    {
+        close();
+        return false;
+    }
     tsize_t scanlength = TIFFScanlineSize(tif);
     tdata_t buf = _TIFFmalloc(scanlength);
     float* data;
     for (uint32 row = 0; row < img_height; row++)
     {
-        TIFFReadScanline(tif, buf, row);
+        if (TIFFReadScanline(tif, buf, row) != 1)
+        {
+            close();
+            return false;
+        }
         data=(float*)buf;
         for (uint32 i=0; i<img_width; i++)
         {
@@ -920,8 +929,9 @@ bool TiffEncoder::write_32FC1(const Mat& _img)
     TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
     for (uint32 row = 0; row < (uint32)_img.rows; row++)
     {
-        if (TIFFWriteScanline(tif, &_img.data[row*_img.cols*32/8], row, 1) != 1)
+        if (TIFFWriteScanline(tif, (tdata_t)_img.ptr<float>(row), row, 1) != 1)
         {
+            TIFFClose(tif);
             return false;
         }
     }
