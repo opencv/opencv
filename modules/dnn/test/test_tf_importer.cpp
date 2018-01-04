@@ -152,6 +152,13 @@ TEST(Test_TensorFlow, batch_norm)
     runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true);
 }
 
+OCL_TEST(Test_TensorFlow, batch_norm)
+{
+    runTensorFlowNet("batch_norm", DNN_TARGET_OPENCL);
+    runTensorFlowNet("fused_batch_norm", DNN_TARGET_OPENCL);
+    runTensorFlowNet("batch_norm_text", DNN_TARGET_OPENCL, true);
+}
+
 TEST(Test_TensorFlow, pooling)
 {
     runTensorFlowNet("max_pool_even");
