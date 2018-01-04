@@ -63,11 +63,11 @@ int main( int argc, char** argv )
         logPolar(log_polar_img, recovered_log_polar, center, M, flags + WARP_INVERSE_MAP);
         linearPolar(lin_polar_img, recovered_lin_polar_img, center, maxRadius, flags + WARP_INVERSE_MAP);
 #endif
-        wrapPolar(frame, log_polar_img, center, maxRadius, true, Size(), flags);  // linear Polar
-        wrapPolar(frame, lin_polar_img, center, maxRadius, false, Size(), flags); // semilog Polar
+        warpPolar(frame, log_polar_img, center, maxRadius, true, Size(), flags);  // linear Polar
+        warpPolar(frame, lin_polar_img, center, maxRadius, false, Size(), flags); // semilog Polar
         // inverse transform
-        wrapPolar(log_polar_img, recovered_log_polar, center, maxRadius, true, frame.size(), flags + WARP_INVERSE_MAP);
-        wrapPolar(lin_polar_img, recovered_lin_polar_img, center, maxRadius, false, frame.size(), flags + WARP_INVERSE_MAP);
+        warpPolar(log_polar_img, recovered_log_polar, center, maxRadius, true, frame.size(), flags + WARP_INVERSE_MAP);
+        warpPolar(lin_polar_img, recovered_lin_polar_img, center, maxRadius, false, frame.size(), flags + WARP_INVERSE_MAP);
 
         // Below is the reverse transformation for dst(rho, phi)->src(x, y) :
         Mat src(frame), dst;

@@ -2546,7 +2546,7 @@ An example using the cv::linearPolar and cv::logPolar operations
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
-@deprecated This function produces same result as cv::wrapPolar(src, dst, center, maxRadius, true, src.size(), flags );
+@deprecated This function produces same result as cv::warpPolar(src, dst, center, maxRadius, true, src.size(), flags );
 
 @internal
 Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
@@ -2588,7 +2588,7 @@ CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
 
 /** @brief Remaps an image to polar coordinates space.
 
-@deprecated This function produces same result as cv::wrapPolar(src, dst, center, maxRadius, false, src.size(), flags );
+@deprecated This function produces same result as cv::warpPolar(src, dst, center, maxRadius, false, src.size(), flags );
 
 @internal
 Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
@@ -2698,7 +2698,7 @@ Below is the reverse transformation for dst(rho, phi)->src(x, y) :
 
 @sa cv::remap
 */
-CV_EXPORTS_W void wrapPolar(InputArray src, OutputArray dst,
+CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst,
     Point2f center, double maxRadius, bool semiLog = false, Size dsize = Size(),
     int flags = cv::INTER_LINEAR + cv::WARP_FILL_OUTLIERS);
 

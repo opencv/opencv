@@ -1862,7 +1862,7 @@ TEST(Imgproc_logPolar, identity)
 #endif
 }
 
-TEST(Imgproc_wrapPolar, identity)
+TEST(Imgproc_warpPolar, identity)
 {
     const int N = 33;
     Mat in(N, N, CV_8UC3, Scalar(255, 0, 0));
@@ -1880,8 +1880,8 @@ TEST(Imgproc_wrapPolar, identity)
     // test linearPolar
     for (int ki = 1; ki <= 5; ki++)
     {
-        wrapPolar(src, dst, center, radius, false, src.size(), flags + CV_WARP_INVERSE_MAP);
-        wrapPolar(dst, src, center, radius, false, src.size(), flags);
+        warpPolar(src, dst, center, radius, false, src.size(), flags + CV_WARP_INVERSE_MAP);
+        warpPolar(dst, src, center, radius, false, src.size(), flags);
 
         double psnr = cv::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << ki;
@@ -1890,8 +1890,8 @@ TEST(Imgproc_wrapPolar, identity)
     src = in.clone();
     for (int ki = 1; ki <= 5; ki++)
     {
-        wrapPolar(src, dst, center, radius, true, src.size(), flags + CV_WARP_INVERSE_MAP);
-        wrapPolar(dst, src, center, radius, true, src.size(), flags);
+        warpPolar(src, dst, center, radius, true, src.size(), flags + CV_WARP_INVERSE_MAP);
+        warpPolar(dst, src, center, radius, true, src.size(), flags);
 
         double psnr = cv::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << ki;

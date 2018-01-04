@@ -3681,7 +3681,7 @@ void cv::linearPolar( InputArray _src, OutputArray _dst,
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
 ****************************************************************************************/
-void cv::wrapPolar(InputArray _src, OutputArray _dst,
+void cv::warpPolar(InputArray _src, OutputArray _dst,
     Point2f center, double maxRadius, bool semiLog, Size dsize,
     int flags)
 {
