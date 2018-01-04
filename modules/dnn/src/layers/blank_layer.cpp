@@ -63,8 +63,22 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    bool forward_ocl(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        for (int i = 0, n = outputs.size(); i < n; ++i)
+        {
+            void *src_handle = inputs[i].handle(ACCESS_READ);
+            void *dst_handle = outputs[i].handle(ACCESS_WRITE);
+            if (src_handle != dst_handle)
+                inputs[i].copyTo(outputs[i]);
+        }
+
         return true;
     }
 #endif
