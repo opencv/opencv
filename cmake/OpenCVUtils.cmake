@@ -32,8 +32,8 @@ function(ocv_cmake_eval var_name)
 endfunction()
 
 macro(ocv_cmake_configure file_name var_name)
-  configure_file(${file_name} "${CMAKE_BINARY_DIR}/CMakeConfig-${var_name}.cmake" ${ARGN})
-  file(READ "${CMAKE_BINARY_DIR}/CMakeConfig-${var_name}.cmake" ${var_name})
+  file(READ "${file_name}" __config)
+  string(CONFIGURE "${__config}" ${var_name} ${ARGN})
 endmacro()
 
 macro(ocv_update VAR)
