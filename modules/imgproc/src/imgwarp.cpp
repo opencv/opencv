@@ -3795,7 +3795,7 @@ void cv::wrapPolar(InputArray _src, OutputArray _dst,
         {
             double Kmag = std::log(maxRadius) / dsize.width;
             for (rho = 0; rho < dsize.width; rho++)
-                bufRhos[rho] = (float)std::exp(rho * Kmag) - 1.0;
+                bufRhos[rho] = (float)(std::exp(rho * Kmag) - 1.0);
 
         }
         else

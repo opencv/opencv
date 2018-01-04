@@ -1879,21 +1879,21 @@ TEST(Imgproc_wrapPolar, identity)
     Point2f center = Point2f((N - 1) * 0.5f, (N - 1) * 0.5f);
     double radius = N * 0.5;
     int flags = CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR;
-
+    // test linearPolar
     for (int ki = 1; ki <= 5; ki++)
     {
-        wrapPolar(src, dst, center, radius, false);
-        wrapPolar(dst, src, center, radius, false, src.size(), flags + CV_WARP_INVERSE_MAP);
+        wrapPolar(src, dst, center, radius, false, src.size(), flags + CV_WARP_INVERSE_MAP);
+        wrapPolar(dst, src, center, radius, false, src.size(), flags);
 
         double psnr = cv::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << ki;
     }
-
+    // test logPolar
     src = in.clone();
     for (int ki = 1; ki <= 5; ki++)
     {
-        wrapPolar(src, dst, center, radius, true);
-        wrapPolar(dst, src, center, radius, true, src.size(), flags + CV_WARP_INVERSE_MAP);
+        wrapPolar(src, dst, center, radius, true, src.size(), flags + CV_WARP_INVERSE_MAP);
+        wrapPolar(dst, src, center, radius, true, src.size(), flags);
 
         double psnr = cv::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << ki;
