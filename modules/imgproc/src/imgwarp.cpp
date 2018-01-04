@@ -1404,6 +1404,9 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     return k.run(2, globalThreads, NULL, false);
 }
 
+/**
+@deprecated with old version of cv::linearPolar
+*/
 static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     Point2f center, double maxRadius, int flags)
 {
@@ -3757,4 +3760,125 @@ void cv::linearPolar( InputArray _src, OutputArray _dst,
     remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
 }
 
+/****************************************************************************************
+PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
+****************************************************************************************/
+void cv::wrapPolar(InputArray _src, OutputArray _dst,
+    Point2f center, double maxRadius, bool semiLog, Size dsize,
+    int flags)
+{
+    // if dest size is empty given than calculate using proportional setting
+    // thus we calculate needed angles to keep same area as bounding circle
+    if ((dsize.width <= 0) && (dsize.height <= 0))
+    {
+        dsize.width = cvRound(maxRadius);
+        dsize.height = cvRound(maxRadius * CV_PI);
+    }
+    else if (dsize.height <= 0)
+    {
+        dsize.height = cvRound(dsize.width * CV_PI);
+    }
+
+    Mat mapx, mapy;
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+        double Kangle = CV_2PI / dsize.height;
+        int phi, rho;
+
+        // precalculate scaled rho
+        Mat rhos = Mat(1, dsize.width, CV_32F);
+        float* bufRhos = (float*)(rhos.data);
+        if (semiLog)
+        {
+            double Kmag = std::log(maxRadius) / dsize.width;
+            for (rho = 0; rho < dsize.width; rho++)
+                bufRhos[rho] = (float)std::exp(rho * Kmag) - 1.0;
+
+        }
+        else
+        {
+            double Kmag = maxRadius / dsize.width;
+            for (rho = 0; rho < dsize.width; rho++)
+                bufRhos[rho] = (float)(rho * Kmag);
+        }
+
+        for (phi = 0; phi < dsize.height; phi++)
+        {
+            double KKy = Kangle * phi;
+            double cp = cos(KKy);
+            double sp = sin(KKy);
+            float* mx = (float*)(mapx.data + phi*mapx.step);
+            float* my = (float*)(mapy.data + phi*mapy.step);
+
+            for (rho = 0; rho < dsize.width; rho++)
+            {
+                double x = bufRhos[rho] * cp + center.x;
+                double y = bufRhos[rho] * sp + center.y;
+
+                mx[rho] = (float)x;
+                my[rho] = (float)y;
+            }
+        }
+        remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    }
+    else
+    {
+
+        const int ANGLE_BORDER = 1;
+        OutputArray src_with_border(_dst);
+
+        cv::copyMakeBorder(_src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        InputArray src(src_with_border);
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+        const double Kangle = CV_2PI / ssize.height;
+        double Kmag;
+        if (semiLog)
+            Kmag = std::log(maxRadius) / ssize.width;
+        else
+            Kmag = maxRadius / ssize.width;
+
+        int x, y;
+        Mat bufx, bufy, bufp, bufa;
+
+        bufx = Mat(1, dsize.width, CV_32F);
+        bufy = Mat(1, dsize.width, CV_32F);
+        bufp = Mat(1, dsize.width, CV_32F);
+        bufa = Mat(1, dsize.width, CV_32F);
+
+        for (x = 0; x < dsize.width; x++)
+            bufx.at<float>(0, x) = (float)x - center.x;
+
+        for (y = 0; y < dsize.height; y++)
+        {
+            float* mx = (float*)(mapx.data + y*mapx.step);
+            float* my = (float*)(mapy.data + y*mapy.step);
+
+            for (x = 0; x < dsize.width; x++)
+                bufy.at<float>(0, x) = (float)y - center.y;
+
+            cartToPolar(bufx, bufy, bufp, bufa, 0);
+
+            if (semiLog)
+            {
+                //for (x = 0; x < dsize.width; x++)
+                //    bufp.at<float>(0, x) += 1.f;
+                bufp += 1.f;
+                log(bufp, bufp);
+            }
+
+            for (x = 0; x < dsize.width; x++)
+            {
+                double rho = bufp.at<float>(0, x) / Kmag;
+                double phi = bufa.at<float>(0, x) / Kangle;
+                mx[x] = (float)rho;
+                my[x] = (float)phi + ANGLE_BORDER;
+            }
+        }
+        remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    }
+}
 /* End of file. */

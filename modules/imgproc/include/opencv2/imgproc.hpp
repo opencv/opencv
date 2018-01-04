@@ -2500,7 +2500,10 @@ An example using the cv::linearPolar and cv::logPolar operations
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image"):
+@deprecated This function produces same result as cv::wrapPolar(src, dst, center, maxRadius, true, src.size(), flags );
+
+@internal
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
 \f[\begin{array}{l}
   dst( \rho , \phi ) = src(x,y) \\
   dst.size() \leftarrow src.size()
@@ -2510,13 +2513,13 @@ where
 \f[\begin{array}{l}
   I = (dx,dy) = (x - center.x,y - center.y) \\
   \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
-  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg} \\
+  \phi = Kangle \cdot \texttt{angle} (I) \\
 \end{array}\f]
 
 and
 \f[\begin{array}{l}
   M = src.cols / log_e(maxRadius) \\
-  Ky = src.rows / 360 \\
+  Kangle = src.rows / 2\Pi \\
 \end{array}\f]
 
 The function emulates the human "foveal" vision and can be used for fast scale and
@@ -2530,16 +2533,19 @@ rotation-invariant template matching, for object tracking and so forth.
 @note
 -   The function can not operate in-place.
 -   To calculate magnitude and angle in degrees @ref cv::cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+
+@sa cv::linearPolar
+@endinternal
 */
 CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
                             Point2f center, double M, int flags );
 
 /** @brief Remaps an image to polar coordinates space.
 
-@anchor polar_remaps_reference_image
-![Polar remaps reference](pics/polar_remap_doc.png)
+@deprecated This function produces same result as cv::wrapPolar(src, dst, center, maxRadius, false, src.size(), flags );
 
-Transform the source image using the following transformation:
+@internal
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
 \f[\begin{array}{l}
   dst( \rho , \phi ) = src(x,y) \\
   dst.size() \leftarrow src.size()
@@ -2548,14 +2554,14 @@ Transform the source image using the following transformation:
 where
 \f[\begin{array}{l}
   I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = Kx \cdot \texttt{magnitude} (I) ,\\
-  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+  \rho = Kmag \cdot \texttt{magnitude} (I) ,\\
+  \phi = angle \cdot \texttt{angle} (I)
 \end{array}\f]
 
 and
 \f[\begin{array}{l}
   Kx = src.cols / maxRadius \\
-  Ky = src.rows / 360
+  Ky = src.rows / 2\Pi
 \end{array}\f]
 
 
@@ -2569,9 +2575,87 @@ and
 -   The function can not operate in-place.
 -   To calculate magnitude and angle in degrees @ref cv::cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
 
+@sa cv::logPolar
+@endinternal
 */
 CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
                                Point2f center, double maxRadius, int flags );
+
+
+/** \brief Remaps an image to polar or semilog-polar coordinates space
+
+@anchor polar_remaps_reference_image
+![Polar remaps reference](pics/polar_remap_doc.png)
+
+Transform the source image using the following transformation:
+\f[
+dst(\rho , \phi ) = src(x,y)
+\f]
+
+where
+\f[
+\begin{array}{l}
+\vec{I} = (x - center.x, \;y - center.y) \\
+\phi = Kangle \cdot \texttt{angle} (\vec{I}) \\
+\rho = \left\{\begin{matrix}
+Klin \cdot \texttt{magnitude} (\vec{I}) & default \\
+Klog \cdot log_e(\texttt{magnitude} (\vec{I})) & if \; semiLog = true \\
+\end{matrix}\right.
+\end{array}
+\f]
+
+and
+\f[
+\begin{array}{l}
+Kangle = dsize.height / 2\Pi \\
+Klin = dsize.width / maxRadius \\
+Klog = dsize.width / log_e(maxRadius) \\
+\end{array}
+\f]
+
+\par Option on `dsize`:
+
+- if both values in `dsize <=0 ` (default),
+the destination image will have (almost) same area of source bounding circle:
+\f[\begin{array}{l}
+dsize.area  \leftarrow (maxRadius^2 \cdot \Pi) \\
+dsize.width = \texttt{cvRound}(maxRadius) \\
+dsize.height = \texttt{cvRound}(maxRadius \cdot \Pi) \\
+\end{array}\f]
+
+
+- if only `dsize.height <= 0`,
+the destination image area will be proportional to the bounding circle area but scaled by `Kx * Kx`:
+\f[\begin{array}{l}
+dsize.height = \texttt{cvRound}(dsize.width \cdot \Pi) \\
+\end{array}
+\f]
+
+- if both values in `dsize > 0 `,
+the destination image will have the given size therefore the area of the bounding circle will be scaled to `dsize`.
+
+Below is the reverse transformation for dst(rho, phi)->src(x, y) :
+\snippet polar_transforms.cpp Reverse Transform
+
+@param src Source image.
+@param dst Destination image. It will have same type as src.
+@param center The transformation center;
+@param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
+@param semiLog if `true` use log mapping for magnitudes to generate semi-log polar remapping. Default is `false` to use linear mapping of magnitude.
+@param dsize The destination image size (see description for valid options)
+@param flags A combination of interpolation methods, see cv::InterpolationFlags. Add cv::WARP_INVERSE_MAP for reverse mapping.
+
+@note
+-  The function can not operate in-place.
+-  To calculate magnitude and angle in degrees @ref cv::cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+-  This function uses cv::remap. Due its to current implementation limitations the size of an input and output images should be less than 32767x32767.
+
+@sa cv::remap
+*/
+CV_EXPORTS_W void wrapPolar(InputArray src, OutputArray dst,
+    Point2f center, double maxRadius, bool semiLog = false, Size dsize = Size(),
+    int flags = cv::INTER_LINEAR + cv::WARP_FILL_OUTLIERS);
+
 
 //! @} imgproc_transform
 
