@@ -2,25 +2,20 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "../perf_precomp.hpp"
-#include "opencv2/ts/ocl_perf.hpp"
+#include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCL
 #ifdef HAVE_VIDEO_INPUT
-#include "../perf_bgfg_utils.hpp"
+#include "perf_bgfg_utils.hpp"
 
-namespace cvtest {
-namespace ocl {
+namespace opencv_test { namespace {
 
 //////////////////////////// Mog2//////////////////////////
 
-typedef tuple<string, int> VideoMOG2ParamType;
+typedef tuple<std::string, int> VideoMOG2ParamType;
 typedef TestBaseWithParam<VideoMOG2ParamType> MOG2_Apply;
 typedef TestBaseWithParam<VideoMOG2ParamType> MOG2_GetBackgroundImage;
 
-using namespace opencv_test;
-
-OCL_PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1,3)))
+PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1,3)))
 {
     VideoMOG2ParamType params = GetParam();
 
@@ -35,22 +30,22 @@ OCL_PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/v
     ASSERT_TRUE(cap.isOpened());
     prepareData(cap, cn, frame_buffer);
 
-    UMat u_foreground;
+    Mat foreground;
 
-    OCL_TEST_CYCLE()
+    TEST_CYCLE()
     {
         Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
         mog2->setDetectShadows(false);
-        u_foreground.release();
+        foreground.release();
         for (int i = 0; i < nFrame; i++)
         {
-            mog2->apply(frame_buffer[i], u_foreground);
+            mog2->apply(frame_buffer[i], foreground);
         }
     }
     SANITY_CHECK_NOTHING();
 }
 
-OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
+PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
         std::make_pair<string, int>("gpu/video/768x576.avi", 5),
         std::make_pair<string, int>("gpu/video/1920x1080.avi", 5)))
 {
@@ -68,28 +63,27 @@ OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
     ASSERT_TRUE(cap.isOpened());
     prepareData(cap, cn, frame_buffer, skipFrames);
 
-    UMat u_foreground, u_background;
+    Mat foreground, background;
 
-    OCL_TEST_CYCLE()
+    TEST_CYCLE()
     {
         Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
         mog2->setDetectShadows(false);
-        u_foreground.release();
-        u_background.release();
+        foreground.release();
+        background.release();
         for (int i = 0; i < nFrame; i++)
         {
-            mog2->apply(frame_buffer[i], u_foreground);
+            mog2->apply(frame_buffer[i], foreground);
         }
-        mog2->getBackgroundImage(u_background);
+        mog2->getBackgroundImage(background);
     }
 #ifdef DEBUG_BGFG
-    imwrite(format("fg_%d_%d_mog2_ocl.png", frame_buffer[0].rows, cn), u_foreground.getMat(ACCESS_READ));
-    imwrite(format("bg_%d_%d_mog2_ocl.png", frame_buffer[0].rows, cn), u_background.getMat(ACCESS_READ));
+    imwrite(format("fg_%d_%d_mog2.png", frame_buffer[0].rows, cn), foreground);
+    imwrite(format("bg_%d_%d_mog2.png", frame_buffer[0].rows, cn), background);
 #endif
     SANITY_CHECK_NOTHING();
 }
 
-}}// namespace cvtest::ocl
+}}// namespace
 
-#endif
 #endif
