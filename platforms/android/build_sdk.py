@@ -4,6 +4,8 @@ import os, sys, subprocess, argparse, shutil, glob, re
 import logging as log
 import xml.etree.ElementTree as ET
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 class Fail(Exception):
     def __init__(self, text=None):
         self.t = text
@@ -12,7 +14,8 @@ class Fail(Exception):
 
 def execute(cmd, shell=False):
     try:
-        log.info("Executing: %s" % cmd)
+        log.debug("Executing: %s" % cmd)
+        log.info('Executing: ' + ' '.join(cmd))
         retcode = subprocess.call(cmd, shell=shell)
         if retcode < 0:
             raise Fail("Child was terminated by signal:" %s -retcode)
@@ -96,27 +99,23 @@ def copytree_smart(src, dst):
 #===================================================================================================
 
 class ABI:
-    def __init__(self, platform_id, name, toolchain, cmake_name=None):
+    def __init__(self, platform_id, name, toolchain, ndk_api_level = None, cmake_vars = dict()):
         self.platform_id = platform_id # platform code to add to apk version (for cmake)
         self.name = name # general name (official Android ABI identifier)
         self.toolchain = toolchain # toolchain identifier (for cmake)
-        self.cmake_name = cmake_name # name of android toolchain (for cmake)
-        if self.cmake_name is None:
-            self.cmake_name = self.name
+        self.cmake_vars = dict(
+            ANDROID_STL="gnustl_static",
+            ANDROID_ABI=self.name,
+            ANDROID_TOOLCHAIN_NAME=toolchain,
+            ANDROID_PLATFORM_ID=platform_id,
+        )
+        if ndk_api_level:
+            self.cmake_vars['ANDROID_NATIVE_API_LEVEL'] = ndk_api_level
+        self.cmake_vars.update(cmake_vars)
     def __str__(self):
         return "%s (%s)" % (self.name, self.toolchain)
     def haveIPP(self):
         return self.name == "x86" or self.name == "x86_64"
-
-ABIs = [
-    ABI("2", "armeabi-v7a", "arm-linux-androideabi-4.8", cmake_name="armeabi-v7a with NEON"),
-    ABI("1", "armeabi",     "arm-linux-androideabi-4.8"),
-    ABI("3", "arm64-v8a",   "aarch64-linux-android-4.9"),
-    ABI("5", "x86_64",      "x86_64-4.9"),
-    ABI("4", "x86",         "x86-4.8"),
-    ABI("7", "mips64",      "mips64el-linux-android-4.9"),
-    ABI("6", "mips",        "mipsel-linux-android-4.8")
-]
 
 #===================================================================================================
 
@@ -125,17 +124,24 @@ class Builder:
         self.workdir = check_dir(workdir, create=True)
         self.opencvdir = check_dir(opencvdir)
         self.config = config
-        self.extra_modules_path = None
         self.libdest = check_dir(os.path.join(self.workdir, "o4a"), create=True, clean=True)
         self.resultdest = check_dir(os.path.join(self.workdir, 'OpenCV-android-sdk'), create=True, clean=True)
         self.docdest = check_dir(os.path.join(self.workdir, 'OpenCV-android-sdk', 'sdk', 'java', 'javadoc'), create=True, clean=True)
         self.extra_packs = []
         self.opencv_version = determine_opencv_version(os.path.join(self.opencvdir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
         self.engine_version = determine_engine_version(os.path.join(self.opencvdir, "platforms", "android", "service", "engine", "AndroidManifest.xml"))
-        self.use_ccache = True
+        self.use_ccache = False if config.no_ccache else True
 
     def get_toolchain_file(self):
-        return os.path.join(self.opencvdir, "platforms", "android", "android.toolchain.cmake")
+        if not self.config.force_opencv_toolchain:
+            toolchain = os.path.join(os.environ['ANDROID_NDK'], 'build', 'cmake', 'android.toolchain.cmake')
+            if os.path.exists(toolchain):
+                return toolchain
+        toolchain = os.path.join(SCRIPT_DIR, "android.toolchain.cmake")
+        if os.path.exists(toolchain):
+            return toolchain
+        else:
+            raise Fail("Can't find toolchain")
 
     def get_engine_apk_dest(self, engdest):
         return os.path.join(engdest, "platforms", "android", "service", "engine", ".build")
@@ -150,35 +156,32 @@ class Builder:
             rm_one(d)
 
     def build_library(self, abi, do_install):
-        cmd = [
-            "cmake",
-            "-GNinja",
-            "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
-            "-DWITH_OPENCL=OFF",
-            "-DWITH_CUDA=OFF",
-            "-DWITH_IPP=%s" % ("ON" if abi.haveIPP() else "OFF"),
-            "-DBUILD_EXAMPLES=OFF",
-            "-DBUILD_TESTS=OFF",
-            "-DBUILD_PERF_TESTS=OFF",
-            "-DBUILD_DOCS=OFF",
-            "-DBUILD_ANDROID_EXAMPLES=ON",
-            "-DINSTALL_ANDROID_EXAMPLES=ON",
-            "-DANDROID_STL=gnustl_static",
-            "-DANDROID_NATIVE_API_LEVEL=9",
-            "-DANDROID_ABI='%s'" % abi.cmake_name,
-            "-DWITH_TBB=ON",
-            "-DANDROID_TOOLCHAIN_NAME=%s" % abi.toolchain
-        ]
+        cmd = ["cmake", "-GNinja"]
+        cmake_vars = dict(
+            CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
+            WITH_OPENCL="OFF",
+            WITH_CUDA="OFF",
+            WITH_IPP=("ON" if abi.haveIPP() else "OFF"),
+            WITH_TBB="ON",
+            BUILD_EXAMPLES="OFF",
+            BUILD_TESTS="OFF",
+            BUILD_PERF_TESTS="OFF",
+            BUILD_DOCS="OFF",
+            BUILD_ANDROID_EXAMPLES="ON",
+            INSTALL_ANDROID_EXAMPLES="ON",
+        )
 
-        if self.extra_modules_path is not None:
-            cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.extra_modules_path)
-
-        cmd.append(self.opencvdir)
+        if self.config.extra_modules_path is not None:
+            cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
 
         if self.use_ccache == True:
             cmd.append("-DNDK_CCACHE=ccache")
         if do_install:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
+
+        cmake_vars.update(abi.cmake_vars)
+        cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
+        cmd.append(self.opencvdir)
         execute(cmd)
         if do_install:
             execute(["ninja"])
@@ -188,18 +191,17 @@ class Builder:
             execute(["ninja", "install/strip"])
 
     def build_engine(self, abi, engdest):
-        cmd = [
-            "cmake",
-            "-GNinja",
-            "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
-            "-DANDROID_ABI='%s'" % abi.cmake_name,
-            "-DBUILD_ANDROID_SERVICE=ON",
-            "-DANDROID_PLATFORM_ID=%s" % abi.platform_id,
-            "-DWITH_CUDA=OFF",
-            "-DWITH_OPENCL=OFF",
-            "-DWITH_IPP=OFF",
-            self.opencvdir
-        ]
+        cmd = ["cmake", "-GNinja"]
+        cmake_vars = dict(
+            CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
+            WITH_OPENCL="OFF",
+            WITH_CUDA="OFF",
+            WITH_IPP="OFF",
+            BUILD_ANDROID_SERVICE = 'ON'
+        )
+        cmake_vars.update(abi.cmake_vars)
+        cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
+        cmd.append(self.opencvdir)
         execute(cmd)
         apkdest = self.get_engine_apk_dest(engdest)
         assert os.path.exists(apkdest), apkdest
@@ -290,8 +292,9 @@ class Builder:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build OpenCV for Android SDK')
-    parser.add_argument("work_dir", help="Working directory (and output)")
-    parser.add_argument("opencv_dir", help="Path to OpenCV source dir")
+    parser.add_argument("work_dir", nargs='?', default='.', help="Working directory (and output)")
+    parser.add_argument("opencv_dir", nargs='?', default=os.path.join(SCRIPT_DIR, '../..'), help="Path to OpenCV source dir")
+    parser.add_argument('--config', default='ndk-10.config.py', type=str, help="Package build configuration", )
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
     parser.add_argument("--extra_modules_path", help="Path to extra modules to use for build")
@@ -300,6 +303,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
     parser.add_argument('--extra_pack', action='append', help="provide extra OpenCV libraries for Manager apk in form <version>:<path-to-native-libs>, for example '2.4.11:unpacked/sdk/native/libs'")
     parser.add_argument('--force_copy', action="store_true", help="Do not use file move during library build (useful for debug)")
+    parser.add_argument('--force_opencv_toolchain', action="store_true", help="Do not use toolchain from Android NDK")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -310,16 +314,29 @@ if __name__ == "__main__":
     if args.sdk_path is not None:
         os.environ["ANDROID_SDK"] = args.sdk_path
 
+    if os.path.realpath(args.work_dir) == os.path.realpath(SCRIPT_DIR):
+        raise Fail("Specify workdir (building from script directory is not supported)")
+    if os.path.realpath(args.work_dir) == os.path.realpath(args.opencv_dir):
+        raise Fail("Specify workdir (building from OpenCV source directory is not supported)")
+
+    cpath = args.config
+    if not os.path.exists(cpath):
+        cpath = os.path.join(SCRIPT_DIR, cpath)
+        if not os.path.exists(cpath):
+            raise Fail('Config "%s" is missing' % args.config)
+    with open(cpath, 'r') as f:
+        cfg = f.read()
+    print("Package configuration:")
+    print('=' * 80)
+    print(cfg.strip())
+    print('=' * 80)
+
+    exec(compile(cfg, cpath, 'exec'))
+
     log.info("Android NDK path: %s", os.environ["ANDROID_NDK"])
     log.info("Android SDK path: %s", os.environ["ANDROID_SDK"])
 
     builder = Builder(args.work_dir, args.opencv_dir, args)
-
-    if args.extra_modules_path is not None:
-        builder.extra_modules_path = os.path.abspath(args.extra_modules_path)
-
-    if args.no_ccache:
-        builder.use_ccache = False
 
     log.info("Detected OpenCV version: %s", builder.opencv_version)
     log.info("Detected Engine version: %s", builder.engine_version)
