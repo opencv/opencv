@@ -2629,7 +2629,7 @@ public:
 
     /** @overload
     initializes an empty SVD structure and then calls SVD::operator()
-    @param src decomposed matrix.
+    @param src decomposed matrix. The depth has to be CV_32F or CV_64F.
     @param flags operation flags (SVD::Flags)
       */
     SVD( InputArray src, int flags = 0 );
@@ -2642,7 +2642,7 @@ public:
     different matrices. Each time, if needed, the previous u,`vt` , and w
     are reclaimed and the new matrices are created, which is all handled by
     Mat::create.
-    @param src decomposed matrix.
+    @param src decomposed matrix. The depth has to be CV_32F or CV_64F.
     @param flags operation flags (SVD::Flags)
       */
     SVD& operator ()( InputArray src, int flags = 0 );
@@ -2658,18 +2658,18 @@ public:
     SVD::compute(A, w, u, vt);
     @endcode
 
-    @param src decomposed matrix
+    @param src decomposed matrix. The depth has to be CV_32F or CV_64F.
     @param w calculated singular values
     @param u calculated left singular vectors
-    @param vt transposed matrix of right singular values
-    @param flags operation flags - see SVD::SVD.
+    @param vt transposed matrix of right singular vectors
+    @param flags operation flags - see SVD::Flags.
       */
     static void compute( InputArray src, OutputArray w,
                          OutputArray u, OutputArray vt, int flags = 0 );
 
     /** @overload
     computes singular values of a matrix
-    @param src decomposed matrix
+    @param src decomposed matrix. The depth has to be CV_32F or CV_64F.
     @param w calculated singular values
     @param flags operation flags - see SVD::Flags.
       */
