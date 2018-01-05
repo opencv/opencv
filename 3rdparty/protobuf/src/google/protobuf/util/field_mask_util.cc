@@ -216,14 +216,14 @@ class FieldMaskTree {
     ~Node() { ClearChildren(); }
 
     void ClearChildren() {
-      for (map<string, Node*>::iterator it = children.begin();
+      for (std::map<string, Node*>::iterator it = children.begin();
            it != children.end(); ++it) {
         delete it->second;
       }
       children.clear();
     }
 
-    map<string, Node*> children;
+    std::map<string, Node*> children;
 
    private:
     GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(Node);
@@ -274,7 +274,7 @@ void FieldMaskTree::MergeToFieldMask(const string& prefix, const Node* node,
     out->add_paths(prefix);
     return;
   }
-  for (map<string, Node*>::const_iterator it = node->children.begin();
+  for (std::map<string, Node*>::const_iterator it = node->children.begin();
        it != node->children.end(); ++it) {
     string current_path = prefix.empty() ? it->first : prefix + "." + it->first;
     MergeToFieldMask(current_path, it->second, out);
@@ -339,7 +339,7 @@ void FieldMaskTree::MergeLeafNodesToTree(const string& prefix, const Node* node,
   if (node->children.empty()) {
     out->AddPath(prefix);
   }
-  for (map<string, Node*>::const_iterator it = node->children.begin();
+  for (std::map<string, Node*>::const_iterator it = node->children.begin();
        it != node->children.end(); ++it) {
     string current_path = prefix.empty() ? it->first : prefix + "." + it->first;
     MergeLeafNodesToTree(current_path, it->second, out);
@@ -353,7 +353,7 @@ void FieldMaskTree::MergeMessage(const Node* node, const Message& source,
   const Reflection* source_reflection = source.GetReflection();
   const Reflection* destination_reflection = destination->GetReflection();
   const Descriptor* descriptor = source.GetDescriptor();
-  for (map<string, Node*>::const_iterator it = node->children.begin();
+  for (std::map<string, Node*>::const_iterator it = node->children.begin();
        it != node->children.end(); ++it) {
     const string& field_name = it->first;
     const Node* child = it->second;
@@ -456,7 +456,7 @@ void FieldMaskTree::TrimMessage(const Node* node, Message* message) {
   const int32 field_count = descriptor->field_count();
   for (int index = 0; index < field_count; ++index) {
     const FieldDescriptor* field = descriptor->field(index);
-    map<string, Node*>::const_iterator it = node->children.find(field->name());
+    std::map<string, Node*>::const_iterator it = node->children.find(field->name());
     if (it == node->children.end()) {
       reflection->ClearField(message, field);
     } else {
