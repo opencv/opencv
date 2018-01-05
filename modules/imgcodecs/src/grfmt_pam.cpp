@@ -487,7 +487,7 @@ bool  PAMDecoder::readData( Mat& img )
     bool res = false, funcout;
     PaletteEntry palette[256];
     const struct pam_format *fmt = NULL;
-    struct channel_layout layout;
+    struct channel_layout layout = { 0, 0, 0, 0 }; // normalized to 1-channel grey format
 
     /* setting buffer to max data size so scaling up is possible */
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
@@ -506,9 +506,7 @@ bool  PAMDecoder::readData( Mat& img )
             layout.bchan = 0;
             layout.gchan = 1;
             layout.rchan = 2;
-        } else
-            layout.bchan = layout.gchan = layout.rchan = 0;
-        layout.graychan = 0;
+        }
     }
 
     CV_TRY
