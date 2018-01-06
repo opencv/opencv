@@ -87,6 +87,7 @@ const char* params
     = "{ help           | false | Sample app for loading googlenet model }"
       "{ proto          | bvlc_googlenet.prototxt | model configuration }"
       "{ model          | bvlc_googlenet.caffemodel | model weights }"
+      "{ label          | synset_words.txt | names of ILSVRC2012 classes }"
       "{ image          | space_shuttle.jpg | path to image file }"
       "{ opencl         | false | enable OpenCL }"
 ;
@@ -106,6 +107,7 @@ int main(int argc, char **argv)
     String modelTxt = parser.get<string>("proto");
     String modelBin = parser.get<string>("model");
     String imageFile = parser.get<String>("image");
+    String classNameFile = parser.get<String>("label");
 
     Net net;
     try {
@@ -169,7 +171,11 @@ int main(int argc, char **argv)
     //! [Gather output]
 
     //! [Print results]
-    std::vector<String> classNames = readClassNames();
+    std::vector<String> classNames;
+    if (classNameFile.empty())
+        classNames = readClassNames();
+    else
+        classNames = readClassNames(classNameFile.c_str());
     std::cout << "Best class: #" << classId << " '" << classNames.at(classId) << "'" << std::endl;
     std::cout << "Probability: " << classProb * 100 << "%" << std::endl;
     //! [Print results]
