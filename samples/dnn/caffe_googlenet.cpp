@@ -115,7 +115,7 @@ int main(int argc, char **argv)
         net = dnn::readNetFromCaffe(modelTxt, modelBin);
         //! [Read and initialize network]
     }
-    catch (cv::Exception& e) {
+    catch (const cv::Exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
         //! [Check that network was read successfully]
         if (net.empty())
@@ -123,7 +123,6 @@ int main(int argc, char **argv)
             std::cerr << "Can't load network by using the following files: " << std::endl;
             std::cerr << "prototxt:   " << modelTxt << std::endl;
             std::cerr << "caffemodel: " << modelBin << std::endl;
-            std::cerr << "names of classes: " << classNameFile << std::endl;
             std::cerr << "bvlc_googlenet.caffemodel can be downloaded here:" << std::endl;
             std::cerr << "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
             exit(-1);
@@ -172,8 +171,7 @@ int main(int argc, char **argv)
     //! [Gather output]
 
     //! [Print results]
-    std::vector<String> classNames;
-    classNames = readClassNames(classNameFile.c_str());
+    std::vector<String> classNames = readClassNames(classNameFile.c_str());
     std::cout << "Best class: #" << classId << " '" << classNames.at(classId) << "'" << std::endl;
     std::cout << "Probability: " << classProb * 100 << "%" << std::endl;
     //! [Print results]
