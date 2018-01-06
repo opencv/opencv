@@ -60,7 +60,7 @@ static void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
     *classId = classNumber.x;
 }
 
-static std::vector<String> readClassNames(const char *filename = "synset_words.txt")
+static std::vector<String> readClassNames(const char *filename )
 {
     std::vector<String> classNames;
 
@@ -123,6 +123,7 @@ int main(int argc, char **argv)
             std::cerr << "Can't load network by using the following files: " << std::endl;
             std::cerr << "prototxt:   " << modelTxt << std::endl;
             std::cerr << "caffemodel: " << modelBin << std::endl;
+            std::cerr << "names of classes: " << classNameFile << std::endl;
             std::cerr << "bvlc_googlenet.caffemodel can be downloaded here:" << std::endl;
             std::cerr << "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
             exit(-1);
@@ -172,10 +173,7 @@ int main(int argc, char **argv)
 
     //! [Print results]
     std::vector<String> classNames;
-    if (classNameFile.empty())
-        classNames = readClassNames();
-    else
-        classNames = readClassNames(classNameFile.c_str());
+    classNames = readClassNames(classNameFile.c_str());
     std::cout << "Best class: #" << classId << " '" << classNames.at(classId) << "'" << std::endl;
     std::cout << "Probability: " << classProb * 100 << "%" << std::endl;
     //! [Print results]
