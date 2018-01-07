@@ -27,7 +27,7 @@ static const char* params =
 "{ camera_device  | 0     | camera device number}"
 "{ source         |       | video or image for detection}"
 "{ save           |       | file name output}"
-"{ fps            | 10    | frame per second }"
+"{ fps            | 3     | frame per second }"
 "{ style          | box   | box or line style draw }"
 "{ min_confidence | 0.24  | min confidence      }"
 "{ class_names    |       | File with class names, [PATH-TO-DARKNET]/data/coco.names }";
@@ -64,7 +64,6 @@ int main(int argc, char** argv)
     VideoWriter writer;
     int codec = CV_FOURCC('M', 'J', 'P', 'G');
     double fps = parser.get<float>("fps");
-    Mat frame;
     if (parser.get<String>("source").empty())
     {
         int cameraDevice = parser.get<int>("camera_device");
@@ -87,10 +86,8 @@ int main(int argc, char** argv)
 
     if(!parser.get<String>("save").empty())
     {
-        cap >> frame;
-        writer.open(parser.get<String>("save"), codec, fps, frame.size(),  (frame.type() == CV_8UC3));
+        writer.open(parser.get<String>("save"), codec, fps, Size(cap.get(CAP_PROP_FRAME_WIDTH),cap.get(CAP_PROP_FRAME_HEIGHT)), 1);
     }
-
 
     vector<String> classNamesVec;
     ifstream classNamesFile(parser.get<String>("class_names").c_str());
@@ -105,6 +102,7 @@ int main(int argc, char** argv)
 
     for(;;)
     {
+        Mat frame;
         cap >> frame; // get a new frame from camera/video or read image
 
         if (frame.empty())
