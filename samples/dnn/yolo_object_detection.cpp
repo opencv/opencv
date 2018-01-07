@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 
     if(!parser.get<String>("save").empty())
     {
-        writer.open(parser.get<String>("save"), codec, fps, Size(cap.get(CAP_PROP_FRAME_WIDTH),cap.get(CAP_PROP_FRAME_HEIGHT)), 1);
+        writer.open(parser.get<String>("save"), codec, fps, Size((int)cap.get(CAP_PROP_FRAME_WIDTH),(int)cap.get(CAP_PROP_FRAME_HEIGHT)), 1);
     }
 
     vector<String> classNamesVec;
