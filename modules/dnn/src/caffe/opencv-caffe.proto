@@ -550,7 +550,7 @@ message LayerParameter {
   optional PReLUParameter prelu_param = 131;
   optional PriorBoxParameter prior_box_param = 150;
   optional ProposalParameter proposal_param = 201;
-  optional PSROIPoolingParameter psroi_pooling_param = 10001;  // https://github.com/daijifeng001/caffe-rfcn
+  optional PSROIPoolingParameter psroi_pooling_param = 10002;  // https://github.com/daijifeng001/caffe-rfcn
   optional PythonParameter python_param = 130;
   optional RecurrentParameter recurrent_param = 146;
   optional ReductionParameter reduction_param = 136;
