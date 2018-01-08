@@ -2368,7 +2368,7 @@ void protobuf_AddDesc_opencv_2dcaffe_2eproto_impl() {
     "eLUParameter\0229\n\017prior_box_param\030\226\001 \001(\0132\037"
     ".opencv_caffe.PriorBoxParameter\0228\n\016propo"
     "sal_param\030\311\001 \001(\0132\037.opencv_caffe.Proposal"
-    "Parameter\022A\n\023psroi_pooling_param\030\221N \001(\0132"
+    "Parameter\022A\n\023psroi_pooling_param\030\222N \001(\0132"
     "#.opencv_caffe.PSROIPoolingParameter\0224\n\014"
     "python_param\030\202\001 \001(\0132\035.opencv_caffe.Pytho"
     "nParameter\022:\n\017recurrent_param\030\222\001 \001(\0132 .o"
@@ -16966,13 +16966,13 @@ bool LayerParameter::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(80010)) goto parse_psroi_pooling_param;
+        if (input->ExpectTag(80018)) goto parse_psroi_pooling_param;
         break;
       }
 
-      // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
-      case 10001: {
-        if (tag == 80010) {
+      // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
+      case 10002: {
+        if (tag == 80018) {
          parse_psroi_pooling_param:
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
                input, mutable_psroi_pooling_param()));
@@ -17415,10 +17415,10 @@ void LayerParameter::SerializeWithCachedSizes(
       201, *this->proposal_param_, output);
   }
 
-  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
   if (has_psroi_pooling_param()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      10001, *this->psroi_pooling_param_, output);
+      10002, *this->psroi_pooling_param_, output);
   }
 
   // optional .opencv_caffe.ROIPoolingParameter roi_pooling_param = 8266711;
@@ -17890,11 +17890,11 @@ void LayerParameter::SerializeWithCachedSizes(
         201, *this->proposal_param_, false, target);
   }
 
-  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
   if (has_psroi_pooling_param()) {
     target = ::google::protobuf::internal::WireFormatLite::
       InternalWriteMessageNoVirtualToArray(
-        10001, *this->psroi_pooling_param_, false, target);
+        10002, *this->psroi_pooling_param_, false, target);
   }
 
   // optional .opencv_caffe.ROIPoolingParameter roi_pooling_param = 8266711;
@@ -18215,7 +18215,7 @@ size_t LayerParameter::ByteSizeLong() const {
           *this->proposal_param_);
     }
 
-    // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+    // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
     if (has_psroi_pooling_param()) {
       total_size += 3 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
@@ -20896,7 +20896,7 @@ void LayerParameter::set_allocated_proposal_param(::opencv_caffe::ProposalParame
   // @@protoc_insertion_point(field_set_allocated:opencv_caffe.LayerParameter.proposal_param)
 }
 
-// optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+// optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
 bool LayerParameter::has_psroi_pooling_param() const {
   return (_has_bits_[1] & 0x00020000u) != 0;
 }

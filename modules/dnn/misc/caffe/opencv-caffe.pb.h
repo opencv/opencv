@@ -4159,10 +4159,10 @@ class LayerParameter : public ::google::protobuf::Message /* @@protoc_insertion_
   ::opencv_caffe::ProposalParameter* release_proposal_param();
   void set_allocated_proposal_param(::opencv_caffe::ProposalParameter* proposal_param);
 
-  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+  // optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
   bool has_psroi_pooling_param() const;
   void clear_psroi_pooling_param();
-  static const int kPsroiPoolingParamFieldNumber = 10001;
+  static const int kPsroiPoolingParamFieldNumber = 10002;
   const ::opencv_caffe::PSROIPoolingParameter& psroi_pooling_param() const;
   ::opencv_caffe::PSROIPoolingParameter* mutable_psroi_pooling_param();
   ::opencv_caffe::PSROIPoolingParameter* release_psroi_pooling_param();
@@ -19331,7 +19331,7 @@ inline void LayerParameter::set_allocated_proposal_param(::opencv_caffe::Proposa
   // @@protoc_insertion_point(field_set_allocated:opencv_caffe.LayerParameter.proposal_param)
 }
 
-// optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10001;
+// optional .opencv_caffe.PSROIPoolingParameter psroi_pooling_param = 10002;
 inline bool LayerParameter::has_psroi_pooling_param() const {
   return (_has_bits_[1] & 0x00020000u) != 0;
 }
