@@ -51,9 +51,14 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <opencv2/core/utils/configuration.private.hpp>
+
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
+
+// this option is usefull to run valgrind memory errors detection
+static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterBool("OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS", false);
 
 using std::vector;
 using std::map;
@@ -369,40 +374,42 @@ public:
 
     void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst)
     {
-#ifdef REUSE_DNN_MEMORY
-        Mat bestBlob;
-        LayerPin bestBlobPin;
-
-        std::map<LayerPin, Mat>::iterator hostIt;
-        std::map<LayerPin, int>::iterator refIt;
-
-        const int targetTotal = total(shape);
-        int bestBlobTotal = INT_MAX;
-
-        for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
+        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS)
         {
-            refIt = refCounter.find(hostIt->first);
-            // Use only blobs that had references before because if not,
-            // it might be used as output.
-            if (refIt != refCounter.end() && refIt->second == 0)
+            Mat bestBlob;
+            LayerPin bestBlobPin;
+
+            std::map<LayerPin, Mat>::iterator hostIt;
+            std::map<LayerPin, int>::iterator refIt;
+
+            const int targetTotal = total(shape);
+            int bestBlobTotal = INT_MAX;
+
+            for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
             {
-                Mat& unusedBlob = hostIt->second;
-                if (unusedBlob.total() >= targetTotal &&
-                    unusedBlob.total() < bestBlobTotal)
+                refIt = refCounter.find(hostIt->first);
+                // Use only blobs that had references before because if not,
+                // it might be used as output.
+                if (refIt != refCounter.end() && refIt->second == 0)
                 {
-                    bestBlobPin = hostIt->first;
-                    bestBlob = unusedBlob;
-                    bestBlobTotal = unusedBlob.total();
+                    Mat& unusedBlob = hostIt->second;
+                    if (unusedBlob.total() >= targetTotal &&
+                        unusedBlob.total() < bestBlobTotal)
+                    {
+                        bestBlobPin = hostIt->first;
+                        bestBlob = unusedBlob;
+                        bestBlobTotal = unusedBlob.total();
+                    }
                 }
             }
+            if (!bestBlob.empty())
+            {
+                reuse(bestBlobPin, lp);
+                dst = bestBlob.reshape(1, 1).colRange(0, targetTotal).reshape(1, shape);
+                return;
+            }
         }
-        if (!bestBlob.empty())
-        {
-            reuse(bestBlobPin, lp);
-            dst = bestBlob.reshape(1, 1).colRange(0, targetTotal).reshape(1, shape);
-        }
-        else
-#endif  // REUSE_DNN_MEMORY
+
         {
             // if dst already has been allocated with total(shape) elements,
             // it won't be recrreated and pointer of dst.data remains the same.
@@ -413,40 +420,42 @@ public:
 
     void reuseOrCreate(const MatShape& shape, const LayerPin& lp, UMat &umat_dst)
     {
-#ifdef REUSE_DNN_MEMORY
-        UMat bestBlob;
-        LayerPin bestBlobPin;
-
-        std::map<LayerPin, UMat>::iterator hostIt;
-        std::map<LayerPin, int>::iterator refIt;
-
-        const int targetTotal = total(shape);
-        int bestBlobTotal = INT_MAX;
-
-        for (hostIt = umat_memHosts.begin(); hostIt != umat_memHosts.end(); ++hostIt)
+        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS)
         {
-            refIt = refCounter.find(hostIt->first);
-            // Use only blobs that had references before because if not,
-            // it might be used as output.
-            if (refIt != refCounter.end() && refIt->second == 0)
+            UMat bestBlob;
+            LayerPin bestBlobPin;
+
+            std::map<LayerPin, UMat>::iterator hostIt;
+            std::map<LayerPin, int>::iterator refIt;
+
+            const int targetTotal = total(shape);
+            int bestBlobTotal = INT_MAX;
+
+            for (hostIt = umat_memHosts.begin(); hostIt != umat_memHosts.end(); ++hostIt)
             {
-                UMat& unusedBlob = hostIt->second;
-                if (unusedBlob.total() >= targetTotal &&
-                    unusedBlob.total() < bestBlobTotal)
+                refIt = refCounter.find(hostIt->first);
+                // Use only blobs that had references before because if not,
+                // it might be used as output.
+                if (refIt != refCounter.end() && refIt->second == 0)
                 {
-                    bestBlobPin = hostIt->first;
-                    bestBlob = unusedBlob;
-                    bestBlobTotal = unusedBlob.total();
+                    UMat& unusedBlob = hostIt->second;
+                    if (unusedBlob.total() >= targetTotal &&
+                        unusedBlob.total() < bestBlobTotal)
+                    {
+                        bestBlobPin = hostIt->first;
+                        bestBlob = unusedBlob;
+                        bestBlobTotal = unusedBlob.total();
+                    }
                 }
             }
+            if (!bestBlob.empty())
+            {
+                reuse(bestBlobPin, lp);
+                umat_dst.create(shape, CV_32F);
+                return;
+            }
         }
-        if (!bestBlob.empty())
-        {
-            reuse(bestBlobPin, lp);
-            umat_dst.create(shape, CV_32F);
-        }
-        else
-#endif  // REUSE_DNN_MEMORY
+
         {
             // if dst already has been allocated with total(shape) elements,
             // it won't be recrreated and pointer of dst.data remains the same.

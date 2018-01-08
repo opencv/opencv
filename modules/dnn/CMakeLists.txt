@@ -97,8 +97,3 @@ if(BUILD_PERF_TESTS)
     endif()
   endif()
 endif()
-
-ocv_option(${the_module}_REUSE_MEMORY "Enable reusing strategy of memory management" ON)
-if (${the_module}_REUSE_MEMORY)
-  add_definitions(-DREUSE_DNN_MEMORY=1)
-endif()
