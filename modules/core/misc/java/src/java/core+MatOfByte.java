@@ -30,7 +30,7 @@ public class MatOfByte extends Mat {
         //FIXME: do we need release() here?
     }
 
-	public MatOfByte(byte...a) {
+    public MatOfByte(byte...a) {
         super();
         fromArray(a);
     }
@@ -45,7 +45,7 @@ public class MatOfByte extends Mat {
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
     }
 
-	public void fromArray(byte...a) {
+    public void fromArray(byte...a) {
         if(a==null || a.length==0)
             return;
         int num = a.length / _channels;

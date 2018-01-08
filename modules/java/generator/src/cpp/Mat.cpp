@@ -1919,9 +1919,18 @@ template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row
 extern "C" {
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals);
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals)
+{
+  return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwOffset
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwOffset
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals)
 {
   return java_mat_put(env, self, row, col, count, offset, vals);

@@ -1025,7 +1025,7 @@ public class Mat {
                             ") should be multiple of the Mat channels count (" +
                             CvType.channels(t) + ")");
         if (CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
-            return nPutB(nativeObj, row, col, length, offset, data);
+            return nPutBwOffset(nativeObj, row, col, length, offset, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
@@ -1333,7 +1333,7 @@ public class Mat {
 
     private static native int nPutB(long self, int row, int col, int count, byte[] data);
     
-    private static native int nPutB(long self, int row, int col, int count, int offset, byte[] data);
+    private static native int nPutBwOffset(long self, int row, int col, int count, int offset, byte[] data);
 
     private static native int nGetB(long self, int row, int col, int count, byte[] vals);
 
