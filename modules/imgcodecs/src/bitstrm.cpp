@@ -165,7 +165,7 @@ void  RBaseStream::release()
 
 void  RBaseStream::setPos( int pos )
 {
-    assert( isOpened() && pos >= 0 );
+    CV_Assert(isOpened() && pos >= 0);
 
     if( !m_file )
     {
@@ -182,13 +182,13 @@ void  RBaseStream::setPos( int pos )
 
 int  RBaseStream::getPos()
 {
-    assert( isOpened() );
+    CV_Assert(isOpened());
     return m_block_pos + (int)(m_current - m_start);
 }
 
 void  RBaseStream::skip( int bytes )
 {
-    assert( bytes >= 0 );
+    CV_Assert(bytes >= 0);
     m_current += bytes;
 }
 
@@ -221,7 +221,7 @@ int RLByteStream::getBytes( void* buffer, int count )
 {
     uchar*  data = (uchar*)buffer;
     int readed = 0;
-    assert( count >= 0 );
+    CV_Assert(count >= 0);
 
     while( count > 0 )
     {
@@ -373,7 +373,7 @@ void  WBaseStream::writeBlock()
 {
     int size = (int)(m_current - m_start);
 
-    assert( isOpened() );
+    CV_Assert(isOpened());
     if( size == 0 )
         return;
 
@@ -444,7 +444,7 @@ void  WBaseStream::release()
 
 int  WBaseStream::getPos()
 {
-    assert( isOpened() );
+    CV_Assert(isOpened());
     return m_block_pos + (int)(m_current - m_start);
 }
 
@@ -467,7 +467,7 @@ void WLByteStream::putBytes( const void* buffer, int count )
 {
     uchar* data = (uchar*)buffer;
 
-    assert( data && m_current && count >= 0 );
+    CV_Assert(data && m_current && count >= 0);
 
     while( count )
     {
