@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "bitstrm.hpp"
+#include "utils.hpp"
 
 namespace cv
 {
@@ -183,13 +184,18 @@ void  RBaseStream::setPos( int pos )
 int  RBaseStream::getPos()
 {
     CV_Assert(isOpened());
-    return m_block_pos + (int)(m_current - m_start);
+    int pos = validateToInt((m_current - m_start) + m_block_pos);
+    CV_Assert(pos >= m_block_pos); // overflow check
+    CV_Assert(pos >= 0); // overflow check
+    return pos;
 }
 
 void  RBaseStream::skip( int bytes )
 {
     CV_Assert(bytes >= 0);
+    uchar* old = m_current;
     m_current += bytes;
+    CV_Assert(m_current >= old);  // overflow check
 }
 
 /////////////////////////  RLByteStream ////////////////////////////
