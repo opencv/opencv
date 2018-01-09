@@ -1602,13 +1602,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     // RANSAC stuff:
     // 1. find the consensus
-    std::vector<int> tmp_matches;
     for( k = 0; k < RANSAC_MAX_ITERS; k++ )
     {
         int idx[RANSAC_SIZE0];
         Point2f *a =new Point2f[RANSAC_SIZE0];
         Point2f *b =new Point2f[RANSAC_SIZE0];
-        tmp_matches.clear();
 
         // choose random 3 non-coplanar points from A & B
         for( i = 0; i < RANSAC_SIZE0; i++ )
@@ -1679,8 +1677,6 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
             if( std::abs( m[0]*pA[i].x + m[1]*pA[i].y + m[2] - pB[i].x ) +
                 std::abs( m[3]*pA[i].x + m[4]*pA[i].y + m[5] - pB[i].y ) < std::max(brect.width,brect.height)*0.05 )
                 good_idx[good_count++] = i;
-                //if( matches != NULL )
-                //    tmp_matches.push_back(i);
         }
 
         if( good_count >= count*RANSAC_GOOD_RATIO )
@@ -1700,15 +1696,6 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         }
     }
 
-    /*if( matches != NULL )
-    {
-        for( i=0; i < count; i++ )
-        {
-            matches[i] = 0;
-        }
-        for( i=0; i < tmp_matches.size(); i++ )
-            matches[i] = 1;
-    }*/
 
     getRTMatrix( &pA[0], &pB[0], good_count, M, fullAffine );
     M.at<double>(0, 2) /= scale;
