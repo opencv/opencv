@@ -54,7 +54,7 @@ public class MatOfByte extends Mat {
     }
 
     public void fromArray(int offset, int length, byte...a) {
-        if(a==null || a.length==0 || a.length - (length + offset) < 0)
+        if(a==null || a.length==0 || a.length - (length + offset) < 0 || offset < 0)
             return;
         int num = length / _channels;
         alloc(num);
