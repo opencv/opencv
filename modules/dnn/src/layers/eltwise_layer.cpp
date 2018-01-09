@@ -259,10 +259,62 @@ public:
         }
     };
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        switch (op)
+        {
+            case SUM:
+                if (coeffs.empty())
+                {
+                    add(inputs[0], inputs[1], outputs[0]);
+                    for (int i = 2; i < inputs.size(); ++i)
+                        add(outputs[0], inputs[i], outputs[0]);
+                }
+                else
+                {
+                    UMat mul0, mul1;
+                    multiply(coeffs[0], inputs[0], mul0);
+                    multiply(coeffs[1], inputs[1], mul1);
+                    add(mul0, mul1, outputs[0]);
+                    for (int i = 2; i < inputs.size(); ++i)
+                    {
+                        multiply(coeffs[i], inputs[i], mul0);
+                        add(mul0, outputs[0], outputs[0]);
+                    }
+                }
+                break;
+            case PROD:
+                multiply(inputs[0], inputs[1], outputs[0]);
+                for (int i = 2; i < inputs.size(); ++i)
+                    multiply(inputs[i], outputs[0], outputs[0]);
+                break;
+            case MAX:
+                max(inputs[0], inputs[1], outputs[0]);
+                for (int i = 2; i < inputs.size(); ++i)
+                    max(inputs[i], outputs[0], outputs[0]);
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }

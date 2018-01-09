@@ -320,6 +320,11 @@ TEST(Layer_Test_Eltwise, Accuracy)
     testLayerUsingCaffeModels("layer_eltwise");
 }
 
+OCL_TEST(Layer_Test_Eltwise, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_eltwise", DNN_TARGET_OPENCL);
+}
+
 TEST(Layer_Test_PReLU, Accuracy)
 {
     testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_CPU, true);
