@@ -442,8 +442,10 @@ if(BUILD_FAT_JAVA_LIB)
     foreach(_dep ${__deps})
       ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-force_load "${_dep}")
     endforeach()
-  else()
+  elseif(((CMAKE_COMPILER_IS_GNUCXX OR UNIX) OR (OPENCV_FORCE_FAT_JAVA_LIB_LD_RULES)) AND (NOT OPENCV_SKIP_FAT_JAVA_LIB_LD_RULES))
     ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+  else()
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__deps})
   endif()
   ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
@@ -480,8 +482,9 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
 
-if(ANDROID)
+if(BUILD_FAT_JAVA_LIB)
   ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
+          RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT java
           LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java)
 else()
