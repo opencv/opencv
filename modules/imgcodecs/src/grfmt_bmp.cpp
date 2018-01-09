@@ -95,6 +95,7 @@ bool  BmpDecoder::readHeader()
         m_offset = m_strm.getDWord();
 
         int  size = m_strm.getDWord();
+        CV_Assert(size > 0); // overflow, 2Gb limit
 
         if( size >= 36 )
         {
