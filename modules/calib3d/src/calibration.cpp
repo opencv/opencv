@@ -1009,6 +1009,8 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
     CV_Assert( (CV_MAT_DEPTH(tvec->type) == CV_64F || CV_MAT_DEPTH(tvec->type) == CV_32F) &&
         (tvec->rows == 1 || tvec->cols == 1) && tvec->rows*tvec->cols*CV_MAT_CN(tvec->type) == 3 );
 
+    CV_Assert((count >= 4) || (count == 3 && useExtrinsicGuess)); // it is unsafe to call LM optimisation without an extrinsic guess in the case of 3 points. This is because there is no guarantee that it will converge on the correct solution.
+
     _mn.reset(cvCreateMat( 1, count, CV_64FC2 ));
     _Mxy.reset(cvCreateMat( 1, count, CV_64FC2 ));
 
@@ -1033,7 +1035,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
         cvSVD( &_MM, &matW, 0, &matV, CV_SVD_MODIFY_A + CV_SVD_V_T );
 
         // initialize extrinsic parameters
-        if( W[2]/W[1] < 1e-3 || count < 4 )
+        if( W[2]/W[1] < 1e-3)
         {
             // a planar structure case (all M's lie in the same plane)
             double tt[3], h[9], h1_norm, h2_norm;
