@@ -250,7 +250,9 @@ when fullAffine=false.
 @sa
 estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
-CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
+
+ CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine, int RANSAC_MAX_ITERS=500, 
+    double RANSAC_GOOD_RATIO=0.5, int RANSAC_SIZE0=3);
 
 
 enum
