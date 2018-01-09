@@ -1487,7 +1487,8 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 }
 
-cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
+cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine, int RANSAC_MAX_ITERS, double RANSAC_GOOD_RATIO,
+                                    int RANSAC_SIZE0)
 {
     CV_INSTRUMENT_REGION()
 
@@ -1495,9 +1496,6 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     const int COUNT = 15;
     const int WIDTH = 160, HEIGHT = 120;
-    const int RANSAC_MAX_ITERS = 500;
-    const int RANSAC_SIZE0 = 3;
-    const double RANSAC_GOOD_RATIO = 0.5;
 
     std::vector<Point2f> pA, pB;
     std::vector<int> good_idx;
@@ -1604,11 +1602,13 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     // RANSAC stuff:
     // 1. find the consensus
+    std::vector<int> tmp_matches;
     for( k = 0; k < RANSAC_MAX_ITERS; k++ )
     {
         int idx[RANSAC_SIZE0];
-        Point2f a[RANSAC_SIZE0];
-        Point2f b[RANSAC_SIZE0];
+        Point2f *a =new Point2f[RANSAC_SIZE0];
+        Point2f *b =new Point2f[RANSAC_SIZE0];
+        tmp_matches.clear();
 
         // choose random 3 non-coplanar points from A & B
         for( i = 0; i < RANSAC_SIZE0; i++ )
@@ -1635,7 +1635,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
                 if( i+1 == RANSAC_SIZE0 )
                 {
-                    // additional check for non-complanar vectors
+                    // additional check for non-coplanar vectors
                     a[0] = pA[idx[0]];
                     a[1] = pA[idx[1]];
                     a[2] = pA[idx[2]];
@@ -1662,10 +1662,16 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         }
 
         if( i < RANSAC_SIZE0 )
+        {
+            delete [] a;
+            delete [] b;
             continue;
+        }
 
         // estimate the transformation using 3 points
         getRTMatrix( a, b, 3, M, fullAffine );
+        delete [] a;
+        delete [] b;
 
         const double* m = M.ptr<double>();
         for( i = 0, good_count = 0; i < count; i++ )
@@ -1673,6 +1679,8 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
             if( std::abs( m[0]*pA[i].x + m[1]*pA[i].y + m[2] - pB[i].x ) +
                 std::abs( m[3]*pA[i].x + m[4]*pA[i].y + m[5] - pB[i].y ) < std::max(brect.width,brect.height)*0.05 )
                 good_idx[good_count++] = i;
+                //if( matches != NULL )
+                //    tmp_matches.push_back(i);
         }
 
         if( good_count >= count*RANSAC_GOOD_RATIO )
@@ -1691,6 +1699,16 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
             pB[i] = pB[j];
         }
     }
+
+    /*if( matches != NULL )
+    {
+        for( i=0; i < count; i++ )
+        {
+            matches[i] = 0;
+        }
+        for( i=0; i < tmp_matches.size(); i++ )
+            matches[i] = 1;
+    }*/
 
     getRTMatrix( &pA[0], &pB[0], good_count, M, fullAffine );
     M.at<double>(0, 2) /= scale;
