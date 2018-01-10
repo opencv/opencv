@@ -886,7 +886,10 @@ macro(_ocv_create_module)
     DEFINE_SYMBOL CVAPI_EXPORTS
   )
 
-  if(ANDROID AND BUILD_FAT_JAVA_LIB)
+  if(BUILD_FAT_JAVA_LIB)  # force exports from static modules too
+    if(BUILD_SHARED_LIBS)
+      message(FATAL_ERROR "Assertion failed: BUILD_SHARED_LIBS=OFF must be off if BUILD_FAT_JAVA_LIB=ON")
+    endif()
     target_compile_definitions(${the_module} PRIVATE CVAPI_EXPORTS)
   endif()
 

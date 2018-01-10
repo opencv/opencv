@@ -66,7 +66,7 @@
 //
 //M*/
 
-#include <opencv2/core.hpp>
+#include "../precomp.hpp"
 
 #include <iostream>
 #include <fstream>

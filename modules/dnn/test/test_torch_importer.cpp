@@ -170,6 +170,11 @@ TEST(Torch_Importer, run_batch_norm)
     runTorchNet("net_batch_norm", DNN_TARGET_CPU, "", false, true);
 }
 
+OCL_TEST(Torch_Importer, run_batch_norm)
+{
+    runTorchNet("net_batch_norm", DNN_TARGET_OPENCL, "", false, true);
+}
+
 TEST(Torch_Importer, net_prelu)
 {
     runTorchNet("net_prelu");
@@ -225,6 +230,11 @@ TEST(Torch_Importer, net_normalize)
     runTorchNet("net_normalize", DNN_TARGET_CPU, "", false, true);
 }
 
+OCL_TEST(Torch_Importer, net_normalize)
+{
+    runTorchNet("net_normalize", DNN_TARGET_OPENCL, "", false, true);
+}
+
 TEST(Torch_Importer, net_padding)
 {
     runTorchNet("net_padding", DNN_TARGET_CPU, "", false, true);
@@ -235,6 +245,11 @@ TEST(Torch_Importer, net_padding)
 TEST(Torch_Importer, net_non_spatial)
 {
     runTorchNet("net_non_spatial", DNN_TARGET_CPU, "", false, true);
+}
+
+OCL_TEST(Torch_Importer, net_non_spatial)
+{
+    runTorchNet("net_non_spatial", DNN_TARGET_OPENCL, "", false, true);
 }
 
 TEST(Torch_Importer, ENet_accuracy)
