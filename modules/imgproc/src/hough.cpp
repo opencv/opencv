@@ -1606,7 +1606,7 @@ static int SelectHoughPeak( const short *plane,
 }
 
 int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
-                                HoughDetectParam *rho_param, HoughDetectParam *theta_param,
+                                const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
                                 int polar_cnt, HoughLinePolar hough_polar[] )
 {
     int ret = 0;

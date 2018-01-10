@@ -2150,14 +2150,14 @@ Must fall between 0 and max_theta.
 @param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
 Must fall between min_theta and CV_PI.
  */
-struct HoughLinePolar
+struct CV_EXPORTS_W_SIMPLE HoughLinePolar
 {
     int votes;
     double rho;
     double angle;
 };
 
-struct HoughDetectParam
+struct CV_EXPORTS_W_SIMPLE HoughDetectParam
 {
     double min;
     double max;
@@ -2165,8 +2165,8 @@ struct HoughDetectParam
 };
 
 CV_EXPORTS_W int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
-                                             HoughDetectParam *rho_param, HoughDetectParam *theta_param,
-                                             int polar_cnt, HoughLinePolar hough_polar[] );
+                                             const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
+                                             int polar_cnt, CV_OUT HoughLinePolar hough_polar[] );
 
 //! @} imgproc_feature
 
