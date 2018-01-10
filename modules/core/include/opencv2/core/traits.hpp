@@ -231,22 +231,21 @@ public:
          };
 };
 
-#if CV_FP16
-    template<> class DataType<float16> {
-    public:
-        typedef float16 value_type;
-        typedef value_type work_type;
-        typedef value_type channel_type;
-        typedef value_type vec_type;
-        enum {
-            generic_type = 0,
-            depth = 2,
-            channels = 1,
-            fmt = (int)'g',
-            type = CV_MAKETYPE(depth, channels)
-        };
+
+template<> class DataType<float16> {
+public:
+    typedef float16 value_type;
+    typedef value_type work_type;
+    typedef value_type channel_type;
+    typedef value_type vec_type;
+    enum {
+        generic_type = 0,
+        depth = 2,
+        channels = 1,
+        fmt = (int)'g',
+        type = CV_MAKETYPE(depth, channels)
     };
-#endif
+};
 
 template<> class DataType<float>
 {
