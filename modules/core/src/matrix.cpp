@@ -5406,7 +5406,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
 
     CV_Assert( hdr );
     m.create( dims(), hdr->size, rtype );
-    m = Scalar(beta);
+    m = Scalar::all(beta);
 
     SparseMatConstIterator from = begin();
     size_t N = nzcount();

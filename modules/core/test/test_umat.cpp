@@ -1383,4 +1383,21 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
 }
 
+typedef TestWithParam<tuple<int, Size, int> > UMat_init;
+TEST_P(UMat_init, ones)
+{
+    int depth = get<0>(GetParam());
+    Size size = get<1>(GetParam());
+    int ch = get<2>(GetParam());
+
+    UMat m = UMat::ones(size, CV_MAKETYPE(depth, ch));
+    ASSERT_EQ(countNonZero(m.getMat(ACCESS_READ) != 1), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(Core, UMat_init, Combine(
+        Values(CV_8U, CV_8S, CV_16S, CV_32S, CV_32F, CV_64F), // depth
+        Values(Size(3, 3), Size(16, 8)),  // input size
+        Values(1, 2, 3, 4)  // number of channels
+));
+
 } } // namespace cvtest::ocl
