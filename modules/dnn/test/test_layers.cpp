@@ -202,6 +202,11 @@ TEST(Layer_Test_MVN, Accuracy)
     testLayerUsingCaffeModels("layer_mvn");
 }
 
+OCL_TEST(Layer_Test_MVN, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_mvn", DNN_TARGET_OPENCL);
+}
+
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
                  int axis = 0, int num_axes = -1,
                  MatShape mask = MatShape())
