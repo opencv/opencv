@@ -183,29 +183,34 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
 class OpenCLBackendWrapper : public BackendWrapper
 {
 public:
-    OpenCLBackendWrapper(const Mat& m) : BackendWrapper(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL)
+    OpenCLBackendWrapper(Mat& m) : BackendWrapper(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL)
     {
-        umat = m.getUMat(ACCESS_RW);
+        m.copyTo(umat);
+        host = &m;
+        hostDirty = false;
     }
 
-    OpenCLBackendWrapper(const Ptr<BackendWrapper>& baseBuffer, const Mat& host)
+    OpenCLBackendWrapper(const Ptr<BackendWrapper>& baseBuffer, Mat& m)
         : BackendWrapper(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL)
     {
         Ptr<OpenCLBackendWrapper> base = baseBuffer.dynamicCast<OpenCLBackendWrapper>();
         CV_Assert(!base.empty());
 
+        host = &m;
+
         int shape[] = {1, (int)base->umat.total()};
         umat = base->umat.reshape(1, 2, &shape[0])
-                         .colRange(0, host.total())
-                         .reshape(1, host.dims, &host.size[0]);
+                         .colRange(0, host->total())
+                         .reshape(1, host->dims, &host->size[0]);
+        hostDirty = false;
     }
 
-    static Ptr<BackendWrapper> create(const Mat& m)
+    static Ptr<BackendWrapper> create(Mat& m)
     {
         return Ptr<BackendWrapper>(new OpenCLBackendWrapper(m));
     }
 
-    static Ptr<BackendWrapper> create(const Ptr<BackendWrapper>& baseBuffer, const Mat& m)
+    static Ptr<BackendWrapper> create(const Ptr<BackendWrapper>& baseBuffer, Mat& m)
     {
         return Ptr<BackendWrapper>(new OpenCLBackendWrapper(baseBuffer, m));
     }
@@ -218,25 +223,22 @@ public:
         {
             Ptr<OpenCLBackendWrapper> umatWrapper = wrappers[i].dynamicCast<OpenCLBackendWrapper>();
             CV_Assert(!umatWrapper.empty());
+            umatWrapper->copyToDevice();
             mats[i] = umatWrapper->umat;
         }
         return mats;
     }
 
-    // Replaces all umats in wrappers to specific ones. Returns host mats.
+    // Replaces all umats in wrappers to specific ones.
     static void update(const std::vector<Ptr<BackendWrapper> >& wrappers,
-                       const std::vector<UMat>& umats, std::vector<Mat>& mats)
+                       const std::vector<UMat>& umats)
     {
-        CV_Assert(wrappers.size() == mats.size());
-        for (int i = 0, n = mats.size(); i < n; ++i)
+        CV_Assert(wrappers.size() == umats.size());
+        for (int i = 0, n = umats.size(); i < n; ++i)
         {
             Ptr<OpenCLBackendWrapper> umatWrapper = wrappers[i].dynamicCast<OpenCLBackendWrapper>();
             CV_Assert(!umatWrapper.empty());
-            if (umatWrapper->umat.size != umats[i].size)
-            {
-                umatWrapper->umat = umats[i];
-                mats[i] = umats[i].getMat(ACCESS_RW);
-            }
+            umatWrapper->umat = umats[i];
         }
     }
 
@@ -245,13 +247,27 @@ public:
     // Copies data from device to a host memory.
     virtual void copyToHost()
     {
-        umat.getMat(ACCESS_READ);
+        umat.copyTo(*host);
     }
 
-    virtual void setHostDirty() {};
+    virtual void setHostDirty()
+    {
+        hostDirty = true;
+    };
+
+    void copyToDevice()
+    {
+        if (hostDirty)
+        {
+            host->copyTo(umat);
+            hostDirty = false;
+        }
+    }
 
 private:
     UMat umat;
+    Mat* host;
+    bool hostDirty;
 };
 
 struct LayerPin
@@ -594,7 +610,7 @@ private:
     std::map<LayerPin, Mat> memHosts;
 };
 
-static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, const cv::Mat& m)
+static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 {
     if (backendId == DNN_BACKEND_DEFAULT)
     {
@@ -658,7 +674,7 @@ struct Net::Impl
     bool fusion;
     std::vector<int64> layersTimings;
 
-    Ptr<BackendWrapper> wrap(const Mat& host)
+    Ptr<BackendWrapper> wrap(Mat& host)
     {
         if (preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_CPU)
             return Ptr<BackendWrapper>();
@@ -1504,7 +1520,7 @@ struct Net::Impl
                     layer->forward(OpenCLBackendWrapper::getUMatVector(ld.inputBlobsWrappers),
                                    umat_outputBlobs,
                                    OpenCLBackendWrapper::getUMatVector(ld.internalBlobsWrappers));
-                    OpenCLBackendWrapper::update(ld.outputBlobsWrappers, umat_outputBlobs, ld.outputBlobs);
+                    OpenCLBackendWrapper::update(ld.outputBlobsWrappers, umat_outputBlobs);
                 }
                 else
                 {
