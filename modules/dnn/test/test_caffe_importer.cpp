@@ -303,6 +303,14 @@ OCL_TEST(Reproducibility_ResNet50, Accuracy)
 
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
     normAssert(ref, out);
+
+    UMat out_umat;
+    net.forward(out_umat);
+    normAssert(ref, out_umat, "out_umat");
+
+    std::vector<UMat> out_umats;
+    net.forward(out_umats);
+    normAssert(ref, out_umats[0], "out_umat_vector");
 }
 
 TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
@@ -331,8 +339,13 @@ OCL_TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
     ASSERT_TRUE(!input.empty());
 
-    net.setInput(input);
+    // Firstly set a wrong input blob and run the model to receive a wrong output.
+    net.setInput(input * 2.0f);
     Mat out = net.forward();
+
+    // Then set a correct input blob to check CPU->GPU synchronization is working well.
+    net.setInput(input);
+    out = net.forward();
 
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
