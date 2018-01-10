@@ -1,6 +1,9 @@
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
+find_package(HDF5)
+include_directories(${HDF5_INCLUDE_DIRS})
+
 ocv_add_module(${MODULE_NAME} BINDINGS PRIVATE_REQUIRED opencv_python_bindings_generator)
 
 ocv_module_include_directories(
