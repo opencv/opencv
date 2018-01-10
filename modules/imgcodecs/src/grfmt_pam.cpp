@@ -53,6 +53,8 @@
 #include "utils.hpp"
 #include "grfmt_pam.hpp"
 
+using namespace cv;
+
 /* the PAM related fields */
 #define MAX_PAM_HEADER_IDENITFIER_LENGTH 8
 #define MAX_PAM_HEADER_VALUE_LENGTH 255
@@ -184,7 +186,7 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                     }
                     break;
                 default:
-                    assert (0);
+                    CV_Error(Error::StsInternal, "");
             }
             break;
         }
@@ -205,12 +207,12 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                     }
                     break;
                 default:
-                    assert (0);
+                    CV_Error(Error::StsInternal, "");
             }
             break;
         }
         default:
-            assert (0);
+            CV_Error(Error::StsInternal, "");
     }
 }
 
@@ -711,7 +713,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
         } else
             strm.putBytes( data, stride*height );
     } else
-        assert (0);
+        CV_Error(Error::StsInternal, "");
 
     strm.close();
     return true;
