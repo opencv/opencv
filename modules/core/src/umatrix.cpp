@@ -1146,12 +1146,12 @@ UMat UMat::ones(int rows, int cols, int type)
 
 UMat UMat::ones(Size size, int type)
 {
-    return UMat(size, type, Scalar(1));
+    return UMat(size, type, Scalar::all(1));
 }
 
 UMat UMat::ones(int ndims, const int* sz, int type)
 {
-    return UMat(ndims, sz, type, Scalar(1));
+    return UMat(ndims, sz, type, Scalar::all(1));
 }
 
 UMat UMat::eye(int rows, int cols, int type)

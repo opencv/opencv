@@ -1754,3 +1754,55 @@ TEST(Mat_, template_based_ptr)
 }
 
 #endif
+
+namespace cvtest {
+
+typedef testing::TestWithParam<tuple<int, Size, int> > Mat_init;
+TEST_P(Mat_init, ones)
+{
+    int depth = get<0>(GetParam());
+    Size size = get<1>(GetParam());
+    int ch = get<2>(GetParam());
+
+    Mat m = Mat::ones(size, CV_MAKETYPE(depth, ch));
+    ASSERT_EQ(countNonZero(m != 1), 0);
+}
+
+TEST_P(Mat_init, eye)
+{
+    int depth = get<0>(GetParam());
+    Size size = get<1>(GetParam());
+    int ch = get<2>(GetParam());
+
+    Mat m = Mat::eye(size, CV_MAKETYPE(depth, ch));
+    Mat diag = m.diag();
+    ASSERT_EQ(countNonZero(diag != 1), 0);
+    diag.setTo(0);
+    ASSERT_EQ(countNonZero(m != 0), 0);
+}
+
+TEST_P(Mat_init, SparseMat_convertTo)
+{
+    int depth = get<0>(GetParam());
+    Size size = get<1>(GetParam());
+    int ch = get<2>(GetParam());
+
+    Mat diag = Mat::eye(size, CV_MAKETYPE(depth, ch));
+    SparseMat sparse(diag);
+
+    Mat m;
+    sparse.convertTo(m, sparse.type(), 1, 1);  // m = diag * 1 + 1
+
+    diag = m.diag();
+    ASSERT_EQ(countNonZero(diag != 2), 0);
+    diag.setTo(1);
+    ASSERT_EQ(countNonZero(m != 1), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(Core, Mat_init, Combine(
+        Values(CV_8U, CV_8S, CV_16S, CV_32S, CV_32F, CV_64F), // depth
+        Values(Size(3, 3), Size(16, 8)),  // input size
+        Values(1, 2, 3, 4)  // number of channels
+));
+
+}  // namespace cvtest
