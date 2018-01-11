@@ -123,9 +123,8 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                    vs22 = _mm256_setzero_ps(), vs23 = _mm256_setzero_ps();
 
 #if CV_AVX512_SKX // AVX512VL is necessary to avoid register spilling
-           /* only use AVX512 for multiple-of-16 vectors */
-           if ((vecsize & 15) == 0) {
-
+            if (vecsize >= 32)
+            {
                     __m512 vs00_5 = _mm512_setzero_ps(), vs01_5 = _mm512_setzero_ps(),
                            vs02_5 = _mm512_setzero_ps(), vs03_5 = _mm512_setzero_ps(),
                            vs10_5 = _mm512_setzero_ps(), vs11_5 = _mm512_setzero_ps(),
@@ -133,7 +132,7 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                            vs20_5 = _mm512_setzero_ps(), vs21_5 = _mm512_setzero_ps(),
                            vs22_5 = _mm512_setzero_ps(), vs23_5 = _mm512_setzero_ps();
 
-                    for(; k < vecsize - 15; k += 16, rptr += 16 )
+                    for (; k <= vecsize - 16; k += 16, rptr += 16)
                     {
                         __m512 w0 = _mm512_loadu_ps(wptr0 + k);
                         __m512 w1 = _mm512_loadu_ps(wptr1 + k);
