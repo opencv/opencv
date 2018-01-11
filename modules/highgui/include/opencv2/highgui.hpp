@@ -197,11 +197,7 @@ enum WindowPropertyFlags {
        WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
        WND_PROP_OPENGL       = 3, //!< opengl support.
-       WND_PROP_VISIBLE      = 4, //!< checks whether the window exists and is visible
-       WND_PROP_RO_WIDTH     = 5, //!< read only field returning pixel width of window
-       WND_PROP_RO_HEIGHT    = 6, //!< read only field returning pixel height of window
-       WND_PROP_RO_XPOS      = 7, //!< read only field returning absolute X position of window
-       WND_PROP_RO_YPOS      = 8  //!< read only field returning absolute Y position of window
+       WND_PROP_VISIBLE      = 4  //!< checks whether the window exists and is visible
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -445,6 +441,16 @@ The function getWindowProperty returns properties of a window.
 @sa setWindowProperty
  */
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
+
+/** @brief Provides rectangle of image in the window.
+
+The function getWindowImageRect returns the client screen coordinates, width and height of the image rendering area.
+
+@param winname Name of the window.
+
+@sa resizeWindow moveWindow
+ */
+CV_EXPORTS_W Rect cv::getWindowImageRect(const String& winname);
 
 /** @brief Sets mouse handler for the specified window
 
