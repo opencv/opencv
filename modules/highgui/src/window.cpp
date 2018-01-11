@@ -167,6 +167,9 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
 cv::Rect cvGetWindowImageRect(const char* name)
 {
+    if (!name)
+        return cv::Rect(-1, -1, -1, -1);
+    
     #if defined (HAVE_QT)
         return cvGetWindowRect_QT(name);
     #elif defined(HAVE_WIN32UI)
