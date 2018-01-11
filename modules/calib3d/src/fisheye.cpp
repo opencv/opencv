@@ -388,12 +388,19 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         {
             // compensate distortion iteratively
             double theta = theta_d;
-            for(int j = 0; j < 10; j++ )
-            {
-                double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
-                theta = theta_d / (1 + k[0] * theta2 + k[1] * theta4 + k[2] * theta6 + k[3] * theta8);
-            }
-
+            int j;
+			double eps0 = 1e-8, eps = 1;
+           
+			for (j=0; j<10 && eps > eps0; j++)
+			{
+				double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
+				double theta3 = theta*theta2, theta5 = theta4*theta, theta7 = theta6*theta, theta9 = theta8*theta;
+				double _theta = theta - (theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9 - theta_d) /
+						 (1 + 3*k[0]*theta2 + 5*k[1]*theta4 + 7*k[2]*theta6 + 9*k[3]*theta8);
+				eps = fabs(_theta - theta);
+				theta = _theta;
+			}
+            
             scale = std::tan(theta) / theta_d;
         }
 
