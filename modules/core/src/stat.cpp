@@ -2713,6 +2713,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
+    if (src.dims <= 2)
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols, src.rows, src.depth(), minVal, maxVal,
+                 minIdx, maxIdx, mask.data);
+
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
                openvx_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 

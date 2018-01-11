@@ -1867,6 +1867,24 @@ TEST(Core_BoolVector, support)
     ASSERT_FLOAT_EQ((float)nz/n, (float)(mean(test)[0]));
 }
 
+TEST(MinMaxLoc, Mat_UcharMax_Without_Loc)
+{
+    Mat_<uchar> mat(50, 50);
+    uchar iMaxVal = numeric_limits<uchar>::max();
+    mat.setTo(iMaxVal);
+
+    double min, max;
+    Point minLoc, maxLoc;
+
+    minMaxLoc(mat, &min, &max, &minLoc, &maxLoc, Mat());
+
+    ASSERT_EQ(iMaxVal, min);
+    ASSERT_EQ(iMaxVal, max);
+
+    ASSERT_EQ(Point(0, 0), minLoc);
+    ASSERT_EQ(Point(0, 0), maxLoc);
+}
+
 TEST(MinMaxLoc, Mat_IntMax_Without_Mask)
 {
     Mat_<int> mat(50, 50);
