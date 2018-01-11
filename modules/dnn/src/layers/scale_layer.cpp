@@ -12,6 +12,7 @@ Implementation of Scale layer.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -42,7 +43,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
@@ -130,6 +132,20 @@ public:
 #endif  // HAVE_HALIDE
                 break;
             }
+            case DNN_BACKEND_INFERENCE_ENGINE:
+            {
+#ifdef HAVE_INF_ENGINE
+                auto base = node.dynamicCast<InfEngineBackendNode>();
+                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
+                if (conv)
+                {
+                    Mat bias = hasBias ? blobs[1] : Mat();
+                    fuseConvWeights(conv, blobs[0], bias);
+                    return base;
+                }
+#endif  // HAVE_INF_ENGINE
+                break;
+            }
         }
         return Ptr<BackendNode>();
     }
@@ -166,6 +182,24 @@ public:
         return top;
     }
 #endif  // HAVE_HALIDE
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0]);
+        if (hasBias)
+            ieLayer->_biases = wrapToInfEngineBlob(blobs[1]);
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const

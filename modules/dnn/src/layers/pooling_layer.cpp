@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include <float.h>
 #include <algorithm>
@@ -130,7 +131,8 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == MAX || type == AVE && !pad.width && !pad.height);
+               (type == MAX || type == AVE && !pad.width && !pad.height) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (type == MAX || type == AVE);
     }
 
 #ifdef HAVE_OPENCL
@@ -220,6 +222,34 @@ public:
             return initAvePoolingHalide(inputs);
         else
             return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Pooling";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::PoolingLayer> ieLayer(new InferenceEngine::PoolingLayer(lp));
+
+        ieLayer->_kernel_x = kernel.width;
+        ieLayer->_kernel_y = kernel.height;
+        ieLayer->_stride_x = stride.width;
+        ieLayer->_stride_y = stride.height;
+        ieLayer->_padding_x = pad.width;
+        ieLayer->_padding_y = pad.height;
+        ieLayer->_exclude_pad = false;
+        if (type == MAX)
+            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
+        else if (type == AVE)
+            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::AVG;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 
     class PoolingInvoker : public ParallelLoopBody
