@@ -182,7 +182,7 @@ cv::Rect cvGetWindowImageRect(const char* name)
     #endif
 }
 
-double cv::getWindowImageRect(const String& winname)
+cv::Rect cv::getWindowImageRect(const String& winname)
 {
     CV_TRACE_FUNCTION();
     return cvGetWindowImageRect(winname.c_str());
