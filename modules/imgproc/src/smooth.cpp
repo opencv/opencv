@@ -1815,7 +1815,64 @@ static std::vector<T> getFixedpointGaussianKernel( int n, double sigma )
 };
 
 template <typename ET, typename FT>
-void hlineSmooth(ET* src, int cn, FT* m, int n, FT* dst, int len, int borderType)
+void hlineSmooth1M1(const ET* src, int cn, const FT*, int, FT* dst, int len, int)
+{
+    for (int i = 0; i < len*cn; i++, src++, dst++)
+        *dst = *src;
+}
+template <>
+void hlineSmooth1M1<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16*, int, ufixedpoint16* dst, int len, int)
+{
+    int lencn = len*cn;
+    int i = 0;
+    for (; i < lencn - 15; i += 16)
+    {
+        v_uint8x16 v_src = v_load(src + i);
+        v_uint16x8 v_tmp0, v_tmp1;
+        v_expand(v_src, v_tmp0, v_tmp1);
+        v_store((uint16_t*)dst + i, v_shl<8>(v_tmp0));
+        v_store((uint16_t*)dst + i + 8, v_shl<8>(v_tmp1));
+    }
+    if (i < lencn - 7)
+    {
+        v_uint16x8 v_src = v_load_expand(src + i);
+        v_store((uint16_t*)dst + i, v_shl<8>(v_src));
+        i += 8;
+    }
+    for (; i < lencn; i++)
+        dst[i] = src[i];
+}
+template <typename ET, typename FT>
+void hlineSmooth1M(const ET* src, int cn, const FT* m, int, FT* dst, int len, int)
+{
+    for (int i = 0; i < len*cn; i++, src++, dst++)
+        *dst = (*m) * (*src);
+}
+template <>
+void hlineSmooth1M<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* m, int, ufixedpoint16* dst, int len, int)
+{
+    int lencn = len*cn;
+    v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
+    int i = 0;
+    for (; i < lencn - 15; i += 16)
+    {
+        v_uint8x16 v_src = v_load(src + i);
+        v_uint16x8 v_tmp0, v_tmp1;
+        v_expand(v_src, v_tmp0, v_tmp1);
+        v_store((uint16_t*)dst + i, v_mul*v_tmp0);
+        v_store((uint16_t*)dst + i + 8, v_mul*v_tmp1);
+    }
+    if (i < lencn - 7)
+    {
+        v_uint16x8 v_src = v_load_expand(src + i);
+        v_store((uint16_t*)dst + i, v_mul*v_src);
+        i += 8;
+    }
+    for (; i < lencn; i++)
+        dst[i] = m[0] * src[i];
+}
+template <typename ET, typename FT>
+void hlineSmooth(const ET* src, int cn, const FT* m, int n, FT* dst, int len, int borderType)
 {
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
@@ -1869,30 +1926,8 @@ void hlineSmooth(ET* src, int cn, FT* m, int n, FT* dst, int len, int borderType
     }
 }
 template <>
-void hlineSmooth<uint8_t, ufixedpoint16>(uint8_t* src, int cn, ufixedpoint16* m, int n, ufixedpoint16* dst, int len, int borderType)
+void hlineSmooth<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* m, int n, ufixedpoint16* dst, int len, int borderType)
 {
-    if (n == 1)
-    {
-        CV_Assert((m[0] - ufixedpoint16::one()).isZero()); //Assert that there actually is no smoothing
-        int i = 0;
-        for (; i < len*cn - 15; i += 16)
-        {
-            v_uint8x16 v_src = v_load(src + i);
-            v_uint16x8 v_tmp0, v_tmp1;
-            v_expand(v_src, v_tmp0, v_tmp1);
-            v_store((uint16_t*)dst+i, v_shl<8>(v_tmp0));
-            v_store((uint16_t*)dst+i+8, v_shl<8>(v_tmp1));
-        }
-        if(i < len*cn - 7)
-        {
-            v_uint16x8 v_src = v_load_expand(src + i);
-            v_store((uint16_t*)dst+i, v_shl<8>(v_src));
-            i += 8;
-        }
-        for (; i < len*cn; i++)
-            dst[i] = src[i];
-    }
-    else
     {
         int pre_shift = n / 2;
         int post_shift = n - pre_shift;
@@ -1994,7 +2029,47 @@ void hlineSmooth<uint8_t, ufixedpoint16>(uint8_t* src, int cn, ufixedpoint16* m,
     }
 }
 template <typename ET, typename FT>
-void vlineSmooth(FT** src, FT* m, int n, ET* dst, int len)
+void vlineSmooth1M1(const FT* const * src, const FT*, int, ET* dst, int len)
+{
+    const FT* src0 = src[0];
+    for (int i = 0; i < len; i++)
+        dst[i] = src0[i];
+}
+template <>
+void vlineSmooth1M1<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
+{
+    const ufixedpoint16* src0 = src[0];
+    int i = 0;
+    for (; i < len - 7; i += 8)
+        v_rshr_pack_store<8>(dst + i, v_load((uint16_t*)(src0 + i)));
+    for (; i < len; i++)
+        dst[i] = src0[i];
+}
+template <typename ET, typename FT>
+void vlineSmooth1M(const FT* const * src, const FT* m, int, ET* dst, int len)
+{
+    const FT* src0 = src[0];
+    for (int i = 0; i < len; i++)
+        dst[i] = m * src0[i];
+}
+template <>
+void vlineSmooth1M<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len)
+{
+    const ufixedpoint16* src0 = src[0];
+    v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
+    int i = 0;
+    for (; i < len - 7; i += 8)
+    {
+        v_uint16x8 v_src0 = v_load((uint16_t*)src0 + i);
+        v_uint32x4 v_res0, v_res1;
+        v_mul_expand(v_src0, v_mul, v_res0, v_res1);
+        v_pack_store(dst + i, v_rshr_pack<16>(v_res0, v_res1));
+    }
+    for (; i < len; i++)
+        dst[i] = m[0] * src0[i];
+}
+template <typename ET, typename FT>
+void vlineSmooth(const FT* const * src, const FT* m, int n, ET* dst, int len)
 {
     for (int i = 0; i < len; i++)
     {
@@ -2005,197 +2080,279 @@ void vlineSmooth(FT** src, FT* m, int n, ET* dst, int len)
     }
 }
 template <>
-void vlineSmooth<uint8_t, ufixedpoint16>(ufixedpoint16** src, ufixedpoint16* m, int n, uint8_t* dst, int len)
+void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int n, uint8_t* dst, int len)
 {
-    if (n == 1)
+    CV_Assert(n != 1);
+    static const v_int16x8 v_128 = v_reinterpret_as_s16(v_setall_u16((uint16_t)1 << 15));
+
+    v_int32x4 v_128_4 = v_setall_s32(128 << 16);
+    if (len > 7)
     {
-        ufixedpoint16* src0 = src[0];
-        if((m[0] - ufixedpoint16::one()).isZero())
-        {
-            int i = 0;
-            for (; i < len-7; i+=8)
-                v_rshr_pack_store<8>(dst + i, v_load((uint16_t*)(src0 + i)));
-            for (; i < len; i++)
-                dst[i] = src0[i];
-        }
-        else
-        {
-            v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
-            int i = 0;
-            for (; i < len - 7; i += 8)
-            {
-                v_uint16x8 v_src0 = v_load((uint16_t*)src0 + i);
-                v_uint32x4 v_res0, v_res1;
-                v_mul_expand(v_src0, v_mul, v_res0, v_res1);
-                v_pack_store(dst + i, v_rshr_pack<16>(v_res0, v_res1));
-            }
-            for (; i < len; i++)
-                dst[i] = m[0] * src0[i];
-        }
+        ufixedpoint16 msum = m[0] + m[1];
+        for (int j = 2; j < n; j++)
+            msum = msum + m[j];
+        ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
+        v_128_4 = v_setall_s32(*((int32_t*)val));
     }
-    else
+
+    int i = 0;
+    for (; i < len - 7; i += 8)
     {
-        static const v_int16x8 v_128 = v_reinterpret_as_s16(v_setall_u16((uint16_t)1 << 15));
+        v_int16x8 v_src0, v_src1;
+        v_int16x8 v_tmp0, v_tmp1;
 
-        v_int32x4 v_128_4 = v_setall_s32(128 << 16);
-        if (len > 7)
+        v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+
+        v_src0 = v_load((int16_t*)(src[0]) + i);
+        v_src1 = v_load((int16_t*)(src[1]) + i);
+        v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
+        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
+
+        int j = 2;
+        for (; j < n - 1; j+=2)
         {
-            ufixedpoint16 msum = m[0] + m[1];
-            for (int j = 2; j < n; j++)
-                msum = msum + m[j];
-            ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
-            v_128_4 = v_setall_s32(*((int32_t*)val));
-        }
+            v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m+j))));
 
-        int i = 0;
-        for (; i < len - 7; i += 8)
-        {
-            v_int16x8 v_src0, v_src1;
-            v_int16x8 v_tmp0, v_tmp1;
-
-            v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
-
-            v_src0 = v_load((int16_t*)(src[0]) + i);
-            v_src1 = v_load((int16_t*)(src[1]) + i);
+            v_src0 = v_load((int16_t*)(src[j]) + i);
+            v_src1 = v_load((int16_t*)(src[j+1]) + i);
             v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
-            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
-            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
-
-            int j = 2;
-            for (; j < n - 1; j+=2)
-            {
-                v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m+j))));
-
-                v_src0 = v_load((int16_t*)(src[j]) + i);
-                v_src1 = v_load((int16_t*)(src[j+1]) + i);
-                v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
-                v_res0 += v_dotprod(v_tmp0, v_mul);
-                v_res1 += v_dotprod(v_tmp1, v_mul);
-            }
-            if(j < n)
-            {
-                v_int32x4 v_resj0, v_resj1;
-                v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
-                v_src0 = v_load((int16_t*)(src[j]) + i);
-                v_mul_expand(v_add_wrap(v_src0, v_128), v_mul, v_resj0, v_resj1);
-                v_res0 += v_resj0;
-                v_res1 += v_resj1;
-            }
-            v_res0 += v_128_4;
-            v_res1 += v_128_4;
-
-            v_uint16x8 v_res = v_reinterpret_as_u16(v_rshr_pack<16>(v_res0, v_res1));
-            v_pack_store(dst + i, v_res);
+            v_res0 += v_dotprod(v_tmp0, v_mul);
+            v_res1 += v_dotprod(v_tmp1, v_mul);
         }
-        for (; i < len; i++)
+        if(j < n)
         {
-            ufixedpoint32 val = m[0] * src[0][i];
-            for (int j = 1; j < n; j++)
-            {
-                val = val + m[j] * src[j][i];
-            }
-            dst[i] = val;
+            v_int32x4 v_resj0, v_resj1;
+            v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
+            v_src0 = v_load((int16_t*)(src[j]) + i);
+            v_mul_expand(v_add_wrap(v_src0, v_128), v_mul, v_resj0, v_resj1);
+            v_res0 += v_resj0;
+            v_res1 += v_resj1;
         }
+        v_res0 += v_128_4;
+        v_res1 += v_128_4;
+
+        v_uint16x8 v_res = v_reinterpret_as_u16(v_rshr_pack<16>(v_res0, v_res1));
+        v_pack_store(dst + i, v_res);
+    }
+    for (; i < len; i++)
+    {
+        ufixedpoint32 val = m[0] * src[0][i];
+        for (int j = 1; j < n; j++)
+        {
+            val = val + m[j] * src[j][i];
+        }
+        dst[i] = val;
     }
 }
 template <typename ET, typename FT>
-static void fixedSmooth(ET* src, size_t src_stride, ET* dst, size_t dst_stride, int width, int height, int cn, FT* kx, int kxlen, FT* ky, int kylen, int borderType)
+class fixedSmoothInvoker : public ParallelLoopBody
 {
-    AutoBuffer<FT> _buf((width*cn+2)*kylen);
-    FT* buf = _buf;
-    FT* coeffs = buf + width*cn*kylen;
-    memcpy(coeffs, ky, kylen*sizeof(FT));
-    coeffs += kylen;
-    memcpy(coeffs, ky, kylen*sizeof(FT));
-
-    AutoBuffer<FT*> _ptrs(kylen);
-    FT** ptrs = _ptrs;
-    int pre_shift = kylen / 2;
-    int post_shift = kylen - pre_shift;
-    // First line evaluation
-    int i = 0;
-    for (; i < min(post_shift, height); i++)
+public:
+    fixedSmoothInvoker(const ET* _src, size_t _src_stride, ET* _dst, size_t _dst_stride,
+                       int _width, int _height, int _cn, const FT* _kx, int _kxlen, const FT* _ky, int _kylen, int _borderType) : ParallelLoopBody(),
+                       src(_src), src_stride(_src_stride), dst(_dst), dst_stride(_dst_stride),
+                       width(_width), height(_height), cn(_cn), kx(_kx), kxlen(_kxlen), ky(_ky), kylen(_kylen), borderType(_borderType)
     {
-        ptrs[i] = buf + i * width*cn;
-        hlineSmooth(src + i * src_stride, cn, kx, kxlen, ptrs[i], width, borderType);
-    }
-    if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
-    {
-        for (; i < post_shift; i++)
+        if (kxlen == 1)
         {
-            int src_idx = borderInterpolate(i, height, borderType);
-            ptrs[i] = ptrs[src_idx];
-        }
-        for (int j = -pre_shift; j < 0; j++)
-        {
-            int src_idx = borderInterpolate(j, height, borderType);
-            if (src_idx >= post_shift)
-            {
-                ptrs[kylen + j] = buf + (kylen + j) * width*cn;
-                hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[kylen + j], width, borderType);
-            }
+            if ((kx[0] - FT::one()).isZero())
+                hlineSmoothFunc = hlineSmooth1M1;
             else
+                hlineSmoothFunc = hlineSmooth1M;
+        }
+        else
+            hlineSmoothFunc = hlineSmooth;
+        if (kylen == 1)
+        {
+            if ((ky[0] - FT::one()).isZero())
+                vlineSmoothFunc = vlineSmooth1M1;
+            else
+                vlineSmoothFunc = vlineSmooth1M;
+        }
+        else
+            vlineSmoothFunc = vlineSmooth;
+    }
+    virtual void operator() (const Range& range) const
+    {
+        AutoBuffer<FT> _buf(width*cn*kylen);
+        FT* buf = _buf;
+        AutoBuffer<FT*> _ptrs(kylen);
+        FT** ptrs = _ptrs;
+
+        if (kylen == 1)
+        {
+            ptrs[0] = buf;
+            for (int i = range.start; i < range.end; i++)
             {
-                ptrs[kylen + j] = ptrs[src_idx];
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[0], width, borderType);
+                vlineSmoothFunc(ptrs, ky, kylen, dst + i * dst_stride, width*cn);
             }
         }
-    }
-    vlineSmooth(ptrs, coeffs - post_shift, borderType == BORDER_CONSTANT ? min(post_shift, height) : kylen, dst, width*cn);
-    dst += dst_stride;
-
-    // border mode dependent part evaluation
-    // i points to last src row to evaluate in convolution
-    int bufline = i % kylen;
-    for (; i < min(kylen, height); i++, dst += dst_stride)
-    {
-        ptrs[bufline] = buf + bufline * width*cn;
-        hlineSmooth(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
-        bufline = (bufline + 1) % kylen;
-        vlineSmooth(ptrs, coeffs - bufline, borderType == BORDER_CONSTANT ? i+1 : kylen, dst, width*cn);
-    }
-    // Points inside the border
-    for (; i < height; i++, dst += dst_stride)
-    {
-        hlineSmooth(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
-        bufline = (bufline + 1) % kylen;
-        vlineSmooth(ptrs, coeffs - bufline, kylen, dst, width*cn);
-    }
-    // Points that fall below border
-    if (borderType != BORDER_CONSTANT)
-        for (; i < height + post_shift - 1; i++, dst += dst_stride)
+        else if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
         {
-            int src_idx = borderInterpolate(i, height, borderType);
-            if ((i - src_idx) > kylen)
-                hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
-            else
-                ptrs[bufline] = ptrs[(bufline + kylen - (i - src_idx)) % kylen];
-            bufline = (bufline + 1) % kylen;
-            vlineSmooth(ptrs, coeffs - bufline, kylen, dst, width*cn);
-        }
-    else if(height >= kylen - 1)
-    {
-        bufline = (bufline + 1) % kylen;
-        if (bufline > 1)
-        {
-            for (int j = 0; j < kylen - 1; j++)
+            int pre_shift = kylen / 2;
+            int post_shift = kylen - pre_shift - 1;
+            // First line evaluation
+            int idst = range.start;
+            int ifrom = max(0, idst - pre_shift);
+            int ito = idst + post_shift + 1;
+            int i = ifrom;
+            int bufline = 0;
+            for (; i < min(ito, height); i++, bufline++)
             {
-                ptrs[j] = buf + bufline * width*cn;
+                ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+            }
+            for (; i < ito; i++, bufline++)
+            {
+                int src_idx = borderInterpolate(i, height, borderType);
+                if (src_idx < ifrom)
+                {
+                    ptrs[bufline] = buf + bufline * width*cn;
+                    hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                }
+                else
+                {
+                    ptrs[bufline] = ptrs[src_idx - ifrom];
+                }
+            }
+            for (int j = idst - pre_shift; j < 0; j++)
+            {
+                int src_idx = borderInterpolate(j, height, borderType);
+                if (src_idx >= ito)
+                {
+                    ptrs[kylen + j] = buf + (kylen + j) * width*cn;
+                    hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[kylen + j], width, borderType);
+                }
+                else
+                {
+                    ptrs[kylen + j] = ptrs[src_idx];
+                }
+            }
+            vlineSmooth(ptrs, ky - bufline, kylen, dst + idst*dst_stride, width*cn); idst++;
+
+            // border mode dependent part evaluation
+            // i points to last src row to evaluate in convolution
+            bufline %= kylen; ito = min(height, range.end + post_shift);
+            for (; i < min(kylen, ito); i++, idst++)
+            {
+                ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
                 bufline = (bufline + 1) % kylen;
+                vlineSmooth(ptrs, ky - bufline, kylen, dst + idst*dst_stride, width*cn);
             }
-            bufline = 0;
+            // Points inside the border
+            for (; i < ito; i++, idst++)
+            {
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                bufline = (bufline + 1) % kylen;
+                vlineSmooth(ptrs, ky - bufline, kylen, dst + idst*dst_stride, width*cn);
+            }
+            // Points that could fall below border
+            for (; i < range.end + post_shift; i++, idst++)
+            {
+                int src_idx = borderInterpolate(i, height, borderType);
+                if ((i - src_idx) > kylen)
+                    hlineSmooth(src + src_idx * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                else
+                    ptrs[bufline] = ptrs[(bufline + kylen - (i - src_idx)) % kylen];
+                bufline = (bufline + 1) % kylen;
+                vlineSmooth(ptrs, ky - bufline, kylen, dst + idst*dst_stride, width*cn);
+            }
         }
-        // i points to first src row to evaluate in convolution
-        for (i = height - kylen + 1; i < height - pre_shift; i++, dst += dst_stride, bufline++)
-            vlineSmooth(ptrs+bufline, coeffs, height - i, dst, width*cn);
+        else
+        {
+            int pre_shift = kylen / 2;
+            int post_shift = kylen - pre_shift - 1;
+            // First line evaluation
+            int idst = range.start;
+            int ifrom = idst - pre_shift;
+            int ito = min(idst + post_shift + 1, height);
+            int i = max(0, ifrom);
+            int bufline = 0;
+            for (; i < ito; i++, bufline++)
+            {
+                ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+            }
+
+            if (bufline == 1)
+                vlineSmooth1M(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn);
+            else
+                vlineSmooth(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn);
+            idst++;
+
+            // border mode dependent part evaluation
+            // i points to last src row to evaluate in convolution
+            bufline %= kylen; ito = min(height, range.end + post_shift);
+            for (; i < min(kylen, ito); i++, idst++)
+            {
+                ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                bufline = (bufline + 1) % kylen;
+                vlineSmooth(ptrs, ky - bufline, i + 1, dst + idst*dst_stride, width*cn);
+            }
+            // Points inside the border
+            if (height >= kylen - 1)
+            {
+                for (; i < ito; i++, idst++)
+                {
+                    hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                    bufline = (bufline + 1) % kylen;
+                    vlineSmoothFunc(ptrs, ky - bufline, kylen, dst + idst*dst_stride, width*cn);
+                }
+
+                // Points that could fall below border
+                // i points to first src row to evaluate in convolution
+                bufline = (bufline + 1) % kylen;
+                if (bufline > 1)
+                {
+                    for (int j = 0; j < kylen - 1; j++)
+                    {
+                        ptrs[j] = buf + bufline * width*cn;
+                        bufline = (bufline + 1) % kylen;
+                    }
+                    bufline = 0;
+                }
+                for (i -= kylen - 1; i < range.end - pre_shift; i++, idst++, bufline++)
+                    vlineSmooth(ptrs + bufline, ky, height - i, dst + idst*dst_stride, width*cn);
+            }
+            else
+            {
+                // i points to first src row to evaluate in convolution
+                for (i = max(i, post_shift + 1) - (kylen-1); i < min(range.end - pre_shift, 0); i++, idst++)
+                    vlineSmooth(ptrs, ky - i, height, dst + idst*dst_stride, width*cn);
+                for (; i < range.end - pre_shift; i++, idst++)
+                    vlineSmooth(ptrs + i, ky, height - i, dst + idst*dst_stride, width*cn);
+            }
+        }
     }
-    else
-    {
-        // i points to first src row to evaluate in convolution
-        for (i = 1 - min(kylen - height, pre_shift); i < min(height - pre_shift, 0); i++, dst += dst_stride)
-            vlineSmooth(ptrs, coeffs - i, height, dst, width*cn);
-        for (; i < height - pre_shift; i++, dst += dst_stride)
-            vlineSmooth(ptrs+i, coeffs, height - i, dst, width*cn);
-    }
+private:
+    const ET* src;
+    ET* dst;
+    size_t src_stride, dst_stride;
+    int width, height, cn;
+    const FT *kx, *ky;
+    int kxlen, kylen;
+    int borderType;
+    void(*hlineSmoothFunc)(const ET* src, int cn, const FT* m, int n, FT* dst, int len, int borderType);
+    void(*vlineSmoothFunc)(const FT* const * src, const FT* m, int n, ET* dst, int len);
+
+    fixedSmoothInvoker(const fixedSmoothInvoker&);
+    fixedSmoothInvoker& operator=(const fixedSmoothInvoker&);
+};
+template <typename ET, typename FT>
+static void fixedSmooth(const ET* src, size_t src_stride, ET* dst, size_t dst_stride, int width, int height, int cn, const FT* kx, int kxlen, const FT* ky, int kylen, int borderType)
+{
+    AutoBuffer<FT> _coeffs(2 * kylen);
+    FT* coeffs = _coeffs;
+    memcpy(coeffs, ky, kylen * sizeof(FT));
+    coeffs += kylen;
+    memcpy(coeffs, ky, kylen * sizeof(FT));
+
+    fixedSmoothInvoker<ET, FT> invoker(src, src_stride, dst, dst_stride, width, height, cn, kx, kxlen, coeffs, kylen, borderType);
+    parallel_for_(Range(0, height), invoker, width * height * cn / (double)(1 << 13));
 }
 
 static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
@@ -2550,6 +2707,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
+        if (src.data == dst.data)
+            src = src.clone();
         fixedSmooth(src.ptr<uint8_t>(), src.step1(), dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(), &fkx[0], (int)fkx.size(), &fky[0], (int)fky.size(), borderType & ~BORDER_ISOLATED);
         return;
     }
