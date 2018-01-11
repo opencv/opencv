@@ -84,10 +84,7 @@ void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
     waitKey(500);
 
     ts->printf(ts->LOG, "GUI 8\n");
-    getWindowProperty("Win", WND_PROP_RO_WIDTH);
-    getWindowProperty("Win", WND_PROP_RO_HEIGHT);
-    getWindowProperty("Win", WND_PROP_RO_XPOS);
-    getWindowProperty("Win", WND_PROP_RO_YPOS);
+    getWindowImageRect("Win");
 
     ts->printf(ts->LOG, "GUI 9\n");
     destroyAllWindows();
