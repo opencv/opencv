@@ -165,7 +165,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     }
 }
 
-cv::Rect cv::getWindowImageRect( const String& winname)
+cv::Rect cvGetWindowImageRect(const char* name)
 {
     #if defined (HAVE_QT)
         return cvGetWindowRect_QT(name);
@@ -180,6 +180,12 @@ cv::Rect cv::getWindowImageRect( const String& winname)
     #else
         return cv::Rect(-1, -1, -1, -1);
     #endif
+}
+
+double cv::getWindowImageRect(const String& winname)
+{
+    CV_TRACE_FUNCTION();
+    return cvGetWindowImageRect(winname.c_str());
 }
 
 void cv::namedWindow( const String& winname, int flags )
