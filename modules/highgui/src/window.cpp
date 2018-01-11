@@ -165,7 +165,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     }
 }
 
-Rect cv::getWindowImageRect( const String& winname)
+cv::Rect cv::getWindowImageRect( const String& winname)
 {
     #if defined (HAVE_QT)
         return cvGetWindowRect_QT(name);
@@ -178,7 +178,7 @@ Rect cv::getWindowImageRect( const String& winname)
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(name);
     #else
-        return Rect(-1, -1, -1, -1);
+        return cv::Rect(-1, -1, -1, -1);
     #endif
 }
 
