@@ -135,26 +135,26 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
 
                     for(; k < vecsize - 15; k += 16, rptr += 16 )
                     {
-                        __m512 w0 = _mm512_load_ps(wptr0 + k);
-                        __m512 w1 = _mm512_load_ps(wptr1 + k);
-                        __m512 w2 = _mm512_load_ps(wptr2 + k);
-                        __m512 r0 = _mm512_load_ps(rptr);
+                        __m512 w0 = _mm512_loadu_ps(wptr0 + k);
+                        __m512 w1 = _mm512_loadu_ps(wptr1 + k);
+                        __m512 w2 = _mm512_loadu_ps(wptr2 + k);
+                        __m512 r0 = _mm512_loadu_ps(rptr);
 
                         vs00_5 = _mm512_fmadd_ps(w0, r0, vs00_5);
                         vs10_5 = _mm512_fmadd_ps(w1, r0, vs10_5);
                         vs20_5 = _mm512_fmadd_ps(w2, r0, vs20_5);
 
-                        r0 = _mm512_load_ps(rptr + vecsize_aligned);
+                        r0 = _mm512_loadu_ps(rptr + vecsize_aligned);
                         vs01_5 = _mm512_fmadd_ps(w0, r0, vs01_5);
                         vs11_5 = _mm512_fmadd_ps(w1, r0, vs11_5);
                         vs21_5 = _mm512_fmadd_ps(w2, r0, vs21_5);
 
-                        r0 = _mm512_load_ps(rptr + vecsize_aligned*2);
+                        r0 = _mm512_loadu_ps(rptr + vecsize_aligned*2);
                         vs02_5 = _mm512_fmadd_ps(w0, r0, vs02_5);
                         vs12_5 = _mm512_fmadd_ps(w1, r0, vs12_5);
                         vs22_5 = _mm512_fmadd_ps(w2, r0, vs22_5);
 
-                        r0 = _mm512_load_ps(rptr + vecsize_aligned*3);
+                        r0 = _mm512_loadu_ps(rptr + vecsize_aligned*3);
                         vs03_5 = _mm512_fmadd_ps(w0, r0, vs03_5);
                         vs13_5 = _mm512_fmadd_ps(w1, r0, vs13_5);
                         vs23_5 = _mm512_fmadd_ps(w2, r0, vs23_5);
