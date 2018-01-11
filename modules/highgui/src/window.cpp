@@ -160,70 +160,26 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return -1;
         #endif
     break;
-
-    case CV_WND_PROP_RO_WIDTH:
-        #if defined (HAVE_QT)
-            return cvGetWindowRect_QT(name).width;
-        #elif defined(HAVE_WIN32UI)
-            return cvGetWindowRect_W32(name).width;
-        #elif defined (HAVE_GTK)
-            return cvGetWindowRect_GTK(name).width;
-        #elif defined (HAVE_CARBON)
-            return cvGetWindowRect_CARBON(name).width;
-        #elif defined (HAVE_COCOA)
-            return cvGetWindowRect_COCOA(name).width;
-        #else
-            return -1;
-        #endif
-    break;
-    case CV_WND_PROP_RO_HEIGHT:
-        #if defined (HAVE_QT)
-            return cvGetWindowRect_QT(name).height;
-        #elif defined(HAVE_WIN32UI)
-            return cvGetWindowRect_W32(name).height;
-        #elif defined (HAVE_GTK)
-            return cvGetWindowRect_GTK(name).height;
-        #elif defined (HAVE_CARBON)
-            return cvGetWindowRect_CARBON(name).height;
-        #elif defined (HAVE_COCOA)
-            return cvGetWindowRect_COCOA(name).height;
-        #else
-            return -1;
-        #endif
-    break;
-    case CV_WND_PROP_RO_XPOS:
-        #if defined (HAVE_QT)
-            return cvGetWindowRect_QT(name).x;
-        #elif defined(HAVE_WIN32UI)
-            return cvGetWindowRect_W32(name).x;
-        #elif defined (HAVE_GTK)
-            return cvGetWindowRect_GTK(name).x;
-        #elif defined (HAVE_CARBON)
-            return cvGetWindowRect_CARBON(name).x;
-        #elif defined (HAVE_COCOA)
-            return cvGetWindowRect_COCOA(name).x;
-        #else
-            return -1;
-        #endif
-    break;
-    case CV_WND_PROP_RO_YPOS:
-        #if defined (HAVE_QT)
-            return cvGetWindowRect_QT(name).y;
-        #elif defined(HAVE_WIN32UI)
-            return cvGetWindowRect_W32(name).y;
-        #elif defined (HAVE_GTK)
-            return cvGetWindowRect_GTK(name).y;
-        #elif defined (HAVE_CARBON)
-            return cvGetWindowRect_CARBON(name).y;
-        #elif defined (HAVE_COCOA)
-            return cvGetWindowRect_COCOA(name).y;
-        #else
-            return -1;
-        #endif
-    break;
     default:
         return -1;
     }
+}
+
+Rect cv::getWindowImageRect( const String& winname)
+{
+    #if defined (HAVE_QT)
+        return cvGetWindowRect_QT(name);
+    #elif defined(HAVE_WIN32UI)
+        return cvGetWindowRect_W32(name);
+    #elif defined (HAVE_GTK)
+        return cvGetWindowRect_GTK(name);
+    #elif defined (HAVE_CARBON)
+        return cvGetWindowRect_CARBON(name);
+    #elif defined (HAVE_COCOA)
+        return cvGetWindowRect_COCOA(name);
+    #else
+        return Rect(-1, -1, -1, -1);
+    #endif
 }
 
 void cv::namedWindow( const String& winname, int flags )
