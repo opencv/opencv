@@ -450,7 +450,7 @@ The function getWindowImageRect returns the client screen coordinates, width and
 
 @sa resizeWindow moveWindow
  */
-CV_EXPORTS_W Rect cv::getWindowImageRect(const String& winname);
+CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
 
 /** @brief Sets mouse handler for the specified window
 
