@@ -2072,19 +2072,23 @@ struct Context::Impl
     {
         if (prefix.empty())
         {
-            CV_Assert(!devices.empty());
-            const Device& d = devices[0];
-            int bits = d.addressBits();
-            if (bits > 0 && bits != 64)
-                prefix = cv::format("%d-bit--", bits);
-            prefix += d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
-            // sanitize chars
-            for (size_t i = 0; i < prefix.size(); i++)
+            cv::AutoLock lock(program_cache_mutex);
+            if (prefix.empty())
             {
-                char c = prefix[i];
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                CV_Assert(!devices.empty());
+                const Device& d = devices[0];
+                int bits = d.addressBits();
+                if (bits > 0 && bits != 64)
+                    prefix = cv::format("%d-bit--", bits);
+                prefix += d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
+                // sanitize chars
+                for (size_t i = 0; i < prefix.size(); i++)
                 {
-                    prefix[i] = '_';
+                    char c = prefix[i];
+                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                    {
+                        prefix[i] = '_';
+                    }
                 }
             }
         }
@@ -2095,18 +2099,22 @@ struct Context::Impl
     {
         if (prefix_base.empty())
         {
-            const Device& d = devices[0];
-            int bits = d.addressBits();
-            if (bits > 0 && bits != 64)
-                prefix_base = cv::format("%d-bit--", bits);
-            prefix_base += d.vendorName() + "--" + d.name() + "--";
-            // sanitize chars
-            for (size_t i = 0; i < prefix_base.size(); i++)
+            cv::AutoLock lock(program_cache_mutex);
+            if (prefix_base.empty())
             {
-                char c = prefix_base[i];
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                const Device& d = devices[0];
+                int bits = d.addressBits();
+                if (bits > 0 && bits != 64)
+                    prefix_base = cv::format("%d-bit--", bits);
+                prefix_base += d.vendorName() + "--" + d.name() + "--";
+                // sanitize chars
+                for (size_t i = 0; i < prefix_base.size(); i++)
                 {
-                    prefix_base[i] = '_';
+                    char c = prefix_base[i];
+                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                    {
+                        prefix_base[i] = '_';
+                    }
                 }
             }
         }
