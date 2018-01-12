@@ -35,6 +35,11 @@ public class MatOfByte extends Mat {
         fromArray(a);
     }
 
+    public MatOfByte(int offset, int length, byte...a) {
+        super();
+        fromArray(offset, length, a);
+    }
+
     public void alloc(int elemNumber) {
         if(elemNumber>0)
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
@@ -46,6 +51,20 @@ public class MatOfByte extends Mat {
         int num = a.length / _channels;
         alloc(num);
         put(0, 0, a); //TODO: check ret val!
+    }
+
+    public void fromArray(int offset, int length, byte...a) {
+        if (offset < 0)
+            throw new IllegalArgumentException("offset < 0");
+        if (a == null)
+            throw new NullPointerException();
+        if (length < 0 || length + offset > a.length)
+            throw new IllegalArgumentException("invalid 'length' parameter: " + Integer.toString(length));
+        if (a.length == 0)
+            return;
+        int num = length / _channels;
+        alloc(num);
+        put(0, 0, a, offset, length); //TODO: check ret val!
     }
 
     public byte[] toArray() {
