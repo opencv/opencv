@@ -1541,9 +1541,10 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
     int deg_min=(int)_TO_DEGREE_OF(theta_param->min);
     int deg_max=(int)_TO_DEGREE_OF(theta_param->max);
     int deg_step=(int)_TO_DEGREE_OF(theta_param->step);
+    if( deg_step == 0 ){ deg_step = 1; }
 
     int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
-    int theta_size = (int)((deg_max - deg_min) / deg_step);
+    int theta_size = (int)((_TO_DEGREE_OF(theta_param->max) - _TO_DEGREE_OF(theta_param->min)) / _TO_DEGREE_OF(theta_param->step));
 
     for( int cnt = 0; cnt < point_cnt; cnt++ )
     {
@@ -1559,7 +1560,10 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
             if( ((0 <= rho_index)   && (rho_index < rho_size)) &&
                 ((0 <= theta_index) && (theta_index < theta_size)) )
             {
-                *(plane + (rho_index * theta_size) + theta_index) += 1;
+                if( *(plane + (rho_index * theta_size) + theta_index) < SHRT_MAX )
+                {
+                    *(plane + (rho_index * theta_size) + theta_index) += 1;
+                }
             }
             else
             {
@@ -1569,7 +1573,7 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
     }
 }
 
-static int SelectHoughPeak( const short *plane,
+static int SelectHoughPolar( const short *plane,
                             const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
                             int polar_cnt, HoughLinePolar hough_polar[] )
 {
@@ -1581,14 +1585,14 @@ static int SelectHoughPeak( const short *plane,
 
     for( int rho = 0; rho < rho_size; rho++ )
     {
-        for( int deg = 0; deg < theta_size; deg++ )
+        for( int theta = 0; theta < theta_size; theta++ )
         {
-            votes = *(plane + (rho * theta_size) + deg);
+            votes = *(plane + (rho * theta_size) + theta);
 
             if( votes > max_votes )
             {
                 hough_polar[cnt].votes = votes;
-                hough_polar[cnt].angle = _TO_RADIAN_OF(deg) * theta_param->step + theta_param->min;
+                hough_polar[cnt].angle = (double)theta * theta_param->step + theta_param->min;
                 hough_polar[cnt].rho = (double)rho * rho_param->step + rho_param->min;
                 max_votes = votes;
                 ret = cnt;
@@ -1634,9 +1638,9 @@ int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                               rho_param, theta_param,
                               plane );
 
-            ret = SelectHoughPeak( plane,
-                                   rho_param, theta_param,
-                                   polar_cnt, hough_polar );
+            ret = SelectHoughPolar( plane,
+                                    rho_param, theta_param,
+                                    polar_cnt, hough_polar );
 
             free(plane);
         }
