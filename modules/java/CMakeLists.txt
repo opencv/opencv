@@ -372,7 +372,7 @@ file(MAKE_DIRECTORY "${OpenCV_BINARY_DIR}/bin")
 # step 4: build jar
 if(ANDROID)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/classes.jar")
-  if(ANDROID_TOOLS_Pkg_Revision GREATER 13)
+  if(ANDROID_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
     # build the library project
     # normally we should do this after a native part, but for a library project we can build the java part first
     add_custom_command(OUTPUT "${JAR_FILE}" "${JAR_FILE}.dephelper"
