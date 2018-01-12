@@ -1014,7 +1014,7 @@ public class Mat {
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
-    
+
     // javadoc:Mat::put(row,col,data,offset,length)
     public int put(int row, int col, byte[] data, int offset, int length) {
         int t = type();
@@ -1332,7 +1332,7 @@ public class Mat {
     private static native int nPutS(long self, int row, int col, int count, short[] data);
 
     private static native int nPutB(long self, int row, int col, int count, byte[] data);
-    
+
     private static native int nPutBwOffset(long self, int row, int col, int count, int offset, byte[] data);
 
     private static native int nGetB(long self, int row, int col, int count, byte[] vals);
