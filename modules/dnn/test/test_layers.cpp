@@ -627,4 +627,81 @@ OCL_TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
         EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
 }
 
+typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
+TEST_P(Scale_untrainable, Accuracy)
+{
+    Vec4i inpShapeVec = get<0>(GetParam());
+    int axis = get<1>(GetParam())[0];
+    int weightsDims = get<1>(GetParam())[1];
+    bool testFusion = get<2>(GetParam());
+    const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+
+    // Create a network with two inputs. Scale layer multiplies a first input to
+    // a second one. See http://caffe.berkeleyvision.org/tutorial/layers/scale.html
+    Net net;
+    // Check that this version of Scale layer won't be fused with Convolution layer.
+    if (testFusion)
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 3);
+        lp.set("group", 3);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv";
+
+        std::vector<int> weightsShape(4);
+        weightsShape[0] = 3;  // #outChannels
+        weightsShape[1] = 1;  // #inpChannels / group
+        weightsShape[2] = 1;  // height
+        weightsShape[3] = 1;  // width
+        Mat weights(weightsShape, CV_32F);
+        weights.setTo(1);
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    LayerParams lp;
+    lp.type = "Scale";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+
+    Mat input(4, inpShape, CV_32F);
+    Mat weights(weightsDims, &inpShape[axis], CV_32F);
+    randu(input, -1, 1);
+    randu(weights, -1, 1);
+
+    std::vector<String> inpNames(2);
+    inpNames[0] = "scale_input";
+    inpNames[1] = "scale_weights";
+    net.setInputsNames(inpNames);
+    net.setInput(input, inpNames[0]);
+    net.setInput(weights, inpNames[1]);
+    Mat out = net.forward();
+
+    Mat ref(input.dims, input.size, CV_32F);
+    float* inpData = (float*)input.data;
+    float* refData = (float*)ref.data;
+    float* weightsData = (float*)weights.data;
+    int spatialSize = 1;
+    for (int i = axis + weightsDims; i < 4; ++i)
+        spatialSize *= inpShape[i];
+    for (int i = 0; i < ref.total(); ++i)
+    {
+        float w = weightsData[(i / spatialSize) % weights.total()];
+        refData[i] = inpData[i] * w;
+    }
+    normAssert(out, ref);
+}
+
+INSTANTIATE_TEST_CASE_P(Layer_Test, Scale_untrainable, Combine(
+/*input size*/   Values(Vec4i(2, 3, 4, 5)),
+/*axis, #dims*/  Values(Vec2i(0, 1), Vec2i(0, 2), Vec2i(0, 3), Vec2i(0, 4),
+                                     Vec2i(1, 1), Vec2i(1, 2), Vec2i(1, 3),
+                                                  Vec2i(2, 1), Vec2i(2, 2),
+                                                               Vec2i(3, 1)),
+/*conv fusion*/  testing::Bool()
+));
+
 }
