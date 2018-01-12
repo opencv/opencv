@@ -522,6 +522,45 @@ endmacro()
 
 if(NOT DEFINED CMAKE_ARGC) # Guard CMake standalone invocations
 
+# Use this option carefully, CMake's install() will install symlinks instead of real files
+# It is fine for development, but should not be used by real installations
+set(__symlink_default OFF)  # preprocessing is required for old CMake like 2.8.12
+if(DEFINED ENV{BUILD_USE_SYMLINKS})
+  set(__symlink_default $ENV{BUILD_USE_SYMLINKS})
+endif()
+OCV_OPTION(BUILD_USE_SYMLINKS "Use symlinks instead of files copying during build (and !!INSTALL!!)" (${__symlink_default}) IF (UNIX OR DEFINED __symlink_default))
+
+if(CMAKE_VERSION VERSION_LESS "3.2")
+  macro(ocv_cmake_byproducts var_name)
+    set(${var_name}) # nothing
+  endmacro()
+else()
+  macro(ocv_cmake_byproducts var_name)
+    set(${var_name} BYPRODUCTS ${ARGN})
+  endmacro()
+endif()
+
+set(OPENCV_DEPHELPER "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/dephelper" CACHE INTERNAL "")
+file(MAKE_DIRECTORY ${OPENCV_DEPHELPER})
+
+if(BUILD_USE_SYMLINKS)
+  set(__file0 "${CMAKE_CURRENT_LIST_FILE}")
+  set(__file1 "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/symlink_test")
+  if(NOT IS_SYMLINK "${__file1}")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${__file0}" "${__file1}"
+        RESULT_VARIABLE SYMLINK_RESULT)
+    if(NOT SYMLINK_RESULT EQUAL 0)
+      file(REMOVE "${__file1}")
+    endif()
+    if(NOT IS_SYMLINK "${__file1}")
+      set(BUILD_USE_SYMLINKS 0 CACHE INTERNAL "")
+    endif()
+  endif()
+  if(NOT BUILD_USE_SYMLINKS)
+    message(STATUS "Build symlinks are not available (disabled)")
+  endif()
+endif()
+
 set(OPENCV_BUILD_INFO_STR "" CACHE INTERNAL "")
 function(ocv_output_status msg)
   message(STATUS "${msg}")
@@ -1268,4 +1307,82 @@ macro(ocv_cmake_script_append_var content_var)
 set(${var_name} \"${${var_name}}\")
 ")
   endforeach()
+endmacro()
+
+macro(ocv_copyfiles_append_file list_var src dst)
+  list(LENGTH ${list_var} __id)
+  list(APPEND ${list_var} ${__id})
+  set(${list_var}_SRC_${__id} "${src}")
+  set(${list_var}_DST_${__id} "${dst}")
+endmacro()
+
+macro(ocv_copyfiles_append_dir list_var src dst)
+  set(__glob ${ARGN})
+  list(LENGTH ${list_var} __id)
+  list(APPEND ${list_var} ${__id})
+  set(${list_var}_SRC_${__id} "${src}")
+  set(${list_var}_DST_${__id} "${dst}")
+  set(${list_var}_MODE_${__id} "COPYDIR")
+  if(__glob)
+    set(${list_var}_GLOB_${__id} ${__glob})
+  endif()
+endmacro()
+
+macro(ocv_copyfiles_make_config_string content_var list_var)
+  set(var_name "${list_var}")
+  set(${content_var} "${${content_var}}
+set(${var_name} \"${${var_name}}\")
+")
+  foreach(__id ${${list_var}})
+    set(${content_var} "${${content_var}}
+set(${list_var}_SRC_${__id} \"${${list_var}_SRC_${__id}}\")
+set(${list_var}_DST_${__id} \"${${list_var}_DST_${__id}}\")
+")
+    if(DEFINED ${list_var}_MODE_${__id})
+      set(${content_var} "${${content_var}}set(${list_var}_MODE_${__id} \"${${list_var}_MODE_${__id}}\")\n")
+    endif()
+    if(DEFINED ${list_var}_GLOB_${__id})
+      set(${content_var} "${${content_var}}set(${list_var}_GLOB_${__id} \"${${list_var}_GLOB_${__id}}\")\n")
+    endif()
+  endforeach()
+endmacro()
+
+macro(ocv_copyfiles_make_config_file filename_var list_var)
+  ocv_copyfiles_make_config_string(${list_var}_CONFIG ${list_var})
+  set(${filename_var} "${CMAKE_CURRENT_BINARY_DIR}/copyfiles-${list_var}.cmake")
+  file(WRITE "${${filename_var}}" "${${list_var}_CONFIG}")
+endmacro()
+
+macro(ocv_copyfiles_add_forced_target target list_var comment_str)
+  ocv_copyfiles_make_config_file(CONFIG_FILE ${list_var})
+  ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_DEPHELPER}/${target}")
+  add_custom_target(${target}
+      ${__byproducts}  # required for add_custom_target() by ninja
+      COMMAND ${CMAKE_COMMAND}
+        "-DCONFIG_FILE:PATH=${CONFIG_FILE}"
+        "-DCOPYLIST_VAR:STRING=${list_var}"
+        "-DDEPHELPER=${OPENCV_DEPHELPER}/${target}"
+        -P "${OpenCV_SOURCE_DIR}/cmake/copy_files.cmake"
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMENT "${comment_str}"
+      DEPENDS "${OpenCV_SOURCE_DIR}/cmake/copy_files.cmake"
+              # ninja warn about file(WRITE): "${SRC_COPY_CONFIG_FILE}"
+  )
+endmacro()
+
+macro(ocv_copyfiles_add_target target list_var comment_str)
+  set(deps ${ARGN})
+  ocv_copyfiles_make_config_file(CONFIG_FILE ${list_var})
+  add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${target}"
+      COMMAND ${CMAKE_COMMAND}
+        "-DCONFIG_FILE:PATH=${CONFIG_FILE}"
+        "-DCOPYLIST_VAR:STRING=${list_var}"
+        "-DDEPHELPER=${OPENCV_DEPHELPER}/${target}"
+        -P "${OpenCV_SOURCE_DIR}/cmake/copy_files.cmake"
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMENT "${comment_str}"
+      DEPENDS "${OpenCV_SOURCE_DIR}/cmake/copy_files.cmake" ${deps}
+              # ninja warn about file(WRITE): "${SRC_COPY_CONFIG_FILE}"
+  )
+  add_custom_target(${target} DEPENDS "${OPENCV_DEPHELPER}/${target}")
 endmacro()
