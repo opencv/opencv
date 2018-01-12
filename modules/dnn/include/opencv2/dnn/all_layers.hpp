@@ -490,6 +490,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         bool hasBias;
+        int axis;
 
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };

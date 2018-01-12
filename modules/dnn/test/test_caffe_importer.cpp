@@ -87,10 +87,10 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
-typedef testing::TestWithParam<tuple<bool> > Reproducibility_AlexNet;
+typedef testing::TestWithParam<bool> Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
-    bool readFromMemory = get<0>(GetParam());
+    bool readFromMemory = GetParam();
     Net net;
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
@@ -119,12 +119,12 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     normAssert(ref, out);
 }
 
-INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_AlexNet, testing::Values(true, false));
+INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_AlexNet, testing::Bool());
 
-typedef testing::TestWithParam<tuple<bool> > Reproducibility_OCL_AlexNet;
+typedef testing::TestWithParam<bool> Reproducibility_OCL_AlexNet;
 OCL_TEST_P(Reproducibility_OCL_AlexNet, Accuracy)
 {
-    bool readFromMemory = get<0>(GetParam());
+    bool readFromMemory = GetParam();
     Net net;
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
@@ -156,7 +156,7 @@ OCL_TEST_P(Reproducibility_OCL_AlexNet, Accuracy)
     normAssert(ref, out);
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_OCL_AlexNet, testing::Values(true, false));
+OCL_INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_OCL_AlexNet, testing::Bool());
 
 #if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)

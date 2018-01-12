@@ -26,6 +26,7 @@ public:
     {
         setParamsFrom(params);
         hasBias = params.get<bool>("bias_term", false);
+        axis = params.get<int>("axis", 1);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -33,8 +34,8 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(blobs.size() == 1 + hasBias);
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        CV_Assert(inputs.size() == 2 && blobs.empty() || blobs.size() == 1 + hasBias);
+        outputs.assign(1, inputs[0]);
         return true;
     }
 
@@ -56,28 +57,60 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        CV_Assert(outputs.size() == 1, !blobs.empty() || inputs.size() == 2);
 
-        for (size_t ii = 0; ii < outputs.size(); ii++)
+        Mat &inpBlob = *inputs[0];
+        Mat &outBlob = outputs[0];
+        Mat &weights = blobs.empty() ? *inputs[1] : blobs[0];
+        Mat bias = hasBias ? blobs.back() : Mat();
+        MatShape inpShape = shape(inpBlob);
+        const int numWeights = weights.total();
+
+        int endAxis;
+        for (endAxis = axis + 1; endAxis <= inpBlob.dims; ++endAxis)
         {
-            Mat &inpBlob = *inputs[ii];
-            Mat &outBlob = outputs[ii];
+            if (total(inpShape, axis, endAxis) == numWeights)
+                break;
+        }
+        CV_Assert(total(inpShape, axis, endAxis) == numWeights,
+                  !hasBias || numWeights == bias.total(),
+                  inpBlob.type() == CV_32F && outBlob.type() == CV_32F);
 
-            CV_Assert(inpBlob.size[1] == blobs[0].total());
-            if (hasBias)
-                CV_Assert(inpBlob.size[1] == blobs[1].total());
+        int numSlices = total(inpShape, 0, axis);
+        float* inpData = (float*)inpBlob.data;
+        float* outData = (float*)outBlob.data;
 
-            CV_Assert(inpBlob.type() == CV_32F && outBlob.type() == CV_32F);
-
-            for( int cn = 0; cn < inpBlob.size[0]; cn++ )
+        if (endAxis != inpBlob.dims)
+        {
+            float* weightsData = (float*)weights.data;
+            float* biasesData = hasBias ? (float*)bias.data : 0;
+            int spatialSize = total(inpShape, endAxis);  // spatialSize != 1
+            for (int i = 0; i < numSlices; ++i)
             {
-                for (int n = 0; n < inpBlob.size[1]; n++)
+                for (int j = 0; j < numWeights; ++j)
                 {
-                    float w = blobs[0].at<float>(n);
-                    float b = hasBias ? blobs[1].at<float>(n) : 0;
-                    Mat outBlobPlane = slice(outBlob, cn, n);
-                    Mat inpBlobPlane = slice(inpBlob, cn, n);
-                    inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
+                    float w = weightsData[j];
+                    float b = hasBias ? biasesData[j] : 0;
+                    Mat inpSlice(1, spatialSize, CV_32F, inpData);
+                    Mat outSlice(1, spatialSize, CV_32F, outData);
+                    inpSlice.convertTo(outSlice, CV_32F, w, b);
+                    inpData += spatialSize;
+                    outData += spatialSize;
                 }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < numSlices; ++i)
+            {
+                Mat inpSlice(weights.dims, weights.size, CV_32F, inpData);
+                Mat outSlice(weights.dims, weights.size, CV_32F, outData);
+                multiply(inpSlice, weights, outSlice);
+                if (hasBias)
+                    add(outSlice, bias, outSlice);
+
+                inpData += numWeights;
+                outData += numWeights;
             }
         }
     }
