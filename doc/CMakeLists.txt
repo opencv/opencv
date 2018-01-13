@@ -33,7 +33,7 @@ endif(HAVE_DOC_GENERATOR)
 
 if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
-  list(APPEND blacklist "ts" "java" "python_bindings_generator" "python2" "python3" "js" "world")
+  list(APPEND blacklist "ts" "java_bindings_generator" "java" "python_bindings_generator" "python2" "python3" "js" "world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
   unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
 
@@ -252,4 +252,6 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
       DEPENDS doxygen
       COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   )
+
+  add_dependencies(opencv_docs doxygen)
 endif()

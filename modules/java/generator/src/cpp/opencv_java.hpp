@@ -4,9 +4,8 @@
 
 // Author: abratchik
 
-#ifndef JAVA_HPP
-#define	JAVA_HPP
-
+#undef LOGE
+#undef LOGD
 #ifdef __ANDROID__
 #  include <android/log.h>
 #  define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
@@ -20,6 +19,8 @@
 #  define LOGD(...)
 #endif
 
+#ifndef OPENCV_JAVA_HPP
+#define	OPENCV_JAVA_HPP
 
 #define MATOFINT(ENV) static_cast<jclass>(ENV->NewGlobalRef(ENV->FindClass("org/opencv/core/MatOfInt")))
 #define GETNATIVEOBJ(ENV, CLS, MAT) ENV->GetLongField(MAT, ENV->GetFieldID(CLS, "nativeObj", "J"))
@@ -34,16 +35,4 @@
 
 #define CHECK_MAT(cond) if(!(cond)){ LOGD("FAILED: " #cond); return; }
 
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
-
-
-
-#ifdef	__cplusplus
-}
-#endif
-
-#endif	/* JAVA_HPP */
+#endif	// OPENCV_JAVA_HPP

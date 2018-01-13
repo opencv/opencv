@@ -1,4 +1,6 @@
 {
+    "module_imports": [ "java.lang.String" ],
+    "module_j_code": "src/java/core+Core.jcode.in",
     "class_ignore_list" : [
         "FileNode",
         "FileStorage",

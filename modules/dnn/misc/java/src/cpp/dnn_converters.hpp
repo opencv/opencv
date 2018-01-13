@@ -8,7 +8,7 @@
 #define	DNN_CONVERTERS_HPP
 
 #include <jni.h>
-#include "opencv2/java.hpp"
+#include "opencv_java.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/dnn/dnn.hpp"
 
