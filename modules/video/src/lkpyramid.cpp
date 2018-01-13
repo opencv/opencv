@@ -1488,7 +1488,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 }
 
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine, int RANSAC_MAX_ITERS, double RANSAC_GOOD_RATIO,
-                                    int RANSAC_SIZE0)
+                                    const int RANSAC_SIZE0)
 {
     CV_INSTRUMENT_REGION()
 
