@@ -380,7 +380,29 @@ public:
     sumTime = 0;
     counter = 0;
     }
-
+    /**
+    returns frames per second.
+    @param reset_point is value of counter after which TickMeter should reset.
+    */
+    CV_WRAP double getFps(int reset_point = 10)
+    {
+    static double stat_fps = 0;
+    if(counter >= reset_point)
+        reset();
+    double fps = getCounter()/getTimeSec();
+    if(std::isnan(fps))
+        return stat_fps;
+        else stat_fps = fps;
+    return fps;
+    }
+    /**
+    increases counter
+    @param by value by which counter should be increased
+    */
+    CV_WRAP void incrementCounter(int by = 1)
+    {
+    counter += by;
+    }
 private:
     int64 counter;
     int64 sumTime;
