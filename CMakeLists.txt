@@ -458,6 +458,14 @@ if(INSTALL_TO_MANGLED_PATHS)
   endforeach()
 endif()
 
+if(ANDROID)
+  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_LIB_INSTALL_PATH}")
+elseif(INSTALL_CREATE_DISTRIB)
+  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH}")
+else()
+  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}")
+endif()
+ocv_update(OPENCV_JNI_BIN_INSTALL_PATH "${OPENCV_JNI_INSTALL_PATH}")
 
 if(WIN32)
   # Postfix of DLLs:
@@ -608,6 +616,7 @@ include(cmake/OpenCVFindLAPACK.cmake)
 # ----------------------------------------------------------------------------
 
 # --- Doxygen for documentation ---
+add_custom_target(opencv_docs ALL)
 if(BUILD_DOCS)
   find_package(Doxygen)
 else()
