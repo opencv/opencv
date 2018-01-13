@@ -81,27 +81,39 @@ namespace
     };
 }
 
-template<typename T>
-static String toString(const T &v)
-{
-    std::ostringstream ss;
-    ss << v;
-    return ss.str();
-}
-
 Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
                   const Scalar& mean, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
-    std::vector<Mat> images(1, image.getMat());
-    return blobFromImages(images, scalefactor, size, mean, swapRB, crop);
+    Mat blob;
+    blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop);
+    return blob;
 }
 
-Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size size,
-                   const Scalar& mean_, bool swapRB, bool crop)
+void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
+                   const Size& size, const Scalar& mean, bool swapRB, bool crop)
 {
     CV_TRACE_FUNCTION();
-    std::vector<Mat> images = images_;
+    std::vector<Mat> images(1, image.getMat());
+    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop);
+}
+
+Mat blobFromImages(InputArrayOfArrays images, double scalefactor, Size size,
+                   const Scalar& mean, bool swapRB, bool crop)
+{
+    CV_TRACE_FUNCTION();
+    Mat blob;
+    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop);
+    return blob;
+}
+
+void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalefactor,
+                    Size size, const Scalar& mean_, bool swapRB, bool crop)
+{
+    CV_TRACE_FUNCTION();
+    std::vector<Mat> images;
+    images_.getMatVector(images);
+    CV_Assert(!images.empty());
     for (int i = 0; i < images.size(); i++)
     {
         Size imgSize = images[i].size();
@@ -133,16 +145,15 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
     }
 
     size_t i, nimages = images.size();
-    if(nimages == 0)
-        return Mat();
     Mat image0 = images[0];
     int nch = image0.channels();
     CV_Assert(image0.dims == 2);
-    Mat blob, image;
+    Mat image;
     if (nch == 3 || nch == 4)
     {
         int sz[] = { (int)nimages, nch, image0.rows, image0.cols };
-        blob = Mat(4, sz, CV_32F);
+        blob_.create(4, sz, CV_32F);
+        Mat blob = blob_.getMat();
         Mat ch[4];
 
         for( i = 0; i < nimages; i++ )
@@ -164,7 +175,8 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
     {
        CV_Assert(nch == 1);
        int sz[] = { (int)nimages, 1, image0.rows, image0.cols };
-       blob = Mat(4, sz, CV_32F);
+       blob_.create(4, sz, CV_32F);
+       Mat blob = blob_.getMat();
 
        for( i = 0; i < nimages; i++ )
        {
@@ -177,7 +189,6 @@ Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size siz
            image.copyTo(Mat(image.rows, image.cols, CV_32F, blob.ptr((int)i, 0)));
        }
     }
-    return blob;
 }
 
 class OpenCLBackendWrapper : public BackendWrapper
@@ -886,7 +897,8 @@ struct Net::Impl
         {
             LayerPin storedFrom = ld.inputBlobsId[inNum];
             if (storedFrom.valid() && !storedFrom.equal(from))
-                CV_Error(Error::StsError, "Input #" + toString(inNum) + "of layer \"" + ld.name + "\" already was connected");
+                CV_Error(Error::StsError, format("Input #%d of layer \"%s\" already was connected",
+                                                 inNum, ld.name.c_str()));
         }
 
         ld.inputBlobsId[inNum] = from;
@@ -1665,8 +1677,9 @@ struct Net::Impl
         LayerData &ld = layers[pin.lid];
         if ((size_t)pin.oid >= ld.outputBlobs.size())
         {
-            CV_Error(Error::StsOutOfRange, "Layer \"" + ld.name + "\" produce only " + toString(ld.outputBlobs.size()) +
-                                           " outputs, the #" + toString(pin.oid) + " was requsted");
+            CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %d outputs, "
+                                           "the #%d was requsted", ld.name.c_str(),
+                                           ld.outputBlobs.size(), pin.oid));
         }
         if (preferableTarget != DNN_TARGET_CPU)
         {
