@@ -380,7 +380,13 @@ public:
     sumTime = 0;
     counter = 0;
     }
-
+    /**
+    returns frames per second.
+    */
+    CV_WRAP double getFps()
+    {
+    return getCounter()/getTimeSec();
+    }
 private:
     int64 counter;
     int64 sumTime;
