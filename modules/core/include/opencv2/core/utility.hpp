@@ -309,7 +309,6 @@ public:
     {
     reset();
     }
-
     /**
     starts counting ticks.
     */
@@ -317,20 +316,10 @@ public:
     {
     startTime = cv::getTickCount();
     }
-
     /**
     stops counting ticks.
     */
-    CV_WRAP void stop()
-    {
-    int64 time = cv::getTickCount();
-    if (startTime == 0)
-    return;
-    ++counter;
-    sumTime += (time - startTime);
-    startTime = 0;
-    }
-
+    CV_WRAP void stop();
     /**
     returns counted ticks.
     */
@@ -338,7 +327,6 @@ public:
     {
     return sumTime;
     }
-
     /**
     returns passed time in microseconds.
     */
@@ -346,7 +334,6 @@ public:
     {
     return getTimeMilli()*1e3;
     }
-
     /**
     returns passed time in milliseconds.
     */
@@ -354,7 +341,6 @@ public:
     {
     return getTimeSec()*1e3;
     }
-
     /**
     returns passed time in seconds.
     */
@@ -362,7 +348,6 @@ public:
     {
     return (double)getTimeTicks() / getTickFrequency();
     }
-
     /**
     returns internal counter value.
     */
@@ -370,39 +355,20 @@ public:
     {
     return counter;
     }
-
     /**
     resets internal values.
     */
-    CV_WRAP void reset()
-    {
-    startTime = 0;
-    sumTime = 0;
-    counter = 0;
-    }
+    CV_WRAP void reset();
     /**
     returns frames per second.
     @param reset_point is value of counter after which TickMeter should reset.
     */
-    CV_WRAP double getFps(int reset_point = 10)
-    {
-    static double stat_fps = 0;
-    if(counter >= reset_point)
-        reset();
-    double fps = getCounter()/getTimeSec();
-    if(std::isnan(fps))
-        return stat_fps;
-        else stat_fps = fps;
-    return fps;
-    }
+    CV_WRAP double getFps(int reset_point = 10);
     /**
     increases counter
     @param by value by which counter should be increased
     */
-    CV_WRAP void incrementCounter(int by = 1)
-    {
-    counter += by;
-    }
+    CV_WRAP void incrementCounter(int by = 1);
 private:
     int64 counter;
     int64 sumTime;
