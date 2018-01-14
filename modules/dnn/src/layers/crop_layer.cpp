@@ -110,26 +110,12 @@ public:
         }
 
         crop_ranges.resize(dims, Range::all());
-        for (int i = 0; i < dims; i++)
+        for (int i = start_axis; i < dims; i++)
         {
-            if( i < start_axis )
-                continue;
+            if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
+                CV_Error(Error::StsBadArg, "invalid crop parameters or blob sizes");
 
-            if (!offset.empty()) //normal case
-            {
-                if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
-                    CV_Error(Error::StsBadArg, "invalid crop parameters");
-
-                crop_ranges[i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
-            }
-            else //detect offset automatically so that cropped image is center of original one
-            {
-                if (inpSzBlob.size[i] > inpBlob.size[i])
-                    CV_Error(Error::StsBadArg, "invalid output blob size");
-
-                int cur_crop = (inpBlob.size[i] - inpSzBlob.size[i]) / 2;
-                crop_ranges[i] = Range(cur_crop, cur_crop + inpSzBlob.size[i]);
-            }
+            crop_ranges[i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
         }
     }
 
