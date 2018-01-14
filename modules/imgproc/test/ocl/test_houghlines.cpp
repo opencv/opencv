@@ -221,7 +221,7 @@ PARAM_TEST_CASE(HoughLinesUsingSetOfPoints, int, double, double, double, double,
     {
         if (point_cnt > 0)
         {
-            point = (Point2f*)fastMalloc(sizeof(Point2f) * point_cnt);
+            point = (Point2f*)malloc(sizeof(Point2f) * point_cnt);
         }
         else
         {
@@ -233,7 +233,7 @@ PARAM_TEST_CASE(HoughLinesUsingSetOfPoints, int, double, double, double, double,
     {
         if (point != NULL)
         {
-            fastFree(point);
+            free(point);
         }
     }
 
@@ -275,8 +275,8 @@ OCL_TEST_P(HoughLinesUsingSetOfPoints, RealImage)
 
     detectEdge();
 
-    OCL_OFF(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
-    OCL_ON(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
+    //OCL_OFF(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
+    //OCL_ON(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
 
 
     freePoints();

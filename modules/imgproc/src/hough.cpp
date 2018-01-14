@@ -1534,33 +1534,33 @@ void HoughCircles( InputArray _image, OutputArray _circles,
 static void
 CreateHoughPlane( int point_cnt, const Point2f point[],
                   const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
-                  short *plane )
+                  int *plane )
 {
     double rad = 0.0f, rho = 0.0f;
     int rho_index = 0, theta_index = 0;
-    int deg_min=(int)_TO_DEGREE_OF(theta_param->min);
-    int deg_max=(int)_TO_DEGREE_OF(theta_param->max);
-    int deg_step=(int)_TO_DEGREE_OF(theta_param->step);
-    if( deg_step == 0 ){ deg_step = 1; }
+    int theta_min=(int)_TO_DEGREE_OF(theta_param->min);
+    int theta_max=(int)_TO_DEGREE_OF(theta_param->max);
+    int theta_step=(int)_TO_DEGREE_OF(theta_param->step);
+    if( theta_step == 0 ){ theta_step = 1; }
 
     int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
     int theta_size = (int)((_TO_DEGREE_OF(theta_param->max) - _TO_DEGREE_OF(theta_param->min)) / _TO_DEGREE_OF(theta_param->step));
 
     for( int cnt = 0; cnt < point_cnt; cnt++ )
     {
-        for( int deg = deg_min; deg < deg_max; deg+=deg_step )
+        for( int theta = theta_min; theta < theta_max; theta+=theta_step )
         {
             // Calc rho
-            rad = _TO_RADIAN_OF(deg);
+            rad = _TO_RADIAN_OF(theta);
             rho = point[cnt].x * cos(rad) + point[cnt].y * sin(rad);
             // Calc index
             rho_index = (int)((rho - rho_param->min) / rho_param->step);
-            theta_index = (int)(((double)deg - (double)deg_min) / (double)deg_step);
+            theta_index = (int)((double)(theta - theta_min) / (double)theta_step);
 
             if( ((0 <= rho_index)   && (rho_index < rho_size)) &&
                 ((0 <= theta_index) && (theta_index < theta_size)) )
             {
-                if( *(plane + (rho_index * theta_size) + theta_index) < SHRT_MAX )
+                if( *(plane + (rho_index * theta_size) + theta_index) < INT_MAX )
                 {
                     *(plane + (rho_index * theta_size) + theta_index) += 1;
                 }
@@ -1573,13 +1573,12 @@ CreateHoughPlane( int point_cnt, const Point2f point[],
     }
 }
 
-static int SelectHoughPolar( const short *plane,
-                            const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
-                            int polar_cnt, HoughLinePolar hough_polar[] )
+static int SelectHoughPolar( const int *plane,
+                             const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
+                             int polar_cnt, HoughLinePolar hough_polar[] )
 {
-    int ret = 0;
-    short votes = 0, max_votes = 0;
-    long cnt = 0;
+    int ret = 0, cnt = 0;
+    int votes = 0, max_votes = 0;
     int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
     int theta_size = (int)((_TO_DEGREE_OF(theta_param->max) - _TO_DEGREE_OF(theta_param->min)) / _TO_DEGREE_OF(theta_param->step));
 
@@ -1589,7 +1588,7 @@ static int SelectHoughPolar( const short *plane,
         {
             votes = *(plane + (rho * theta_size) + theta);
 
-            if( votes > max_votes )
+            if( votes >= max_votes )
             {
                 hough_polar[cnt].votes = votes;
                 hough_polar[cnt].angle = (double)theta * theta_param->step + theta_param->min;
@@ -1632,7 +1631,9 @@ int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
             int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
             int theta_size = (int)((_TO_DEGREE_OF(theta_param->max) - _TO_DEGREE_OF(theta_param->min)) / _TO_DEGREE_OF(theta_param->step));
 
-            short *plane = (short*)malloc(sizeof(short) * rho_size * theta_size);
+            int *plane = (int*)malloc(sizeof(int) * rho_size * theta_size);
+            // Clear hough plane buffer
+            memset(plane, 0, sizeof(int) * rho_size * theta_size);
 
             CreateHoughPlane( point_cnt, point,
                               rho_param, theta_param,
