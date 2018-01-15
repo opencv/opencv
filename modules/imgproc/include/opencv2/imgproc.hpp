@@ -853,7 +853,7 @@ public:
     virtual int getVotesThreshold() const = 0;
 };
 
-//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+//! Guil, N., Gonzalez-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 //! Detects position, translation and rotation
 class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
 {
@@ -2120,35 +2120,21 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
                                int minRadius = 0, int maxRadius = 0 );
 
 
-/** TODO Add discription...@example houghlines.cpp
+/** @example houghlines.cpp
 An example using the Hough line detector
-![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
 
-/** @brief Finds lines in a binary image using the standard Hough transform.
+/** @brief Finds lines in set of points using the standard Hough transform.
 
-The function implements the standard or standard multi-scale Hough transform algorithm for line
-detection. See <http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm> for a good explanation of Hough
-transform.
-
-@param image 8-bit, single-channel binary source image. The image may be modified by the function.
-@param lines Output vector of lines. Each line is represented by a two-element vector
-\f$(\rho, \theta)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
-the image). \f$\theta\f$ is the line rotation angle in radians (
-\f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
-@param rho Distance resolution of the accumulator in pixels.
-@param theta Angle resolution of the accumulator in radians.
-@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
-votes ( \f$>\texttt{threshold}\f$ ).
-@param srn For the multi-scale Hough transform, it is a divisor for the distance resolution rho .
-The coarse accumulator distance resolution is rho and the accurate accumulator resolution is
-rho/srn . If both srn=0 and stn=0 , the classical Hough transform is used. Otherwise, both these
-parameters should be positive.
-@param stn For the multi-scale Hough transform, it is a divisor for the distance resolution theta.
-@param min_theta For standard and multi-scale Hough transform, minimum angle to check for lines.
-Must fall between 0 and max_theta.
-@param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
-Must fall between min_theta and CV_PI.
+@param point_cnt_max  Count of points.
+@param point[]        Array of points.
+@param rho_param      Data set of rho. Set the minimum and maximum values of the range of rho. 
+                      Also, set the step value within the range of rho. Rho must be a pixel value.
+@param theta_param    Data set of theta. Set the minimum and maximum values of the range of theta. 
+                      Also, set the step value within the range of theta. Theta must be a radian value.
+@param polar_cnt_max  Count of polars.
+@param hough_polar[]  Array of hough polar. This is the output data of this function.
+                      "votes" is the count of votes in the hough plane. rho, angle is the rho and theta in polar.
  */
 struct CV_EXPORTS_W_SIMPLE HoughLinePolar
 {
@@ -4276,7 +4262,7 @@ CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize =
 //! Detects position only without translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 
-//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+//! Guil, N., Gonzalez-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 //! Detects position, translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
