@@ -268,6 +268,8 @@ public:
 
     bool setScale(const Ptr<ScaleLayer>& layer)
     {
+        if (layer.empty() || layer->blobs.empty())
+            return false;
         scaleLayer = layer;
         // we will need to re-compute the weights with the scaling
         // coefficients taken into account
@@ -276,7 +278,7 @@ public:
         newWeightAndBias = true;
         fusedBias = false;
 #endif
-        return !scaleLayer.empty();
+        return true;
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
