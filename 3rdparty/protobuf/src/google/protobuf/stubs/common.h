@@ -35,7 +35,12 @@
 #ifndef GOOGLE_PROTOBUF_COMMON_H__
 #define GOOGLE_PROTOBUF_COMMON_H__
 
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <set>
 #include <string>
+#include <vector>
 
 #include <google/protobuf/stubs/port.h>
 #include <google/protobuf/stubs/macros.h>
@@ -96,24 +101,27 @@ namespace internal {
 
 // The current version, represented as a single integer to make comparison
 // easier:  major * 10^6 + minor * 10^3 + micro
-#define GOOGLE_PROTOBUF_VERSION 3001000
+#define GOOGLE_PROTOBUF_VERSION 3005001
+
+// A suffix string for alpha, beta or rc releases. Empty for stable releases.
+#define GOOGLE_PROTOBUF_VERSION_SUFFIX ""
 
 // The minimum library version which works with the current version of the
 // headers.
-#define GOOGLE_PROTOBUF_MIN_LIBRARY_VERSION 3001000
+#define GOOGLE_PROTOBUF_MIN_LIBRARY_VERSION 3005000
 
 // The minimum header version which works with the current version of
 // the library.  This constant should only be used by protoc's C++ code
 // generator.
-static const int kMinHeaderVersionForLibrary = 3001000;
+static const int kMinHeaderVersionForLibrary = 3005000;
 
 // The minimum protoc version which works with the current version of the
 // headers.
-#define GOOGLE_PROTOBUF_MIN_PROTOC_VERSION 3001000
+#define GOOGLE_PROTOBUF_MIN_PROTOC_VERSION 3005000
 
 // The minimum header version which works with the current version of
 // protoc.  This constant should only be used in VerifyVersion().
-static const int kMinHeaderVersionForProtoc = 3001000;
+static const int kMinHeaderVersionForProtoc = 3005000;
 
 // Verifies that the headers and libraries are compatible.  Use the macro
 // below to call this.
@@ -192,6 +200,10 @@ namespace internal {
 
 // Register a function to be called when ShutdownProtocolBuffers() is called.
 LIBPROTOBUF_EXPORT void OnShutdown(void (*func)());
+// Destroy the string (call string destructor)
+LIBPROTOBUF_EXPORT void OnShutdownDestroyString(const std::string* ptr);
+// Destroy (not delete) the message
+LIBPROTOBUF_EXPORT void OnShutdownDestroyMessage(const void* ptr);
 
 }  // namespace internal
 
@@ -217,7 +229,12 @@ class FatalException : public std::exception {
 
 // This is at the end of the file instead of the beginning to work around a bug
 // in some versions of MSVC.
-using namespace std;  // Don't do this at home, kids.
+// TODO(acozzette): remove these using statements
+using std::istream;
+using std::ostream;
+using std::pair;
+using std::string;
+using std::vector;
 
 }  // namespace protobuf
 }  // namespace google

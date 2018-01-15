@@ -54,16 +54,16 @@ inline Atomic32 NoBarrier_AtomicIncrement(volatile Atomic32* ptr,
   return (Atomic32)atomic_add_32_nv((volatile uint32_t*)ptr, (uint32_t)increment);
 }
 
-inline void MemoryBarrier(void) {
+inline void MemoryBarrierInternal(void) {
 	membar_producer();
 	membar_consumer();
 }
 
 inline Atomic32 Barrier_AtomicIncrement(volatile Atomic32* ptr,
                                         Atomic32 increment) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   Atomic32 ret = NoBarrier_AtomicIncrement(ptr, increment);
-  MemoryBarrier();
+  MemoryBarrierInternal();
 
   return ret;
 }
@@ -72,7 +72,7 @@ inline Atomic32 Acquire_CompareAndSwap(volatile Atomic32* ptr,
                                        Atomic32 old_value,
                                        Atomic32 new_value) {
   Atomic32 ret = NoBarrier_CompareAndSwap(ptr, old_value, new_value);
-  MemoryBarrier();
+  MemoryBarrierInternal();
 
   return ret;
 }
@@ -80,7 +80,7 @@ inline Atomic32 Acquire_CompareAndSwap(volatile Atomic32* ptr,
 inline Atomic32 Release_CompareAndSwap(volatile Atomic32* ptr,
                                        Atomic32 old_value,
                                        Atomic32 new_value) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return NoBarrier_CompareAndSwap(ptr, old_value, new_value);
 }
 
@@ -129,9 +129,9 @@ inline Atomic64 NoBarrier_AtomicIncrement(volatile Atomic64* ptr, Atomic64 incre
 }
 
 inline Atomic64 Barrier_AtomicIncrement(volatile Atomic64* ptr, Atomic64 increment) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   Atomic64 ret = atomic_add_64_nv((volatile uint64_t*)ptr, increment);
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return ret;
 }
 
@@ -139,14 +139,14 @@ inline Atomic64 Acquire_CompareAndSwap(volatile Atomic64* ptr,
                                        Atomic64 old_value,
                                        Atomic64 new_value) {
   Atomic64 ret = NoBarrier_CompareAndSwap(ptr, old_value, new_value);
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return ret;
 }
 
 inline Atomic64 Release_CompareAndSwap(volatile Atomic64* ptr,
                                        Atomic64 old_value,
                                        Atomic64 new_value) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return NoBarrier_CompareAndSwap(ptr, old_value, new_value);
 }
 

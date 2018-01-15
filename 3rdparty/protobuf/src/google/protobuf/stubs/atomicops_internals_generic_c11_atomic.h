@@ -30,8 +30,8 @@
 
 // This file is an internal atomic implementation, use atomicops.h instead.
 
-#ifndef GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_PNACL_H_
-#define GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_PNACL_H_
+#ifndef GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_GENERIC_C11_ATOMIC_H_
+#define GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_GENERIC_C11_ATOMIC_H_
 
 #include <atomic>
 
@@ -52,7 +52,7 @@ typedef volatile std::atomic<Atomic32>* AtomicLocation32;
 static_assert(sizeof(*(AtomicLocation32) nullptr) == sizeof(Atomic32),
               "incompatible 32-bit atomic layout");
 
-inline void MemoryBarrier() {
+inline void MemoryBarrierInternal() {
 #if defined(__GLIBCXX__)
   // Work around libstdc++ bug 51038 where atomic_thread_fence was declared but
   // not defined, leading to the linker complaining about undefined references.
@@ -119,7 +119,7 @@ inline void NoBarrier_Store(volatile Atomic32* ptr, Atomic32 value) {
 
 inline void Acquire_Store(volatile Atomic32* ptr, Atomic32 value) {
   ((AtomicLocation32)ptr)->store(value, std::memory_order_relaxed);
-  MemoryBarrier();
+  MemoryBarrierInternal();
 }
 
 inline void Release_Store(volatile Atomic32* ptr, Atomic32 value) {
@@ -135,7 +135,7 @@ inline Atomic32 Acquire_Load(volatile const Atomic32* ptr) {
 }
 
 inline Atomic32 Release_Load(volatile const Atomic32* ptr) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return ((AtomicLocation32)ptr)->load(std::memory_order_relaxed);
 }
 
@@ -202,7 +202,7 @@ inline void NoBarrier_Store(volatile Atomic64* ptr, Atomic64 value) {
 
 inline void Acquire_Store(volatile Atomic64* ptr, Atomic64 value) {
   ((AtomicLocation64)ptr)->store(value, std::memory_order_relaxed);
-  MemoryBarrier();
+  MemoryBarrierInternal();
 }
 
 inline void Release_Store(volatile Atomic64* ptr, Atomic64 value) {
@@ -218,7 +218,7 @@ inline Atomic64 Acquire_Load(volatile const Atomic64* ptr) {
 }
 
 inline Atomic64 Release_Load(volatile const Atomic64* ptr) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return ((AtomicLocation64)ptr)->load(std::memory_order_relaxed);
 }
 
@@ -228,4 +228,4 @@ inline Atomic64 Release_Load(volatile const Atomic64* ptr) {
 }  // namespace protobuf
 }  // namespace google
 
-#endif  // GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_PNACL_H_
+#endif  // GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_GENERIC_C11_ATOMIC_H_

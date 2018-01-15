@@ -227,7 +227,7 @@ void SplitStringToIteratorUsing(const string& full,
 void SplitStringUsing(const string& full,
                       const char* delim,
                       vector<string>* result) {
-  back_insert_iterator< vector<string> > it(*result);
+  std::back_insert_iterator< vector<string> > it(*result);
   SplitStringToIteratorUsing(full, delim, it);
 }
 
@@ -265,7 +265,7 @@ void SplitStringToIteratorAllowEmpty(const StringType& full,
 
 void SplitStringAllowEmpty(const string& full, const char* delim,
                            vector<string>* result) {
-  back_insert_iterator<vector<string> > it(*result);
+  std::back_insert_iterator<vector<string> > it(*result);
   SplitStringToIteratorAllowEmpty(full, delim, 0, it);
 }
 
@@ -981,7 +981,7 @@ static const char two_ASCII_digits[100][2] = {
 };
 
 char* FastUInt32ToBufferLeft(uint32 u, char* buffer) {
-  int digits;
+  uint32 digits;
   const char *ASCII_digits = NULL;
   // The idea of this implementation is to trim the number of divides to as few
   // as possible by using multiplication and subtraction rather than mod (%),
@@ -1262,10 +1262,10 @@ char* DoubleToBuffer(double value, char* buffer) {
   // this assert.
   GOOGLE_COMPILE_ASSERT(DBL_DIG < 20, DBL_DIG_is_too_big);
 
-  if (value == numeric_limits<double>::infinity()) {
+  if (value == std::numeric_limits<double>::infinity()) {
     strcpy(buffer, "inf");
     return buffer;
-  } else if (value == -numeric_limits<double>::infinity()) {
+  } else if (value == -std::numeric_limits<double>::infinity()) {
     strcpy(buffer, "-inf");
     return buffer;
   } else if (MathLimits<double>::IsNaN(value)) {
@@ -1380,10 +1380,10 @@ char* FloatToBuffer(float value, char* buffer) {
   // this assert.
   GOOGLE_COMPILE_ASSERT(FLT_DIG < 10, FLT_DIG_is_too_big);
 
-  if (value == numeric_limits<double>::infinity()) {
+  if (value == std::numeric_limits<double>::infinity()) {
     strcpy(buffer, "inf");
     return buffer;
-  } else if (value == -numeric_limits<double>::infinity()) {
+  } else if (value == -std::numeric_limits<double>::infinity()) {
     strcpy(buffer, "-inf");
     return buffer;
   } else if (MathLimits<float>::IsNaN(value)) {
@@ -1401,7 +1401,7 @@ char* FloatToBuffer(float value, char* buffer) {
   float parsed_value;
   if (!safe_strtof(buffer, &parsed_value) || parsed_value != value) {
     int snprintf_result =
-      snprintf(buffer, kFloatToBufferSize, "%.*g", FLT_DIG+2, value);
+      snprintf(buffer, kFloatToBufferSize, "%.*g", FLT_DIG+3, value);
 
     // Should never overflow; see above.
     GOOGLE_DCHECK(snprintf_result > 0 && snprintf_result < kFloatToBufferSize);

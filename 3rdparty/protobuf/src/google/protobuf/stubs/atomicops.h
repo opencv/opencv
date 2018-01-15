@@ -63,28 +63,22 @@ namespace google {
 namespace protobuf {
 namespace internal {
 
-#if defined(GOOGLE_PROTOBUF_ARCH_POWER)
-#if defined(_LP64) || defined(__LP64__)
-typedef int32 Atomic32;
-typedef intptr_t Atomic64;
+#ifdef GOOGLE_PROTOBUF_ARCH_32_BIT
+  typedef intptr_t Atomic32;
+  typedef int64 Atomic64;
 #else
-typedef intptr_t Atomic32;
-typedef int64 Atomic64;
-#endif
-#else
-typedef int32 Atomic32;
-#ifdef GOOGLE_PROTOBUF_ARCH_64_BIT
-// We need to be able to go between Atomic64 and AtomicWord implicitly.  This
-// means Atomic64 and AtomicWord should be the same type on 64-bit.
-#if defined(__ILP32__) || defined(GOOGLE_PROTOBUF_OS_NACL)
-// NaCl's intptr_t is not actually 64-bits on 64-bit!
-// http://code.google.com/p/nativeclient/issues/detail?id=1162
-// sparcv9's pointer type is 32bits
-typedef int64 Atomic64;
-#else
-typedef intptr_t Atomic64;
-#endif
-#endif
+  // We need to be able to go between Atomic64 and AtomicWord implicitly.  This
+  // means Atomic64 and AtomicWord should be the same type on 64-bit.
+  #if defined(__ILP32__) || defined(GOOGLE_PROTOBUF_OS_NACL)
+  // NaCl's intptr_t is not actually 64-bits on 64-bit!
+  // http://code.google.com/p/nativeclient/issues/detail?id=1162
+  // sparcv9's pointer type is 32bits
+  typedef intptr_t Atomic32;
+  typedef int64 Atomic64;
+  #else
+  typedef int32 Atomic32;
+  typedef intptr_t Atomic64;
+  #endif
 #endif
 
 // Use AtomicWord for a machine-sized pointer.  It will use the Atomic32 or
@@ -123,8 +117,8 @@ Atomic32 Barrier_AtomicIncrement(volatile Atomic32* ptr,
 // ensure that no later memory access can be reordered ahead of the operation.
 // "Release" operations ensure that no previous memory access can be reordered
 // after the operation.  "Barrier" operations have both "Acquire" and "Release"
-// semantics.   A MemoryBarrier() has "Barrier" semantics, but does no memory
-// access.
+// semantics.   A MemoryBarrierInternal() has "Barrier" semantics, but does no
+// memory access.
 Atomic32 Acquire_CompareAndSwap(volatile Atomic32* ptr,
                                 Atomic32 old_value,
                                 Atomic32 new_value);
@@ -132,10 +126,10 @@ Atomic32 Release_CompareAndSwap(volatile Atomic32* ptr,
                                 Atomic32 old_value,
                                 Atomic32 new_value);
 
-#if defined(__MINGW32__) && defined(MemoryBarrier)
-#undef MemoryBarrier
-#endif
-void MemoryBarrier();
+// This function was renamed from MemoryBarrier to MemoryBarrierInternal
+// because MemoryBarrier is a define in Windows ARM builds and we do not
+// undefine it because we call it from this function.
+void MemoryBarrierInternal();
 void NoBarrier_Store(volatile Atomic32* ptr, Atomic32 value);
 void Acquire_Store(volatile Atomic32* ptr, Atomic32 value);
 void Release_Store(volatile Atomic32* ptr, Atomic32 value);
@@ -180,7 +174,7 @@ Atomic64 Release_Load(volatile const Atomic64* ptr);
 #include <google/protobuf/stubs/atomicops_internals_tsan.h>
 // MSVC.
 #elif defined(_MSC_VER)
-#if defined(GOOGLE_PROTOBUF_ARCH_IA32) || defined(GOOGLE_PROTOBUF_ARCH_X64)
+#if defined(GOOGLE_PROTOBUF_ARCH_IA32) || defined(GOOGLE_PROTOBUF_ARCH_X64) || defined(GOOGLE_PROTOBUF_ARCH_ARM)
 #include <google/protobuf/stubs/atomicops_internals_x86_msvc.h>
 #else
 #error GOOGLE_PROTOBUF_ATOMICOPS_ERROR
@@ -194,16 +188,16 @@ Atomic64 Release_Load(volatile const Atomic64* ptr);
 #elif defined(GOOGLE_PROTOBUF_OS_AIX)
 #include <google/protobuf/stubs/atomicops_internals_power.h>
 
-// Apple.
-#elif defined(GOOGLE_PROTOBUF_OS_APPLE)
-#include <google/protobuf/stubs/atomicops_internals_macosx.h>
-
 // GCC.
 #elif defined(__GNUC__)
 #if defined(GOOGLE_PROTOBUF_ARCH_IA32) || defined(GOOGLE_PROTOBUF_ARCH_X64)
 #include <google/protobuf/stubs/atomicops_internals_x86_gcc.h>
 #elif defined(GOOGLE_PROTOBUF_ARCH_ARM) && defined(__linux__)
+#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4))
+#include <google/protobuf/stubs/atomicops_internals_generic_gcc.h>
+#else
 #include <google/protobuf/stubs/atomicops_internals_arm_gcc.h>
+#endif
 #elif defined(GOOGLE_PROTOBUF_ARCH_AARCH64)
 #include <google/protobuf/stubs/atomicops_internals_arm64_gcc.h>
 #elif defined(GOOGLE_PROTOBUF_ARCH_ARM_QNX)
@@ -213,7 +207,10 @@ Atomic64 Release_Load(volatile const Atomic64* ptr);
 #elif defined(GOOGLE_PROTOBUF_ARCH_POWER)
 #include <google/protobuf/stubs/atomicops_internals_power.h>
 #elif defined(__native_client__)
-#include <google/protobuf/stubs/atomicops_internals_pnacl.h>
+// The static_asserts in the C++11 atomics implementation cause it to fail
+// with certain compilers, e.g. nvcc on macOS. Don't use elsewhere unless
+// the TODO in that file is addressed.
+#include <google/protobuf/stubs/atomicops_internals_generic_c11_atomic.h>
 #elif defined(GOOGLE_PROTOBUF_ARCH_PPC)
 #include <google/protobuf/stubs/atomicops_internals_ppc_gcc.h>
 #elif (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4))
@@ -231,12 +228,6 @@ Atomic64 Release_Load(volatile const Atomic64* ptr);
 // Unknown.
 #else
 #error GOOGLE_PROTOBUF_ATOMICOPS_ERROR
-#endif
-
-// On some platforms we need additional declarations to make AtomicWord
-// compatible with our other Atomic* types.
-#if defined(GOOGLE_PROTOBUF_OS_APPLE)
-#include <google/protobuf/stubs/atomicops_internals_atomicword_compat.h>
 #endif
 
 #undef GOOGLE_PROTOBUF_ATOMICOPS_ERROR

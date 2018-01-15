@@ -35,13 +35,8 @@
 #include <google/protobuf/test_util_lite.h>
 #include <google/protobuf/stubs/logging.h>
 #include <google/protobuf/stubs/common.h>
+#include <gtest/gtest.h>
 
-
-#define EXPECT_TRUE GOOGLE_CHECK
-#define ASSERT_TRUE GOOGLE_CHECK
-#define EXPECT_FALSE(COND) GOOGLE_CHECK(!(COND))
-#define EXPECT_EQ GOOGLE_CHECK_EQ
-#define ASSERT_EQ GOOGLE_CHECK_EQ
 
 namespace google {
 namespace protobuf {

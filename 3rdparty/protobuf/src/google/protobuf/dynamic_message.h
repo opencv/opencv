@@ -38,12 +38,15 @@
 #ifndef GOOGLE_PROTOBUF_DYNAMIC_MESSAGE_H__
 #define GOOGLE_PROTOBUF_DYNAMIC_MESSAGE_H__
 
+#include <algorithm>
 #include <memory>
 #ifndef _SHARED_PTR_H
 #include <google/protobuf/stubs/shared_ptr.h>
 #endif
+#include <vector>
 
 #include <google/protobuf/message.h>
+#include <google/protobuf/repeated_field.h>
 #include <google/protobuf/stubs/common.h>
 #include <google/protobuf/stubs/mutex.h>
 
@@ -136,14 +139,95 @@ class LIBPROTOBUF_EXPORT DynamicMessageFactory : public MessageFactory {
   // Construct default oneof instance for reflection usage if oneof
   // is defined.
   static void ConstructDefaultOneofInstance(const Descriptor* type,
-                                            const int offsets[],
+                                            const uint32 offsets[],
                                             void* default_oneof_instance);
   // Delete default oneof instance. Called by ~DynamicMessageFactory.
   static void DeleteDefaultOneofInstance(const Descriptor* type,
-                                         const int offsets[],
-                                         void* default_oneof_instance);
+                                         const uint32 offsets[],
+                                         const void* default_oneof_instance);
 
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(DynamicMessageFactory);
+};
+
+// Helper for computing a sorted list of map entries via reflection.
+class LIBPROTOBUF_EXPORT DynamicMapSorter {
+ public:
+  static std::vector<const Message*> Sort(const Message& message,
+                                          int map_size,
+                                          const Reflection* reflection,
+                                          const FieldDescriptor* field) {
+    std::vector<const Message*> result(static_cast<size_t>(map_size));
+    const RepeatedPtrField<Message>& map_field =
+        reflection->GetRepeatedPtrField<Message>(message, field);
+    size_t i = 0;
+    for (RepeatedPtrField<Message>::const_pointer_iterator it =
+             map_field.pointer_begin(); it != map_field.pointer_end(); ) {
+      result[i++] = *it++;
+    }
+    GOOGLE_DCHECK_EQ(result.size(), i);
+    MapEntryMessageComparator comparator(field->message_type());
+    std::stable_sort(result.begin(), result.end(), comparator);
+    // Complain if the keys aren't in ascending order.
+#ifndef NDEBUG
+    for (size_t j = 1; j < static_cast<size_t>(map_size); j++) {
+      if (!comparator(result[j - 1], result[j])) {
+        GOOGLE_LOG(ERROR) << (comparator(result[j], result[j - 1]) ?
+                      "internal error in map key sorting" :
+                      "map keys are not unique");
+      }
+    }
+#endif
+    return result;
+  }
+
+ private:
+  class LIBPROTOBUF_EXPORT MapEntryMessageComparator {
+   public:
+    explicit MapEntryMessageComparator(const Descriptor* descriptor)
+        : field_(descriptor->field(0)) {}
+
+    bool operator()(const Message* a, const Message* b) {
+      const Reflection* reflection = a->GetReflection();
+      switch (field_->cpp_type()) {
+        case FieldDescriptor::CPPTYPE_BOOL: {
+          bool first = reflection->GetBool(*a, field_);
+          bool second = reflection->GetBool(*b, field_);
+          return first < second;
+        }
+        case FieldDescriptor::CPPTYPE_INT32: {
+          int32 first = reflection->GetInt32(*a, field_);
+          int32 second = reflection->GetInt32(*b, field_);
+          return first < second;
+        }
+        case FieldDescriptor::CPPTYPE_INT64: {
+          int64 first = reflection->GetInt64(*a, field_);
+          int64 second = reflection->GetInt64(*b, field_);
+          return first < second;
+        }
+        case FieldDescriptor::CPPTYPE_UINT32: {
+          uint32 first = reflection->GetUInt32(*a, field_);
+          uint32 second = reflection->GetUInt32(*b, field_);
+          return first < second;
+        }
+        case FieldDescriptor::CPPTYPE_UINT64: {
+          uint64 first = reflection->GetUInt64(*a, field_);
+          uint64 second = reflection->GetUInt64(*b, field_);
+          return first < second;
+        }
+        case FieldDescriptor::CPPTYPE_STRING: {
+          string first = reflection->GetString(*a, field_);
+          string second = reflection->GetString(*b, field_);
+          return first < second;
+        }
+        default:
+          GOOGLE_LOG(DFATAL) << "Invalid key for map field.";
+          return true;
+      }
+    }
+
+   private:
+    const FieldDescriptor* field_;
+  };
 };
 
 }  // namespace protobuf
