@@ -224,3 +224,4 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesUsingSetOfPoints, Combine(Values(
                                                                          Values((CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f))));  // thetaMax
 } } // namespace cvtest::ocl
 #endif // HAVE_OPENCL
+
