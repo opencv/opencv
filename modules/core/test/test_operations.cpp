@@ -105,7 +105,7 @@ CV_OperationsTest::~CV_OperationsTest() {}
 template<typename _Tp> void CV_OperationsTest::TestType(Size sz, _Tp value)
 {
     cv::Mat_<_Tp> m(sz);
-    CV_Assert(m.cols == sz.width && m.rows == sz.height && m.depth() == DataType<_Tp>::depth &&
+    CV_Assert(m.cols == sz.width && m.rows == sz.height && m.depth() == cv::traits::Depth<_Tp>::value &&
               m.channels() == DataType<_Tp>::channels &&
               m.elemSize() == sizeof(_Tp) && m.step == m.elemSize()*m.cols);
     for( int y = 0; y < sz.height; y++ )

@@ -184,12 +184,12 @@ protected:
             bool & output) const;
 
     // Widgets
-    void reloadConfig() throw (GPhoto2Exception);
+    void reloadConfig();
     CameraWidget * getWidget(int widgetId) const;
     CameraWidget * findWidgetByName(const char * name) const;
 
     // Loading
-    void readFrameFromFile(CameraFile * file, OutputArray outputFrame) throw (GPhoto2Exception);
+    void readFrameFromFile(CameraFile * file, OutputArray outputFrame);
 
     // Context feedback
     friend void ctxErrorFunc(GPContext *, const char *, void *);
@@ -231,10 +231,8 @@ private:
 
     // Widgets
     int noOfWidgets;
-    int widgetDescription(std::ostream &os, CameraWidget * widget) const
-            throw (GPhoto2Exception);
-    int collectWidgets(std::ostream &os, CameraWidget * widget)
-            throw (GPhoto2Exception);
+    int widgetDescription(std::ostream &os, CameraWidget * widget) const;
+    int collectWidgets(std::ostream &os, CameraWidget * widget);
 
     // Messages / debug
     mutable std::ostringstream msgsBuffer; // CV_CAP_PROP_GPHOTO2_FLUSH_MSGS
@@ -929,7 +927,7 @@ int DigitalCameraCapture::findDevice(const char * deviceName) const
 /**
  * Load device settings.
  */
-void DigitalCameraCapture::reloadConfig() throw (GPhoto2Exception)
+void DigitalCameraCapture::reloadConfig()
 {
     std::ostringstream widgetInfoListStream;
 
@@ -999,7 +997,7 @@ CameraWidget * DigitalCameraCapture::findWidgetByName(
  * @FUTURE: RAW format reader.
  */
 void DigitalCameraCapture::readFrameFromFile(CameraFile * file, OutputArray outputFrame)
-        throw (GPhoto2Exception)
+
 {
     // FUTURE: OpenCV cannot read RAW files right now.
     const char * data;
@@ -1022,7 +1020,7 @@ void DigitalCameraCapture::readFrameFromFile(CameraFile * file, OutputArray outp
  *         then IDs won't be the same)
  */
 int DigitalCameraCapture::widgetDescription(std::ostream &os,
-        CameraWidget * widget) const throw (GPhoto2Exception)
+        CameraWidget * widget) const
 {
     const char * label, *name, *info;
     int id, readonly;
@@ -1137,7 +1135,7 @@ int DigitalCameraCapture::widgetDescription(std::ostream &os,
  * @return maximum of widget ID
  */
 int DigitalCameraCapture::collectWidgets(std::ostream & os,
-        CameraWidget * widget) throw (GPhoto2Exception)
+        CameraWidget * widget)
 {
     int id = widgetDescription(os, widget);
     os << lineDelimiter;

@@ -45,10 +45,6 @@ The references are:
 #include "precomp.hpp"
 #include "agast_score.hpp"
 
-#ifdef _MSC_VER
-#pragma warning( disable : 4127 )
-#endif
-
 namespace cv
 {
 
@@ -8167,6 +8163,11 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     {
       keypoints = kpts;
     }
+}
+
+String AgastFeatureDetector::getDefaultName() const
+{
+    return(Feature2D::getDefaultName() + ".AgastFeatureDetector");
 }
 
 } // END NAMESPACE CV

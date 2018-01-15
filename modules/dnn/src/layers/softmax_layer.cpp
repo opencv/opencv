@@ -43,9 +43,13 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
+#ifdef HAVE_OPENCL
+using namespace cv::dnn::ocl4dnn;
+#endif
 
 namespace cv
 {
@@ -62,6 +66,10 @@ public:
         logSoftMax = params.get<int>("log_softmax", false);
         setParamsFrom(params);
     }
+
+#ifdef HAVE_OPENCL
+    Ptr<OCL4DNNSoftmax<float> > softmaxOp;
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
@@ -80,6 +88,110 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1;
+    }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays itns)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+        std::vector<UMat> internals;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        itns.getUMatVector(internals);
+
+        if (softmaxOp.empty())
+        {
+            OCL4DNNSoftmaxConfig config;
+
+            config.in_shape = shape(inputs[0]);
+            config.axis = axisRaw;
+            config.channels = inputs[0].size[axisRaw];
+            config.logsoftmax = logSoftMax;
+
+            softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
+        }
+
+        UMat& src = inputs[0];
+        UMat& dstMat = outputs[0];
+
+        if (softmaxOp->Forward(src, dstMat))
+            return true;
+
+        UMat& bufMat = internals[0];
+        src.copyTo(dstMat);
+
+        int axis = clamp(axisRaw, src.dims);
+        MatShape s = shape(src);
+        size_t outerSize = total(s, 0, axis);
+        size_t channels = src.size[axis];
+        size_t innerSize = total(s, axis + 1);
+
+        String buildOpts = String("-DT=") + ocl::typeToStr(src.type());
+        ocl::Kernel kmax, ksub, ksum, kdiv;
+
+        if (!kmax.create("kernel_channel_max", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!ksub.create("kernel_channel_subtract", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!ksum.create("kernel_channel_sum", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (logSoftMax) buildOpts += " -DLOG_SOFTMAX ";
+        if (!kdiv.create("kernel_channel_div", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
+        size_t bufSize = internals[0].total();
+        size_t totalSize = src.total();
+
+        // adjust local/global size
+        size_t internal_localSize[1] = { (bufSize == 1) ? 1 : wgSize };
+        size_t internal_globalSize[1] = { divUp(bufSize, (unsigned int)internal_localSize[0]) * internal_localSize[0] };
+
+        // adjust local/global size (total)
+        size_t total_localSize[1] = { (totalSize == 1) ? 1 : wgSize };
+        size_t total_globalSize[1] = { divUp(totalSize, (unsigned int)total_localSize[0]) * total_localSize[0] };
+
+        kmax.args((int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!kmax.run(1, internal_globalSize, internal_localSize, false))
+            return false;
+
+        ksub.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
+        if (!ksub.run(1, total_globalSize, total_localSize, false))
+            return false;
+
+        cv::exp(dstMat, dstMat);
+
+        ksum.args((int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!ksum.run(1, internal_globalSize, internal_localSize, false))
+            return false;
+
+        kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
+        if (!kdiv.run(1, total_globalSize, total_localSize, false))
+            return false;
+
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)

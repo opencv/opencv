@@ -424,12 +424,12 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if(!a)
             a = a0;
-        try
+        CV_TRY
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
-        catch(...)
+        CV_CATCH_ALL
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
@@ -484,21 +484,31 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
+    CV_TRY
     {
-        CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end && _rowRange.end <= m.rows );
-        rows = _rowRange.size();
-        data += step*_rowRange.start;
-        flags |= SUBMATRIX_FLAG;
-    }
+        if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
+        {
+            CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end
+                       && _rowRange.end <= m.rows );
+            rows = _rowRange.size();
+            data += step*_rowRange.start;
+            flags |= SUBMATRIX_FLAG;
+        }
 
-    if( _colRange != Range::all() && _colRange != Range(0,cols) )
+        if( _colRange != Range::all() && _colRange != Range(0,cols) )
+        {
+            CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end
+                       && _colRange.end <= m.cols );
+            cols = _colRange.size();
+            data += _colRange.start*elemSize();
+            flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
+            flags |= SUBMATRIX_FLAG;
+        }
+    }
+    CV_CATCH_ALL
     {
-        CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols );
-        cols = _colRange.size();
-        data += _colRange.start*elemSize();
-        flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
-        flags |= SUBMATRIX_FLAG;
+        release();
+        CV_RETHROW();
     }
 
     if( rows == 1 )
@@ -1140,78 +1150,45 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
     ? (int)(total()*channels()/_elemChannels) : -1;
 }
 
+template <typename T> static inline
+void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
+{
+    int i = 0;
+    for(; i < cn; i++)
+        buf[i] = saturate_cast<T>(s.val[i]);
+    for(; i < unroll_to; i++)
+        buf[i] = buf[i-cn];
+}
 
 void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
     CV_INSTRUMENT_REGION()
 
-    int i, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);
     switch(depth)
     {
     case CV_8U:
-        {
-        uchar* buf = (uchar*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<uchar>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
         break;
     case CV_8S:
-        {
-        schar* buf = (schar*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<schar>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
         break;
     case CV_16U:
-        {
-        ushort* buf = (ushort*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<ushort>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
         break;
     case CV_16S:
-        {
-        short* buf = (short*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<short>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_32S:
-        {
-        int* buf = (int*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<int>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
         break;
     case CV_32F:
-        {
-        float* buf = (float*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<float>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
-        }
+        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
         break;
     case CV_64F:
-        {
-        double* buf = (double*)_buf;
-        for(i = 0; i < cn; i++)
-            buf[i] = saturate_cast<double>(s.val[i]);
-        for(; i < unroll_to; i++)
-            buf[i] = buf[i-cn];
+        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
         break;
-        }
     default:
         CV_Error(CV_StsUnsupportedFormat,"");
     }
@@ -2165,7 +2142,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        CV_Assert(i < sz.height);
+        CV_Assert(i > 0 && i < sz.height);
         return vv[i].isContinuous();
     }
 
@@ -3068,6 +3045,82 @@ void _OutputArray::assign(const Mat& m) const
     else if (k == MATX)
     {
         m.copyTo(getMat());
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::assign(const std::vector<UMat>& v) const
+{
+    int k = kind();
+    if (k == STD_VECTOR_UMAT)
+    {
+        std::vector<UMat>& this_v = *(std::vector<UMat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const UMat& m = v[i];
+            UMat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
+    }
+    else if (k == STD_VECTOR_MAT)
+    {
+        std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const UMat& m = v[i];
+            Mat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::assign(const std::vector<Mat>& v) const
+{
+    int k = kind();
+    if (k == STD_VECTOR_UMAT)
+    {
+        std::vector<UMat>& this_v = *(std::vector<UMat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const Mat& m = v[i];
+            UMat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
+    }
+    else if (k == STD_VECTOR_MAT)
+    {
+        std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
+        CV_Assert(this_v.size() == v.size());
+
+        for (size_t i = 0; i < v.size(); i++)
+        {
+            const Mat& m = v[i];
+            Mat& this_m = this_v[i];
+            if (this_m.u != NULL && this_m.u == m.u)
+                continue; // same object (see dnn::Layer::forward_fallback)
+            m.copyTo(this_m);
+        }
     }
     else
     {
@@ -4021,6 +4074,11 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
 
+    // Fake reference to source. Resolves issue 8693 in case of src == dst.
+    UMat srcUMat;
+    if (_src.isUMat())
+        srcUMat = _src.getUMat();
+
     Mat src = _src.getMat();
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
@@ -4356,7 +4414,6 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 }
 
 #ifdef HAVE_IPP
-#if !IPP_DISABLE_SORT_IDX
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
 static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
@@ -4435,7 +4492,6 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
     return true;
 }
 #endif
-#endif
 
 typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
 }
@@ -4472,9 +4528,8 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
         _dst.release();
     _dst.create( src.size(), CV_32S );
     dst = _dst.getMat();
-#if !IPP_DISABLE_SORT_IDX
+
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
-#endif
 
     static SortFunc tab[] =
     {

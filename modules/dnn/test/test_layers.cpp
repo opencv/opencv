@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -98,7 +98,8 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
 }
 
 
-void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool useCommonInputBlob = true)
+void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
+                               bool useCaffeModel = false, bool useCommonInputBlob = true)
 {
     String prototxt = _tf(basename + ".prototxt");
     String caffemodel = _tf(basename + ".caffemodel");
@@ -106,14 +107,11 @@ void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool
     String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
     String outfile = _tf(basename + ".npy");
 
-    cv::setNumThreads(cv::getNumberOfCPUs());
+    Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+    ASSERT_FALSE(net.empty());
 
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(prototxt, (useCaffeModel) ? caffemodel : String());
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     Mat inp = blobFromNPY(inpfile);
     Mat ref = blobFromNPY(outfile);
@@ -126,57 +124,91 @@ void testLayerUsingCaffeModels(String basename, bool useCaffeModel = false, bool
 
 TEST(Layer_Test_Softmax, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_softmax");
+    testLayerUsingCaffeModels("layer_softmax");
+}
+
+OCL_TEST(Layer_Test_Softmax, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_softmax", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_LRN_spatial, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_lrn_spatial");
+    testLayerUsingCaffeModels("layer_lrn_spatial");
+}
+
+OCL_TEST(Layer_Test_LRN_spatial, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_lrn_spatial", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_LRN_channels, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_lrn_channels");
+    testLayerUsingCaffeModels("layer_lrn_channels");
+}
+
+OCL_TEST(Layer_Test_LRN_channels, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_lrn_channels", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_Convolution, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_convolution", true);
+    testLayerUsingCaffeModels("layer_convolution", DNN_TARGET_CPU, true);
+}
+
+OCL_TEST(Layer_Test_Convolution, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_convolution", DNN_TARGET_OPENCL, true);
 }
 
 TEST(Layer_Test_DeConvolution, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_deconvolution", true, false);
+    testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_CPU, true, false);
 }
 
 TEST(Layer_Test_InnerProduct, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_inner_product", true);
+    testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_CPU, true);
+}
+
+OCL_TEST(Layer_Test_InnerProduct, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_OPENCL, true);
 }
 
 TEST(Layer_Test_Pooling_max, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_pooling_max");
+    testLayerUsingCaffeModels("layer_pooling_max");
+}
+
+OCL_TEST(Layer_Test_Pooling_max, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_pooling_max", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_Pooling_ave, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_pooling_ave");
+    testLayerUsingCaffeModels("layer_pooling_ave");
+}
+
+OCL_TEST(Layer_Test_Pooling_ave, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_pooling_ave", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_MVN, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_mvn");
+    testLayerUsingCaffeModels("layer_mvn");
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
-                 int axis = 0, int num_axes = -1, bool reorder_dims = false,
+                 int axis = 0, int num_axes = -1,
                  MatShape mask = MatShape())
 {
     LayerParams params;
     params.set("axis", axis);
     params.set("num_axes", num_axes);
-    params.set("reorder_dims", reorder_dims);
     if (!mask.empty())
     {
         params.set("dim", DictValue::arrayInt<int*>(&mask[0], mask.size()));
@@ -205,29 +237,93 @@ TEST(Layer_Test_Reshape, Accuracy)
         int inp[] = {1, 128, 4, 4};
         int out[] = {1, 2048};
         int mask[] = {-1, 2048};
-        testReshape(MatShape(inp, inp + 4), MatShape(out, out + 2), 0, -1, true,
+        testReshape(MatShape(inp, inp + 4), MatShape(out, out + 2), 0, -1,
                     MatShape(mask, mask + 2));
     }
 }
 
 TEST(Layer_Test_BatchNorm, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_batch_norm", true);
+    testLayerUsingCaffeModels("layer_batch_norm", DNN_TARGET_CPU, true);
 }
 
 TEST(Layer_Test_ReLU, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_relu");
+    testLayerUsingCaffeModels("layer_relu");
+}
+
+OCL_TEST(Layer_Test_ReLU, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_relu", DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Test_Dropout, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_dropout");
+    testLayerUsingCaffeModels("layer_dropout");
 }
 
 TEST(Layer_Test_Concat, Accuracy)
 {
-     testLayerUsingCaffeModels("layer_concat");
+    testLayerUsingCaffeModels("layer_concat");
+}
+
+OCL_TEST(Layer_Test_Concat, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_concat", DNN_TARGET_OPENCL);
+}
+
+TEST(Layer_Test_Fused_Concat, Accuracy)
+{
+    // Test case
+    // input
+    //   |
+    //   v
+    // some_layer
+    // |   |
+    // v   v
+    // concat
+    Net net;
+    int interLayer;
+    {
+        LayerParams lp;
+        lp.type = "AbsVal";
+        lp.name = "someLayer";
+        interLayer = net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.set("axis", 1);
+        lp.type = "Concat";
+        lp.name = "testConcat";
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(interLayer, 0, id, 0);
+        net.connect(interLayer, 0, id, 1);
+    }
+    int shape[] = {1, 2, 3, 4};
+    Mat input(4, shape, CV_32F);
+    randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input);
+    normAssert(slice(out, Range::all(), Range(2, 4), Range::all(), Range::all()), input);
+
+    //
+
+    testLayerUsingCaffeModels("layer_concat_optim", DNN_TARGET_CPU, true, false);
+    testLayerUsingCaffeModels("layer_concat_shared_input", DNN_TARGET_CPU, true, false);
+}
+
+TEST(Layer_Test_Eltwise, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_eltwise");
+}
+
+TEST(Layer_Test_PReLU, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_CPU, true);
+    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_CPU, true, false);
 }
 
 //template<typename XMat>
@@ -252,12 +348,8 @@ TEST(Layer_Test_Concat, Accuracy)
 
 static void test_Reshape_Split_Slice_layers()
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createCaffeImporter(_tf("reshape_and_slice_routines.prototxt"));
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
+    ASSERT_FALSE(net.empty());
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -276,12 +368,9 @@ TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
 
 TEST(Layer_Conv_Elu, Accuracy)
 {
-    Net net;
-    {
-        Ptr<Importer> importer = createTensorflowImporter(_tf("layer_elu_model.pb"));
-        ASSERT_TRUE(importer != NULL);
-        importer->populateNet(net);
-    }
+    Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
+    ASSERT_FALSE(net.empty());
+
     Mat inp = blobFromNPY(_tf("layer_elu_in.npy"));
     Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
 
@@ -301,7 +390,8 @@ public:
 
     Layer_LSTM_Test() {}
 
-    void init(const MatShape &inpShape_, const MatShape &outShape_)
+    void init(const MatShape &inpShape_, const MatShape &outShape_,
+              bool produceCellOutput, bool useTimestampDim)
     {
         numInp = total(inpShape_);
         numOut = total(outShape_);
@@ -310,8 +400,15 @@ public:
         Wx = Mat::ones(4 * numOut, numInp, CV_32F);
         b  = Mat::ones(4 * numOut, 1, CV_32F);
 
-        layer = LSTMLayer::create(LayerParams());
-        layer->setWeights(Wh, Wx, b);
+        LayerParams lp;
+        lp.blobs.resize(3);
+        lp.blobs[0] = Wh;
+        lp.blobs[1] = Wx;
+        lp.blobs[2] = b;
+        lp.set<bool>("produce_cell_output", produceCellOutput);
+        lp.set<bool>("use_timestamp_dim", useTimestampDim);
+
+        layer = LSTMLayer::create(lp);
         layer->setOutShape(outShape_);
     }
 };
@@ -324,9 +421,7 @@ TEST_F(Layer_LSTM_Test, get_set_test)
     MatShape inpResShape = concat(shape(TN), inpShape);
     MatShape outResShape = concat(shape(TN), outShape);
 
-    init(inpShape, outShape);
-    layer->setProduceCellOutput(true);
-    layer->setUseTimstampsDim(false);
+    init(inpShape, outShape, true, false);
     layer->setOutShape(outShape);
 
     Mat C((int)outResShape.size(), &outResShape[0], CV_32F);
@@ -356,12 +451,12 @@ TEST_F(Layer_LSTM_Test, get_set_test)
 
 TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
 {
-    Ptr<LSTMLayer> layer = LSTMLayer::create(LayerParams());
-
-    Mat Wx = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));
-    Mat Wh = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));
-    Mat b  = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));
-    layer->setWeights(Wh, Wx, b);
+    LayerParams lp;
+    lp.blobs.resize(3);
+    lp.blobs[0] = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));  // Wh
+    lp.blobs[1] = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));  // Wx
+    lp.blobs[2] = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));  // bias
+    Ptr<LSTMLayer> layer = LSTMLayer::create(lp);
 
     Mat inp = blobFromNPY(_tf("recurrent.input.npy"));
     std::vector<Mat> inputs(1, inp), outputs;
@@ -430,6 +525,101 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(outputs.size(), 2u);
     EXPECT_EQ(shape(outputs[0]), shape(nT, nS, nO));
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
+}
+
+void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, bool useCommonInputBlob = true)
+{
+    String cfg = _tf(basename + ".cfg");
+    String weights = _tf(basename + ".weights");
+
+    String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
+    String outfile = _tf(basename + ".npy");
+
+    Net net = readNetFromDarknet(cfg, (useDarknetModel) ? weights : String());
+    ASSERT_FALSE(net.empty());
+
+    Mat inp = blobFromNPY(inpfile);
+    Mat ref = blobFromNPY(outfile);
+
+    net.setInput(inp, "data");
+    Mat out = net.forward();
+
+    normAssert(ref, out);
+}
+
+TEST(Layer_Test_Region, Accuracy)
+{
+    testLayerUsingDarknetModels("region", false, false);
+}
+
+TEST(Layer_Test_Reorg, Accuracy)
+{
+    testLayerUsingDarknetModels("reorg", false, false);
+}
+
+TEST(Layer_Test_ROIPooling, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
+
+    Mat inp = blobFromNPY(_tf("net_roi_pooling.input.npy"));
+    Mat rois = blobFromNPY(_tf("net_roi_pooling.rois.npy"));
+    Mat ref = blobFromNPY(_tf("net_roi_pooling.npy"));
+
+    net.setInput(inp, "input");
+    net.setInput(rois, "rois");
+
+    Mat out = net.forward();
+
+    normAssert(out, ref);
+}
+
+TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+
+    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
+    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
+    Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
+    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
+
+    net.setInput(scores, "rpn_cls_prob_reshape");
+    net.setInput(deltas, "rpn_bbox_pred");
+    net.setInput(imInfo, "im_info");
+
+    Mat out = net.forward();
+
+    const int numDets = ref.size[0];
+    EXPECT_LE(numDets, out.size[0]);
+    normAssert(out.rowRange(0, numDets), ref);
+
+    if (numDets < out.size[0])
+        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
+}
+
+OCL_TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
+{
+    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
+    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
+    Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
+    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
+
+    net.setInput(scores, "rpn_cls_prob_reshape");
+    net.setInput(deltas, "rpn_bbox_pred");
+    net.setInput(imInfo, "im_info");
+
+    Mat out = net.forward();
+
+    const int numDets = ref.size[0];
+    EXPECT_LE(numDets, out.size[0]);
+    normAssert(out.rowRange(0, numDets), ref);
+
+    if (numDets < out.size[0])
+        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
 }
 
 }

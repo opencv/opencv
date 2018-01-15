@@ -1366,4 +1366,21 @@ TEST(UMat, DISABLED_regression_5991)
     EXPECT_EQ(0, cvtest::norm(mat.getMat(ACCESS_READ), Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
 }
 
+TEST(UMat, testTempObjects_Mat_issue_8693)
+{
+    UMat srcUMat(3, 4, CV_32FC1);
+    Mat srcMat;
+
+    randu(srcUMat, -1.f, 1.f);
+    srcUMat.copyTo(srcMat);
+
+    reduce(srcUMat, srcUMat, 0, CV_REDUCE_SUM);
+    reduce(srcMat, srcMat, 0, CV_REDUCE_SUM);
+
+    srcUMat.convertTo(srcUMat, CV_64FC1);
+    srcMat.convertTo(srcMat, CV_64FC1);
+
+    EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
+}
+
 } } // namespace cvtest::ocl

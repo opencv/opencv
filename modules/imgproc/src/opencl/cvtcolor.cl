@@ -877,7 +877,11 @@ __kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
             {
                 __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
                 __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
+#if scn == 3
+                DATA_TYPE_3 src_pix = vload3(0, src);
+#else
                 DATA_TYPE_4 src_pix = vload4(0, src);
+#endif
 
 #ifdef REVERSE
                 dst[0] = src_pix.z;
@@ -2159,6 +2163,9 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
                 vp = clamp(vp, -0.25f, 0.25f);
                 X = 3.f*Y*up*vp;
                 Z = Y*fma(fma(12.f*13.f, L, -up), vp, -5.f);
+
+                //limit X, Y, Z to [0, 2] to fit white point
+                X = clamp(X, 0.f, 2.f); Z = clamp(Z, 0.f, 2.f);
 
                 float R = fma(X, coeffs[0], fma(Y, coeffs[1], Z * coeffs[2]));
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));

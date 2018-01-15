@@ -52,16 +52,16 @@ detector is called STAR detector in OpenCV)
 note, that you need [opencv contrib](https://github.com/opencv/opencv_contrib)) to use this.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('simple.jpg',0)
+img = cv.imread('simple.jpg',0)
 
 # Initiate FAST detector
-star = cv2.xfeatures2d.StarDetector_create()
+star = cv.xfeatures2d.StarDetector_create()
 
 # Initiate BRIEF extractor
-brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+brief = cv.xfeatures2d.BriefDescriptorExtractor_create()
 
 # find the keypoints with STAR
 kp = star.detect(img,None)
@@ -81,4 +81,4 @@ Additional Resources
 -#  Michael Calonder, Vincent Lepetit, Christoph Strecha, and Pascal Fua, "BRIEF: Binary Robust
     Independent Elementary Features", 11th European Conference on Computer Vision (ECCV), Heraklion,
     Crete. LNCS Springer, September 2010.
-2.  LSH (Locality Sensitive Hasing) at wikipedia.
+2.  [LSH (Locality Sensitive Hashing)](https://en.wikipedia.org/wiki/Locality-sensitive_hashing) at wikipedia.

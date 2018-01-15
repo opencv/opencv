@@ -264,6 +264,9 @@ private:
     bool loaded_;
     /** Parameters passed to the index */
     IndexParams index_params_;
+
+    Index(const Index &); // copy disabled
+    Index& operator=(const Index &); // assign disabled
 };
 
 /**

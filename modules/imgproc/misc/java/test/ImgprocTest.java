@@ -1033,7 +1033,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
         MatOfPoint lp = new MatOfPoint();
 
-        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true, 0);
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, 3, true, 0);
 
         assertEquals(4, lp.total());
     }
@@ -1617,7 +1617,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(1));
         Size dsize = new Size(1, 1);
 
-        Imgproc.resize(src, dst, dsize);
+        Imgproc.resize(src, dst, dsize, 0, 0, Imgproc.INTER_LINEAR_EXACT);
 
         truth = new Mat(1, 1, CvType.CV_8UC1, new Scalar(1));
         assertMatEqual(truth, dst);

@@ -312,9 +312,8 @@ Ptr<Filter> cv::cuda::createLaplacianFilter(int srcType, int dstType, int ksize,
         {2.0f, 0.0f, 2.0f, 0.0f, -8.0f, 0.0f, 2.0f, 0.0f, 2.0f}
     };
 
-    Mat kernel(3, 3, CV_32FC1, (void*)K[ksize == 3]);
-    if (scale != 1)
-        kernel *= scale;
+    Mat kernel1(3, 3, CV_32FC1, (void*)K[ksize == 3]);
+    Mat kernel = (scale == 1) ? kernel1 : (kernel1 * scale);
 
     return cuda::createLinearFilter(srcType, dstType, kernel, Point(-1,-1), borderMode, borderVal);
 }

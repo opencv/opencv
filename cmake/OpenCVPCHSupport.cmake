@@ -261,6 +261,24 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
         endif()
     endif()
 
+    if(type STREQUAL "SHARED_LIBRARY" OR type STREQUAL "STATIC_LIBRARY")
+      get_target_property(__pic ${_targetName} POSITION_INDEPENDENT_CODE)
+      if(__pic AND CMAKE_CXX_COMPILE_OPTIONS_PIC
+          AND NOT OPENCV_SKIP_PCH_PIC_HANDLING
+          AND NOT OPENCV_SKIP_PCH_PIC_HANDLING_${_targetName}
+      )
+        list(APPEND _compile_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_PIC}")
+      endif()
+    elseif(type STREQUAL "EXECUTABLE")
+      get_target_property(__pie ${_targetName} POSITION_INDEPENDENT_CODE)
+      if(__pie AND CMAKE_CXX_COMPILE_OPTIONS_PIE
+          AND NOT OPENCV_SKIP_PCH_PIE_HANDLING
+          AND NOT OPENCV_SKIP_PCH_PIE_HANDLING_${_targetName}
+      )
+        list(APPEND _compile_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_PIE}")
+      endif()
+    endif()
+
     get_target_property(DIRINC ${_targetName} INCLUDE_DIRECTORIES)
     set_target_properties(${_targetName}_pch_dephelp PROPERTIES INCLUDE_DIRECTORIES "${DIRINC}")
 

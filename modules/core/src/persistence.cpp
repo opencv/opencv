@@ -4513,7 +4513,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         //mode = cvGetErrMode();
         //cvSetErrMode( CV_ErrModeSilent );
-        try
+        CV_TRY
         {
             switch (fs->fmt)
             {
@@ -4523,10 +4523,11 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             default: break;
             }
         }
-        catch (...)
+        CV_CATCH_ALL
         {
+            fs->is_opened = true;
             cvReleaseFileStorage( &fs );
-            throw;
+            CV_RETHROW();
         }
         //cvSetErrMode( mode );
 
@@ -5985,11 +5986,11 @@ icvReadSeq( CvFileStorage* fs, CvFileNode* node )
             flags |= CV_SEQ_FLAG_HOLE;
         if( !strstr(flags_str, "untyped") )
         {
-            try
+            CV_TRY
             {
                 flags |= icvDecodeSimpleFormat(dt);
             }
-            catch(...)
+            CV_CATCH_ALL
             {
             }
         }
@@ -7332,21 +7333,55 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
     m->copyToSparseMat(mat);
 }
 
-void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
+CV_EXPORTS void read(const FileNode& node, KeyPoint& value, const KeyPoint& default_value)
 {
-    cv::internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
-
-    int i, npoints = (int)keypoints.size();
-    for( i = 0; i < npoints; i++ )
+    if( node.empty() )
     {
-        write(fs, keypoints[i]);
+        value = default_value;
+        return;
     }
+    node >> value;
 }
 
+CV_EXPORTS void read(const FileNode& node, DMatch& value, const DMatch& default_value)
+{
+    if( node.empty() )
+    {
+        value = default_value;
+        return;
+    }
+    node >> value;
+}
+
+#ifdef CV__LEGACY_PERSISTENCE
+void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& vec)
+{
+    // from template implementation
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
+    write(fs, vec);
+}
 
 void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
 {
-    keypoints.resize(0);
+    FileNode first_node = *(node.begin());
+    if (first_node.isSeq())
+    {
+        // modern scheme
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+        FileNodeIterator it = node.begin();
+        size_t total = (size_t)it.remaining;
+        keypoints.resize(total);
+        for (size_t i = 0; i < total; ++i, ++it)
+        {
+            (*it) >> keypoints[i];
+        }
+#else
+        FileNodeIterator it = node.begin();
+        it >> keypoints;
+#endif
+        return;
+    }
+    keypoints.clear();
     FileNodeIterator it = node.begin(), it_end = node.end();
     for( ; it != it_end; )
     {
@@ -7356,21 +7391,34 @@ void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
     }
 }
 
-
-void write(FileStorage& fs, const String& objname, const std::vector<DMatch>& matches)
+void write( FileStorage& fs, const String& name, const std::vector<DMatch>& vec)
 {
-    cv::internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
-
-    int i, n = (int)matches.size();
-    for( i = 0; i < n; i++ )
-    {
-        write(fs, matches[i]);
-    }
+    // from template implementation
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
+    write(fs, vec);
 }
 
 void read(const FileNode& node, std::vector<DMatch>& matches)
 {
-    matches.resize(0);
+    FileNode first_node = *(node.begin());
+    if (first_node.isSeq())
+    {
+        // modern scheme
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+        FileNodeIterator it = node.begin();
+        size_t total = (size_t)it.remaining;
+        matches.resize(total);
+        for (size_t i = 0; i < total; ++i, ++it)
+        {
+            (*it) >> matches[i];
+        }
+#else
+        FileNodeIterator it = node.begin();
+        it >> matches;
+#endif
+        return;
+    }
+    matches.clear();
     FileNodeIterator it = node.begin(), it_end = node.end();
     for( ; it != it_end; )
     {
@@ -7379,7 +7427,7 @@ void read(const FileNode& node, std::vector<DMatch>& matches)
         matches.push_back(m);
     }
 }
-
+#endif
 
 int FileNode::type() const { return !node ? NONE : (node->tag & TYPE_MASK); }
 bool FileNode::isNamed() const { return !node ? false : (node->tag & NAMED) != 0; }

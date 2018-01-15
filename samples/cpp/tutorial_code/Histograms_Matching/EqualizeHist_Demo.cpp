@@ -15,7 +15,7 @@ using namespace std;
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   Mat src, dst;
 
@@ -23,12 +23,14 @@ int main( int, char** argv )
   const char* equalized_window = "Equalized Image";
 
   /// Load image
-  src = imread( argv[1], IMREAD_COLOR );
-
+  CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
   if( src.empty() )
-    { cout<<"Usage: ./EqualizeHist_Demo <path_to_image>"<<endl;
-      return -1;
-    }
+  {
+    cout << "Could not open or find the image!\n" << endl;
+    cout << "Usage: " << argv[0] << " <Input image>" << endl;
+    return -1;
+  }
 
   /// Convert to grayscale
   cvtColor( src, src, COLOR_BGR2GRAY );

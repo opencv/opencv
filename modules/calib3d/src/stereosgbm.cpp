@@ -2273,10 +2273,10 @@ Rect getValidDisparityROI( Rect roi1, Rect roi2,
                           int SADWindowSize )
 {
     int SW2 = SADWindowSize/2;
-    int minD = minDisparity, maxD = minDisparity + numberOfDisparities - 1;
+    int maxD = minDisparity + numberOfDisparities - 1;
 
     int xmin = std::max(roi1.x, roi2.x + maxD) + SW2;
-    int xmax = std::min(roi1.x + roi1.width, roi2.x + roi2.width - minD) - SW2;
+    int xmax = std::min(roi1.x + roi1.width, roi2.x + roi2.width) - SW2;
     int ymin = std::max(roi1.y, roi2.y) + SW2;
     int ymax = std::min(roi1.y + roi1.height, roi2.y + roi2.height) - SW2;
 

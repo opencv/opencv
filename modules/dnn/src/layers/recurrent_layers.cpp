@@ -90,6 +90,8 @@ class LSTMLayerImpl : public LSTMLayer
 
     bool useTimestampDim;
     bool produceCellOutput;
+    float forgetBias, cellClip;
+    bool useCellClip, usePeephole;
 
 public:
 
@@ -97,9 +99,40 @@ public:
         : numTimeStamps(0), numSamples(0)
     {
         setParamsFrom(params);
-        type = "LSTM";
-        useTimestampDim = true;
-        produceCellOutput = false;
+
+        if (!blobs.empty())
+        {
+            CV_Assert(blobs.size() >= 3);
+
+            blobs[2] = blobs[2].reshape(1, 1);
+
+            const Mat& Wh = blobs[0];
+            const Mat& Wx = blobs[1];
+            const Mat& bias = blobs[2];
+            CV_Assert(Wh.dims == 2 && Wx.dims == 2);
+            CV_Assert(Wh.rows == Wx.rows);
+            CV_Assert(Wh.rows == 4*Wh.cols);
+            CV_Assert(Wh.rows == (int)bias.total());
+            CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
+
+            // Peephole weights.
+            if (blobs.size() > 3)
+            {
+                CV_Assert(blobs.size() == 6);
+                for (int i = 3; i < 6; ++i)
+                {
+                    CV_Assert(blobs[i].rows == Wh.cols && blobs[i].cols == Wh.cols);
+                    CV_Assert(blobs[i].type() == bias.type());
+                }
+            }
+        }
+        useTimestampDim = params.get<bool>("use_timestamp_dim", true);
+        produceCellOutput = params.get<bool>("produce_cell_output", false);
+        forgetBias = params.get<float>("forget_bias", 0.0f);
+        cellClip = params.get<float>("cell_clip", 0.0f);
+        useCellClip = params.get<bool>("use_cell_clip", false);
+        usePeephole = params.get<bool>("use_peephole", false);
+
         allocated = false;
         outTailShape.clear();
     }
@@ -141,7 +174,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        CV_Assert(blobs.size() == 3);
+        CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
         CV_Assert(inputs.size() == 1);
         const MatShape& inp0 = inputs[0];
 
@@ -186,7 +219,7 @@ public:
 
     void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output)
     {
-        CV_Assert(blobs.size() == 3);
+        CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
         CV_Assert(input.size() == 1);
         const Mat& inp0 = *input[0];
 
@@ -217,6 +250,14 @@ public:
         outTsShape.insert(outTsShape.end(), outTailShape.begin(), outTailShape.end());
 
         allocated = true;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
@@ -251,19 +292,44 @@ public:
             gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
             gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
 
-            Mat getesIFO = gates.colRange(0, 3*numOut);
             Mat gateI = gates.colRange(0*numOut, 1*numOut);
             Mat gateF = gates.colRange(1*numOut, 2*numOut);
             Mat gateO = gates.colRange(2*numOut, 3*numOut);
             Mat gateG = gates.colRange(3*numOut, 4*numOut);
 
-            sigmoid(getesIFO, getesIFO);
+            if (forgetBias)
+                add(gateF, forgetBias, gateF);
+
+            if (usePeephole)
+            {
+                Mat gatesIF = gates.colRange(0, 2*numOut);
+                gemm(cInternal, blobs[3], 1, gateI, 1, gateI);
+                gemm(cInternal, blobs[4], 1, gateF, 1, gateF);
+                sigmoid(gatesIF, gatesIF);
+            }
+            else
+            {
+                Mat gatesIFO = gates.colRange(0, 3*numOut);
+                sigmoid(gatesIFO, gatesIFO);
+            }
+
             tanh(gateG, gateG);
 
             //compute c_t
             multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
             multiply(gateI, gateG, gateI);      // i_t (*) g_t
             add(gateF, gateI, cInternal);       // c_t = f_t (*) c_{t-1} + i_t (*) g_t
+
+            if (useCellClip)
+            {
+                min(cInternal, cellClip, cInternal);
+                max(cInternal, -cellClip, cInternal);
+            }
+            if (usePeephole)
+            {
+                gemm(cInternal, blobs[5], 1, gateO, 1, gateO);
+                sigmoid(gateO, gateO);
+            }
 
             //compute h_t
             tanh(cInternal, hInternal);
@@ -405,6 +471,14 @@ public:
             int sz1[] = { numTimestamps, numSamples, numH };
             output[1].create(3, sz1, dtype);
         }
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)

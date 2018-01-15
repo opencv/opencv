@@ -354,8 +354,8 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
     mask_ = std::vector<size_t>((feature_size * sizeof(char) + sizeof(size_t) - 1) / sizeof(size_t), 0);
 
     // A bit brutal but fast to code
-    std::vector<size_t> indices(feature_size * CHAR_BIT);
-    for (size_t i = 0; i < feature_size * CHAR_BIT; ++i) indices[i] = i;
+    std::vector<int> indices(feature_size * CHAR_BIT);
+    for (size_t i = 0; i < feature_size * CHAR_BIT; ++i) indices[i] = (int)i;
 #ifndef OPENCV_FLANN_USE_STD_RAND
     cv::randShuffle(indices);
 #else

@@ -41,8 +41,8 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
         // not enough memory
     }
 
-    remove(file3.c_str());
-    remove(file4.c_str());
+    EXPECT_EQ(0, remove(file3.c_str()));
+    EXPECT_EQ(0, remove(file4.c_str()));
 }
 
 TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
@@ -88,7 +88,7 @@ TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
         EXPECT_EQ(0xDEAD, img.at<ushort>(0,0));
         EXPECT_EQ(0xBEEF, img.at<ushort>(0,1));
 
-        remove(filename.c_str());
+        EXPECT_EQ(0, remove(filename.c_str()));
     }
 }
 
@@ -143,7 +143,7 @@ TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
 
     EXPECT_NO_THROW(cv::imread(filename, IMREAD_UNCHANGED));
 
-    remove(filename.c_str());
+    EXPECT_EQ(0, remove(filename.c_str()));
 }
 
 //==================================================================================================

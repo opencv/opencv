@@ -44,7 +44,7 @@ TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
         }
     }
 
-    remove(output.c_str());
+    EXPECT_EQ(0, remove(output.c_str()));
 
     cv::Mat decode = cv::imdecode(buf, IMREAD_COLOR);
     ASSERT_FALSE(decode.empty());
@@ -71,7 +71,7 @@ TEST(Imgcodecs_WebP, encode_decode_lossy_webp)
 
         EXPECT_NO_THROW(cv::imwrite(output, img, params));
         cv::Mat img_webp = cv::imread(output);
-        remove(output.c_str());
+        EXPECT_EQ(0, remove(output.c_str()));
         EXPECT_FALSE(img_webp.empty());
         EXPECT_EQ(3,   img_webp.channels());
         EXPECT_EQ(512, img_webp.cols);
@@ -96,7 +96,7 @@ TEST(Imgcodecs_WebP, encode_decode_with_alpha_webp)
 
     EXPECT_NO_THROW(cv::imwrite(output, img));
     cv::Mat img_webp = cv::imread(output);
-    remove(output.c_str());
+    EXPECT_EQ(0, remove(output.c_str()));
     EXPECT_FALSE(img_webp.empty());
     EXPECT_EQ(4,   img_webp.channels());
     EXPECT_EQ(512, img_webp.cols);

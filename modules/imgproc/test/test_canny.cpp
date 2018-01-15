@@ -121,7 +121,7 @@ int CV_CannyTest::prepare_test_case( int test_case_idx )
         Mat& src = test_mat[INPUT][0];
         //GaussianBlur(src, src, Size(11, 11), 5, 5);
         if(src.cols > img.cols || src.rows > img.rows)
-            resize(img, src, src.size());
+            resize(img, src, src.size(), 0, 0, INTER_LINEAR_EXACT);
         else
             img(
                 Rect(

@@ -153,14 +153,23 @@ namespace cv
         typedef _Tp                                        channel_type;
 
         enum { generic_type = 0,
-               depth        = DataType<channel_type>::depth,
                channels     = 16,
-               fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-               type         = CV_MAKETYPE(depth, channels)
+               fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
+               ,depth        = DataType<channel_type>::depth
+               ,type         = CV_MAKETYPE(depth, channels)
+#endif
              };
 
         typedef Vec<channel_type, channels> vec_type;
     };
+
+    namespace traits {
+    template<typename _Tp>
+    struct Depth< Affine3<_Tp> > { enum { value = Depth<_Tp>::value }; };
+    template<typename _Tp>
+    struct Type< Affine3<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 16) }; };
+    } // namespace
 
 //! @} core
 
@@ -202,7 +211,7 @@ cv::Affine3<T>::Affine3(const Vec3& _rvec, const Vec3& t)
 template<typename T> inline
 cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
 {
-    CV_Assert(data.type() == cv::DataType<T>::type);
+    CV_Assert(data.type() == cv::traits::Type<T>::value);
 
     if (data.cols == 4 && data.rows == 4)
     {
@@ -271,7 +280,7 @@ void cv::Affine3<T>::rotation(const Vec3& _rvec)
 template<typename T> inline
 void cv::Affine3<T>::rotation(const cv::Mat& data)
 {
-    CV_Assert(data.type() == cv::DataType<T>::type);
+    CV_Assert(data.type() == cv::traits::Type<T>::value);
 
     if (data.cols == 3 && data.rows == 3)
     {
@@ -485,21 +494,21 @@ cv::Vec3d cv::operator*(const cv::Affine3d& affine, const cv::Vec3d& v)
 template<typename T> inline
 cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>& affine)
 {
-    cv::Mat(4, 4, cv::DataType<T>::type, affine.matrix().data()).copyTo(matrix);
+    cv::Mat(4, 4, cv::traits::Type<T>::value, affine.matrix().data()).copyTo(matrix);
 }
 
 template<typename T> inline
 cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine>& affine)
 {
     Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)> a = affine;
-    cv::Mat(4, 4, cv::DataType<T>::type, a.matrix().data()).copyTo(matrix);
+    cv::Mat(4, 4, cv::traits::Type<T>::value, a.matrix().data()).copyTo(matrix);
 }
 
 template<typename T> inline
 cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>() const
 {
     Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)> r;
-    cv::Mat hdr(4, 4, cv::DataType<T>::type, r.matrix().data());
+    cv::Mat hdr(4, 4, cv::traits::Type<T>::value, r.matrix().data());
     cv::Mat(matrix, false).copyTo(hdr);
     return r;
 }

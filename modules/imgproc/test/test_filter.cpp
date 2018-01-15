@@ -1982,6 +1982,27 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
 }
 
+TEST(Imgproc_GaussianBlur, borderTypes)
+{
+    Size kernelSize(3, 3);
+
+    Mat src_16(16, 16, CV_8UC1, cv::Scalar::all(42)), dst_16;
+    Mat src_roi_16 = src_16(Rect(1, 1, 14, 14));
+    src_roi_16.setTo(cv::Scalar::all(3));
+
+    cv::GaussianBlur(src_roi_16, dst_16, kernelSize, 0, 0, BORDER_REPLICATE);
+
+    EXPECT_EQ(20, dst_16.at<uchar>(0, 0));
+
+    Mat src(3, 12, CV_8UC1, cv::Scalar::all(42)), dst;
+    Mat src_roi = src(Rect(1, 1, 10, 1));
+    src_roi.setTo(cv::Scalar::all(2));
+
+    cv::GaussianBlur(src_roi, dst, kernelSize, 0, 0, BORDER_REPLICATE);
+
+    EXPECT_EQ(27, dst.at<uchar>(0, 0));
+}
+
 TEST(Imgproc_Morphology, iterated)
 {
     RNG& rng = theRNG();

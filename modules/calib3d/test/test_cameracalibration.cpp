@@ -1431,10 +1431,10 @@ void CV_StereoCalibrationCornerTest::run(int)
     // perform remap-resize
     Mat src_result;
     remap(image, src_result, srcRmap[0], srcRmap[1], INTER_LINEAR);
-    resize(src_result, src_result, Size(), scale, scale, INTER_LINEAR);
+    resize(src_result, src_result, Size(), scale, scale, INTER_LINEAR_EXACT);
     // perform resize-remap
     Mat rsz_result;
-    resize(image, rsz_result, Size(), scale, scale, INTER_LINEAR);
+    resize(image, rsz_result, Size(), scale, scale, INTER_LINEAR_EXACT);
     remap(rsz_result, rsz_result, rszRmap[0], rszRmap[1], INTER_LINEAR);
 
     // modifying the camera matrix with resizeCameraMatrix must yield the same
@@ -1911,9 +1911,9 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
     }
 
     Mat npoints( 1, nimages, CV_32S ),
-        objPt( 1, total, DataType<Point3f>::type ),
-        imgPt( 1, total, DataType<Point2f>::type ),
-        imgPt2( 1, total, DataType<Point2f>::type );
+        objPt( 1, total, traits::Type<Point3f>::value ),
+        imgPt( 1, total, traits::Type<Point2f>::value ),
+        imgPt2( 1, total, traits::Type<Point2f>::value );
 
     Point2f* imgPtData2 = imgPt2.ptr<Point2f>();
     Point3f* objPtData = objPt.ptr<Point3f>();

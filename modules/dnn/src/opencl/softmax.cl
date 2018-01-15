@@ -70,6 +70,10 @@ __kernel void kernel_channel_div(const int count,
   if(index < count) {
     int n = index / channels / spatial_dim;
     int s = index % spatial_dim;
-    data[index] /= channel_sum[n * spatial_dim + s];
+    T v = data[index] / channel_sum[n * spatial_dim + s];
+#ifdef LOG_SOFTMAX
+    v = log(v);
+#endif
+    data[index] = v;
   }
 }

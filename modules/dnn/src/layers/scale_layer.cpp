@@ -33,6 +33,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
+        CV_Assert(blobs.size() == 1 + hasBias);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
@@ -43,12 +44,18 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide();
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_Assert(blobs.size() == 1 + hasBias);
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -67,8 +74,8 @@ public:
                 {
                     float w = blobs[0].at<float>(n);
                     float b = hasBias ? blobs[1].at<float>(n) : 0;
-                    Mat outBlobPlane = getPlane(outBlob, cn, n);
-                    Mat inpBlobPlane = getPlane(inpBlob, cn, n);
+                    Mat outBlobPlane = slice(outBlob, cn, n);
+                    Mat inpBlobPlane = slice(inpBlob, cn, n);
                     inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
                 }
             }

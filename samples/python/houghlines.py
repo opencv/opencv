@@ -11,7 +11,7 @@ Usage:
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import cv2
+import cv2 as cv
 import numpy as np
 import sys
 import math
@@ -24,18 +24,18 @@ if __name__ == '__main__':
     except IndexError:
         fn = "../data/pic1.png"
 
-    src = cv2.imread(fn)
-    dst = cv2.Canny(src, 50, 200)
-    cdst = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
+    src = cv.imread(fn)
+    dst = cv.Canny(src, 50, 200)
+    cdst = cv.cvtColor(dst, cv.COLOR_GRAY2BGR)
 
     if True: # HoughLinesP
-        lines = cv2.HoughLinesP(dst, 1, math.pi/180.0, 40, np.array([]), 50, 10)
+        lines = cv.HoughLinesP(dst, 1, math.pi/180.0, 40, np.array([]), 50, 10)
         a,b,c = lines.shape
         for i in range(a):
-            cv2.line(cdst, (lines[i][0][0], lines[i][0][1]), (lines[i][0][2], lines[i][0][3]), (0, 0, 255), 3, cv2.LINE_AA)
+            cv.line(cdst, (lines[i][0][0], lines[i][0][1]), (lines[i][0][2], lines[i][0][3]), (0, 0, 255), 3, cv.LINE_AA)
 
     else:    # HoughLines
-        lines = cv2.HoughLines(dst, 1, math.pi/180.0, 50, np.array([]), 0, 0)
+        lines = cv.HoughLines(dst, 1, math.pi/180.0, 50, np.array([]), 0, 0)
         if lines is not None:
             a,b,c = lines.shape
             for i in range(a):
@@ -46,9 +46,9 @@ if __name__ == '__main__':
                 x0, y0 = a*rho, b*rho
                 pt1 = ( int(x0+1000*(-b)), int(y0+1000*(a)) )
                 pt2 = ( int(x0-1000*(-b)), int(y0-1000*(a)) )
-                cv2.line(cdst, pt1, pt2, (0, 0, 255), 3, cv2.LINE_AA)
+                cv.line(cdst, pt1, pt2, (0, 0, 255), 3, cv.LINE_AA)
 
-            cv2.imshow("detected lines", cdst)
+    cv.imshow("detected lines", cdst)
 
-    cv2.imshow("source", src)
-    cv2.waitKey(0)
+    cv.imshow("source", src)
+    cv.waitKey(0)

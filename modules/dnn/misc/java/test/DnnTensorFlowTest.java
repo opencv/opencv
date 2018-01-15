@@ -9,7 +9,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.dnn.DictValue;
 import org.opencv.dnn.Dnn;
-import org.opencv.dnn.Importer;
 import org.opencv.dnn.Layer;
 import org.opencv.dnn.Net;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -51,12 +50,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         sourceImageFile = f.toString();
         if(!f.exists()) throw new Exception("Test image is missing: " + sourceImageFile);
 
-        net = new Net();
-        if(net.empty()) {
-            Importer importer = Dnn.createTensorflowImporter(modelFileName);
-            importer.populateNet(net);
-        }
-
+        net = Dnn.readNetFromTensorflow(modelFileName);
     }
 
     public void testGetLayerTypes() {

@@ -59,11 +59,11 @@ protected:
         UMat uimg = img.getUMat(ACCESS_READ), ugray, usmallimg, uresult;
 
         cvtColor(img, gray, COLOR_BGR2GRAY);
-        resize(gray, smallimg, Size(), 0.75, 0.75, INTER_LINEAR);
+        resize(gray, smallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
         equalizeHist(smallimg, result);
 
         cvtColor(uimg, ugray, COLOR_BGR2GRAY);
-        resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR);
+        resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
         equalizeHist(usmallimg, uresult);
 
 #if 0

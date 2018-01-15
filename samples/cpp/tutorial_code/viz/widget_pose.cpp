@@ -56,12 +56,12 @@ int main()
     {
         /* Rotation using rodrigues */
         /// Rotate around (1,1,1)
-        rot_vec.at<float>(0,0) += CV_PI * 0.01f;
-        rot_vec.at<float>(0,1) += CV_PI * 0.01f;
-        rot_vec.at<float>(0,2) += CV_PI * 0.01f;
+        rot_vec.at<float>(0,0) += (float)CV_PI * 0.01f;
+        rot_vec.at<float>(0,1) += (float)CV_PI * 0.01f;
+        rot_vec.at<float>(0,2) += (float)CV_PI * 0.01f;
 
         /// Shift on (1,1,1)
-        translation_phase += CV_PI * 0.01f;
+        translation_phase += (float)CV_PI * 0.01f;
         translation = sin(translation_phase);
 
         Mat rot_mat;

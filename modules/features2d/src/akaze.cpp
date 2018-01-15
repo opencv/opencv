@@ -169,38 +169,25 @@ namespace cv
         {
             CV_INSTRUMENT_REGION()
 
-            Mat img = image.getMat();
-            if (img.channels() > 1)
-                cvtColor(image, img, COLOR_BGR2GRAY);
-
-            Mat img1_32;
-            if ( img.depth() == CV_32F )
-                img1_32 = img;
-            else if ( img.depth() == CV_8U )
-                img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
-            else if ( img.depth() == CV_16U )
-                img.convertTo(img1_32, CV_32F, 1.0 / 65535.0, 0);
-
-            CV_Assert( ! img1_32.empty() );
+            CV_Assert( ! image.empty() );
 
             AKAZEOptions options;
             options.descriptor = descriptor;
             options.descriptor_channels = descriptor_channels;
             options.descriptor_size = descriptor_size;
-            options.img_width = img.cols;
-            options.img_height = img.rows;
+            options.img_width = image.cols();
+            options.img_height = image.rows();
             options.dthreshold = threshold;
             options.omax = octaves;
             options.nsublevels = sublevels;
             options.diffusivity = diffusivity;
 
             AKAZEFeatures impl(options);
-            impl.Create_Nonlinear_Scale_Space(img1_32);
+            impl.Create_Nonlinear_Scale_Space(image);
 
             if (!useProvidedKeypoints)
             {
                 impl.Feature_Detection(keypoints);
-                impl.Compute_Keypoints_Orientation(keypoints);
             }
 
             if (!mask.empty())
@@ -208,7 +195,7 @@ namespace cv
                 KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
             }
 
-            if( descriptors.needed() )
+            if(descriptors.needed())
             {
                 impl.Compute_Descriptors(keypoints, descriptors);
 
@@ -257,4 +244,10 @@ namespace cv
         return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
                                    threshold, octaves, sublevels, diffusivity);
     }
+
+    String AKAZE::getDefaultName() const
+    {
+        return (Feature2D::getDefaultName() + ".AKAZE");
+    }
+
 }

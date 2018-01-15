@@ -43,50 +43,58 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 #include "grfmt_pxm.hpp"
+#include <iostream>
 
 namespace cv
 {
 
 ///////////////////////// P?M reader //////////////////////////////
 
-static int ReadNumber( RLByteStream& strm, int maxdigits )
+static int ReadNumber(RLByteStream& strm, int maxdigits = 0)
 {
     int code;
-    int val = 0;
+    int64 val = 0;
     int digits = 0;
 
     code = strm.getByte();
 
-    if( !isdigit(code))
+    while (!isdigit(code))
     {
-        do
+        if (code == '#' )
         {
-            if( code == '#' )
+            do
             {
-                do
-                {
-                    code = strm.getByte();
-                }
-                while( code != '\n' && code != '\r' );
+                code = strm.getByte();
             }
-
+            while (code != '\n' && code != '\r');
             code = strm.getByte();
-
-            while( isspace(code))
+        }
+        else if (isspace(code))
+        {
+            while (isspace(code))
                 code = strm.getByte();
         }
-        while( !isdigit( code ));
+        else
+        {
+#if 1
+            CV_ErrorNoReturn_(Error::StsError, ("PXM: Unexpected code in ReadNumber(): 0x%x (%d)", code, code));
+#else
+            code = strm.getByte();
+#endif
+        }
     }
 
     do
     {
-        val = val*10 + code - '0';
-        if( ++digits >= maxdigits ) break;
+        val = val*10 + (code - '0');
+        CV_Assert(val <= INT_MAX && "PXM: ReadNumber(): result is too large");
+        digits++;
+        if (maxdigits != 0 && digits >= maxdigits) break;
         code = strm.getByte();
     }
-    while( isdigit(code));
+    while (isdigit(code));
 
-    return val;
+    return (int)val;
 }
 
 
@@ -122,13 +130,13 @@ ImageDecoder PxMDecoder::newDecoder() const
     return makePtr<PxMDecoder>();
 }
 
-void  PxMDecoder::close()
+void PxMDecoder::close()
 {
     m_strm.close();
 }
 
 
-bool  PxMDecoder::readHeader()
+bool PxMDecoder::readHeader()
 {
     bool result = false;
 
@@ -140,11 +148,11 @@ bool  PxMDecoder::readHeader()
     else if( !m_strm.open( m_filename ))
         return false;
 
-    try
+    CV_TRY
     {
         int code = m_strm.getByte();
         if( code != 'P' )
-            throw RBS_BAD_HEADER;
+            CV_THROW (RBS_BAD_HEADER);
 
         code = m_strm.getByte();
         switch( code )
@@ -152,18 +160,18 @@ bool  PxMDecoder::readHeader()
         case '1': case '4': m_bpp = 1; break;
         case '2': case '5': m_bpp = 8; break;
         case '3': case '6': m_bpp = 24; break;
-        default: throw RBS_BAD_HEADER;
+        default: CV_THROW (RBS_BAD_HEADER);
         }
 
         m_binary = code >= '4';
         m_type = m_bpp > 8 ? CV_8UC3 : CV_8UC1;
 
-        m_width = ReadNumber( m_strm, INT_MAX );
-        m_height = ReadNumber( m_strm, INT_MAX );
+        m_width = ReadNumber(m_strm);
+        m_height = ReadNumber(m_strm);
 
-        m_maxval = m_bpp == 1 ? 1 : ReadNumber( m_strm, INT_MAX );
+        m_maxval = m_bpp == 1 ? 1 : ReadNumber(m_strm);
         if( m_maxval > 65535 )
-            throw RBS_BAD_HEADER;
+            CV_THROW (RBS_BAD_HEADER);
 
         //if( m_maxval > 255 ) m_binary = false; nonsense
         if( m_maxval > 255 )
@@ -175,8 +183,15 @@ bool  PxMDecoder::readHeader()
             result = true;
         }
     }
-    catch(...)
+    CV_CATCH (cv::Exception, e)
     {
+        CV_UNUSED(e);
+        CV_RETHROW();
+    }
+    CV_CATCH_ALL
+    {
+        std::cerr << "PXM::readHeader(): unknown C++ exception" << std::endl << std::flush;
+        CV_RETHROW();
     }
 
     if( !result )
@@ -189,39 +204,34 @@ bool  PxMDecoder::readHeader()
 }
 
 
-bool  PxMDecoder::readData( Mat& img )
+bool PxMDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
     uchar* data = img.ptr();
     PaletteEntry palette[256];
     bool   result = false;
-    int  bit_depth = CV_ELEM_SIZE1(m_type)*8;
-    int  src_pitch = (m_width*m_bpp*bit_depth/8 + 7)/8;
+    const int bit_depth = CV_ELEM_SIZE1(m_type)*8;
+    const int src_pitch = divUp(m_width*m_bpp*(bit_depth/8), 8);
     int  nch = CV_MAT_CN(m_type);
     int  width3 = m_width*nch;
-    int  i, x, y;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    AutoBuffer<uchar> _src(src_pitch + 32);
-    uchar* src = _src;
-    AutoBuffer<uchar> _gray_palette;
-    uchar* gray_palette = _gray_palette;
+    uchar gray_palette[256] = {0};
 
     // create LUT for converting colors
     if( bit_depth == 8 )
     {
-        _gray_palette.allocate(m_maxval + 1);
-        gray_palette = _gray_palette;
+        CV_Assert(m_maxval < 256);
 
-        for( i = 0; i <= m_maxval; i++ )
+        for (int i = 0; i <= m_maxval; i++)
             gray_palette[i] = (uchar)((i*255/m_maxval)^(m_bpp == 1 ? 255 : 0));
 
         FillGrayPalette( palette, m_bpp==1 ? 1 : 8 , m_bpp == 1 );
     }
 
-    try
+    CV_TRY
     {
         m_strm.setPos( m_offset );
 
@@ -229,12 +239,16 @@ bool  PxMDecoder::readData( Mat& img )
         {
         ////////////////////////// 1 BPP /////////////////////////
         case 1:
+            CV_Assert(CV_MAT_DEPTH(m_type) == CV_8U);
             if( !m_binary )
             {
-                for( y = 0; y < m_height; y++, data += img.step )
+                AutoBuffer<uchar> _src(m_width);
+                uchar* src = _src;
+
+                for (int y = 0; y < m_height; y++, data += img.step)
                 {
-                    for( x = 0; x < m_width; x++ )
-                        src[x] = ReadNumber( m_strm, 1 ) != 0;
+                    for (int x = 0; x < m_width; x++)
+                        src[x] = ReadNumber(m_strm, 1) != 0;
 
                     if( color )
                         FillColorRow8( data, src, m_width, palette );
@@ -244,7 +258,10 @@ bool  PxMDecoder::readData( Mat& img )
             }
             else
             {
-                for( y = 0; y < m_height; y++, data += img.step )
+                AutoBuffer<uchar> _src(src_pitch);
+                uchar* src = _src;
+
+                for (int y = 0; y < m_height; y++, data += img.step)
                 {
                     m_strm.getBytes( src, src_pitch );
 
@@ -260,13 +277,17 @@ bool  PxMDecoder::readData( Mat& img )
         ////////////////////////// 8 BPP /////////////////////////
         case 8:
         case 24:
-            for( y = 0; y < m_height; y++, data += img.step )
+        {
+            AutoBuffer<uchar> _src(std::max<size_t>(width3*2, src_pitch));
+            uchar* src = _src;
+
+            for (int y = 0; y < m_height; y++, data += img.step)
             {
                 if( !m_binary )
                 {
-                    for( x = 0; x < width3; x++ )
+                    for (int x = 0; x < width3; x++)
                     {
-                        int code = ReadNumber( m_strm, INT_MAX );
+                        int code = ReadNumber(m_strm);
                         if( (unsigned)code > (unsigned)m_maxval ) code = m_maxval;
                         if( bit_depth == 8 )
                             src[x] = gray_palette[code];
@@ -279,7 +300,7 @@ bool  PxMDecoder::readData( Mat& img )
                     m_strm.getBytes( src, src_pitch );
                     if( bit_depth == 16 && !isBigEndian() )
                     {
-                        for( x = 0; x < width3; x++ )
+                        for (int x = 0; x < width3; x++)
                         {
                             uchar v = src[x * 2];
                             src[x * 2] = src[x * 2 + 1];
@@ -290,7 +311,7 @@ bool  PxMDecoder::readData( Mat& img )
 
                 if( img.depth() == CV_8U && bit_depth == 16 )
                 {
-                    for( x = 0; x < width3; x++ )
+                    for (int x = 0; x < width3; x++)
                     {
                         int v = ((ushort *)src)[x];
                         src[x] = (uchar)(v >> 8);
@@ -312,7 +333,7 @@ bool  PxMDecoder::readData( Mat& img )
                         }
                     }
                     else
-                        memcpy( data, src, CV_ELEM_SIZE1(m_type)*m_width);
+                        memcpy(data, src, img.elemSize1()*m_width);
                 }
                 else
                 {
@@ -331,12 +352,20 @@ bool  PxMDecoder::readData( Mat& img )
             }
             result = true;
             break;
+        }
         default:
-            assert(0);
+            CV_ErrorNoReturn(Error::StsError, "m_bpp is not supported");
         }
     }
-    catch(...)
+    CV_CATCH (cv::Exception, e)
     {
+        CV_UNUSED(e);
+        CV_RETHROW();
+    }
+    CV_CATCH_ALL
+    {
+        std::cerr << "PXM::readData(): unknown exception" << std::endl << std::flush;
+        CV_RETHROW();
     }
 
     return result;
@@ -345,31 +374,33 @@ bool  PxMDecoder::readData( Mat& img )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-PxMEncoder::PxMEncoder()
+PxMEncoder::PxMEncoder(PxMMode mode) :
+    mode_(mode)
 {
-    m_description = "Portable image format (*.pbm;*.pgm;*.ppm;*.pxm;*.pnm)";
+    switch (mode)
+    {
+    case PXM_TYPE_AUTO: m_description = "Portable image format - auto (*.pnm)"; break;
+    case PXM_TYPE_PBM: m_description = "Portable image format - monochrome (*.pbm)"; break;
+    case PXM_TYPE_PGM: m_description = "Portable image format - gray (*.pgm)"; break;
+    case PXM_TYPE_PPM: m_description = "Portable image format - color (*.ppm)"; break;
+    default:
+        CV_Error(Error::StsInternal, "");
+    }
     m_buf_supported = true;
 }
-
 
 PxMEncoder::~PxMEncoder()
 {
 }
 
-
-ImageEncoder  PxMEncoder::newEncoder() const
+bool PxMEncoder::isFormatSupported(int depth) const
 {
-    return makePtr<PxMEncoder>();
-}
-
-
-bool  PxMEncoder::isFormatSupported( int depth ) const
-{
+    if (mode_ == PXM_TYPE_PBM)
+        return depth == CV_8U;
     return depth == CV_8U || depth == CV_16U;
 }
 
-
-bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
+bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
 {
     bool isBinary = true;
 
@@ -380,8 +411,29 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
     int  x, y;
 
     for( size_t i = 0; i < params.size(); i += 2 )
-        if( params[i] == CV_IMWRITE_PXM_BINARY )
+    {
+        if( params[i] == IMWRITE_PXM_BINARY )
             isBinary = params[i+1] != 0;
+    }
+
+    int mode = mode_;
+    if (mode == PXM_TYPE_AUTO)
+    {
+        mode = img.channels() == 1 ? PXM_TYPE_PGM : PXM_TYPE_PPM;
+    }
+
+    if (mode == PXM_TYPE_PGM && img.channels() > 1)
+    {
+        CV_Error(Error::StsBadArg, "Portable bitmap(.pgm) expects gray image");
+    }
+    if (mode == PXM_TYPE_PPM && img.channels() != 3)
+    {
+        CV_Error(Error::StsBadArg, "Portable bitmap(.ppm) expects BGR image");
+    }
+    if (mode == PXM_TYPE_PBM && img.type() != CV_8UC1)
+    {
+        CV_Error(Error::StsBadArg, "For portable bitmap(.pbm) type must be CV_8UC1");
+    }
 
     WLByteStream strm;
 
@@ -412,17 +464,58 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
     char* buffer = _buffer;
 
     // write header;
-    sprintf( buffer, "P%c\n%d %d\n%d\n",
-             '2' + (channels > 1 ? 1 : 0) + (isBinary ? 3 : 0),
-             width, height, (1 << depth) - 1 );
+    const int code = ((mode == PXM_TYPE_PBM) ? 1 : (mode == PXM_TYPE_PGM) ? 2 : 3)
+         + (isBinary ? 3 : 0);
+    const char* comment = "# Generated by OpenCV " CV_VERSION "\n";
 
-    strm.putBytes( buffer, (int)strlen(buffer) );
+    int header_sz = sprintf(buffer, "P%c\n%s%d %d\n",
+            (char)('0' + code), comment,
+            width, height);
+    CV_Assert(header_sz > 0);
+    if (mode != PXM_TYPE_PBM)
+    {
+        int sz = sprintf(&buffer[header_sz], "%d\n", (1 << depth) - 1);
+        CV_Assert(sz > 0);
+        header_sz += sz;
+    }
+
+    strm.putBytes(buffer, header_sz);
 
     for( y = 0; y < height; y++ )
     {
         const uchar* const data = img.ptr(y);
         if( isBinary )
         {
+            if (mode == PXM_TYPE_PBM)
+            {
+                char* ptr = buffer;
+                int bcount = 7;
+                char byte = 0;
+                for (x = 0; x < width; x++)
+                {
+                    if (bcount == 0)
+                    {
+                        if (data[x] == 0)
+                            byte = (byte) | 1;
+                        *ptr++ = byte;
+                        bcount = 7;
+                        byte = 0;
+                    }
+                    else
+                    {
+                        if (data[x] == 0)
+                            byte = (byte) | (1  << bcount);
+                        bcount--;
+                    }
+                }
+                if (bcount != 7)
+                {
+                    *ptr++ = byte;
+                }
+                strm.putBytes(buffer, (int)(ptr - buffer));
+                continue;
+            }
+
             if( _channels == 3 )
             {
                 if( depth == 8 )
@@ -445,59 +538,72 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
                     buffer[x + 1] = v;
                 }
             }
-            strm.putBytes( (channels > 1 || depth > 8) ? buffer : (const char*)data, fileStep );
+
+            strm.putBytes( (channels > 1 || depth > 8) ? buffer : (const char*)data, fileStep);
         }
         else
         {
             char* ptr = buffer;
-
-            if( channels > 1 )
+            if (mode == PXM_TYPE_PBM)
             {
-                if( depth == 8 )
+                CV_Assert(channels == 1);
+                CV_Assert(depth == 8);
+                for (x = 0; x < width; x++)
                 {
-                    for( x = 0; x < width*channels; x += channels )
-                    {
-                        sprintf( ptr, "% 4d", data[x + 2] );
-                        ptr += 4;
-                        sprintf( ptr, "% 4d", data[x + 1] );
-                        ptr += 4;
-                        sprintf( ptr, "% 4d", data[x] );
-                        ptr += 4;
-                        *ptr++ = ' ';
-                        *ptr++ = ' ';
-                    }
-                }
-                else
-                {
-                    for( x = 0; x < width*channels; x += channels )
-                    {
-                        sprintf( ptr, "% 6d", ((const ushort *)data)[x + 2] );
-                        ptr += 6;
-                        sprintf( ptr, "% 6d", ((const ushort *)data)[x + 1] );
-                        ptr += 6;
-                        sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
-                        ptr += 6;
-                        *ptr++ = ' ';
-                        *ptr++ = ' ';
-                    }
+                    ptr[0] = data[x] ? '0' : '1';
+                    ptr += 1;
                 }
             }
             else
             {
-                if( depth == 8 )
+                if( channels > 1 )
                 {
-                    for( x = 0; x < width; x++ )
+                    if( depth == 8 )
                     {
-                        sprintf( ptr, "% 4d", data[x] );
-                        ptr += 4;
+                        for( x = 0; x < width*channels; x += channels )
+                        {
+                            sprintf( ptr, "% 4d", data[x + 2] );
+                            ptr += 4;
+                            sprintf( ptr, "% 4d", data[x + 1] );
+                            ptr += 4;
+                            sprintf( ptr, "% 4d", data[x] );
+                            ptr += 4;
+                            *ptr++ = ' ';
+                            *ptr++ = ' ';
+                        }
+                    }
+                    else
+                    {
+                        for( x = 0; x < width*channels; x += channels )
+                        {
+                            sprintf( ptr, "% 6d", ((const ushort *)data)[x + 2] );
+                            ptr += 6;
+                            sprintf( ptr, "% 6d", ((const ushort *)data)[x + 1] );
+                            ptr += 6;
+                            sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
+                            ptr += 6;
+                            *ptr++ = ' ';
+                            *ptr++ = ' ';
+                        }
                     }
                 }
                 else
                 {
-                    for( x = 0; x < width; x++ )
+                    if( depth == 8 )
                     {
-                        sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
-                        ptr += 6;
+                        for( x = 0; x < width; x++ )
+                        {
+                            sprintf( ptr, "% 4d", data[x] );
+                            ptr += 4;
+                        }
+                    }
+                    else
+                    {
+                        for( x = 0; x < width; x++ )
+                        {
+                            sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
+                            ptr += 6;
+                        }
                     }
                 }
             }

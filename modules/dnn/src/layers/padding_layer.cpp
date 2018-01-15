@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2016, Intel Corporation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 /*
@@ -10,6 +10,7 @@ Implementation of padding layer, which adds paddings to input blob.
 */
 
 #include "../precomp.hpp"
+#include "layers_common.hpp"
 #include "op_halide.hpp"
 #include <vector>
 
@@ -24,14 +25,21 @@ public:
     PaddingLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        paddingDim = params.get<int>("padding_dim");
-        padding = params.get<int>("padding");
-        inputDims = params.get<int>("input_dims", 0);
-        index = params.get<int>("index", 0);
-        paddingValue = params.get<double>("value", 0);
+        paddingValue = params.get<float>("value", 0);
+        inputDims = params.get<int>("input_dims", -1);
+        paddingType = params.get<String>("type", "constant");
 
-        if(paddingDim < 0 || padding < 0)
-            CV_Error(cv::Error::StsNotImplemented, "Negative padding and dim aren't supported");
+        CV_Assert(params.has("paddings"));
+        const DictValue& paddingsParam = params.get("paddings");
+        CV_Assert((paddingsParam.size() & 1) == 0);
+
+        paddings.resize(paddingsParam.size() / 2);
+        for (int i = 0; i < paddings.size(); ++i)
+        {
+            paddings[i].first = paddingsParam.get<int>(i * 2);  // Pad before.
+            paddings[i].second = paddingsParam.get<int>(i * 2 + 1);  // Pad after.
+            CV_Assert(paddings[i].first >= 0, paddings[i].second >= 0);
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -39,24 +47,56 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
-        outputs.clear();
-        for(int i = 0; i < inputs.size(); i++)
-        {
-            MatShape shape = inputs[i];
-            int dim = getPadDim(shape);
-            CV_Assert(dim < shape.size());
+        CV_Assert(inputs.size() == 1);
+        const MatShape& inpShape = inputs[0];
+        CV_Assert(inpShape.size() >= paddings.size());
+        CV_Assert(inputDims == -1 || inpShape.size() == inputDims || inpShape.size() > paddings.size());
 
-            shape[dim] += padding;
-            outputs.push_back(shape);
+        outputs.resize(1, inpShape);
+        int offset = (inputDims == -1 ? 0 : (inpShape.size() > inputDims ? 1 : 0));
+        for (int i = 0; i < paddings.size(); ++i)
+        {
+            outputs[0][offset + i] = inpShape[offset + i] + paddings[i].first + paddings[i].second;
+        }
+        return false;
+    }
+
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    {
+        // Compute dstRanges.
+        const MatSize& inpShape = inputs[0]->size;
+        dstRanges.resize(paddings.size());
+
+        int offset = 0;
+        if (inputDims != -1 && inputs[0]->dims != inputDims)
+        {
+            dstRanges.insert(dstRanges.begin(), Range::all());
+            offset = 1;
         }
 
-        return false;
+        for (int i = 0; i < paddings.size(); ++i)
+        {
+            dstRanges[offset + i].start = paddings[i].first;
+            dstRanges[offset + i].end = paddings[i].first + inpShape[offset + i];
+        }
+
+        // Add the rest of dimensions.
+        for (int i = dstRanges.size(); i < inputs[0]->dims; ++i)
+            dstRanges.push_back(Range::all());
     }
 
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -64,50 +104,55 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        for(int i = 0; i < inputs.size(); i++)
+        if (paddingType == "constant")
         {
-            outputs[i] = paddingValue;
-            const Mat& inp = *inputs[i];
-            Mat& out = outputs[i];
-            int dims = inp.dims;
-            MatShape inShape(inp.size.p, inp.size.p + dims);
-            MatShape outShape(out.size.p, out.size.p + dims);
-            int dim = getPadDim(inShape);
+            outputs[0].setTo(paddingValue);
+            inputs[0]->copyTo(outputs[0](dstRanges));
+        }
+        else if (paddingType == "reflect")
+        {
+            CV_Assert(inputs.size() == 1);
+            CV_Assert(outputs.size() == 1);
+            CV_Assert(inputs[0]->dims == 4);
+            CV_Assert(outputs[0].dims == 4);
 
-            int actualIndex = index;
-            if(index == 0)
-                actualIndex = inShape[dim];
+            if (inputs[0]->size[0] != outputs[0].size[0] || inputs[0]->size[1] != outputs[0].size[1])
+                CV_Error(Error::StsNotImplemented, "Only spatial reflection padding is supported.");
 
-            std::vector<std::pair<Range, Range> > srcDstRanges;
-            srcDstRanges.push_back(std::make_pair(Range(0, actualIndex), Range(0, actualIndex)));
-            srcDstRanges.push_back(std::make_pair(Range(actualIndex, inShape[dim]),
-                                                  Range(actualIndex + padding, outShape[dim])));
+            const int inpHeight = inputs[0]->size[2];
+            const int inpWidth = inputs[0]->size[3];
+            const int outHeight = outputs[0].size[2];
+            const int outWidth = outputs[0].size[3];
+            const int padTop = dstRanges[2].start;
+            const int padBottom = outHeight - dstRanges[2].end;
+            const int padLeft = dstRanges[3].start;
+            const int padRight = outWidth - dstRanges[3].end;
+            CV_Assert(padTop < inpHeight, padBottom < inpHeight,
+                      padLeft < inpWidth, padRight < inpWidth);
 
-            std::vector<Range> srcRanges(dims, Range::all()), dstRanges = srcRanges;
-
-            for(int j = 0; j < srcDstRanges.size(); j++)
+            for (size_t n = 0; n < inputs[0]->size[0]; ++n)
             {
-                if(!srcDstRanges[j].first.empty())
+                for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
                 {
-                    srcRanges[dim] = srcDstRanges[j].first;
-                    dstRanges[dim] = srcDstRanges[j].second;
-                    Mat dst = out(&dstRanges[0]);
-                    Mat src = inp(&srcRanges[0]).clone();
-                    src.copyTo(dst);
+                    copyMakeBorder(getPlane(*inputs[0], n, ch),
+                                   getPlane(outputs[0], n, ch),
+                                   padTop, padBottom, padLeft, padRight,
+                                   BORDER_REFLECT_101);
                 }
             }
         }
-    }
-
-    int getPadDim(const MatShape& shape) const
-    {
-        return inputDims > 0 && (int)shape.size() > inputDims ? paddingDim + 1 : paddingDim;
+        else
+            CV_Error(Error::StsNotImplemented, "Unknown padding type: " + paddingType);
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
     {
 #ifdef HAVE_HALIDE
         int inW, inH, inC, inN;
+        int minN = std::max(dstRanges[0].start, 0);
+        int minC = std::max(dstRanges[1].start, 0);
+        int minY = std::max(dstRanges[2].start, 0);
+        int minX = std::max(dstRanges[3].start, 0);
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
         getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
 
@@ -115,14 +160,18 @@ public:
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
         Halide::Func padded =
             Halide::BoundaryConditions::constant_exterior(inputBuffer, paddingValue);
-        top(x, y, c, n) = padded(x, y, c, n);
+        top(x, y, c, n) = padded(x - minX, y - minY, c - minC, n - minN);
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
     }
 
-    int paddingDim, padding, inputDims, index;
+private:
+    std::vector<std::pair<int, int> > paddings;  // Pairs pad before, pad after.
+    std::vector<Range> dstRanges;
+    int inputDims;
     float paddingValue;
+    std::string paddingType;
 };
 
 Ptr<PaddingLayer> PaddingLayer::create(const LayerParams &params)

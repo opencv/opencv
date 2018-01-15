@@ -35,10 +35,9 @@ int main( void )
      { line( src, vert[j],  vert[(j+1)%6], Scalar( 255 ), 3, 8 ); }
 
   /// Get the contours
-  vector<vector<Point> > contours; vector<Vec4i> hierarchy;
-  Mat src_copy = src.clone();
+  vector<vector<Point> > contours;
 
-  findContours( src_copy, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+  findContours( src, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
 
   /// Calculate the distances to the contour
   Mat raw_dist( src.size(), CV_32FC1 );
@@ -67,11 +66,8 @@ int main( void )
           }
      }
 
-  /// Create Window and show your results
-  const char* source_window = "Source";
-  namedWindow( source_window, WINDOW_AUTOSIZE );
-  imshow( source_window, src );
-  namedWindow( "Distance", WINDOW_AUTOSIZE );
+  /// Show your results
+  imshow( "Source", src );
   imshow( "Distance", drawing );
 
   waitKey(0);

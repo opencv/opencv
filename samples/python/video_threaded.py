@@ -19,7 +19,7 @@ Keyboard shortcuts:
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from multiprocessing.pool import ThreadPool
 from collections import deque
@@ -50,11 +50,11 @@ if __name__ == '__main__':
 
     def process_frame(frame, t0):
         # some intensive computation...
-        frame = cv2.medianBlur(frame, 19)
-        frame = cv2.medianBlur(frame, 19)
+        frame = cv.medianBlur(frame, 19)
+        frame = cv.medianBlur(frame, 19)
         return frame, t0
 
-    threadn = cv2.getNumberOfCPUs()
+    threadn = cv.getNumberOfCPUs()
     pool = ThreadPool(processes = threadn)
     pending = deque()
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
             draw_str(res, (20, 20), "threaded      :  " + str(threaded_mode))
             draw_str(res, (20, 40), "latency        :  %.1f ms" % (latency.value*1000))
             draw_str(res, (20, 60), "frame interval :  %.1f ms" % (frame_interval.value*1000))
-            cv2.imshow('threaded video', res)
+            cv.imshow('threaded video', res)
         if len(pending) < threadn:
             ret, frame = cap.read()
             t = clock()
@@ -81,9 +81,9 @@ if __name__ == '__main__':
             else:
                 task = DummyTask(process_frame(frame, t))
             pending.append(task)
-        ch = cv2.waitKey(1)
+        ch = cv.waitKey(1)
         if ch == ord(' '):
             threaded_mode = not threaded_mode
         if ch == 27:
             break
-cv2.destroyAllWindows()
+cv.destroyAllWindows()

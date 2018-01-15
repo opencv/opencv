@@ -193,7 +193,7 @@ public:
         CV_Assert( nmixtures <= 255);
 
 #ifdef HAVE_OPENCL
-        if (ocl::useOpenCL() && opencl_ON)
+        if (ocl::isOpenCLActivated() && opencl_ON)
         {
             create_ocl_apply_kernel();
 

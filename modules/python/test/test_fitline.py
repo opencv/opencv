@@ -4,7 +4,7 @@
 Robust line fitting.
 ==================
 
-Example of using cv2.fitLine function for fitting line
+Example of using cv.fitLine function for fitting line
 to points in presence of outliers.
 
 Switch through different M-estimator functions and see,
@@ -19,7 +19,7 @@ import sys
 PY3 = sys.version_info[0] == 3
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from tests_common import NewOpenCVTests
 
@@ -53,14 +53,18 @@ class fitline_test(NewOpenCVTests):
         lines = []
 
         for name in dist_func_names:
-            func = getattr(cv2, name)
-            vx, vy, cx, cy = cv2.fitLine(np.float32(points), func, 0, 0.01, 0.01)
+            func = getattr(cv, name)
+            vx, vy, cx, cy = cv.fitLine(np.float32(points), func, 0, 0.01, 0.01)
             line = [float(vx), float(vy), float(cx), float(cy)]
             lines.append(line)
 
         eps = 0.05
 
-        refVec =  (np.float32(p1) - p0) / cv2.norm(np.float32(p1) - p0)
+        refVec =  (np.float32(p1) - p0) / cv.norm(np.float32(p1) - p0)
 
         for i in range(len(lines)):
-            self.assertLessEqual(cv2.norm(refVec - lines[i][0:2], cv2.NORM_L2), eps)
+            self.assertLessEqual(cv.norm(refVec - lines[i][0:2], cv.NORM_L2), eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

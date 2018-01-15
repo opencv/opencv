@@ -159,6 +159,9 @@ void dumpOpenCLDevice()
         DUMP_MESSAGE_STDOUT("    Driver version = " << device.driverVersion());
         DUMP_PROPERTY_XML("cv_ocl_current_driverVersion", device.driverVersion());
 
+        DUMP_MESSAGE_STDOUT("    Address bits = " << device.addressBits());
+        DUMP_PROPERTY_XML("cv_ocl_current_addressBits", device.addressBits());
+
         DUMP_MESSAGE_STDOUT("    Compute units = "<< device.maxComputeUnits());
         DUMP_PROPERTY_XML("cv_ocl_current_maxComputeUnits", device.maxComputeUnits());
 
@@ -180,6 +183,23 @@ void dumpOpenCLDevice()
         const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Host unified memory = "<< isUnifiedMemoryStr);
         DUMP_PROPERTY_XML("cv_ocl_current_hostUnifiedMemory", device.hostUnifiedMemory());
+
+        DUMP_MESSAGE_STDOUT("    Device extensions:");
+        String extensionsStr = device.extensions();
+        size_t pos = 0;
+        while (pos < extensionsStr.size())
+        {
+            size_t pos2 = extensionsStr.find(' ', pos);
+            if (pos2 == String::npos)
+                pos2 = extensionsStr.size();
+            if (pos2 > pos)
+            {
+                String extensionName = extensionsStr.substr(pos, pos2 - pos);
+                DUMP_MESSAGE_STDOUT("        " << extensionName);
+            }
+            pos = pos2 + 1;
+        }
+        DUMP_PROPERTY_XML("cv_ocl_current_extensions", extensionsStr.c_str());
 
         const char* haveAmdBlasStr = haveAmdBlas() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Has AMD Blas = "<< haveAmdBlasStr);

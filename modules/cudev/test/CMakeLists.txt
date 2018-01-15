@@ -16,7 +16,9 @@ if(OCV_DEPENDENCIES_FOUND)
   ocv_cuda_filter_options()
 
   CUDA_ADD_EXECUTABLE(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
-  ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})
+  ocv_target_link_libraries(${the_target} LINK_PRIVATE
+      ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES}
+  )
   add_dependencies(opencv_tests ${the_target})
 
   set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")

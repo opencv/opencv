@@ -85,7 +85,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/sse_utils.hpp"
 #include "opencv2/core/neon_utils.hpp"
-
+#include "opencv2/core/vsx_utils.hpp"
 #include "arithm_core.hpp"
 #include "hal_replacement.hpp"
 
@@ -257,7 +257,8 @@ struct CoreTLSData
 //#ifdef HAVE_OPENCL
         device(0), useOpenCL(-1),
 //#endif
-        useIPP(-1)
+        useIPP(-1),
+        useIPP_NE(-1)
 #ifdef HAVE_TEGRA_OPTIMIZATION
         ,useTegra(-1)
 #endif
@@ -272,7 +273,8 @@ struct CoreTLSData
     ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
-    int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_TEGRA_OPTIMIZATION
     int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif
@@ -294,12 +296,6 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #else
 #define CL_RUNTIME_EXPORT
 #endif
-
-namespace utils {
-bool getConfigurationParameterBool(const char* name, bool defaultValue);
-size_t getConfigurationParameterSizeT(const char* name, size_t defaultValue);
-cv::String getConfigurationParameterString(const char* name, const char* defaultValue);
-}
 
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)

@@ -393,27 +393,27 @@ static int xioctl( int fd, int request, void *arg)
    Returns the global numCameras with the correct value (we hope) */
 
 static void icvInitCapture_V4L() {
-   int deviceHandle;
-   int CameraNumber;
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
+    int deviceHandle;
+    int CameraNumber;
+    char deviceName[MAX_DEVICE_DRIVER_NAME];
 
-   CameraNumber = 0;
-   while(CameraNumber < MAX_CAMERAS) {
-      /* Print the CameraNumber at the end of the string with a width of one character */
-      sprintf(deviceName, "/dev/video%1d", CameraNumber);
-      /* Test using an open to see if this new device name really does exists. */
-      deviceHandle = open(deviceName, O_RDONLY);
-      if (deviceHandle != -1) {
-         /* This device does indeed exist - add it to the total so far */
-    // add indexList
-    indexList|=(1 << CameraNumber);
-        numCameras++;
-    }
-    if (deviceHandle != -1)
-      close(deviceHandle);
-      /* Set up to test the next /dev/video source in line */
-      CameraNumber++;
-   } /* End while */
+    CameraNumber = 0;
+    while(CameraNumber < MAX_CAMERAS) {
+        /* Print the CameraNumber at the end of the string with a width of one character */
+        sprintf(deviceName, "/dev/video%1d", CameraNumber);
+        /* Test using an open to see if this new device name really does exists. */
+        deviceHandle = open(deviceName, O_RDONLY);
+        if (deviceHandle != -1) {
+            /* This device does indeed exist - add it to the total so far */
+            numCameras++;
+            // add indexList
+            indexList|=(1 << CameraNumber);
+        }
+        if (deviceHandle != -1)
+            close(deviceHandle);
+        /* Set up to test the next /dev/video source in line */
+        CameraNumber++;
+    } /* End while */
 
 }; /* End icvInitCapture_V4L */
 

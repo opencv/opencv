@@ -17,7 +17,7 @@ TEST(Imgcodecs_Png, write_big)
     EXPECT_EQ(13043, img.cols);
     EXPECT_EQ(13917, img.rows);
     ASSERT_NO_THROW(imwrite(dst_file, img));
-    remove(dst_file.c_str());
+    EXPECT_EQ(0, remove(dst_file.c_str()));
 }
 
 TEST(Imgcodecs_Png, encode)

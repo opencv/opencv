@@ -503,17 +503,8 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
          sqdepth = CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
 
-#ifdef HAVE_OPENCL
-    if (ocl::useOpenCL() && _sum.isUMat() && !_tilted.needed())
-    {
-        if (!_sqsum.needed())
-        {
-            CV_OCL_RUN(ocl::useOpenCL(), ocl_integral(_src, _sum, sdepth))
-        }
-        else if (_sqsum.isUMat())
-            CV_OCL_RUN(ocl::useOpenCL(), ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth))
-    }
-#endif
+    CV_OCL_RUN(_sum.isUMat() && !_tilted.needed(),
+        (_sqsum.needed() ? ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth) : ocl_integral(_src, _sum, sdepth)));
 
     Size ssize = _src.size(), isize(ssize.width + 1, ssize.height + 1);
     _sum.create( isize, CV_MAKETYPE(sdepth, cn) );

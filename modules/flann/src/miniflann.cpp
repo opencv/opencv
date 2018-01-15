@@ -553,7 +553,7 @@ static void createIndicesDists(OutputArray _indices, OutputArray _dists,
         if( !dists.isContinuous() || dists.type() != dtype ||
            dists.rows != rows || dists.cols < minCols || dists.cols > maxCols )
         {
-            if( !indices.isContinuous() )
+            if( !_dists.isContinuous() )
                 _dists.release();
             _dists.create( rows, minCols, dtype );
             dists = _dists.getMat();

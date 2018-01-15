@@ -141,7 +141,7 @@ void UMatData::unlock()
 MatAllocator* UMat::getStdAllocator()
 {
 #ifdef HAVE_OPENCL
-    if( ocl::haveOpenCL() && ocl::useOpenCL() )
+    if (ocl::useOpenCL())
         return ocl::getOpenCLAllocator();
 #endif
     return Mat::getDefaultAllocator();
@@ -267,19 +267,22 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     UMat hdr;
     if(!data)
         return hdr;
-    Size wholeSize;
-    Point ofs;
-    locateROI(wholeSize, ofs);
-    Size sz(cols, rows);
-    if (ofs.x != 0 || ofs.y != 0)
+    if (data != datastart)
     {
-        Mat src = *this;
-        int dtop = ofs.y;
-        int dbottom = wholeSize.height - src.rows - ofs.y;
-        int dleft = ofs.x;
-        int dright = wholeSize.width - src.cols - ofs.x;
-        src.adjustROI(dtop, dbottom, dleft, dright);
-        return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+        Size wholeSize;
+        Point ofs;
+        locateROI(wholeSize, ofs);
+        Size sz(cols, rows);
+        if (ofs.x != 0 || ofs.y != 0)
+        {
+            Mat src = *this;
+            int dtop = ofs.y;
+            int dbottom = wholeSize.height - src.rows - ofs.y;
+            int dleft = ofs.x;
+            int dright = wholeSize.width - src.cols - ofs.x;
+            src.adjustROI(dtop, dbottom, dleft, dright);
+            return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+        }
     }
     CV_Assert(data == datastart);
 
@@ -292,11 +295,11 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
     }
     bool allocated = false;
-    try
+    CV_TRY
     {
         allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
     }
-    catch (const cv::Exception& e)
+    CV_CATCH(cv::Exception, e)
     {
         fprintf(stderr, "Exception: %s\n", e.what());
     }
@@ -368,12 +371,12 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             a = a0;
             a0 = Mat::getDefaultAllocator();
         }
-        try
+        CV_TRY
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
             CV_Assert(u != 0);
         }
-        catch(...)
+        CV_CATCH_ALL
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
@@ -961,6 +964,8 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
         }
     }
 #endif
+    UMat src = *this;  // Fake reference to itself.
+                       // Resolves issue 8693 in case of src == dst.
     Mat m = getMat(ACCESS_READ);
     m.convertTo(_dst, _type, alpha, beta);
 }

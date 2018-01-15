@@ -92,6 +92,13 @@ endif()
 
 if(NOT __IN_TRY_COMPILE)
   set(_xcodebuild_wrapper "${CMAKE_BINARY_DIR}/xcodebuild_wrapper")
+  if(NOT DEFINED CMAKE_MAKE_PROGRAM)  # empty since CMake 3.10
+    find_program(XCODEBUILD_PATH "xcodebuild")
+    if(NOT XCODEBUILD_PATH)
+      message(FATAL_ERROR "Specify CMAKE_MAKE_PROGRAM variable ('xcodebuild' absolute path)")
+    endif()
+    set(CMAKE_MAKE_PROGRAM "${XCODEBUILD_PATH}")
+  endif()
   if(NOT CMAKE_MAKE_PROGRAM STREQUAL _xcodebuild_wrapper)
     if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
       set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")

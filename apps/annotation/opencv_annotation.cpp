@@ -273,7 +273,7 @@ int main( int argc, const char** argv )
         }
 
         if(resize_bool){
-            resize(current_image, current_image, Size(current_image.cols/resizeFactor, current_image.rows/resizeFactor));
+            resize(current_image, current_image, Size(current_image.cols/resizeFactor, current_image.rows/resizeFactor), 0, 0, INTER_LINEAR_EXACT);
         }
 
         // Perform annotations & store the result inside the vectorized structure

@@ -78,15 +78,18 @@
 #if GST_VERSION_MAJOR == 0
 #define COLOR_ELEM "ffmpegcolorspace"
 #define COLOR_ELEM_NAME "ffmpegcsp"
-#elif FULL_GST_VERSION < VERSION_NUM(1,5,0)
-#define COLOR_ELEM "videoconvert"
-#define COLOR_ELEM_NAME COLOR_ELEM
 #else
-#define COLOR_ELEM "autovideoconvert"
+#define COLOR_ELEM "videoconvert"
 #define COLOR_ELEM_NAME COLOR_ELEM
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
+#if defined(__MINGW32__)
+inline char *realpath(const char *path, char *resolved_path)
+{
+    return _fullpath(resolved_path,path,PATH_MAX);
+}
+#endif
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #define strcasecmp _stricmp
@@ -172,6 +175,8 @@ protected:
     bool          isPosFramesSupported;
     bool          isPosFramesEmulated;
     gint64        emulatedFrameNumber;
+
+    bool          isOutputByteBuffer;
 };
 
 /*!
@@ -199,6 +204,8 @@ void CvCapture_GStreamer::init()
     isPosFramesSupported = false;
     isPosFramesEmulated = false;
     emulatedFrameNumber = -1;
+
+    isOutputByteBuffer = false;
 }
 
 /*!
@@ -351,6 +358,7 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         } else if(strcasecmp(name, "image/jpeg") == 0) {
             depth = 1;
             // the correct size will be set once the first frame arrives
+            isOutputByteBuffer = true;
         }
 #endif
         if (depth > 0) {
@@ -377,7 +385,8 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
     gboolean success = gst_buffer_map(buffer,&info, (GstMapFlags)GST_MAP_READ);
 
     // with MJPEG streams frame size can change arbitrarily
-    if(int(info.size) != frame->imageSize) {
+    if (isOutputByteBuffer && (size_t)info.size != (size_t)frame->imageSize)
+    {
         cvReleaseImageHeader(&frame);
         frame = cvCreateImageHeader(cvSize(info.size, 1), IPL_DEPTH_8U, 1);
     }

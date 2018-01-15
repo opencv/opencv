@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#include "opencv2/core/opencl/ocl_defs.hpp"
+
 using namespace cv;
 using namespace cv::detail;
 using namespace cv::cuda;
@@ -49,6 +51,10 @@ using namespace cv::cuda;
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
 using xfeatures2d::SURF;
+#endif
+
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
 #endif
 
 namespace {
@@ -190,7 +196,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     Ptr<cv::DescriptorMatcher> matcher;
 #if 0 // TODO check this
-    if (ocl::useOpenCL())
+    if (ocl::isOpenCLActivated())
     {
         matcher = makePtr<BFMatcher>((int)NORM_L2);
     }
@@ -386,10 +392,12 @@ void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFea
 
 bool FeaturesFinder::isThreadSafe() const
 {
-    if (ocl::useOpenCL())
+#ifdef HAVE_OPENCL
+    if (ocl::isOpenCLActivated())
     {
         return false;
     }
+#endif
     if (dynamic_cast<const SurfFeaturesFinder*>(this))
     {
         return true;
@@ -583,7 +591,12 @@ void SurfFeaturesFinderGpu::find(InputArray image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
+
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+    cv::cuda::cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
+#else
     cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
+#endif
 
     surf_.nOctaves = num_octaves_;
     surf_.nOctaveLayers = num_layers_;
@@ -616,7 +629,7 @@ MatchesInfo::MatchesInfo() : src_img_idx(-1), dst_img_idx(-1), num_inliers(0), c
 
 MatchesInfo::MatchesInfo(const MatchesInfo &other) { *this = other; }
 
-const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
+MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 {
     src_img_idx = other.src_img_idx;
     dst_img_idx = other.dst_img_idx;

@@ -374,7 +374,7 @@ cvGetMatND( const CvArr* arr, CvMatND* matnd, int* coi )
 // returns number of dimensions to iterate.
 /*
 Checks whether <count> arrays have equal type, sizes (mask is optional array
-that needs to have the same size, but 8uC1 or 8sC1 type).
+that needs to have the same size, but 8uC1 or 8sC1 type - feature has been disabled).
 Returns number of dimensions to iterate through:
 0 means that all arrays are continuous,
 1 means that all arrays are vectors of continuous arrays etc.
@@ -399,17 +399,16 @@ cvInitNArrayIterator( int count, CvArr** arrs,
     if( !iterator )
         CV_Error( CV_StsNullPtr, "Iterator pointer is NULL" );
 
-    for( i = 0; i <= count; i++ )
+    if (mask)
+        CV_Error( CV_StsBadArg, "Iterator with mask is not supported" );
+
+    for( i = 0; i < count; i++ )
     {
-        const CvArr* arr = i < count ? arrs[i] : mask;
+        const CvArr* arr = arrs[i];
         CvMatND* hdr;
 
         if( !arr )
-        {
-            if( i < count )
-                CV_Error( CV_StsNullPtr, "Some of required array pointers is NULL" );
-            break;
-        }
+            CV_Error( CV_StsNullPtr, "Some of required array pointers is NULL" );
 
         if( CV_IS_MATND( arr ))
             hdr = (CvMatND*)arr;
@@ -429,31 +428,23 @@ cvInitNArrayIterator( int count, CvArr** arrs,
                 CV_Error( CV_StsUnmatchedSizes,
                           "Number of dimensions is the same for all arrays" );
 
-            if( i < count )
+            switch( flags & (CV_NO_DEPTH_CHECK|CV_NO_CN_CHECK))
             {
-                switch( flags & (CV_NO_DEPTH_CHECK|CV_NO_CN_CHECK))
-                {
-                case 0:
-                    if( !CV_ARE_TYPES_EQ( hdr, hdr0 ))
-                        CV_Error( CV_StsUnmatchedFormats,
-                                  "Data type is not the same for all arrays" );
-                    break;
-                case CV_NO_DEPTH_CHECK:
-                    if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
-                        CV_Error( CV_StsUnmatchedFormats,
-                                  "Number of channels is not the same for all arrays" );
-                    break;
-                case CV_NO_CN_CHECK:
-                    if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
-                        CV_Error( CV_StsUnmatchedFormats,
-                                  "Depth is not the same for all arrays" );
-                    break;
-                }
-            }
-            else
-            {
-                if( !CV_IS_MASK_ARR( hdr ))
-                    CV_Error( CV_StsBadMask, "Mask should have 8uC1 or 8sC1 data type" );
+            case 0:
+                if( !CV_ARE_TYPES_EQ( hdr, hdr0 ))
+                    CV_Error( CV_StsUnmatchedFormats,
+                              "Data type is not the same for all arrays" );
+                break;
+            case CV_NO_DEPTH_CHECK:
+                if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
+                    CV_Error( CV_StsUnmatchedFormats,
+                              "Number of channels is not the same for all arrays" );
+                break;
+            case CV_NO_CN_CHECK:
+                if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
+                    CV_Error( CV_StsUnmatchedFormats,
+                              "Depth is not the same for all arrays" );
+                break;
             }
 
             if( !(flags & CV_NO_SIZE_CHECK) )

@@ -594,7 +594,7 @@ public:
     bool checkSubset( InputArray _ms1, InputArray, int count ) const
     {
         Mat ms1 = _ms1.getMat();
-        // check colinearity and also check that points are too close
+        // check collinearity and also check that points are too close
         // only ms1 affects actual estimation stability
         return !haveCollinearPoints(ms1, count);
     }

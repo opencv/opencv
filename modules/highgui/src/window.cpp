@@ -190,6 +190,12 @@ void cv::resizeWindow( const String& winname, int width, int height )
     cvResizeWindow( winname.c_str(), width, height );
 }
 
+void cv::resizeWindow(const String& winname, const cv::Size& size)
+{
+   CV_TRACE_FUNCTION();
+   cvResizeWindow(winname.c_str(), size.width, size.height);
+}
+
 void cv::moveWindow( const String& winname, int x, int y )
 {
     CV_TRACE_FUNCTION();

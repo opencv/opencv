@@ -52,7 +52,7 @@
     #undef abs
 #endif
 
-#if defined __linux__ || defined __APPLE__
+#if defined __linux__ || defined __APPLE__ || defined __GLIBC__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -124,6 +124,8 @@
 #elif defined HAVE_PTHREADS_PF
 #  define CV_PARALLEL_FRAMEWORK "pthreads"
 #endif
+
+using namespace cv;
 
 namespace cv
 {
@@ -363,6 +365,10 @@ static SchedPtr pplScheduler;
 
 /* ================================   parallel_for_  ================================ */
 
+#ifdef CV_PARALLEL_FRAMEWORK
+static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes); // forward declaration
+#endif
+
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
 #ifdef OPENCV_TRACE
@@ -377,10 +383,35 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
         return;
 
 #ifdef CV_PARALLEL_FRAMEWORK
+    static volatile int flagNestedParallelFor = 0;
+    bool isNotNestedRegion = flagNestedParallelFor == 0;
+    if (isNotNestedRegion)
+      isNotNestedRegion = CV_XADD(&flagNestedParallelFor, 1) == 0;
+    if (isNotNestedRegion)
+    {
+        try
+        {
+            parallel_for_impl(range, body, nstripes);
+            flagNestedParallelFor = 0;
+        }
+        catch (...)
+        {
+            flagNestedParallelFor = 0;
+            throw;
+        }
+    }
+    else // nested parallel_for_() calls are not parallelized
+#endif // CV_PARALLEL_FRAMEWORK
+    {
+        (void)nstripes;
+        body(range);
+    }
+}
 
-    static int flagNestedParallelFor = 0;
-    bool isNotNesterParallelFor = CV_XADD(&flagNestedParallelFor, 1) == 0;
-    if(numThreads != 0 && isNotNesterParallelFor)
+#ifdef CV_PARALLEL_FRAMEWORK
+static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
+{
+    if ((numThreads < 0 || numThreads > 1) && range.end - range.start > 1)
     {
         ParallelLoopBodyWrapperContext ctx(body, range, nstripes);
         ProxyLoopBody pbody(ctx);
@@ -388,7 +419,6 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
         if( stripeRange.end - stripeRange.start == 1 )
         {
             body(range);
-            flagNestedParallelFor = 0;
             return;
         }
 
@@ -444,16 +474,14 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 #error You have hacked and compiling with unsupported parallel framework
 
 #endif
-        flagNestedParallelFor = 0;
     }
     else
-
-#endif // CV_PARALLEL_FRAMEWORK
     {
-        (void)nstripes;
         body(range);
     }
 }
+#endif // CV_PARALLEL_FRAMEWORK
+
 
 int cv::getNumThreads(void)
 {
@@ -644,7 +672,7 @@ int cv::getNumberOfCPUs(void)
 #elif defined __ANDROID__
     static int ncpus = getNumberOfCPUsImpl();
     return ncpus;
-#elif defined __linux__
+#elif defined __linux__ || defined __GLIBC__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;

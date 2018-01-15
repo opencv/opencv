@@ -284,6 +284,7 @@ public:
                     history->parent_ = h;
                 }
             }
+            CV_Assert(h != NULL);
             h->val = gray_level;
             h->size = size;
             h->head = head;
@@ -1106,6 +1107,11 @@ Ptr<MSER> MSER::create( int _delta, int _min_area, int _max_area,
                           _max_variation, _min_diversity,
                           _max_evolution, _area_threshold,
                           _min_margin, _edge_blur_size));
+}
+
+String MSER::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".MSER");
 }
 
 }

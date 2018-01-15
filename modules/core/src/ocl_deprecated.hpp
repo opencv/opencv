@@ -759,15 +759,15 @@ OCL_FUNC_P(cl_mem, clCreateBuffer,
 
 /*
 OCL_FUNC(cl_int, clRetainCommandQueue, (cl_command_queue command_queue), (command_queue))
-
+*/
 OCL_FUNC(cl_int, clGetCommandQueueInfo,
- (cl_command_queue command_queue,
- cl_command_queue_info param_name,
- size_t param_value_size,
- void * param_value,
- size_t * param_value_size_ret),
- (command_queue, param_name, param_value_size, param_value, param_value_size_ret))
-
+   (cl_command_queue command_queue,
+   cl_command_queue_info param_name,
+   size_t param_value_size,
+   void * param_value,
+   size_t * param_value_size_ret),
+   (command_queue, param_name, param_value_size, param_value, param_value_size_ret))
+/*
 OCL_FUNC_P(cl_mem, clCreateSubBuffer,
     (cl_mem buffer,
     cl_mem_flags flags,
@@ -968,7 +968,7 @@ OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
 
 OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
 
-
+/*
 OCL_FUNC_P(cl_program, clCreateProgramWithSource,
     (cl_context context,
     cl_uint count,
@@ -1014,7 +1014,7 @@ OCL_FUNC(cl_int, clGetProgramBuildInfo,
     void * param_value,
     size_t * param_value_size_ret),
     (program, device, param_name, param_value_size, param_value, param_value_size_ret))
-
+*/
 OCL_FUNC_P(cl_kernel, clCreateKernel,
     (cl_program program,
     const char * kernel_name,
@@ -1201,6 +1201,19 @@ OCL_FUNC(cl_int, clSetEventCallback,
     (event, command_exec_callback_type, pfn_event_notify, user_data))
 
 OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
+
+OCL_FUNC(cl_int, clWaitForEvents,
+    (cl_uint num_events, const cl_event *event_list),
+    (num_events, event_list))
+
+
+OCL_FUNC(cl_int, clGetEventProfilingInfo, (
+    cl_event event,
+    cl_profiling_info param_name,
+    size_t param_value_size,
+    void *param_value,
+    size_t *param_value_size_ret),
+    (event, param_name, param_value_size, param_value, param_value_size_ret))
 
 }
 

@@ -51,7 +51,7 @@
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4244 4510 4512 4610 )
+#pragma warning( disable: 4244 4510 4610 )
 #endif
 
 #ifdef __GNUC__
@@ -83,7 +83,7 @@ extern "C" {
 #endif
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( default: 4244 4510 4512 4610 )
+#pragma warning( default: 4244 4510 4610 )
 #endif
 
 #ifdef NDEBUG
@@ -147,6 +147,10 @@ extern "C" {
 #define AV_PIX_FMT_YUVJ420P PIX_FMT_YUVJ420P
 #define AV_PIX_FMT_GRAY16LE PIX_FMT_GRAY16LE
 #define AV_PIX_FMT_GRAY16BE PIX_FMT_GRAY16BE
+#endif
+
+#ifndef PKT_FLAG_KEY
+#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
 #endif
 
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
@@ -781,7 +785,23 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+#ifndef NO_GETENV
+    char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    if(options == NULL)
+    {
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+    }
+    else
+    {
+#if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(52, 17, 100) : CALC_FFMPEG_VERSION(52, 7, 0))
+        av_dict_parse_string(&dict, options, ";", "|", 0);
+#else
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
+    }
+#else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
     int err = avformat_open_input(&ic, _filename, NULL, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
@@ -1093,11 +1113,6 @@ double CvCapture_FFMPEG::get_duration_sec() const
         sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
     }
 
-    if (sec < eps_zero)
-    {
-        sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
-    }
-
     return sec;
 }
 
@@ -1297,6 +1312,7 @@ struct CvVideoWriter_FFMPEG
     AVStream        * video_st;
     int               input_pix_fmt;
     unsigned char   * aligned_input;
+    size_t            aligned_input_size;
     int               frame_width, frame_height;
     int               frame_idx;
     bool              ok;
@@ -1374,6 +1390,7 @@ void CvVideoWriter_FFMPEG::init()
     video_st = 0;
     input_pix_fmt = 0;
     aligned_input = NULL;
+    aligned_input_size = 0;
     img_convert_ctx = 0;
     frame_width = frame_height = 0;
     frame_idx = 0;
@@ -1554,7 +1571,11 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     // some formats want stream headers to be seperate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
+#if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+        c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+#else
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+#endif
     }
 #endif
 
@@ -1582,15 +1603,13 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #endif
     int ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
 
-    if (oc->oformat->flags & AVFMT_RAWPICTURE) {
+#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
+    if (oc->oformat->flags & AVFMT_RAWPICTURE)
+    {
         /* raw video case. The API will change slightly in the near
            futur for that */
         AVPacket pkt;
         av_init_packet(&pkt);
-
-#ifndef PKT_FLAG_KEY
-#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
-#endif
 
         pkt.flags |= PKT_FLAG_KEY;
         pkt.stream_index= video_st->index;
@@ -1598,7 +1617,10 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
         pkt.size= sizeof(AVPicture);
 
         ret = av_write_frame(oc, &pkt);
-    } else {
+    }
+    else
+#endif
+    {
         /* encode the image */
         AVPacket pkt;
         av_init_packet(&pkt);
@@ -1677,17 +1699,28 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 #endif
 
     // FFmpeg contains SIMD optimizations which can sometimes read data past
-    // the supplied input buffer. To ensure that doesn't happen, we pad the
-    // step to a multiple of 32 (that's the minimal alignment for which Valgrind
-    // doesn't raise any warnings).
-    const int STEP_ALIGNMENT = 32;
-    if( step % STEP_ALIGNMENT != 0 )
+    // the supplied input buffer.
+    // Related info: https://trac.ffmpeg.org/ticket/6763
+    // 1. To ensure that doesn't happen, we pad the step to a multiple of 32
+    // (that's the minimal alignment for which Valgrind doesn't raise any warnings).
+    // 2. (dataend - SIMD_SIZE) and (dataend + SIMD_SIZE) is from the same 4k page
+    const int CV_STEP_ALIGNMENT = 32;
+    const size_t CV_SIMD_SIZE = 32;
+    const size_t CV_PAGE_MASK = ~(4096 - 1);
+    const uchar* dataend = data + ((size_t)height * step);
+    if (step % CV_STEP_ALIGNMENT != 0 ||
+        (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
     {
-        int aligned_step = (step + STEP_ALIGNMENT - 1) & -STEP_ALIGNMENT;
+        int aligned_step = (step + CV_STEP_ALIGNMENT - 1) & ~(CV_STEP_ALIGNMENT - 1);
 
-        if( !aligned_input )
+        size_t new_size = (aligned_step * height + CV_SIMD_SIZE);
+
+        if (!aligned_input || aligned_input_size < new_size)
         {
-            aligned_input = (unsigned char*)av_mallocz(aligned_step * height);
+            if (aligned_input)
+                av_freep(&aligned_input);
+            aligned_input_size = new_size;
+            aligned_input = (unsigned char*)av_mallocz(aligned_input_size);
         }
 
         if (origin == 1)
@@ -1756,7 +1789,9 @@ void CvVideoWriter_FFMPEG::close()
     /* write the trailer, if any */
     if(ok && oc)
     {
-        if( (oc->oformat->flags & AVFMT_RAWPICTURE) == 0 )
+#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
+        if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
+#endif
         {
             for(;;)
             {
@@ -2055,7 +2090,11 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     outbuf = NULL;
 
-    if (!(oc->oformat->flags & AVFMT_RAWPICTURE)) {
+
+#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
+    if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
+#endif
+    {
         /* allocate output buffer */
         /* assume we will never get codec output with more than 4 bytes per pixel... */
         outbuf_size = width*height*4;
@@ -2360,7 +2399,11 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
         // some formats want stream headers to be seperate
         if (oc->oformat->flags & AVFMT_GLOBALHEADER)
         {
-            c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+            #if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+                c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+            #else
+                c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+            #endif
         }
     #endif
 

@@ -186,7 +186,7 @@ namespace
         }
 
         BufferPool pool(stream);
-        GpuMat objectsBuf = pool.getBuffer(1, maxNumObjects_, DataType<Rect>::type);
+        GpuMat objectsBuf = pool.getBuffer(1, maxNumObjects_, traits::Type<Rect>::value);
 
         unsigned int numDetections;
         ncvSafeCall( process(image, objectsBuf, ncvMinSize, numDetections) );
@@ -220,7 +220,7 @@ namespace
         }
 
         CV_Assert( gpu_objects.rows == 1 );
-        CV_Assert( gpu_objects.type() == DataType<Rect>::type );
+        CV_Assert( gpu_objects.type() == traits::Type<Rect>::value );
 
         Rect* ptr = gpu_objects.ptr<Rect>();
         objects.assign(ptr, ptr + gpu_objects.cols);
@@ -533,7 +533,7 @@ namespace
         const float grouping_eps = 0.2f;
 
         BufferPool pool(stream);
-        GpuMat objects = pool.getBuffer(1, maxNumObjects_, DataType<Rect>::type);
+        GpuMat objects = pool.getBuffer(1, maxNumObjects_, traits::Type<Rect>::value);
 
         // used for debug
         // candidates.setTo(cv::Scalar::all(0));
@@ -625,7 +625,7 @@ namespace
         }
 
         CV_Assert( gpu_objects.rows == 1 );
-        CV_Assert( gpu_objects.type() == DataType<Rect>::type );
+        CV_Assert( gpu_objects.type() == traits::Type<Rect>::value );
 
         Rect* ptr = gpu_objects.ptr<Rect>();
         objects.assign(ptr, ptr + gpu_objects.cols);

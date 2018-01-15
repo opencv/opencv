@@ -59,30 +59,16 @@ int main(int argc, char **argv)
     String classNamesFile = parser.get<String>("c_names");
     String resultFile = parser.get<String>("result");
 
-    //! [Create the importer of TensorFlow model]
-    Ptr<dnn::Importer> importer;
-    try                                     //Try to import TensorFlow AlexNet model
-    {
-        importer = dnn::createTensorflowImporter(modelFile);
-    }
-    catch (const cv::Exception &err)        //Importer can throw errors, we will catch them
-    {
-        std::cerr << err.msg << std::endl;
-    }
-    //! [Create the importer of Caffe model]
+    //! [Initialize network]
+    dnn::Net net = readNetFromTensorflow(modelFile);
+    //! [Initialize network]
 
-    if (!importer)
+    if (net.empty())
     {
         std::cerr << "Can't load network by using the mode file: " << std::endl;
         std::cerr << modelFile << std::endl;
         exit(-1);
     }
-
-    //! [Initialize network]
-    dnn::Net net;
-    importer->populateNet(net);
-    importer.release();                     //We don't need importer anymore
-    //! [Initialize network]
 
     //! [Prepare blob]
     Mat img = imread(imageFile);
@@ -92,12 +78,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    cv::Size inputImgSize = cv::Size(224, 224);
-
-    if (inputImgSize != img.size())
-        resize(img, img, inputImgSize);       //Resize image to input size
-
-    Mat inputBlob = blobFromImage(img);   //Convert Mat to image batch
+    Mat inputBlob = blobFromImage(img, 1.0f, Size(224, 224), Scalar(), true, false);   //Convert Mat to batch of images
     //! [Prepare blob]
     inputBlob -= 117.0;
     //! [Set input blob]

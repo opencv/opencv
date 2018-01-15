@@ -263,8 +263,4 @@ MyData:
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=A4yqVnByMMM) .
 
-\htmlonly
-<div align="center">
-<iframe title="File Input and Output using XML and YAML files in OpenCV" width="560" height="349" src="http://www.youtube.com/embed/A4yqVnByMMM?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{A4yqVnByMMM}

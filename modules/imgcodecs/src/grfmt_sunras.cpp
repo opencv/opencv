@@ -82,7 +82,7 @@ bool  SunRasterDecoder::readHeader()
 
     if( !m_strm.open( m_filename )) return false;
 
-    try
+    CV_TRY
     {
         m_strm.skip( 4 );
         m_width  = m_strm.getDWord();
@@ -142,7 +142,7 @@ bool  SunRasterDecoder::readHeader()
             }
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
     }
 
@@ -160,7 +160,7 @@ bool  SunRasterDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
     uchar* data = img.ptr();
-    int step = (int)img.step;
+    size_t step = img.step;
     uchar  gray_palette[256] = {0};
     bool   result = false;
     int  src_pitch = ((m_width*m_bpp + 7)/8 + 1) & -2;
@@ -179,7 +179,7 @@ bool  SunRasterDecoder::readData( Mat& img )
     if( !color && m_maptype == RMT_EQUAL_RGB )
         CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );
 
-    try
+    CV_TRY
     {
         m_strm.setPos( m_offset );
 
@@ -308,11 +308,11 @@ bad_decoding_1bpp:
                         code = m_strm.getByte();
 
                         if( color )
-                            data = FillUniColor( data, line_end, step, width3,
+                            data = FillUniColor( data, line_end, validateToInt(step), width3,
                                                  y, m_height, len,
                                                  m_palette[code] );
                         else
-                            data = FillUniGray( data, line_end, step, width3,
+                            data = FillUniGray( data, line_end, validateToInt(step), width3,
                                                 y, m_height, len,
                                                 gray_palette[code] );
                         if( y >= m_height )
@@ -374,7 +374,7 @@ bad_decoding_end:
             assert(0);
         }
     }
-    catch( ... )
+    CV_CATCH_ALL
     {
     }
 

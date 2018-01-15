@@ -1194,10 +1194,8 @@ static IppiHistogram_C1 getIppiHistogramFunction_C1(int type)
 {
     IppiHistogram_C1 ippFunction =
         (type == CV_8UC1) ? (IppiHistogram_C1)ippiHistogram_8u_C1R :
-#if IPP_VERSION_X100 >= 201700 || !(defined HAVE_IPP_ICV_ONLY)
         (type == CV_16UC1) ? (IppiHistogram_C1)ippiHistogram_16u_C1R :
         (type == CV_32FC1) ? (IppiHistogram_C1)ippiHistogram_32f_C1R :
-#endif
         NULL;
 
     return ippFunction;
@@ -1401,9 +1399,9 @@ static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float*
 {
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201801
     // No SSE42 optimization for uniform 32f
-#if IPP_DISABLE_PERF_HISTU32F_SSE42
-    if(uniform && image.depth() == CV_32F && !(ipp::getIppFeatures()&ippCPUID_AVX))
+    if(uniform && image.depth() == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
         return false;
 #endif
 

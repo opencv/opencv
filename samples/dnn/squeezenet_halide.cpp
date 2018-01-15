@@ -1,10 +1,3 @@
-// This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.
-//
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-
 // Sample of using Halide backend in OpenCV deep learning module.
 // Based on caffe_googlenet.cpp.
 
@@ -86,8 +79,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    resize(img, img, Size(227, 227));                // SqueezeNet v1.1 predict class by 3x227x227 input image.
-    Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(), false);  // Convert Mat to 4-dimensional batch.
+    Mat inputBlob = blobFromImage(img, 1.0, Size(227, 227), Scalar(), false, false);  // Convert Mat to 4-dimensional batch.
     //! [Prepare blob]
 
     //! [Set input blob]

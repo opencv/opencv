@@ -74,6 +74,10 @@ struct CV_EXPORTS IndexParams
                 std::vector<double>& numValues) const;
 
     void* params;
+
+private:
+    IndexParams(const IndexParams &); // copy disabled
+    IndexParams& operator=(const IndexParams &); // assign disabled
 };
 
 struct CV_EXPORTS KDTreeIndexParams : public IndexParams

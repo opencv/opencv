@@ -126,6 +126,7 @@ CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
 CvCapture* cvCreateFileCapture_OpenNI2( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
+CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
 CvCapture* cvCreateCameraCapture_Aravis( int index );
 
