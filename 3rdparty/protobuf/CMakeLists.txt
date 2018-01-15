@@ -11,6 +11,8 @@ if(MSVC)
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146
                                        /wd4305 /wd4127 /wd4100 /wd4512 /wd4125 /wd4389 /wd4510 /wd4610
                                        /wd4702 /wd4456 /wd4457 /wd4065 /wd4310 /wd4661 /wd4506
+                                       /wd4701 /wd4703     # potentially uninitialized local/pointer variable 'value' used
+                                       /wd4505             # unreferenced local function has been removed
   )
 else()
   #NOTE: -Wno-invalid-offsetof was used as solution for invalid offset warning on protobuf #3450
