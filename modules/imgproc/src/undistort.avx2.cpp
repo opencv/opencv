@@ -48,9 +48,9 @@ namespace cv
 
 int initUndistortRectifyMapLine_AVX(float* m1f, float* m2f, short* m1, ushort* m2, double* matTilt, const double* ir,
                                     double& _x, double& _y, double& _w, int width, int m1type,
-                                    double& k1, double& k2, double& k3, double& k4, double& k5, double& k6,
-                                    double& p1, double& p2, double& s1, double& s2, double& s3, double& s4,
-                                    double& u0, double& v0, double& fx, double& fy)
+                                    double k1, double k2, double k3, double k4, double k5, double k6,
+                                    double p1, double p2, double s1, double s2, double s3, double s4,
+                                    double u0, double v0, double fx, double fy)
 {
     int j = 0;
 
