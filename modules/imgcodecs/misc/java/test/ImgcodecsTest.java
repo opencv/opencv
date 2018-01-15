@@ -1,4 +1,4 @@
-package org.opencv.test.highgui;
+package org.opencv.test.imgcodecs;
 
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfInt;
@@ -6,7 +6,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
-public class HighguiTest extends OpenCVTestCase {
+public class ImgcodecsTest extends OpenCVTestCase {
 
     public void testImdecode() {
         fail("Not yet implemented");

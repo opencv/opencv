@@ -268,6 +268,8 @@ public:
 
     bool setScale(const Ptr<ScaleLayer>& layer)
     {
+        if (layer.empty() || layer->blobs.empty())
+            return false;
         scaleLayer = layer;
         // we will need to re-compute the weights with the scaling
         // coefficients taken into account
@@ -276,7 +278,7 @@ public:
         newWeightAndBias = true;
         fusedBias = false;
 #endif
-        return !scaleLayer.empty();
+        return true;
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
@@ -709,6 +711,10 @@ public:
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
+        CV_Assert(outputs.size() == 1);
+        for (int i = 0; i < inputs.size(); ++i)
+            CV_Assert(inputs[i].u != outputs[0].u);
+
         int group = inputs[0].size[1] / umat_blobs[0].size[1];
 
         if (convolutionOp.empty())
@@ -913,7 +919,9 @@ public:
                name.c_str(), inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3],
                kernel.width, kernel.height, pad.width, pad.height,
                stride.width, stride.height, dilation.width, dilation.height);*/
-        CV_Assert(inputs.size() == (size_t)1 && inputs[0]->size[1] % blobs[0].size[1] == 0);
+        CV_Assert(inputs.size() == (size_t)1, inputs[0]->size[1] % blobs[0].size[1] == 0,
+                  outputs.size() == 1, inputs[0]->data != outputs[0].data);
+
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
         int k, outCn = blobs[0].size[0];

@@ -60,7 +60,7 @@ class TypeInfoForTypeResolver : public TypeInfo {
 
   virtual util::StatusOr<const google::protobuf::Type*> ResolveTypeUrl(
       StringPiece type_url) const {
-    map<StringPiece, StatusOrType>::iterator it = cached_types_.find(type_url);
+    std::map<StringPiece, StatusOrType>::iterator it = cached_types_.find(type_url);
     if (it != cached_types_.end()) {
       return it->second;
     }
@@ -85,7 +85,7 @@ class TypeInfoForTypeResolver : public TypeInfo {
 
   virtual const google::protobuf::Enum* GetEnumByTypeUrl(
       StringPiece type_url) const {
-    map<StringPiece, StatusOrEnum>::iterator it = cached_enums_.find(type_url);
+    std::map<StringPiece, StatusOrEnum>::iterator it = cached_enums_.find(type_url);
     if (it != cached_enums_.end()) {
       return it->second.ok() ? it->second.ValueOrDie() : NULL;
     }
@@ -123,8 +123,8 @@ class TypeInfoForTypeResolver : public TypeInfo {
   typedef util::StatusOr<const google::protobuf::Enum*> StatusOrEnum;
 
   template <typename T>
-  static void DeleteCachedTypes(map<StringPiece, T>* cached_types) {
-    for (typename map<StringPiece, T>::iterator it = cached_types->begin();
+  static void DeleteCachedTypes(std::map<StringPiece, T>* cached_types) {
+    for (typename std::map<StringPiece, T>::iterator it = cached_types->begin();
          it != cached_types->end(); ++it) {
       if (it->second.ok()) {
         delete it->second.ValueOrDie();
@@ -153,11 +153,11 @@ class TypeInfoForTypeResolver : public TypeInfo {
   // cached_types_, cached_enums_ and camel_case_name_table_.
   mutable set<string> string_storage_;
 
-  mutable map<StringPiece, StatusOrType> cached_types_;
-  mutable map<StringPiece, StatusOrEnum> cached_enums_;
+  mutable std::map<StringPiece, StatusOrType> cached_types_;
+  mutable std::map<StringPiece, StatusOrEnum> cached_enums_;
 
   mutable set<const google::protobuf::Type*> indexed_types_;
-  mutable map<StringPiece, StringPiece> camel_case_name_table_;
+  mutable std::map<StringPiece, StringPiece> camel_case_name_table_;
 };
 }  // namespace
 

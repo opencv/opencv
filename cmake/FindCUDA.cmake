@@ -76,11 +76,12 @@
 #   CUDA_HOST_COMPILATION_CPP (Default ON)
 #   -- Set to OFF for C compilation of host code.
 #
-#   CUDA_HOST_COMPILER (Default CMAKE_C_COMPILER, $(VCInstallDir)/bin for VS)
+#   CUDA_HOST_COMPILER (Default CMAKE_C_COMPILER)
 #   -- Set the host compiler to be used by nvcc.  Ignored if -ccbin or
 #      --compiler-bindir is already present in the CUDA_NVCC_FLAGS or
-#      CUDA_NVCC_FLAGS_<CONFIG> variables.  For Visual Studio targets
-#      $(VCInstallDir)/bin is a special value that expands out to the path when
+#      CUDA_NVCC_FLAGS_<CONFIG> variables.  For Visual Studio targets,
+#      the host compiler is constructed with one or more visual studio macros
+#      such as $(VCInstallDir), that expands out to the path when
 #      the command is run from withing VS.
 #
 #   CUDA_NVCC_FLAGS
@@ -450,7 +451,13 @@ option(CUDA_HOST_COMPILATION_CPP "Generated file extension" ON)
 set(CUDA_NVCC_FLAGS "" CACHE STRING "Semi-colon delimit multiple arguments.")
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  set(CUDA_HOST_COMPILER "$(VCInstallDir)bin" CACHE FILEPATH "Host side compiler used by NVCC")
+  set(_CUDA_MSVC_HOST_COMPILER "$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)")
+  if(MSVC_VERSION LESS 1910)
+   set(_CUDA_MSVC_HOST_COMPILER "$(VCInstallDir)bin")
+  endif()
+
+  set(CUDA_HOST_COMPILER "${_CUDA_MSVC_HOST_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
+
 else()
   # Using cc which is symlink to clang may let NVCC think it is GCC and issue
   # unhandled -dumpspecs option to clang. Also in case neither
@@ -1132,11 +1139,11 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
   endif()
 
   # This needs to be passed in at this stage, because VS needs to fill out the
-  # value of VCInstallDir from within VS.  Note that CCBIN is only used if
+  # various macros from within VS.  Note that CCBIN is only used if
   # -ccbin or --compiler-bindir isn't used and CUDA_HOST_COMPILER matches
-  # $(VCInstallDir)/bin.
+  # _CUDA_MSVC_HOST_COMPILER
   if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    set(ccbin_flags -D "\"CCBIN:PATH=$(VCInstallDir)bin\"" )
+    set(ccbin_flags -D "\"CCBIN:PATH=${_CUDA_MSVC_HOST_COMPILER}\"" )
   else()
     set(ccbin_flags)
   endif()

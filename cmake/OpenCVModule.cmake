@@ -774,6 +774,9 @@ endmacro()
 #   ocv_create_module()
 macro(ocv_create_module)
   ocv_debug_message("${the_module}: ocv_create_module(" ${ARGN} ")")
+  if(OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS")
+    message(FATAL_ERROR "Bindings module can't call ocv_create_module()")
+  endif()
   if(NOT " ${ARGN}" STREQUAL " ")
     set(OPENCV_MODULE_${the_module}_LINK_DEPS "${OPENCV_MODULE_${the_module}_LINK_DEPS};${ARGN}" CACHE INTERNAL "")
   endif()
@@ -886,7 +889,10 @@ macro(_ocv_create_module)
     DEFINE_SYMBOL CVAPI_EXPORTS
   )
 
-  if(ANDROID AND BUILD_FAT_JAVA_LIB)
+  if(BUILD_FAT_JAVA_LIB)  # force exports from static modules too
+    if(BUILD_SHARED_LIBS)
+      message(FATAL_ERROR "Assertion failed: BUILD_SHARED_LIBS=OFF must be off if BUILD_FAT_JAVA_LIB=ON")
+    endif()
     target_compile_definitions(${the_module} PRIVATE CVAPI_EXPORTS)
   endif()
 

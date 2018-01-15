@@ -1284,7 +1284,7 @@ class MaximumMatcher {
   int count1_;
   int count2_;
   google::protobuf::scoped_ptr<NodeMatchCallback> match_callback_;
-  map<pair<int, int>, bool> cached_match_results_;
+  std::map<pair<int, int>, bool> cached_match_results_;
   vector<int>* match_list1_;
   vector<int>* match_list2_;
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MaximumMatcher);
@@ -1322,7 +1322,7 @@ int MaximumMatcher::FindMaximumMatch(bool early_return) {
 
 bool MaximumMatcher::Match(int left, int right) {
   pair<int, int> p(left, right);
-  map<pair<int, int>, bool>::iterator it = cached_match_results_.find(p);
+  std::map<pair<int, int>, bool>::iterator it = cached_match_results_.find(p);
   if (it != cached_match_results_.end()) {
     return it->second;
   }

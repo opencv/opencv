@@ -292,7 +292,11 @@ bool  TiffDecoder::readData( Mat& img )
 {
     if(m_hdr && img.type() == CV_32FC3)
     {
-        return readHdrData(img);
+        return readData_32FC3(img);
+    }
+    if(img.type() == CV_32FC1)
+    {
+        return readData_32FC1(img);
     }
     bool result = false;
     bool color = img.channels() > 1;
@@ -528,8 +532,9 @@ bool  TiffDecoder::readData( Mat& img )
     return result;
 }
 
-bool TiffDecoder::readHdrData(Mat& img)
+bool TiffDecoder::readData_32FC3(Mat& img)
 {
+
     int rows_per_strip = 0, photometric = 0;
     if(!m_tif)
     {
@@ -556,6 +561,44 @@ bool TiffDecoder::readHdrData(Mat& img)
     {
         cvtColor(img, img, COLOR_RGB2BGR);
     }
+    return true;
+}
+
+bool TiffDecoder::readData_32FC1(Mat& img)
+{
+    if(!m_tif)
+    {
+        return false;
+    }
+    TIFF *tif = static_cast<TIFF*>(m_tif);
+
+    uint32 img_width, img_height;
+    TIFFGetField(tif,TIFFTAG_IMAGEWIDTH, &img_width);
+    TIFFGetField(tif,TIFFTAG_IMAGELENGTH, &img_height);
+    if(img.size() != Size(img_width,img_height))
+    {
+        close();
+        return false;
+    }
+    tsize_t scanlength = TIFFScanlineSize(tif);
+    tdata_t buf = _TIFFmalloc(scanlength);
+    float* data;
+    for (uint32 row = 0; row < img_height; row++)
+    {
+        if (TIFFReadScanline(tif, buf, row) != 1)
+        {
+            close();
+            return false;
+        }
+        data=(float*)buf;
+        for (uint32 i=0; i<img_width; i++)
+        {
+            img.at<float>(row,i) = data[i];
+        }
+    }
+    _TIFFfree(buf);
+    close();
+
     return true;
 }
 
@@ -818,7 +861,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
     return true;
 }
 
-bool TiffEncoder::writeHdr(const Mat& _img)
+bool TiffEncoder::write_32FC3(const Mat& _img)
 {
     Mat img;
     cvtColor(_img, img, COLOR_BGR2XYZ);
@@ -857,13 +900,58 @@ bool TiffEncoder::writeHdr(const Mat& _img)
     return true;
 }
 
+bool TiffEncoder::write_32FC1(const Mat& _img)
+{
+
+    TIFF* tif;
+
+    TiffEncoderBufHelper buf_helper(m_buf);
+    if ( m_buf )
+    {
+        tif = buf_helper.open();
+    }
+    else
+    {
+        tif = TIFFOpen(m_filename.c_str(), "w");
+    }
+
+    if (!tif)
+    {
+        return false;
+    }
+
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, _img.cols);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, _img.rows);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 32);
+    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+    TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP);
+    TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
+    for (uint32 row = 0; row < (uint32)_img.rows; row++)
+    {
+        if (TIFFWriteScanline(tif, (tdata_t)_img.ptr<float>(row), row, 1) != 1)
+        {
+            TIFFClose(tif);
+            return false;
+        }
+    }
+    TIFFWriteDirectory(tif);
+    TIFFClose(tif);
+
+    return true;
+}
+
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 {
     int depth = img.depth();
 
     if(img.type() == CV_32FC3)
     {
-        return writeHdr(img); // TODO Rename
+        return write_32FC3(img);
+    }
+    if(img.type() == CV_32FC1)
+    {
+        return write_32FC1(img);
     }
 
     CV_Assert(depth == CV_8U || depth == CV_16U);

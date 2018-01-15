@@ -30,6 +30,7 @@ const char* params
       "{ model          |       | model weights (res10_300x300_ssd_iter_140000.caffemodel) }"
       "{ camera_device  | 0     | camera device number }"
       "{ video          |       | video or image for detection }"
+      "{ opencl         | false | enable OpenCL }"
       "{ min_confidence | 0.5   | min confidence       }";
 
 int main(int argc, char** argv)
@@ -60,6 +61,11 @@ int main(int argc, char** argv)
         cerr << "or here:" << endl;
         cerr << "https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector" << endl;
         exit(-1);
+    }
+
+    if (parser.get<bool>("opencl"))
+    {
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
     }
 
     VideoCapture cap;

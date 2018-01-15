@@ -53,6 +53,8 @@
 #include "utils.hpp"
 #include "grfmt_pam.hpp"
 
+using namespace cv;
+
 /* the PAM related fields */
 #define MAX_PAM_HEADER_IDENITFIER_LENGTH 8
 #define MAX_PAM_HEADER_VALUE_LENGTH 255
@@ -184,7 +186,7 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                     }
                     break;
                 default:
-                    assert (0);
+                    CV_Error(Error::StsInternal, "");
             }
             break;
         }
@@ -205,12 +207,12 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                     }
                     break;
                 default:
-                    assert (0);
+                    CV_Error(Error::StsInternal, "");
             }
             break;
         }
         default:
-            assert (0);
+            CV_Error(Error::StsInternal, "");
     }
 }
 
@@ -487,7 +489,7 @@ bool  PAMDecoder::readData( Mat& img )
     bool res = false, funcout;
     PaletteEntry palette[256];
     const struct pam_format *fmt = NULL;
-    struct channel_layout layout;
+    struct channel_layout layout = { 0, 0, 0, 0 }; // normalized to 1-channel grey format
 
     /* setting buffer to max data size so scaling up is possible */
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
@@ -506,9 +508,7 @@ bool  PAMDecoder::readData( Mat& img )
             layout.bchan = 0;
             layout.gchan = 1;
             layout.rchan = 2;
-        } else
-            layout.bchan = layout.gchan = layout.rchan = 0;
-        layout.graychan = 0;
+        }
     }
 
     CV_TRY
@@ -713,7 +713,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
         } else
             strm.putBytes( data, stride*height );
     } else
-        assert (0);
+        CV_Error(Error::StsInternal, "");
 
     strm.close();
     return true;
