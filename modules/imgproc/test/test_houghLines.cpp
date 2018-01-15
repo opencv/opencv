@@ -153,12 +153,12 @@ public:
     {
         paramRho.min = std::tr1::get<0>(GetParam());
         paramRho.max = std::tr1::get<1>(GetParam());
-        paramRho.step = (paramRho.max - paramRho.min) / 180.0f;
+        paramRho.step = (paramRho.max - paramRho.min) / 360.0f;
         paramTheta.min = std::tr1::get<2>(GetParam());
         paramTheta.max = std::tr1::get<3>(GetParam());
-        paramTheta.step = CV_PI / 360.0f;
-        Rho = 320.0f;
-        Theta = 1.047198f;
+        paramTheta.step = CV_PI / 180.0f;
+        Rho = 320.00000;    // rho =  320 pix
+        Theta = 1.04719;    // theta = 60 deg
     }
 };
 
@@ -221,12 +221,13 @@ void BaseHoughLineTest::run_test(int type)
 void HoughLinesUsingSetOfPointsTest::run_test(void)
 {
     HoughLinePolar houghpolar[20];
+
     static const float Points[20][2] = {
-    { 0.0f,   369.50417f }, { 10.0f,  363.73067f }, { 20.0f,  357.95717f }, { 30.0f,  352.18366f },
-    { 40.0f,  346.41016f }, { 50.0f,  340.63666f }, { 60.0f,  334.86316f }, { 70.0f,  329.08965f },
-    { 80.0f,  323.31615f }, { 90.0f,  317.54265f }, { 100.0f, 311.76915f }, { 110.0f, 305.99564f },
-    { 120.0f, 300.22214f }, { 130.0f, 294.44864f }, { 140.0f, 288.67514f }, { 150.0f, 282.90163f },
-    { 160.0f, 277.12813f }, { 170.0f, 271.35463f }, { 180.0f, 265.58112f }, { 190.0f, 259.80762f }
+    { 0.0f,   369.0f }, { 10.0f,  364.0f }, { 20.0f,  358.0f }, { 30.0f,  352.0f },
+    { 40.0f,  346.0f }, { 50.0f,  341.0f }, { 60.0f,  335.0f }, { 70.0f,  329.0f },
+    { 80.0f,  323.0f }, { 90.0f,  318.0f }, { 100.0f, 312.0f }, { 110.0f, 306.0f },
+    { 120.0f, 300.0f }, { 130.0f, 295.0f }, { 140.0f, 289.0f }, { 150.0f, 284.0f },
+    { 160.0f, 277.0f }, { 170.0f, 271.0f }, { 180.0f, 266.0f }, { 190.0f, 260.0f }
     };
 
     Point2f point[20];
@@ -239,7 +240,7 @@ void HoughLinesUsingSetOfPointsTest::run_test(void)
 
     polar_index = HoughLinesUsingSetOfPoints(20, point, &paramRho, &paramTheta, 20, houghpolar);
 
-    EXPECT_EQ((int) ((houghpolar + polar_index)->rho * 10.0f), (int) (Rho * 10.0f));
+    EXPECT_EQ((int) ((houghpolar + polar_index)->rho * 100000.0f), (int) (Rho * 100000.0f));
     EXPECT_EQ((int) ((houghpolar + polar_index)->angle * 100000.0f), (int) (Theta * 100000.0f));
 }
 
@@ -272,8 +273,8 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
 
-INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 120.0f ),             // rhoMin
-                                                                                   testing::Values( 320.0f, 320.0f ),         // rhoMax
-                                                                                   testing::Values( 0, (CV_PI / 6.0f) ),                   // thetaMin
-                                                                                   testing::Values( (CV_PI / 2.0f), (CV_PI / 2.0f) )   // thetaMax
+INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 120.0f ),                             // rhoMin
+                                                                                   testing::Values( 360.0f, 480.0f ),                           // rhoMax
+                                                                                   testing::Values( 0.0f, (CV_PI / 18.0f) ),                    // thetaMin
+                                                                                   testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )    // thetaMax
                                                                                    ));

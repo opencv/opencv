@@ -2164,9 +2164,9 @@ struct CV_EXPORTS_W_SIMPLE HoughDetectParam
     double step;
 };
 
-CV_EXPORTS_W int HoughLinesUsingSetOfPoints( int point_cnt_max, const Point2f point[],
+CV_EXPORTS_W int HoughLinesUsingSetOfPoints( int point_cnt, const Point2f point[],
                                              const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
-                                             int polar_cnt_max, CV_OUT HoughLinePolar hough_polar[] );
+                                             int polar_cnt, CV_OUT HoughLinePolar hough_polar[] );
 
 //! @} imgproc_feature
 

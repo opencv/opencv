@@ -172,115 +172,42 @@ OCL_TEST_P(HoughLinesP, RealImage)
 }
 
 //////////////////////// HoughLinesUsingSetOfPoints ///////////////////////////
-PARAM_TEST_CASE(HoughLinesUsingSetOfPoints, int, double, double, double, double, int)
+PARAM_TEST_CASE(HoughLinesUsingSetOfPoints, double, double, double, double)
 {
-    int point_cnt, polar_cnt;
-    Point2f *point = NULL;
-    HoughLinePolar *hough_polar = NULL;
-    HoughDetectParam rho_param, theta_param;
-
-    Size src_size;
-    Mat src, dst;
-    UMat usrc, udst;
+    HoughDetectParam paramRho, paramTheta;
 
     virtual void SetUp()
     {
-        point_cnt = GET_PARAM(0);
-        rho_param.min = GET_PARAM(1);
-        rho_param.max = GET_PARAM(2);
-        rho_param.step = (rho_param.max - rho_param.min) / 180.0f;
-        theta_param.min = GET_PARAM(3);
-        theta_param.max = GET_PARAM(4);
-        theta_param.step = (theta_param.max - theta_param.min) / 256.0f;
-        polar_cnt = GET_PARAM(5);
-    }
-
-    void detectEdge()
-    {
-        float edge = 0.0f;
-        int point_cnt_temp = 0;
-        Point2f *point_work = point;
-        for (int y = 0; y < src.rows; y++)
-        {
-            for (int x = 0; x < src.cols; x++)
-            {
-                edge = src.at<float>(y, x);
-                if ((point_cnt_temp < point_cnt) && (edge > 150))
-                {
-                    point_work->x = (float)x;
-                    point_work->y = (float)y;
-                    point_cnt_temp++;
-                    // Pointer increment
-                    point_work++;
-                }
-            }
-        }
-    }
-
-    void mallocPoints()
-    {
-        if (point_cnt > 0)
-        {
-            point = (Point2f*)malloc(sizeof(Point2f) * point_cnt);
-        }
-        else
-        {
-            point = NULL;
-        }
-    }
-
-    void freePoints()
-    {
-        if (point != NULL)
-        {
-            free(point);
-        }
-    }
-
-    void mallocHoughPolar()
-    {
-        if (polar_cnt > 0)
-        {
-            hough_polar = (HoughLinePolar*)fastMalloc(sizeof(HoughLinePolar) * polar_cnt);
-        }
-        else
-        {
-            hough_polar = NULL;
-        }
-    }
-
-    void freeHoughPolar()
-    {
-        if (hough_polar != NULL)
-        {
-            fastFree(hough_polar);
-        }
-    }
-
-    void readTestData()
-    {
-        Mat img = readImage("shared/pic5.png", IMREAD_GRAYSCALE);
-        Canny(img, src, 50, 200, 3);
-        src.copyTo(usrc);
+        paramRho.min = std::tr1::get<0>(GetParam());
+        paramRho.max = std::tr1::get<1>(GetParam());
+        paramRho.step = (paramRho.max - paramRho.min) / 360.0f;
+        paramTheta.min = std::tr1::get<2>(GetParam());
+        paramTheta.max = std::tr1::get<3>(GetParam());
+        paramTheta.step = CV_PI / 180.0f;
     }
 };
 
 OCL_TEST_P(HoughLinesUsingSetOfPoints, RealImage)
 {
-    readTestData();
+    HoughLinePolar houghpolar[20];
+    static const float Points[20][2] = {
+        { 0.0f,   369.0f },{ 10.0f,  364.0f },{ 20.0f,  358.0f },{ 30.0f,  352.0f },
+        { 40.0f,  346.0f },{ 50.0f,  341.0f },{ 60.0f,  335.0f },{ 70.0f,  329.0f },
+        { 80.0f,  323.0f },{ 90.0f,  318.0f },{ 100.0f, 312.0f },{ 110.0f, 306.0f },
+        { 120.0f, 300.0f },{ 130.0f, 295.0f },{ 140.0f, 289.0f },{ 150.0f, 284.0f },
+        { 160.0f, 277.0f },{ 170.0f, 271.0f },{ 180.0f, 266.0f },{ 190.0f, 260.0f }
+    };
 
-    mallocPoints();
+    Point2f point[20];
+    int polar_index = 0;
+    for (int i = 0; i < 20; i++)
+    {
+        point[i].x = Points[i][0];
+        point[i].y = Points[i][1];
+    }
 
-    mallocHoughPolar();
-
-    detectEdge();
-
-    //OCL_OFF(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
-    //OCL_ON(cv::HoughLinesUsingSetOfPoints(point_cnt, point, &rho_param, &theta_param, polar_cnt, hough_polar));
-
-
-    freePoints();
-    freeHoughPolar();
+    OCL_OFF(cv::HoughLinesUsingSetOfPoints(20, point, &paramRho, &paramTheta, 20, houghpolar));
+    OCL_ON(cv::HoughLinesUsingSetOfPoints(20, point, &paramRho, &paramTheta, 20, houghpolar));
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
@@ -291,12 +218,10 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesP, Combine(Values(100, 150),     
                                                           Values(50, 100),                      // minLineLength
                                                           Values(5, 10)));                      // maxLineGap
 
-OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesUsingSetOfPoints, Combine(Values(256, 512),               // pointCnt
-                                                                         Values(0.0f, 0.0f),             // rhoMin
-                                                                         Values(180.0f, 320.0f),         // rhoMax
-                                                                         Values(0, 0),                   // thetaMin
-                                                                         Values(CV_PI / 2.0f, CV_PI),    // thetaMax
-                                                                         Values(10, 20)));               // polarCnt
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesUsingSetOfPoints, Combine(Values(0.0f, 120.0f),                              // rhoMin
+                                                                         Values(360.0f, 480.0f),                            // rhoMax
+                                                                         Values(0.0f, (CV_PI / 18.0f)),                     // thetaMin
+                                                                         Values((CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f))));  // thetaMax
 
 } } // namespace cvtest::ocl
 
