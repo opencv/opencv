@@ -1614,7 +1614,8 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     std::vector<Point2f> a(ransacSize0);
     std::vector<Point2f> b(ransacSize0);
 
-    int * idx = new int idx[ransacSize0];
+    int * idx;
+    idx = new int[ransacSize0];
 
     // RANSAC stuff:
     // 1. find the consensus
