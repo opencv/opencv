@@ -37,7 +37,6 @@
 #ifndef GOOGLE_PROTOBUF_MAP_H__
 #define GOOGLE_PROTOBUF_MAP_H__
 
-#include <google/protobuf/stubs/hash.h>
 #include <iterator>
 #include <limits>  // To support Visual Studio 2008
 #include <set>
@@ -47,11 +46,7 @@
 #include <google/protobuf/arena.h>
 #include <google/protobuf/generated_enum_util.h>
 #include <google/protobuf/map_type_handler.h>
-#include <google/protobuf/message.h>
-#include <google/protobuf/descriptor.h>
-#if __cpp_exceptions && LANG_CXX11
-#include <random>
-#endif
+#include <google/protobuf/stubs/hash.h>
 
 namespace google {
 namespace protobuf {
@@ -64,16 +59,14 @@ class MapIterator;
 template <typename Enum> struct is_proto_enum;
 
 namespace internal {
-template <typename Key, typename T,
+template <typename Derived, typename Key, typename T,
           WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
+          WireFormatLite::FieldType value_wire_type, int default_enum_value>
 class MapFieldLite;
 
-template <typename Key, typename T,
+template <typename Derived, typename Key, typename T,
           WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
+          WireFormatLite::FieldType value_wire_type, int default_enum_value>
 class MapField;
 
 template <typename Key, typename T>
@@ -83,389 +76,6 @@ class DynamicMapField;
 
 class GeneratedMessageReflection;
 }  // namespace internal
-
-#define TYPE_CHECK(EXPECTEDTYPE, METHOD)                        \
-  if (type() != EXPECTEDTYPE) {                                 \
-    GOOGLE_LOG(FATAL)                                                  \
-        << "Protocol Buffer map usage error:\n"                 \
-        << METHOD << " type does not match\n"                   \
-        << "  Expected : "                                      \
-        << FieldDescriptor::CppTypeName(EXPECTEDTYPE) << "\n"   \
-        << "  Actual   : "                                      \
-        << FieldDescriptor::CppTypeName(type());                \
-  }
-
-// MapKey is an union type for representing any possible
-// map key.
-class LIBPROTOBUF_EXPORT MapKey {
- public:
-  MapKey() : type_(0) {
-  }
-  MapKey(const MapKey& other) : type_(0) {
-    CopyFrom(other);
-  }
-
-  ~MapKey() {
-    if (type_ == FieldDescriptor::CPPTYPE_STRING) {
-      delete val_.string_value_;
-    }
-  }
-
-  FieldDescriptor::CppType type() const {
-    if (type_ == 0) {
-      GOOGLE_LOG(FATAL)
-          << "Protocol Buffer map usage error:\n"
-          << "MapKey::type MapKey is not initialized. "
-          << "Call set methods to initialize MapKey.";
-    }
-    return (FieldDescriptor::CppType)type_;
-  }
-
-  void SetInt64Value(int64 value) {
-    SetType(FieldDescriptor::CPPTYPE_INT64);
-    val_.int64_value_ = value;
-  }
-  void SetUInt64Value(uint64 value) {
-    SetType(FieldDescriptor::CPPTYPE_UINT64);
-    val_.uint64_value_ = value;
-  }
-  void SetInt32Value(int32 value) {
-    SetType(FieldDescriptor::CPPTYPE_INT32);
-    val_.int32_value_ = value;
-  }
-  void SetUInt32Value(uint32 value) {
-    SetType(FieldDescriptor::CPPTYPE_UINT32);
-    val_.uint32_value_ = value;
-  }
-  void SetBoolValue(bool value) {
-    SetType(FieldDescriptor::CPPTYPE_BOOL);
-    val_.bool_value_ = value;
-  }
-  void SetStringValue(const string& val) {
-    SetType(FieldDescriptor::CPPTYPE_STRING);
-    *val_.string_value_ = val;
-  }
-
-  int64 GetInt64Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_INT64,
-               "MapKey::GetInt64Value");
-    return val_.int64_value_;
-  }
-  uint64 GetUInt64Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_UINT64,
-               "MapKey::GetUInt64Value");
-    return val_.uint64_value_;
-  }
-  int32 GetInt32Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_INT32,
-               "MapKey::GetInt32Value");
-    return val_.int32_value_;
-  }
-  uint32 GetUInt32Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_UINT32,
-               "MapKey::GetUInt32Value");
-    return val_.uint32_value_;
-  }
-  bool GetBoolValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_BOOL,
-               "MapKey::GetBoolValue");
-    return val_.bool_value_;
-  }
-  const string& GetStringValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_STRING,
-               "MapKey::GetStringValue");
-    return *val_.string_value_;
-  }
-
-  bool operator<(const MapKey& other) const {
-    if (type_ != other.type_) {
-      // We could define a total order that handles this case, but
-      // there currently no need.  So, for now, fail.
-      GOOGLE_LOG(FATAL) << "Unsupported: type mismatch";
-    }
-    switch (type()) {
-      case FieldDescriptor::CPPTYPE_DOUBLE:
-      case FieldDescriptor::CPPTYPE_FLOAT:
-      case FieldDescriptor::CPPTYPE_ENUM:
-      case FieldDescriptor::CPPTYPE_MESSAGE:
-        GOOGLE_LOG(FATAL) << "Unsupported";
-        return false;
-      case FieldDescriptor::CPPTYPE_STRING:
-        return *val_.string_value_ < *other.val_.string_value_;
-      case FieldDescriptor::CPPTYPE_INT64:
-        return val_.int64_value_ < other.val_.int64_value_;
-      case FieldDescriptor::CPPTYPE_INT32:
-        return val_.int32_value_ < other.val_.int32_value_;
-      case FieldDescriptor::CPPTYPE_UINT64:
-        return val_.uint64_value_ < other.val_.uint64_value_;
-      case FieldDescriptor::CPPTYPE_UINT32:
-        return val_.uint32_value_ < other.val_.uint32_value_;
-      case FieldDescriptor::CPPTYPE_BOOL:
-        return val_.bool_value_ < other.val_.bool_value_;
-    }
-    return false;
-  }
-
-  bool operator==(const MapKey& other) const {
-    if (type_ != other.type_) {
-      // To be consistent with operator<, we don't allow this either.
-      GOOGLE_LOG(FATAL) << "Unsupported: type mismatch";
-    }
-    switch (type()) {
-      case FieldDescriptor::CPPTYPE_DOUBLE:
-      case FieldDescriptor::CPPTYPE_FLOAT:
-      case FieldDescriptor::CPPTYPE_ENUM:
-      case FieldDescriptor::CPPTYPE_MESSAGE:
-        GOOGLE_LOG(FATAL) << "Unsupported";
-        break;
-      case FieldDescriptor::CPPTYPE_STRING:
-        return *val_.string_value_ == *other.val_.string_value_;
-      case FieldDescriptor::CPPTYPE_INT64:
-        return val_.int64_value_ == other.val_.int64_value_;
-      case FieldDescriptor::CPPTYPE_INT32:
-        return val_.int32_value_ == other.val_.int32_value_;
-      case FieldDescriptor::CPPTYPE_UINT64:
-        return val_.uint64_value_ == other.val_.uint64_value_;
-      case FieldDescriptor::CPPTYPE_UINT32:
-        return val_.uint32_value_ == other.val_.uint32_value_;
-      case FieldDescriptor::CPPTYPE_BOOL:
-        return val_.bool_value_ == other.val_.bool_value_;
-    }
-    GOOGLE_LOG(FATAL) << "Can't get here.";
-    return false;
-  }
-
-  void CopyFrom(const MapKey& other) {
-    SetType(other.type());
-    switch (type_) {
-      case FieldDescriptor::CPPTYPE_DOUBLE:
-      case FieldDescriptor::CPPTYPE_FLOAT:
-      case FieldDescriptor::CPPTYPE_ENUM:
-      case FieldDescriptor::CPPTYPE_MESSAGE:
-        GOOGLE_LOG(FATAL) << "Unsupported";
-        break;
-      case FieldDescriptor::CPPTYPE_STRING:
-        *val_.string_value_ = *other.val_.string_value_;
-        break;
-      case FieldDescriptor::CPPTYPE_INT64:
-        val_.int64_value_ = other.val_.int64_value_;
-        break;
-      case FieldDescriptor::CPPTYPE_INT32:
-        val_.int32_value_ = other.val_.int32_value_;
-        break;
-      case FieldDescriptor::CPPTYPE_UINT64:
-        val_.uint64_value_ = other.val_.uint64_value_;
-        break;
-      case FieldDescriptor::CPPTYPE_UINT32:
-        val_.uint32_value_ = other.val_.uint32_value_;
-        break;
-      case FieldDescriptor::CPPTYPE_BOOL:
-        val_.bool_value_ = other.val_.bool_value_;
-        break;
-    }
-  }
-
- private:
-  template <typename K, typename V>
-  friend class internal::TypeDefinedMapFieldBase;
-  friend class MapIterator;
-  friend class internal::DynamicMapField;
-
-  union KeyValue {
-    KeyValue() {}
-    string* string_value_;
-    int64 int64_value_;
-    int32 int32_value_;
-    uint64 uint64_value_;
-    uint32 uint32_value_;
-    bool bool_value_;
-  } val_;
-
-  void SetType(FieldDescriptor::CppType type) {
-    if (type_ == type) return;
-    if (type_ == FieldDescriptor::CPPTYPE_STRING) {
-      delete val_.string_value_;
-    }
-    type_ = type;
-    if (type_ == FieldDescriptor::CPPTYPE_STRING) {
-      val_.string_value_ = new string;
-    }
-  }
-
-  // type_ is 0 or a valid FieldDescriptor::CppType.
-  int type_;
-};
-
-// MapValueRef points to a map value.
-class LIBPROTOBUF_EXPORT MapValueRef {
- public:
-  MapValueRef() : data_(NULL), type_(0) {}
-
-  void SetInt64Value(int64 value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_INT64,
-               "MapValueRef::SetInt64Value");
-    *reinterpret_cast<int64*>(data_) = value;
-  }
-  void SetUInt64Value(uint64 value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_UINT64,
-               "MapValueRef::SetUInt64Value");
-    *reinterpret_cast<uint64*>(data_) = value;
-  }
-  void SetInt32Value(int32 value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_INT32,
-               "MapValueRef::SetInt32Value");
-    *reinterpret_cast<int32*>(data_) = value;
-  }
-  void SetUInt32Value(uint32 value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_UINT32,
-               "MapValueRef::SetUInt32Value");
-    *reinterpret_cast<uint32*>(data_) = value;
-  }
-  void SetBoolValue(bool value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_BOOL,
-               "MapValueRef::SetBoolValue");
-    *reinterpret_cast<bool*>(data_) = value;
-  }
-  // TODO(jieluo) - Checks that enum is member.
-  void SetEnumValue(int value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_ENUM,
-               "MapValueRef::SetEnumValue");
-    *reinterpret_cast<int*>(data_) = value;
-  }
-  void SetStringValue(const string& value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_STRING,
-               "MapValueRef::SetStringValue");
-    *reinterpret_cast<string*>(data_) = value;
-  }
-  void SetFloatValue(float value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_FLOAT,
-               "MapValueRef::SetFloatValue");
-    *reinterpret_cast<float*>(data_) = value;
-  }
-  void SetDoubleValue(double value) {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_DOUBLE,
-               "MapValueRef::SetDoubleValue");
-    *reinterpret_cast<double*>(data_) = value;
-  }
-
-  int64 GetInt64Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_INT64,
-               "MapValueRef::GetInt64Value");
-    return *reinterpret_cast<int64*>(data_);
-  }
-  uint64 GetUInt64Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_UINT64,
-               "MapValueRef::GetUInt64Value");
-    return *reinterpret_cast<uint64*>(data_);
-  }
-  int32 GetInt32Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_INT32,
-               "MapValueRef::GetInt32Value");
-    return *reinterpret_cast<int32*>(data_);
-  }
-  uint32 GetUInt32Value() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_UINT32,
-               "MapValueRef::GetUInt32Value");
-    return *reinterpret_cast<uint32*>(data_);
-  }
-  bool GetBoolValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_BOOL,
-               "MapValueRef::GetBoolValue");
-    return *reinterpret_cast<bool*>(data_);
-  }
-  int GetEnumValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_ENUM,
-               "MapValueRef::GetEnumValue");
-    return *reinterpret_cast<int*>(data_);
-  }
-  const string& GetStringValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_STRING,
-               "MapValueRef::GetStringValue");
-    return *reinterpret_cast<string*>(data_);
-  }
-  float GetFloatValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_FLOAT,
-               "MapValueRef::GetFloatValue");
-    return *reinterpret_cast<float*>(data_);
-  }
-  double GetDoubleValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_DOUBLE,
-               "MapValueRef::GetDoubleValue");
-    return *reinterpret_cast<double*>(data_);
-  }
-
-  const Message& GetMessageValue() const {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_MESSAGE,
-               "MapValueRef::GetMessageValue");
-    return *reinterpret_cast<Message*>(data_);
-  }
-
-  Message* MutableMessageValue() {
-    TYPE_CHECK(FieldDescriptor::CPPTYPE_MESSAGE,
-               "MapValueRef::MutableMessageValue");
-    return reinterpret_cast<Message*>(data_);
-  }
-
- private:
-  template <typename K, typename V,
-            internal::WireFormatLite::FieldType key_wire_type,
-            internal::WireFormatLite::FieldType value_wire_type,
-            int default_enum_value>
-  friend class internal::MapField;
-  template <typename K, typename V>
-  friend class internal::TypeDefinedMapFieldBase;
-  friend class MapIterator;
-  friend class internal::GeneratedMessageReflection;
-  friend class internal::DynamicMapField;
-
-  void SetType(FieldDescriptor::CppType type) {
-    type_ = type;
-  }
-
-  FieldDescriptor::CppType type() const {
-    if (type_ == 0 || data_ == NULL) {
-      GOOGLE_LOG(FATAL)
-          << "Protocol Buffer map usage error:\n"
-          << "MapValueRef::type MapValueRef is not initialized.";
-    }
-    return (FieldDescriptor::CppType)type_;
-  }
-  void SetValue(const void* val) {
-    data_ = const_cast<void*>(val);
-  }
-  void CopyFrom(const MapValueRef& other) {
-    type_ = other.type_;
-    data_ = other.data_;
-  }
-  // Only used in DynamicMapField
-  void DeleteData() {
-    switch (type_) {
-#define HANDLE_TYPE(CPPTYPE, TYPE)                              \
-      case google::protobuf::FieldDescriptor::CPPTYPE_##CPPTYPE: {        \
-        delete reinterpret_cast<TYPE*>(data_);                  \
-        break;                                                  \
-      }
-      HANDLE_TYPE(INT32, int32);
-      HANDLE_TYPE(INT64, int64);
-      HANDLE_TYPE(UINT32, uint32);
-      HANDLE_TYPE(UINT64, uint64);
-      HANDLE_TYPE(DOUBLE, double);
-      HANDLE_TYPE(FLOAT, float);
-      HANDLE_TYPE(BOOL, bool);
-      HANDLE_TYPE(STRING, string);
-      HANDLE_TYPE(ENUM, int32);
-      HANDLE_TYPE(MESSAGE, Message);
-#undef HANDLE_TYPE
-    }
-  }
-  // data_ point to a map value. MapValueRef does not
-  // own this value.
-  void* data_;
-  // type_ is 0 or a valid FieldDescriptor::CppType.
-  int type_;
-};
-
-#undef TYPE_CHECK
 
 // This is the class for google::protobuf::Map's internal value_type. Instead of using
 // std::pair as value_type, we use this class which provides us more control of
@@ -523,30 +133,38 @@ class Map {
   typedef size_t size_type;
   typedef hash<Key> hasher;
 
-  explicit Map(bool old_style = true)
-      : arena_(NULL),
-        default_enum_value_(0),
-        old_style_(old_style) {
-    Init();
-  }
-  explicit Map(Arena* arena, bool old_style = true)
-      : arena_(arena),
-        default_enum_value_(0),
-        old_style_(old_style) {
-    Init();
-  }
+  Map() : arena_(NULL), default_enum_value_(0) { Init(); }
+  explicit Map(Arena* arena) : arena_(arena), default_enum_value_(0) { Init(); }
+
   Map(const Map& other)
-      : arena_(NULL),
-        default_enum_value_(other.default_enum_value_),
-        old_style_(other.old_style_) {
+      : arena_(NULL), default_enum_value_(other.default_enum_value_) {
     Init();
     insert(other.begin(), other.end());
   }
+
+#if LANG_CXX11
+  Map(Map&& other) noexcept : Map() {
+    if (other.arena_) {
+      *this = other;
+    } else {
+      swap(other);
+    }
+  }
+  Map& operator=(Map&& other) noexcept {
+    if (this != &other) {
+      if (arena_ != other.arena_) {
+        *this = other;
+      } else {
+        swap(other);
+      }
+    }
+    return *this;
+  }
+#endif
+
   template <class InputIt>
-  Map(const InputIt& first, const InputIt& last, bool old_style = true)
-      : arena_(NULL),
-        default_enum_value_(0),
-        old_style_(old_style) {
+  Map(const InputIt& first, const InputIt& last)
+      : arena_(NULL), default_enum_value_(0) {
     Init();
     insert(first, last);
   }
@@ -554,22 +172,13 @@ class Map {
   ~Map() {
     clear();
     if (arena_ == NULL) {
-      if (old_style_)
-        delete deprecated_elements_;
-      else
-        delete elements_;
+      delete elements_;
     }
   }
 
  private:
   void Init() {
-    if (old_style_)
-      deprecated_elements_ = Arena::Create<DeprecatedInnerMap>(
-          arena_, 0, hasher(), std::equal_to<Key>(),
-          MapAllocator<std::pair<const Key, MapPair<Key, T>*> >(arena_));
-    else
-      elements_ =
-          Arena::Create<InnerMap>(arena_, 0, hasher(), Allocator(arena_));
+    elements_ = Arena::Create<InnerMap>(arena_, 0u, hasher(), Allocator(arena_));
   }
 
   // re-implement std::allocator to use arena allocator for memory allocation.
@@ -592,7 +201,7 @@ class Map {
     MapAllocator(const MapAllocator<X>& allocator)
         : arena_(allocator.arena()) {}
 
-    pointer allocate(size_type n, const_pointer hint = 0) {
+    pointer allocate(size_type n, const void* /* hint */ = 0) {
       // If arena is not given, malloc needs to be called which doesn't
       // construct element object.
       if (arena_ == NULL) {
@@ -608,6 +217,7 @@ class Map {
 #if defined(__GXX_DELETE_WITH_SIZE__) || defined(__cpp_sized_deallocation)
         ::operator delete(p, n * sizeof(value_type));
 #else
+        (void)n;
         ::operator delete(p);
 #endif
       }
@@ -615,7 +225,6 @@ class Map {
 
 #if __cplusplus >= 201103L && !defined(GOOGLE_PROTOBUF_OS_APPLE) && \
     !defined(GOOGLE_PROTOBUF_OS_NACL) &&                            \
-    !defined(GOOGLE_PROTOBUF_OS_ANDROID) &&                         \
     !defined(GOOGLE_PROTOBUF_OS_EMSCRIPTEN)
     template<class NodeType, class... Args>
     void construct(NodeType* p, Args&&... args) {
@@ -654,7 +263,8 @@ class Map {
 
     // To support Visual Studio 2008
     size_type max_size() const {
-      return std::numeric_limits<size_type>::max();
+      // parentheses around (std::...:max) prevents macro warning of max()
+      return (std::numeric_limits<size_type>::max)();
     }
 
     // To support gcc-4.4, which does not properly
@@ -678,7 +288,7 @@ class Map {
 
     const Key& key() const { return k_; }
     Key& key() { return k_; }
-    value_type* const value() const { return v_; }
+    value_type* value() const { return v_; }
     value_type*& value() { return v_; }
 
    private:
@@ -764,14 +374,13 @@ class Map {
     };
     typedef typename Allocator::template rebind<Key*>::other KeyPtrAllocator;
     typedef std::set<Key*, KeyCompare, KeyPtrAllocator> Tree;
+    typedef typename Tree::iterator TreeIterator;
 
     // iterator and const_iterator are instantiations of iterator_base.
     template <typename KeyValueType>
-    class iterator_base {
-     public:
+    struct iterator_base {
       typedef KeyValueType& reference;
       typedef KeyValueType* pointer;
-      typedef typename Tree::iterator TreeIterator;
 
       // Invariants:
       // node_ is always correct. This is handy because the most common
@@ -780,7 +389,7 @@ class Map {
       // are updated to be correct also, but those fields can become stale
       // if the underlying map is modified.  When those fields are needed they
       // are rechecked, and updated if necessary.
-      iterator_base() : node_(NULL) {}
+      iterator_base() : node_(NULL), m_(NULL), bucket_index_(0) {}
 
       explicit iterator_base(const InnerMap* m) : m_(m) {
         SearchFrom(m->index_of_first_non_null_);
@@ -791,22 +400,15 @@ class Map {
       // can convert to const_iterator" is OK but the reverse direction is not.
       template <typename U>
       explicit iterator_base(const iterator_base<U>& it)
-          : node_(it.node_),
-            m_(it.m_),
-            bucket_index_(it.bucket_index_),
-            tree_it_(it.tree_it_) {}
+          : node_(it.node_), m_(it.m_), bucket_index_(it.bucket_index_) {}
 
       iterator_base(Node* n, const InnerMap* m, size_type index)
-          : node_(n),
-            m_(m),
-            bucket_index_(index) {}
+          : node_(n), m_(m), bucket_index_(index) {}
 
       iterator_base(TreeIterator tree_it, const InnerMap* m, size_type index)
-          : node_(NodePtrFromKeyPtr(*tree_it)),
-            m_(m),
-            bucket_index_(index),
-            tree_it_(tree_it) {
-        // Invariant: iterators that use tree_it_ have an even bucket_index_.
+          : node_(NodePtrFromKeyPtr(*tree_it)), m_(m), bucket_index_(index) {
+        // Invariant: iterators that use buckets with trees have an even
+        // bucket_index_.
         GOOGLE_DCHECK_EQ(bucket_index_ % 2, 0);
       }
 
@@ -824,8 +426,7 @@ class Map {
           } else if (m_->TableEntryIsTree(bucket_index_)) {
             Tree* tree = static_cast<Tree*>(m_->table_[bucket_index_]);
             GOOGLE_DCHECK(!tree->empty());
-            tree_it_ = tree->begin();
-            node_ = NodePtrFromKeyPtr(*tree_it_);
+            node_ = NodePtrFromKeyPtr(*tree->begin());
             break;
           }
         }
@@ -843,16 +444,17 @@ class Map {
 
       iterator_base& operator++() {
         if (node_->next == NULL) {
-          const bool is_list = revalidate_if_necessary();
+          TreeIterator tree_it;
+          const bool is_list = revalidate_if_necessary(&tree_it);
           if (is_list) {
             SearchFrom(bucket_index_ + 1);
           } else {
             GOOGLE_DCHECK_EQ(bucket_index_ & 1, 0);
             Tree* tree = static_cast<Tree*>(m_->table_[bucket_index_]);
-            if (++tree_it_ == tree->end()) {
+            if (++tree_it == tree->end()) {
               SearchFrom(bucket_index_ + 2);
             } else {
-              node_ = NodePtrFromKeyPtr(*tree_it_);
+              node_ = NodePtrFromKeyPtr(*tree_it);
             }
           }
         } else {
@@ -869,8 +471,9 @@ class Map {
 
       // Assumes node_ and m_ are correct and non-NULL, but other fields may be
       // stale.  Fix them as needed.  Then return true iff node_ points to a
-      // Node in a list.
-      bool revalidate_if_necessary() {
+      // Node in a list.  If false is returned then *it is modified to be
+      // a valid iterator for node_.
+      bool revalidate_if_necessary(TreeIterator* it) {
         GOOGLE_DCHECK(node_ != NULL && m_ != NULL);
         // Force bucket_index_ to be in range.
         bucket_index_ &= (m_->num_buckets_ - 1);
@@ -891,16 +494,14 @@ class Map {
         // not.  Revalidate just to be sure.  This case is rare enough that we
         // don't worry about potential optimizations, such as having a custom
         // find-like method that compares Node* instead of const Key&.
-        iterator_base i(m_->find(*KeyPtrFromNodePtr(node_)));
+        iterator_base i(m_->find(*KeyPtrFromNodePtr(node_), it));
         bucket_index_ = i.bucket_index_;
-        tree_it_ = i.tree_it_;
         return m_->TableEntryIsList(bucket_index_);
       }
 
       Node* node_;
       const InnerMap* m_;
       size_type bucket_index_;
-      TreeIterator tree_it_;
     };
 
    public:
@@ -952,7 +553,7 @@ class Map {
     bool empty() const { return size() == 0; }
 
     iterator find(const Key& k) { return iterator(FindHelper(k).first); }
-    const_iterator find(const Key& k) const { return FindHelper(k).first; }
+    const_iterator find(const Key& k) const { return find(k, NULL); }
 
     // In traditional C++ style, this performs "insert if not present."
     std::pair<iterator, bool> insert(const KeyValuePair& kv) {
@@ -999,7 +600,8 @@ class Map {
 
     void erase(iterator it) {
       GOOGLE_DCHECK_EQ(it.m_, this);
-      const bool is_list = it.revalidate_if_necessary();
+      typename Tree::iterator tree_it;
+      const bool is_list = it.revalidate_if_necessary(&tree_it);
       size_type b = it.bucket_index_;
       Node* const item = it.node_;
       if (is_list) {
@@ -1010,7 +612,7 @@ class Map {
       } else {
         GOOGLE_DCHECK(TableEntryIsTree(b));
         Tree* tree = static_cast<Tree*>(table_[b]);
-        tree->erase(it.tree_it_);
+        tree->erase(*tree_it);
         if (tree->empty()) {
           // Force b to be the minimum of b and b ^ 1.  This is important
           // only because we want index_of_first_non_null_ to be correct.
@@ -1030,7 +632,14 @@ class Map {
     }
 
    private:
+    const_iterator find(const Key& k, TreeIterator* it) const {
+      return FindHelper(k, it).first;
+    }
     std::pair<const_iterator, size_type> FindHelper(const Key& k) const {
+      return FindHelper(k, NULL);
+    }
+    std::pair<const_iterator, size_type> FindHelper(const Key& k,
+                                                    TreeIterator* it) const {
       size_type b = BucketNumber(k);
       if (TableEntryIsNonEmptyList(b)) {
         Node* node = static_cast<Node*>(table_[b]);
@@ -1048,6 +657,7 @@ class Map {
         Key* key = const_cast<Key*>(&k);
         typename Tree::iterator tree_it = tree->find(key);
         if (tree_it != tree->end()) {
+          if (it != NULL) *it = tree_it;
           return std::make_pair(const_iterator(tree_it, this, b), b);
         }
       }
@@ -1084,8 +694,9 @@ class Map {
         // index_of_first_non_null_, so we skip the code to update it.
         return InsertUniqueInTree(b, node);
       }
+      // parentheses around (std::min) prevents macro expansion of min(...)
       index_of_first_non_null_ =
-          std::min(index_of_first_non_null_, result.bucket_index_);
+          (std::min)(index_of_first_non_null_, result.bucket_index_);
       return result;
     }
 
@@ -1272,14 +883,7 @@ class Map {
     size_type BucketNumber(const Key& k) const {
       // We inherit from hasher, so one-arg operator() provides a hash function.
       size_type h = (*const_cast<InnerMap*>(this))(k);
-      // To help prevent people from making assumptions about the hash function,
-      // we use the seed differently depending on NDEBUG.  The default hash
-      // function, the seeding, etc., are all likely to change in the future.
-#ifndef NDEBUG
-      return (h * (seed_ | 1)) & (num_buckets_ - 1);
-#else
       return (h + seed_) & (num_buckets_ - 1);
-#endif
     }
 
     bool IsMatch(const Key& k0, const Key& k1) const {
@@ -1289,7 +893,9 @@ class Map {
     // Return a power of two no less than max(kMinTableSize, n).
     // Assumes either n < kMinTableSize or n is a power of two.
     size_type TableSize(size_type n) {
-      return n < kMinTableSize ? kMinTableSize : n;
+      return n < static_cast<size_type>(kMinTableSize)
+                 ? static_cast<size_type>(kMinTableSize)
+                 : n;
     }
 
     // Use alloc_ to allocate an array of n objects of type U.
@@ -1327,16 +933,6 @@ class Map {
 
     // Return a randomish value.
     size_type Seed() const {
-      // random_device can throw, so avoid it unless we are compiling with
-      // exceptions enabled.
-#if __cpp_exceptions && LANG_CXX11
-      try {
-        std::random_device rd;
-        std::knuth_b knuth(rd());
-        std::uniform_int_distribution<size_type> u;
-        return u(knuth);
-      } catch (...) { }
-#endif
       size_type s = static_cast<size_type>(reinterpret_cast<uintptr_t>(this));
 #if defined(__x86_64__) && defined(__GNUC__)
       uint32 hi, lo;
@@ -1355,72 +951,34 @@ class Map {
     GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(InnerMap);
   };  // end of class InnerMap
 
-  typedef hash_map<Key, value_type*, hash<Key>, std::equal_to<Key>,
-                   MapAllocator<std::pair<const Key, MapPair<Key, T>*> > >
-      DeprecatedInnerMap;
-
  public:
   // Iterators
-  class iterator_base {
-   public:
-    // We support "old style" and "new style" iterators for now. This is
-    // temporary.  Also, for "iterator()" we have an unknown category.
-    // TODO(gpike): get rid of this.
-    enum IteratorStyle { kUnknown, kOld, kNew };
-    explicit iterator_base(IteratorStyle style) : iterator_style_(style) {}
-
-    bool OldStyle() const {
-      GOOGLE_DCHECK_NE(iterator_style_, kUnknown);
-      return iterator_style_ == kOld;
-    }
-    bool UnknownStyle() const {
-      return iterator_style_ == kUnknown;
-    }
-    bool SameStyle(const iterator_base& other) const {
-      return iterator_style_ == other.iterator_style_;
-    }
-
-   private:
-    IteratorStyle iterator_style_;
-  };
-
-  class const_iterator
-      : private iterator_base,
-        public std::iterator<std::forward_iterator_tag, value_type, ptrdiff_t,
-                             const value_type*, const value_type&> {
+  class const_iterator {
     typedef typename InnerMap::const_iterator InnerIt;
-    typedef typename DeprecatedInnerMap::const_iterator DeprecatedInnerIt;
 
    public:
-    const_iterator() : iterator_base(iterator_base::kUnknown) {}
-    explicit const_iterator(const DeprecatedInnerIt& dit)
-        : iterator_base(iterator_base::kOld), dit_(dit) {}
-    explicit const_iterator(const InnerIt& it)
-        : iterator_base(iterator_base::kNew), it_(it) {}
+    typedef std::forward_iterator_tag iterator_category;
+    typedef typename Map::value_type value_type;
+    typedef ptrdiff_t difference_type;
+    typedef const value_type* pointer;
+    typedef const value_type& reference;
 
-    const_iterator(const const_iterator& other)
-        : iterator_base(other), it_(other.it_), dit_(other.dit_) {}
+    const_iterator() {}
+    explicit const_iterator(const InnerIt& it) : it_(it) {}
 
     const_reference operator*() const {
-      return this->OldStyle() ? *dit_->second : *it_->value();
+      return *it_->value();
     }
     const_pointer operator->() const { return &(operator*()); }
 
     const_iterator& operator++() {
-      if (this->OldStyle())
-        ++dit_;
-      else
-        ++it_;
+      ++it_;
       return *this;
     }
-    const_iterator operator++(int) {
-      return this->OldStyle() ? const_iterator(dit_++) : const_iterator(it_++);
-    }
+    const_iterator operator++(int) { return const_iterator(it_++); }
 
     friend bool operator==(const const_iterator& a, const const_iterator& b) {
-      if (!a.SameStyle(b)) return false;
-      if (a.UnknownStyle()) return true;
-      return a.OldStyle() ? (a.dit_ == b.dit_) : (a.it_ == b.it_);
+      return a.it_ == b.it_;
     }
     friend bool operator!=(const const_iterator& a, const const_iterator& b) {
       return !(a == b);
@@ -1428,48 +986,37 @@ class Map {
 
    private:
     InnerIt it_;
-    DeprecatedInnerIt dit_;
   };
 
-  class iterator : private iterator_base,
-                   public std::iterator<std::forward_iterator_tag, value_type> {
+  class iterator {
     typedef typename InnerMap::iterator InnerIt;
-    typedef typename DeprecatedInnerMap::iterator DeprecatedInnerIt;
 
    public:
-    iterator() : iterator_base(iterator_base::kUnknown) {}
-    explicit iterator(const DeprecatedInnerIt& dit)
-        : iterator_base(iterator_base::kOld), dit_(dit) {}
-    explicit iterator(const InnerIt& it)
-        : iterator_base(iterator_base::kNew), it_(it) {}
+    typedef std::forward_iterator_tag iterator_category;
+    typedef typename Map::value_type value_type;
+    typedef ptrdiff_t difference_type;
+    typedef value_type* pointer;
+    typedef value_type& reference;
 
-    reference operator*() const {
-      return this->OldStyle() ? *dit_->second : *it_->value();
-    }
+    iterator() {}
+    explicit iterator(const InnerIt& it) : it_(it) {}
+
+    reference operator*() const { return *it_->value(); }
     pointer operator->() const { return &(operator*()); }
 
     iterator& operator++() {
-      if (this->OldStyle())
-        ++dit_;
-      else
-        ++it_;
+      ++it_;
       return *this;
     }
-    iterator operator++(int) {
-      return this->OldStyle() ? iterator(dit_++) : iterator(it_++);
-    }
+    iterator operator++(int) { return iterator(it_++); }
 
     // Allow implicit conversion to const_iterator.
     operator const_iterator() const {
-      return this->OldStyle() ?
-          const_iterator(typename DeprecatedInnerMap::const_iterator(dit_)) :
-          const_iterator(typename InnerMap::const_iterator(it_));
+      return const_iterator(typename InnerMap::const_iterator(it_));
     }
 
     friend bool operator==(const iterator& a, const iterator& b) {
-      if (!a.SameStyle(b)) return false;
-      if (a.UnknownStyle()) return true;
-      return a.OldStyle() ? a.dit_ == b.dit_ : a.it_ == b.it_;
+      return a.it_ == b.it_;
     }
     friend bool operator!=(const iterator& a, const iterator& b) {
       return !(a == b);
@@ -1479,38 +1026,26 @@ class Map {
     friend class Map;
 
     InnerIt it_;
-    DeprecatedInnerIt dit_;
   };
 
-  iterator begin() {
-    return old_style_ ? iterator(deprecated_elements_->begin())
-                      : iterator(elements_->begin());
-  }
-  iterator end() {
-    return old_style_ ? iterator(deprecated_elements_->end())
-                      : iterator(elements_->end());
-  }
+  iterator begin() { return iterator(elements_->begin()); }
+  iterator end() { return iterator(elements_->end()); }
   const_iterator begin() const {
-    return old_style_ ? const_iterator(deprecated_elements_->begin())
-                      : const_iterator(iterator(elements_->begin()));
+    return const_iterator(iterator(elements_->begin()));
   }
   const_iterator end() const {
-    return old_style_ ? const_iterator(deprecated_elements_->end())
-                      : const_iterator(iterator(elements_->end()));
+    return const_iterator(iterator(elements_->end()));
   }
   const_iterator cbegin() const { return begin(); }
   const_iterator cend() const { return end(); }
 
   // Capacity
-  size_type size() const {
-    return old_style_ ? deprecated_elements_->size() : elements_->size();
-  }
+  size_type size() const { return elements_->size(); }
   bool empty() const { return size() == 0; }
 
   // Element access
   T& operator[](const key_type& key) {
-    value_type** value =
-        old_style_ ? &(*deprecated_elements_)[key] : &(*elements_)[key];
+    value_type** value =  &(*elements_)[key];
     if (*value == NULL) {
       *value = CreateValueTypeInternal(key);
       internal::MapValueInitializer<google::protobuf::is_proto_enum<T>::value,
@@ -1521,28 +1056,25 @@ class Map {
   }
   const T& at(const key_type& key) const {
     const_iterator it = find(key);
-    GOOGLE_CHECK(it != end());
+    GOOGLE_CHECK(it != end()) << "key not found: " << key;
     return it->second;
   }
   T& at(const key_type& key) {
     iterator it = find(key);
-    GOOGLE_CHECK(it != end());
+    GOOGLE_CHECK(it != end()) << "key not found: " << key;
     return it->second;
   }
 
   // Lookup
   size_type count(const key_type& key) const {
-    if (find(key) != end()) assert(key == find(key)->first);
-    return find(key) == end() ? 0 : 1;
+    const_iterator it = find(key);
+    GOOGLE_DCHECK(it == end() || key == it->first);
+    return it == end() ? 0 : 1;
   }
   const_iterator find(const key_type& key) const {
-    return old_style_ ? const_iterator(deprecated_elements_->find(key))
-        : const_iterator(iterator(elements_->find(key)));
+    return const_iterator(iterator(elements_->find(key)));
   }
-  iterator find(const key_type& key) {
-    return old_style_ ? iterator(deprecated_elements_->find(key))
-                      : iterator(elements_->find(key));
-  }
+  iterator find(const key_type& key) { return iterator(elements_->find(key)); }
   std::pair<const_iterator, const_iterator> equal_range(
       const key_type& key) const {
     const_iterator it = find(key);
@@ -1565,23 +1097,12 @@ class Map {
 
   // insert
   std::pair<iterator, bool> insert(const value_type& value) {
-    if (old_style_) {
-      iterator it = find(value.first);
-      if (it != end()) {
-        return std::pair<iterator, bool>(it, false);
-      } else {
-        return std::pair<iterator, bool>(
-            iterator(deprecated_elements_->insert(std::pair<Key, value_type*>(
-                value.first, CreateValueTypeInternal(value))).first), true);
-      }
-    } else {
-      std::pair<typename InnerMap::iterator, bool> p =
-          elements_->insert(value.first);
-      if (p.second) {
-        p.first->value() = CreateValueTypeInternal(value);
-      }
-      return std::pair<iterator, bool>(iterator(p.first), p.second);
+    std::pair<typename InnerMap::iterator, bool> p =
+        elements_->insert(value.first);
+    if (p.second) {
+      p.first->value() = CreateValueTypeInternal(value);
     }
+    return std::pair<iterator, bool>(iterator(p.first), p.second);
   }
   template <class InputIt>
   void insert(InputIt first, InputIt last) {
@@ -1606,10 +1127,7 @@ class Map {
   iterator erase(iterator pos) {
     if (arena_ == NULL) delete pos.operator->();
     iterator i = pos++;
-    if (old_style_)
-      deprecated_elements_->erase(i.dit_);
-    else
-      elements_->erase(i.it_);
+    elements_->erase(i.it_);
     return pos;
   }
   void erase(iterator first, iterator last) {
@@ -1629,13 +1147,9 @@ class Map {
   }
 
   void swap(Map& other) {
-    if (arena_ == other.arena_ && old_style_ == other.old_style_) {
+    if (arena_ == other.arena_) {
       std::swap(default_enum_value_, other.default_enum_value_);
-      if (old_style_) {
-        std::swap(deprecated_elements_, other.deprecated_elements_);
-      } else {
-        std::swap(elements_, other.elements_);
-      }
+      std::swap(elements_, other.elements_);
     } else {
       // TODO(zuguang): optimize this. The temporary copy can be allocated
       // in the same arena as the other message, and the "other = copy" can
@@ -1648,10 +1162,7 @@ class Map {
 
   // Access to hasher.  Currently this returns a copy, but it may
   // be modified to return a const reference in the future.
-  hasher hash_function() const {
-    return old_style_ ? deprecated_elements_->hash_function()
-                      : elements_->hash_function();
-  }
+  hasher hash_function() const { return elements_->hash_function(); }
 
  private:
   // Set default enum value only for proto2 map field whose value is enum type.
@@ -1688,19 +1199,12 @@ class Map {
 
   Arena* arena_;
   int default_enum_value_;
-  // The following is a tagged union because we support two map styles
-  // for now.
-  // TODO(gpike): get rid of the old style.
-  const bool old_style_;
-  union {
-    InnerMap* elements_;
-    DeprecatedInnerMap* deprecated_elements_;
-  };
+  InnerMap* elements_;
 
   friend class ::google::protobuf::Arena;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  template <typename K, typename V,
+  template <typename Derived, typename K, typename V,
             internal::WireFormatLite::FieldType key_wire_type,
             internal::WireFormatLite::FieldType value_wire_type,
             int default_enum_value>
@@ -1708,42 +1212,6 @@ class Map {
 };
 
 }  // namespace protobuf
+
 }  // namespace google
-
-GOOGLE_PROTOBUF_HASH_NAMESPACE_DECLARATION_START
-template<>
-struct hash<google::protobuf::MapKey> {
-  size_t
-  operator()(const google::protobuf::MapKey& map_key) const {
-    switch (map_key.type()) {
-      case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
-      case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
-      case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
-      case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE:
-        GOOGLE_LOG(FATAL) << "Unsupported";
-        break;
-      case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
-        return hash<string>()(map_key.GetStringValue());
-      case google::protobuf::FieldDescriptor::CPPTYPE_INT64:
-        return hash< ::google::protobuf::int64>()(map_key.GetInt64Value());
-      case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
-        return hash< ::google::protobuf::int32>()(map_key.GetInt32Value());
-      case google::protobuf::FieldDescriptor::CPPTYPE_UINT64:
-        return hash< ::google::protobuf::uint64>()(map_key.GetUInt64Value());
-      case google::protobuf::FieldDescriptor::CPPTYPE_UINT32:
-        return hash< ::google::protobuf::uint32>()(map_key.GetUInt32Value());
-      case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
-        return hash<bool>()(map_key.GetBoolValue());
-    }
-    GOOGLE_LOG(FATAL) << "Can't get here.";
-    return 0;
-  }
-  bool
-  operator()(const google::protobuf::MapKey& map_key1,
-             const google::protobuf::MapKey& map_key2) const {
-    return map_key1 < map_key2;
-  }
-};
-GOOGLE_PROTOBUF_HASH_NAMESPACE_DECLARATION_END
-
 #endif  // GOOGLE_PROTOBUF_MAP_H__

@@ -139,17 +139,9 @@ template<> struct is_integral<int> : true_type { };
 template<> struct is_integral<unsigned int> : true_type { };
 template<> struct is_integral<long> : true_type { };
 template<> struct is_integral<unsigned long> : true_type { };
-#ifdef HAVE_LONG_LONG
+#if defined(HAVE_LONG_LONG) || defined(_MSC_VER)
 template<> struct is_integral<long long> : true_type { };
 template<> struct is_integral<unsigned long long> : true_type { };
-#endif
-#if defined(_MSC_VER)
-// With VC, __int8, __int16, and __int32 are synonymous with standard types
-// with the same size, but __int64 has not equivalent (i.e., it's neither
-// long, nor long long and should be treated differnetly).
-// https://msdn.microsoft.com/en-us/library/29dh1w7z.aspx
-template<> struct is_integral<__int64> : true_type { };
-template<> struct is_integral<unsigned __int64> : true_type {};
 #endif
 template <class T> struct is_integral<const T> : is_integral<T> { };
 template <class T> struct is_integral<volatile T> : is_integral<T> { };

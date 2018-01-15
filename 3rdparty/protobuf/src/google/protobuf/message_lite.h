@@ -39,21 +39,114 @@
 #ifndef GOOGLE_PROTOBUF_MESSAGE_LITE_H__
 #define GOOGLE_PROTOBUF_MESSAGE_LITE_H__
 
+#include <climits>
 #include <google/protobuf/stubs/common.h>
-
+#include <google/protobuf/stubs/logging.h>
+#include <google/protobuf/stubs/once.h>
+#include <google/protobuf/stubs/port.h>
 
 namespace google {
 namespace protobuf {
-  class Arena;
+class Arena;
 namespace io {
-  class CodedInputStream;
-  class CodedOutputStream;
-  class ZeroCopyInputStream;
-  class ZeroCopyOutputStream;
+class CodedInputStream;
+class CodedOutputStream;
+class ZeroCopyInputStream;
+class ZeroCopyOutputStream;
 }
 namespace internal {
-  class WireFormatLite;
+
+class WireFormatLite;
+
+#ifndef SWIG
+// We compute sizes as size_t but cache them as int.  This function converts a
+// computed size to a cached size.  Since we don't proceed with serialization
+// if the total size was > INT_MAX, it is not important what this function
+// returns for inputs > INT_MAX.  However this case should not error or
+// GOOGLE_CHECK-fail, because the full size_t resolution is still returned from
+// ByteSizeLong() and checked against INT_MAX; we can catch the overflow
+// there.
+inline int ToCachedSize(size_t size) { return static_cast<int>(size); }
+
+// We mainly calculate sizes in terms of size_t, but some functions that
+// compute sizes return "int".  These int sizes are expected to always be
+// positive. This function is more efficient than casting an int to size_t
+// directly on 64-bit platforms because it avoids making the compiler emit a
+// sign extending instruction, which we don't want and don't want to pay for.
+inline size_t FromIntSize(int size) {
+  // Convert to unsigned before widening so sign extension is not necessary.
+  return static_cast<unsigned int>(size);
 }
+
+// For cases where a legacy function returns an integer size.  We GOOGLE_DCHECK()
+// that the conversion will fit within an integer; if this is false then we
+// are losing information.
+inline int ToIntSize(size_t size) {
+  GOOGLE_DCHECK_LE(size, static_cast<size_t>(INT_MAX));
+  return static_cast<int>(size);
+}
+
+// This type wraps a variable whose constructor and destructor are explicitly
+// called. It is particularly useful for a global variable, without its
+// constructor and destructor run on start and end of the program lifetime.
+// This circumvents the initial construction order fiasco, while keeping
+// the address of the empty string a compile time constant.
+//
+// Pay special attention to the initialization state of the object.
+// 1. The object is "uninitialized" to begin with.
+// 2. Call DefaultConstruct() only if the object is uninitialized.
+//    After the call, the object becomes "initialized".
+// 3. Call get() and get_mutable() only if the object is initialized.
+// 4. Call Destruct() only if the object is initialized.
+//    After the call, the object becomes uninitialized.
+template <typename T>
+class ExplicitlyConstructed {
+ public:
+  void DefaultConstruct() {
+    new (&union_) T();
+  }
+
+  void Destruct() {
+    get_mutable()->~T();
+  }
+
+#if LANG_CXX11
+  constexpr
+#endif
+      const T&
+      get() const {
+    return reinterpret_cast<const T&>(union_);
+  }
+  T* get_mutable() { return reinterpret_cast<T*>(&union_); }
+
+ private:
+  // Prefer c++14 aligned_storage, but for compatibility this will do.
+  union AlignedUnion {
+    char space[sizeof(T)];
+    int64 align_to_int64;
+    void* align_to_ptr;
+  } union_;
+};
+
+// Default empty string object. Don't use this directly. Instead, call
+// GetEmptyString() to get the reference.
+extern ExplicitlyConstructed< ::std::string> fixed_address_empty_string;
+LIBPROTOBUF_EXPORT extern ProtobufOnceType empty_string_once_init_;
+LIBPROTOBUF_EXPORT void InitEmptyString();
+
+
+LIBPROTOBUF_EXPORT inline const ::std::string& GetEmptyStringAlreadyInited() {
+  return fixed_address_empty_string.get();
+}
+
+LIBPROTOBUF_EXPORT inline const ::std::string& GetEmptyString() {
+  ::google::protobuf::GoogleOnceInit(&empty_string_once_init_, &InitEmptyString);
+  return GetEmptyStringAlreadyInited();
+}
+
+LIBPROTOBUF_EXPORT size_t StringSpaceUsedExcludingSelfLong(const string& str);
+#endif  // SWIG
+}  // namespace internal
 
 // Interface to light weight protocol messages.
 //
@@ -99,18 +192,19 @@ class LIBPROTOBUF_EXPORT MessageLite {
   // Get the arena, if any, associated with this message. Virtual method
   // required for generic operations but most arena-related operations should
   // use the GetArenaNoVirtual() generated-code method. Default implementation
-  // to reduce code size by avoiding the need for per-type implementations when
-  // types do not implement arena support.
+  // to reduce code size by avoiding the need for per-type implementations
+  // when types do not implement arena support.
   virtual ::google::protobuf::Arena* GetArena() const { return NULL; }
 
-  // Get a pointer that may be equal to this message's arena, or may not be. If
-  // the value returned by this method is equal to some arena pointer, then this
-  // message is on that arena; however, if this message is on some arena, this
-  // method may or may not return that arena's pointer. As a tradeoff, this
-  // method may be more efficient than GetArena(). The intent is to allow
-  // underlying representations that use e.g. tagged pointers to sometimes store
-  // the arena pointer directly, and sometimes in a more indirect way, and allow
-  // a fastpath comparison against the arena pointer when it's easy to obtain.
+  // Get a pointer that may be equal to this message's arena, or may not be.
+  // If the value returned by this method is equal to some arena pointer, then
+  // this message is on that arena; however, if this message is on some arena,
+  // this method may or may not return that arena's pointer. As a tradeoff,
+  // this method may be more efficient than GetArena(). The intent is to allow
+  // underlying representations that use e.g. tagged pointers to sometimes
+  // store the arena pointer directly, and sometimes in a more indirect way,
+  // and allow a fastpath comparison against the arena pointer when it's easy
+  // to obtain.
   virtual void* GetMaybeArenaPointer() const { return GetArena(); }
 
   // Clear all fields of the message and set them to their default values.
@@ -128,19 +222,20 @@ class LIBPROTOBUF_EXPORT MessageLite {
   // for full messages.  See message.h.
   virtual string InitializationErrorString() const;
 
-  // If |other| is the exact same class as this, calls MergeFrom().  Otherwise,
+  // If |other| is the exact same class as this, calls MergeFrom(). Otherwise,
   // results are undefined (probably crash).
   virtual void CheckTypeAndMergeFrom(const MessageLite& other) = 0;
 
   // Parsing ---------------------------------------------------------
   // Methods for parsing in protocol buffer format.  Most of these are
-  // just simple wrappers around MergeFromCodedStream().  Clear() will be called
-  // before merging the input.
+  // just simple wrappers around MergeFromCodedStream().  Clear() will be
+  // called before merging the input.
 
-  // Fill the message with a protocol buffer parsed from the given input stream.
-  // Returns false on a read error or if the input is in the wrong format.  A
-  // successful return does not indicate the entire input is consumed, ensure
-  // you call ConsumedEntireMessage() to check that if applicable.
+  // Fill the message with a protocol buffer parsed from the given input
+  // stream. Returns false on a read error or if the input is in the wrong
+  // format.  A successful return does not indicate the entire input is
+  // consumed, ensure you call ConsumedEntireMessage() to check that if
+  // applicable.
   bool ParseFromCodedStream(io::CodedInputStream* input);
   // Like ParseFromCodedStream(), but accepts messages that are missing
   // required fields.
@@ -239,25 +334,35 @@ class LIBPROTOBUF_EXPORT MessageLite {
   bool AppendPartialToString(string* output) const;
 
   // Computes the serialized size of the message.  This recursively calls
-  // ByteSize() on all embedded messages.  Subclasses MUST override either
-  // ByteSize() or ByteSizeLong() (overriding both is fine).
+  // ByteSizeLong() on all embedded messages.
   //
-  // ByteSize() is generally linear in the number of fields defined for the
+  // ByteSizeLong() is generally linear in the number of fields defined for the
   // proto.
-  virtual int ByteSize() const { return ByteSizeLong(); }
-  virtual size_t ByteSizeLong() const;
+  virtual size_t ByteSizeLong() const = 0;
 
-  // Serializes the message without recomputing the size.  The message must
-  // not have changed since the last call to ByteSize(); if it has, the results
-  // are undefined.
-  virtual void SerializeWithCachedSizes(
-      io::CodedOutputStream* output) const = 0;
-
-  // A version of SerializeWithCachedSizesToArray, below, that does
-  // not guarantee deterministic serialization.
-  virtual uint8* SerializeWithCachedSizesToArray(uint8* target) const {
-    return InternalSerializeWithCachedSizesToArray(false, target);
+  // Legacy ByteSize() API.
+  PROTOBUF_RUNTIME_DEPRECATED("Please use ByteSizeLong() instead")
+  int ByteSize() const {
+    return internal::ToIntSize(ByteSizeLong());
   }
+
+  // Serializes the message without recomputing the size.  The message must not
+  // have changed since the last call to ByteSize(), and the value returned by
+  // ByteSize must be non-negative.  Otherwise the results are undefined.
+  virtual void SerializeWithCachedSizes(
+      io::CodedOutputStream* output) const;
+
+  // Functions below here are not part of the public interface.  It isn't
+  // enforced, but they should be treated as private, and will be private
+  // at some future time.  Unfortunately the implementation of the "friend"
+  // keyword in GCC is broken at the moment, but we expect it will be fixed.
+
+  // Like SerializeWithCachedSizes, but writes directly to *target, returning
+  // a pointer to the byte immediately after the last byte written.  "target"
+  // must point at a byte array of at least ByteSize() bytes.  Whether to use
+  // deterministic serialization, e.g., maps in sorted order, is determined by
+  // CodedOutputStream::IsDefaultSerializationDeterministic().
+  virtual uint8* SerializeWithCachedSizesToArray(uint8* target) const;
 
   // Returns the result of the last call to ByteSize().  An embedded message's
   // size is needed both to serialize it (because embedded messages are
@@ -272,24 +377,34 @@ class LIBPROTOBUF_EXPORT MessageLite {
   // method.)
   virtual int GetCachedSize() const = 0;
 
-  // Functions below here are not part of the public interface.  It isn't
-  // enforced, but they should be treated as private, and will be private
-  // at some future time.  Unfortunately the implementation of the "friend"
-  // keyword in GCC is broken at the moment, but we expect it will be fixed.
-
-  // Like SerializeWithCachedSizes, but writes directly to *target, returning
-  // a pointer to the byte immediately after the last byte written.  "target"
-  // must point at a byte array of at least ByteSize() bytes.  If deterministic
-  // is true then we use deterministic serialization, e.g., map keys are sorted.
-  // FOR INTERNAL USE ONLY!
   virtual uint8* InternalSerializeWithCachedSizesToArray(bool deterministic,
                                                          uint8* target) const;
 
  private:
+  // TODO(gerbens) make this a pure abstract function
+  virtual const void* InternalGetTable() const { return NULL; }
+
   friend class internal::WireFormatLite;
+  friend class Message;
 
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MessageLite);
 };
+
+namespace internal {
+
+extern bool LIBPROTOBUF_EXPORT proto3_preserve_unknown_;
+
+// DO NOT USE: For migration only. Will be removed when Proto3 defaults to
+// preserve unknowns.
+inline bool GetProto3PreserveUnknownsDefault() {
+  return proto3_preserve_unknown_;
+}
+
+// DO NOT USE: For migration only. Will be removed when Proto3 defaults to
+// preserve unknowns.
+void LIBPROTOBUF_EXPORT SetProto3PreserveUnknownsDefault(bool preserve);
+}  // namespace internal
+
 
 }  // namespace protobuf
 
