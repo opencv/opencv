@@ -1614,12 +1614,12 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     std::vector<Point2f> a(ransacSize0);
     std::vector<Point2f> b(ransacSize0);
 
+    int * idx = new int idx[ransacSize0];
+
     // RANSAC stuff:
     // 1. find the consensus
     for( k = 0; k < ransacMaxIters; k++ )
     {
-        std::vector<int> idx(ransacSize0);
-
         // choose random 3 non-complanar points from A & B
         for( i = 0; i < ransacSize0; i++ )
         {
@@ -1688,6 +1688,8 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         if( good_count >= count*ransacGoodRatio )
             break;
     }
+
+    delete [] idx;
 
     if( k >= ransacMaxIters )
         return Mat();
