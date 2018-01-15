@@ -1618,7 +1618,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     // 1. find the consensus
     for( k = 0; k < ransacMaxIters; k++ )
     {
-        int idx[ransacSize0];
+        std::vector<int> idx(ransacSize0);
 
         // choose random 3 non-complanar points from A & B
         for( i = 0; i < ransacSize0; i++ )
