@@ -4730,6 +4730,20 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
+
+/** @brief Calculates the font-specific size to use to achieve a given height in pixels.
+
+@param fontFace Font to use, see cv::HersheyFonts.
+@param pixelHeight Pixel height to compute the fontScale for
+@param thickness Thickness of lines used to render the text.See putText for details.
+@return The fontSize to use for cv::putText
+
+@see cv::putText
+*/
+CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
+                                           const int pixelHeight,
+                                           const int thickness = 1);
+
 /** @brief Line iterator
 
 The class is used to iterate over all the pixels on the raster line
