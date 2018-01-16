@@ -134,7 +134,7 @@ if(NOT DEFINED OPENCV_MAP_IMPORTED_CONFIG)
     # By default CMake maps these configuration on the first available (Debug) which is wrong.
     # Non-Debug build of Application can't be used with OpenCV Debug build (ABI mismatch problem)
     # Add mapping of RelWithDebInfo and MinSizeRel to Release here
-    set(OPENCV_MAP_IMPORTED_CONFIG "RELWITHDEBINFO=!Release;MINSIZEREL=!Release")
+    set(OPENCV_MAP_IMPORTED_CONFIG "RelWithDebInfo=!Release;MinSizeRel=!Release")
   endif()
 endif()
 set(__remap_warnings "")
