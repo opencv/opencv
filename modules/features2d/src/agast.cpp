@@ -8066,7 +8066,6 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
-        std::vector<KeyPoint>::iterator currCorner_nms;
         std::vector<KeyPoint>::const_iterator currCorner;
 
         currCorner = kpts.begin();
