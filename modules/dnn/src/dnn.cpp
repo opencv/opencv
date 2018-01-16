@@ -191,6 +191,60 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     }
 }
 
+std::vector<Mat> imagesFromBlob(const Mat& blob)
+{
+	CV_TRACE_FUNCTION();
+
+	//A blob is a 4 dimensional matrix in floating point precision
+	CV_Assert(blob.depth() == CV_32F);
+	CV_Assert(blob.dims == 4);
+
+	//A container to store our images
+	std::vector<cv::Mat> vectorOfImages;
+
+	//Store each dimension size
+	//It is ok to hardcode it since we asserted the dimension before
+	int nbOfInputs = blob.size[0]; //= nb of inputs
+	int nbOfChannels = blob.size[1]; //<=> nb of filtered images
+	int height = blob.size[2]; //= the height of the images
+	int width = blob.size[3]; //= the width of the images
+
+
+							  //Access the elements of each channel for each image in the blob
+							  //Store them in a vector of Images
+	for (int i = 0; i < nbOfInputs; i++)
+	{
+		for (int c = 0; c < nbOfChannels; c++)
+		{
+			cv::Mat img(width, height, CV_32F);
+
+			for (int w = 0; w < width; w++)
+			{
+				for (int h = 0; h < height; h++)
+				{
+					int indx[4] = { 0, c, h, w };
+					img.at<float>(h, w) = blob.at<float>(indx);
+				}//loop on height
+			}//loop on width
+
+			 //Sanity check
+			CV_Assert(img.empty() == false);
+			CV_Assert(img.dims == 2);
+			CV_Assert(img.cols == width);
+			CV_Assert(img.rows == height);
+
+			//Store the image - note that the image has > not < been normalized here
+			//The image is still int floating point precision
+			vectorOfImages.push_back(img);
+
+		}//loop on channels
+	}//loop on images
+
+	return vectorOfImages;
+
+}//imagesFromBlob
+
+
 class OpenCLBackendWrapper : public BackendWrapper
 {
 public:

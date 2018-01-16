@@ -732,6 +732,16 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
+	/** @brief Parse a blob and output the images it contains in a simpler data structure (std::vector<cv::Mat>).
+	*         You can use the output images to visualize the data contained in the blob (e.g. the output of each
+	*         filter on a given layer) with the classical cv::imshow() method. The output images are in floating
+	*         point precision.
+	*  @param blob 4 dimensional array in floating point precision (CV_32F) from which you would like to
+	*         extract the images.
+	*  @returns vector of mat containing the non-normalized images extracted from the blob in floating point
+	*           precision (CV_32F).
+	*/
+	CV_EXPORTS_W std::vector<Mat> imagesFromBlob(const Mat& blob);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single
