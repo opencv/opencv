@@ -1763,7 +1763,7 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 
 namespace cv {
 
-static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size ksize,
+static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size & ksize,
                                    double sigma1, double sigma2 )
 {
     int depth = CV_MAT_DEPTH(type);
