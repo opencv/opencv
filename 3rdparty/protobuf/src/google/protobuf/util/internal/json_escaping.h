@@ -86,6 +86,6 @@ class JsonEscaping {
 }  // namespace converter
 }  // namespace util
 }  // namespace protobuf
+}  // namespace google
 
 #endif  // NET_PROTO2_UTIL_CONVERTER_STRINGS_JSON_ESCAPING_H_
-}  // namespace google

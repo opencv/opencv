@@ -570,8 +570,8 @@ struct RefTypeTraits<
   typedef RepeatedFieldRefIterator<T> iterator;
   typedef RepeatedFieldAccessor AccessorType;
   typedef string AccessorValueType;
-  typedef string IteratorValueType;
-  typedef string* IteratorPointerType;
+  typedef const string IteratorValueType;
+  typedef const string* IteratorPointerType;
   static const FieldDescriptor::CppType cpp_type =
       FieldDescriptor::CPPTYPE_STRING;
   static const Descriptor* GetMessageFieldDescriptor() {

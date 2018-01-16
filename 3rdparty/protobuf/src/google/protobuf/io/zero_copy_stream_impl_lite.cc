@@ -64,9 +64,6 @@ ArrayInputStream::ArrayInputStream(const void* data, int size,
     last_returned_size_(0) {
 }
 
-ArrayInputStream::~ArrayInputStream() {
-}
-
 bool ArrayInputStream::Next(const void** data, int* size) {
   if (position_ < size_) {
     last_returned_size_ = std::min(block_size_, size_ - position_);
@@ -117,9 +114,6 @@ ArrayOutputStream::ArrayOutputStream(void* data, int size, int block_size)
     last_returned_size_(0) {
 }
 
-ArrayOutputStream::~ArrayOutputStream() {
-}
-
 bool ArrayOutputStream::Next(void** data, int* size) {
   if (position_ < size_) {
     last_returned_size_ = std::min(block_size_, size_ - position_);
@@ -151,9 +145,6 @@ int64 ArrayOutputStream::ByteCount() const {
 
 StringOutputStream::StringOutputStream(string* target)
   : target_(target) {
-}
-
-StringOutputStream::~StringOutputStream() {
 }
 
 bool StringOutputStream::Next(void** data, int* size) {
@@ -204,32 +195,6 @@ void StringOutputStream::SetString(string* target) {
 }
 
 // ===================================================================
-
-LazyStringOutputStream::LazyStringOutputStream(
-    ResultCallback<string*>* callback)
-    : StringOutputStream(NULL),
-      callback_(GOOGLE_CHECK_NOTNULL(callback)),
-      string_is_set_(false) {
-}
-
-LazyStringOutputStream::~LazyStringOutputStream() {
-}
-
-bool LazyStringOutputStream::Next(void** data, int* size) {
-  if (!string_is_set_) {
-    SetString(callback_->Run());
-    string_is_set_ = true;
-  }
-  return StringOutputStream::Next(data, size);
-}
-
-int64 LazyStringOutputStream::ByteCount() const {
-  return string_is_set_ ? StringOutputStream::ByteCount() : 0;
-}
-
-// ===================================================================
-
-CopyingInputStream::~CopyingInputStream() {}
 
 int CopyingInputStream::Skip(int count) {
   char junk[4096];
@@ -349,8 +314,6 @@ void CopyingInputStreamAdaptor::FreeBuffer() {
 }
 
 // ===================================================================
-
-CopyingOutputStream::~CopyingOutputStream() {}
 
 CopyingOutputStreamAdaptor::CopyingOutputStreamAdaptor(
     CopyingOutputStream* copying_stream, int block_size)

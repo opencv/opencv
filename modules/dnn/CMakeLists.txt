@@ -52,7 +52,10 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Wdeprecated-declarations
     /wd4125 /wd4267 /wd4127 /wd4244 /wd4512 /wd4702
     /wd4456 /wd4510 /wd4610 /wd4800
+    /wd4701 /wd4703                    # potentially uninitialized local/pointer variable 'value' used
+    /wd4505                            # unreferenced local function has been removed
     -wd858 -wd2196
+    -Winvalid-offsetof                 # Apple Clang (attr_value.pb.cc)
 )
 
 if(PROTOBUF_UPDATE_FILES)
