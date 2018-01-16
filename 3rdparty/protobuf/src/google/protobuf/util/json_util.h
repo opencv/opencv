@@ -61,10 +61,17 @@ struct JsonPrintOptions {
   // set to 0 will be omitted. Set this flag to true will override the default
   // behavior and print primitive fields regardless of their values.
   bool always_print_primitive_fields;
+  // Whether to always print enums as ints. By default they are rendered as
+  // strings.
+  bool always_print_enums_as_ints;
+  // Whether to preserve proto field names
+  bool preserve_proto_field_names;
 
-  JsonPrintOptions() : add_whitespace(false),
-                       always_print_primitive_fields(false) {
-  }
+  JsonPrintOptions()
+      : add_whitespace(false),
+        always_print_primitive_fields(false),
+        always_print_enums_as_ints(false),
+        preserve_proto_field_names(false) {}
 };
 
 // DEPRECATED. Use JsonPrintOptions instead.
@@ -172,12 +179,15 @@ namespace internal {
 class LIBPROTOBUF_EXPORT ZeroCopyStreamByteSink : public strings::ByteSink {
  public:
   explicit ZeroCopyStreamByteSink(io::ZeroCopyOutputStream* stream)
-      : stream_(stream) {}
+      : stream_(stream), buffer_(NULL), buffer_size_(0) {}
+  ~ZeroCopyStreamByteSink();
 
   virtual void Append(const char* bytes, size_t len);
 
  private:
   io::ZeroCopyOutputStream* stream_;
+  void* buffer_;
+  int buffer_size_;
 
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(ZeroCopyStreamByteSink);
 };
