@@ -2124,35 +2124,66 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
 An example using the Hough line detector
 */
 
-/** @brief Finds lines in set of points using the standard Hough transform.
+/** @brief Finds lines in a set of points using the standard Hough transform.
+    The function finds lines in a set of points using a modification of the Hough transform.
 
-@param point_cnt_max  Count of points.
-@param point[]        Array of points.
-@param rho_param      Data set of rho. Set the minimum and maximum values of the range of rho. 
-                      Also, set the step value within the range of rho. Rho must be a pixel value.
-@param theta_param    Data set of theta. Set the minimum and maximum values of the range of theta. 
-                      Also, set the step value within the range of theta. Theta must be a radian value.
-@param polar_cnt_max  Count of polars.
-@param hough_polar[]  Array of hough polar. This is the output data of this function.
-                      "votes" is the count of votes in the hough plane. rho, angle is the rho and theta in polar.
+Example: :
+@code
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
+    #include <math.h>
+
+    using namespace cv;
+    using namespace std;
+
+    int main(int argc, char** argv)
+    {
+        int polar_index = 0;
+        Mat lines;
+        vector<Point2f> point;
+        vector<Vec3d> line_polar;
+        const static float Points[20][2] = {
+        { 0.0f,   369.0f }, { 10.0f,  364.0f }, { 20.0f,  358.0f }, { 30.0f,  352.0f },
+        { 40.0f,  346.0f }, { 50.0f,  341.0f }, { 60.0f,  335.0f }, { 70.0f,  329.0f },
+        { 80.0f,  323.0f }, { 90.0f,  318.0f }, { 100.0f, 312.0f }, { 110.0f, 306.0f },
+        { 120.0f, 300.0f }, { 130.0f, 295.0f }, { 140.0f, 289.0f }, { 150.0f, 284.0f },
+        { 160.0f, 277.0f }, { 170.0f, 271.0f }, { 180.0f, 266.0f }, { 190.0f, 260.0f }
+        };
+
+        // Create test data.
+        for (int i = 0; i < 20; i++)
+        {
+            point.push_back(Point2f(Points[i][0],Points[i][1]));
+        }
+        double rhoMin = 0.0f, rhoMax = 360.0f, rhoStep = 1;
+        double thetaMin = 0.0f, thetaMax = CV_PI / 2.0f, thetaStep = CV_PI / 180.0f;
+
+        polar_index = HoughLinesUsingSetOfPoints(point, lines, 20,
+                                                 rhoMin, rhoMax, rhoStep,
+                                                 thetaMin, thetaMax, thetaStep);
+
+        lines.copyTo(line_polar);
+
+        printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(polar_index).val[0], line_polar.at(polar_index).val[1], line_polar.at(polar_index).val[2]);
+    }
+@endicode
+
+@param _point      Input vector of points. This data must be (x, y) points. Type must be CV_32FC2 or CV_32SC2.
+@param _lines      Output vector of found lines. Each vector is encoded as a 3-element
+                   vector<Vec3d> \f$(votes, rho, theta)\f$ .
+                   The larger the value of 'votes', the higher the reliability of the Hough line
+@param lines_max   Max count of hough lines.
+@param rho_min     Minimum Distance value in pixel.
+@param rho_max     Maximum Distance value in pixel.
+@param rho_step    Step within the range of rho.
+@param theta_min   Minimum angle value in radians.
+@param theta_max   Maximum angle value in radians.
+@param theta_step  Step within the range of theta.
  */
-struct CV_EXPORTS_W_SIMPLE HoughLinePolar
-{
-    int votes;
-    double rho;
-    double angle;
-};
+CV_EXPORTS_W int HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int lines_max,
+                                             double rho_min, double rho_max, double rho_step,
+                                             double theta_min, double theta_max, double theta_step);
 
-struct CV_EXPORTS_W_SIMPLE HoughDetectParam
-{
-    double min;
-    double max;
-    double step;
-};
-
-CV_EXPORTS_W int HoughLinesUsingSetOfPoints( int point_cnt_max, const Point2f point[],
-                                             const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
-                                             int polar_cnt_max, CV_OUT HoughLinePolar hough_polar[] );
 
 //! @} imgproc_feature
 

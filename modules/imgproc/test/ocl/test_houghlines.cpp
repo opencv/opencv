@@ -171,45 +171,6 @@ OCL_TEST_P(HoughLinesP, RealImage)
     Near(0.25);
 }
 
-//////////////////////// HoughLinesUsingSetOfPoints ///////////////////////////
-PARAM_TEST_CASE(HoughLinesUsingSetOfPoints, double, double, double, double)
-{
-    HoughDetectParam paramRho, paramTheta;
-
-    virtual void SetUp()
-    {
-        paramRho.min = std::tr1::get<0>(GetParam());
-        paramRho.max = std::tr1::get<1>(GetParam());
-        paramRho.step = (paramRho.max - paramRho.min) / 360.0f;
-        paramTheta.min = std::tr1::get<2>(GetParam());
-        paramTheta.max = std::tr1::get<3>(GetParam());
-        paramTheta.step = CV_PI / 180.0f;
-    }
-};
-
-OCL_TEST_P(HoughLinesUsingSetOfPoints, RealImage)
-{
-    HoughLinePolar houghpolar[20];
-    static const float Points[20][2] = {
-        { 0.0f,   369.0f },{ 10.0f,  364.0f },{ 20.0f,  358.0f },{ 30.0f,  352.0f },
-        { 40.0f,  346.0f },{ 50.0f,  341.0f },{ 60.0f,  335.0f },{ 70.0f,  329.0f },
-        { 80.0f,  323.0f },{ 90.0f,  318.0f },{ 100.0f, 312.0f },{ 110.0f, 306.0f },
-        { 120.0f, 300.0f },{ 130.0f, 295.0f },{ 140.0f, 289.0f },{ 150.0f, 284.0f },
-        { 160.0f, 277.0f },{ 170.0f, 271.0f },{ 180.0f, 266.0f },{ 190.0f, 260.0f }
-    };
-
-    Point2f point[20];
-    int polar_index = 0;
-    for (int i = 0; i < 20; i++)
-    {
-        point[i].x = Points[i][0];
-        point[i].y = Points[i][1];
-    }
-
-    OCL_OFF(cv::HoughLinesUsingSetOfPoints(20, point, &paramRho, &paramTheta, 20, houghpolar));
-    OCL_ON(cv::HoughLinesUsingSetOfPoints(20, point, &paramRho, &paramTheta, 20, houghpolar));
-}
-
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
                                                          Values(CV_PI / 180.0, CV_PI / 360.0),  // thetaStep
                                                          Values(80, 150)));                     // threshold
@@ -218,10 +179,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesP, Combine(Values(100, 150),     
                                                           Values(50, 100),                      // minLineLength
                                                           Values(5, 10)));                      // maxLineGap
 
-OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesUsingSetOfPoints, Combine(Values(0.0f, 120.0f),                              // rhoMin
-                                                                         Values(360.0f, 480.0f),                            // rhoMax
-                                                                         Values(0.0f, (CV_PI / 18.0f)),                     // thetaMin
-                                                                         Values((CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f))));  // thetaMax
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL

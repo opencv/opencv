@@ -1532,35 +1532,36 @@ void HoughCircles( InputArray _image, OutputArray _circles,
 #define TO_DEG(rad)  ((double)rad * 180.0f / CV_PI)
 #define TO_RAD(deg)  ((double)deg * CV_PI / 180.0f)
 static void
-CreateHoughPlane( int point_cnt_max, const Point2f point[],
-                  const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
+CreateHoughPlane( const std::vector<Point2f> point,
+                  double rho_min, double rho_max, double rho_step,
+                  double theta_min, double theta_max, double theta_step,
                   int *plane )
 {
     double rad = 0.0f, rho = 0.0f;
     int rho_index = 0, theta_index = 0;
-    int theta_min=(int)TO_DEG(theta_param->min);
-    int theta_max=(int)TO_DEG(theta_param->max);
-    int theta_step=(int)TO_DEG(theta_param->step);
-    if( theta_step < 1 ){ theta_step = 1; }
+    int deg_min=(int)TO_DEG(theta_min);
+    int deg_max=(int)TO_DEG(theta_max);
+    int deg_step=(int)TO_DEG(theta_step);
+    if( deg_step < 1 ){ deg_step = 1; }
 
-    int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
-    int theta_size = (int)((TO_DEG(theta_param->max) - TO_DEG(theta_param->min)) / TO_DEG(theta_param->step));
+    int rho_size = (int)((rho_max - rho_min) / rho_step);
+    int theta_size = (int)((TO_DEG(theta_max) - TO_DEG(theta_min)) / TO_DEG(theta_step));
 
-    for( int cnt = 0; cnt < point_cnt_max; cnt++ )
+    for( int i = 0; i < point.size(); i++)
     {
-        for( int theta = theta_min; theta < theta_max; theta+=theta_step )
+        for (int deg = deg_min; deg < deg_max; deg += deg_step)
         {
             // Calc rho
-            rad = TO_RAD(theta);
-            rho = (double)point[cnt].x * cos(rad) + (double)point[cnt].y * sin(rad);
+            rad = TO_RAD(deg);
+            rho = (double)point.at(i).x * cos(rad) + (double)point.at(i).y * sin(rad);
             // Calc index
-            rho_index = (int)((rho - rho_param->min) / rho_param->step);
-            theta_index = (int)((double)(theta - theta_min) / (double)theta_step);
+            rho_index = (int)((rho - rho_min) / rho_step);
+            theta_index = (int)((double)(deg - deg_min) / (double)deg_step);
 
-            if( ((0 <= rho_index)   && (rho_index < rho_size)) &&
-                ((0 <= theta_index) && (theta_index < theta_size)) )
+            if (((0 <= rho_index) && (rho_index < rho_size)) &&
+                ((0 <= theta_index) && (theta_index < theta_size)))
             {
-                if( *(plane + (rho_index * theta_size) + theta_index) < INT_MAX )
+                if (*(plane + (rho_index * theta_size) + theta_index) < INT_MAX)
                 {
                     *(plane + (rho_index * theta_size) + theta_index) += 1;
                 }
@@ -1573,30 +1574,28 @@ CreateHoughPlane( int point_cnt_max, const Point2f point[],
     }
 }
 
-static int SelectHoughPolar( const int *plane,
-                             const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
-                             int polar_cnt_max, HoughLinePolar hough_polar[] )
+static int SelectHoughLines( const int *plane,
+                             double rho_min, double rho_max, double rho_step,
+                             double theta_min, double theta_max, double theta_step,
+                             std::vector<Vec3d>& lines)
 {
     int ret = 0, cnt = 0;
     int votes = 0, max_votes = 0;
-    int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
-    int theta_size = (int)((TO_DEG(theta_param->max) - TO_DEG(theta_param->min)) / TO_DEG(theta_param->step));
+    int rho_size = (int)((rho_max - rho_min) / rho_step);
+    int theta_size = (int)((TO_DEG(theta_max) - TO_DEG(theta_min)) / TO_DEG(theta_step));
 
     for( int rho = 0; rho < rho_size; rho++ )
     {
         for( int theta = 0; theta < theta_size; theta++ )
         {
             votes = *(plane + (rho * theta_size) + theta);
-
             if( votes >= max_votes )
             {
-                hough_polar[cnt].votes = votes;
-                hough_polar[cnt].angle = (double)theta * theta_param->step + theta_param->min;
-                hough_polar[cnt].rho = (double)rho * rho_param->step + rho_param->min;
+                lines[cnt] = Vec3d((double)votes, ((double)rho * rho_step + rho_min), ((double)theta * theta_step + theta_min));
                 max_votes = votes;
                 ret = cnt;
                 cnt++ ;
-                if( cnt >= polar_cnt_max ){ cnt = 0; }
+                if( cnt >= lines.size() ){ cnt = 0; }
             }
             else
             {
@@ -1604,57 +1603,65 @@ static int SelectHoughPolar( const int *plane,
             }
         }
     }
-
     return ret;
 }
 
-int HoughLinesUsingSetOfPoints( int point_cnt_max, const Point2f point[],
-                                const HoughDetectParam *rho_param, const HoughDetectParam *theta_param,
-                                int polar_cnt_max, HoughLinePolar hough_polar[] )
+int HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int lines_max,
+                                double rho_min, double rho_max, double rho_step,
+                                double theta_min, double theta_max, double theta_step )
 {
     int max_polar_index = 0;
-    if( (point_cnt_max > 0) && (polar_cnt_max > 0) )
+
+    if( (_point.type() == CV_32FC2) || (_point.type() == CV_32SC2) )
     {
-        // Init output data
-        for( int cnt = 0; cnt < polar_cnt_max; cnt++ )
+        std::vector<Point2f> point;
+        _point.copyTo(point);
+        if( lines_max > 0 )
         {
-            hough_polar[cnt].votes = 0;
-            hough_polar[cnt].rho = 0.0f;
-            hough_polar[cnt].angle = 0.0f;
-        }
+            std::vector<Vec3d> lines(lines_max, 0.0f);
 
-        if( ((rho_param->max - rho_param->min) > 0)     &&
-            ((theta_param->max - theta_param->min) > 0) &&
-            ((rho_param->step > 0))                     &&
-            ((theta_param->step > 0)) )
-        {
-            int rho_size = (int)((rho_param->max - rho_param->min) / rho_param->step);
-            int theta_size = (int)((TO_DEG(theta_param->max) - TO_DEG(theta_param->min)) / TO_DEG(theta_param->step));
+            if( ((rho_max   - rho_min)   > 0) &&
+                ((theta_max - theta_min) > 0) &&
+                ((rho_step   > 0))            &&
+                ((theta_step > 0)) )
+            {
+                int rho_size = (int)((rho_max - rho_min) / rho_step);
+                int theta_size = (int)((TO_DEG(theta_max) - TO_DEG(theta_min)) / TO_DEG(theta_step));
 
-            int *plane = (int*)fastMalloc(sizeof(int) * rho_size * theta_size);
+                int *plane = (int*)fastMalloc(sizeof(int) * rho_size * theta_size);
 
-            // Clear hough plane buffer
-            memset(plane, 0, sizeof(int) * rho_size * theta_size);
+                // Clear hough plane buffer
+                memset(plane, 0, sizeof(int) * rho_size * theta_size);
 
-            CreateHoughPlane( point_cnt_max, point,
-                              rho_param, theta_param,
-                              plane );
+                CreateHoughPlane( point,
+                                  rho_min, rho_max, rho_step,
+                                  theta_min, theta_max, theta_step,
+                                  plane );
 
-            max_polar_index = SelectHoughPolar( plane,
-											    rho_param, theta_param,
-											    polar_cnt_max, hough_polar );
+                max_polar_index = SelectHoughLines( plane,
+                                                    rho_min, rho_max, rho_step,
+                                                    theta_min, theta_max, theta_step,
+                                                    lines );
 
-            fastFree(plane);
+                Mat(lines).copyTo(_lines);
+                fastFree(plane);
+            }
+            else
+            {
+                CV_Error( Error::StsBadArg, "max must be greater than min, and step must be greater than 0" );
+            }
         }
         else
         {
-            CV_Error( Error::StsBadArg, "max must be greater than min, and step must be greater than 0" );
+            CV_Error( Error::StsBadArg, "lines_max must be greater than 0" );
         }
+        return max_polar_index;
     }
     else
     {
-        CV_Error( Error::StsBadArg, "point_cnt_max and polar_cnt_max must be greater than 0" );
+        CV_Assert( _point.type() == CV_32FC2 || _point.type() == CV_32SC2 );
     }
+
     return max_polar_index;
 }
 } // \namespace cv
