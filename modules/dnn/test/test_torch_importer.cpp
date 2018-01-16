@@ -165,6 +165,11 @@ TEST(Torch_Importer, run_deconv)
     runTorchNet("net_deconv");
 }
 
+OCL_TEST(Torch_Importer, run_deconv)
+{
+    runTorchNet("net_deconv", DNN_TARGET_OPENCL);
+}
+
 TEST(Torch_Importer, run_batch_norm)
 {
     runTorchNet("net_batch_norm", DNN_TARGET_CPU, "", false, true);
