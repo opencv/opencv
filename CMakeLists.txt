@@ -271,7 +271,7 @@ OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead o
 OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID AND NOT WINRT) IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_opencv_js          "Build JavaScript bindings by Emscripten" OFF )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
-OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
+OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" OFF  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON  IF NOT WINRT)
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT APPLE_FRAMEWORK) )
@@ -615,14 +615,6 @@ include(cmake/OpenCVFindLAPACK.cmake)
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
-
-# --- Doxygen for documentation ---
-add_custom_target(opencv_docs ALL)
-if(BUILD_DOCS)
-  find_package(Doxygen)
-else()
-  unset(DOXYGEN_FOUND CACHE)
-endif()
 
 # --- Java Support ---
 if(BUILD_JAVA)
