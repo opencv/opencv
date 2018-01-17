@@ -43,7 +43,7 @@ if(BUILD_DOCS)
     COMMENT "Generating Javadoc"
   )
   add_custom_target(${the_module}doc DEPENDS "${OPENCV_DEPHELPER}/${the_module}doc")
-  install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/javadoc
+  install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html"
     COMPONENT "docs" OPTIONAL
     ${compatible_MESSAGE_NEVER}
