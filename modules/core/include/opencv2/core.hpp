@@ -1739,20 +1739,21 @@ element is a 2D/3D vector to be transformed.
 */
 CV_EXPORTS_W void perspectiveTransform(InputArray src, OutputArray dst, InputArray m );
 
-/** @brief Copies the lower or the upper half of a square matrix to another half.
+/** @brief Copies the lower or the upper half of a square matrix to its another half.
 
-The function cv::completeSymm copies the lower half of a square matrix to
+The function cv::completeSymm copies the lower or the upper half of a square matrix to
 its another half. The matrix diagonal remains unchanged:
-*   \f$\texttt{mtx}_{ij}=\texttt{mtx}_{ji}\f$ for \f$i > j\f$ if
+ - \f$\texttt{m}_{ij}=\texttt{m}_{ji}\f$ for \f$i > j\f$ if
     lowerToUpper=false
-*   \f$\texttt{mtx}_{ij}=\texttt{mtx}_{ji}\f$ for \f$i < j\f$ if
+ - \f$\texttt{m}_{ij}=\texttt{m}_{ji}\f$ for \f$i < j\f$ if
     lowerToUpper=true
-@param mtx input-output floating-point square matrix.
+
+@param m input-output floating-point square matrix.
 @param lowerToUpper operation flag; if true, the lower half is copied to
 the upper half. Otherwise, the upper half is copied to the lower half.
 @sa flip, transpose
 */
-CV_EXPORTS_W void completeSymm(InputOutputArray mtx, bool lowerToUpper = false);
+CV_EXPORTS_W void completeSymm(InputOutputArray m, bool lowerToUpper = false);
 
 /** @brief Initializes a scaled identity matrix.
 
