@@ -591,12 +591,12 @@ public:
         }
     }
 
-    bool checkSubset( InputArray _ms1, InputArray, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
     {
         Mat ms1 = _ms1.getMat();
+        Mat ms2 = _ms2.getMat();
         // check collinearity and also check that points are too close
-        // only ms1 affects actual estimation stability
-        return !haveCollinearPoints(ms1, count);
+        return !haveCollinearPoints(ms1, count) && !haveCollinearPoints(ms2, count);
     }
 };
 
