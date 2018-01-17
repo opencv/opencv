@@ -166,8 +166,8 @@ public:
         thetaMin = std::tr1::get<2>(GetParam());
         thetaMax = std::tr1::get<3>(GetParam());
         thetaStep = CV_PI / 180.0f;
-        Rho = 320.00000;    // rho =  320 pix
-        Theta = 1.04719;    // theta = 60 deg
+        Rho = 320.00000;
+        Theta = 1.04719;
     }
 };
 
@@ -234,7 +234,6 @@ void HoughLinesUsingSetOfPointsTest::run_test(void)
     vector<Point2f> point;
     vector<Vec3d> line_polar;
 
-	// Create test data.
     for (int i = 0; i < 20; i++)
     {
         point.push_back(Point2f(Points[i][0],Points[i][1]));
@@ -278,8 +277,8 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
 
-INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 120.0f ),                             // rhoMin
-                                                                                   testing::Values( 360.0f, 480.0f ),                           // rhoMax
-                                                                                   testing::Values( 0.0f, (CV_PI / 18.0f) ),                    // thetaMin
-                                                                                   testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )    // thetaMax
+INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 120.0f ),
+                                                                                   testing::Values( 360.0f, 480.0f ),
+                                                                                   testing::Values( 0.0f, (CV_PI / 18.0f) ),
+                                                                                   testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )
                                                                                    ));

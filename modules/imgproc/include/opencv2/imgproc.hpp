@@ -2088,7 +2088,7 @@ Example: :
 @endcode
 
 @param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
-@param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$ .
+@param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
 @param lines_max Max count of hough lines.
 @param rho_min Minimum Distance value in pixel.
