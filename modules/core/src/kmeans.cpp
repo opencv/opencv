@@ -42,11 +42,15 @@
 //M*/
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 
 ////////////////////////////////////////// kmeans ////////////////////////////////////////////
 
 namespace cv
 {
+
+static int CV_KMEANS_PARALLEL_GRANULARITY = (int)utils::getConfigurationParameterSizeT("OPENCV_KMEANS_PARALLEL_GRANULARITY", 1000);
+
 
 static void generateRandomCenter(const std::vector<Vec2f>& box, float* center, RNG& rng)
 {
@@ -134,7 +138,8 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
             int ci = i;
 
             parallel_for_(Range(0, N),
-                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
+                          KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci),
+                          divUp(dims * N, CV_KMEANS_PARALLEL_GRANULARITY));
             for( i = 0; i < N; i++ )
             {
                 s += tdist2[i];
@@ -447,7 +452,8 @@ double cv::kmeans( InputArray _data, int K,
             // assign labels
             dists = 0;
             double* dist = dists.ptr<double>(0);
-            parallel_for_(Range(0, N), KMeansDistanceComputer(dist, labels, data, centers, isLastIter));
+            parallel_for_(Range(0, N), KMeansDistanceComputer(dist, labels, data, centers, isLastIter),
+                          divUp(dims * N * (isLastIter ? 1 : K), CV_KMEANS_PARALLEL_GRANULARITY));
             compactness = sum(dists)[0];
 
             if (isLastIter)
