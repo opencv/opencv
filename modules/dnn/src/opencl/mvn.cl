@@ -40,56 +40,73 @@
 //
 //M*/
 
-__kernel void ReLUForward(const int count, __global const T* in, __global T* out
-#ifndef RELU_NO_SLOPE
-, T negative_slope
-#endif
-) {
-  int index = get_global_id(0);
-  if(index < count)
-#ifndef RELU_NO_SLOPE
-  out[index] = in[index] > 0 ? in[index] : in[index] * negative_slope;
-#else
-  out[index] = in[index] > 0 ? in[index] : 0;
-#endif
-}
+#define Dtype float
+#define Dtype4 float4
+#define Dtype8 float8
 
-__kernel void PReLUForward(const int count, const int channels, const int plane_size,
-                           __global const T* in, __global T* out, __global const T* slope_data)
+#if NUM == 8
+    #define load(src, index) vload8(0, src + index)
+    #define store(vec, dst, index) vstore8(vec, 0, dst + index)
+    #define vec_type Dtype8
+    #define CALC_MEAN calc_mean8
+    #define MVN mvn8
+#elif NUM == 4
+    #define load(src, index) vload4(0, src + index)
+    #define store(vec, dst, index) vstore4(vec, 0, dst + index)
+    #define vec_type Dtype4
+    #define CALC_MEAN calc_mean4
+    #define MVN mvn4
+#elif NUM == 1
+    #define load(src, index) src[index]
+    #define store(vec, dst, index) dst[index] = vec
+    #define vec_type Dtype
+    #define CALC_MEAN calc_mean1
+    #define MVN mvn1
+#endif
+
+__kernel void CALC_MEAN(__global const Dtype* src,
+                        const int rows,
+                        const int cols,
+                        __global Dtype* mean,
+                        __global Dtype* dst)
 {
-  int index = get_global_id(0);
-  int c = (index / plane_size) % channels;
-  if(index < count)
-  out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+    int x = get_global_id(0);
+    int y = get_global_id(1) * NUM;
+    int index = x * cols + y;
+
+    if (x >= rows || y >= cols)
+        return;
+
+    Dtype mean_val = mean[x];
+    vec_type src_vec = load(src, index);
+    vec_type dst_vec = pow(src_vec - (vec_type)mean_val, 2);
+    store(dst_vec, dst, index);
 }
 
-__kernel void TanHForward(const int count, __global T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = tanh(in[index]);
-}
+__kernel void MVN(__global const Dtype* src,
+                  const int rows,
+                  const int cols,
+                  const Dtype eps,
+                  __global const Dtype* mean,
+                  __global const Dtype* dev,
+                  __global Dtype* dst)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * NUM;
+    int index = x * cols + y;
 
-__kernel void SigmoidForward(const int count, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if(index < count)
-  out[index] = 1.0f / (1.0f + exp(-in[index]));
-}
+    if (x >= rows || y >= cols)
+        return;
 
-__kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
-  }
-}
-
-__kernel void AbsValForward(const int n, __global const T* in, __global T* out) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = fabs(in[index]);
-}
-
-__kernel void PowForward(const int n, __global const T* in, __global T* out, const T power, const T scale, const T shift) {
-  int index = get_global_id(0);
-  if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
+    Dtype mean_val = mean[x];
+    Dtype dev_val = sqrt(dev[x]);
+    Dtype alpha;
+#ifdef NORM_VARIANCE
+    alpha = 1 / (eps + dev_val);
+#else
+    alpha = 1;
+#endif
+    vec_type src_vec = load(src, index) - (vec_type)mean_val;
+    vec_type dst_vec = src_vec * alpha;
+    store(dst_vec, dst, index);
 }
