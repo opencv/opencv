@@ -202,6 +202,11 @@ TEST(Layer_Test_MVN, Accuracy)
     testLayerUsingCaffeModels("layer_mvn");
 }
 
+OCL_TEST(Layer_Test_MVN, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_mvn", DNN_TARGET_OPENCL);
+}
+
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
                  int axis = 0, int num_axes = -1,
                  MatShape mask = MatShape())
@@ -329,6 +334,12 @@ TEST(Layer_Test_PReLU, Accuracy)
 {
     testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_CPU, true);
     testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_CPU, true, false);
+}
+
+OCL_TEST(Layer_Test_PReLU, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_OPENCL, true);
+    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_OPENCL, true, false);
 }
 
 //template<typename XMat>
