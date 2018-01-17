@@ -1033,7 +1033,14 @@ ocv_build_features_string(apps_status
   IF BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS THEN "android_examples"
   ELSE "-")
 status("    Applications:" "${apps_status}")
-status("    Documentation:" BUILD_DOCS AND DOXYGEN_FOUND THEN "YES (${DOXYGEN_EXECUTABLE} ${DOXYGEN_VERSION})" ELSE "NO")
+ocv_build_features_string(docs_status
+    IF TARGET doxygen_cpp THEN "doxygen"
+    IF TARGET doxygen_python THEN "python"
+    IF TARGET doxygen_javadoc THEN "javadoc"
+    IF BUILD_opencv_js OR DEFINED OPENCV_JS_LOCATION THEN "js"
+    ELSE "NO"
+)
+status("    Documentation:" "${docs_status}")
 status("    Non-free algorithms:" OPENCV_ENABLE_NONFREE THEN "YES" ELSE "NO")
 
 # ========================== Android details ==========================
