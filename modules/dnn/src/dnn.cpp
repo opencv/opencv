@@ -191,56 +191,97 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     }
 }
 
-std::vector<Mat> imagesFromBlob(const Mat& blob)
+std::vector<Mat> imagesFromBlob(const cv::Mat& blob_, const bool normalize_,
+                                const cv::Size outputSize_, const double scaleFactor_,
+                                const cv::Scalar& mean_)
 {
-	CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
-	//A blob is a 4 dimensional matrix in floating point precision
-	CV_Assert(blob.depth() == CV_32F);
-	CV_Assert(blob.dims == 4);
+    //A blob is a 4 dimensional matrix in floating point precision
+    CV_Assert(blob_.depth() == CV_32F);
+    CV_Assert(blob_.dims == 4);
 
-	//A container to store our images
-	std::vector<cv::Mat> vectorOfImages;
+    //A container to store our images
+    std::vector<cv::Mat> vectorOfImages;
 
-	//Store each dimension size
-	//It is ok to hardcode it since we asserted the dimension before
-	int nbOfInputs = blob.size[0]; //= nb of inputs
-	int nbOfChannels = blob.size[1]; //<=> nb of filtered images
-	int height = blob.size[2]; //= the height of the images
-	int width = blob.size[3]; //= the width of the images
+    //Store each dimension size
+    //It is ok to hardcode it since we asserted the dimension before
+    int nbOfImages = blob_.size[0]; //= nb of inputs
+    int nbOfChannels = blob_.size[1]; //<=> nb of filtered images
+    int height = blob_.size[2]; //= the height of the images
+    int width = blob_.size[3]; //= the width of the images
 
 
-							  //Access the elements of each channel for each image in the blob
-							  //Store them in a vector of Images
-	for (int i = 0; i < nbOfInputs; i++)
-	{
-		for (int c = 0; c < nbOfChannels; c++)
-		{
-			cv::Mat img(width, height, CV_32F);
+    //Access the elements of each channel for each images
+    //Store the matrix in a vector of Images
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        //store all the channels for each image
+        std::vector<cv::Mat> vectorOfChannels;
 
-			for (int w = 0; w < width; w++)
-			{
-				for (int h = 0; h < height; h++)
-				{
-					int indx[4] = { 0, c, h, w };
-					img.at<float>(h, w) = blob.at<float>(indx);
-				}//loop on height
-			}//loop on width
+        for (int c = 0; c < nbOfChannels; c++)
+        {
+            //store the current channel
+            cv::Mat currentChannel(width, height, CV_32F);
 
-			 //Sanity check
-			CV_Assert(img.empty() == false);
-			CV_Assert(img.dims == 2);
-			CV_Assert(img.cols == width);
-			CV_Assert(img.rows == height);
+            for (int w = 0; w < width; w++)
+            {
+                for (int h = 0; h < height; h++)
+                {
+                    int indx[4] = { i, c, h, w };
+                    currentChannel.at<float>(h, w) = blob_.at<float>(indx); //blobs store images in floating point precision
+                }//loop on height
+            }//loop on width
 
-			//Store the image - note that the image has > not < been normalized here
-			//The image is still int floating point precision
-			vectorOfImages.push_back(img);
+            //Sanity check
+            CV_Assert(currentChannel.empty() == false);
+            CV_Assert(currentChannel.dims == 2);
+            CV_Assert(currentChannel.cols == width);
+            CV_Assert(currentChannel.rows == height);
+            
+            //Normalization is done for each channel independently if
+            //the output image is not expected to be a RGB/BGR image or 
+            //a grayscale image (HERE) / else, the normalisation is done on the
+            //the output image directly (see below)
+            if (normalize_ && nbOfChannels != 3 && nbOfChannels != 1)
+                cv::normalize(currentChannel, currentChannel, 0, 1, cv::NORM_MINMAX);
 
-		}//loop on channels
-	}//loop on images
+            //Save the current channel
+            //The channel is still in floating point precision
+            vectorOfChannels.push_back(currentChannel);
 
-	return vectorOfImages;
+        }//loop on channels
+
+        //Merge all the channels in one mat 
+        cv::Mat outputImg;
+        cv::merge(vectorOfChannels, outputImg);
+
+        //Inverse scale if > 0 ; use negative value to not mutliply ; inverse operation than in blobFromImages
+        if (scaleFactor_ > 0)	outputImg = outputImg / scaleFactor_; 
+
+        //Add mean if != -1 ; use negative values to not add ; inverse operation than in blobFromImages
+        if (mean_ != cv::Scalar(-1) && mean_ != cv::Scalar(-1, -1, -1))  outputImg += mean_;
+
+        //Resize if size is != (-1,-1) ; handy for visualisation at the scale of the original input images
+        //Same operation than in blobFromImages without crop, user should take care of the size manually
+        if (outputSize_ != cv::Size(-1, -1)) cv::resize(outputImg, outputImg, outputSize_, 0, 0, cv::INTER_LINEAR);
+
+        //Normalization is done for each channel independently if
+        //the output image is not expected to be a RGB/BGR image or 
+        //a grayscale image (see upper) / else, the normalisation is done on the
+        //the output image directly (HERE)
+        if (normalize_ && (nbOfChannels == 3 || nbOfChannels ==1)) 
+            cv::normalize(outputImg, outputImg, 0, 1, cv::NORM_MINMAX);
+        
+        std::cout << nbOfChannels << std::endl;
+        
+        //Store the image with all its channels concatenated
+        //All data are in CV_32F, channels not normalized
+        vectorOfImages.push_back(outputImg);
+
+    }//loop on images
+
+    return vectorOfImages;
 
 }//imagesFromBlob
 
