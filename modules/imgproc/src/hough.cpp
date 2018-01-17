@@ -1547,7 +1547,7 @@ CreateHoughPlane( const std::vector<Point2f> point,
     int rho_size = (int)((rho_max - rho_min) / rho_step);
     int theta_size = (int)((TO_DEG(theta_max) - TO_DEG(theta_min)) / TO_DEG(theta_step));
 
-    for( int i = 0; i < point.size(); i++)
+    for( int i = 0; i < (int)point.size(); i++)
     {
         for (int deg = deg_min; deg < deg_max; deg += deg_step)
         {
@@ -1595,7 +1595,7 @@ static int SelectHoughLines( const int *plane,
                 max_votes = votes;
                 ret = cnt;
                 cnt++ ;
-                if( cnt >= lines.size() ){ cnt = 0; }
+                if( cnt >= (int)lines.size() ){ cnt = 0; }
             }
             else
             {
