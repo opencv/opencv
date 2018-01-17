@@ -2070,7 +2070,6 @@ Example: :
         { 160.0f, 277.0f }, { 170.0f, 271.0f }, { 180.0f, 266.0f }, { 190.0f, 260.0f }
         };
 
-        // Create test data.
         for (int i = 0; i < 20; i++)
         {
             point.push_back(Point2f(Points[i][0],Points[i][1]));
@@ -2086,7 +2085,7 @@ Example: :
 
         printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(polar_index).val[0], line_polar.at(polar_index).val[1], line_polar.at(polar_index).val[2]);
     }
-@endicode
+@endcode
 
 @param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$ .
