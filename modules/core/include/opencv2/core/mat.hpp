@@ -545,14 +545,6 @@ struct CV_EXPORTS UMatData
 };
 
 
-struct CV_EXPORTS UMatDataAutoLock
-{
-    explicit UMatDataAutoLock(UMatData* u);
-    ~UMatDataAutoLock();
-    UMatData* u;
-};
-
-
 struct CV_EXPORTS MatSize
 {
     explicit MatSize(int* _p);
