@@ -171,6 +171,11 @@ TEST(Test_TensorFlow, deconvolution)
     runTensorFlowNet("deconvolution");
 }
 
+OCL_TEST(Test_TensorFlow, deconvolution)
+{
+    runTensorFlowNet("deconvolution", DNN_TARGET_OPENCL);
+}
+
 TEST(Test_TensorFlow, matmul)
 {
     runTensorFlowNet("matmul");

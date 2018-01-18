@@ -167,6 +167,11 @@ TEST(Layer_Test_DeConvolution, Accuracy)
     testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_CPU, true, false);
 }
 
+OCL_TEST(Layer_Test_DeConvolution, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_OPENCL, true, false);
+}
+
 TEST(Layer_Test_InnerProduct, Accuracy)
 {
     testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_CPU, true);
