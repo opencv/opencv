@@ -7,8 +7,6 @@
 #include <opencv2/highgui.hpp>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-#include <cstdlib>
 
 using namespace std;
 using namespace cv;
@@ -26,7 +24,7 @@ static const char* params =
 "{ model          |       | model weights       }"
 "{ camera_device  | 0     | camera device number}"
 "{ source         |       | video or image for detection}"
-"{ save           |       | file name output}"
+"{ out            |       | path to output video file}"
 "{ fps            | 3     | frame per second }"
 "{ style          | box   | box or line style draw }"
 "{ min_confidence | 0.24  | min confidence      }"
@@ -84,9 +82,9 @@ int main(int argc, char** argv)
         }
     }
 
-    if(!parser.get<String>("save").empty())
+    if(!parser.get<String>("out").empty())
     {
-        writer.open(parser.get<String>("save"), codec, fps, Size((int)cap.get(CAP_PROP_FRAME_WIDTH),(int)cap.get(CAP_PROP_FRAME_HEIGHT)), 1);
+        writer.open(parser.get<String>("out"), codec, fps, Size((int)cap.get(CAP_PROP_FRAME_WIDTH),(int)cap.get(CAP_PROP_FRAME_HEIGHT)), 1);
     }
 
     vector<String> classNamesVec;
@@ -169,7 +167,7 @@ int main(int argc, char** argv)
                 int baseLine = 0;
                 Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
                 rectangle(frame, Rect(p1, Size(labelSize.width, labelSize.height + baseLine)),
-                          object_roi_color, CV_FILLED);
+                          object_roi_color, FILLED);
                 putText(frame, label, p1 + Point(0, labelSize.height),
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
             }

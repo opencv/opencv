@@ -2,13 +2,11 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-using namespace cv;
-using namespace cv::dnn;
-
-#include <fstream>
 #include <iostream>
-#include <cstdlib>
+
+using namespace cv;
 using namespace std;
+using namespace cv::dnn;
 
 const char* classNames[] = {"background",
                             "aeroplane", "bicycle", "bird", "boat",
@@ -144,7 +142,7 @@ int main(int argc, char** argv)
                 Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
                 rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom - labelSize.height),
                                       Size(labelSize.width, labelSize.height + baseLine)),
-                          Scalar(255, 255, 255), CV_FILLED);
+                          Scalar(255, 255, 255), FILLED);
                 putText(frame, label, Point(xLeftBottom, yLeftBottom),
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
             }
