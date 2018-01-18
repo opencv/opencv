@@ -30,24 +30,29 @@ add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}_jar"
 )
 add_custom_target(${the_module}_jar DEPENDS "${OPENCV_DEPHELPER}/${the_module}_jar")
 
-add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}doc"
-    COMMAND ${ANT_EXECUTABLE} -noinput -k javadoc
-    COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}doc"
-    WORKING_DIRECTORY "${OPENCV_JAVA_DIR}"
-    DEPENDS ${depends}
-    COMMENT "Generating Javadoc"
-)
-add_custom_target(${the_module}doc DEPENDS "${OPENCV_DEPHELPER}/${the_module}doc")
-
 install(FILES ${OPENCV_JAR_FILE} OPTIONAL DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
 
 add_dependencies(${the_module} ${the_module}_jar)
 
 if(BUILD_DOCS)
-  add_dependencies(opencv_docs ${the_module}doc)
-
-  install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/javadoc
-    DESTINATION "${OPENCV_DOC_INSTALL_PATH}/javadoc"
-    COMPONENT "docs" OPTIONAL
+  add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}doc"
+    COMMAND ${ANT_EXECUTABLE} -noinput -k javadoc
+    COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}doc"
+    WORKING_DIRECTORY "${OPENCV_JAVA_DIR}"
+    DEPENDS ${depends}
+    COMMENT "Generating Javadoc"
   )
+  add_custom_target(${the_module}doc DEPENDS "${OPENCV_DEPHELPER}/${the_module}doc")
+  install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc
+    DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html"
+    COMPONENT "docs" OPTIONAL
+    ${compatible_MESSAGE_NEVER}
+  )
+  set(CMAKE_DOXYGEN_JAVADOC_NODE
+    "<tab type=\"user\" url=\"./javadoc/index.html\" title=\"Java documentation\"/>"
+    CACHE INTERNAL "Link to the Java documentation") # set to the cache to make it global
+  add_custom_target(doxygen_javadoc DEPENDS ${the_module}doc)
+  add_dependencies(opencv_docs ${the_module}doc)
+else()
+  unset(CMAKE_DOXYGEN_JAVADOC_NODE CACHE)
 endif()

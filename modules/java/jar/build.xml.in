@@ -32,7 +32,7 @@
     <javadoc
       packagenames="org.opencv.*"
       sourcepath="java"
-      destdir="@OpenCV_BINARY_DIR@/doc/javadoc"
+      destdir="@OpenCV_BINARY_DIR@/doc/doxygen/html/javadoc"
       Windowtitle="OpenCV @OPENCV_VERSION_PLAIN@ Java documentation"
       Doctitle="OpenCV Java documentation (@OPENCV_VERSION@)"
       bottom="Generated on ${timestamp} / OpenCV @OPENCV_VCSVERSION@"
