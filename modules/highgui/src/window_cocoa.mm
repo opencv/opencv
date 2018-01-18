@@ -606,6 +606,38 @@ CV_IMPL int cvWaitKey (int maxWait)
     return returnCode;
 }
 
+CvRect cvGetWindowRect_COCOA( const char* name )
+{
+    CvRect result = cvRect(-1, -1, -1, -1);
+    CVWindow *window = nil;
+
+    CV_FUNCNAME( "cvGetWindowRect_COCOA" );
+
+    __BEGIN__;
+    if( name == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+    }
+
+    window = cvGetWindow( name );
+    if ( window == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+    } else {
+        NSRect rect = [window frame];
+#if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_6
+        NSPoint pt = [window convertRectToScreen:rect].origin;
+#else
+        NSPoint pt = [window convertBaseToScreen:rect.origin];
+#endif
+        NSSize sz = [[[window contentView] image] size];
+        result = cvRect(pt.x, pt.y, sz.width, sz.height);
+    }
+
+    __END__;
+    return result;
+}
+
 double cvGetModeWindow_COCOA( const char* name )
 {
     double result = -1;

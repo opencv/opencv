@@ -160,10 +160,35 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return -1;
         #endif
     break;
-
     default:
         return -1;
     }
+}
+
+cv::Rect cvGetWindowImageRect(const char* name)
+{
+    if (!name)
+        return cv::Rect(-1, -1, -1, -1);
+
+    #if defined (HAVE_QT)
+        return cvGetWindowRect_QT(name);
+    #elif defined(HAVE_WIN32UI)
+        return cvGetWindowRect_W32(name);
+    #elif defined (HAVE_GTK)
+        return cvGetWindowRect_GTK(name);
+    #elif defined (HAVE_CARBON)
+        return cvGetWindowRect_CARBON(name);
+    #elif defined (HAVE_COCOA)
+        return cvGetWindowRect_COCOA(name);
+    #else
+        return cv::Rect(-1, -1, -1, -1);
+    #endif
+}
+
+cv::Rect cv::getWindowImageRect(const String& winname)
+{
+    CV_TRACE_FUNCTION();
+    return cvGetWindowImageRect(winname.c_str());
 }
 
 void cv::namedWindow( const String& winname, int flags )

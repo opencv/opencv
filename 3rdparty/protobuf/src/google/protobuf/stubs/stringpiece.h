@@ -292,7 +292,7 @@ class LIBPROTOBUF_EXPORT StringPiece {
   int compare(StringPiece x) const {
     const stringpiece_ssize_type min_size =
         length_ < x.length_ ? length_ : x.length_;
-    int r = memcmp(ptr_, x.ptr_, min_size);
+    int r = memcmp(ptr_, x.ptr_, static_cast<size_t>(min_size));
     if (r < 0) return -1;
     if (r > 0) return 1;
     if (length_ < x.length_) return -1;
@@ -310,7 +310,7 @@ class LIBPROTOBUF_EXPORT StringPiece {
   // "as_string()" method defined here for existing code.
   string ToString() const {
     if (ptr_ == NULL) return string();
-    return string(data(), size());
+    return string(data(), static_cast<size_type>(size()));
   }
 
   operator string() const {
@@ -321,12 +321,14 @@ class LIBPROTOBUF_EXPORT StringPiece {
   void AppendToString(string* target) const;
 
   bool starts_with(StringPiece x) const {
-    return (length_ >= x.length_) && (memcmp(ptr_, x.ptr_, x.length_) == 0);
+    return (length_ >= x.length_) &&
+           (memcmp(ptr_, x.ptr_, static_cast<size_t>(x.length_)) == 0);
   }
 
   bool ends_with(StringPiece x) const {
     return ((length_ >= x.length_) &&
-            (memcmp(ptr_ + (length_-x.length_), x.ptr_, x.length_) == 0));
+            (memcmp(ptr_ + (length_-x.length_), x.ptr_,
+                 static_cast<size_t>(x.length_)) == 0));
   }
 
   // Checks whether StringPiece starts with x and if so advances the beginning
@@ -398,7 +400,7 @@ inline bool operator==(StringPiece x, StringPiece y) {
   }
 
   return x.data() == y.data() || len <= 0 ||
-      memcmp(x.data(), y.data(), len) == 0;
+      memcmp(x.data(), y.data(), static_cast<size_t>(len)) == 0;
 }
 
 inline bool operator!=(StringPiece x, StringPiece y) {
@@ -408,7 +410,7 @@ inline bool operator!=(StringPiece x, StringPiece y) {
 inline bool operator<(StringPiece x, StringPiece y) {
   const stringpiece_ssize_type min_size =
       x.size() < y.size() ? x.size() : y.size();
-  const int r = memcmp(x.data(), y.data(), min_size);
+  const int r = memcmp(x.data(), y.data(), static_cast<size_t>(min_size));
   return (r < 0) || (r == 0 && x.size() < y.size());
 }
 
@@ -458,7 +460,9 @@ struct StringPiecePod {
     return size_;
   }
 
-  std::string ToString() const { return std::string(data_, size_); }
+  std::string ToString() const {
+    return std::string(data_, static_cast<size_t>(size_));
+  }
  private:
   const char* data_;
   stringpiece_ssize_type size_;
@@ -473,7 +477,7 @@ template<> struct hash<StringPiece> {
   size_t operator()(const StringPiece& s) const {
     size_t result = 0;
     for (const char *str = s.data(), *end = str + s.size(); str < end; str++) {  
-      result = 5 * result + *str;
+      result = 5 * result + static_cast<size_t>(*str);
     }
     return result;
   }

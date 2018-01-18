@@ -76,7 +76,7 @@ static std::string path(const std::string& file)
     return findDataFile("dnn/tensorflow/" + file, false);
 }
 
-static void runTensorFlowNet(const std::string& prefix, bool hasText = false,
+static void runTensorFlowNet(const std::string& prefix, int targetId = DNN_TARGET_CPU, bool hasText = false,
                              double l1 = 1e-5, double lInf = 1e-4,
                              bool memoryLoad = false)
 {
@@ -103,6 +103,9 @@ static void runTensorFlowNet(const std::string& prefix, bool hasText = false,
         net = readNetFromTensorflow(netPath, netConfig);
 
     ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     cv::Mat input = blobFromNPY(inpPath);
     cv::Mat target = blobFromNPY(outPath);
@@ -132,6 +135,11 @@ TEST(Test_TensorFlow, eltwise_add_mul)
     runTensorFlowNet("eltwise_add_mul");
 }
 
+OCL_TEST(Test_TensorFlow, eltwise_add_mul)
+{
+    runTensorFlowNet("eltwise_add_mul", DNN_TARGET_OPENCL);
+}
+
 TEST(Test_TensorFlow, pad_and_concat)
 {
     runTensorFlowNet("pad_and_concat");
@@ -141,7 +149,14 @@ TEST(Test_TensorFlow, batch_norm)
 {
     runTensorFlowNet("batch_norm");
     runTensorFlowNet("fused_batch_norm");
-    runTensorFlowNet("batch_norm_text", true);
+    runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true);
+}
+
+OCL_TEST(Test_TensorFlow, batch_norm)
+{
+    runTensorFlowNet("batch_norm", DNN_TARGET_OPENCL);
+    runTensorFlowNet("fused_batch_norm", DNN_TARGET_OPENCL);
+    runTensorFlowNet("batch_norm_text", DNN_TARGET_OPENCL, true);
 }
 
 TEST(Test_TensorFlow, pooling)
@@ -179,15 +194,15 @@ TEST(Test_TensorFlow, fp16)
 {
     const float l1 = 1e-3;
     const float lInf = 1e-2;
-    runTensorFlowNet("fp16_single_conv", false, l1, lInf);
-    runTensorFlowNet("fp16_deconvolution", false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_same", false, l1, lInf);
-    runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
-    runTensorFlowNet("fp16_eltwise_add_mul", false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_valid", false, l1, lInf);
-    runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_even", false, l1, lInf);
-    runTensorFlowNet("fp16_padding_same", false, l1, lInf);
+    runTensorFlowNet("fp16_single_conv", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_deconvolution", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_same", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_padding_valid", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_eltwise_add_mul", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_valid", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_pad_and_concat", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_even", DNN_TARGET_CPU, false, l1, lInf);
+    runTensorFlowNet("fp16_padding_same", DNN_TARGET_CPU, false, l1, lInf);
 }
 
 TEST(Test_TensorFlow, quantized)
@@ -267,7 +282,7 @@ OCL_TEST(Test_TensorFlow, MobileNet_SSD)
 
 TEST(Test_TensorFlow, lstm)
 {
-    runTensorFlowNet("lstm", true);
+    runTensorFlowNet("lstm", DNN_TARGET_CPU, true);
 }
 
 TEST(Test_TensorFlow, split)
@@ -284,11 +299,11 @@ TEST(Test_TensorFlow, memory_read)
 {
     double l1 = 1e-5;
     double lInf = 1e-4;
-    runTensorFlowNet("lstm", true, l1, lInf, true);
+    runTensorFlowNet("lstm", DNN_TARGET_CPU, true, l1, lInf, true);
 
-    runTensorFlowNet("batch_norm", false, l1, lInf, true);
-    runTensorFlowNet("fused_batch_norm", false, l1, lInf, true);
-    runTensorFlowNet("batch_norm_text", true, l1, lInf, true);
+    runTensorFlowNet("batch_norm", DNN_TARGET_CPU, false, l1, lInf, true);
+    runTensorFlowNet("fused_batch_norm", DNN_TARGET_CPU, false, l1, lInf, true);
+    runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true, l1, lInf, true);
 }
 
 }

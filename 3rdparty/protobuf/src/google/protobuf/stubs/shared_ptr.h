@@ -428,11 +428,11 @@ class enable_shared_from_this {
   shared_ptr<T> shared_from_this() {
     // Behavior is undefined if the precondition isn't satisfied; we choose
     // to die with a CHECK failure.
-    CHECK(!weak_this_.expired()) << "No shared_ptr owns this object";
+    GOOGLE_CHECK(!weak_this_.expired()) << "No shared_ptr owns this object";
     return weak_this_.lock();
   }
   shared_ptr<const T> shared_from_this() const {
-    CHECK(!weak_this_.expired()) << "No shared_ptr owns this object";
+    GOOGLE_CHECK(!weak_this_.expired()) << "No shared_ptr owns this object";
     return weak_this_.lock();
   }
 
@@ -456,7 +456,8 @@ class enable_shared_from_this {
 template<typename T>
 void shared_ptr<T>::MaybeSetupWeakThis(enable_shared_from_this<T>* ptr) {
   if (ptr) {
-    CHECK(ptr->weak_this_.expired()) << "Object already owned by a shared_ptr";
+    GOOGLE_CHECK(ptr->weak_this_.expired())
+        << "Object already owned by a shared_ptr";
     ptr->weak_this_ = *this;
   }
 }

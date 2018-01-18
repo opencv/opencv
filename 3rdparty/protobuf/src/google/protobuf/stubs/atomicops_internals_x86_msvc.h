@@ -82,7 +82,7 @@ inline Atomic32 Acquire_Load(volatile const Atomic32* ptr) {
 }
 
 inline Atomic32 Release_Load(volatile const Atomic32* ptr) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return *ptr;
 }
 
@@ -125,7 +125,7 @@ inline Atomic64 Acquire_Load(volatile const Atomic64* ptr) {
 }
 
 inline Atomic64 Release_Load(volatile const Atomic64* ptr) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return *ptr;
 }
 

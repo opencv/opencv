@@ -34,6 +34,9 @@
 
 #include <google/protobuf/wire_format_lite_inl.h>
 
+#ifdef __SSE_4_1__
+#include <immintrin.h>
+#endif
 #include <stack>
 #include <string>
 #include <vector>
@@ -120,6 +123,8 @@ WireFormatLite::kWireTypeForFieldType[MAX_FIELD_TYPE + 1] = {
 
 bool WireFormatLite::SkipField(
     io::CodedInputStream* input, uint32 tag) {
+  // Field number 0 is illegal.
+  if (WireFormatLite::GetTagFieldNumber(tag) == 0) return false;
   switch (WireFormatLite::GetTagWireType(tag)) {
     case WireFormatLite::WIRETYPE_VARINT: {
       uint64 value;
@@ -165,6 +170,8 @@ bool WireFormatLite::SkipField(
 
 bool WireFormatLite::SkipField(
     io::CodedInputStream* input, uint32 tag, io::CodedOutputStream* output) {
+  // Field number 0 is illegal.
+  if (WireFormatLite::GetTagFieldNumber(tag) == 0) return false;
   switch (WireFormatLite::GetTagWireType(tag)) {
     case WireFormatLite::WIRETYPE_VARINT: {
       uint64 value;
@@ -337,6 +344,94 @@ bool WireFormatLite::ReadPackedEnumPreserveUnknowns(
   return true;
 }
 
+#if !defined(PROTOBUF_LITTLE_ENDIAN)
+
+namespace {
+void EncodeFixedSizeValue(float v, uint8* dest) {
+  WireFormatLite::WriteFloatNoTagToArray(v, dest);
+}
+
+void EncodeFixedSizeValue(double v, uint8* dest) {
+  WireFormatLite::WriteDoubleNoTagToArray(v, dest);
+}
+
+void EncodeFixedSizeValue(uint32 v, uint8* dest) {
+  WireFormatLite::WriteFixed32NoTagToArray(v, dest);
+}
+
+void EncodeFixedSizeValue(uint64 v, uint8* dest) {
+  WireFormatLite::WriteFixed64NoTagToArray(v, dest);
+}
+
+void EncodeFixedSizeValue(int32 v, uint8* dest) {
+  WireFormatLite::WriteSFixed32NoTagToArray(v, dest);
+}
+
+void EncodeFixedSizeValue(int64 v, uint8* dest) {
+  WireFormatLite::WriteSFixed64NoTagToArray(v, dest);
+}
+
+void EncodeFixedSizeValue(bool v, uint8* dest) {
+  WireFormatLite::WriteBoolNoTagToArray(v, dest);
+}
+}  // anonymous namespace
+
+#endif  // !defined(PROTOBUF_LITTLE_ENDIAN)
+
+template <typename CType>
+static void WriteArray(const CType* a, int n, io::CodedOutputStream* output) {
+#if defined(PROTOBUF_LITTLE_ENDIAN)
+  output->WriteRaw(reinterpret_cast<const char*>(a), n * sizeof(a[0]));
+#else
+  const int kAtATime = 128;
+  uint8 buf[sizeof(CType) * kAtATime];
+  for (int i = 0; i < n; i += kAtATime) {
+    int to_do = std::min(kAtATime, n - i);
+    uint8* ptr = buf;
+    for (int j = 0; j < to_do; j++) {
+      EncodeFixedSizeValue(a[i+j], ptr);
+      ptr += sizeof(a[0]);
+    }
+    output->WriteRaw(buf, to_do * sizeof(a[0]));
+  }
+#endif
+}
+
+void WireFormatLite::WriteFloatArray(const float* a, int n,
+                                     io::CodedOutputStream* output) {
+  WriteArray<float>(a, n, output);
+}
+
+void WireFormatLite::WriteDoubleArray(const double* a, int n,
+                                     io::CodedOutputStream* output) {
+  WriteArray<double>(a, n, output);
+}
+
+void WireFormatLite::WriteFixed32Array(const uint32* a, int n,
+                                     io::CodedOutputStream* output) {
+  WriteArray<uint32>(a, n, output);
+}
+
+void WireFormatLite::WriteFixed64Array(const uint64* a, int n,
+                                       io::CodedOutputStream* output) {
+  WriteArray<uint64>(a, n, output);
+}
+
+void WireFormatLite::WriteSFixed32Array(const int32* a, int n,
+                                       io::CodedOutputStream* output) {
+  WriteArray<int32>(a, n, output);
+}
+
+void WireFormatLite::WriteSFixed64Array(const int64* a, int n,
+                                       io::CodedOutputStream* output) {
+  WriteArray<int64>(a, n, output);
+}
+
+void WireFormatLite::WriteBoolArray(const bool* a, int n,
+                                    io::CodedOutputStream* output) {
+  WriteArray<bool>(a, n, output);
+}
+
 void WireFormatLite::WriteInt32(int field_number, int32 value,
                                 io::CodedOutputStream* output) {
   WriteTag(field_number, WIRETYPE_VARINT, output);
@@ -467,7 +562,7 @@ void WireFormatLite::WriteGroupMaybeToArray(int field_number,
   uint8* target = output->GetDirectBufferForNBytesAndAdvance(size);
   if (target != NULL) {
     uint8* end = value.InternalSerializeWithCachedSizesToArray(
-        output->IsSerializationDeterminstic(), target);
+        output->IsSerializationDeterministic(), target);
     GOOGLE_DCHECK_EQ(end - target, size);
   } else {
     value.SerializeWithCachedSizes(output);
@@ -484,14 +579,14 @@ void WireFormatLite::WriteMessageMaybeToArray(int field_number,
   uint8* target = output->GetDirectBufferForNBytesAndAdvance(size);
   if (target != NULL) {
     uint8* end = value.InternalSerializeWithCachedSizesToArray(
-        output->IsSerializationDeterminstic(), target);
+        output->IsSerializationDeterministic(), target);
     GOOGLE_DCHECK_EQ(end - target, size);
   } else {
     value.SerializeWithCachedSizes(output);
   }
 }
 
-GOOGLE_ATTRIBUTE_ALWAYS_INLINE static bool ReadBytesToString(
+GOOGLE_PROTOBUF_ATTRIBUTE_ALWAYS_INLINE static bool ReadBytesToString(
     io::CodedInputStream* input, string* value);
 inline static bool ReadBytesToString(io::CodedInputStream* input,
                                      string* value) {
@@ -539,6 +634,152 @@ bool WireFormatLite::VerifyUtf8String(const char* data,
   }
   return true;
 }
+
+#ifdef __SSE_4_1__
+template<typename T, bool ZigZag, bool SignExtended>
+static size_t VarintSize(
+    const T* data, const int n,
+    const internal::enable_if<sizeof(T) == 4>::type* = NULL) {
+#if __cplusplus >= 201103L
+  // is_unsigned<T> => !ZigZag
+  static_assert((std::is_unsigned<T>::value ^ ZigZag) ||
+                std::is_signed<T>::value,
+                "Cannot ZigZag encode unsigned types");
+  // is_unsigned<T> => !SignExtended
+  static_assert((std::is_unsigned<T>::value ^ SignExtended) ||
+                std::is_signed<T>::value,
+                "Cannot SignExtended unsigned types");
+#endif
+
+  union vus32 {
+    uint32  u[4];
+    int32   s[4];
+    __m128i v;
+  };
+
+  static const vus32 ones = {{1, 1, 1, 1}};
+
+  // CodedOutputStream::VarintSize32SignExtended returns 10 for negative
+  // numbers.  We can apply the UInt32Size algorithm, and simultaneously logical
+  // shift the MSB into the LSB to determine if it is negative.
+  static const vus32 fives = {{5, 5, 5, 5}};
+
+  // sum is the vectorized-output of calling CodedOutputStream::VarintSize32 on
+  // the processed elements.
+  //
+  // msb_sum is the count of set most-significant bits.  When computing the
+  // vectorized CodedOutputStream::VarintSize32SignExtended, negative values
+  // have the most significant bit set.  VarintSize32SignExtended returns 10 and
+  // VarintSize32 returns 5.  msb_sum allows us to compute:
+  //   VarintSize32SignExtended = msb_sum * 5 + VarintSize32
+  vus32 sum, v, msb_sum;
+  sum.v = _mm_setzero_si128();
+  msb_sum.v = _mm_setzero_si128();
+
+  int rounded = n & ~(3);
+  int i;
+  for (i = 0; i < rounded; i += 4) {
+    v.v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&data[i]));
+
+    if (ZigZag) {
+      // Note:  the right-shift must be arithmetic
+      v.v = _mm_xor_si128(_mm_slli_epi32(v.v, 1), _mm_srai_epi32(v.v, 31));
+    }
+
+    sum.v = _mm_add_epi32(sum.v, ones.v);
+    if (SignExtended) {
+      msb_sum.v = _mm_add_epi32(msb_sum.v, _mm_srli_epi32(v.v, 31));
+    }
+
+    v.v = _mm_srli_epi32(v.v, 7);
+
+    for (int j = 0; j < 4; j++) {
+      __m128i min = _mm_min_epi32(v.v, ones.v);
+
+      sum.v = _mm_add_epi32(sum.v, min);
+      v.v   = _mm_srli_epi32(v.v, 7);
+    }
+  }
+
+  if (SignExtended) {
+    vus32 extensions;
+    extensions.v = _mm_mullo_epi32(msb_sum.v, fives.v);
+
+    sum.v = _mm_add_epi32(sum.v, extensions.v);
+  }
+
+  // TODO(ckennelly): Can we avoid the sign conversion?
+  size_t out = _mm_cvtsi128_si32(
+      _mm_hadd_epi32(_mm_hadd_epi32(sum.v, ones.v), ones.v));
+
+  // Finish tail.
+  for (; i < n; i++) {
+    if (ZigZag) {
+      out += WireFormatLite::SInt32Size(data[i]);
+    } else if (SignExtended) {
+      out += WireFormatLite::Int32Size(data[i]);
+    } else {
+      out += WireFormatLite::UInt32Size(data[i]);
+    }
+  }
+
+  return out;
+}
+
+size_t WireFormatLite::Int32Size(const RepeatedField<int32>& value) {
+  return VarintSize<int32, false, true>(value.data(), value.size());
+}
+
+size_t WireFormatLite::UInt32Size(const RepeatedField<uint32>& value) {
+  return VarintSize<uint32, false, false>(value.data(), value.size());
+}
+
+size_t WireFormatLite::SInt32Size(const RepeatedField<int32>& value) {
+  return VarintSize<int32, true, true>(value.data(), value.size());
+}
+
+size_t WireFormatLite::EnumSize(const RepeatedField<int>& value) {
+  // On ILP64, sizeof(int) == 8, which would require a different template.
+  return VarintSize<int, false, true>(value.data(), value.size());
+}
+
+#else  // !__SSE_4_1__
+size_t WireFormatLite::Int32Size(const RepeatedField<int32>& value) {
+  size_t out = 0;
+  const int n = value.size();
+  for (int i = 0; i < n; i++) {
+    out += Int32Size(value.Get(i));
+  }
+  return out;
+}
+
+size_t WireFormatLite::UInt32Size(const RepeatedField<uint32>& value) {
+  size_t out = 0;
+  const int n = value.size();
+  for (int i = 0; i < n; i++) {
+    out += UInt32Size(value.Get(i));
+  }
+  return out;
+}
+
+size_t WireFormatLite::SInt32Size(const RepeatedField<int32>& value) {
+  size_t out = 0;
+  const int n = value.size();
+  for (int i = 0; i < n; i++) {
+    out += SInt32Size(value.Get(i));
+  }
+  return out;
+}
+
+size_t WireFormatLite::EnumSize(const RepeatedField<int>& value) {
+  size_t out = 0;
+  const int n = value.size();
+  for (int i = 0; i < n; i++) {
+    out += EnumSize(value.Get(i));
+  }
+  return out;
+}
+#endif
 
 }  // namespace internal
 }  // namespace protobuf

@@ -289,7 +289,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
     }
 
     IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
-    if(maskSize < 0)
+    if((int)maskSize < 0)
         return false;
 
 #if IPP_VERSION_X100 <= 201703
@@ -299,7 +299,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
 #endif
 
     IwiDerivativeType derivType = ippiGetDerivType(dx, dy, (useScharr)?false:true);
-    if(derivType < 0)
+    if((int)derivType < 0)
         return false;
 
     // Acquire data and begin processing
@@ -728,7 +728,7 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
         useScale = true;
 
     IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
-    if(maskSize < 0)
+    if((int)maskSize < 0)
         return false;
 
     // Acquire data and begin processing

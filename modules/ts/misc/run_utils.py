@@ -168,7 +168,7 @@ parse_patterns = (
     {'name': "android_abi",              'default': None,       'pattern': re.compile(r"^ANDROID_ABI:STRING=(.*)$")},
     {'name': "android_executable",       'default': None,       'pattern': re.compile(r"^ANDROID_EXECUTABLE:FILEPATH=(.*android.*)$")},
     {'name': "ant_executable",           'default': None,       'pattern': re.compile(r"^ANT_EXECUTABLE:FILEPATH=(.*ant.*)$")},
-    {'name': "java_test_binary_dir",     'default': None,       'pattern': re.compile(r"^opencv_test_java_BINARY_DIR:STATIC=(.*)$")},
+    {'name': "java_test_dir",            'default': None,       'pattern': re.compile(r"^OPENCV_JAVA_TEST_DIR:\w+=(.*)$")},
     {'name': "is_x64",                   'default': "OFF",      'pattern': re.compile(r"^CUDA_64_BIT_DEVICE_CODE:BOOL=(ON)$")},#ugly(
     {'name': "cmake_generator",          'default': None,       'pattern': re.compile(r"^CMAKE_GENERATOR:INTERNAL=(.+)$")},
     {'name': "cxx_compiler",             'default': None,       'pattern': re.compile(r"^CMAKE_CXX_COMPILER:\w*PATH=(.+)$")},
@@ -269,7 +269,7 @@ class CMakeCache:
         return self.cuda_version and self.with_cuda == "ON" and self.cuda_library and not self.cuda_library.endswith("-NOTFOUND")
 
     def withJava(self):
-        return self.ant_executable and self.java_test_binary_dir
+        return self.ant_executable and os.path.exists(self.java_test_dir)
 
     def withPython2(self):
         return self.python2 == 'ON'
