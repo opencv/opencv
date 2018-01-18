@@ -49,6 +49,8 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // HistEvenC1
 
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
+
 PERF_TEST_P(Sz_Depth, HistEvenC1,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_16S)))
