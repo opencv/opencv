@@ -166,7 +166,6 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-
 double cvGetPropWindow_QT(const char* name)
 {
     if (!guiMainThread)
@@ -220,6 +219,21 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
         Q_ARG(double, prop_value));
 }
 
+CvRect cvGetWindowRect_QT(const char* name)
+{
+    if (!guiMainThread)
+        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+    CvRect result = cvRect(-1, -1, -1, -1);
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "getWindowRect",
+        autoBlockingConnection(),
+        Q_RETURN_ARG(CvRect, result),
+        Q_ARG(QString, QString(name)));
+
+    return result;
+}
 
 double cvGetModeWindow_QT(const char* name)
 {
@@ -946,6 +960,21 @@ void GuiReceiver::setWindowTitle(QString name, QString title)
     w->setWindowTitle(title);
 }
 
+CvRect GuiReceiver::getWindowRect(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (!w)
+        return cvRect(-1, -1, -1, -1);
+
+    QPoint org = w->myView->mapToGlobal(new QPoint(0, 0));
+#ifdef HAVE_QT_OPENGL
+    if (isOpenGl()) {
+        return cvRect(w->myView->pos().x() + org.x, w->myView->pos().y() + org.y, w->myView->width(), w->myView->height());
+    } else
+#endif
+    return cvRect(w->myView->viewport()->pos().x() + org.x, w->myView->viewport()->pos().y() + org.y, w->myView->viewport()->width(), w->myView->viewport()->height());
+}
 
 double GuiReceiver::isFullScreen(QString name)
 {

@@ -423,6 +423,33 @@ icvSaveWindowPos( const char* name, CvRect rect )
     RegCloseKey(hkey);
 }
 
+CvRect cvGetWindowRect_W32(const char* name)
+{
+    CvRect result = cvRect(-1, -1, -1, -1);
+
+    CV_FUNCNAME( "cvGetWindowRect_W32" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if (!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+    window = icvFindWindowByName( name );
+    if (!window)
+        EXIT; // keep silence here
+
+    RECT rect;
+    GetClientRect(window->hwnd, &rect);
+    {
+    POINT pt = {rect.left, rect.top};
+    ClientToScreen(window->hwnd, &pt);
+    result = cvRect(pt.x, pt.y, rect.right - rect.left, rect.bottom - rect.top);
+    }
+    __END__;
+    return result;
+}
+
 double cvGetModeWindow_W32(const char* name)//YV
 {
     double result = -1;
