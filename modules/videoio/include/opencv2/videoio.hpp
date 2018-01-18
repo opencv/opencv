@@ -172,10 +172,13 @@ enum VideoCaptureProperties {
 @note Currently, these are supported through the libv4l backend only.
 */
 enum VideoCaptureModes {
+       CAP_MODE_AUTO = -1, 
        CAP_MODE_BGR  = 0, //!< BGR24 (default)
        CAP_MODE_RGB  = 1, //!< RGB24
        CAP_MODE_GRAY = 2, //!< Y8
-       CAP_MODE_YUYV = 3  //!< YUYV
+       CAP_MODE_YUYV = 3,  //!< YUYV
+       CAP_MODE_RGBA = 4, //!< RGBA
+       CAP_MODE_GRAY16 = 5, //!< Y16
      };
 
 /** @brief %VideoWriter generic properties identifier.

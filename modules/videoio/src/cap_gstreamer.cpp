@@ -1418,7 +1418,7 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  *
  */
 bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
-                                    double fps, CvSize frameSize, bool is_color )
+                                    double fps, CvSize frameSize, bool is_color)
 {
     CV_FUNCNAME("CvVideoWriter_GStreamer::open");
 
@@ -1429,6 +1429,9 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
     // init gstreamer
     gst_initializer::init();
+
+    if(cap != CAP_MODE_AUTO)
+        return false;
 
     // init vars
     bool manualpipeline = true;

@@ -456,10 +456,13 @@ enum
 // Currently, these are supported through the libv4l interface only.
 enum
 {
+    CV_CAP_MODE_AUTO = -1, 
     CV_CAP_MODE_BGR  = 0, // BGR24 (default)
     CV_CAP_MODE_RGB  = 1, // RGB24
     CV_CAP_MODE_GRAY = 2, // Y8
-    CV_CAP_MODE_YUYV = 3  // YUYV
+    CV_CAP_MODE_YUYV = 3, // YUYV
+    CV_CAP_MODE_RGBA = 4, // RGBA
+    CV_CAP_MODE_GRAY16 = 5, // Y16
 };
 
 enum

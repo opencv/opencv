@@ -18,13 +18,13 @@ class MFXVideoENCODE;
 class VideoWriter_IntelMFX : public cv::IVideoWriter
 {
 public:
-    VideoWriter_IntelMFX(const cv::String &filename, int _fourcc, double fps, cv::Size frameSize, bool isColor);
+    VideoWriter_IntelMFX(const cv::String &filename, int _fourcc, double fps, cv::Size frameSize, bool isColor, VideoCaptureMode cap = CAP_MODE_AUTO);
     virtual ~VideoWriter_IntelMFX();
     virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool isOpened() const;
     virtual void write(cv::InputArray input);
-    static cv::Ptr<VideoWriter_IntelMFX> create(const cv::String& filename, int _fourcc, double fps, cv::Size frameSize, bool isColor);
+    static cv::Ptr<VideoWriter_IntelMFX> create(const cv::String& filename, int _fourcc, double fps, cv::Size frameSize, bool isColor, VideoCaptureMode cap = CAP_MODE_AUTO);
 
 protected:
     bool write_one(cv::InputArray bgr);

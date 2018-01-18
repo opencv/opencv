@@ -1295,7 +1295,7 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
 struct CvVideoWriter_FFMPEG
 {
     bool open( const char* filename, int fourcc,
-               double fps, int width, int height, bool isColor );
+               double fps, int width, int height, bool isColor, cv::VideoCaptureModes cap);
     void close();
     bool writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin );
 
@@ -1887,7 +1887,7 @@ static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_
 
 /// Create a video writer object that uses FFMPEG
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
-                                 double fps, int width, int height, bool is_color )
+                                 double fps, int width, int height, bool is_color, cv::VideoCaptureModes cap )
 {
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     int err, codec_pix_fmt;
@@ -1921,11 +1921,36 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         return false;
 
     /* determine optimal pixel format */
-    if (is_color) {
-        input_pix_fmt = AV_PIX_FMT_BGR24;
-    }
-    else {
-        input_pix_fmt = AV_PIX_FMT_GRAY8;
+    switch(cap)
+    {
+        case cv::CAP_MODE_AUTO:
+            if (is_color) {
+                input_pix_fmt = AV_PIX_FMT_BGR24;
+            }
+            else {
+                input_pix_fmt = AV_PIX_FMT_GRAY8;
+            }
+            break;
+        case cv::CAP_MODE_BGR:
+            input_pix_fmt = AV_PIX_FMT_BGR24;
+            break;
+        case cv::CAP_MODE_RGB:
+            input_pix_fmt = AV_PIX_FMT_RGB24;
+            break;
+        case cv::CAP_MODE_GRAY:
+            input_pix_fmt = AV_PIX_FMT_GRAY8;
+            break;
+        case cv::CAP_MODE_YUYV:
+            input_pix_fmt = AV_PIX_FMT_YUYV422;
+            break;
+        case cv::CAP_MODE_RGBA:
+            input_pix_fmt = AV_PIX_FMT_RGBA;
+            break;
+        case cv::CAP_MODE_GRAY16:
+            input_pix_fmt = AV_PIX_FMT_GRAY16;
+            break;
+        default:
+            return false;
     }
 
     /* Lookup codec_id for given fourcc */
@@ -2202,13 +2227,13 @@ int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int*
 }
 
 CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,
-                                                  int width, int height, int isColor )
+                                                  int width, int height, int isColor, cv::VideoCaptureModes cap)
 {
     CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
     if (!writer)
         return 0;
     writer->init();
-    if( writer->open( filename, fourcc, fps, width, height, isColor != 0 ))
+    if( writer->open( filename, fourcc, fps, width, height, isColor != 0, cap))
         return writer;
     writer->close();
     free(writer);

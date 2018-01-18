@@ -146,7 +146,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char* filename);
 
 
 CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color );
+                                            double fps, CvSize frameSize, int is_color, cv::VideoCaptureModes cap );
 
 CvCapture * cvCreateFileCapture_QT (const char  * filename);
 CvCapture * cvCreateCameraCapture_QT  (const int     index);
@@ -191,7 +191,7 @@ namespace cv
     };
 
     Ptr<IVideoCapture> createMotionJpegCapture(const String& filename);
-    Ptr<IVideoWriter> createMotionJpegWriter( const String& filename, double fps, Size frameSize, bool iscolor );
+    Ptr<IVideoWriter> createMotionJpegWriter( const String& filename, double fps, Size frameSize, bool iscolor);
 
     Ptr<IVideoCapture> createGPhoto2Capture(int index);
     Ptr<IVideoCapture> createGPhoto2Capture(const String& deviceName);

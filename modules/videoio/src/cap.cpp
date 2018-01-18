@@ -376,10 +376,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
  * API that can write a given stream.
  */
 static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, int apiPreference, int fourcc,
-                                            double fps, CvSize frameSize, int is_color )
+                                            double fps, CvSize frameSize, int is_color, VideoCaptureModes cap)
 {
     CV_UNUSED(frameSize);
-    CV_UNUSED(is_color);
+    CV_UNUSED(is_color);    
+    CV_UNUSED(cap);
 
     CvVideoWriter *result = 0;
 
@@ -395,35 +396,47 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
             if (apiPreference != CAP_ANY) break;
         #ifdef HAVE_FFMPEG
         case CAP_FFMPEG:
-            TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color))
+            TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color, cap))
             if (apiPreference != CAP_ANY) break;
         #endif
         #ifdef HAVE_VFW
         case CAP_VFW:
+            if(cap != CAP_MODE_AUTO)
+                return result;
             TRY_OPEN(result, cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
         #ifdef HAVE_MSMF
         case CAP_MSMF:
+            if(cap != CAP_MODE_AUTO)
+                return result;
             TRY_OPEN(result, cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
         #ifdef HAVE_AVFOUNDATION
         case CAP_AVFOUNDATION:
+            if(cap != CAP_MODE_AUTO)
+                return result;
             TRY_OPEN(result, cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
         #if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
         case(CAP_QT):
+            if(cap != CAP_MODE_AUTO)
+                return result;
             TRY_OPEN(result, cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
         #ifdef HAVE_GSTREAMER
         case CAP_GSTREAMER:
+            if(cap != CAP_MODE_AUTO)
+                return result;
             TRY_OPEN(result, cvCreateVideoWriter_GStreamer (filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
         case CAP_IMAGES:
+            if(cap != CAP_MODE_AUTO)
+                return result;
             TRY_OPEN(result, cvCreateVideoWriter_Images(filename))
             if (apiPreference != CAP_ANY) break;
     }
@@ -432,9 +445,9 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
 }
 
 CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color )
+                                            double fps, CvSize frameSize, int is_color)
 {
-    return cvCreateVideoWriterWithPreference(filename, CAP_ANY, fourcc, fps, frameSize, is_color);
+    return cvCreateVideoWriterWithPreference(filename, CAP_ANY, fourcc, fps, frameSize, is_color, CAP_MODE_AUTO);
 }
 
 CV_IMPL int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
@@ -558,13 +571,14 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
     return capture;
 }
 
-static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
+static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, VideoCaptureModes cap)
 {
+    CV_UNUSED(cap);
     Ptr<IVideoWriter> iwriter;
 #ifdef HAVE_MFX
     if (apiPreference == CAP_INTEL_MFX || apiPreference == CAP_ANY)
     {
-        iwriter = VideoWriter_IntelMFX::create(filename, _fourcc, fps, frameSize, isColor);
+        iwriter = VideoWriter_IntelMFX::create(filename, _fourcc, fps, frameSize, isColor, cap);
         if (!iwriter.empty())
             return iwriter;
     }
@@ -786,10 +800,10 @@ bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, d
     CV_INSTRUMENT_REGION()
 
     if (isOpened()) release();
-    iwriter = IVideoWriter_create(filename, apiPreference, _fourcc, fps, frameSize, isColor);
+    iwriter = IVideoWriter_create(filename, apiPreference, _fourcc, fps, frameSize, isColor, CAP_MODE_AUTO);
     if (!iwriter.empty())
         return true;
-    writer.reset(cvCreateVideoWriterWithPreference(filename.c_str(), apiPreference, _fourcc, fps, frameSize, isColor));
+    writer.reset(cvCreateVideoWriterWithPreference(filename.c_str(), apiPreference, _fourcc, fps, frameSize, isColor, CAP_MODE_AUTO));
     return isOpened();
 }
 
