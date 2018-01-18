@@ -2,14 +2,11 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <iostream>
 
 using namespace cv;
-using namespace cv::dnn;
-
-#include <fstream>
-#include <iostream>
-#include <cstdlib>
 using namespace std;
+using namespace cv::dnn;
 
 const size_t inWidth = 300;
 const size_t inHeight = 300;
@@ -22,11 +19,13 @@ const char* classNames[] = {"background",
                             "motorbike", "person", "pottedplant",
                             "sheep", "sofa", "train", "tvmonitor"};
 
-const char* params
+const String keys
     = "{ help           | false | print usage         }"
-      "{ proto          | MobileNetSSD_deploy.prototxt | model configuration }"
+      "{ proto          | MobileNetSSD_deploy.prototxt   | model configuration }"
       "{ model          | MobileNetSSD_deploy.caffemodel | model weights }"
       "{ camera_device  | 0     | camera device number }"
+      "{ camera_width   | 640   | camera device width  }"
+      "{ camera_height  | 480   | camera device height }"
       "{ video          |       | video or image for detection}"
       "{ out            |       | path to output video file}"
       "{ min_confidence | 0.2   | min confidence      }"
@@ -35,7 +34,7 @@ const char* params
 
 int main(int argc, char** argv)
 {
-    CommandLineParser parser(argc, argv, params);
+    CommandLineParser parser(argc, argv, keys);
     parser.about("This sample uses MobileNet Single-Shot Detector "
                  "(https://arxiv.org/abs/1704.04861) "
                  "to detect objects on camera/video/image.\n"
@@ -43,14 +42,14 @@ int main(int argc, char** argv)
                  "https://github.com/chuanqi305/MobileNet-SSD\n"
                  "Default network is 300x300 and 20-classes VOC.\n");
 
-    if (parser.get<bool>("help") || argc == 1)
+    if (parser.get<bool>("help"))
     {
         parser.printMessage();
         return 0;
     }
 
-    String modelConfiguration = parser.get<string>("proto");
-    String modelBinary = parser.get<string>("model");
+    String modelConfiguration = parser.get<String>("proto");
+    String modelBinary = parser.get<String>("model");
     CV_Assert(!modelConfiguration.empty() && !modelBinary.empty());
 
     //! [Initialize network]
@@ -82,6 +81,9 @@ int main(int argc, char** argv)
             cout << "Couldn't find camera: " << cameraDevice << endl;
             return -1;
         }
+
+        cap.set(CAP_PROP_FRAME_WIDTH, parser.get<int>("camera_width"));
+        cap.set(CAP_PROP_FRAME_HEIGHT, parser.get<int>("camera_height"));
     }
     else
     {
@@ -94,11 +96,11 @@ int main(int argc, char** argv)
     }
 
     //Acquire input size
-    Size inVideoSize((int) cap.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) cap.get(CV_CAP_PROP_FRAME_HEIGHT));
+    Size inVideoSize((int) cap.get(CAP_PROP_FRAME_WIDTH),
+                     (int) cap.get(CAP_PROP_FRAME_HEIGHT));
 
-    double fps = cap.get(CV_CAP_PROP_FPS);
-    int fourcc = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
+    double fps = cap.get(CAP_PROP_FPS);
+    int fourcc = static_cast<int>(cap.get(CAP_PROP_FOURCC));
     VideoWriter outputVideo;
     outputVideo.open(parser.get<String>("out") ,
                      (fourcc != 0 ? fourcc : VideoWriter::fourcc('M','J','P','G')),
@@ -168,7 +170,7 @@ int main(int argc, char** argv)
                 top = max(top, labelSize.height);
                 rectangle(frame, Point(left, top - labelSize.height),
                           Point(left + labelSize.width, top + baseLine),
-                          Scalar(255, 255, 255), CV_FILLED);
+                          Scalar(255, 255, 255), FILLED);
                 putText(frame, label, Point(left, top),
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
             }
