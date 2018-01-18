@@ -230,7 +230,7 @@ public:
         Size kernel, stride, pad;
         int nstripes;
         bool computeMaxIdx;
-        std::vector<int> ofsbuf;
+        AutoBuffer<int> ofsbuf;
         int poolingType;
         float spatialScale;
 
@@ -287,7 +287,7 @@ public:
             bool compMaxIdx = computeMaxIdx;
 
 #if CV_SIMD128
-            const int* ofsptr = &ofsbuf[0];
+            const int* ofsptr = (const int*)ofsbuf;
             v_float32x4 idx00(0.f, (float)stride_w, (float)(stride_w*2), (float)(stride_w*3));
             v_float32x4 ones = v_setall_f32(1.f);
             v_float32x4 idx_delta = v_setall_f32((float)(inp_width - kernel_w));
