@@ -79,7 +79,7 @@ __kernel void CALC_MEAN(__global const Dtype* src,
 
     Dtype mean_val = mean[x];
     vec_type src_vec = load(src, index);
-    vec_type dst_vec = pow(src_vec - (vec_type)mean_val, 2);
+    vec_type dst_vec = native_powr(src_vec - (vec_type)mean_val, 2);
     store(dst_vec, dst, index);
 }
 
