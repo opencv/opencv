@@ -8,7 +8,7 @@ from tests_common import NewOpenCVTests
 
 
 class persistence_test(NewOpenCVTests):
-    def test_basic(self):
+    def test_yml_rw(self):
         fd, fname = tempfile.mkstemp(prefix="opencv_python_persistence_", suffix=".yml")
         os.close(fd)
 
