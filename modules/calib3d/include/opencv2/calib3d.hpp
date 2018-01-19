@@ -318,19 +318,19 @@ CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobi
 or vector\<Point2f\> .
 @param dstPoints Coordinates of the points in the target plane, a matrix of the type CV_32FC2 or
 a vector\<Point2f\> .
-@param method Method used to computed a homography matrix. The following methods are possible:
--   **0** - a regular method using all the points
+@param method Method used to compute a homography matrix. The following methods are possible:
+-   **0** - a regular method using all the points, i.e., the least squares method
 -   **RANSAC** - RANSAC-based robust method
 -   **LMEDS** - Least-Median robust method
--   **RHO**    - PROSAC-based robust method
+-   **RHO** - PROSAC-based robust method
 @param ransacReprojThreshold Maximum allowed reprojection error to treat a point pair as an inlier
 (used in the RANSAC and RHO methods only). That is, if
-\f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|  >  \texttt{ransacReprojThreshold}\f]
-then the point \f$i\f$ is considered an outlier. If srcPoints and dstPoints are measured in pixels,
+\f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|_2  >  \texttt{ransacReprojThreshold}\f]
+then the point \f$i\f$ is considered as an outlier. If srcPoints and dstPoints are measured in pixels,
 it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 @param mask Optional output mask set by a robust method ( RANSAC or LMEDS ). Note that the input
 mask values are ignored.
-@param maxIters The maximum number of RANSAC iterations, 2000 is the maximum it can be.
+@param maxIters The maximum number of RANSAC iterations.
 @param confidence Confidence level, between 0 and 1.
 
 The function finds and returns the perspective transformation \f$H\f$ between the source and the
@@ -348,10 +348,10 @@ pairs to compute an initial homography estimate with a simple least-squares sche
 However, if not all of the point pairs ( \f$srcPoints_i\f$, \f$dstPoints_i\f$ ) fit the rigid perspective
 transformation (that is, there are some outliers), this initial estimate will be poor. In this case,
 you can use one of the three robust methods. The methods RANSAC, LMeDS and RHO try many different
-random subsets of the corresponding point pairs (of four pairs each), estimate the homography matrix
-using this subset and a simple least-square algorithm, and then compute the quality/goodness of the
-computed homography (which is the number of inliers for RANSAC or the median re-projection error for
-LMeDs). The best subset is then used to produce the initial estimate of the homography matrix and
+random subsets of the corresponding point pairs (of four pairs each, collinear pairs are discarded), estimate the homography matrix
+using this subset and a simple least-squares algorithm, and then compute the quality/goodness of the
+computed homography (which is the number of inliers for RANSAC or the least median re-projection error for
+LMeDS). The best subset is then used to produce the initial estimate of the homography matrix and
 the mask of inliers/outliers.
 
 Regardless of the method, robust or not, the computed homography matrix is refined further (using
@@ -364,7 +364,7 @@ correctly only when there are more than 50% of inliers. Finally, if there are no
 noise is rather small, use the default method (method=0).
 
 The function is used to find initial intrinsic and extrinsic matrices. Homography matrix is
-determined up to a scale. Thus, it is normalized so that \f$h_{33}=1\f$. Note that whenever an H matrix
+determined up to a scale. Thus, it is normalized so that \f$h_{33}=1\f$. Note that whenever an \f$H\f$ matrix
 cannot be estimated, an empty one will be returned.
 
 @sa
@@ -1781,10 +1781,43 @@ CV_EXPORTS_W double sampsonDistance(InputArray pt1, InputArray pt2, InputArray F
 
 /** @brief Computes an optimal affine transformation between two 3D point sets.
 
-@param src First input 3D point set.
-@param dst Second input 3D point set.
-@param out Output 3D affine transformation matrix \f$3 \times 4\f$ .
-@param inliers Output vector indicating which points are inliers.
+It computes
+\f[
+\begin{bmatrix}
+x\\
+y\\
+z\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+a_{11} & a_{12} & a_{13}\\
+a_{21} & a_{22} & a_{23}\\
+a_{31} & a_{32} & a_{33}\\
+\end{bmatrix}
+\begin{bmatrix}
+X\\
+Y\\
+Z\\
+\end{bmatrix}
++
+\begin{bmatrix}
+b_1\\
+b_2\\
+b_3\\
+\end{bmatrix}
+\f]
+
+@param src First input 3D point set containing \f$(X,Y,Z)\f$.
+@param dst Second input 3D point set containing \f$(x,y,z)\f$.
+@param out Output 3D affine transformation matrix \f$3 \times 4\f$ of the form
+\f[
+\begin{bmatrix}
+a_{11} & a_{12} & a_{13} & b_1\\
+a_{21} & a_{22} & a_{23} & b_2\\
+a_{31} & a_{32} & a_{33} & b_3\\
+\end{bmatrix}
+\f]
+@param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
 @param ransacThreshold Maximum reprojection error in the RANSAC algorithm to consider a point as
 an inlier.
 @param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
@@ -1800,16 +1833,38 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
 
 /** @brief Computes an optimal affine transformation between two 2D point sets.
 
-@param from First input 2D point set.
-@param to Second input 2D point set.
-@param inliers Output vector indicating which points are inliers.
+It computes
+\f[
+\begin{bmatrix}
+x\\
+y\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+a_{11} & a_{12}\\
+a_{21} & a_{22}\\
+\end{bmatrix}
+\begin{bmatrix}
+X\\
+Y\\
+\end{bmatrix}
++
+\begin{bmatrix}
+b_1\\
+b_2\\
+\end{bmatrix}
+\f]
+
+@param from First input 2D point set containing \f$(X,Y)\f$.
+@param to Second input 2D point set containing \f$(x,y)\f$.
+@param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
 @param method Robust method used to compute transformation. The following methods are possible:
 -   cv::RANSAC - RANSAC-based robust method
 -   cv::LMEDS - Least-Median robust method
 RANSAC is the default method.
 @param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
 a point as an inlier. Applies only to RANSAC.
-@param maxIters The maximum number of robust method iterations, 2000 is the maximum it can be.
+@param maxIters The maximum number of robust method iterations.
 @param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
 between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
 significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
@@ -1817,7 +1872,13 @@ significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated 
 Passing 0 will disable refining, so the output matrix will be output of robust method.
 
 @return Output 2D affine transformation matrix \f$2 \times 3\f$ or empty matrix if transformation
-could not be estimated.
+could not be estimated. The returned matrix has the following form:
+\f[
+\begin{bmatrix}
+a_{11} & a_{12} & b_1\\
+a_{21} & a_{22} & b_2\\
+\end{bmatrix}
+\f]
 
 The function estimates an optimal 2D affine transformation between two 2D point sets using the
 selected robust algorithm.
@@ -1826,7 +1887,7 @@ The computed transformation is then refined further (using only inliers) with th
 Levenberg-Marquardt method to reduce the re-projection error even more.
 
 @note
-The RANSAC method can handle practically any ratio of outliers but need a threshold to
+The RANSAC method can handle practically any ratio of outliers but needs a threshold to
 distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
 correctly only when there are more than 50% of inliers.
 
@@ -1849,7 +1910,7 @@ two 2D point sets.
 RANSAC is the default method.
 @param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
 a point as an inlier. Applies only to RANSAC.
-@param maxIters The maximum number of robust method iterations, 2000 is the maximum it can be.
+@param maxIters The maximum number of robust method iterations.
 @param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
 between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
 significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
@@ -1867,10 +1928,10 @@ The computed transformation is then refined further (using only inliers) with th
 Levenberg-Marquardt method to reduce the re-projection error even more.
 
 Estimated transformation matrix is:
-\f[ \begin{bmatrix} \cos(\theta)s & -\sin(\theta)s & tx \\
-                \sin(\theta)s & \cos(\theta)s & ty
+\f[ \begin{bmatrix} \cos(\theta) \cdot s & -\sin(\theta) \cdot s & t_x \\
+                \sin(\theta) \cdot s & \cos(\theta) \cdot s & t_y
 \end{bmatrix} \f]
-Where \f$ \theta \f$ is the rotation angle, \f$ s \f$ the scaling factor and \f$ tx, ty \f$ are
+Where \f$ \theta \f$ is the rotation angle, \f$ s \f$ the scaling factor and \f$ t_x, t_y \f$ are
 translations in \f$ x, y \f$ axes respectively.
 
 @note
