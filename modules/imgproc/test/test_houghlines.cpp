@@ -140,6 +140,37 @@ public:
     }
 };
 
+typedef std::tr1::tuple<double, double, double, double> HoughLinesUsingSetOfPointsInput_t;
+class HoughLinesUsingSetOfPointsTest : public testing::TestWithParam<HoughLinesUsingSetOfPointsInput_t>
+{
+protected:
+    void run_test();
+    double Rho;
+    double Theta;
+    double rhoMin, rhoMax, rhoStep;
+    double thetaMin, thetaMax, thetaStep;
+public:
+    const float Points[20][2] = {
+    { 0.0f,   369.0f }, { 10.0f,  364.0f }, { 20.0f,  358.0f }, { 30.0f,  352.0f },
+    { 40.0f,  346.0f }, { 50.0f,  341.0f }, { 60.0f,  335.0f }, { 70.0f,  329.0f },
+    { 80.0f,  323.0f }, { 90.0f,  318.0f }, { 100.0f, 312.0f }, { 110.0f, 306.0f },
+    { 120.0f, 300.0f }, { 130.0f, 295.0f }, { 140.0f, 289.0f }, { 150.0f, 284.0f },
+    { 160.0f, 277.0f }, { 170.0f, 271.0f }, { 180.0f, 266.0f }, { 190.0f, 260.0f }
+    };
+
+    HoughLinesUsingSetOfPointsTest()
+    {
+        rhoMin = std::tr1::get<0>(GetParam());
+        rhoMax = std::tr1::get<1>(GetParam());
+        rhoStep = (rhoMax - rhoMin) / 360.0f;
+        thetaMin = std::tr1::get<2>(GetParam());
+        thetaMax = std::tr1::get<3>(GetParam());
+        thetaStep = CV_PI / 180.0f;
+        Rho = 320.00000;
+        Theta = 1.04719;
+    }
+};
+
 void BaseHoughLineTest::run_test(int type)
 {
     string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
@@ -196,6 +227,27 @@ void BaseHoughLineTest::run_test(int type)
 #endif
 }
 
+void HoughLinesUsingSetOfPointsTest::run_test(void)
+{
+    int polar_index = 0;
+    Mat lines;
+    vector<Point2f> point;
+    vector<Vec3d> line_polar;
+
+    for (int i = 0; i < 20; i++)
+    {
+        point.push_back(Point2f(Points[i][0],Points[i][1]));
+    }
+
+    polar_index = HoughLinesUsingSetOfPoints(point, lines, 20,
+                                             rhoMin, rhoMax, rhoStep,
+                                             thetaMin, thetaMax, thetaStep);
+
+    lines.copyTo(line_polar);
+    EXPECT_EQ((int)(line_polar.at(polar_index).val[1] * 100000.0f), (int)(Rho * 100000.0f));
+    EXPECT_EQ((int)(line_polar.at(polar_index).val[2] * 100000.0f), (int)(Theta * 100000.0f));
+}
+
 TEST_P(StandartHoughLinesTest, regression)
 {
     run_test(STANDART);
@@ -204,6 +256,11 @@ TEST_P(StandartHoughLinesTest, regression)
 TEST_P(ProbabilisticHoughLinesTest, regression)
 {
     run_test(PROBABILISTIC);
+}
+
+TEST_P(HoughLinesUsingSetOfPointsTest, regression)
+{
+    run_test();
 }
 
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
@@ -219,3 +276,9 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 10 ),
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
+
+INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 120.0f ),
+                                                                                   testing::Values( 360.0f, 480.0f ),
+                                                                                   testing::Values( 0.0f, (CV_PI / 18.0f) ),
+                                                                                   testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )
+                                                                                   ));

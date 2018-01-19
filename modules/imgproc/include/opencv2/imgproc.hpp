@@ -2072,6 +2072,63 @@ CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
                                double rho, double theta, int threshold,
                                double minLineLength = 0, double maxLineGap = 0 );
 
+/** @brief Finds lines in a set of points using the standard Hough transform.
+
+The function finds lines in a set of points using a modification of the Hough transform.
+
+Example: :
+@code
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
+    #include <math.h>
+
+    using namespace cv;
+    using namespace std;
+
+    int main(int argc, char** argv)
+    {
+        int polar_index = 0;
+        Mat lines;
+        vector<Point2f> point;
+        vector<Vec3d> line_polar;
+        const static float Points[20][2] = {
+        { 0.0f,   369.0f }, { 10.0f,  364.0f }, { 20.0f,  358.0f }, { 30.0f,  352.0f },
+        { 40.0f,  346.0f }, { 50.0f,  341.0f }, { 60.0f,  335.0f }, { 70.0f,  329.0f },
+        { 80.0f,  323.0f }, { 90.0f,  318.0f }, { 100.0f, 312.0f }, { 110.0f, 306.0f },
+        { 120.0f, 300.0f }, { 130.0f, 295.0f }, { 140.0f, 289.0f }, { 150.0f, 284.0f },
+        { 160.0f, 277.0f }, { 170.0f, 271.0f }, { 180.0f, 266.0f }, { 190.0f, 260.0f }
+        };
+
+        for (int i = 0; i < 20; i++)
+        {
+            point.push_back(Point2f(Points[i][0],Points[i][1]));
+        }
+        double rhoMin = 0.0f, rhoMax = 360.0f, rhoStep = 1;
+        double thetaMin = 0.0f, thetaMax = CV_PI / 2.0f, thetaStep = CV_PI / 180.0f;
+
+        polar_index = HoughLinesUsingSetOfPoints(point, lines, 20,
+                                                 rhoMin, rhoMax, rhoStep,
+                                                 thetaMin, thetaMax, thetaStep);
+        lines.copyTo(line_polar);
+        printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(polar_index).val[0], line_polar.at(polar_index).val[1], line_polar.at(polar_index).val[2]);
+    }
+@endcode
+
+@param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
+@param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
+The larger the value of 'votes', the higher the reliability of the Hough line.
+@param lines_max Max count of hough lines.
+@param rho_min Minimum Distance value in pixel.
+@param rho_max Maximum Distance value in pixel.
+@param rho_step Step within the range of rho.
+@param theta_min Minimum angle value in radians.
+@param theta_max Maximum angle value in radians.
+@param theta_step Step within the range of theta.
+ */
+CV_EXPORTS_W int HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int lines_max,
+                                             double rho_min, double rho_max, double rho_step,
+                                             double theta_min, double theta_max, double theta_step );
+
 /** @example houghcircles.cpp
 An example using the Hough circle detector
 */
