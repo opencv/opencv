@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 """Algorithm serializaion test."""
-from tempfile import NamedTemporaryFile
+import tempfile
+import os
 import cv2 as cv
 from tests_common import NewOpenCVTests
 
 
 class algorithm_rw_test(NewOpenCVTests):
     def test_algorithm_rw(self):
-        f = NamedTemporaryFile(prefix="opencv_python_algorithm_", suffix=".yml")
+        fd, fname = tempfile.mkstemp(prefix="opencv_python_algorithm_", suffix=".yml")
+        os.close(fd)
 
         # some arbitrary non-default parameters
         gold = cv.AKAZE_create(descriptor_size=1, descriptor_channels=2, nOctaves=3, threshold=4.0)
-        gold.write(cv.FileStorage(f.name, cv.FILE_STORAGE_WRITE), "AKAZE")
+        gold.write(cv.FileStorage(fname, cv.FILE_STORAGE_WRITE), "AKAZE")
 
-        fs = cv.FileStorage(f.name, cv.FILE_STORAGE_READ)
+        fs = cv.FileStorage(fname, cv.FILE_STORAGE_READ)
         algorithm = cv.AKAZE_create()
         algorithm.read(fs.getNode("AKAZE"))
 
@@ -22,4 +24,4 @@ class algorithm_rw_test(NewOpenCVTests):
         self.assertEqual(algorithm.getNOctaves(), 3)
         self.assertEqual(algorithm.getThreshold(), 4.0)
 
-        f.close()
+        os.remove(fname)

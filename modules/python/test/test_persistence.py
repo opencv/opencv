@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """"Core serializaion tests."""
-from tempfile import NamedTemporaryFile
+import tempfile
+import os
 import cv2 as cv
 import numpy as np
 from tests_common import NewOpenCVTests
@@ -8,16 +9,17 @@ from tests_common import NewOpenCVTests
 
 class persistence_test(NewOpenCVTests):
     def test_basic(self):
-        f = NamedTemporaryFile(prefix="opencv_python_persistence_", suffix=".yml")
+        fd, fname = tempfile.mkstemp(prefix="opencv_python_persistence_", suffix=".yml")
+        os.close(fd)
 
         # Writing ...
         expected = np.array([[[0, 1, 2, 3, 4]]])
-        fs = cv.FileStorage(f.name, cv.FILE_STORAGE_WRITE)
+        fs = cv.FileStorage(fname, cv.FILE_STORAGE_WRITE)
         fs.write("test", expected)
         fs.release()
 
         # Reading ...
-        fs = cv.FileStorage(f.name, cv.FILE_STORAGE_READ)
+        fs = cv.FileStorage(fname, cv.FILE_STORAGE_READ)
         root = fs.getFirstTopLevelNode()
         self.assertEqual(root.name(), "test")
         test = fs.getNode("test")
@@ -30,4 +32,4 @@ class persistence_test(NewOpenCVTests):
         self.assertEqual(np.array_equal(expected, actual), True)
         fs.release()
 
-        f.close()
+        os.remove(fname)
