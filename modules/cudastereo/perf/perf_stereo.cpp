@@ -192,6 +192,8 @@ PERF_TEST_P(ImagePair, DisparityBilateralFilter,
 //////////////////////////////////////////////////////////////////////
 // ReprojectImageTo3D
 
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
+
 PERF_TEST_P(Sz_Depth, ReprojectImageTo3D,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S)))
