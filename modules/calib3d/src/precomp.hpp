@@ -74,7 +74,7 @@ namespace cv
  * \frac{\ln(1-p)}{\ln\left(1-(1-ep)^\mathrm{modelPoints}\right)}
  * \f]
  *
- * If the computed number of iterations is less than maxIters, then 1 is returned.
+ * If the computed number of iterations is larger than maxIters, then maxIters is returned.
  */
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
 
