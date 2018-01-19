@@ -966,9 +966,8 @@ CvRect GuiReceiver::getWindowRect(QString name)
 
     if (!w)
         return cvRect(-1, -1, -1, -1);
-
-    QPoint org = w->viewport()->mapToGlobal(new QPoint(0, 0));
-    return cvRect(w->viewport()->pos().x() + org.x(), w->viewport()->pos().y() + org.y(), w->viewport()->width(), w->viewport()->height());
+    
+    return w->getWindowRect();
 }
 
 double GuiReceiver::isFullScreen(QString name)
@@ -1776,6 +1775,17 @@ void CvWindow::setRatio(int flags)
     myView->setRatio(flags);
 }
 
+CvRect CvWindow::getWindowRect()
+{
+    QPoint org = myView->viewport()->mapToGlobal(new QPoint(0, 0));
+
+#ifdef HAVE_QT_OPENGL
+    if (isOpenGl()) {
+        return cvRect(myView->pos().x() + org.x(), myView->pos().y() + org.y(), myView->width(), myView->height());
+    } else 
+#endif
+    return cvRect(myView->viewport()->pos().x() + org.x(), myView->viewport()->pos().y() + org.y(), myView->viewport()->width(), myView->viewport()->height()); 
+}
 
 int CvWindow::getPropWindow()
 {
