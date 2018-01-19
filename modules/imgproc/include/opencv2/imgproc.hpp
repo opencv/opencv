@@ -2080,9 +2080,7 @@ Example: :
         polar_index = HoughLinesUsingSetOfPoints(point, lines, 20,
                                                  rhoMin, rhoMax, rhoStep,
                                                  thetaMin, thetaMax, thetaStep);
-
         lines.copyTo(line_polar);
-
         printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(polar_index).val[0], line_polar.at(polar_index).val[1], line_polar.at(polar_index).val[2]);
     }
 @endcode

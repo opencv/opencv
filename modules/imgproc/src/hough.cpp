@@ -1577,7 +1577,7 @@ CreateHoughPlane( const std::vector<Point2f> point,
 static int SelectHoughLines( const int *plane,
                              double rho_min, double rho_max, double rho_step,
                              double theta_min, double theta_max, double theta_step,
-                             std::vector<Vec3d>& lines)
+                             std::vector<Vec3d>& lines )
 {
     int ret = 0, cnt = 0;
     int votes = 0, max_votes = 0;
