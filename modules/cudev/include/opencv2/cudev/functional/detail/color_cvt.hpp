@@ -343,14 +343,14 @@ namespace color_cvt_detail
             const int delta = ColorChannel<T>::half() * (1 << yuv_shift);
 
             const int Y = CV_CUDEV_DESCALE(b * c_RGB2YUVCoeffs_i[0] + g * c_RGB2YUVCoeffs_i[1] + r * c_RGB2YUVCoeffs_i[2], yuv_shift);
-            const int Cr = CV_CUDEV_DESCALE((b - Y) * c_RGB2YUVCoeffs_i[3] + delta, yuv_shift);
-            const int Cb = CV_CUDEV_DESCALE((r - Y) * c_RGB2YUVCoeffs_i[4] + delta, yuv_shift);
+            const int Cb = CV_CUDEV_DESCALE((b - Y) * c_RGB2YUVCoeffs_i[3] + delta, yuv_shift);
+            const int Cr = CV_CUDEV_DESCALE((r - Y) * c_RGB2YUVCoeffs_i[4] + delta, yuv_shift);
 
             typename MakeVec<T, dcn>::type dst;
 
             dst.x = saturate_cast<T>(Y);
-            dst.y = saturate_cast<T>(Cr);
-            dst.z = saturate_cast<T>(Cb);
+            dst.y = saturate_cast<T>(Cb);
+            dst.z = saturate_cast<T>(Cr);
 
             return dst;
         }
