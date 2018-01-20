@@ -1777,14 +1777,10 @@ void CvWindow::setRatio(int flags)
 
 CvRect CvWindow::getWindowRect()
 {
-    QPoint org = myView->viewport()->mapToGlobal(new QPoint(0, 0));
-
-#ifdef HAVE_QT_OPENGL
-    if (isOpenGl()) {
-        return cvRect(myView->pos().x() + org.x(), myView->pos().y() + org.y(), myView->width(), myView->height());
-    } else
-#endif
-    return cvRect(myView->viewport()->pos().x() + org.x(), myView->viewport()->pos().y() + org.y(), myView->viewport()->width(), myView->viewport()->height());
+    QWidget* view = myView->getWidget();
+    QRect local_rc = view->geometry(); // http://doc.qt.io/qt-5/application-windows.html#window-geometry
+    QPoint global_pos = /*view->*/mapToGlobal(QPoint(local_rc.x(), local_rc.y()));
+    return cvRect(global_pos.x(), global_pos.y(), local_rc.width(), local_rc.height());
 }
 
 int CvWindow::getPropWindow()
