@@ -3,6 +3,7 @@
 from __future__ import print_function
 import hashlib
 import sys
+import tarfile
 if sys.version_info[0] < 3:
     from urllib2 import urlopen
 else:
@@ -15,9 +16,11 @@ class Model:
 
     def __init__(self, **kwargs):
         self.name = kwargs.pop('name')
-        self.url = kwargs.pop('url')
+        self.url = kwargs.pop('url', None)
         self.filename = kwargs.pop('filename')
         self.sha = kwargs.pop('sha', None)
+        self.archive = kwargs.pop('archive', None)
+        self.member = kwargs.pop('member', None)
 
     def __str__(self):
         return 'Model <{}>'.format(self.name)
@@ -45,17 +48,40 @@ class Model:
         print('  actual {}'.format(sha.hexdigest()))
         return self.sha == sha.hexdigest()
 
-    def download(self):
+    def get(self):
         try:
             if self.verify():
-                print('  hash match - skipping download')
+                print('  hash match - skipping')
                 return
         except Exception as e:
             print('  catch {}'.format(e))
-        print('  hash check failed - downloading')
-        print('  get {}'.format(self.url))
+
+        if self.archive or self.member:
+            assert(self.archive and self.member)
+            print('  hash check failed - extracting')
+            print('  get {}'.format(self.member))
+            self.extract()
+        else:
+            assert(self.url)
+            print('  hash check failed - downloading')
+            print('  get {}'.format(self.url))
+            self.download()
+
+        print(' done')
+        print(' file {}'.format(self.filename))
+        self.verify()
+
+    def download(self):
         r = urlopen(self.url)
         self.printRequest(r)
+        self.save(r)
+
+    def extract(self):
+        with tarfile.open(self.archive) as f:
+            assert self.member in f.getnames()
+            self.save(f.extractfile(self.member))
+
+    def save(self, r):
         with open(self.filename, 'wb') as f:
             print('  progress ', end='')
             sys.stdout.flush()
@@ -66,10 +92,6 @@ class Model:
                 f.write(buf)
                 print('>', end='')
                 sys.stdout.flush()
-            print(' done')
-        print(' file {}'.format(self.filename))
-        self.verify()
-
 
 models = [
     Model(
@@ -157,6 +179,47 @@ models = [
         url='https://raw.githubusercontent.com/shicai/DenseNet-Caffe/master/DenseNet_121.prototxt',
         sha='4922099342af5993d9d09f63081c8a392f3c1cc6',
         filename='DenseNet_121.prototxt'),
+    Model(
+        name='Fast-Neural-Style',
+        url='http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/starry_night.t7',
+        sha='5b5e115253197b84d6c6ece1dafe6c15d7105ca6',
+        filename='fast_neural_style_eccv16_starry_night.t7'),
+    Model(
+        name='Fast-Neural-Style',
+        url='http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/feathers.t7',
+        sha='9838007df750d483b5b5e90b92d76e8ada5a31c0',
+        filename='fast_neural_style_instance_norm_feathers.t7'),
+    Model(
+        name='MobileNet-SSD (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz',
+        sha='a88a18cca9fe4f9e496d73b8548bfd157ad286e2',
+        filename='ssd_mobilenet_v1_coco_11_06_217.tar.gz'),
+    Model(
+        name='MobileNet-SSD (TensorFlow)',
+        archive='ssd_mobilenet_v1_coco_11_06_217.tar.gz',
+        member='ssd_mobilenet_v1_coco_11_06_2017/frozen_inference_graph.pb',
+        sha='aaf36f068fab10359eadea0bc68388d96cf68139',
+        filename='ssd_mobilenet_v1_coco.pb'),
+    Model(
+        name='Colorization',
+        url='https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt',
+        sha='f528334e386a69cbaaf237a7611d833bef8e5219',
+        filename='colorization_deploy_v2.prototxt'),
+    Model(
+        name='Colorization',
+        url='http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel',
+        sha='21e61293a3fa6747308171c11b6dd18a68a26e7f',
+        filename='colorization_release_v2.caffemodel'),
+    Model(
+        name='Face_detector',
+        url='https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt',
+        sha='006baf926232df6f6332defb9c24f94bb9f3764e',
+        filename='opencv_face_detector.prototxt'),
+    Model(
+        name='Face_detector',
+        url='https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel',
+        sha='15aa726b4d46d9f023526d85537db81cbc8dd566',
+        filename='opencv_face_detector.caffemodel'),
 ]
 
 # Note: models will be downloaded to current working directory
@@ -164,4 +227,4 @@ models = [
 if __name__ == '__main__':
     for m in models:
         print(m)
-        m.download()
+        m.get()
