@@ -966,7 +966,7 @@ CvRect GuiReceiver::getWindowRect(QString name)
 
     if (!w)
         return cvRect(-1, -1, -1, -1);
-    
+
     return w->getWindowRect();
 }
 
@@ -1782,9 +1782,9 @@ CvRect CvWindow::getWindowRect()
 #ifdef HAVE_QT_OPENGL
     if (isOpenGl()) {
         return cvRect(myView->pos().x() + org.x(), myView->pos().y() + org.y(), myView->width(), myView->height());
-    } else 
+    } else
 #endif
-    return cvRect(myView->viewport()->pos().x() + org.x(), myView->viewport()->pos().y() + org.y(), myView->viewport()->width(), myView->viewport()->height()); 
+    return cvRect(myView->viewport()->pos().x() + org.x(), myView->viewport()->pos().y() + org.y(), myView->viewport()->width(), myView->viewport()->height());
 }
 
 int CvWindow::getPropWindow()
