@@ -84,7 +84,8 @@ void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
     waitKey(500);
 
     ts->printf(ts->LOG, "GUI 8\n");
-    getWindowImageRect("Win");
+    Rect rc = getWindowImageRect("Win");
+    std::cout << "window image rect: " << rc << std::endl;
 
     ts->printf(ts->LOG, "GUI 9\n");
     destroyAllWindows();
