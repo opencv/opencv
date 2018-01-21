@@ -732,33 +732,16 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
-    /** @brief Parse a blob and output the images it contains in a simpler data structure (std::vector<cv::Mat>).
-    *		  Each returned image corresponds to one input image in the network. 
-    *		  The number of channels for one image corresponds to the number of output of the layer from which 
-    *		  the blob was retrieved after a forward pass. If you just used a blobFromImage(s) method, this number 
-    *         is the number of channels from the original images (e.g. 3 for BGR and RGB, 1 for Grayscale, etc.).
-    *         If you want to see the output of each filter from a given layer individually with the classical 
-    *         cv::imshow(), you will need to call the cv::split() method on the returned images. 
-    *		  The output images are in floating point precision. 
-    *  @param blob_ 4 dimensional array in floating point precision (CV_32F) from which you would like to
-    *         extract the images.
-    *  @param normalize_ a boolean flag to retrieve normalized or non normalized CV_32F images.
-    *         True for normalized images. False for non normalized images. The normalization is made on the output images
-    *         if the output images are expected to be 3 channels or a 1 channel arrays (BGR,RGB.., Grayscale). The normalization
-    *         is made on each channel independently if the output images are expected to have another number of channels 
-    *         (e.g. the outputs of a dcnn inner layer).
-    *  @param outputSize_ the size of the output image. Set to cv::Size(-1,-1) for no resizing operation.
-    *  @param scaleFactor_ diviser for @p images values. Should be the same value used with the blboFromImage(s) 
-    *         methods. the scaleFactor_ Will not be applied if equal to 0 (= default).
-    *  @param mean_ scalar with mean values which are added from channels. Expected to be used with 3 channel output 
-    *               images (RGB, BGR). Should be the same value used with the blboFromImage(s) methods. Set to 
-    *               cv::Scalar(-1,-1,-1) for not use it.
-    *  @returns vector of mat containing the multi channels images extracted from the blob in floating point
-    *           precision (CV_32F).
+   /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
+    *  (std::vector<cv::Mat>). The number of channels per returned image equals the number of output in the
+	*  layer from which the blob_ was retrieved. The channels could be easily accessed with the cv::split() method.
+    *  The images are returned in floating point precision (CV_32F). They are neither mean added nor normalized.
+    *  @param blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
+	*  which you would like to extract the images.
+    *  @returns vector of mat containing the 2D non normalized multi channels images extracted from the blob in
+    *  floating point precision (CV_32F).
     */
-    CV_EXPORTS_W std::vector<Mat> imagesFromBlob(const cv::Mat& blob_, const bool normalize_ = true, 
-                                                 const cv::Size outputSize_ = cv::Size(-1, -1), const double scaleFactor_ = 0, 
-                                                 const cv::Scalar& mean_ = cv::Scalar(-1, -1, -1));
+    CV_EXPORTS_W std::vector<Mat> imagesFromBlob(const cv::Mat& blob_);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single
