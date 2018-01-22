@@ -738,7 +738,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     *  The images are returned in floating point precision (CV_32F). They are neither mean added nor normalized.
     *  @param blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
 	*  which you would like to extract the images.
-    *  @returns vector of mat containing the 2D non normalized multi channels images extracted from the blob in
+    *  @returns vector of 2D Mat containing the non normalized multi channels images extracted from the blob in
     *  floating point precision (CV_32F).
     */
     CV_EXPORTS_W std::vector<Mat> imagesFromBlob(const cv::Mat& blob_);
