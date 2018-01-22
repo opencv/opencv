@@ -396,7 +396,7 @@ CVAPI(void)  cvGetRectSubPix( const CvArr* src, CvArr* dst, CvPoint2D32f center 
     matrixarr = ( a11  a12 | b1 )   dst(x,y) <- src(A[x y]' + b)
                 ( a21  a22 | b2 )   (bilinear interpolation is used to retrieve pixels
                                      with fractional coordinates)
-@see cvWarpAffine
+@see cv::getQuadrangleSubPix
 */
 CVAPI(void)  cvGetQuadrangleSubPix( const CvArr* src, CvArr* dst,
                                     const CvMat* map_matrix );
