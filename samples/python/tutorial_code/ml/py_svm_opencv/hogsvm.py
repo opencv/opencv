@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import cv2 as cv
 import numpy as np
 
@@ -31,41 +33,42 @@ def hog(img):
     return hist
 ## [hog]
 
-img = cv.imread('digits.png',0)
-if img is None:
-    raise Exception("we need the digits.png image from samples/data here !")
+if __name__ == "__main__":
+    img = cv.imread('digits.png',0)
+    if img is None:
+        raise Exception("we need the digits.png image from samples/data here !")
 
 
-cells = [np.hsplit(row,100) for row in np.vsplit(img,50)]
+    cells = [np.hsplit(row,100) for row in np.vsplit(img,50)]
 
-# First half is trainData, remaining is testData
-train_cells = [ i[:50] for i in cells ]
-test_cells = [ i[50:] for i in cells]
+    # First half is trainData, remaining is testData
+    train_cells = [ i[:50] for i in cells ]
+    test_cells = [ i[50:] for i in cells]
 
-######     Now training      ########################
+    ######     Now training      ########################
 
-deskewed = [map(deskew,row) for row in train_cells]
-hogdata = [map(hog,row) for row in deskewed]
-trainData = np.float32(hogdata).reshape(-1,64)
-responses = np.repeat(np.arange(10),250)[:,np.newaxis]
+    deskewed = [list(map(deskew,row)) for row in train_cells]
+    hogdata = [list(map(hog,row)) for row in deskewed]
+    trainData = np.float32(hogdata).reshape(-1,64)
+    responses = np.repeat(np.arange(10),250)[:,np.newaxis]
 
-svm = cv.ml.SVM_create()
-svm.setKernel(cv.ml.SVM_LINEAR)
-svm.setType(cv.ml.SVM_C_SVC)
-svm.setC(2.67)
-svm.setGamma(5.383)
+    svm = cv.ml.SVM_create()
+    svm.setKernel(cv.ml.SVM_LINEAR)
+    svm.setType(cv.ml.SVM_C_SVC)
+    svm.setC(2.67)
+    svm.setGamma(5.383)
 
-svm.train(trainData, cv.ml.ROW_SAMPLE, responses)
-svm.save('svm_data.dat')
+    svm.train(trainData, cv.ml.ROW_SAMPLE, responses)
+    svm.save('svm_data.dat')
 
-######     Now testing      ########################
+    ######     Now testing      ########################
 
-deskewed = [map(deskew,row) for row in test_cells]
-hogdata = [map(hog,row) for row in deskewed]
-testData = np.float32(hogdata).reshape(-1,bin_n*4)
-result = svm.predict(testData)[1]
+    deskewed = [list(map(deskew,row)) for row in test_cells]
+    hogdata = [list(map(hog,row)) for row in deskewed]
+    testData = np.float32(hogdata).reshape(-1,bin_n*4)
+    result = svm.predict(testData)[1]
 
-#######   Check Accuracy   ########################
-mask = result==responses
-correct = np.count_nonzero(mask)
-print correct*100.0/result.size
+    #######   Check Accuracy   ########################
+    mask = result==responses
+    correct = np.count_nonzero(mask)
+    print(correct*100.0/result.size)
