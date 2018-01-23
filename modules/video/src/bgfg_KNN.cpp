@@ -733,7 +733,8 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 #ifdef HAVE_OPENCL
     if (opencl_ON)
     {
-        CV_OCL_RUN(_fgmask.isUMat(), ocl_apply(_image, _fgmask, learningRate))
+        CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel() || _image.channels() == 1),
+                   ocl_apply(_image, _fgmask, learningRate))
 
         opencl_ON = false;
         nframes = 0;
