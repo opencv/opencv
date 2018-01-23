@@ -276,6 +276,7 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        // for stereo rectification
        CALIB_ZERO_DISPARITY      = 0x00400,
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
+       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< for stereoCalibrate
      };
 
 //! the algorithm for finding fundamental matrix
@@ -1125,11 +1126,14 @@ is similar to distCoeffs1 .
 @param T Output translation vector between the coordinate systems of the cameras.
 @param E Output essential matrix.
 @param F Output fundamental matrix.
+@param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CALIB_FIX_INTRINSIC** Fix cameraMatrix? and distCoeffs? so that only R, T, E , and F
 matrices are estimated.
 -   **CALIB_USE_INTRINSIC_GUESS** Optimize some or all of the intrinsic parameters
 according to the specified flags. Initial values are provided by the user.
+-   **CALIB_USE_EXTRINSIC_GUESS** R, T contain valid initial values that are optimized further.
+Otherwise R, T are initialized to the median value of the pattern views (each dimension separately).
 -   **CALIB_FIX_PRINCIPAL_POINT** Fix the principal points during the optimization.
 -   **CALIB_FIX_FOCAL_LENGTH** Fix \f$f^{(j)}_x\f$ and \f$f^{(j)}_y\f$ .
 -   **CALIB_FIX_ASPECT_RATIO** Optimize \f$f^{(j)}_y\f$ . Fix the ratio \f$f^{(j)}_x/f^{(j)}_y\f$
@@ -1194,6 +1198,15 @@ Similarly to calibrateCamera , the function minimizes the total re-projection er
 points in all the available views from both cameras. The function returns the final value of the
 re-projection error.
  */
+CV_EXPORTS_AS(stereoCalibrateExtended) double stereoCalibrate( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     Size imageSize, InputOutputArray R,InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+
+/// @overload
 CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
@@ -1201,7 +1214,6 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
-
 
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
 
