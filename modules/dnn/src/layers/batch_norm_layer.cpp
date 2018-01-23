@@ -81,9 +81,6 @@ public:
             dstWeightsData[i] = w;
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
         }
-
-        umat_weight = weights_.getUMat(ACCESS_READ);
-        umat_bias = bias_.getUMat(ACCESS_READ);
     }
 
     void getScaleShift(Mat& scale, Mat& shift) const
@@ -118,6 +115,12 @@ public:
 
         CV_Assert(blobs.size() >= 2);
         CV_Assert(inputs.size() == 1);
+
+        if (umat_weight.empty())
+        {
+            umat_weight = weights_.getUMat(ACCESS_READ);
+            umat_bias = bias_.getUMat(ACCESS_READ);
+        }
 
         UMat &inpBlob = inputs[0];
         CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
