@@ -246,6 +246,11 @@ public:
                 power = activ_power->power;
                 activType = OCL4DNN_CONV_FUSED_ACTIV_POWER;
             }
+            Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
+            if (!activ_tanh.empty())
+            {
+                activType = OCL4DNN_CONV_FUSED_ACTIV_TANH;
+            }
         }
 #endif
         return !activ.empty();
@@ -877,11 +882,16 @@ public:
             {
                 convolutionOp->setActivPower(true, power);
             }
+            else if ( activType == OCL4DNN_CONV_FUSED_ACTIV_TANH)
+            {
+                convolutionOp->setActivTanh(true);
+            }
             else
             {
                 convolutionOp->setActivReLU(false, 0);
                 convolutionOp->setActivPReLU(false, reluslope);
                 convolutionOp->setActivPower(false, 1.f);
+                convolutionOp->setActivTanh(false);
             }
             newActiv = false;
         }
