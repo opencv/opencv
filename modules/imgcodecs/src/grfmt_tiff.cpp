@@ -804,6 +804,22 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
         return false;
     }
 
+    //Get dpi.
+    int dpix = 300;
+    int dpiy = 300;
+    int resUnit = RESUNIT_INCH;
+    readParam(params, TIFFTAG_XRESOLUTION, dpix);
+    readParam(params, TIFFTAG_YRESOLUTION, dpiy);
+    readParam(params, TIFFTAG_RESOLUTIONUNIT, resUnit);
+
+    //Set dpi.
+    if ( !TIFFSetField(pTiffHandle, TIFFTAG_XRESOLUTION, (float) dpix)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_YRESOLUTION, (float) dpiy)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_RESOLUTIONUNIT, resUnit)) {
+        TIFFClose(pTiffHandle);
+        return false;
+    }
+
     // row buffer, because TIFFWriteScanline modifies the original data!
     size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
     AutoBuffer<uchar> _buffer(scanlineSize+32);
