@@ -1627,7 +1627,12 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                 JtErr.rowRange(NINTRINSIC + i * 6, NINTRINSIC + (i + 1) * 6) = _Je.t() * _err;
             }
 
-            reprojErr += norm(_err, NORM_L2SQR);
+            double viewErr = norm(_err, NORM_L2SQR);
+
+            if( perViewErrors )
+                perViewErrors->data.db[i] = std::sqrt(viewErr / ni);
+
+            reprojErr += viewErr;
         }
         if( _errNorm )
             *_errNorm = reprojErr;
@@ -1669,13 +1674,6 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     for( i = 0, pos = 0; i < nimages; i++ )
     {
         CvMat src, dst;
-        if( perViewErrors )
-        {
-            ni = npoints->data.i[i*npstep];
-            perViewErrors->data.db[i] = std::sqrt(cv::norm(allErrors.colRange(pos, pos + ni),
-                                                           NORM_L2SQR) / ni);
-            pos+=ni;
-        }
 
         if( rvecs )
         {
