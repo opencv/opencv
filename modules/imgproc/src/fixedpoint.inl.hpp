@@ -76,6 +76,8 @@ public:
     //        int64_t nval = (int64_t)val + val2.val + nfrac >> 32;
     //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
     //    }
+    CV_ALWAYS_INLINE fixedpoint64 operator >> (int n) const { return fixedpoint64(val >> n); }
+    CV_ALWAYS_INLINE fixedpoint64 operator << (int n) const { return fixedpoint64(val << n); }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int64_t)fixedround((uint64_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1LL << fixedShift); }
@@ -129,6 +131,8 @@ public:
     //        int64_t nval = (int64_t)val + val2.val + nfrac >> 32;
     //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
     //    }
+    CV_ALWAYS_INLINE ufixedpoint64 operator >> (int n) const { return ufixedpoint64(val >> n); }
+    CV_ALWAYS_INLINE ufixedpoint64 operator << (int n) const { return ufixedpoint64(val << n); }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1LL << fixedShift); }
@@ -170,6 +174,8 @@ public:
     //        int32_t nval = (int32_t)val + val2.val + nfrac >> 32;
     //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
     //    }
+    CV_ALWAYS_INLINE fixedpoint32 operator >> (int n) const { return fixedpoint32(val >> n); }
+    CV_ALWAYS_INLINE fixedpoint32 operator << (int n) const { return fixedpoint32(val << n); }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int32_t)fixedround((uint32_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
@@ -209,6 +215,8 @@ public:
     //        int32_t nval = (int32_t)val + val2.val + nfrac >> 32;
     //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
     //    }
+    CV_ALWAYS_INLINE ufixedpoint32 operator >> (int n) const { return ufixedpoint32(val >> n); }
+    CV_ALWAYS_INLINE ufixedpoint32 operator << (int n) const { return ufixedpoint32(val << n); }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
@@ -241,6 +249,8 @@ public:
     CV_ALWAYS_INLINE fixedpoint32 operator * (const fixedpoint16& val2) const { return (int32_t)val * (int32_t)(val2.val); }
     CV_ALWAYS_INLINE fixedpoint16 operator + (const fixedpoint16& val2) const { return fixedpoint16((int16_t)(val + val2.val)); }
     CV_ALWAYS_INLINE fixedpoint16 operator - (const fixedpoint16& val2) const { return fixedpoint16((int16_t)(val - val2.val)); }
+    CV_ALWAYS_INLINE fixedpoint16 operator >> (int n) const { return fixedpoint16((int16_t)(val >> n)); }
+    CV_ALWAYS_INLINE fixedpoint16 operator << (int n) const { return fixedpoint16((int16_t)(val << n)); }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int16_t)fixedround((uint16_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
@@ -271,12 +281,8 @@ public:
     CV_ALWAYS_INLINE ufixedpoint32 operator * (const ufixedpoint16& val2) const { return ((uint32_t)val * (uint32_t)(val2.val)); }
     CV_ALWAYS_INLINE ufixedpoint16 operator + (const ufixedpoint16& val2) const { return ufixedpoint16((uint16_t)(val + val2.val)); }
     CV_ALWAYS_INLINE ufixedpoint16 operator - (const ufixedpoint16& val2) const { return ufixedpoint16((uint16_t)(val - val2.val)); }
-    //    CV_ALWAYS_INLINE fixedpoint16 operator + (const fixedpoint16& val2) const
-    //    {
-    //        int16_t nfrac = (int32_t)frac + val2.frac;
-    //        int16_t nval = (int32_t)val + val2.val + nfrac >> 16;
-    //        return nval > MAXINT32 ? beConv(MAXINT16, MAXINT16) : beConv((int16_t)(nval), 0);
-    //    }
+    CV_ALWAYS_INLINE ufixedpoint16 operator >> (int n) const { return ufixedpoint16((uint16_t)(val >> n)); }
+    CV_ALWAYS_INLINE ufixedpoint16 operator << (int n) const { return ufixedpoint16((uint16_t)(val << n)); }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
