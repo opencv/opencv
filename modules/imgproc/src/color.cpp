@@ -11063,7 +11063,7 @@ void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst
     }
 
     int stype = _ysrc.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), uidx, gbits, ycn;
+    int depth = CV_MAT_DEPTH(stype), uidx;
 
     Mat ysrc, uvsrc, dst;
     ysrc = _ysrc.getMat();
