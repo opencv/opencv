@@ -11050,6 +11050,38 @@ inline bool isFullRange(int code)
 
 } // namespace::
 
+// helper function for dual-plane modes
+void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code, int dcn )
+{
+    // only YUV420 is currently supported
+    switch (code) {
+        case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21:  case COLOR_YUV2BGR_NV12:  case COLOR_YUV2RGB_NV12:
+        case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
+            break;
+        default:
+            return;
+    }
+
+    int stype = _ysrc.type();
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), uidx, gbits, ycn;
+
+    Mat ysrc, uvsrc, dst;
+    ysrc = _ysrc.getMat();
+    uvsrc = _uvsrc.getMat();
+    Size sz = _ysrc.size();
+
+    // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
+    // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
+    if (dcn <= 0) dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
+    uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
+    CV_Assert( dcn == 3 || dcn == 4 );
+    CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
+    _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
+    dst = _dst.getMat();
+    hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step, dst.data, dst.step, dst.cols, dst.rows, dcn, swapBlue(code), uidx);
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                   The main function                                  //
 //////////////////////////////////////////////////////////////////////////////////////////
