@@ -271,7 +271,7 @@ OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead o
 OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID AND NOT WINRT) IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_opencv_js          "Build JavaScript bindings by Emscripten" OFF )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
-OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
+OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" OFF  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON  IF NOT WINRT)
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT APPLE_FRAMEWORK) )
@@ -314,6 +314,7 @@ OCV_OPTION(ENABLE_INSTRUMENTATION     "Instrument functions to collect calls tra
 OCV_OPTION(ENABLE_GNU_STL_DEBUG       "Enable GNU STL Debug mode (defines _GLIBCXX_DEBUG)"       OFF IF ((NOT CMAKE_VERSION VERSION_LESS "2.8.11") AND CMAKE_COMPILER_IS_GNUCXX) )
 OCV_OPTION(ENABLE_BUILD_HARDENING     "Enable hardening of the resulting binaries (against security attacks, detects memory corruption, etc)" OFF)
 OCV_OPTION(ENABLE_LTO                 "Enable Link Time Optimization" OFF IF CMAKE_COMPILER_IS_GNUCXX OR MSVC)
+OCV_OPTION(ENABLE_THIN_LTO            "Enable Thin LTO" OFF IF CMAKE_COMPILER_IS_CLANGCXX)
 OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_checker tool" OFF IF UNIX)
 OCV_OPTION(CV_ENABLE_INTRINSICS       "Use intrinsic-based optimized code" ON )
 OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatched code/intrinsics/loop unrolling/etc)" OFF )
@@ -614,14 +615,6 @@ include(cmake/OpenCVFindLAPACK.cmake)
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
-
-# --- Doxygen for documentation ---
-add_custom_target(opencv_docs ALL)
-if(BUILD_DOCS)
-  find_package(Doxygen)
-else()
-  unset(DOXYGEN_FOUND CACHE)
-endif()
 
 # --- Java Support ---
 if(BUILD_JAVA)
@@ -1040,7 +1033,14 @@ ocv_build_features_string(apps_status
   IF BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS THEN "android_examples"
   ELSE "-")
 status("    Applications:" "${apps_status}")
-status("    Documentation:" BUILD_DOCS AND DOXYGEN_FOUND THEN "YES (${DOXYGEN_EXECUTABLE} ${DOXYGEN_VERSION})" ELSE "NO")
+ocv_build_features_string(docs_status
+    IF TARGET doxygen_cpp THEN "doxygen"
+    IF TARGET doxygen_python THEN "python"
+    IF TARGET doxygen_javadoc THEN "javadoc"
+    IF BUILD_opencv_js OR DEFINED OPENCV_JS_LOCATION THEN "js"
+    ELSE "NO"
+)
+status("    Documentation:" "${docs_status}")
 status("    Non-free algorithms:" OPENCV_ENABLE_NONFREE THEN "YES" ELSE "NO")
 
 # ========================== Android details ==========================

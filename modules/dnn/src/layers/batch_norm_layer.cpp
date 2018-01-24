@@ -12,6 +12,7 @@ Implementation of Batch Normalization layer.
 #include "../precomp.hpp"
 #include "op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -22,7 +23,7 @@ class BatchNormLayerImpl : public BatchNormLayer
 {
 public:
     Mat weights_, bias_;
-    Mat weightMat, biasMat;
+    UMat umat_weight, umat_bias;
 
     BatchNormLayerImpl(const LayerParams& params)
     {
@@ -80,6 +81,9 @@ public:
             dstWeightsData[i] = w;
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
         }
+
+        umat_weight = weights_.getUMat(ACCESS_READ);
+        umat_bias = bias_.getUMat(ACCESS_READ);
     }
 
     void getScaleShift(Mat& scale, Mat& shift) const
@@ -95,25 +99,6 @@ public:
     {
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
-    }
-
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
-    {
-        if (inputs[0]->dims == 4)
-        {
-            int groups = inputs[0]->size[0];
-            int channels = inputs[0]->size[1];
-            int rows = inputs[0]->size[2];
-            int cols = inputs[0]->size[3];
-            MatShape s = shape(groups * channels, rows * cols);
-            weightMat = Mat(s[0], s[1], CV_32FC1);
-            biasMat = Mat(s[0], s[1], CV_32FC1);
-            for (int n = 0; n < s[0]; n++)
-            {
-                weightMat.row(n).setTo(weights_.at<float>(n % channels));
-                biasMat.row(n).setTo(bias_.at<float>(n % channels));
-            }
-        }
     }
 
     virtual bool supportBackend(int backendId)
@@ -155,8 +140,23 @@ public:
                 MatShape s = shape(groups * channels, rows * cols);
                 UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
                 UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
-                multiply(src, weightMat, dst);
-                add(dst, biasMat, dst);
+                int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
+                String buildopt = format("-DNUM=%d ", number);
+                String kname = format("batch_norm%d", number);
+                ocl::Kernel kernel(kname.c_str(), ocl::dnn::batchnorm_oclsrc, buildopt);
+                if (kernel.empty())
+                    return false;
+                size_t global[] = { (size_t)s[0], (size_t)(s[1] / number) };
+                kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+                kernel.set(1, (int)s[0]);
+                kernel.set(2, (int)s[1]);
+                kernel.set(3, (int)channels);
+                kernel.set(4, ocl::KernelArg::PtrReadOnly(umat_weight));
+                kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_bias));
+                kernel.set(6, ocl::KernelArg::PtrWriteOnly(dst));
+                bool ret = kernel.run(2, global, NULL, false);
+                if (!ret)
+                    return false;
             }
         }
         return true;

@@ -81,32 +81,32 @@ class LIBPROTOBUF_EXPORT ProtoWriter : public StructuredObjectWriter {
   virtual ~ProtoWriter();
 
   // ObjectWriter methods.
-  virtual ProtoWriter* StartObject(StringPiece name);
-  virtual ProtoWriter* EndObject();
-  virtual ProtoWriter* StartList(StringPiece name);
-  virtual ProtoWriter* EndList();
-  virtual ProtoWriter* RenderBool(StringPiece name, bool value) {
+  ProtoWriter* StartObject(StringPiece name);
+  ProtoWriter* EndObject();
+  ProtoWriter* StartList(StringPiece name);
+  ProtoWriter* EndList();
+  ProtoWriter* RenderBool(StringPiece name, bool value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderInt32(StringPiece name, int32 value) {
+  ProtoWriter* RenderInt32(StringPiece name, int32 value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderUint32(StringPiece name, uint32 value) {
+  ProtoWriter* RenderUint32(StringPiece name, uint32 value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderInt64(StringPiece name, int64 value) {
+  ProtoWriter* RenderInt64(StringPiece name, int64 value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderUint64(StringPiece name, uint64 value) {
+  ProtoWriter* RenderUint64(StringPiece name, uint64 value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderDouble(StringPiece name, double value) {
+  ProtoWriter* RenderDouble(StringPiece name, double value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderFloat(StringPiece name, float value) {
+  ProtoWriter* RenderFloat(StringPiece name, float value) {
     return RenderDataPiece(name, DataPiece(value));
   }
-  virtual ProtoWriter* RenderString(StringPiece name, StringPiece value) {
+  ProtoWriter* RenderString(StringPiece name, StringPiece value) {
     return RenderDataPiece(name,
                            DataPiece(value, use_strict_base64_decoding()));
   }
@@ -114,7 +114,7 @@ class LIBPROTOBUF_EXPORT ProtoWriter : public StructuredObjectWriter {
     return RenderDataPiece(
         name, DataPiece(value, false, use_strict_base64_decoding()));
   }
-  virtual ProtoWriter* RenderNull(StringPiece name) {
+  ProtoWriter* RenderNull(StringPiece name) {
     return RenderDataPiece(name, DataPiece::NullData());
   }
 
@@ -242,7 +242,7 @@ class LIBPROTOBUF_EXPORT ProtoWriter : public StructuredObjectWriter {
   ProtoWriter(const TypeInfo* typeinfo, const google::protobuf::Type& type,
               strings::ByteSink* output, ErrorListener* listener);
 
-  virtual ProtoElement* element() { return element_.get(); }
+  ProtoElement* element() { return element_.get(); }
 
   // Helper methods for calling ErrorListener. See error_listener.h.
   void InvalidName(StringPiece unknown_name, StringPiece message);

@@ -314,7 +314,7 @@ struct LayerData
 {
     LayerData() : id(-1), flag(0) {}
     LayerData(int _id, const String &_name, const String &_type, LayerParams &_params)
-        : id(_id), name(_name), type(_type), params(_params), flag(0)
+        : id(_id), name(_name), type(_type), params(_params), skip(false), flag(0)
     {
         CV_TRACE_FUNCTION();
 
@@ -343,7 +343,7 @@ struct LayerData
     // Computation nodes of implemented backends (except DEFAULT).
     std::map<int, Ptr<BackendNode> > backendNodes;
     // Flag for skip layer computation for specific backend.
-    std::map<int, bool> skipFlags;
+    bool skip;
 
     int flag;
 
@@ -732,7 +732,7 @@ struct Net::Impl
         {
             LayerData &ld = it->second;
             Ptr<Layer> layer = ld.layerInstance;
-            if (layer->supportBackend(DNN_BACKEND_HALIDE) && !ld.skipFlags[DNN_BACKEND_HALIDE])
+            if (layer->supportBackend(DNN_BACKEND_HALIDE) && !ld.skip)
             {
                 CV_Assert(!ld.backendNodes[DNN_BACKEND_HALIDE].empty());
                 bool scheduled = scheduler.process(ld.backendNodes[DNN_BACKEND_HALIDE]);
@@ -780,7 +780,7 @@ struct Net::Impl
                 it->second.outputBlobs.clear();
                 it->second.internals.clear();
             }
-            it->second.skipFlags.clear();
+            it->second.skip = false;
             //it->second.consumers.clear();
             Ptr<Layer> currLayer = it->second.layerInstance;
 
@@ -797,7 +797,7 @@ struct Net::Impl
         }
         it = layers.find(0);
         CV_Assert(it != layers.end());
-        it->second.skipFlags[DNN_BACKEND_DEFAULT] = true;
+        it->second.skip = true;
 
         layersTimings.clear();
     }
@@ -1041,14 +1041,15 @@ struct Net::Impl
                         layerTop->tryAttach(ldBot.backendNodes[preferableBackend]);
                     if (!fusedNode.empty())
                     {
-                        ldTop.skipFlags[preferableBackend] = true;
+                        ldTop.skip = true;
                         ldBot.backendNodes[preferableBackend] = fusedNode;
+                        ldBot.outputBlobsWrappers = ldTop.outputBlobsWrappers;
                         continue;
                     }
                 }
             }
             // No layers fusion.
-            ldTop.skipFlags[preferableBackend] = false;
+            ldTop.skip = false;
             if (preferableBackend == DNN_BACKEND_HALIDE)
             {
                 ldTop.backendNodes[DNN_BACKEND_HALIDE] =
@@ -1173,7 +1174,7 @@ struct Net::Impl
         {
             int lid = it->first;
             LayerData& ld = layers[lid];
-            if( ld.skipFlags[DNN_BACKEND_DEFAULT] )
+            if( ld.skip )
             {
                 printf_(("skipped %s: %s\n", ld.layerInstance->name.c_str(), ld.layerInstance->type.c_str()));
                 continue;
@@ -1206,7 +1207,7 @@ struct Net::Impl
                     if( currLayer->setBatchNorm(nextBNormLayer) )
                     {
                         printf_(("\tfused with %s\n", nextBNormLayer->name.c_str()));
-                        bnormData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                        bnormData->skip = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
                         if( bnormData->consumers.size() == 1 )
@@ -1227,7 +1228,7 @@ struct Net::Impl
                     if( currLayer->setScale(nextScaleLayer) )
                     {
                         printf_(("\tfused with %s\n", nextScaleLayer->name.c_str()));
-                        scaleData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                        scaleData->skip = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
                         if( scaleData->consumers.size() == 1 )
@@ -1257,7 +1258,7 @@ struct Net::Impl
                     {
                         LayerData *activData = nextData;
                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
-                        activData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                        activData->skip = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
 
@@ -1281,7 +1282,7 @@ struct Net::Impl
                         LayerData *eltwiseData = nextData;
                         // go down from the second input and find the first non-skipped layer.
                         LayerData *downLayerData = &layers[eltwiseData->inputBlobsId[1].lid];
-                        while (downLayerData->skipFlags[DNN_BACKEND_DEFAULT])
+                        while (downLayerData->skip)
                         {
                             downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
                         }
@@ -1291,7 +1292,7 @@ struct Net::Impl
                         {
                             // go down from the first input and find the first non-skipped layer
                             downLayerData = &layers[eltwiseData->inputBlobsId[0].lid];
-                            while (downLayerData->skipFlags[DNN_BACKEND_DEFAULT])
+                            while (downLayerData->skip)
                             {
                                 if ( !downLayerData->type.compare("Eltwise") )
                                     downLayerData = &layers[downLayerData->inputBlobsId[1].lid];
@@ -1326,8 +1327,8 @@ struct Net::Impl
                                         ld.inputBlobsWrappers.push_back(firstConvLayerData->outputBlobsWrappers[0]);
                                         printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
                                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
-                                        eltwiseData->skipFlags[DNN_BACKEND_DEFAULT] = true;
-                                        nextData->skipFlags[DNN_BACKEND_DEFAULT] = true;
+                                        eltwiseData->skip = true;
+                                        nextData->skip = true;
                                         // This optimization for cases like
                                         // some_layer   conv
                                         //   |             |
@@ -1419,7 +1420,7 @@ struct Net::Impl
                     {
                         LayerPin pin = ld.inputBlobsId[i];
                         LayerData* inp_i_data = &layers[pin.lid];
-                        while(inp_i_data->skipFlags[DNN_BACKEND_DEFAULT] &&
+                        while(inp_i_data->skip &&
                               inp_i_data->inputBlobsId.size() == 1 &&
                               inp_i_data->consumers.size() == 1)
                         {
@@ -1430,7 +1431,7 @@ struct Net::Impl
                                layers[ld.inputBlobsId[i].lid].getLayerInstance()->name.c_str(),
                                inp_i_data->getLayerInstance()->name.c_str()));
 
-                        if(inp_i_data->skipFlags[DNN_BACKEND_DEFAULT] || inp_i_data->consumers.size() != 1)
+                        if(inp_i_data->skip || inp_i_data->consumers.size() != 1)
                             break;
                         realinputs[i] = pin;
                     }
@@ -1460,7 +1461,7 @@ struct Net::Impl
                             // new data but the same Mat object.
                             CV_Assert(curr_output.data == output_slice.data, oldPtr == &curr_output);
                         }
-                        ld.skipFlags[DNN_BACKEND_DEFAULT] = true;
+                        ld.skip = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
                     }
                 }
@@ -1524,7 +1525,7 @@ struct Net::Impl
         if (preferableBackend == DNN_BACKEND_DEFAULT ||
             !layer->supportBackend(preferableBackend))
         {
-            if( !ld.skipFlags[DNN_BACKEND_DEFAULT] )
+            if( !ld.skip )
             {
                 if (preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_OPENCL)
                 {
@@ -1554,7 +1555,7 @@ struct Net::Impl
             else
                 tm.reset();
         }
-        else if (!ld.skipFlags[preferableBackend])
+        else if (!ld.skip)
         {
             Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
             if (preferableBackend == DNN_BACKEND_HALIDE)

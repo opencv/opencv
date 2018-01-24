@@ -1422,3 +1422,11 @@ macro(ocv_copyfiles_add_target target list_var comment_str)
   )
   add_custom_target(${target} DEPENDS "${OPENCV_DEPHELPER}/${target}")
 endmacro()
+
+
+# Needed by install(DIRECTORY ...)
+if(NOT CMAKE_VERSION VERSION_LESS 3.1)
+  set(compatible_MESSAGE_NEVER MESSAGE_NEVER)
+else()
+  set(compatible_MESSAGE_NEVER "")
+endif()

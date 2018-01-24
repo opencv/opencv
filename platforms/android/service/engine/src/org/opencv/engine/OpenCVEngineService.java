@@ -119,9 +119,12 @@ public class OpenCVEngineService extends Service {
 
             @Override
             public String getLibraryList(String version) throws RemoteException {
-                for (LibVariant lib : variants)
+                Log.i(TAG, "getLibraryList(" + version + ")");
+                for (LibVariant lib : variants) {
+                    Log.i(TAG, "checking " + lib.version + " ...");
                     if (lib.isCompatible(version))
                         return lib.getFileList();
+                }
                 return null;
             }
 

@@ -23,8 +23,8 @@ int main()
         Mat m = (Mat_<uchar>(3,2) << 1,2,3,4,5,6);
         Mat col_sum, row_sum;
 
-        reduce(m, col_sum, 0, CV_REDUCE_SUM, CV_32F);
-        reduce(m, row_sum, 1, CV_REDUCE_SUM, CV_32F);
+        reduce(m, col_sum, 0, REDUCE_SUM, CV_32F);
+        reduce(m, row_sum, 1, REDUCE_SUM, CV_32F);
         /*
         m =
         [  1,   2;
@@ -40,22 +40,22 @@ int main()
         //! [example]
 
         Mat col_average, row_average, col_min, col_max, row_min, row_max;
-        reduce(m, col_average, 0, CV_REDUCE_AVG, CV_32F);
+        reduce(m, col_average, 0, REDUCE_AVG, CV_32F);
         cout << "col_average =\n" << col_average << endl;
 
-        reduce(m, row_average, 1, CV_REDUCE_AVG, CV_32F);
+        reduce(m, row_average, 1, REDUCE_AVG, CV_32F);
         cout << "row_average =\n" << row_average << endl;
 
-        reduce(m, col_min, 0, CV_REDUCE_MIN, CV_8U);
+        reduce(m, col_min, 0, REDUCE_MIN, CV_8U);
         cout << "col_min =\n" << col_min << endl;
 
-        reduce(m, row_min, 1, CV_REDUCE_MIN, CV_8U);
+        reduce(m, row_min, 1, REDUCE_MIN, CV_8U);
         cout << "row_min =\n" << row_min << endl;
 
-        reduce(m, col_max, 0, CV_REDUCE_MAX, CV_8U);
+        reduce(m, col_max, 0, REDUCE_MAX, CV_8U);
         cout << "col_max =\n" << col_max << endl;
 
-        reduce(m, row_max, 1, CV_REDUCE_MAX, CV_8U);
+        reduce(m, row_max, 1, REDUCE_MAX, CV_8U);
         cout << "row_max =\n" << row_max << endl;
 
         /*
@@ -86,7 +86,7 @@ int main()
         char d[] = {1,2,3,4,5,6};
         Mat m(3, 1, CV_8UC2, d);
         Mat col_sum_per_channel;
-        reduce(m, col_sum_per_channel, 0, CV_REDUCE_SUM, CV_32F);
+        reduce(m, col_sum_per_channel, 0, REDUCE_SUM, CV_32F);
         /*
         col_sum_per_channel =
         [9, 12]
