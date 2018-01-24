@@ -1693,9 +1693,10 @@ void TestBase::validateMetrics()
     {
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double median = metrics.median * 1000.0f / metrics.frequency;
+        double min_value = metrics.min * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, median = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, median, stddev, percents);
+        printf("[ PERFSTAT ]    (samples=%d   mean=%.2f   median=%.2f   min=%.2f   stddev=%.2f (%.1f%%))\n", (int)metrics.samples, mean, median, min_value, stddev, percents);
     }
     else
     {
