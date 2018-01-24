@@ -367,10 +367,13 @@ OCL_TEST(Layer_Test_PReLU, Accuracy)
 //    );
 //}
 
-static void test_Reshape_Split_Slice_layers()
+static void test_Reshape_Split_Slice_layers(int targetId)
 {
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -384,7 +387,12 @@ static void test_Reshape_Split_Slice_layers()
 
 TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
 {
-    test_Reshape_Split_Slice_layers();
+    test_Reshape_Split_Slice_layers(DNN_TARGET_CPU);
+}
+
+OCL_TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
+{
+    test_Reshape_Split_Slice_layers(DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Conv_Elu, Accuracy)

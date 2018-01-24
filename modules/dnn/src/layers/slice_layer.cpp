@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -171,10 +172,58 @@ public:
         }
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        if (inputs[0].dims < 4)
+            return false;
+
+        const UMat& inpMat = inputs[0];
+        for (size_t i = 0; i < outputs.size(); i++)
+        {
+            int groups = outputs[i].size[0];
+            int channels = outputs[i].size[1];
+            int rows = outputs[i].size[2];
+            int cols = outputs[i].size[3];
+
+            int number = (cols % 8 == 0) ? 8 : ((cols % 4 == 0) ? 4 : 1);
+            String buildopt = format("-DNUM=%d ", number);
+            String kname = format("slice%d", number);
+            ocl::Kernel kernel(kname.c_str(), ocl::dnn::slice_oclsrc, buildopt);
+            size_t global[] = { (size_t)groups * channels, (size_t)rows * cols / number };
+            int idx = 0;
+            kernel.set(idx++, ocl::KernelArg::PtrReadOnly(inpMat));
+            kernel.set(idx++, (int)(inpMat.size[2] * inpMat.size[3]));
+            kernel.set(idx++, (int)inpMat.size[3]);
+            kernel.set(idx++, (int)global[0]);
+            kernel.set(idx++, (int)(rows * cols));
+            kernel.set(idx++, (int)cols);
+            kernel.set(idx++, (int)sliceRanges[i][2].start);
+            kernel.set(idx++, (int)sliceRanges[i][3].start);
+            kernel.set(idx++, ocl::KernelArg::PtrWriteOnly(outputs[i]));
+            bool ret = kernel.run(2, global, NULL, false);
+            if (!ret)
+                return false;
+        }
+
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
