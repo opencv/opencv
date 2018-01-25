@@ -770,6 +770,10 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
 
     //-------------------------------Optimization
+    double lambda = 1.0;
+    const double nu = 1.414213562; // sqrt(2), chosen by experiment
+    double prev_rms;
+    EstimateUncertainties(objectPoints, imagePoints, finalParam, omc, Tc, errors, err_std, thresh_cond, check_cond, prev_rms);
     for(int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
     {
         if ((criteria.type == 1 && iter >= criteria.maxCount)  ||
@@ -777,25 +781,38 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
             (criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount)))
             break;
 
-        double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
-
         Mat JJ2, ex3;
         ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond,thresh_cond, JJ2, ex3);
 
+        // Create a diagonal matrix of JJ2
+        cv::Mat JJ2diag = cv::Mat::zeros(JJ2.cols, JJ2.rows, CV_64F);
+        for (int rc = 0; rc < JJ2.cols; rc++)
+            JJ2diag.at<double>(rc, rc) = JJ2.at<double>(rc, rc);
+
+        cv::Mat JJ2Plus = JJ2 + (lambda * JJ2diag);
+
         Mat G;
-        solve(JJ2, ex3, G);
-        currentParam = finalParam + alpha_smooth2*G;
+        solve(JJ2Plus, ex3, G);
+        currentParam = finalParam + G;
 
         change = norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
                 Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
                 / norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
 
-        finalParam = currentParam;
+        double rms_err = 0;
+        EstimateUncertainties(objectPoints, imagePoints, currentParam, omc, Tc, errors, err_std, thresh_cond, check_cond, rms_err);
 
-        if (recompute_extrinsic)
+        if (rms_err < prev_rms)
         {
-            CalibrateExtrinsics(objectPoints,  imagePoints, finalParam, check_cond,
-                                    thresh_cond, omc, Tc);
+            prev_rms = rms_err;
+            finalParam = currentParam;
+            if (recompute_extrinsic)
+                CalibrateExtrinsics(objectPoints, imagePoints, finalParam, check_cond, thresh_cond, omc, Tc);
+            lambda /= nu;
+        }
+        else
+        {
+            lambda *= nu;
         }
     }
 
@@ -1128,8 +1145,8 @@ cv::internal::IntrinsicParams cv::internal::IntrinsicParams::operator+(const Mat
     tmp.f[0]    = this->f[0]    + (isEstimate[0] ? ptr[j++] : 0);
     tmp.f[1]    = this->f[1]    + (isEstimate[1] ? ptr[j++] : 0);
     tmp.c[0]    = this->c[0]    + (isEstimate[2] ? ptr[j++] : 0);
-    tmp.alpha   = this->alpha   + (isEstimate[4] ? ptr[j++] : 0);
     tmp.c[1]    = this->c[1]    + (isEstimate[3] ? ptr[j++] : 0);
+    tmp.alpha   = this->alpha   + (isEstimate[4] ? ptr[j++] : 0);
     tmp.k[0]    = this->k[0]    + (isEstimate[5] ? ptr[j++] : 0);
     tmp.k[1]    = this->k[1]    + (isEstimate[6] ? ptr[j++] : 0);
     tmp.k[2]    = this->k[2]    + (isEstimate[7] ? ptr[j++] : 0);
