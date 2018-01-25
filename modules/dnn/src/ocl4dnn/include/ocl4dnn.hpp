@@ -77,7 +77,8 @@ typedef enum {
     OCL4DNN_CONV_FUSED_ACTIV_NONE                 = 0,
     OCL4DNN_CONV_FUSED_ACTIV_RELU                 = 1,
     OCL4DNN_CONV_FUSED_ACTIV_PRELU                = 2,
-    OCL4DNN_CONV_FUSED_ACTIV_POWER                = 3
+    OCL4DNN_CONV_FUSED_ACTIV_POWER                = 3,
+    OCL4DNN_CONV_FUSED_ACTIV_TANH                 = 4
 } ocl4dnnFusedActiv_t;
 
 template<typename Dtype>
@@ -94,6 +95,7 @@ class OCL4DNNConvSpatial
         void setActivReLU(bool fuse_activ, float slope);
         void setActivPReLU(bool fuse_activ, std::vector<float> &slope);
         void setActivPower(bool fuse_activ, float power);
+        void setActivTanh(bool fuse_activ);
         void setBias(bool bias_term);
 
     private:
