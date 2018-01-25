@@ -10140,29 +10140,31 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
     CV_IPP_CHECK()
     {
-        if(depth == CV_32F && scn == 3 && !swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
-                return;
-        }
-        else if(depth == CV_32F && scn == 3 && swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
-                return;
-        }
-        else if(depth == CV_32F && scn == 4 && !swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
-                return;
-        }
-        else if(depth == CV_32F && scn == 4 && swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
-                return;
+        if(depth == CV_8U || depth == CV_16U || depth == CV_32F) {
+            if(scn == 3 && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
+                    return;
+            }
+            else if(scn == 3 && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
+                    return;
+            }
+            else if(scn == 4 && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
+                    return;
+            }
+            else if(scn == 4 && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
+                    return;
+            }
         }
     }
 #endif
