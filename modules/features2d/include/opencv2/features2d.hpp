@@ -304,10 +304,11 @@ public:
     will mean that to cover certain scale range you will need more pyramid levels and so the speed
     will suffer.
     @param nlevels The number of pyramid levels. The smallest level will have linear size equal to
-    input_image_linear_size/pow(scaleFactor, nlevels).
+    input_image_linear_size/pow(scaleFactor, nlevels - firstLevel).
     @param edgeThreshold This is size of the border where the features are not detected. It should
     roughly match the patchSize parameter.
-    @param firstLevel It should be 0 in the current implementation.
+    @param firstLevel The level of pytramid to put source image to. Previous layers are filled
+    with upscaled source image.
     @param WTA_K The number of points that produce each element of the oriented BRIEF descriptor. The
     default value 2 means the BRIEF where we take a random point pair and compare their brightnesses,
     so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3
