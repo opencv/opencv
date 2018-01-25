@@ -272,9 +272,8 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
 #endif
 }
 
-void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat&) const
+void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask) const
 {
-    //TODO: support mask
     keypoints.clear();
     Mat grayscaleImage;
     if (image.channels() == 3)
@@ -353,6 +352,11 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
         sumPoint *= (1. / normalizer);
         KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius));
         keypoints.push_back(kpt);
+    }
+
+    if (!mask.empty())
+    {
+        KeyPointsFilter::runByPixelsMask(keypoints, mask);
     }
 
 #ifdef DEBUG_BLOB_DETECTOR
