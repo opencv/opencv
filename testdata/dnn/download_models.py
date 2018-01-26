@@ -220,6 +220,17 @@ models = [
         url='https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel',
         sha='15aa726b4d46d9f023526d85537db81cbc8dd566',
         filename='opencv_face_detector.caffemodel'),
+    Model(
+        name='InceptionV2-SSD (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2017_11_17.tar.gz',
+        sha='b9546dcd1ba99282b5bfa81c460008c885ca591b',
+        filename='ssd_inception_v2_coco_2017_11_17.tar.gz'),
+    Model(
+        name='InceptionV2-SSD (TensorFlow)',
+        archive='ssd_inception_v2_coco_2017_11_17.tar.gz',
+        member='ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb',
+        sha='554a75594e9fd1ccee291b3ba3f1190b868a54c9',
+        filename='ssd_inception_v2_coco_2017_11_17.pb'),
 ]
 
 # Note: models will be downloaded to current working directory
