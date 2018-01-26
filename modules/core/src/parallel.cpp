@@ -328,7 +328,11 @@ namespace
 static int numThreads = -1;
 
 #if defined HAVE_TBB
-static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+    #if TBB_INTERFACE_VERSION >= 8000
+        static tbb::task_arena tbbArena(tbb::task_arena::automatic);
+    #else
+        static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+    #endif
 #elif defined HAVE_CSTRIPES
 // nothing for C=
 #elif defined HAVE_OPENMP
@@ -367,6 +371,23 @@ static SchedPtr pplScheduler;
 
 #ifdef CV_PARALLEL_FRAMEWORK
 static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes); // forward declaration
+#endif
+
+#if defined HAVE_TBB && TBB_INTERFACE_VERSION >= 8000
+class TBBLoopBody
+{
+public:
+    TBBLoopBody(const cv::Range& _range, const ProxyLoopBody& _body)
+        : range(_range), body(_body) {}
+
+    void operator()() const {
+        tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), body);
+    }
+
+private:
+    const cv::Range& range;
+    const ProxyLoopBody& body;
+};
 #endif
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
@@ -424,7 +445,11 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 
 #if defined HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 8000
+        tbbArena.execute(TBBLoopBody(stripeRange,  pbody));
+#else
         tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
+#endif
 
 #elif defined HAVE_CSTRIPES
 
@@ -494,9 +519,17 @@ int cv::getNumThreads(void)
 
 #if defined HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 9100
+    return tbbArena.max_concurrency();
+#elif TBB_INTERFACE_VERSION >= 8000
+    return numThreads > 0
+        ? numThreads
+        : tbb::task_scheduler_init::default_num_threads();
+#else
     return tbbScheduler.is_active()
            ? numThreads
            : tbb::task_scheduler_init::default_num_threads();
+#endif
 
 #elif defined HAVE_CSTRIPES
 
@@ -545,8 +578,13 @@ void cv::setNumThreads( int threads )
 
 #ifdef HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 8000
+    if(tbbArena.is_active()) tbbArena.terminate();
+    if(threads > 0) tbbArena.initialize(threads);
+#else
     if(tbbScheduler.is_active()) tbbScheduler.terminate();
     if(threads > 0) tbbScheduler.initialize(threads);
+#endif
 
 #elif defined HAVE_CSTRIPES
 
