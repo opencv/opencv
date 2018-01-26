@@ -164,6 +164,7 @@ TEST(Test_TensorFlow, pooling)
     runTensorFlowNet("max_pool_even");
     runTensorFlowNet("max_pool_odd_valid");
     runTensorFlowNet("max_pool_odd_same");
+    runTensorFlowNet("ave_pool_same");
 }
 
 TEST(Test_TensorFlow, deconvolution)
@@ -246,6 +247,36 @@ TEST(Test_TensorFlow, MobileNet_SSD)
     normAssert(target[0].reshape(1, 1), output[0].reshape(1, 1));
     normAssert(target[1].reshape(1, 1), output[1].reshape(1, 1), "", 1e-5, 3e-4);
     normAssert(target[2].reshape(1, 1), output[2].reshape(1, 1), "", 4e-5, 1e-2);
+}
+
+TEST(Test_TensorFlow, Inception_v2_SSD)
+{
+    std::string proto = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pbtxt", false);
+    std::string model = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/street.png", false));
+    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+
+    net.setInput(blob);
+    // Output has shape 1x1xNx7 where N - number of detections.
+    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+    Mat out = net.forward();
+    out = out.reshape(1, out.total() / 7);
+
+    Mat detections;
+    for (int i = 0; i < out.rows; ++i)
+    {
+        if (out.at<float>(i, 2) > 0.5)
+          detections.push_back(out.row(i).colRange(1, 7));
+    }
+
+    Mat ref = (Mat_<float>(5, 6) << 1, 0.90176028, 0.19872092, 0.36311883, 0.26461923, 0.63498729,
+                                    3, 0.93569964, 0.64865261, 0.45906419, 0.80675775, 0.65708131,
+                                    3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
+                                    10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
+                                    10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
+    normAssert(detections, ref);
 }
 
 OCL_TEST(Test_TensorFlow, MobileNet_SSD)
