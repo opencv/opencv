@@ -298,6 +298,12 @@ namespace
         {
             this->ParallelLoopBodyWrapper::operator()(cv::Range(range.begin(), range.end()));
         }
+
+        void operator ()() const  // run parallel job
+        {
+            cv::Range stripeRange = this->stripeRange();
+            tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), *this);
+        }
     };
 #elif defined HAVE_CSTRIPES || defined HAVE_OPENMP
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
@@ -373,23 +379,6 @@ static SchedPtr pplScheduler;
 static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes); // forward declaration
 #endif
 
-#if defined HAVE_TBB && TBB_INTERFACE_VERSION >= 8000
-class TBBLoopBody
-{
-public:
-    TBBLoopBody(const cv::Range& _range, const ProxyLoopBody& _body)
-        : range(_range), body(_body) {}
-
-    void operator()() const {
-        tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), body);
-    }
-
-private:
-    const cv::Range& range;
-    const ProxyLoopBody& body;
-};
-#endif
-
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
 #ifdef OPENCV_TRACE
@@ -446,9 +435,9 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 #if defined HAVE_TBB
 
 #if TBB_INTERFACE_VERSION >= 8000
-        tbbArena.execute(TBBLoopBody(stripeRange,  pbody));
+        tbbArena.execute(pbody);
 #else
-        tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
+        pbody();
 #endif
 
 #elif defined HAVE_CSTRIPES
