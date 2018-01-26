@@ -312,6 +312,7 @@ private:
 };
 
 CV_EXPORTS_W Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
+CV_EXPORTS_W Ptr<Stitcher> createStitcherScans(bool try_use_gpu = false);
 
 //! @} stitching
 
