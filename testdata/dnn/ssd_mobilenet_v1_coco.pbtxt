@@ -1722,88 +1722,34 @@ node {
 }
 ### Locations ##################################################################
 node {
-  name: "order"
-  op: "Const"
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_INT32
-        tensor_shape {
-        }
-        int_val: 0
-        int_val: 1
-        int_val: 2
-        int_val: 3
-      }
-    }
-  }
-}
-node {
-  name: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
-  input: "order"
-}
-node {
   name: "BoxPredictor_0/Flatten"
   op: "Flatten"
-  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_1/Flatten"
   op: "Flatten"
-  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_2/Flatten"
   op: "Flatten"
-  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_3/Flatten"
   op: "Flatten"
-  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_4/Flatten"
   op: "Flatten"
-  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_5/Flatten"
   op: "Flatten"
-  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd/transpose"
+  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
 }
 node {
   name: "concat/axis_flatten"
@@ -1833,70 +1779,34 @@ node {
 }
 ### Classifications ############################################################
 node {
-  name: "BoxPredictor_0/ClassPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_0/ClassPredictor/BiasAdd"
-  input: "order"
-}
-node {
   name: "BoxPredictor_0/Flatten_1"
   op: "Flatten"
-  input: "BoxPredictor_0/ClassPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_1/ClassPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_1/ClassPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_0/ClassPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_1/Flatten_1"
   op: "Flatten"
-  input: "BoxPredictor_1/ClassPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_2/ClassPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_2/ClassPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_1/ClassPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_2/Flatten_1"
   op: "Flatten"
-  input: "BoxPredictor_2/ClassPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_3/ClassPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_3/ClassPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_2/ClassPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_3/Flatten_1"
   op: "Flatten"
-  input: "BoxPredictor_3/ClassPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_4/ClassPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_4/ClassPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_3/ClassPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_4/Flatten_1"
   op: "Flatten"
-  input: "BoxPredictor_4/ClassPredictor/BiasAdd/transpose"
-}
-node {
-  name: "BoxPredictor_5/ClassPredictor/BiasAdd/transpose"
-  op: "Transpose"
-  input: "BoxPredictor_5/ClassPredictor/BiasAdd"
-  input: "order"
+  input: "BoxPredictor_4/ClassPredictor/BiasAdd"
 }
 node {
   name: "BoxPredictor_5/Flatten_1"
   op: "Flatten"
-  input: "BoxPredictor_5/ClassPredictor/BiasAdd/transpose"
+  input: "BoxPredictor_5/ClassPredictor/BiasAdd"
 }
 node {
   name: "concat_1"
