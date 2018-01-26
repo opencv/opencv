@@ -134,8 +134,8 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/wrappers.pb.cc
 )
 
-add_library(libprotobuf STATIC EXCLUDE_FROM_ALL ${Protobuf_SRCS})
-target_include_directories(libprotobuf SYSTEM PUBLIC ${PROTOBUF_ROOT}/src)
+add_library(libprotobuf STATIC ${Protobuf_SRCS})
+target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
     PROPERTIES
     FOLDER "3rdparty"
