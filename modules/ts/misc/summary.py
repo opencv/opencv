@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
-    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
+    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)
     parser.add_option("", "--module", dest="module", default=None, metavar="NAME", help="module prefix for test names")
     parser.add_option("", "--columns", dest="columns", default=None, metavar="NAMES", help="comma-separated list of column aliases")
@@ -46,6 +46,7 @@ if __name__ == "__main__":
     parser.add_option("", "--match-replace", dest="match_replace", default="")
     parser.add_option("", "--regressions-only", dest="regressionsOnly", default=None, metavar="X-FACTOR", help="show only tests with performance regressions not")
     parser.add_option("", "--intersect-logs", dest="intersect_logs", default=False, help="show only tests present in all log files")
+    parser.add_option("", "--show_units", action="store_true", dest="show_units", help="append units into table cells")
     (options, args) = parser.parse_args()
 
     options.generateHtml = detectHtmlOutputType(options.format)
@@ -74,6 +75,8 @@ if __name__ == "__main__":
             return link
 
         options.regressions = [parseRegressionColumn(s) for s in options.regressions.split(',')]
+
+    show_units = options.units if options.show_units else None
 
     # expand wildcards and filter duplicates
     files = []
@@ -142,7 +145,7 @@ if __name__ == "__main__":
     getter_score = metrix_table["score"][1] if options.calc_score else None
     getter_p = metrix_table[options.metric + "%"][1] if options.calc_relatives else None
     getter_cr = metrix_table[options.metric + "$"][1] if options.calc_cr else None
-    tbl = table(metrix_table[options.metric][0], options.format)
+    tbl = table('%s (%s)' % (metrix_table[options.metric][0], options.units), options.format)
 
     # header
     tbl.newColumn("name", "Name of Test", align = "left", cssclass = "col_name")
@@ -204,7 +207,7 @@ if __name__ == "__main__":
                     val = getter(case, cases[0], options.units)
                     if val:
                         needNewRow = True
-                    tbl.newCell(str(i), formatValue(val, options.metric, options.units), val)
+                    tbl.newCell(str(i), formatValue(val, options.metric, show_units), val)
 
         if needNewRow:
             for link in options.regressions:
@@ -253,12 +256,12 @@ if __name__ == "__main__":
                             color = None
                         if addColor:
                             if not reverse:
-                                tbl.newCell(str(i), formatValue(val, options.metric, options.units), val, color=color)
+                                tbl.newCell(str(i), formatValue(val, options.metric, show_units), val, color=color)
                             else:
                                 r = cases[reference]
                                 if r is not None and r.get("status") == 'run':
                                     val = getter(r, cases[0], options.units)
-                                    tbl.newCell(str(reference), formatValue(val, options.metric, options.units), val, color=color)
+                                    tbl.newCell(str(reference), formatValue(val, options.metric, show_units), val, color=color)
                         if options.calc_relatives:
                             tbl.newCell(tblCellID + "%", formatValue(valp, "%"), valp, color=color, bold=color)
                         if options.calc_cr:
