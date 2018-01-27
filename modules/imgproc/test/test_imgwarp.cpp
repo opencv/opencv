@@ -1782,7 +1782,7 @@ TEST(Imgproc_Remap, DISABLED_memleak)
     }
 }
 
-
+//** @deprecated */
 TEST(Imgproc_linearPolar, identity)
 {
     const int N = 33;
@@ -1822,7 +1822,7 @@ TEST(Imgproc_linearPolar, identity)
 #endif
 }
 
-
+//** @deprecated */
 TEST(Imgproc_logPolar, identity)
 {
     const int N = 33;
@@ -1882,8 +1882,8 @@ TEST(Imgproc_warpPolar, identity)
     // test linearPolar
     for (int ki = 1; ki <= 5; ki++)
     {
-        warpPolar(src, dst, center, radius, false, src.size(), flags + CV_WARP_INVERSE_MAP);
-        warpPolar(dst, src, center, radius, false, src.size(), flags);
+        warpPolar(src, dst, src.size(), center, radius, flags + WARP_POLAR_LINEAR + CV_WARP_INVERSE_MAP);
+        warpPolar(dst, src, src.size(), center, radius, flags + WARP_POLAR_LINEAR);
 
         double psnr = cv::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << ki;
@@ -1892,8 +1892,8 @@ TEST(Imgproc_warpPolar, identity)
     src = in.clone();
     for (int ki = 1; ki <= 5; ki++)
     {
-        warpPolar(src, dst, center, radius, true, src.size(), flags + CV_WARP_INVERSE_MAP);
-        warpPolar(dst, src, center, radius, true, src.size(), flags);
+        warpPolar(src, dst, src.size(),center, radius, flags + WARP_POLAR_LOG + CV_WARP_INVERSE_MAP );
+        warpPolar(dst, src, src.size(),center, radius, flags + WARP_POLAR_LOG);
 
         double psnr = cv::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << ki;

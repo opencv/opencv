@@ -44,15 +44,15 @@ int main( int argc, char** argv )
     moveWindow( "Recovered Linear-Polar", 20, 350 );
     moveWindow( "Recovered Log-Polar", 700, 350 );
     int flags = INTER_LINEAR + WARP_FILL_OUTLIERS;
+    Mat src;
     for(;;)
     {
-        Mat frame;
-        capture >> frame;
+        capture >> src;
 
-        if( frame.empty() )
+        if(src.empty() )
             break;
 
-        Point2f center( (float)frame.cols / 2, (float)frame.rows / 2 );
+        Point2f center( (float)src.cols / 2, (float)src.rows / 2 );
         double maxRadius = 0.7*min(center.y, center.x);
 
 #if 0 //deprecated
@@ -63,28 +63,30 @@ int main( int argc, char** argv )
         logPolar(log_polar_img, recovered_log_polar, center, M, flags + WARP_INVERSE_MAP);
         linearPolar(lin_polar_img, recovered_lin_polar_img, center, maxRadius, flags + WARP_INVERSE_MAP);
 #endif
-        warpPolar(frame, log_polar_img, center, maxRadius, true, Size(), flags);  // linear Polar
-        warpPolar(frame, lin_polar_img, center, maxRadius, false, Size(), flags); // semilog Polar
+        //! [InverseMap]
+        // direct transform
+        warpPolar(src, lin_polar_img, Size(),center, maxRadius, flags);                     // linear Polar
+        warpPolar(src, log_polar_img, Size(),center, maxRadius, flags + WARP_POLAR_LOG);    // semilog Polar
         // inverse transform
-        warpPolar(log_polar_img, recovered_log_polar, center, maxRadius, true, frame.size(), flags + WARP_INVERSE_MAP);
-        warpPolar(lin_polar_img, recovered_lin_polar_img, center, maxRadius, false, frame.size(), flags + WARP_INVERSE_MAP);
+        warpPolar(lin_polar_img, recovered_lin_polar_img, src.size(), center, maxRadius, flags + WARP_INVERSE_MAP);
+        warpPolar(log_polar_img, recovered_log_polar, src.size(), center, maxRadius, flags + WARP_POLAR_LOG + WARP_INVERSE_MAP);
+        //! [InverseMap]
 
-        // Below is the reverse transformation for dst(rho, phi)->src(x, y) :
-        Mat src(frame), dst;
-        bool semiLog = true;
-        if (semiLog)
+        // Below is the reverse transformation for (rho, phi)->(x, y) :
+        Mat dst;
+        if (flags & WARP_POLAR_LOG)
             dst = log_polar_img;
         else
             dst = lin_polar_img;
-
+        //get a point from the polar image
         int rho = cvRound(dst.cols * 0.75);
         int phi = cvRound(dst.rows / 2.0);
 
-        //! [Reverse Transform]
+        //! [InverseCoordinate]
         double angleRad, magnitude;
         double Kangle = dst.rows / CV_2PI;
         angleRad = phi / Kangle;
-        if(semiLog)
+        if (flags & WARP_POLAR_LOG)
         {
             double Klog = dst.cols / std::log(maxRadius);
             magnitude = std::exp(rho / Klog);
@@ -96,7 +98,7 @@ int main( int argc, char** argv )
         }
         int x = cvRound(center.x + magnitude * cos(angleRad));
         int y = cvRound(center.y + magnitude * sin(angleRad));
-        //! [Reverse Transform]
+        //! [InverseCoordinate]
         drawMarker(src, Point(x, y), Scalar(0, 255, 0));
         drawMarker(dst, Point(rho, phi), Scalar(0, 255, 0));
 
@@ -109,7 +111,7 @@ int main( int argc, char** argv )
         cvLinearPolar(&dst, &inverse, center, maxRadius,flags + WARP_INVERSE_MAP);
 #endif
 
-        imshow("Src frame", frame);
+        imshow("Src frame", src);
         imshow("Log-Polar", log_polar_img);
         imshow("Linear-Polar", lin_polar_img);
         imshow("Recovered Linear-Polar", recovered_lin_polar_img );
@@ -118,7 +120,5 @@ int main( int argc, char** argv )
         if( waitKey(10) >= 0 )
             break;
     }
-
-    waitKey(0);
     return 0;
 }
