@@ -3681,9 +3681,8 @@ void cv::linearPolar( InputArray _src, OutputArray _dst,
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
 ****************************************************************************************/
-void cv::warpPolar(InputArray _src, OutputArray _dst,
-    Point2f center, double maxRadius, bool semiLog, Size dsize,
-    int flags)
+void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
+    Point2f center, double maxRadius, int flags)
 {
     // if dest size is empty given than calculate using proportional setting
     // thus we calculate needed angles to keep same area as bounding circle
@@ -3700,7 +3699,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst,
     Mat mapx, mapy;
     mapx.create(dsize, CV_32F);
     mapy.create(dsize, CV_32F);
-
+    bool semiLog = (flags & WARP_POLAR_LOG);
     if (!(flags & CV_WARP_INVERSE_MAP))
     {
         double Kangle = CV_2PI / dsize.height;

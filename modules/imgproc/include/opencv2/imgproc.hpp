@@ -295,6 +295,15 @@ enum InterpolationFlags{
     WARP_INVERSE_MAP     = 16
 };
 
+/** \brief Specify the polar mapping mode
+@sa warpPolar
+*/
+enum WarpPolarMode
+{
+    WARP_POLAR_LINEAR = 0, ///< Remaps an image to/from polar space.
+    WARP_POLAR_LOG = 256   ///< Remaps an image to/from semilog-polar space.
+};
+
 enum InterpolationMasks {
        INTER_BITS      = 5,
        INTER_BITS2     = INTER_BITS * 2,
@@ -2546,7 +2555,7 @@ An example using the cv::linearPolar and cv::logPolar operations
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
-@deprecated This function produces same result as cv::warpPolar(src, dst, center, maxRadius, true, src.size(), flags );
+@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags+WARP_POLAR_LOG);
 
 @internal
 Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
@@ -2588,7 +2597,7 @@ CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
 
 /** @brief Remaps an image to polar coordinates space.
 
-@deprecated This function produces same result as cv::warpPolar(src, dst, center, maxRadius, false, src.size(), flags );
+@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags)
 
 @internal
 Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
@@ -2645,7 +2654,7 @@ where
 \phi = Kangle \cdot \texttt{angle} (\vec{I}) \\
 \rho = \left\{\begin{matrix}
 Klin \cdot \texttt{magnitude} (\vec{I}) & default \\
-Klog \cdot log_e(\texttt{magnitude} (\vec{I})) & if \; semiLog = true \\
+Klog \cdot log_e(\texttt{magnitude} (\vec{I})) & if \; semilog \\
 \end{matrix}\right.
 \end{array}
 \f]
@@ -2658,6 +2667,16 @@ Klin = dsize.width / maxRadius \\
 Klog = dsize.width / log_e(maxRadius) \\
 \end{array}
 \f]
+
+
+\par Linear vs semilog mapping
+
+Polar mapping can be linear or semi-log. Add one of #WarpPolarMode to `flags` to specify the polar mapping mode.
+
+Linear is the default mode.
+
+The semilog mapping emulates the human "foveal" vision that permit very high acuity on the line of sight (central vision)
+in contrast to peripheral vision where acuity is minor.
 
 \par Option on `dsize`:
 
@@ -2680,27 +2699,33 @@ dsize.height = \texttt{cvRound}(dsize.width \cdot \Pi) \\
 - if both values in `dsize > 0 `,
 the destination image will have the given size therefore the area of the bounding circle will be scaled to `dsize`.
 
-Below is the reverse transformation for dst(rho, phi)->src(x, y) :
-\snippet polar_transforms.cpp Reverse Transform
+
+\par Reverse mapping
+
+You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
+\snippet polar_transforms.cpp InverseMap
+
+In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+\snippet polar_transforms.cpp InverseCoordinate
 
 @param src Source image.
 @param dst Destination image. It will have same type as src.
-@param center The transformation center;
+@param dsize The destination image size (see description for valid options).
+@param center The transformation center.
 @param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
-@param semiLog if `true` use log mapping for magnitudes to generate semi-log polar remapping. Default is `false` to use linear mapping of magnitude.
-@param dsize The destination image size (see description for valid options)
-@param flags A combination of interpolation methods, see cv::InterpolationFlags. Add cv::WARP_INVERSE_MAP for reverse mapping.
-
+@param flags A combination of interpolation methods, #InterpolationFlags + #WarpPolarMode.
+            - Add #WARP_POLAR_LINEAR to select linear polar mapping (default)
+            - Add #WARP_POLAR_LOG to select semilog polar mapping
+            - Add #WARP_INVERSE_MAP for reverse mapping.
 @note
 -  The function can not operate in-place.
--  To calculate magnitude and angle in degrees @ref cv::cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
--  This function uses cv::remap. Due its to current implementation limitations the size of an input and output images should be less than 32767x32767.
+-  To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+-  This function uses #remap. Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
 
 @sa cv::remap
 */
-CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst,
-    Point2f center, double maxRadius, bool semiLog = false, Size dsize = Size(),
-    int flags = cv::INTER_LINEAR + cv::WARP_FILL_OUTLIERS);
+CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
+    Point2f center, double maxRadius,int flags);
 
 
 //! @} imgproc_transform
