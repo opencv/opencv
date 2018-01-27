@@ -3781,7 +3781,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     Mat mapx, mapy;
     mapx.create(dsize, CV_32F);
     mapy.create(dsize, CV_32F);
-    bool semiLog = (flags & WARP_POLAR_LOG);
+    bool semiLog = (WARP_POLAR_LOG == (flags & WARP_POLAR_LOG));
     if (!(flags & CV_WARP_INVERSE_MAP))
     {
         double Kangle = CV_2PI / dsize.height;
