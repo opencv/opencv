@@ -7,6 +7,8 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/utils/trace.hpp>
 
+#include <opencv2/core/opencl/opencl_info.hpp>
+
 int main(int argc, const char** argv)
 {
     CV_TRACE_FUNCTION();
@@ -17,12 +19,16 @@ int main(int argc, const char** argv)
     cv::CommandLineParser parser(argc, argv,
         "{ help h usage ? |      | show this help message }"
         "{ verbose v      |      | show build configuration log }"
+        "{ opencl         |      | show information about OpenCL (available platforms/devices, default selected device) }"
     );
+
     if (parser.has("help"))
     {
         parser.printMessage();
+        return 0;
     }
-    else if (parser.has("verbose"))
+
+    if (parser.has("verbose"))
     {
         std::cout << cv::getBuildInformation().c_str() << std::endl;
     }
@@ -30,5 +36,11 @@ int main(int argc, const char** argv)
     {
         std::cout << CV_VERSION << std::endl;
     }
+
+    if (parser.has("opencl"))
+    {
+        cv::dumpOpenCLInformation();
+    }
+
     return 0;
 }
