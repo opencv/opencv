@@ -20,6 +20,7 @@ int main(int argc, const char** argv)
         "{ help h usage ? |      | show this help message }"
         "{ verbose v      |      | show build configuration log }"
         "{ opencl         |      | show information about OpenCL (available platforms/devices, default selected device) }"
+        "{ hw             |      | show detected HW features (see cv::checkHardwareSupport() function). Use --hw=0 to show available features only }"
     );
 
     if (parser.has("help"))
@@ -40,6 +41,27 @@ int main(int argc, const char** argv)
     if (parser.has("opencl"))
     {
         cv::dumpOpenCLInformation();
+    }
+
+    if (parser.has("hw"))
+    {
+        bool showAll = parser.get<bool>("hw");
+        std::cout << "OpenCV's HW features list:" << std::endl;
+        int count = 0;
+        for (int i = 0; i < CV_HARDWARE_MAX_FEATURE; i++)
+        {
+            cv::String name = cv::getHardwareFeatureName(i);
+            if (name.empty())
+                continue;
+            bool enabled = cv::checkHardwareSupport(i);
+            if (enabled)
+                count++;
+            if (enabled || showAll)
+            {
+                printf("    ID=%3d (%s) -> %s\n", i, name.c_str(), enabled ? "ON" : "N/A");
+            }
+        }
+        std::cout << "Total available: " << count << std::endl;
     }
 
     return 0;

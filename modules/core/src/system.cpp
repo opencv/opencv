@@ -663,6 +663,11 @@ bool checkHardwareSupport(int feature)
     return currentFeatures->have[feature];
 }
 
+String getHardwareFeatureName(int feature)
+{
+    const char* name = getHWFeatureName(feature);
+    return name ? String(name) : String();
+}
 
 volatile bool useOptimizedFlag = true;
 
