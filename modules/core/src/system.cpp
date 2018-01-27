@@ -249,9 +249,9 @@ const char* Exception::what() const throw() { return msg.c_str(); }
 void Exception::formatMessage()
 {
     if( func.size() > 0 )
-        msg = format("%s:%d: error: (%d) %s in function %s\n", file.c_str(), line, code, err.c_str(), func.c_str());
+        msg = format("OpenCV(%s) %s:%d: error: (%d) %s in function %s\n", CV_VERSION, file.c_str(), line, code, err.c_str(), func.c_str());
     else
-        msg = format("%s:%d: error: (%d) %s\n", file.c_str(), line, code, err.c_str());
+        msg = format("OpenCV(%s) %s:%d: error: (%d) %s\n", CV_VERSION, file.c_str(), line, code, err.c_str());
 }
 
 static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { NULL };
@@ -952,7 +952,8 @@ void error( const Exception& exc )
         char buf[1 << 12];
 
         cv_snprintf(buf, sizeof(buf),
-            "OpenCV Error: %s (%s) in %s, file %s, line %d",
+            "OpenCV(%s) Error: %s (%s) in %s, file %s, line %d",
+            CV_VERSION,
             errorStr, exc.err.c_str(), exc.func.size() > 0 ?
             exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line);
         fprintf( stderr, "%s\n", buf );
