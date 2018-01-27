@@ -311,7 +311,7 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
     //TODO: support mask
     keypoints.clear();
     Mat grayscaleImage;
-    if (image.channels() == 3)
+    if (image.channels() == 3 || image.channels() == 4)
         cvtColor(image, grayscaleImage, COLOR_BGR2GRAY);
     else
         grayscaleImage = image.getMat();

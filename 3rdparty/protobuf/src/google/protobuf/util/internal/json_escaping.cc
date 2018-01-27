@@ -84,30 +84,6 @@ static const char kCommonEscapes[160][7] = {
   "\\u009c", "\\u009d", "\\u009e", "\\u009f"
 };
 
-// Determines if the given char value is a unicode high-surrogate code unit.
-// Such values do not represent characters by themselves, but are used in the
-// representation of supplementary characters in the utf-16 encoding.
-inline bool IsHighSurrogate(uint16 c) {
-  // Optimized form of:
-  // return c >= kMinHighSurrogate && c <= kMaxHighSurrogate;
-  // (Reduced from 3 ALU instructions to 2 ALU instructions)
-  return (c & ~(JsonEscaping::kMaxHighSurrogate -
-                JsonEscaping::kMinHighSurrogate))
-      == JsonEscaping::kMinHighSurrogate;
-}
-
-// Determines if the given char value is a unicode low-surrogate code unit.
-// Such values do not represent characters by themselves, but are used in the
-// representation of supplementary characters in the utf-16 encoding.
-inline bool IsLowSurrogate(uint16 c) {
-  // Optimized form of:
-  // return c >= kMinLowSurrogate && c <= kMaxLowSurrogate;
-  // (Reduced from 3 ALU instructions to 2 ALU instructions)
-  return (c & ~(JsonEscaping::kMaxLowSurrogate -
-                JsonEscaping::kMinLowSurrogate))
-      == JsonEscaping::kMinLowSurrogate;
-}
-
 // Determines if the given char value is a unicode surrogate code unit (either
 // high-surrogate or low-surrogate).
 inline bool IsSurrogate(uint32 c) {
@@ -117,34 +93,10 @@ inline bool IsSurrogate(uint32 c) {
   return (c & 0xfffff800) == JsonEscaping::kMinHighSurrogate;
 }
 
-// Returns true if the given unicode code point cp is
-// in the supplementary character range.
-inline bool IsSupplementalCodePoint(uint32 cp) {
-  // Optimized form of:
-  // return kMinSupplementaryCodePoint <= cp && cp <= kMaxCodePoint;
-  // (Reduced from 3 ALU instructions to 2 ALU instructions)
-  return (cp & ~(JsonEscaping::kMinSupplementaryCodePoint - 1))
-      < JsonEscaping::kMaxCodePoint;
-}
-
 // Returns true if the given unicode code point cp is a valid
 // unicode code point (i.e. in the range 0 <= cp <= kMaxCodePoint).
 inline bool IsValidCodePoint(uint32 cp) {
   return cp <= JsonEscaping::kMaxCodePoint;
-}
-
-// Converts the specified surrogate pair to its supplementary code point value.
-// It is the callers' responsibility to validate the specified surrogate pair.
-inline uint32 ToCodePoint(uint16 high, uint16 low) {
-  // Optimized form of:
-  // return ((high - kMinHighSurrogate) << 10)
-  //     + (low - kMinLowSurrogate)
-  //     + kMinSupplementaryCodePoint;
-  // (Reduced from 5 ALU instructions to 3 ALU instructions)
-  return (high << 10) + low +
-      (JsonEscaping::kMinSupplementaryCodePoint
-       - (static_cast<unsigned>(JsonEscaping::kMinHighSurrogate) << 10)
-       - JsonEscaping::kMinLowSurrogate);
 }
 
 // Returns the low surrogate for the given unicode code point. The result is
@@ -255,7 +207,7 @@ StringPiece ToHex(uint16 cp, char* buffer) {
   buffer[3] = kHex[cp & 0x0f];
   cp >>= 4;
   buffer[2] = kHex[cp & 0x0f];
-  return StringPiece(buffer).substr(0, 6);
+  return StringPiece(buffer, 6);
 }
 
 // Stores the 32-bit unicode code point as its hexadecimal digits in buffer
@@ -336,19 +288,19 @@ StringPiece EscapeCodePoint(uint32 cp, char* buffer, bool force_output) {
     cp >>= 6;
     if (cp <= 0x1f) {
       buffer[4] = cp | 0xc0;
-      sp.set(buffer + 4, 2);
+      sp = StringPiece(buffer + 4, 2);
       return sp;
     }
     buffer[4] = (cp & 0x3f) | 0x80;
     cp >>= 6;
     if (cp <= 0x0f) {
       buffer[3] = cp | 0xe0;
-      sp.set(buffer + 3, 3);
+      sp = StringPiece(buffer + 3, 3);
       return sp;
     }
     buffer[3] = (cp & 0x3f) | 0x80;
     buffer[2] = ((cp >> 6) & 0x07) | 0xf0;
-    sp.set(buffer + 2, 4);
+    sp = StringPiece(buffer + 2, 4);
   }
   return sp;
 }

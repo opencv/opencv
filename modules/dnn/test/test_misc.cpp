@@ -27,4 +27,14 @@ TEST(blobFromImage_4ch, Regression)
     }
 }
 
+TEST(blobFromImage, allocated)
+{
+    int size[] = {1, 3, 4, 5};
+    Mat img(size[2], size[3], CV_32FC(size[1]));
+    Mat blob(4, size, CV_32F);
+    void* blobData = blob.data;
+    dnn::blobFromImage(img, blob, 1.0 / 255, Size(), Scalar(), false, false);
+    ASSERT_EQ(blobData, blob.data);
+}
+
 }

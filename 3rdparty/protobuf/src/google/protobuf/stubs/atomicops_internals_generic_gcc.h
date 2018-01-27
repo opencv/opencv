@@ -38,7 +38,7 @@ namespace internal {
 inline Atomic32 NoBarrier_CompareAndSwap(volatile Atomic32* ptr,
                                          Atomic32 old_value,
                                          Atomic32 new_value) {
-  __atomic_compare_exchange_n(ptr, &old_value, new_value, true,
+  __atomic_compare_exchange_n(ptr, &old_value, new_value, false,
                               __ATOMIC_RELAXED, __ATOMIC_RELAXED);
   return old_value;
 }
@@ -61,7 +61,7 @@ inline Atomic32 Barrier_AtomicIncrement(volatile Atomic32* ptr,
 inline Atomic32 Acquire_CompareAndSwap(volatile Atomic32* ptr,
                                        Atomic32 old_value,
                                        Atomic32 new_value) {
-  __atomic_compare_exchange_n(ptr, &old_value, new_value, true,
+  __atomic_compare_exchange_n(ptr, &old_value, new_value, false,
                               __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
   return old_value;
 }
@@ -69,7 +69,7 @@ inline Atomic32 Acquire_CompareAndSwap(volatile Atomic32* ptr,
 inline Atomic32 Release_CompareAndSwap(volatile Atomic32* ptr,
                                        Atomic32 old_value,
                                        Atomic32 new_value) {
-  __atomic_compare_exchange_n(ptr, &old_value, new_value, true,
+  __atomic_compare_exchange_n(ptr, &old_value, new_value, false,
                               __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
   return old_value;
 }
@@ -78,7 +78,7 @@ inline void NoBarrier_Store(volatile Atomic32* ptr, Atomic32 value) {
   __atomic_store_n(ptr, value, __ATOMIC_RELAXED);
 }
 
-inline void MemoryBarrier() {
+inline void MemoryBarrierInternal() {
   __sync_synchronize();
 }
 
@@ -115,7 +115,7 @@ inline Atomic64 Acquire_Load(volatile const Atomic64* ptr) {
 inline Atomic64 Acquire_CompareAndSwap(volatile Atomic64* ptr,
                                        Atomic64 old_value,
                                        Atomic64 new_value) {
-  __atomic_compare_exchange_n(ptr, &old_value, new_value, true,
+  __atomic_compare_exchange_n(ptr, &old_value, new_value, false,
                               __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
   return old_value;
 }
@@ -123,7 +123,7 @@ inline Atomic64 Acquire_CompareAndSwap(volatile Atomic64* ptr,
 inline Atomic64 NoBarrier_CompareAndSwap(volatile Atomic64* ptr,
                                          Atomic64 old_value,
                                          Atomic64 new_value) {
-  __atomic_compare_exchange_n(ptr, &old_value, new_value, true,
+  __atomic_compare_exchange_n(ptr, &old_value, new_value, false,
                               __ATOMIC_RELAXED, __ATOMIC_RELAXED);
   return old_value;
 }

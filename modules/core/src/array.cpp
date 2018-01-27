@@ -3125,6 +3125,7 @@ cvCloneImage( const IplImage* src )
         dst = (IplImage*)cvAlloc( sizeof(*dst));
 
         memcpy( dst, src, sizeof(*src));
+        dst->nSize = sizeof(IplImage);
         dst->imageData = dst->imageDataOrigin = 0;
         dst->roi = 0;
 

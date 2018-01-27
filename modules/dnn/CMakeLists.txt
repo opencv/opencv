@@ -13,7 +13,7 @@ endif()
 
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
-ocv_add_dispatched_file("layers/layers_common" AVX AVX2 AVX_512F)
+ocv_add_dispatched_file("layers/layers_common" AVX AVX2 AVX512_SKX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java js)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninitialized -Wsign-promo
@@ -52,7 +52,10 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Wdeprecated-declarations
     /wd4125 /wd4267 /wd4127 /wd4244 /wd4512 /wd4702
     /wd4456 /wd4510 /wd4610 /wd4800
+    /wd4701 /wd4703                    # potentially uninitialized local/pointer variable 'value' used
+    /wd4505                            # unreferenced local function has been removed
     -wd858 -wd2196
+    -Winvalid-offsetof                 # Apple Clang (attr_value.pb.cc)
 )
 
 if(PROTOBUF_UPDATE_FILES)
@@ -96,9 +99,4 @@ if(BUILD_PERF_TESTS)
       ocv_target_link_libraries(opencv_perf_dnn caffe)
     endif()
   endif()
-endif()
-
-ocv_option(${the_module}_REUSE_MEMORY "Enable reusing strategy of memory management" ON)
-if (${the_module}_REUSE_MEMORY)
-  add_definitions(-DREUSE_DNN_MEMORY=1)
 endif()

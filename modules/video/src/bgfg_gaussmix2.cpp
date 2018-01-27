@@ -770,6 +770,11 @@ public:
 
 bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
+
+    if( needToInitialize )
+        initialize(_image.size(), _image.type());
+
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
@@ -841,20 +846,20 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 {
     CV_INSTRUMENT_REGION()
 
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
+    {
+        CV_OCL_RUN(_fgmask.isUMat(), ocl_apply(_image, _fgmask, learningRate))
+
+        opencl_ON = false;
+        nframes = 0;
+    }
+#endif
+
     bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
     if( needToInitialize )
         initialize(_image.size(), _image.type());
-
-#ifdef HAVE_OPENCL
-    if (opencl_ON)
-    {
-        CV_OCL_RUN(_image.isUMat(), ocl_apply(_image, _fgmask, learningRate))
-
-        opencl_ON = false;
-        initialize(_image.size(), _image.type());
-    }
-#endif
 
     Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );

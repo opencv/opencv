@@ -30,6 +30,8 @@
 
 #include <google/protobuf/util/internal/utility.h>
 
+#include <algorithm>
+
 #include <google/protobuf/stubs/callback.h>
 #include <google/protobuf/stubs/common.h>
 #include <google/protobuf/stubs/logging.h>
@@ -41,22 +43,10 @@
 #include <google/protobuf/stubs/map_util.h>
 #include <google/protobuf/stubs/mathlimits.h>
 
-#include <algorithm>
-
 namespace google {
 namespace protobuf {
 namespace util {
 namespace converter {
-
-namespace {
-const StringPiece SkipWhiteSpace(StringPiece str) {
-  StringPiece::size_type i;
-  for (i = 0; i < str.size() && isspace(str[i]); ++i) {
-  }
-  GOOGLE_DCHECK(i == str.size() || !isspace(str[i]));
-  return str.substr(i);
-}
-}  // namespace
 
 bool GetBoolOptionOrDefault(
     const google::protobuf::RepeatedPtrField<google::protobuf::Option>& options,
@@ -134,7 +124,10 @@ const StringPiece GetTypeWithoutUrl(StringPiece type_url) {
     return type_url.substr(kTypeUrlSize + 1);
   } else {
     size_t idx = type_url.rfind('/');
-    return type_url.substr(idx + 1);
+    if (idx != type_url.npos) {
+      type_url.remove_prefix(idx + 1);
+    }
+    return type_url;
   }
 }
 
@@ -324,7 +317,7 @@ string ToSnakeCase(StringPiece input) {
   return result;
 }
 
-set<string>* well_known_types_ = NULL;
+std::set<string>* well_known_types_ = NULL;
 GOOGLE_PROTOBUF_DECLARE_ONCE(well_known_types_init_);
 const char* well_known_types_name_array_[] = {
     "google.protobuf.Timestamp",   "google.protobuf.Duration",
@@ -337,7 +330,7 @@ const char* well_known_types_name_array_[] = {
 void DeleteWellKnownTypes() { delete well_known_types_; }
 
 void InitWellKnownTypes() {
-  well_known_types_ = new set<string>;
+  well_known_types_ = new std::set<string>;
   for (int i = 0; i < GOOGLE_ARRAYSIZE(well_known_types_name_array_); ++i) {
     well_known_types_->insert(well_known_types_name_array_[i]);
   }
@@ -356,15 +349,25 @@ bool IsValidBoolString(const string& bool_string) {
 
 bool IsMap(const google::protobuf::Field& field,
            const google::protobuf::Type& type) {
-  return (field.cardinality() ==
-              google::protobuf::Field_Cardinality_CARDINALITY_REPEATED &&
+  return field.cardinality() ==
+             google::protobuf::Field_Cardinality_CARDINALITY_REPEATED &&
+         (GetBoolOptionOrDefault(type.options(), "map_entry", false) ||
           GetBoolOptionOrDefault(type.options(),
-                                 "google.protobuf.MessageOptions.map_entry", false));
+                                 "google.protobuf.MessageOptions.map_entry", false) ||
+          GetBoolOptionOrDefault(type.options(),
+                                 "google.protobuf.MessageOptions.map_entry",
+                                 false));
 }
 
 bool IsMessageSetWireFormat(const google::protobuf::Type& type) {
-  return GetBoolOptionOrDefault(
-      type.options(), "google.protobuf.MessageOptions.message_set_wire_format", false);
+  return GetBoolOptionOrDefault(type.options(), "message_set_wire_format",
+                                false) ||
+         GetBoolOptionOrDefault(type.options(),
+                                "google.protobuf.MessageOptions.message_set_wire_format",
+                                false) ||
+         GetBoolOptionOrDefault(
+             type.options(),
+             "google.protobuf.MessageOptions.message_set_wire_format", false);
 }
 
 string DoubleAsString(double value) {

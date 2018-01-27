@@ -51,6 +51,8 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // AddMat
 
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
+
 PERF_TEST_P(Sz_Depth, AddMat,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
@@ -775,6 +777,8 @@ PERF_TEST_P(Sz_Depth, BitwiseAndMat,
 
 //////////////////////////////////////////////////////////////////////
 // BitwiseAndScalar
+
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
 
 PERF_TEST_P(Sz_Depth_Cn, BitwiseAndScalar,
             Combine(CUDA_TYPICAL_MAT_SIZES,

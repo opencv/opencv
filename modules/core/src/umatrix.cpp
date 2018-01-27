@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "umatrix.hpp"
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
@@ -127,14 +128,66 @@ UMatData::~UMatData()
     }
 }
 
+static size_t getUMatDataLockIndex(const UMatData* u)
+{
+    size_t idx = ((size_t)(void*)u) % UMAT_NLOCKS;
+    return idx;
+}
+
 void UMatData::lock()
 {
-    umatLocks[(size_t)(void*)this % UMAT_NLOCKS].lock();
+    size_t idx = getUMatDataLockIndex(this);
+    //printf("%d lock(%d)\n", cv::utils::getThreadID(), (int)idx);
+    umatLocks[idx].lock();
 }
 
 void UMatData::unlock()
 {
-    umatLocks[(size_t)(void*)this % UMAT_NLOCKS].unlock();
+    size_t idx = getUMatDataLockIndex(this);
+    //printf("%d unlock(%d)\n", cv::utils::getThreadID(), (int)idx);
+    umatLocks[idx].unlock();
+}
+
+
+struct UMatDataAutoLockUsage
+{
+    int count;
+    UMatDataAutoLockUsage() : count(0) { }
+};
+static TLSData<UMatDataAutoLockUsage>& getUMatDataAutoLockUsageTLS()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<UMatDataAutoLockUsage>, new TLSData<UMatDataAutoLockUsage>());
+}
+static int& getUMatDataAutoLockUsage() { return getUMatDataAutoLockUsageTLS().get()->count; }
+
+
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u) : u1(u), u2(NULL)
+{
+    int& usage_count = getUMatDataAutoLockUsage();
+    CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
+    usage_count = 1;
+    u1->lock();
+}
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u1_, UMatData* u2_) : u1(u1_), u2(u2_)
+{
+    int& usage_count = getUMatDataAutoLockUsage();
+    CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
+    usage_count = 1;
+    if (getUMatDataLockIndex(u1) > getUMatDataLockIndex(u2))
+    {
+        std::swap(u1, u2);
+    }
+    u1->lock();
+    u2->lock();
+}
+UMatDataAutoLock::~UMatDataAutoLock()
+{
+    int& usage_count = getUMatDataAutoLockUsage();
+    CV_Assert(usage_count == 1);
+    usage_count = 0;
+    u1->unlock();
+    if (u2)
+      u2->unlock();
 }
 
 

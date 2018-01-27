@@ -442,6 +442,16 @@ The function getWindowProperty returns properties of a window.
  */
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
+/** @brief Provides rectangle of image in the window.
+
+The function getWindowImageRect returns the client screen coordinates, width and height of the image rendering area.
+
+@param winname Name of the window.
+
+@sa resizeWindow moveWindow
+ */
+CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
+
 /** @brief Sets mouse handler for the specified window
 
 @param winname Name of the window.

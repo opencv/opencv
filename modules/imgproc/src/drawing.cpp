@@ -2364,6 +2364,17 @@ Size getTextSize( const String& text, int fontFace, double fontScale, int thickn
     return size;
 }
 
+double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const int thickness)
+{
+    // By https://stackoverflow.com/a/27898487/1531708
+    const int* ascii = getFontData(fontFace);
+
+    int base_line = (ascii[0] & 15);
+    int cap_line = (ascii[0] >> 4) & 15;
+
+    return static_cast<double>(pixelHeight - static_cast<double>((thickness + 1)) / 2.0) / static_cast<double>(cap_line + base_line);
+}
+
 }
 
 

@@ -95,7 +95,7 @@ typedef struct RHO_HEST RHO_HEST;
  * Initialize the estimator context, by allocating the aligned buffers
  * internally needed.
  *
- * @return A pointer to the context if successful; NULL if an error occured.
+ * @return A pointer to the context if successful; NULL if an error occurred.
  */
 
 Ptr<RHO_HEST> rhoInit(void);

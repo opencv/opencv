@@ -244,10 +244,14 @@ mark_as_advanced(HAVE_IEEEFP)
 
 # Large file support
 if(UNIX OR MINGW)
-  # This might not catch every possibility catered for by
-  # AC_SYS_LARGEFILE.
-  add_definitions(-D_FILE_OFFSET_BITS=64)
-  set(FILE_OFFSET_BITS 64)
+  if(ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 21) AND (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES Clang))
+    # Android NDK build problem: 'mmap' issue with GCC and API<21
+  else()
+    # This might not catch every possibility catered for by
+    # AC_SYS_LARGEFILE.
+    add_definitions(-D_FILE_OFFSET_BITS=64)
+    set(FILE_OFFSET_BITS 64)
+  endif()
 endif()
 
 # Documentation install directory (default to cmake project docdir)

@@ -77,7 +77,7 @@ bitwise operations as below:
 @code{.py}
 # Load two images
 img1 = cv.imread('messi5.jpg')
-img2 = cv.imread('opencv-logo.png')
+img2 = cv.imread('opencv-logo-white.png')
 
 # I want to put logo on top-left corner, So I create a ROI
 rows,cols,channels = img2.shape
