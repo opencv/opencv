@@ -1641,8 +1641,6 @@ void HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int line
                 int *accum = _accum.ptr<int>();
                 float *tabSin = _tabSin, *tabCos = _tabCos;
 
-                memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
-
                 float ang = static_cast<float>(min_theta);
                 for(int n = 0; n < numangle; ang += (float)theta_step, n++ )
                 {
