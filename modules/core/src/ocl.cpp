@@ -3793,16 +3793,10 @@ struct Program::Impl
             }
         }
         if (!handle)
-            return false;
-        cl_build_status build_status = CL_BUILD_NONE;
-        size_t retsz = 0;
-        CV_OCL_DBG_CHECK(result = clGetProgramBuildInfo(handle, devices[0], CL_PROGRAM_BUILD_STATUS,
-                sizeof(build_status), &build_status, &retsz));
-        if (result == CL_SUCCESS && build_status == CL_BUILD_SUCCESS)
         {
-            CV_LOG_VERBOSE(NULL, 0, "clGetProgramBuildInfo() pre-check returns CL_BUILD_SUCCESS. Skip clBuildProgram() call");
+            return false;
         }
-        else
+        // call clBuildProgram()
         {
             result = clBuildProgram(handle, (cl_uint)ndevices, (cl_device_id*)devices_, buildflags.c_str(), 0, 0);
             CV_OCL_DBG_CHECK_RESULT(result, cv::format("clBuildProgram(binary: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
@@ -3817,8 +3811,10 @@ struct Program::Impl
                 return false;
             }
         }
-        if (build_status != CL_BUILD_SUCCESS)
+        // check build status
         {
+            cl_build_status build_status = CL_BUILD_NONE;
+            size_t retsz = 0;
             CV_OCL_DBG_CHECK(result = clGetProgramBuildInfo(handle, devices[0], CL_PROGRAM_BUILD_STATUS,
                     sizeof(build_status), &build_status, &retsz));
             if (result == CL_SUCCESS)
@@ -3847,7 +3843,7 @@ struct Program::Impl
         if (handle && CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
         {
             CV_LOG_INFO(NULL, "OpenCL: query kernel names (binary)...");
-            retsz = 0;
+            size_t retsz = 0;
             char kernels_buffer[4096] = {0};
             result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
             if (retsz < sizeof(kernels_buffer))
