@@ -221,7 +221,6 @@ void BaseHoughLineTest::run_test(int type)
 
 void HoughLinesUsingSetOfPointsTest::run_test(void)
 {
-    int polar_index = 0;
     Mat lines;
     vector<Point2f> point;
     vector<Vec3d> line_polar;
@@ -238,13 +237,13 @@ void HoughLinesUsingSetOfPointsTest::run_test(void)
         point.push_back(Point2f(Points[i][0],Points[i][1]));
     }
 
-    polar_index = HoughLinesUsingSetOfPoints(point, lines, 20,
-                                             rhoMin, rhoMax, rhoStep,
-                                             thetaMin, thetaMax, thetaStep);
+    HoughLinesUsingSetOfPoints(point, lines, 20, 1,
+                               rhoMin, rhoMax, rhoStep,
+                               thetaMin, thetaMax, thetaStep);
 
     lines.copyTo(line_polar);
-    EXPECT_EQ((int)(line_polar.at(polar_index).val[1] * 100000.0f), (int)(Rho * 100000.0f));
-    EXPECT_EQ((int)(line_polar.at(polar_index).val[2] * 100000.0f), (int)(Theta * 100000.0f));
+    EXPECT_EQ((int)(line_polar.at(0).val[1] * 100000.0f), (int)(Rho * 100000.0f));
+    EXPECT_EQ((int)(line_polar.at(0).val[2] * 100000.0f), (int)(Theta * 100000.0f));
 }
 
 TEST_P(StandartHoughLinesTest, regression)

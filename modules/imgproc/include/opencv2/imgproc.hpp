@@ -2087,7 +2087,6 @@ Example: :
 
     int main(int argc, char** argv)
     {
-        int polar_index = 0;
         Mat lines;
         vector<Point2f> point;
         vector<Vec3d> line_polar;
@@ -2106,28 +2105,29 @@ Example: :
         double rhoMin = 0.0f, rhoMax = 360.0f, rhoStep = 1;
         double thetaMin = 0.0f, thetaMax = CV_PI / 2.0f, thetaStep = CV_PI / 180.0f;
 
-        polar_index = HoughLinesUsingSetOfPoints(point, lines, 20,
-                                                 rhoMin, rhoMax, rhoStep,
-                                                 thetaMin, thetaMax, thetaStep);
+        HoughLinesUsingSetOfPoints(point, lines, 20, 1
+                                   rhoMin, rhoMax, rhoStep,
+                                   thetaMin, thetaMax, thetaStep);
         lines.copyTo(line_polar);
-        printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(polar_index).val[0], line_polar.at(polar_index).val[1], line_polar.at(polar_index).val[2]);
+        printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(0).val[0], line_polar.at(0).val[1], line_polar.at(0).val[2]);
     }
 @endcode
-
 @param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
 @param lines_max Max count of hough lines.
-@param rho_min Minimum Distance value in pixel.
-@param rho_max Maximum Distance value in pixel.
-@param rho_step Step within the range of rho.
-@param theta_min Minimum angle value in radians.
-@param theta_max Maximum angle value in radians.
-@param theta_step Step within the range of theta.
+@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+votes ( \f$>\texttt{threshold}\f$ )
+@param min_rho Minimum Distance value of the accumulator in pixels.
+@param max_rho Maximum Distance value of the accumulator in pixels.
+@param rho_step Distance resolution of the accumulator in pixels.
+@param min_theta Minimum angle value of the accumulator in radians.
+@param max_theta Maximum angle value of the accumulator in radians.
+@param theta_step Angle resolution of the accumulator in radians.
  */
-CV_EXPORTS_W int HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int lines_max,
-                                             double rho_min, double rho_max, double rho_step,
-                                             double theta_min, double theta_max, double theta_step );
+CV_EXPORTS_W void HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int lines_max, int threshold,
+                                              double min_rho, double max_rho, double rho_step,
+                                              double min_theta, double max_theta, double theta_step );
 
 /** @example houghcircles.cpp
 An example using the Hough circle detector
