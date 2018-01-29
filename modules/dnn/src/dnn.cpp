@@ -1190,7 +1190,8 @@ struct Net::Impl
 
             // TODO: OpenCL target support more fusion styles.
             if ( preferableTarget == DNN_TARGET_OPENCL &&
-                 (!cv::ocl::useOpenCL() || ld.layerInstance->type.compare("Convolution")) )
+                 (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
+                 ld.layerInstance->type != "MVN")) )
                 continue;
 
             Ptr<Layer>& currLayer = ld.layerInstance;
@@ -1239,13 +1240,14 @@ struct Net::Impl
                     }
                 }
 
-                // For now,  OpenCL target only support fusion with activation of ReLU/ChannelsPReLU/Power
+                // For now, OpenCL target support fusion with activation of ReLU/ChannelsPReLU/Power/Tanh
                 if ( preferableTarget != DNN_TARGET_OPENCL ||
                         (preferableTarget == DNN_TARGET_OPENCL &&
                          nextData &&
-                        (!nextData->type.compare("ReLU") ||
-                         !nextData->type.compare("ChannelsPReLU") ||
-                         !nextData->type.compare("Power"))) )
+                        ((nextData->type == "ReLU") ||
+                         (nextData->type == "ChannelsPReLU") ||
+                         (nextData->type == "TanH") ||
+                         (nextData->type == "Power"))) )
                 {
 
                     Ptr<ActivationLayer> nextActivLayer;

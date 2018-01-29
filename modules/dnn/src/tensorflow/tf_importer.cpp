@@ -1411,23 +1411,17 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("clip", getLayerAttr(layer, "clip").b());
             if (hasLayerAttr(layer, "offset"))
                 layerParams.set("offset", getLayerAttr(layer, "offset").f());
-            if (hasLayerAttr(layer, "variance"))
+
+            const std::string paramNames[] = {"variance", "aspect_ratio", "scales",
+                                              "width", "height"};
+            for (int i = 0; i < 5; ++i)
             {
-                Mat variance = getTensorContent(getLayerAttr(layer, "variance").tensor());
-                layerParams.set("variance",
-                                DictValue::arrayReal<float*>((float*)variance.data, variance.total()));
-            }
-            if (hasLayerAttr(layer, "aspect_ratio"))
-            {
-                Mat aspectRatios = getTensorContent(getLayerAttr(layer, "aspect_ratio").tensor());
-                layerParams.set("aspect_ratio",
-                               DictValue::arrayReal<float*>((float*)aspectRatios.data, aspectRatios.total()));
-            }
-            if (hasLayerAttr(layer, "scales"))
-            {
-                Mat scales = getTensorContent(getLayerAttr(layer, "scales").tensor());
-                layerParams.set("scales",
-                               DictValue::arrayReal<float*>((float*)scales.data, scales.total()));
+                if (hasLayerAttr(layer, paramNames[i]))
+                {
+                    Mat values = getTensorContent(getLayerAttr(layer, paramNames[i]).tensor());
+                    layerParams.set(paramNames[i],
+                                    DictValue::arrayReal<float*>((float*)values.data, values.total()));
+                }
             }
             int id = dstNet.addLayer(name, "PriorBox", layerParams);
             layer_id[name] = id;

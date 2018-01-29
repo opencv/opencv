@@ -1128,8 +1128,8 @@ cv::internal::IntrinsicParams cv::internal::IntrinsicParams::operator+(const Mat
     tmp.f[0]    = this->f[0]    + (isEstimate[0] ? ptr[j++] : 0);
     tmp.f[1]    = this->f[1]    + (isEstimate[1] ? ptr[j++] : 0);
     tmp.c[0]    = this->c[0]    + (isEstimate[2] ? ptr[j++] : 0);
-    tmp.alpha   = this->alpha   + (isEstimate[4] ? ptr[j++] : 0);
     tmp.c[1]    = this->c[1]    + (isEstimate[3] ? ptr[j++] : 0);
+    tmp.alpha   = this->alpha   + (isEstimate[4] ? ptr[j++] : 0);
     tmp.k[0]    = this->k[0]    + (isEstimate[5] ? ptr[j++] : 0);
     tmp.k[1]    = this->k[1]    + (isEstimate[6] ? ptr[j++] : 0);
     tmp.k[2]    = this->k[2]    + (isEstimate[7] ? ptr[j++] : 0);

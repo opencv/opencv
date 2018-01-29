@@ -298,6 +298,12 @@ namespace
         {
             this->ParallelLoopBodyWrapper::operator()(cv::Range(range.begin(), range.end()));
         }
+
+        void operator ()() const  // run parallel job
+        {
+            cv::Range stripeRange = this->stripeRange();
+            tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), *this);
+        }
     };
 #elif defined HAVE_CSTRIPES || defined HAVE_OPENMP
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
@@ -328,7 +334,11 @@ namespace
 static int numThreads = -1;
 
 #if defined HAVE_TBB
-static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+    #if TBB_INTERFACE_VERSION >= 8000
+        static tbb::task_arena tbbArena(tbb::task_arena::automatic);
+    #else
+        static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+    #endif
 #elif defined HAVE_CSTRIPES
 // nothing for C=
 #elif defined HAVE_OPENMP
@@ -424,7 +434,11 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 
 #if defined HAVE_TBB
 
-        tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
+#if TBB_INTERFACE_VERSION >= 8000
+        tbbArena.execute(pbody);
+#else
+        pbody();
+#endif
 
 #elif defined HAVE_CSTRIPES
 
@@ -494,9 +508,17 @@ int cv::getNumThreads(void)
 
 #if defined HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 9100
+    return tbbArena.max_concurrency();
+#elif TBB_INTERFACE_VERSION >= 8000
+    return numThreads > 0
+        ? numThreads
+        : tbb::task_scheduler_init::default_num_threads();
+#else
     return tbbScheduler.is_active()
            ? numThreads
            : tbb::task_scheduler_init::default_num_threads();
+#endif
 
 #elif defined HAVE_CSTRIPES
 
@@ -545,8 +567,13 @@ void cv::setNumThreads( int threads )
 
 #ifdef HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 8000
+    if(tbbArena.is_active()) tbbArena.terminate();
+    if(threads > 0) tbbArena.initialize(threads);
+#else
     if(tbbScheduler.is_active()) tbbScheduler.terminate();
     if(threads > 0) tbbScheduler.initialize(threads);
+#endif
 
 #elif defined HAVE_CSTRIPES
 
