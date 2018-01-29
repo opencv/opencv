@@ -1,4 +1,9 @@
-if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+ocv_cmake_hook(INIT_CPACK)
+if(NOT EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+  message(STATUS "CPack is not found. SKIP")
+  return()
+endif()
+
 set(CPACK_set_DESTDIR "on")
 
 if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
@@ -165,6 +170,6 @@ if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_DEBIAN_COMPONENT_TESTS_NAME "lib${CMAKE_PROJECT_NAME}-tests")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
+ocv_cmake_hook(PRE_CPACK)
 include(CPack)
-
-ENDif(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+ocv_cmake_hook(POST_CPACK)
