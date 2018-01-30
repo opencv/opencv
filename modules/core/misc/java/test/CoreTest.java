@@ -878,7 +878,7 @@ public class CoreTest extends OpenCVTestCase {
 
         Imgproc.line(gray0, point1, point2, colorWhite, 0);
 
-        assertTrue(nPoints == Core.countNonZero(gray0));
+        assertFalse(nPoints == Core.countNonZero(gray0));
     }
 
     public void testLineMatPointPointScalarIntIntInt() {

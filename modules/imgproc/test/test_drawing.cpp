@@ -750,5 +750,11 @@ TEST(Drawing, putText_no_garbage)
 }
 
 
+TEST(Drawing, line)
+{
+    Mat mat = Mat::zeros(Size(100,100), CV_8UC1);
+
+    ASSERT_THROW(line(mat, Point(1,1),Point(99,99),Scalar(255),0), cv::Exception);
+}
 
 } // namespace

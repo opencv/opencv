@@ -1814,7 +1814,7 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
-    CV_Assert( 0 <= thickness && thickness <= MAX_THICKNESS );
+    CV_Assert( 0 < thickness && thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
