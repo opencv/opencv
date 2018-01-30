@@ -62,9 +62,6 @@ else()
   set(fw_inc "misc/caffe" "misc/tensorflow")
 endif()
 
-message(STATUS "fw_srcs=${fw_srcs}")
-message(STATUS "fw_hdrs=${fw_hdrs}")
-
 ocv_module_include_directories(${fw_inc} src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
 ocv_glob_module_sources(SOURCES ${fw_srcs})
 ocv_create_module(libprotobuf ${LAPACK_LIBRARIES})
