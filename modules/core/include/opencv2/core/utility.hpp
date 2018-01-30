@@ -233,6 +233,8 @@ CV_EXPORTS_W int getNumThreads();
 /** @brief Returns the index of the currently executed thread within the current parallel region. Always
 returns 0 if called outside of parallel region.
 
+@deprecated Current implementation doesn't corresponding to this documentation.
+
 The exact meaning of the return value depends on the threading framework used by OpenCV library:
 - `TBB` - Unsupported with current 4.1 TBB release. Maybe will be supported in future.
 - `OpenMP` - The thread number, within the current team, of the calling thread.
