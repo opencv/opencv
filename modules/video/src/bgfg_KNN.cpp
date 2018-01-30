@@ -733,8 +733,13 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 #ifdef HAVE_OPENCL
     if (opencl_ON)
     {
+#ifndef __APPLE__
         CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel() || _image.channels() == 1),
                    ocl_apply(_image, _fgmask, learningRate))
+#else
+        CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel()),
+                   ocl_apply(_image, _fgmask, learningRate))
+#endif
 
         opencl_ON = false;
         nframes = 0;
