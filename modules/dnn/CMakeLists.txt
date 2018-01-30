@@ -7,16 +7,14 @@ if(NOT HAVE_PROTOBUF)
 endif()
 
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
-ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java js)
 
 ocv_add_dispatched_file("layers/layers_common" AVX AVX2 AVX512_SKX)
 
+ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java js)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninitialized -Wsign-promo
                                      -Wmissing-declarations -Wmissing-prototypes
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4701 /wd4100)
-
-include_directories(src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
 
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
@@ -55,16 +53,20 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 )
 
 if(PROTOBUF_UPDATE_FILES)
-  file(GLOB proto_files "src/tensorflow/*.proto" "src/caffe/opencv-caffe.proto")
+  file(GLOB proto_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/opencv-caffe.proto")
   set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
-  PROTOBUF_GENERATE_CPP(fw_hdrs fw_srcs ${proto_files})
+  protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
 else()
-  file(GLOB fw_srcs "misc/tensorflow/*.cc" "misc/caffe/opencv-caffe.pb.cc")
-  file(GLOB fw_hdrs "misc/tensorflow/*.h" "misc/caffe/opencv-caffe.pb.h")
+  file(GLOB fw_srcs "${CMAKE_CURRENT_SOURCE_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_SOURCE_DIR}/misc/caffe/opencv-caffe.pb.cc")
+  file(GLOB fw_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/misc/caffe/opencv-caffe.pb.h")
+  set(fw_inc "misc/caffe" "misc/tensorflow")
 endif()
 
-ocv_module_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/misc/caffe ${CMAKE_CURRENT_SOURCE_DIR}/misc/tensorflow)
-ocv_glob_module_sources(${fw_srcs} ${fw_hdrs} ${CBLAS_H_PROXY_PATH})
+message(STATUS "fw_srcs=${fw_srcs}")
+message(STATUS "fw_hdrs=${fw_hdrs}")
+
+ocv_module_include_directories(${fw_inc} src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
+ocv_glob_module_sources(SOURCES ${fw_srcs})
 ocv_create_module(libprotobuf ${LAPACK_LIBRARIES})
 ocv_add_samples()
 ocv_add_accuracy_tests()
