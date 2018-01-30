@@ -44,7 +44,7 @@
 #include <stdio.h>
 
 /*
-   This is translation to C++ of the Matlab's LMSolve package by Miroslav Balda.
+   This is a translation to C++ from the Matlab's LMSolve package by Miroslav Balda.
    Here is the original copyright:
    ============================================================================
 

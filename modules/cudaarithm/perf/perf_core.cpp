@@ -51,6 +51,8 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // Merge
 
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
+
 PERF_TEST_P(Sz_Depth_Cn, Merge,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,

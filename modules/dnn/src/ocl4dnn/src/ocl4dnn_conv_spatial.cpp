@@ -159,6 +159,9 @@ void OCL4DNNConvSpatial<Dtype>::setFusionDefine(ocl4dnnFusedActiv_t fused_activ,
         case OCL4DNN_CONV_FUSED_ACTIV_POWER:
             addDef("FUSED_CONV_POWER", 1);
             break;
+        case OCL4DNN_CONV_FUSED_ACTIV_TANH:
+            addDef("FUSED_CONV_TANH", 1);
+            break;
         default:
             ;
     }
@@ -410,6 +413,17 @@ void OCL4DNNConvSpatial<Dtype>::setActivPower(bool fuse_activ, float power)
     {
         fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_POWER;
         power_ = power;
+    }
+    else
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+}
+
+template<typename Dtype>
+void OCL4DNNConvSpatial<Dtype>::setActivTanh(bool fuse_activ)
+{
+    if ( fuse_activ )
+    {
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_TANH;
     }
     else
         fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;

@@ -60,6 +60,36 @@ public:
         normVariance = params.get<bool>("normalize_variance", true);
         acrossChannels = params.get<bool>("across_channels", false);
         eps = params.get<double>("eps", 1e-9);
+        fuse_batch_norm = false;
+        fuse_relu = false;
+        relu_slope = 0.f;
+    }
+
+    Ptr<BatchNormLayer> bnorm;
+    Mat scale, shift;
+    UMat bnorm_weight, bnorm_bias;
+    bool fuse_batch_norm;
+
+    bool setBatchNorm(const Ptr<BatchNormLayer>& layer )
+    {
+        bnorm = layer;
+        fuse_batch_norm = !bnorm.empty() && (preferableTarget == DNN_TARGET_OPENCL);
+        return fuse_batch_norm;
+    }
+
+    Ptr<ReLULayer> activ_relu;
+    float relu_slope;
+    bool fuse_relu;
+    bool setActivation(const Ptr<ActivationLayer>& layer)
+    {
+        if (!layer.empty() && preferableTarget == DNN_TARGET_OPENCL)
+        {
+            activ_relu = layer.dynamicCast<ReLULayer>();
+            if( !activ_relu.empty() )
+                relu_slope = activ_relu->negativeSlope;
+        }
+        fuse_relu = !activ_relu.empty();
+        return fuse_relu;
     }
 
 #ifdef HAVE_OPENCL
@@ -71,19 +101,24 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
+        if( fuse_batch_norm && scale.empty())
+        {
+            bnorm->getScaleShift(scale, shift);
+            bnorm_weight = scale.getUMat(ACCESS_READ);
+            bnorm_bias = shift.getUMat(ACCESS_READ);
+        }
+
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
         {
-            UMat &inpBlob = inputs[inpIdx];
-            UMat &outBlob = outputs[inpIdx];
+            UMat &inpMat = inputs[inpIdx];
+            UMat &outMat = outputs[inpIdx];
 
             int splitDim = (acrossChannels) ? 1 : 2;
             int i, newRows = 1;
             for( i = 0; i < splitDim; i++ )
-                newRows *= inpBlob.size[i];
+                newRows *= inpMat.size[i];
 
-            MatShape s = shape(newRows, inpBlob.total() / newRows);
-            UMat& inpMat = inpBlob;
-            UMat& outMat = outBlob;
+            MatShape s = shape(newRows, inpMat.total() / newRows);
             UMat oneMat = UMat::ones(s[1], 1, CV_32F);
             UMat meanMat = UMat(s[0], 1, CV_32F);
             UMat devMat  = UMat(s[0], 1, CV_32F);
@@ -96,32 +131,34 @@ public:
                 return false;
 
             int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
-            String buildopt = format("-DNUM=%d ", number);
-            String kname = format("calc_mean%d", number);
-            ocl::Kernel kernel(kname.c_str(), ocl::dnn::mvn_oclsrc, buildopt);
-            if (kernel.empty())
-                return false;
             size_t global[] = { (size_t)s[0], (size_t)(s[1] / number) };
-            kernel.set(0, ocl::KernelArg::PtrReadOnly(inpMat));
-            kernel.set(1, (int)s[0]);
-            kernel.set(2, (int)s[1]);
-            kernel.set(3, ocl::KernelArg::PtrReadOnly(meanMat));
-            kernel.set(4, ocl::KernelArg::PtrWriteOnly(tmpMat));
-            ret = kernel.run(2, global, NULL, false);
-            if (!ret)
-                return false;
-
+            String buildopt = format("-DNUM=%d", number);
             if (normVariance)
             {
+                String kname = format("calc_mean%d", number);
+                ocl::Kernel kernel(kname.c_str(), ocl::dnn::mvn_oclsrc, buildopt);
+                if (kernel.empty())
+                    return false;
+
+                kernel.set(0, ocl::KernelArg::PtrReadOnly(inpMat));
+                kernel.set(1, (int)s[0]);
+                kernel.set(2, (int)s[1]);
+                kernel.set(3, ocl::KernelArg::PtrReadOnly(meanMat));
+                kernel.set(4, ocl::KernelArg::PtrWriteOnly(tmpMat));
+                ret = kernel.run(2, global, NULL, false);
+                if (!ret)
+                    return false;
+
                 ret = ocl4dnn::ocl4dnnGEMV<float>(ocl4dnn::CblasNoTrans, s[0], s[1], alpha,
                                                   tmpMat, 0, oneMat, 0, 0.0f, devMat, 0);
                 if (!ret)
                     return false;
             }
 
-            kname = format("mvn%d", number);
-            if (normVariance)
-                buildopt += "-DNORM_VARIANCE";
+            String kname = format("mvn%d", number);
+            buildopt += format("%s%s%s", (normVariance) ? " -DNORM_VARIANCE" : "",
+                               (fuse_batch_norm) ? " -DFUSE_BATCH_NORM" : "",
+                               (fuse_relu) ? " -DFUSE_RELU" : "");
             ocl::Kernel kernel1(kname.c_str(), ocl::dnn::mvn_oclsrc, buildopt);
             if (kernel1.empty())
                 return false;
@@ -131,7 +168,11 @@ public:
             kernel1.set(3, (float)eps);
             kernel1.set(4, ocl::KernelArg::PtrReadOnly(meanMat));
             kernel1.set(5, ocl::KernelArg::PtrReadOnly(devMat));
-            kernel1.set(6, ocl::KernelArg::PtrWriteOnly(outMat));
+            kernel1.set(6, ocl::KernelArg::PtrReadOnly(bnorm_weight));
+            kernel1.set(7, ocl::KernelArg::PtrReadOnly(bnorm_bias));
+            kernel1.set(8, (int)inpMat.size[1]);
+            kernel1.set(9, (float)relu_slope);
+            kernel1.set(10, ocl::KernelArg::PtrWriteOnly(outMat));
             ret = kernel1.run(2, global, NULL, false);
             if (!ret)
                 return false;

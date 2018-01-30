@@ -128,6 +128,8 @@ PERF_TEST_P(Sz_Norm, NormDiff,
 //////////////////////////////////////////////////////////////////////
 // Sum
 
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
+
 PERF_TEST_P(Sz_Depth_Cn, Sum,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
@@ -227,6 +229,8 @@ PERF_TEST_P(Sz_Depth_Cn, SumSqr,
 
 //////////////////////////////////////////////////////////////////////
 // MinMax
+
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 
 PERF_TEST_P(Sz_Depth, MinMax,
             Combine(CUDA_TYPICAL_MAT_SIZES,

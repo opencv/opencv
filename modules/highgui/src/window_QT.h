@@ -299,6 +299,7 @@ public:
     double getRatio();
     void setRatio(int flags);
 
+    CvRect getWindowRect();
     int getPropWindow();
     void setPropWindow(int flags);
 

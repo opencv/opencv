@@ -364,6 +364,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, Rotate,
 //////////////////////////////////////////////////////////////////////
 // PyrDown
 
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
+
 PERF_TEST_P(Sz_Depth_Cn, PyrDown,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),

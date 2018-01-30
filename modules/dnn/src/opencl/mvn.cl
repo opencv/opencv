@@ -79,7 +79,7 @@ __kernel void CALC_MEAN(__global const Dtype* src,
 
     Dtype mean_val = mean[x];
     vec_type src_vec = load(src, index);
-    vec_type dst_vec = pow(src_vec - (vec_type)mean_val, 2);
+    vec_type dst_vec = native_powr(src_vec - (vec_type)mean_val, 2);
     store(dst_vec, dst, index);
 }
 
@@ -89,6 +89,10 @@ __kernel void MVN(__global const Dtype* src,
                   const Dtype eps,
                   __global const Dtype* mean,
                   __global const Dtype* dev,
+                  __global const Dtype* bnorm_weight,
+                  __global const Dtype* bnorm_bias,
+                  const int channels,
+                  const float relu_slope,
                   __global Dtype* dst)
 {
     int x = get_global_id(0);
@@ -106,7 +110,21 @@ __kernel void MVN(__global const Dtype* src,
 #else
     alpha = 1;
 #endif
+
+    Dtype w = 1.f, b = 0.f;
+#ifdef FUSE_BATCH_NORM
+    w = bnorm_weight[x % channels];
+    b = bnorm_bias[x % channels];
+#endif
+
     vec_type src_vec = load(src, index) - (vec_type)mean_val;
     vec_type dst_vec = src_vec * alpha;
+    dst_vec = dst_vec * w + (vec_type)b;
+
+#ifdef FUSE_RELU
+    vec_type new_val = dst_vec * relu_slope;
+    dst_vec = select(new_val, dst_vec, dst_vec > (vec_type)0.f);
+#endif
+
     store(dst_vec, dst, index);
 }
