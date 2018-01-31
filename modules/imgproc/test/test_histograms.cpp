@@ -78,7 +78,7 @@ protected:
     int img_type;
     int img_max_log_size;
     double low, high, range_delta;
-    CvSize img_size;
+    Size img_size;
 
     vector<CvHistogram*> hist;
     vector<float> _ranges;
@@ -328,7 +328,6 @@ protected:
     CvMat* values;
     CvMat* values0;
 };
-
 
 
 CV_QueryHistTest::CV_QueryHistTest()
@@ -806,11 +805,10 @@ protected:
 
 
 
-CV_ThreshHistTest::CV_ThreshHistTest()
+CV_ThreshHistTest::CV_ThreshHistTest() : threshold(0)
 {
     hist_count = 1;
     gen_random_hist = 1;
-    threshold = 0;
     indices = values = 0;
 }
 
