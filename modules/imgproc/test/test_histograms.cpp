@@ -828,6 +828,7 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
             orig_nz_count = total_size;
 
             values = Mat( 1, total_size, CV_32F );
+            indices = Mat();
             memcpy( values.ptr<float>(), cvPtr1D( hist[0]->bins, 0 ), total_size*sizeof(float) );
         }
         else
@@ -1113,25 +1114,17 @@ protected:
     int prepare_test_case( int test_case_idx );
     void run_func(void);
     int validate_test_results( int test_case_idx );
-    IplImage* images[CV_MAX_DIM+1];
-    int channels[CV_MAX_DIM+1];
+    vector<Mat> images;
+    vector<int> channels;
 };
 
 
 
-CV_CalcHistTest::CV_CalcHistTest()
+CV_CalcHistTest::CV_CalcHistTest() : images(CV_MAX_DIM+1), channels(CV_MAX_DIM+1)
 {
-    int i;
-
     hist_count = 2;
     gen_random_hist = 0;
     init_ranges = 1;
-
-    for( i = 0; i <= CV_MAX_DIM; i++ )
-    {
-        images[i] = 0;
-        channels[i] = 0;
-    }
 }
 
 
@@ -1143,11 +1136,6 @@ CV_CalcHistTest::~CV_CalcHistTest()
 
 void CV_CalcHistTest::clear()
 {
-    int i;
-
-    for( i = 0; i <= CV_MAX_DIM; i++ )
-        cvReleaseImage( &images[i] );
-
     CV_BaseHistTest::clear();
 }
 
@@ -1166,21 +1154,22 @@ int CV_CalcHistTest::prepare_test_case( int test_case_idx )
             if( i < cdims )
             {
                 int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = cvCreateImage( img_size,
-                    img_type == CV_8U ? IPL_DEPTH_8U : IPL_DEPTH_32F, nch );
+                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
                 channels[i] = cvtest::randInt(rng) % nch;
-                Mat images_i = cvarrToMat(images[i]);
-
-                cvtest::randUni( rng, images_i, Scalar::all(low), Scalar::all(high) );
+                cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
             }
-            else if( i == CV_MAX_DIM && cvtest::randInt(rng) % 2 )
+            else if( i == CV_MAX_DIM )
             {
-                // create mask
-                images[i] = cvCreateImage( img_size, IPL_DEPTH_8U, 1 );
-                Mat images_i = cvarrToMat(images[i]);
+                if( cvtest::randInt(rng) % 2 )
+                {
+                    // create mask
+                    images[i] = Mat(img_size, CV_8U);
 
-                // make ~25% pixels in the mask non-zero
-                cvtest::randUni( rng, images_i, Scalar::all(-2), Scalar::all(2) );
+                    // make ~25% pixels in the mask non-zero
+                    cvtest::randUni( rng, images[i], Scalar::all(-2), Scalar::all(2) );
+                }
+                else
+                    images[i] = Mat();
             }
         }
     }
@@ -1191,14 +1180,82 @@ int CV_CalcHistTest::prepare_test_case( int test_case_idx )
 
 void CV_CalcHistTest::run_func(void)
 {
-    cvCalcHist( images, hist[0], 0, images[CV_MAX_DIM] );
+    int size[CV_MAX_DIM];
+    int hdims = cvGetDims( hist[0]->bins, size);
+    bool huniform = CV_IS_UNIFORM_HIST(hist[0]);
+
+    const float* uranges[CV_MAX_DIM] = {0};
+    const float** hranges = 0;
+
+    if( hist[0]->type & CV_HIST_RANGES_FLAG )
+    {
+        hranges = (const float**)hist[0]->thresh2;
+        if( huniform )
+        {
+            for(int i = 0; i < hdims; i++ )
+                uranges[i] = &hist[0]->thresh[i][0];
+            hranges = uranges;
+        }
+    }
+
+    std::vector<cv::Mat> imagesv(cdims);
+    copy(images.begin(), images.begin() + cdims, imagesv.begin());
+
+    Mat mask = images[CV_MAX_DIM];
+    if( !CV_IS_SPARSE_HIST(hist[0]) )
+    {
+        cv::Mat H = cv::cvarrToMat(hist[0]->bins);
+        if(huniform)
+        {
+            vector<int> emptyChannels;
+            vector<int> hSize(hdims);
+            for(int i = 0; i < hdims; i++)
+                hSize[i] = size[i];
+            vector<float> vranges;
+            if(hranges)
+            {
+                vranges.resize(hdims*2);
+                for(int i = 0; i < hdims; i++ )
+                {
+                    vranges[i*2  ] = hist[0]->thresh[i][0];
+                    vranges[i*2+1] = hist[0]->thresh[i][1];
+                }
+            }
+            cv::calcHist(imagesv, emptyChannels, mask, H, hSize, vranges);
+        }
+        else
+        {
+            cv::calcHist( &imagesv[0], (int)imagesv.size(), 0, mask,
+                          H, cvGetDims(hist[0]->bins), H.size, hranges, huniform );
+        }
+    }
+    else
+    {
+        CvSparseMat* sparsemat = (CvSparseMat*)hist[0]->bins;
+
+        cvZero( hist[0]->bins );
+
+        cv::SparseMat sH;
+        sparsemat->copyToSparseMat(sH);
+
+        cv::calcHist( &imagesv[0], (int)imagesv.size(), 0, mask, sH, sH.dims(),
+                      sH.dims() > 0 ? sH.hdr->size : 0, hranges, huniform, false);
+
+        cv::SparseMatConstIterator it = sH.begin();
+        int nz = (int)sH.nzcount();
+        for(int i = 0; i < nz; i++, ++it )
+        {
+            CV_Assert(it.ptr != NULL);
+            *(float*)cvPtrND(sparsemat, it.node()->idx, 0, -2) = *(const float*)it.ptr;
+        }
+    }
 }
 
 
 static void
-cvTsCalcHist( IplImage** _images, CvHistogram* hist, IplImage* _mask, int* channels )
+cvTsCalcHist( vector<Mat> images, CvHistogram* hist, Mat mask, vector<int> channels )
 {
-    int x, y, k, cdims;
+    int x, y, k;
     union
     {
         float* fl;
@@ -1208,33 +1265,27 @@ cvTsCalcHist( IplImage** _images, CvHistogram* hist, IplImage* _mask, int* chann
     int nch[CV_MAX_DIM];
     int dims[CV_MAX_DIM];
     int uniform = CV_IS_UNIFORM_HIST(hist);
-    CvSize img_size = cvGetSize(_images[0]);
-    CvMat images[CV_MAX_DIM], mask = cvMat(1,1,CV_8U);
-    int img_depth = _images[0]->depth;
 
-    cdims = cvGetDims( hist->bins, dims );
-
+    int cdims = cvGetDims( hist->bins, dims );
     cvZero( hist->bins );
 
+    Size img_size = images[0].size();
+    int img_depth = images[0].depth();
     for( k = 0; k < cdims; k++ )
     {
-        cvGetMat( _images[k], &images[k] );
-        nch[k] = _images[k]->nChannels;
+        nch[k] = images[k].channels();
     }
-
-    if( _mask )
-        cvGetMat( _mask, &mask );
 
     for( y = 0; y < img_size.height; y++ )
     {
-        const uchar* mptr = _mask ? &CV_MAT_ELEM(mask, uchar, y, 0 ) : 0;
+        const uchar* mptr = mask.empty() ? 0 : mask.ptr<uchar>(y);
 
-        if( img_depth == IPL_DEPTH_8U )
+        if( img_depth == CV_8U )
             for( k = 0; k < cdims; k++ )
-                plane[k].ptr = &CV_MAT_ELEM(images[k], uchar, y, 0 ) + channels[k];
+                plane[k].ptr = images[k].ptr<uchar>(y) + channels[k];
         else
             for( k = 0; k < cdims; k++ )
-                plane[k].fl = &CV_MAT_ELEM(images[k], float, y, 0 ) + channels[k];
+                plane[k].fl  = images[k].ptr<float>(y) + channels[k];
 
         for( x = 0; x < img_size.width; x++ )
         {
@@ -1243,7 +1294,7 @@ cvTsCalcHist( IplImage** _images, CvHistogram* hist, IplImage* _mask, int* chann
 
             if( mptr && !mptr[x] )
                 continue;
-            if( img_depth == IPL_DEPTH_8U )
+            if( img_depth == CV_8U )
                 for( k = 0; k < cdims; k++ )
                     val[k] = plane[k].ptr[x*nch[k]];
             else
