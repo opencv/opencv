@@ -324,18 +324,15 @@ protected:
     int validate_test_results( int test_case_idx );
     void init_hist( int test_case_idx, int i );
 
-    CvMat* indices;
-    CvMat* values;
-    CvMat* values0;
+    Mat indices;
+    Mat values;
+    Mat values0;
 };
 
 
 CV_QueryHistTest::CV_QueryHistTest()
 {
     hist_count = 1;
-    indices = 0;
-    values = 0;
-    values0 = 0;
 }
 
 
@@ -347,9 +344,6 @@ CV_QueryHistTest::~CV_QueryHistTest()
 
 void CV_QueryHistTest::clear()
 {
-    cvReleaseMat( &indices );
-    cvReleaseMat( &values );
-    cvReleaseMat( &values0 );
     CV_BaseHistTest::clear();
 }
 
@@ -370,24 +364,22 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
         int i, j, iters;
         float default_value = 0.f;
         RNG& rng = ts->get_rng();
-        CvMat* bit_mask = 0;
         int* idx;
 
         iters = (cvtest::randInt(rng) % MAX(total_size/10,100)) + 1;
         iters = MIN( iters, total_size*9/10 + 1 );
 
-        indices = cvCreateMat( 1, iters*cdims, CV_32S );
-        values = cvCreateMat( 1, iters, CV_32F );
-        values0 = cvCreateMat( 1, iters, CV_32F );
-        idx = indices->data.i;
+        indices = Mat(1, iters*cdims, CV_32S);
+        values  = Mat(1, iters, CV_32F );
+        values0 = Mat( 1, iters, CV_32F );
+        idx = indices.ptr<int>();
 
         //printf( "total_size = %d, cdims = %d, iters = %d\n", total_size, cdims, iters );
 
-        bit_mask = cvCreateMat( 1, (total_size + 7)/8, CV_8U );
-        cvZero( bit_mask );
+        Mat bit_mask(1, (total_size + 7)/8, CV_8U, Scalar(0));
 
-        #define GET_BIT(n) (bit_mask->data.ptr[(n)/8] & (1 << ((n)&7)))
-        #define SET_BIT(n) bit_mask->data.ptr[(n)/8] |= (1 << ((n)&7))
+        #define GET_BIT(n) (bit_mask.data[(n)/8] &  (1 << ((n)&7)))
+        #define SET_BIT(n)  bit_mask.data[(n)/8] |= (1 << ((n)&7))
 
         // set random histogram bins' values to the linear indices of the bins
         for( i = 0; i < iters; i++ )
@@ -402,13 +394,13 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
 
             if( cvtest::randInt(rng) % 8 || GET_BIT(lin_idx) )
             {
-                values0->data.fl[i] = (float)(lin_idx+1);
+                values0.at<float>(i) = (float)(lin_idx+1);
                 SET_BIT(lin_idx);
             }
             else
                 // some histogram bins will not be initialized intentionally,
                 // they should be equal to the default value
-                values0->data.fl[i] = default_value;
+                values0.at<float>(i) = default_value;
         }
 
         // do the second pass to make values0 consistent with bit_mask
@@ -419,10 +411,8 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
                 lin_idx = lin_idx*dims[j] + idx[i*cdims + j];
 
             if( GET_BIT(lin_idx) )
-                values0->data.fl[i] = (float)(lin_idx+1);
+                values0.at<float>(i) = (float)(lin_idx+1);
         }
-
-        cvReleaseMat( &bit_mask );
     }
 
     return code;
@@ -431,17 +421,17 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
 
 void CV_QueryHistTest::run_func(void)
 {
-    int i, iters = values->cols;
+    int i, iters = values.cols;
     CvArr* h = hist[0]->bins;
-    const int* idx = indices->data.i;
-    float* val = values->data.fl;
+    const int* idx = indices.ptr<int>();
+    float* val = values.ptr<float>();
     float default_value = 0.f;
 
     // stage 1: write bins
     if( cdims == 1 )
         for( i = 0; i < iters; i++ )
         {
-            float v0 = values0->data.fl[i];
+            float v0 = values0.at<float>(i);
             if( fabs(v0 - default_value) < FLT_EPSILON )
                 continue;
             if( !(i % 2) )
@@ -457,7 +447,7 @@ void CV_QueryHistTest::run_func(void)
     else if( cdims == 2 )
         for( i = 0; i < iters; i++ )
         {
-            float v0 = values0->data.fl[i];
+            float v0 = values0.at<float>(i);
             if( fabs(v0 - default_value) < FLT_EPSILON )
                 continue;
             if( !(i % 2) )
@@ -473,7 +463,7 @@ void CV_QueryHistTest::run_func(void)
     else if( cdims == 3 )
         for( i = 0; i < iters; i++ )
         {
-            float v0 = values0->data.fl[i];
+            float v0 = values0.at<float>(i);
             if( fabs(v0 - default_value) < FLT_EPSILON )
                 continue;
             if( !(i % 2) )
@@ -489,7 +479,7 @@ void CV_QueryHistTest::run_func(void)
     else
         for( i = 0; i < iters; i++ )
         {
-            float v0 = values0->data.fl[i];
+            float v0 = values0.at<float>(i);
             if( fabs(v0 - default_value) < FLT_EPSILON )
                 continue;
             if( !(i % 2) )
@@ -537,11 +527,11 @@ void CV_QueryHistTest::run_func(void)
 int CV_QueryHistTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
-    int i, j, iters = values->cols;
+    int i, j, iters = values.cols;
 
     for( i = 0; i < iters; i++ )
     {
-        float v = values->data.fl[i], v0 = values0->data.fl[i];
+        float v = values.at<float>(i), v0 = values0.at<float>(i);
 
         if( cvIsNaN(v) || cvIsInf(v) )
         {
@@ -558,7 +548,7 @@ int CV_QueryHistTest::validate_test_results( int /*test_case_idx*/ )
         {
             ts->printf( cvtest::TS::LOG, "The bin index = (" );
             for( j = 0; j < cdims; j++ )
-                ts->printf( cvtest::TS::LOG, "%d%s", indices->data.i[i*cdims + j],
+                ts->printf( cvtest::TS::LOG, "%d%s", indices.at<int>(i*cdims + j),
                                         j < cdims-1 ? ", " : ")\n" );
             break;
         }
