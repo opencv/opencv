@@ -339,6 +339,11 @@ conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
 save(inp, conv, 'uint8_single_conv', quantize=True)
 runModel(inp, conv, 'uint8_single_conv')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 4, 1], 'input')
+conv = tf.layers.conv2d(inp, filters=3, kernel_size=[3, 3], padding='SAME')
+pool = tf.layers.average_pooling2d(conv, pool_size=3, strides=1, padding='SAME')
+save(inp, pool, 'ave_pool_same')
+
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
