@@ -5958,6 +5958,13 @@ class BatchNormParameter : public ::google::protobuf::Message /* @@protoc_insert
   bool use_global_stats() const;
   void set_use_global_stats(bool value);
 
+  // optional bool scale_bias = 7 [default = false];
+  bool has_scale_bias() const;
+  void clear_scale_bias();
+  static const int kScaleBiasFieldNumber = 7;
+  bool scale_bias() const;
+  void set_scale_bias(bool value);
+
   // optional float moving_average_fraction = 2 [default = 0.999];
   bool has_moving_average_fraction() const;
   void clear_moving_average_fraction();
@@ -5980,11 +5987,14 @@ class BatchNormParameter : public ::google::protobuf::Message /* @@protoc_insert
   void clear_has_moving_average_fraction();
   void set_has_eps();
   void clear_has_eps();
+  void set_has_scale_bias();
+  void clear_has_scale_bias();
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
   bool use_global_stats_;
+  bool scale_bias_;
   float moving_average_fraction_;
   float eps_;
   friend struct ::protobuf_opencv_2dcaffe_2eproto::TableStruct;
@@ -22720,13 +22730,13 @@ inline void BatchNormParameter::set_use_global_stats(bool value) {
 
 // optional float moving_average_fraction = 2 [default = 0.999];
 inline bool BatchNormParameter::has_moving_average_fraction() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void BatchNormParameter::set_has_moving_average_fraction() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void BatchNormParameter::clear_has_moving_average_fraction() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void BatchNormParameter::clear_moving_average_fraction() {
   moving_average_fraction_ = 0.999f;
@@ -22744,13 +22754,13 @@ inline void BatchNormParameter::set_moving_average_fraction(float value) {
 
 // optional float eps = 3 [default = 1e-05];
 inline bool BatchNormParameter::has_eps() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void BatchNormParameter::set_has_eps() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void BatchNormParameter::clear_has_eps() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void BatchNormParameter::clear_eps() {
   eps_ = 1e-05f;
@@ -22764,6 +22774,30 @@ inline void BatchNormParameter::set_eps(float value) {
   set_has_eps();
   eps_ = value;
   // @@protoc_insertion_point(field_set:opencv_caffe.BatchNormParameter.eps)
+}
+
+// optional bool scale_bias = 7 [default = false];
+inline bool BatchNormParameter::has_scale_bias() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void BatchNormParameter::set_has_scale_bias() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void BatchNormParameter::clear_has_scale_bias() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void BatchNormParameter::clear_scale_bias() {
+  scale_bias_ = false;
+  clear_has_scale_bias();
+}
+inline bool BatchNormParameter::scale_bias() const {
+  // @@protoc_insertion_point(field_get:opencv_caffe.BatchNormParameter.scale_bias)
+  return scale_bias_;
+}
+inline void BatchNormParameter::set_scale_bias(bool value) {
+  set_has_scale_bias();
+  scale_bias_ = value;
+  // @@protoc_insertion_point(field_set:opencv_caffe.BatchNormParameter.scale_bias)
 }
 
 // -------------------------------------------------------------------
