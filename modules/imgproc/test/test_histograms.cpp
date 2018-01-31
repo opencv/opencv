@@ -786,8 +786,8 @@ protected:
     int prepare_test_case( int test_case_idx );
     void run_func(void);
     int validate_test_results( int test_case_idx );
-    CvMat* indices;
-    CvMat* values;
+    Mat indices;
+    Mat values;
     int orig_nz_count;
 
     double threshold;
@@ -799,7 +799,6 @@ CV_ThreshHistTest::CV_ThreshHistTest() : threshold(0)
 {
     hist_count = 1;
     gen_random_hist = 1;
-    indices = values = 0;
 }
 
 
@@ -811,8 +810,6 @@ CV_ThreshHistTest::~CV_ThreshHistTest()
 
 void CV_ThreshHistTest::clear()
 {
-    cvReleaseMat( &indices );
-    cvReleaseMat( &values );
     CV_BaseHistTest::clear();
 }
 
@@ -830,8 +827,8 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
         {
             orig_nz_count = total_size;
 
-            values = cvCreateMat( 1, total_size, CV_32F );
-            memcpy( values->data.fl, cvPtr1D( hist[0]->bins, 0 ), total_size*sizeof(float) );
+            values = Mat( 1, total_size, CV_32F );
+            memcpy( values.ptr<float>(), cvPtr1D( hist[0]->bins, 0 ), total_size*sizeof(float) );
         }
         else
         {
@@ -842,8 +839,8 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
 
             orig_nz_count = sparse->heap->active_count;
 
-            values = cvCreateMat( 1, orig_nz_count+1, CV_32F );
-            indices = cvCreateMat( 1, (orig_nz_count+1)*cdims, CV_32S );
+            values  = Mat( 1, orig_nz_count+1, CV_32F );
+            indices = Mat( 1, (orig_nz_count+1)*cdims, CV_32S );
 
             for( node = cvInitSparseMatIterator( sparse, &iterator ), i = 0;
                  node != 0; node = cvGetNextSparseNode( &iterator ), i++ )
@@ -852,9 +849,9 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
 
                  OPENCV_ASSERT( i < orig_nz_count, "CV_ThreshHistTest::prepare_test_case", "Buffer overflow" );
 
-                 values->data.fl[i] = *(float*)CV_NODE_VAL(sparse,node);
+                 values.at<float>(i) = *(float*)CV_NODE_VAL(sparse,node);
                  for( k = 0; k < cdims; k++ )
-                     indices->data.i[i*cdims + k] = idx[k];
+                     indices.at<int>(i*cdims + k) = idx[k];
             }
 
             OPENCV_ASSERT( i == orig_nz_count, "Unmatched buffer size",
@@ -876,7 +873,7 @@ int CV_ThreshHistTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
     int i;
-    float* ptr0 = values->data.fl;
+    float* ptr0 = values.ptr<float>();
     float* ptr = 0;
     CvSparseMat* sparse = 0;
 
@@ -895,8 +892,8 @@ int CV_ThreshHistTest::validate_test_results( int /*test_case_idx*/ )
                 v = ptr[i];
             else
             {
-                v = (float)cvGetRealND( sparse, indices->data.i + i*cdims );
-                cvClearND( sparse, indices->data.i + i*cdims );
+                v = (float)cvGetRealND( sparse, indices.ptr<int>() + i*cdims );
+                cvClearND( sparse, indices.ptr<int>() + i*cdims );
             }
 
             if( v0 <= threshold ) v0 = 0.f;
