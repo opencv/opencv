@@ -132,7 +132,7 @@ public:
 
             int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
             size_t global[] = { (size_t)s[0], (size_t)(s[1] / number) };
-            String buildopt = format("-DNUM=%d ", number);
+            String buildopt = format("-DNUM=%d", number);
             if (normVariance)
             {
                 String kname = format("calc_mean%d", number);
@@ -156,9 +156,9 @@ public:
             }
 
             String kname = format("mvn%d", number);
-            buildopt += format("%s %s %s ", (normVariance) ? "-DNORM_VARIANCE" : "",
-                               (fuse_batch_norm) ? "-DFUSE_BATCH_NORM" : "",
-                               (fuse_relu) ? "-DFUSE_RELU" : "");
+            buildopt += format("%s%s%s", (normVariance) ? " -DNORM_VARIANCE" : "",
+                               (fuse_batch_norm) ? " -DFUSE_BATCH_NORM" : "",
+                               (fuse_relu) ? " -DFUSE_RELU" : "");
             ocl::Kernel kernel1(kname.c_str(), ocl::dnn::mvn_oclsrc, buildopt);
             if (kernel1.empty())
                 return false;
