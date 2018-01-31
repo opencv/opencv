@@ -343,7 +343,12 @@ inp = tf.placeholder(tf.float32, [1, 4, 4, 1], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[3, 3], padding='SAME')
 pool = tf.layers.average_pooling2d(conv, pool_size=3, strides=1, padding='SAME')
 save(inp, pool, 'ave_pool_same')
-
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 6, 1], 'input')
+conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1], padding='SAME')
+sliced = tf.slice(conv, [0, 1, 2, 0], [-1, 3, 4, 1])
+save(inp, sliced, 'slice_4d')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
