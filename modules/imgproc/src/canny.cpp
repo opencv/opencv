@@ -159,6 +159,12 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
         lSizeY = 1;
     }
 
+    if (aperture_size == 7)
+    {
+        low_thresh = low_thresh / 16.0f;
+        high_thresh = high_thresh / 16.0f;
+    }
+
     if (L2gradient)
     {
         low_thresh = std::min(32767.0f, low_thresh);
@@ -212,11 +218,17 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
                 Non maxima suppression
                 Double thresholding
         */
+        double scale = 1.0;
+        if (aperture_size == 7)
+        {
+            scale = 1 / 16.0;
+        }
+
         UMat dx, dy;
         if (!useCustomDeriv)
         {
-            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
+            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
         }
         else
         {
@@ -953,8 +965,8 @@ void Canny( InputArray _src, OutputArray _dst,
 
     if (aperture_size == 7)
     {
-        low_thresh = low_thresh / 16;
-        high_thresh = high_thresh / 16;
+        low_thresh = low_thresh / 16.0;
+        high_thresh = high_thresh / 16.0;
     }
 
     if (low_thresh > high_thresh)
