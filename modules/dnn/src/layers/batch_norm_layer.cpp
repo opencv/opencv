@@ -32,6 +32,8 @@ public:
 
         hasWeights = params.get<bool>("has_weight", false);
         hasBias = params.get<bool>("has_bias", false);
+        if(params.get<bool>("scale_bias", false))
+            hasWeights = hasBias = true;
         epsilon = params.get<float>("eps", 1E-5);
 
         size_t n = blobs[0].total();
@@ -47,8 +49,8 @@ public:
                 varMeanScale = 1/varMeanScale;
         }
 
-        const int weightsBlobIndex = 2;
-        const int biasBlobIndex = weightsBlobIndex + hasWeights;
+        const int biasBlobIndex = blobs.size() - 1;
+        const int weightsBlobIndex = biasBlobIndex - hasBias;
 
         if( hasWeights )
         {
