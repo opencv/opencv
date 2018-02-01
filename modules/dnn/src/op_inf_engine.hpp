@@ -61,6 +61,8 @@ public:
 
     void forward();
 
+    bool isInitialized();
+
 private:
     std::vector<InferenceEngine::CNNLayerPtr> layers;
     InferenceEngine::InputsDataMap inputs;

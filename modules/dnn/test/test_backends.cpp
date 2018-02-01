@@ -208,6 +208,11 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
                Size(368, 368), "", "caffe");
 }
 
+TEST_P(DNNTestNetwork, OpenFace)
+{
+    processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", "torch");
+}
+
 const tuple<DNNBackend, DNNTarget> testCases[] = {
 #ifdef HAVE_HALIDE
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),

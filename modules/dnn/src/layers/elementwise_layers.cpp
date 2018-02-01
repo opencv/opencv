@@ -114,7 +114,7 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && this->type == "ReLU";
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node)
@@ -154,10 +154,8 @@ public:
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
         lp.name = this->name;
-        lp.type = "ReLU";
         lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ReLULayer> ieLayer(new InferenceEngine::ReLULayer(lp));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+        return Ptr<BackendNode>(new InfEngineBackendNode(func.initInfEngine(lp)));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
@@ -323,6 +321,15 @@ struct ReLUFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        lp.type = "ReLU";
+        std::shared_ptr<InferenceEngine::ReLULayer> ieLayer(new InferenceEngine::ReLULayer(lp));
+        return ieLayer;
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -387,6 +394,14 @@ struct ReLU6Functor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "ReLU6");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -442,6 +457,14 @@ struct TanHFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "TanH");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -476,6 +499,14 @@ struct SigmoidFunctor
         top(x, y, c, n) = 1.0f / (1.0f + exp(-input));
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "Sigmoid");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 3; }
 };
@@ -514,6 +545,14 @@ struct ELUFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "ELU");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -549,6 +588,14 @@ struct AbsValFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "Abs");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -583,6 +630,14 @@ struct BNLLFunctor
         top(x, y, c, n) = log(1.0f + exp(-abs(input)));
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "BNLL");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 5; }
 };
@@ -672,6 +727,18 @@ struct PowerFunctor
         top(x, y, c, n) = topExpr;
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        lp.type = "Power";
+        std::shared_ptr<InferenceEngine::PowerLayer> ieLayer(new InferenceEngine::PowerLayer(lp));
+        ieLayer->power = power;
+        ieLayer->scale = scale;
+        ieLayer->offset = shift;
+        return ieLayer;
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return power == 1 ? 2 : 10; }
 };
@@ -764,6 +831,14 @@ struct ChannelsPReLUFunctor
         top(x, y, c, n) = select(input >= 0.0f, input, weights(c) * input);
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "PReLU");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 1; }
 };

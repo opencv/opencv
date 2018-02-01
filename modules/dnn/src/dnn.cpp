@@ -1086,9 +1086,11 @@ struct Net::Impl
         CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
 #ifdef HAVE_INF_ENGINE
         MapIdToLayerData::iterator it;
+        Ptr<InfEngineBackendNet> net;
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
+            ld.skip = true;
             Ptr<Layer> layer = ld.layerInstance;
 
             if (!layer->supportBackend(preferableBackend))
@@ -1098,11 +1100,12 @@ struct Net::Impl
                     auto dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
                     dataPtr->name = ld.name;
                 }
+                ld.skip = false;
+                net = Ptr<InfEngineBackendNet>();
                 continue;
             }
 
-            // Get input network.
-            Ptr<InfEngineBackendNet> net;
+            // Check what all inputs are from the same network or from default backend.
             for (int i = 0; i < ld.inputBlobsId.size(); ++i)
             {
                 LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
@@ -1110,11 +1113,7 @@ struct Net::Impl
                 if (!inpNode.empty())
                 {
                     Ptr<InfEngineBackendNode> ieInpNode = inpNode.dynamicCast<InfEngineBackendNode>();
-                    CV_Assert(!ieInpNode.empty());
-                    // Skip previous layer at the same network.
-                    inpLd.skip = true;
-                    CV_Assert(net.empty() || net == ieInpNode->net);
-                    net = ieInpNode->net;
+                    CV_Assert(!ieInpNode.empty(), net.empty() || net == ieInpNode->net);
                 }
             }
 
@@ -1154,15 +1153,14 @@ struct Net::Impl
 
             if (!fused)
                 net->addLayer(ieNode->layer);
-
-            ld.skip = false;
         }
 
         // Initialize all networks.
-        for (it = layers.begin(); it != layers.end(); ++it)
+        std::set<InfEngineBackendNet> initializedNets;
+        for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
         {
             LayerData &ld = it->second;
-            if (ld.skip || ld.backendNodes.find(preferableBackend) == ld.backendNodes.end())
+            if (ld.backendNodes.find(preferableBackend) == ld.backendNodes.end())
                 continue;
 
             Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
@@ -1173,8 +1171,13 @@ struct Net::Impl
             if (ieNode.empty())
                 continue;
 
-            if (!ieNode->net.empty())
+            CV_Assert(!ieNode->net.empty());
+
+            if (!ieNode->net->isInitialized())
+            {
                 ieNode->net->initEngine();
+                ld.skip = false;
+            }
         }
 #endif  // HAVE_INF_ENGINE
     }

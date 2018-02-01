@@ -240,6 +240,7 @@ public:
         ieLayer->_padding_x = pad.width;
         ieLayer->_padding_y = pad.height;
         ieLayer->_exclude_pad = false;
+        ieLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
         if (type == MAX)
             ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
         else if (type == AVE)

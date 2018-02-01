@@ -151,7 +151,6 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 
 PERF_TEST_P_(DNNTestNetwork, OpenFace)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
             Mat(cv::Size(96, 96), CV_32FC3), "", "torch");
 }

@@ -27,14 +27,13 @@ void InfEngineBackendNode::connect(std::vector<Ptr<BackendWrapper> >& inputs,
         dataPtr->inputTo[layer->name] = layer;
     }
 
-    layer->outData.resize(outputs.size());
-    for (int i = 0; i < outputs.size(); ++i)
-    {
-        InferenceEngine::DataPtr dataPtr = infEngineDataNode(outputs[i]);
-        dataPtr->name = layer->name;
-        layer->outData[i] = dataPtr;
-        dataPtr->creatorLayer = InferenceEngine::CNNLayerWeakPtr(layer);
-    }
+    CV_Assert(!outputs.empty());
+
+    layer->outData.resize(1);
+    InferenceEngine::DataPtr dataPtr = infEngineDataNode(outputs[0]);
+    dataPtr->name = layer->name;
+    layer->outData[0] = dataPtr;
+    dataPtr->creatorLayer = InferenceEngine::CNNLayerWeakPtr(layer);
 }
 
 static std::vector<Ptr<InfEngineBackendWrapper> >
@@ -254,11 +253,17 @@ size_t InfEngineBackendNet::getBatchSize() const noexcept
 
 void InfEngineBackendNet::initEngine()
 {
+    CV_Assert(!isInitialized());
     engine = InferenceEngine::InferenceEnginePluginPtr("libMKLDNNPlugin.so");
     InferenceEngine::ResponseDesc resp;
     InferenceEngine::StatusCode status = engine->LoadNetwork(*this, &resp);
     if (status != InferenceEngine::StatusCode::OK)
         CV_Error(Error::StsAssert, resp.msg);
+}
+
+bool InfEngineBackendNet::isInitialized()
+{
+    return (bool)engine;
 }
 
 void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs)
