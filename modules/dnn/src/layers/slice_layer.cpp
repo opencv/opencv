@@ -181,7 +181,8 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        if (inputs[0].dims < 4)
+        if (inputs[0].dims < 4 || (total(shape(outputs[0]), 0, 2) % 4 != 0) ||
+            (total(shape(outputs[0]), 2) % 4 != 0))
             return false;
 
         const UMat& inpMat = inputs[0];
@@ -192,22 +193,19 @@ public:
             int rows = outputs[i].size[2];
             int cols = outputs[i].size[3];
 
-            int number = (cols % 8 == 0) ? 8 : ((cols % 4 == 0) ? 4 : 1);
-            String buildopt = format("-DNUM=%d ", number);
-            String kname = format("slice%d", number);
-            ocl::Kernel kernel(kname.c_str(), ocl::dnn::slice_oclsrc, buildopt);
-            size_t global[] = { (size_t)groups * channels, (size_t)rows * cols / number };
+            ocl::Kernel kernel("slice", ocl::dnn::slice_oclsrc);
+            size_t local[] = { 128 };
+            size_t global[] = { (size_t)groups * channels / 4 * local[0] };
             int idx = 0;
             kernel.set(idx++, ocl::KernelArg::PtrReadOnly(inpMat));
             kernel.set(idx++, (int)(inpMat.size[2] * inpMat.size[3]));
-            kernel.set(idx++, (int)inpMat.size[3]);
-            kernel.set(idx++, (int)global[0]);
             kernel.set(idx++, (int)(rows * cols));
+            kernel.set(idx++, (int)inpMat.size[3]);
             kernel.set(idx++, (int)cols);
             kernel.set(idx++, (int)sliceRanges[i][2].start);
             kernel.set(idx++, (int)sliceRanges[i][3].start);
             kernel.set(idx++, ocl::KernelArg::PtrWriteOnly(outputs[i]));
-            bool ret = kernel.run(2, global, NULL, false);
+            bool ret = kernel.run(1, global, local, false);
             if (!ret)
                 return false;
         }
