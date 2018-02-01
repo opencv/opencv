@@ -1640,30 +1640,22 @@ protected:
     int prepare_test_case( int test_case_idx );
     void run_func(void);
     int validate_test_results( int test_case_idx );
-    IplImage* images[CV_MAX_DIM+2];
-    int channels[CV_MAX_DIM+2];
+    vector<Mat> images;
+    vector<int> channels;
 
-    CvSize patch_size;
+    Size patch_size;
     double factor;
     int method;
 };
 
 
-
-CV_CalcBackProjectPatchTest::CV_CalcBackProjectPatchTest()
+CV_CalcBackProjectPatchTest::CV_CalcBackProjectPatchTest() :
+    images(CV_MAX_DIM+2), channels(CV_MAX_DIM+2)
 {
-    int i;
-
     hist_count = 1;
     gen_random_hist = 0;
     init_ranges = 1;
     img_max_log_size = 6;
-
-    for( i = 0; i < CV_MAX_DIM+2; i++ )
-    {
-        images[i] = 0;
-        channels[i] = 0;
-    }
 }
 
 
@@ -1675,11 +1667,6 @@ CV_CalcBackProjectPatchTest::~CV_CalcBackProjectPatchTest()
 
 void CV_CalcBackProjectPatchTest::clear()
 {
-    int i;
-
-    for( i = 0; i < CV_MAX_DIM+2; i++ )
-        cvReleaseImage( &images[i] );
-
     CV_BaseHistTest::clear();
 }
 
@@ -1691,7 +1678,7 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
     if( code > 0 )
     {
         RNG& rng = ts->get_rng();
-        int i, j, n, img_len = img_size.width*img_size.height;
+        int i, j, n, img_len = img_size.area();
 
         patch_size.width = cvtest::randInt(rng) % img_size.width + 1;
         patch_size.height = cvtest::randInt(rng) % img_size.height + 1;
@@ -1706,30 +1693,24 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
             if( i < cdims )
             {
                 int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = cvCreateImage( img_size,
-                    img_type == CV_8U ? IPL_DEPTH_8U : IPL_DEPTH_32F, nch );
+                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
                 channels[i] = cvtest::randInt(rng) % nch;
-
-                Mat images_i = cvarrToMat(images[i]);
-                cvtest::randUni( rng, images_i, Scalar::all(low), Scalar::all(high) );
+                cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
             }
             else if( i >= CV_MAX_DIM )
             {
-                images[i] = cvCreateImage(
-                    cvSize(img_size.width - patch_size.width + 1,
-                           img_size.height - patch_size.height + 1),
-                    IPL_DEPTH_32F, 1 );
+                images[i] = Mat(img_size - patch_size + Size(1, 1), CV_32F);
             }
         }
 
-        cvTsCalcHist( images, hist[0], 0, channels );
+        cvTsCalcHist( images, hist[0], Mat(), channels );
         cvNormalizeHist( hist[0], factor );
 
         // now modify the images a bit
         n = cvtest::randInt(rng) % (img_len/10+1);
         for( i = 0; i < cdims; i++ )
         {
-            char* data = images[i]->imageData;
+            uchar* data = images[i].data;
             for( j = 0; j < n; j++ )
             {
                 int idx = cvtest::randInt(rng) % img_len;
@@ -1749,53 +1730,46 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
 
 void CV_CalcBackProjectPatchTest::run_func(void)
 {
-    cvCalcBackProjectPatch( images, images[CV_MAX_DIM], patch_size, hist[0], method, factor );
+    CvMat dst(images[CV_MAX_DIM]);
+    vector<CvMat >  img(cdims);
+    vector<CvMat*> pimg(cdims);
+    for(int i = 0; i < cdims; i++)
+    {
+        img[i] = CvMat(images[i]);
+        pimg[i] = &img[i];
+    }
+    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, patch_size, hist[0], method, factor );
 }
 
 
 static void
-cvTsCalcBackProjectPatch( IplImage** images, IplImage* dst, CvSize patch_size,
+cvTsCalcBackProjectPatch( vector<Mat> images, Mat dst, Size patch_size,
                           CvHistogram* hist, int method,
-                          double factor, int* channels )
+                          double factor, vector<int> channels )
 {
     CvHistogram* model = 0;
 
-    IplImage imgstub[CV_MAX_DIM], *img[CV_MAX_DIM];
-    IplROI roi;
-    int i, dims;
     int x, y;
-    CvSize size = cvGetSize(dst);
+    Size size = dst.size();
 
-    dims = cvGetDims( hist->bins );
     cvCopyHist( hist, &model );
     cvNormalizeHist( hist, factor );
-    cvZero( dst );
 
-    for( i = 0; i < dims; i++ )
-    {
-        CvMat stub, *mat;
-        mat = cvGetMat( images[i], &stub, 0, 0 );
-        img[i] = cvGetImage( mat, &imgstub[i] );
-        img[i]->roi = &roi;
-    }
-
-    roi.coi = 0;
-
+    vector<Mat> img(images.size());
     for( y = 0; y < size.height; y++ )
     {
         for( x = 0; x < size.width; x++ )
         {
             double result;
 
-            roi.xOffset = x;
-            roi.yOffset = y;
-            roi.width = patch_size.width;
-            roi.height = patch_size.height;
+            Rect roi(Point(x, y), patch_size);
+            for(size_t i = 0; i < img.size(); i++)
+                img[i] = images[i](roi);
 
-            cvTsCalcHist( img, model, 0, channels );
+            cvTsCalcHist( img, model, Mat(), channels );
             cvNormalizeHist( model, factor );
             result = cvCompareHist( model, hist, method );
-            CV_IMAGE_ELEM( dst, float, y, x ) = (float)result;
+            dst.at<float>(y, x) = (float)result;
         }
     }
 
@@ -1808,10 +1782,14 @@ int CV_CalcBackProjectPatchTest::validate_test_results( int /*test_case_idx*/ )
     int code = cvtest::TS::OK;
     double err_level = 5e-3;
 
-    cvTsCalcBackProjectPatch( images, images[CV_MAX_DIM+1],
-        patch_size, hist[0], method, factor, channels );
+    Mat dst = images[CV_MAX_DIM+1];
+    vector<Mat> imagesv(cdims);
+    for(int i = 0; i < cdims; i++)
+        imagesv[i] = images[i];
+    cvTsCalcBackProjectPatch( imagesv, dst, patch_size, hist[0],
+                              method, factor, channels );
 
-    Mat a = cvarrToMat(images[CV_MAX_DIM]), b = cvarrToMat(images[CV_MAX_DIM+1]);
+    Mat a = images[CV_MAX_DIM], b = images[CV_MAX_DIM+1];
     code = cvtest::cmpEps2( ts, a, b, err_level, true, "BackProjectPatch result" );
 
     if( code < 0 )
