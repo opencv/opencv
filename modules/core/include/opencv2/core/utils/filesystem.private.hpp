@@ -9,6 +9,8 @@
 #ifndef OPENCV_HAVE_FILESYSTEM_SUPPORT
 #  if defined(__EMSCRIPTEN__) || defined(__native_client__)
      /* no support */
+#  elif defined WINRT
+     /* not supported */
 #  elif defined __ANDROID__ || defined __linux__ || defined _WIN32 || \
         defined __FreeBSD__ || defined __bsdi__
 #      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1
