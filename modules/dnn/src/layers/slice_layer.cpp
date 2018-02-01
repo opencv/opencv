@@ -92,7 +92,7 @@ public:
                 {
                     int size = sizeOrEnd;
                     CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
-                    sliceRanges[0][i].end = start > 0 ? start + size : -1;  // We'll finalize a negative value later.
+                    sliceRanges[0][i].end = size > 0 ? (start + size) : -1;  // We'll finalize a negative value later.
                 }
                 else
                 {

@@ -332,6 +332,11 @@ TEST(Test_TensorFlow, resize_nearest_neighbor)
     runTensorFlowNet("resize_nearest_neighbor");
 }
 
+TEST(Test_TensorFlow, slice)
+{
+    runTensorFlowNet("slice_4d");
+}
+
 TEST(Test_TensorFlow, memory_read)
 {
     double l1 = 1e-5;
