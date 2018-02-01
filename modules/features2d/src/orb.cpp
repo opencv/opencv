@@ -673,7 +673,7 @@ public:
     void setEdgeThreshold(int edgeThreshold_) { edgeThreshold = edgeThreshold_; }
     int getEdgeThreshold() const { return edgeThreshold; }
 
-    void setFirstLevel(int firstLevel_) { CV_Assert(firstLevel >= 0);  firstLevel = firstLevel_; }
+    void setFirstLevel(int firstLevel_) { CV_Assert(firstLevel_ >= 0);  firstLevel = firstLevel_; }
     int getFirstLevel() const { return firstLevel; }
 
     void setWTA_K(int wta_k_) { wta_k = wta_k_; }
