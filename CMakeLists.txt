@@ -126,6 +126,8 @@ ocv_clear_vars(OpenCVModules_TARGETS)
 
 include(cmake/OpenCVDownload.cmake)
 
+set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
+
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
@@ -625,6 +627,7 @@ include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
+include(cmake/OpenCVFindProtobuf.cmake)
 
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
@@ -1358,6 +1361,10 @@ if(WITH_OPENVX OR HAVE_OPENVX)
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")
+
+foreach(s ${CUSTOM_STATUS})
+  status(${CUSTOM_STATUS_${s}})
+endforeach()
 
 if(WITH_CUDA OR HAVE_CUDA)
   ocv_build_features_string(cuda_features
