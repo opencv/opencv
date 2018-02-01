@@ -1375,25 +1375,17 @@ protected:
     int prepare_test_case( int test_case_idx );
     void run_func(void);
     int validate_test_results( int test_case_idx );
-    IplImage* images[CV_MAX_DIM+3];
-    int channels[CV_MAX_DIM+3];
+    vector<Mat> images;
+    vector<int> channels;
 };
 
 
 
-CV_CalcBackProjectTest::CV_CalcBackProjectTest()
+CV_CalcBackProjectTest::CV_CalcBackProjectTest() : images(CV_MAX_DIM+3), channels(CV_MAX_DIM+3)
 {
-    int i;
-
     hist_count = 1;
     gen_random_hist = 0;
     init_ranges = 1;
-
-    for( i = 0; i < CV_MAX_DIM+3; i++ )
-    {
-        images[i] = 0;
-        channels[i] = 0;
-    }
 }
 
 
@@ -1405,11 +1397,6 @@ CV_CalcBackProjectTest::~CV_CalcBackProjectTest()
 
 void CV_CalcBackProjectTest::clear()
 {
-    int i;
-
-    for( i = 0; i < CV_MAX_DIM+3; i++ )
-        cvReleaseImage( &images[i] );
-
     CV_BaseHistTest::clear();
 }
 
@@ -1421,31 +1408,35 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
     if( code > 0 )
     {
         RNG& rng = ts->get_rng();
-        int i, j, n, img_len = img_size.width*img_size.height;
+        int i, j, n, img_len = img_size.area();
 
         for( i = 0; i < CV_MAX_DIM + 3; i++ )
         {
             if( i < cdims )
             {
                 int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = cvCreateImage( img_size,
-                    img_type == CV_8U ? IPL_DEPTH_8U : IPL_DEPTH_32F, nch );
+                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
                 channels[i] = cvtest::randInt(rng) % nch;
 
-                Mat images_i = cvarrToMat(images[i]);
-                cvtest::randUni( rng, images_i, Scalar::all(low), Scalar::all(high) );
+                cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
             }
-            else if( i == CV_MAX_DIM && cvtest::randInt(rng) % 2 )
+            else if( i == CV_MAX_DIM )
             {
-                // create mask
-                images[i] = cvCreateImage( img_size, IPL_DEPTH_8U, 1 );
-                Mat images_i = cvarrToMat(images[i]);
-                // make ~25% pixels in the mask non-zero
-                cvtest::randUni( rng, images_i, Scalar::all(-2), Scalar::all(2) );
+                if(cvtest::randInt(rng) % 2 )
+                {
+                    // create mask
+                    images[i] = Mat(img_size, CV_8U);
+                    // make ~25% pixels in the mask non-zero
+                    cvtest::randUni( rng, images[i], Scalar::all(-2), Scalar::all(2) );
+                }
+                else
+                {
+                    images[i] = Mat();
+                }
             }
             else if( i > CV_MAX_DIM )
             {
-                images[i] = cvCreateImage( img_size, images[0]->depth, 1 );
+                images[i] = Mat(img_size, images[0].type());
             }
         }
 
@@ -1455,7 +1446,7 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
         n = cvtest::randInt(rng) % (img_len/20+1);
         for( i = 0; i < cdims; i++ )
         {
-            char* data = images[i]->imageData;
+            uchar* data = images[i].data;
             for( j = 0; j < n; j++ )
             {
                 int idx = cvtest::randInt(rng) % img_len;
@@ -1475,12 +1466,67 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
 
 void CV_CalcBackProjectTest::run_func(void)
 {
-    cvCalcBackProject( images, images[CV_MAX_DIM+1], hist[0] );
+    int size[CV_MAX_DIM];
+    int hdims = cvGetDims( hist[0]->bins, size );
+
+    bool huniform = CV_IS_UNIFORM_HIST(hist[0]);
+    const float* uranges[CV_MAX_DIM] = {0};
+    const float** hranges = 0;
+
+    if( hist[0]->type & CV_HIST_RANGES_FLAG )
+    {
+        hranges = (const float**)hist[0]->thresh2;
+        if( huniform )
+        {
+            for(int i = 0; i < hdims; i++ )
+                uranges[i] = &hist[0]->thresh[i][0];
+            hranges = uranges;
+        }
+    }
+
+    std::vector<cv::Mat> imagesv(hdims);
+    copy(images.begin(), images.begin() + hdims, imagesv.begin());
+
+    cv::Mat dst = images[CV_MAX_DIM+1];
+
+    CV_Assert( dst.size() == imagesv[0].size() && dst.depth() == imagesv[0].depth() );
+
+    if( !CV_IS_SPARSE_HIST(hist[0]) )
+    {
+        cv::Mat H = cv::cvarrToMat(hist[0]->bins);
+        if(huniform)
+        {
+            vector<int> emptyChannels;
+            vector<float> vranges;
+            if(hranges)
+            {
+                vranges.resize(hdims*2);
+                for(int i = 0; i < hdims; i++ )
+                {
+                    vranges[i*2  ] = hist[0]->thresh[i][0];
+                    vranges[i*2+1] = hist[0]->thresh[i][1];
+                }
+            }
+            cv::calcBackProject(imagesv, emptyChannels, H, dst, vranges, 1);
+        }
+        else
+        {
+            cv::calcBackProject( &imagesv[0], (int)imagesv.size(),
+                                 0, H, dst, hranges, 1, false );
+        }
+    }
+    else
+    {
+        cv::SparseMat sH;
+        ((const CvSparseMat*)hist[0]->bins)->copyToSparseMat(sH);
+        cv::calcBackProject( &imagesv[0], (int)imagesv.size(),
+                             0, sH, dst, hranges, 1, huniform );
+    }
 }
 
 
 static void
-cvTsCalcBackProject( IplImage** images, IplImage* dst, CvHistogram* hist, int* channels )
+cvTsCalcBackProject( vector<Mat> images, Mat dst, CvHistogram* hist, vector<int> channels )
 {
     int x, y, k, cdims;
     union
@@ -1492,22 +1538,22 @@ cvTsCalcBackProject( IplImage** images, IplImage* dst, CvHistogram* hist, int* c
     int nch[CV_MAX_DIM];
     int dims[CV_MAX_DIM];
     int uniform = CV_IS_UNIFORM_HIST(hist);
-    CvSize img_size = cvGetSize(images[0]);
-    int img_depth = images[0]->depth;
+    Size img_size = images[0].size();
+    int img_depth = images[0].depth();
 
     cdims = cvGetDims( hist->bins, dims );
 
     for( k = 0; k < cdims; k++ )
-        nch[k] = images[k]->nChannels;
+        nch[k] = images[k].channels();
 
     for( y = 0; y < img_size.height; y++ )
     {
-        if( img_depth == IPL_DEPTH_8U )
+        if( img_depth == CV_8U )
             for( k = 0; k < cdims; k++ )
-                plane[k].ptr = &CV_IMAGE_ELEM(images[k], uchar, y, 0 ) + channels[k];
+                plane[k].ptr = images[k].ptr<uchar>(y) + channels[k];
         else
             for( k = 0; k < cdims; k++ )
-                plane[k].fl = &CV_IMAGE_ELEM(images[k], float, y, 0 ) + channels[k];
+                plane[k].fl = images[k].ptr<float>(y) + channels[k];
 
         for( x = 0; x < img_size.width; x++ )
         {
@@ -1515,7 +1561,7 @@ cvTsCalcBackProject( IplImage** images, IplImage* dst, CvHistogram* hist, int* c
             float bin_val = 0;
             int idx[CV_MAX_DIM];
 
-            if( img_depth == IPL_DEPTH_8U )
+            if( img_depth == CV_8U )
                 for( k = 0; k < cdims; k++ )
                     val[k] = plane[k].ptr[x*nch[k]];
             else
@@ -1553,13 +1599,13 @@ cvTsCalcBackProject( IplImage** images, IplImage* dst, CvHistogram* hist, int* c
             if( k == cdims )
                 bin_val = (float)cvGetRealND( hist->bins, idx );
 
-            if( img_depth == IPL_DEPTH_8U )
+            if( img_depth == CV_8U )
             {
                 int t = cvRound(bin_val);
-                CV_IMAGE_ELEM( dst, uchar, y, x ) = saturate_cast<uchar>(t);
+                dst.at<uchar>(y, x) = saturate_cast<uchar>(t);
             }
             else
-                CV_IMAGE_ELEM( dst, float, y, x ) = bin_val;
+                dst.at<float>(y, x) = bin_val;
         }
     }
 }
@@ -1570,7 +1616,7 @@ int CV_CalcBackProjectTest::validate_test_results( int /*test_case_idx*/ )
     int code = cvtest::TS::OK;
 
     cvTsCalcBackProject( images, images[CV_MAX_DIM+2], hist[0], channels );
-    Mat a = cvarrToMat(images[CV_MAX_DIM+1]), b = cvarrToMat(images[CV_MAX_DIM+2]);
+    Mat a = images[CV_MAX_DIM+1], b = images[CV_MAX_DIM+2];
     double threshold = a.depth() == CV_8U ? 2 : FLT_EPSILON;
     code = cvtest::cmpEps2( ts, a, b, threshold, true, "Back project image" );
 
