@@ -367,7 +367,7 @@ public:
         int *_mag_p, *_mag_a, *_mag_n;
         short *_dx, *_dy, *_dx_a = NULL, *_dy_a = NULL, *_dx_n = NULL, *_dy_n = NULL;
         uchar *_pmap;
-		double scale = 1.0;
+        double scale = 1.0;
 
         CV_TRACE_REGION("gradient")
         if(needGradient)
