@@ -483,4 +483,46 @@ TEST(Test_Caffe, opencv_face_detector)
     normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref);
 }
 
+TEST(Test_Caffe, FasterRCNN_and_RFCN)
+{
+    std::string models[] = {"VGG16_faster_rcnn_final.caffemodel", "ZF_faster_rcnn_final.caffemodel",
+                            "resnet50_rfcn_final.caffemodel"};
+    std::string protos[] = {"faster_rcnn_vgg16.prototxt", "faster_rcnn_zf.prototxt",
+                            "rfcn_pascal_voc_resnet50.prototxt"};
+    Mat refs[] = {(Mat_<float>(3, 6) << 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
+                                        7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
+                                        12, 0.993028, 133.221, 189.377, 350.994, 563.166),
+                  (Mat_<float>(3, 6) << 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
+                                        7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
+                                        12, 0.967198, 138.588, 206.843, 329.766, 553.176),
+                  (Mat_<float>(2, 6) << 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
+                                        12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
+    for (int i = 0; i < 3; ++i)
+    {
+        std::string proto = findDataFile("dnn/" + protos[i], false);
+        std::string model = findDataFile("dnn/" + models[i], false);
+
+        Net net = readNetFromCaffe(proto, model);
+        Mat img = imread(findDataFile("dnn/dog416.png", false));
+        resize(img, img, Size(800, 600));
+        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
+        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
+
+        net.setInput(blob, "data");
+        net.setInput(imInfo, "im_info");
+        // Output has shape 1x1xNx7 where N - number of detections.
+        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+        Mat out = net.forward();
+        out = out.reshape(1, out.total() / 7);
+
+        Mat detections;
+        for (int j = 0; j < out.rows; ++j)
+        {
+            if (out.at<float>(j, 2) > 0.8)
+              detections.push_back(out.row(j).colRange(1, 7));
+        }
+        normAssert(detections, refs[i], ("model name: " + models[i]).c_str(), 2e-4, 6e-4);
+    }
+}
+
 }
