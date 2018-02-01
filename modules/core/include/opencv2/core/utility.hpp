@@ -429,6 +429,12 @@ in OpenCV.
  */
 CV_EXPORTS_W bool checkHardwareSupport(int feature);
 
+/** @brief Returns feature name by ID
+
+Returns empty string if feature is not defined
+*/
+CV_EXPORTS_W String getHardwareFeatureName(int feature);
+
 /** @brief Returns the number of logical CPUs available for the process.
  */
 CV_EXPORTS_W int getNumberOfCPUs();
