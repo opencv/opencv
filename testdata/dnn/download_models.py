@@ -231,6 +231,34 @@ models = [
         member='ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb',
         sha='554a75594e9fd1ccee291b3ba3f1190b868a54c9',
         filename='ssd_inception_v2_coco_2017_11_17.pb'),
+    Model(
+        name='Faster-RCNN',  # https://github.com/rbgirshick/py-faster-rcnn
+        url='https://dl.dropboxusercontent.com/s/o6ii098bu51d139/faster_rcnn_models.tgz?dl=0',
+        sha='51bca62727c3fe5d14b66e9331373c1e297df7d1',
+        filename='faster_rcnn_models.tgz'),
+    Model(
+        name='Faster-RCNN VGG16',
+        archive='faster_rcnn_models.tgz',
+        member='faster_rcnn_models/VGG16_faster_rcnn_final.caffemodel',
+        sha='dd099979468aafba21f3952718a9ceffc7e57699',
+        filename='VGG16_faster_rcnn_final.caffemodel'),
+    Model(
+        name='Faster-RCNN ZF',
+        archive='faster_rcnn_models.tgz',
+        member='faster_rcnn_models/ZF_faster_rcnn_final.caffemodel',
+        sha='7af886686f149622ed7a41c08b96743c9f4130f5',
+        filename='ZF_faster_rcnn_final.caffemodel'),
+    Model(
+        name='R-FCN',  # https://github.com/YuwenXiong/py-R-FCN
+        url='https://onedrive.live.com/download?cid=10B28C0E28BF7B83&resid=10B28C0E28BF7B83%215317&authkey=%21AIeljruhoLuail8',
+        sha='bb3180da68b2b71494f8d3eb8f51b2d47467da3e',
+        filename='rfcn_models.tar.gz'),
+    Model(
+        name='R-FCN ResNet-50',
+        archive='rfcn_models.tar.gz',
+        member='rfcn_models/resnet50_rfcn_final.caffemodel',
+        sha='e00beca7af2790801efb1724d77bddba89e7081c',
+        filename='resnet50_rfcn_final.caffemodel'),
 ]
 
 # Note: models will be downloaded to current working directory
