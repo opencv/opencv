@@ -144,7 +144,7 @@ public:
                 UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
                 UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
                 int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
-                String buildopt = format("-DNUM=%d ", number);
+                String buildopt = format("-DNUM=%d", number);
                 String kname = format("batch_norm%d", number);
                 ocl::Kernel kernel(kname.c_str(), ocl::dnn::batchnorm_oclsrc, buildopt);
                 if (kernel.empty())
