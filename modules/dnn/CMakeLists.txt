@@ -53,16 +53,16 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 )
 
 if(PROTOBUF_UPDATE_FILES)
-  file(GLOB proto_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/opencv-caffe.proto")
+  file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto")
   set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
   protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
 else()
-  file(GLOB fw_srcs "${CMAKE_CURRENT_SOURCE_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_SOURCE_DIR}/misc/caffe/opencv-caffe.pb.cc")
-  file(GLOB fw_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/misc/caffe/opencv-caffe.pb.h")
-  set(fw_inc "misc/caffe" "misc/tensorflow")
+  file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.cc")
+  file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.h")
+  set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/caffe" "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow")
 endif()
 
-ocv_module_include_directories(${fw_inc} src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
+ocv_module_include_directories(${fw_inc} ${CMAKE_CURRENT_LIST_DIR}/src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
 ocv_glob_module_sources(SOURCES ${fw_srcs})
 ocv_create_module(libprotobuf ${LAPACK_LIBRARIES})
 ocv_add_samples()
