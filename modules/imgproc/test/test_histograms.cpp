@@ -1253,13 +1253,13 @@ void CV_CalcHistTest::run_func(void)
 
 
 static void
-cvTsCalcHist( vector<Mat> images, CvHistogram* hist, Mat mask, vector<int> channels )
+cvTsCalcHist( const vector<Mat>& images, CvHistogram* hist, Mat mask, const vector<int>& channels )
 {
     int x, y, k;
     union
     {
-        float* fl;
-        uchar* ptr;
+        const float* fl;
+        const uchar* ptr;
     }
     plane[CV_MAX_DIM];
     int nch[CV_MAX_DIM];
@@ -1526,13 +1526,13 @@ void CV_CalcBackProjectTest::run_func(void)
 
 
 static void
-cvTsCalcBackProject( vector<Mat> images, Mat dst, CvHistogram* hist, vector<int> channels )
+cvTsCalcBackProject( const vector<Mat>& images, Mat dst, CvHistogram* hist, const vector<int>& channels )
 {
     int x, y, k, cdims;
     union
     {
-        float* fl;
-        uchar* ptr;
+        const float* fl;
+        const uchar* ptr;
     }
     plane[CV_MAX_DIM];
     int nch[CV_MAX_DIM];
@@ -1743,9 +1743,9 @@ void CV_CalcBackProjectPatchTest::run_func(void)
 
 
 static void
-cvTsCalcBackProjectPatch( vector<Mat> images, Mat dst, Size patch_size,
+cvTsCalcBackProjectPatch( const vector<Mat>& images, Mat dst, Size patch_size,
                           CvHistogram* hist, int method,
-                          double factor, vector<int> channels )
+                          double factor, const vector<int>& channels )
 {
     CvHistogram* model = 0;
 
