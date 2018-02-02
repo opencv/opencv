@@ -140,8 +140,8 @@ public:
     }
 };
 
-typedef std::tr1::tuple<double, double, double, double> HoughLinesUsingSetOfPointsInput_t;
-class HoughLinesUsingSetOfPointsTest : public testing::TestWithParam<HoughLinesUsingSetOfPointsInput_t>
+typedef std::tr1::tuple<double, double, double, double> HoughLinesPointSetInput_t;
+class HoughLinesPointSetTest : public testing::TestWithParam<HoughLinesPointSetInput_t>
 {
 protected:
     void run_test();
@@ -150,7 +150,7 @@ protected:
     double rhoMin, rhoMax, rhoStep;
     double thetaMin, thetaMax, thetaStep;
 public:
-    HoughLinesUsingSetOfPointsTest()
+    HoughLinesPointSetTest()
     {
         rhoMin = std::tr1::get<0>(GetParam());
         rhoMax = std::tr1::get<1>(GetParam());
@@ -219,7 +219,7 @@ void BaseHoughLineTest::run_test(int type)
 #endif
 }
 
-void HoughLinesUsingSetOfPointsTest::run_test(void)
+void HoughLinesPointSetTest::run_test(void)
 {
     Mat lines;
     vector<Point2f> point;
@@ -237,9 +237,9 @@ void HoughLinesUsingSetOfPointsTest::run_test(void)
         point.push_back(Point2f(Points[i][0],Points[i][1]));
     }
 
-    HoughLinesUsingSetOfPoints(point, lines, 20, 1,
-                               rhoMin, rhoMax, rhoStep,
-                               thetaMin, thetaMax, thetaStep);
+    HoughLinesPointSet(point, lines, 20, 1,
+                       rhoMin, rhoMax, rhoStep,
+                       thetaMin, thetaMax, thetaStep);
 
     lines.copyTo(line_polar);
     EXPECT_EQ((int)(line_polar.at(0).val[1] * 100000.0f), (int)(Rho * 100000.0f));
@@ -256,7 +256,7 @@ TEST_P(ProbabilisticHoughLinesTest, regression)
     run_test(PROBABILISTIC);
 }
 
-TEST_P(HoughLinesUsingSetOfPointsTest, regression)
+TEST_P(HoughLinesPointSetTest, regression)
 {
     run_test();
 }
@@ -275,8 +275,8 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
 
-INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesUsingSetOfPointsTest, testing::Combine(testing::Values( 0.0f, 120.0f ),
-                                                                                   testing::Values( 360.0f, 480.0f ),
-                                                                                   testing::Values( 0.0f, (CV_PI / 18.0f) ),
-                                                                                   testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )
-                                                                                   ));
+INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesPointSetTest, testing::Combine(testing::Values( 0.0f, 120.0f ),
+                                                                           testing::Values( 360.0f, 480.0f ),
+                                                                           testing::Values( 0.0f, (CV_PI / 18.0f) ),
+                                                                           testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )
+                                                                           ));

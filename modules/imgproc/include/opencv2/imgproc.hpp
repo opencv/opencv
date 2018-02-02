@@ -2105,9 +2105,9 @@ Example: :
         double rhoMin = 0.0f, rhoMax = 360.0f, rhoStep = 1;
         double thetaMin = 0.0f, thetaMax = CV_PI / 2.0f, thetaStep = CV_PI / 180.0f;
 
-        HoughLinesUsingSetOfPoints(point, lines, 20, 1
-                                   rhoMin, rhoMax, rhoStep,
-                                   thetaMin, thetaMax, thetaStep);
+        HoughLinesPointSet(point, lines, 20, 1
+                           rhoMin, rhoMax, rhoStep,
+                           thetaMin, thetaMax, thetaStep);
         lines.copyTo(line_polar);
         printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line_polar.at(0).val[0], line_polar.at(0).val[1], line_polar.at(0).val[2]);
     }
@@ -2125,9 +2125,9 @@ votes ( \f$>\texttt{threshold}\f$ )
 @param max_theta Maximum angle value of the accumulator in radians.
 @param theta_step Angle resolution of the accumulator in radians.
  */
-CV_EXPORTS_W void HoughLinesUsingSetOfPoints( InputArray _point, OutputArray _lines, int lines_max, int threshold,
-                                              double min_rho, double max_rho, double rho_step,
-                                              double min_theta, double max_theta, double theta_step );
+CV_EXPORTS_W void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, int threshold,
+                                      double min_rho, double max_rho, double rho_step,
+                                      double min_theta, double max_theta, double theta_step );
 
 /** @example houghcircles.cpp
 An example using the Hough circle detector
