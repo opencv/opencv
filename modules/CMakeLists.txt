@@ -4,7 +4,7 @@ if(NOT OPENCV_MODULES_PATH)
   set(OPENCV_MODULES_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
-ocv_glob_modules(${OPENCV_MODULES_PATH} EXTRA ${OPENCV_EXTRA_MODULES_PATH})
+ocv_glob_modules(${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
 
 # build lists of modules to be documented
 set(OPENCV_MODULES_MAIN "")
