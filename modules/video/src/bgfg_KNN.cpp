@@ -42,6 +42,7 @@
 //#include <math.h>
 
 #include "precomp.hpp"
+#include "opencl_kernels_video.hpp"
 
 namespace cv
 {
@@ -92,6 +93,9 @@ public:
     nLongCounter = 0;
     nMidCounter = 0;
     nShortCounter = 0;
+#ifdef HAVE_OPENCL
+    opencl_ON = true;
+#endif
     }
     //! the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -119,6 +123,9 @@ public:
     nLongCounter = 0;
     nMidCounter = 0;
     nShortCounter = 0;
+#ifdef HAVE_OPENCL
+    opencl_ON = true;
+#endif
     }
     //! the destructor
     ~BackgroundSubtractorKNNImpl() {}
@@ -131,40 +138,80 @@ public:
     //! re-initialization method
     void initialize(Size _frameSize, int _frameType)
     {
-    frameSize = _frameSize;
-    frameType = _frameType;
-    nframes = 0;
+        frameSize = _frameSize;
+        frameType = _frameType;
+        nframes = 0;
 
-    int nchannels = CV_MAT_CN(frameType);
-    CV_Assert( nchannels <= CV_CN_MAX );
+        int nchannels = CV_MAT_CN(frameType);
+        CV_Assert( nchannels <= CV_CN_MAX );
 
-    // Reserve memory for the model
-    int size=frameSize.height*frameSize.width;
-    // for each sample of 3 speed pixel models each pixel bg model we store ...
-    // values + flag (nchannels+1 values)
-    bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8U);
-    bgmodel = Scalar::all(0);
+        // Reserve memory for the model
+        int size=frameSize.height*frameSize.width;
+        //Reset counters
+        nShortCounter = 0;
+        nMidCounter = 0;
+        nLongCounter = 0;
 
-    //index through the three circular lists
-    aModelIndexShort.create(1,size,CV_8U);
-    aModelIndexMid.create(1,size,CV_8U);
-    aModelIndexLong.create(1,size,CV_8U);
-    //when to update next
-    nNextShortUpdate.create(1,size,CV_8U);
-    nNextMidUpdate.create(1,size,CV_8U);
-    nNextLongUpdate.create(1,size,CV_8U);
+#ifdef HAVE_OPENCL
+        if (ocl::isOpenCLActivated() && opencl_ON)
+        {
+            create_ocl_apply_kernel();
 
-    //Reset counters
-    nShortCounter = 0;
-    nMidCounter = 0;
-    nLongCounter = 0;
+            kernel_getBg.create("getBackgroundImage2_kernel", ocl::video::bgfg_knn_oclsrc, format( "-D CN=%d -D NSAMPLES=%d", nchannels, nN));
 
-    aModelIndexShort = Scalar::all(0);//random? //((m_nN)*rand())/(RAND_MAX+1);//0...m_nN-1
-    aModelIndexMid = Scalar::all(0);
-    aModelIndexLong = Scalar::all(0);
-    nNextShortUpdate = Scalar::all(0);
-    nNextMidUpdate = Scalar::all(0);
-    nNextLongUpdate = Scalar::all(0);
+            if (kernel_apply.empty() || kernel_getBg.empty())
+                opencl_ON = false;
+        }
+        else opencl_ON = false;
+
+        if (opencl_ON)
+        {
+            u_flag.create(frameSize.height * nN * 3, frameSize.width, CV_8UC1);
+            u_flag.setTo(Scalar::all(0));
+
+            if (nchannels==3)
+                nchannels=4;
+            u_sample.create(frameSize.height * nN * 3, frameSize.width, CV_32FC(nchannels));
+            u_sample.setTo(Scalar::all(0));
+
+            u_aModelIndexShort.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_aModelIndexShort.setTo(Scalar::all(0));
+            u_aModelIndexMid.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_aModelIndexMid.setTo(Scalar::all(0));
+            u_aModelIndexLong.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_aModelIndexLong.setTo(Scalar::all(0));
+
+            u_nNextShortUpdate.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_nNextShortUpdate.setTo(Scalar::all(0));
+            u_nNextMidUpdate.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_nNextMidUpdate.setTo(Scalar::all(0));
+            u_nNextLongUpdate.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_nNextLongUpdate.setTo(Scalar::all(0));
+        }
+        else
+#endif
+        {
+            // for each sample of 3 speed pixel models each pixel bg model we store ...
+            // values + flag (nchannels+1 values)
+            bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8U);
+            bgmodel = Scalar::all(0);
+
+            //index through the three circular lists
+            aModelIndexShort.create(1,size,CV_8U);
+            aModelIndexMid.create(1,size,CV_8U);
+            aModelIndexLong.create(1,size,CV_8U);
+            //when to update next
+            nNextShortUpdate.create(1,size,CV_8U);
+            nNextMidUpdate.create(1,size,CV_8U);
+            nNextLongUpdate.create(1,size,CV_8U);
+
+            aModelIndexShort = Scalar::all(0);//random? //((m_nN)*rand())/(RAND_MAX+1);//0...m_nN-1
+            aModelIndexMid = Scalar::all(0);
+            aModelIndexLong = Scalar::all(0);
+            nNextShortUpdate = Scalar::all(0);
+            nNextMidUpdate = Scalar::all(0);
+            nNextLongUpdate = Scalar::all(0);
+        }
     }
 
     virtual int getHistory() const { return history; }
@@ -180,7 +227,19 @@ public:
     virtual void setDist2Threshold(double _dist2Threshold) { fTb = (float)_dist2Threshold; }
 
     virtual bool getDetectShadows() const { return bShadowDetection; }
-    virtual void setDetectShadows(bool detectshadows) { bShadowDetection = detectshadows; }
+    virtual void setDetectShadows(bool detectshadows)
+    {
+        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+            return;
+        bShadowDetection = detectshadows;
+#ifdef HAVE_OPENCL
+        if (!kernel_apply.empty())
+        {
+            create_ocl_apply_kernel();
+            CV_Assert( !kernel_apply.empty() );
+        }
+#endif
+    }
 
     virtual int getShadowValue() const { return nShadowDetection; }
     virtual void setShadowValue(int value) { nShadowDetection = (uchar)value; }
@@ -256,7 +315,29 @@ protected:
     Mat nNextMidUpdate;
     Mat nNextLongUpdate;
 
+#ifdef HAVE_OPENCL
+    mutable bool opencl_ON;
+
+    UMat u_flag;
+    UMat u_sample;
+    UMat u_aModelIndexShort;
+    UMat u_aModelIndexMid;
+    UMat u_aModelIndexLong;
+    UMat u_nNextShortUpdate;
+    UMat u_nNextMidUpdate;
+    UMat u_nNextLongUpdate;
+
+    mutable ocl::Kernel kernel_apply;
+    mutable ocl::Kernel kernel_getBg;
+#endif
+
     String name_;
+
+#ifdef HAVE_OPENCL
+    bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
+    bool ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate=-1);
+    void create_ocl_apply_kernel();
+#endif
 };
 
 CV_INLINE void
@@ -328,7 +409,6 @@ CV_INLINE int
     include=0;//do we include this pixel into background model?
 
     int ndata=nchannels+1;
-//	float k;
     // now increase the probability for each pixel
     for (int n = 0; n < m_nN*3; n++)
     {
@@ -546,18 +626,132 @@ public:
     uchar m_nShadowDetection;
 };
 
+#ifdef HAVE_OPENCL
+bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate)
+{
+    bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
+    if( needToInitialize )
+        initialize(_image.size(), _image.type());
+
+    ++nframes;
+    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
+    CV_Assert(learningRate >= 0);
+
+    _fgmask.create(_image.size(), CV_8U);
+    UMat fgmask = _fgmask.getUMat();
+
+    UMat frame = _image.getUMat();
+
+    //recalculate update rates - in case alpha is changed
+    // calculate update parameters (using alpha)
+    int Kshort,Kmid,Klong;
+    //approximate exponential learning curve
+    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+
+    //refresh rates
+    int nShortUpdate = (Kshort/nN)+1;
+    int nMidUpdate = (Kmid/nN)+1;
+    int nLongUpdate = (Klong/nN)+1;
+
+    int idxArg = 0;
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadOnly(frame));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadOnly(u_nNextLongUpdate));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadOnly(u_nNextMidUpdate));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadOnly(u_nNextShortUpdate));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_aModelIndexLong));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_aModelIndexMid));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_aModelIndexShort));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_flag));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_sample));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(fgmask));
+
+    idxArg = kernel_apply.set(idxArg, nLongCounter);
+    idxArg = kernel_apply.set(idxArg, nMidCounter);
+    idxArg = kernel_apply.set(idxArg, nShortCounter);
+    idxArg = kernel_apply.set(idxArg, fTb);
+    idxArg = kernel_apply.set(idxArg, nkNN);
+    idxArg = kernel_apply.set(idxArg, fTau);
+    if (bShadowDetection)
+        kernel_apply.set(idxArg, nShadowDetection);
+
+    size_t globalsize[2] = {(size_t)frame.cols, (size_t)frame.rows};
+    if(!kernel_apply.run(2, globalsize, NULL, true))
+        return false;
+
+    nShortCounter++;//0,1,...,nShortUpdate-1
+    nMidCounter++;
+    nLongCounter++;
+    if (nShortCounter >= nShortUpdate)
+    {
+        nShortCounter = 0;
+        randu(u_nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
+    }
+    if (nMidCounter >= nMidUpdate)
+    {
+        nMidCounter = 0;
+        randu(u_nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+    }
+    if (nLongCounter >= nLongUpdate)
+    {
+        nLongCounter = 0;
+        randu(u_nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+    }
+    return true;
+}
+
+bool BackgroundSubtractorKNNImpl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
+{
+    _backgroundImage.create(frameSize, frameType);
+    UMat dst = _backgroundImage.getUMat();
+
+    int idxArg = 0;
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_flag));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_sample));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalsize[2] = {(size_t)dst.cols, (size_t)dst.rows};
+
+    return kernel_getBg.run(2, globalsize, NULL, false);
+}
+
+void BackgroundSubtractorKNNImpl::create_ocl_apply_kernel()
+{
+    int nchannels = CV_MAT_CN(frameType);
+    String opts = format("-D CN=%d -D NSAMPLES=%d%s", nchannels, nN, bShadowDetection ? " -D SHADOW_DETECT" : "");
+    kernel_apply.create("knn_kernel", ocl::video::bgfg_knn_oclsrc, opts);
+}
+
+#endif
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     CV_INSTRUMENT_REGION()
 
-    Mat image = _image.getMat();
-    bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
+    {
+#ifndef __APPLE__
+        CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel() || _image.channels() == 1),
+                   ocl_apply(_image, _fgmask, learningRate))
+#else
+        CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel()),
+                   ocl_apply(_image, _fgmask, learningRate))
+#endif
+
+        opencl_ON = false;
+        nframes = 0;
+    }
+#endif
+
+    bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
     if( needToInitialize )
-        initialize(image.size(), image.type());
+        initialize(_image.size(), _image.type());
 
+    Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
@@ -621,6 +815,15 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
     CV_INSTRUMENT_REGION()
+
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
+    {
+        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
+
+        opencl_ON = false;
+    }
+#endif
 
     int nchannels = CV_MAT_CN(frameType);
     //CV_Assert( nchannels == 3 );
