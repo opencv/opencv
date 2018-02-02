@@ -82,7 +82,7 @@ createTable( int numangle, double min_theta, double theta_step,
 
 static void
 findLocalMaximums( int numrho, int numangle, int threshold,
-                   const int *accum, std::vector<int> sort_buf )
+                   const int *accum, std::vector<int>& sort_buf )
 {
     for(int r = 0; r < numrho; r++ )
         for(int n = 0; n < numangle; n++ )
