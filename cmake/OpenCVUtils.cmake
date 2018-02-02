@@ -116,15 +116,36 @@ macro(_ocv_fix_target target_var)
   endif()
 endmacro()
 
-function(ocv_is_opencv_directory result_var dir)
-  get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-  if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
-      OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
-      OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
-    set(${result_var} 1 PARENT_SCOPE)
-  else()
-    set(${result_var} 0 PARENT_SCOPE)
+
+# check if "sub" (file or dir) is below "dir"
+function(is_subdir res dir sub )
+  get_filename_component(dir "${dir}" ABSOLUTE)
+  get_filename_component(sub "${sub}" ABSOLUTE)
+  file(TO_CMAKE_PATH "${dir}" dir)
+  file(TO_CMAKE_PATH "${sub}" sub)
+  set(dir "${dir}/")
+  string(LENGTH "${dir}" len)
+  string(LENGTH "${sub}" len_sub)
+  if(NOT len GREATER len_sub)
+    string(SUBSTRING "${sub}" 0 ${len} prefix)
   endif()
+  if(prefix AND prefix STREQUAL dir)
+    set(${res} TRUE PARENT_SCOPE)
+  else()
+    set(${res} FALSE PARENT_SCOPE)
+  endif()
+endfunction()
+
+
+function(ocv_is_opencv_directory result_var dir)
+  set(result FALSE)
+  foreach(parent ${OpenCV_SOURCE_DIR} ${OpenCV_BINARY_DIR} ${OPENCV_EXTRA_MODULES_PATH})
+    is_subdir(result "${parent}" "${dir}")
+    if(result)
+      break()
+    endif()
+  endforeach()
+  set(${result_var} ${result} PARENT_SCOPE)
 endfunction()
 
 
@@ -688,7 +709,7 @@ endif() # NOT DEFINED CMAKE_ARGC
 #   EXCLUSIVE: break after first successful condition
 #
 # Usage:
-#   ocv_build_features_string(out [EXLUSIVE] [IF feature THEN title] ... [ELSE title])
+#   ocv_build_features_string(out [EXCLUSIVE] [IF feature THEN title] ... [ELSE title])
 #
 function(ocv_build_features_string out)
   set(result)
@@ -807,6 +828,23 @@ macro(ocv_list_pop_front LST VAR)
   endif()
 endmacro()
 
+# Get list of duplicates in the list of input items.
+# ocv_get_duplicates(<output list> <element> [<element> ...])
+function(ocv_get_duplicates res)
+  if(ARGC LESS 2)
+    message(FATAL_ERROR "Invalid call to ocv_get_duplicates")
+  endif()
+  set(lst ${ARGN})
+  list(SORT lst)
+  set(prev_item)
+  foreach(item ${lst})
+    if(item STREQUAL prev_item)
+      list(APPEND dups ${item})
+    endif()
+    set(prev_item ${item})
+  endforeach()
+  set(${res} ${dups} PARENT_SCOPE)
+endfunction()
 
 # simple regex escaping routine (does not cover all cases!!!)
 macro(ocv_regex_escape var regex)
