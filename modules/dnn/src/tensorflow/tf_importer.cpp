@@ -1119,21 +1119,21 @@ void TFImporter::populateNet(Net dstNet)
             // input: "Slice/begin"
             // input: "Slice/size"
             CV_Assert(layer.input_size() == 3);
+            Mat begins = getTensorContent(getConstBlob(layer, value_id, 1));
+            Mat sizes = getTensorContent(getConstBlob(layer, value_id, 2));
+            CV_Assert(!begins.empty(), !sizes.empty(), begins.type() == CV_32SC1,
+                      sizes.type() == CV_32SC1);
 
-            const tensorflow::TensorProto begins = getConstBlob(layer, value_id, 1);
-            const tensorflow::TensorProto sizes = getConstBlob(layer, value_id, 2);
-            std::string beginsData = begins.tensor_content();
-            std::string sizesData = sizes.tensor_content();
-            CV_Assert(begins.dtype() == tensorflow::DT_INT32);
-            CV_Assert(sizes.dtype() == tensorflow::DT_INT32);
-            CV_Assert(!beginsData.empty());
-            CV_Assert(!sizesData.empty());
-            CV_Assert(beginsData.size() == sizesData.size());
-
-            layerParams.set("begin", DictValue::arrayInt((int*)beginsData.c_str(),
-                                                         beginsData.size() / 4));
-            layerParams.set("size", DictValue::arrayInt((int*)sizesData.c_str(),
-                                                        sizesData.size() / 4));
+            if (begins.total() == 4)
+            {
+                // Perhabs, we have an NHWC order. Swap it to NCHW.
+                std::swap(*begins.ptr<int32_t>(0, 2), *begins.ptr<int32_t>(0, 3));
+                std::swap(*begins.ptr<int32_t>(0, 1), *begins.ptr<int32_t>(0, 2));
+                std::swap(*sizes.ptr<int32_t>(0, 2), *sizes.ptr<int32_t>(0, 3));
+                std::swap(*sizes.ptr<int32_t>(0, 1), *sizes.ptr<int32_t>(0, 2));
+            }
+            layerParams.set("begin", DictValue::arrayInt((int*)begins.data, begins.total()));
+            layerParams.set("size", DictValue::arrayInt((int*)sizes.data, sizes.total()));
 
             int id = dstNet.addLayer(name, "Slice", layerParams);
             layer_id[name] = id;
@@ -1411,23 +1411,17 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("clip", getLayerAttr(layer, "clip").b());
             if (hasLayerAttr(layer, "offset"))
                 layerParams.set("offset", getLayerAttr(layer, "offset").f());
-            if (hasLayerAttr(layer, "variance"))
+
+            const std::string paramNames[] = {"variance", "aspect_ratio", "scales",
+                                              "width", "height"};
+            for (int i = 0; i < 5; ++i)
             {
-                Mat variance = getTensorContent(getLayerAttr(layer, "variance").tensor());
-                layerParams.set("variance",
-                                DictValue::arrayReal<float*>((float*)variance.data, variance.total()));
-            }
-            if (hasLayerAttr(layer, "aspect_ratio"))
-            {
-                Mat aspectRatios = getTensorContent(getLayerAttr(layer, "aspect_ratio").tensor());
-                layerParams.set("aspect_ratio",
-                               DictValue::arrayReal<float*>((float*)aspectRatios.data, aspectRatios.total()));
-            }
-            if (hasLayerAttr(layer, "scales"))
-            {
-                Mat scales = getTensorContent(getLayerAttr(layer, "scales").tensor());
-                layerParams.set("scales",
-                               DictValue::arrayReal<float*>((float*)scales.data, scales.total()));
+                if (hasLayerAttr(layer, paramNames[i]))
+                {
+                    Mat values = getTensorContent(getLayerAttr(layer, paramNames[i]).tensor());
+                    layerParams.set(paramNames[i],
+                                    DictValue::arrayReal<float*>((float*)values.data, values.total()));
+                }
             }
             int id = dstNet.addLayer(name, "PriorBox", layerParams);
             layer_id[name] = id;

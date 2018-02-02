@@ -2076,6 +2076,48 @@ TEST(Calib3d_StereoCalibrate_C, regression) { CV_StereoCalibrationTest_C test; t
 TEST(Calib3d_StereoCalibrate_CPP, regression) { CV_StereoCalibrationTest_CPP test; test.safe_run(); }
 TEST(Calib3d_StereoCalibrateCorner, regression) { CV_StereoCalibrationCornerTest test; test.safe_run(); }
 
+TEST(Calib3d_StereoCalibrate_CPP, extended)
+{
+    cvtest::TS* ts = cvtest::TS::ptr();
+    String filepath = cv::format("%scv/stereo/case%d/", ts->get_data_path().c_str(), 1 );
+
+    Mat left = imread(filepath+"left01.png");
+    Mat right = imread(filepath+"right01.png");
+    if(left.empty() || right.empty())
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
+        return;
+    }
+
+    vector<vector<Point2f> > imgpt1(1), imgpt2(1);
+    vector<vector<Point3f> > objpt(1);
+    Size patternSize(9, 6), imageSize(640, 480);
+    bool found1 = findChessboardCorners(left, patternSize, imgpt1[0]);
+    bool found2 = findChessboardCorners(right, patternSize, imgpt2[0]);
+
+    if(!found1 || !found2)
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+        return;
+    }
+
+    for( int j = 0; j < patternSize.width*patternSize.height; j++ )
+        objpt[0].push_back(Point3f((float)(j%patternSize.width), (float)(j/patternSize.width), 0.f));
+
+    Mat K1, K2, c1, c2, R, T, E, F, err;
+    int flags = 0;
+    double res0 = stereoCalibrate( objpt, imgpt1, imgpt2,
+                    K1, c1, K2, c2,
+                    imageSize, R, T, E, F, err, flags);
+
+    flags = CALIB_USE_EXTRINSIC_GUESS;
+    double res1 = stereoCalibrate( objpt, imgpt1, imgpt2,
+                    K1, c1, K2, c2,
+                    imageSize, R, T, E, F, err, flags);
+    EXPECT_LE(res1, res0);
+    EXPECT_TRUE(err.total() == 2);
+}
+
 TEST(Calib3d_Triangulate, accuracy)
 {
     // the testcase from http://code.opencv.org/issues/4334

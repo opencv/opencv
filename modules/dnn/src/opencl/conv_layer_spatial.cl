@@ -55,6 +55,9 @@
 #elif defined(FUSED_CONV_POWER)
 #define ACTIVATION_RELU_FUNCTION(x, c) pow(x, power)
 #define NEGATIVE_SLOPE_ARG Dtype power,
+#elif defined(FUSED_CONV_TANH)
+#define ACTIVATION_RELU_FUNCTION(x, c) tanh(x)
+#define NEGATIVE_SLOPE_ARG
 #else
 #define ACTIVATION_RELU_FUNCTION(x, c) (x)
 #define NEGATIVE_SLOPE_ARG
