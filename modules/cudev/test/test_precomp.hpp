@@ -46,6 +46,7 @@
 
 #include "opencv2/cudev.hpp"
 
+#define CV_TEST_SKIP_NAMESPACE_CHECK
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
