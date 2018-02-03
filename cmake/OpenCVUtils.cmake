@@ -1238,7 +1238,7 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
         endif()
         if (TARGET ${dep})
           get_target_property(_type ${dep} TYPE)
-          if(_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS)
+          if(_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS OR _type STREQUAL "INTERFACE_LIBRARY")
             # nothing
           else()
             get_target_property(_output ${dep} IMPORTED_LOCATION)
