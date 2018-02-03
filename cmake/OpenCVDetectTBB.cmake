@@ -71,6 +71,11 @@ function(ocv_tbb_env_guess _found)
       IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
       INTERFACE_INCLUDE_DIRECTORIES "${TBB_ENV_INCLUDE}"
     )
+    # workaround: system TBB library is used for linking instead of provided
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      get_filename_component(_dir "${TBB_ENV_LIB}" DIRECTORY)
+      set_target_properties(tbb PROPERTIES INTERFACE_LINK_LIBRARIES "-L${_dir}")
+    endif()
     message(STATUS "Found TBB (env): ${TBB_ENV_LIB}")
     set(${_found} TRUE PARENT_SCOPE)
   endif()
