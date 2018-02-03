@@ -69,7 +69,7 @@ struct hough_cmp_gt
 };
 
 static void
-createTable( int numangle, double min_theta, double theta_step,
+createTrigTable( int numangle, double min_theta, double theta_step,
              float irho, float *tabSin, float *tabCos )
 {
     float ang = static_cast<float>(min_theta);
@@ -160,8 +160,8 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     float *tabSin = _tabSin, *tabCos = _tabCos;
 
     // create sin and cos table
-    createTable( numangle, min_theta, theta,
-                 irho, tabSin, tabCos );
+    createTrigTable( numangle, min_theta, theta,
+                     irho, tabSin, tabCos );
 
     // stage 1. fill accumulator
     for( i = 0; i < height; i++ )
@@ -927,8 +927,8 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
                 float *tabSin = _tabSin, *tabCos = _tabCos;
 
                 // create sin and cos table
-                createTable( numangle, min_theta, theta_step,
-                             irho, tabSin, tabCos );
+                createTrigTable( numangle, min_theta, theta_step,
+                                 irho, tabSin, tabCos );
 
                 // stage 1. fill accumlator
                 for( i = 0; i < (int)point.size(); i++ )
