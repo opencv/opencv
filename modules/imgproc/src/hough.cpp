@@ -70,7 +70,7 @@ struct hough_cmp_gt
 
 static void
 createTrigTable( int numangle, double min_theta, double theta_step,
-             float irho, float *tabSin, float *tabCos )
+                 float irho, float *tabSin, float *tabCos )
 {
     float ang = static_cast<float>(min_theta);
     for(int n = 0; n < numangle; ang += (float)theta_step, n++ )
@@ -902,78 +902,69 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
                          double min_theta, double max_theta, double theta_step )
 {
     std::vector<Vec3d> lines;
-    if( (_point.type() == CV_32FC2) || (_point.type() == CV_32SC2) )
-    {
-        std::vector<Point2f> point;
-        _point.copyTo(point);
-        if( lines_max > 0 )
-        {
-            if( ((max_rho   - min_rho)   > 0) &&
-                ((max_theta - min_theta) > 0) &&
-                ((rho_step   > 0))            &&
-                ((theta_step > 0)) )
-            {
-                int i;
-                float irho = 1 / (float)rho_step;
-                float irho_min = ((float)min_rho * irho);
-                int numangle = cvRound((max_theta - min_theta) / theta_step);
-                int numrho = cvRound((max_rho - min_rho + 1) / rho_step);
+    std::vector<Point2f> point;
+    _point.copyTo(point);
 
-                Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
-                std::vector<int> _sort_buf;
-                AutoBuffer<float> _tabSin(numangle);
-                AutoBuffer<float> _tabCos(numangle);
-                int *accum = _accum.ptr<int>();
-                float *tabSin = _tabSin, *tabCos = _tabCos;
-
-                // create sin and cos table
-                createTrigTable( numangle, min_theta, theta_step,
-                                 irho, tabSin, tabCos );
-
-                // stage 1. fill accumlator
-                for( i = 0; i < (int)point.size(); i++ )
-                    for(int n = 0; n < numangle; n++ )
-                    {
-                        int r = cvRound( point.at(i).x  * tabCos[n] + point.at(i).y * tabSin[n] - irho_min);
-                        accum[(n+1) * (numrho+2) + r+1]++;
-                    }
-
-                // stage 2. find local maximums
-                findLocalMaximums( numrho, numangle, threshold, accum, _sort_buf );
-
-                // stage 3. sort the detected lines by accumulator value
-                std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));
-
-                // stage 4. store the first min(total,linesMax) lines to the output buffer
-                lines_max = std::min(lines_max, (int)_sort_buf.size());
-                double scale = 1./(numrho+2);
-                for( i = 0; i < lines_max; i++ )
-                {
-                    LinePolar line;
-                    int idx = _sort_buf[i];
-                    int n = cvFloor(idx*scale) - 1;
-                    int r = idx - (n+1)*(numrho+2) - 1;
-                    line.rho = static_cast<float>(min_rho) + r * (float)rho_step;
-                    line.angle = static_cast<float>(min_theta) + n * (float)theta_step;
-                    lines.push_back(Vec3d((double)accum[idx], (double)line.rho, (double)line.angle));
-                }
-
-                Mat(lines).copyTo(_lines);
-            }
-            else
-            {
-                CV_Error( Error::StsBadArg, "max must be greater than min, and step must be greater than 0" );
-            }
-        }
-        else
-        {
-            CV_Error( Error::StsBadArg, "lines_max must be greater than 0" );
-        }
+    CV_Assert( _point.type() == CV_32FC2 || _point.type() == CV_32SC2 );
+    if( lines_max <= 0 ) {
+        CV_Error( Error::StsBadArg, "lines_max must be greater than 0" );
     }
-    else
-    {
-        CV_Assert( _point.type() == CV_32FC2 || _point.type() == CV_32SC2 );
+    if( threshold < 0) {
+        CV_Error( Error::StsBadArg, "threshold must be greater than 0" );
     }
+    if( ((max_rho - min_rho) <= 0) || ((max_theta - min_theta) <= 0) ) {
+        CV_Error( Error::StsBadArg, "max must be greater than min" );
+    }
+    if( ((rho_step <= 0)) || ((theta_step <= 0)) ) {
+        CV_Error( Error::StsBadArg, "step must be greater than 0" );
+    }
+
+    int i;
+    float irho = 1 / (float)rho_step;
+    float irho_min = ((float)min_rho * irho);
+    int numangle = cvRound((max_theta - min_theta) / theta_step);
+    int numrho = cvRound((max_rho - min_rho + 1) / rho_step);
+
+    Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
+    std::vector<int> _sort_buf;
+    AutoBuffer<float> _tabSin(numangle);
+    AutoBuffer<float> _tabCos(numangle);
+    int *accum = _accum.ptr<int>();
+    float *tabSin = _tabSin, *tabCos = _tabCos;
+
+    // create sin and cos table
+    createTrigTable( numangle, min_theta, theta_step,
+                     irho, tabSin, tabCos );
+
+    // stage 1. fill accumlator
+    for( i = 0; i < (int)point.size(); i++ )
+        for(int n = 0; n < numangle; n++ )
+        {
+            int r = cvRound( point.at(i).x  * tabCos[n] + point.at(i).y * tabSin[n] - irho_min);
+            accum[(n+1) * (numrho+2) + r+1]++;
+        }
+
+    // stage 2. find local maximums
+    findLocalMaximums( numrho, numangle, threshold, accum, _sort_buf );
+
+    // stage 3. sort the detected lines by accumulator value
+    std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));
+
+    // stage 4. store the first min(total,linesMax) lines to the output buffer
+    lines_max = std::min(lines_max, (int)_sort_buf.size());
+    double scale = 1./(numrho+2);
+    for( i = 0; i < lines_max; i++ )
+    {
+        LinePolar line;
+        int idx = _sort_buf[i];
+        int n = cvFloor(idx*scale) - 1;
+        int r = idx - (n+1)*(numrho+2) - 1;
+        line.rho = static_cast<float>(min_rho) + r * (float)rho_step;
+        line.angle = static_cast<float>(min_theta) + n * (float)theta_step;
+        lines.push_back(Vec3d((double)accum[idx], (double)line.rho, (double)line.angle));
+    }
+
+    Mat(lines).copyTo(_lines);
 }
 
 /****************************************************************************************\

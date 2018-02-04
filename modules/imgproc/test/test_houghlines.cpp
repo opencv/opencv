@@ -221,9 +221,10 @@ void BaseHoughLineTest::run_test(int type)
 
 void HoughLinesPointSetTest::run_test(void)
 {
-    Mat lines;
-    vector<Point2f> point;
-    vector<Vec3d> line_polar;
+    Mat lines_f, lines_i;
+    vector<Point2f> pointf;
+    vector<Point2i> pointi;
+    vector<Vec3d> line_polar_f, line_polar_i;
     const float Points[20][2] = {
     { 0.0f,   369.0f }, { 10.0f,  364.0f }, { 20.0f,  358.0f }, { 30.0f,  352.0f },
     { 40.0f,  346.0f }, { 50.0f,  341.0f }, { 60.0f,  335.0f }, { 70.0f,  329.0f },
@@ -232,18 +233,34 @@ void HoughLinesPointSetTest::run_test(void)
     { 160.0f, 277.0f }, { 170.0f, 271.0f }, { 180.0f, 266.0f }, { 190.0f, 260.0f }
     };
 
+    // Float
     for (int i = 0; i < 20; i++)
     {
-        point.push_back(Point2f(Points[i][0],Points[i][1]));
+        pointf.push_back(Point2f(Points[i][0],Points[i][1]));
     }
 
-    HoughLinesPointSet(point, lines, 20, 1,
+    HoughLinesPointSet(pointf, lines_f, 20, 1,
                        rhoMin, rhoMax, rhoStep,
                        thetaMin, thetaMax, thetaStep);
 
-    lines.copyTo(line_polar);
-    EXPECT_EQ((int)(line_polar.at(0).val[1] * 100000.0f), (int)(Rho * 100000.0f));
-    EXPECT_EQ((int)(line_polar.at(0).val[2] * 100000.0f), (int)(Theta * 100000.0f));
+    lines_f.copyTo( line_polar_f );
+
+    // Integer
+    for( int i = 0; i < 20; i++ )
+    {
+        pointi.push_back( Point2i( (int)Points[i][0], (int)Points[i][1] ) );
+    }
+
+    HoughLinesPointSet( pointi, lines_i, 20, 1,
+                        rhoMin, rhoMax, rhoStep,
+                        thetaMin, thetaMax, thetaStep );
+
+    lines_i.copyTo( line_polar_i );
+
+    EXPECT_EQ((int)(line_polar_f.at(0).val[1] * 100000.0f), (int)(Rho * 100000.0f));
+    EXPECT_EQ((int)(line_polar_f.at(0).val[2] * 100000.0f), (int)(Theta * 100000.0f));
+    EXPECT_EQ((int)(line_polar_i.at(0).val[1] * 100000.0f), (int)(Rho * 100000.0f));
+    EXPECT_EQ((int)(line_polar_i.at(0).val[2] * 100000.0f), (int)(Theta * 100000.0f));
 }
 
 TEST_P(StandartHoughLinesTest, regression)
