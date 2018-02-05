@@ -19,6 +19,8 @@ typedef void* gzFile;
 
 //=====================================================================================
 
+static const size_t PARSER_BASE64_BUFFER_SIZE = 1024U * 1024U / 8U;
+
 namespace base64 {
 
 namespace fs {
@@ -117,6 +119,9 @@ private:
         CV_Error( CV_StsError, "The file storage is opened for reading" ); \
 }
 
+#define CV_PARSE_ERROR( errmsg )                                    \
+    icvParseError( fs, CV_Func, (errmsg), __FILE__, __LINE__ )
+
 typedef struct CvGenericHash
 {
     CV_SET_FIELDS()
@@ -190,7 +195,45 @@ typedef struct CvFileStorage
 }
 CvFileStorage;
 
-//============================================================================================
+/****************************************************************************************\
+*                            Common macros and type definitions                          *
+\****************************************************************************************/
+
+#define cv_isprint(c)     ((uchar)(c) >= (uchar)' ')
+#define cv_isprint_or_tab(c)  ((uchar)(c) >= (uchar)' ' || (c) == '\t')
+
+inline bool cv_isalnum(char c)
+{
+    return ('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+inline bool cv_isalpha(char c)
+{
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+inline bool cv_isdigit(char c)
+{
+    return '0' <= c && c <= '9';
+}
+
+inline bool cv_isspace(char c)
+{
+    return (9 <= c && c <= 13) || c == ' ';
+}
+
+inline char* cv_skip_BOM(char* ptr)
+{
+    if((uchar)ptr[0] == 0xef && (uchar)ptr[1] == 0xbb && (uchar)ptr[2] == 0xbf) //UTF-8 BOM
+    {
+      return ptr + 3;
+    }
+    return ptr;
+}
+
+char* icv_itoa( int _val, char* buffer, int /*radix*/ );
+double icv_strtod( CvFileStorage* fs, char* ptr, char** endptr );
+char* icvDoubleToString( char* buf, double value );
 
 void icvPuts( CvFileStorage* fs, const char* str );
 char* icvGets( CvFileStorage* fs, char* str, int maxCount );
@@ -198,8 +241,25 @@ int icvEof( CvFileStorage* fs );
 void icvCloseFile( CvFileStorage* fs );
 void icvRewind( CvFileStorage* fs );
 char* icvFSFlush( CvFileStorage* fs );
+void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection );
+char* icvFSResizeWriteBuffer( CvFileStorage* fs, char* ptr, int len );
 int icvCalcStructSize( const char* dt, int initial_size );
+void icvParseError( CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line );
 void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state );
 void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_type_to_base64 = false );
+
+
+//
+// YML
+//
+void icvYMLParse( CvFileStorage* fs );
+void icvYMLWrite( CvFileStorage* fs, const char* key, const char* data );
+void icvYMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name CV_DEFAULT(0));
+void icvYMLEndWriteStruct( CvFileStorage* fs );
+void icvYMLStartNextStream( CvFileStorage* fs );
+void icvYMLWriteInt( CvFileStorage* fs, const char* key, int value );
+void icvYMLWriteReal( CvFileStorage* fs, const char* key, double value );
+void icvYMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
+void icvYMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
 
 #endif // SRC_PERSISTENCE_HPP
