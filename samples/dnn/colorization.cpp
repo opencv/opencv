@@ -116,6 +116,8 @@ int main(int argc, char **argv)
     merge(chn, 3, lab);
     cvtColor(lab, color, COLOR_Lab2BGR);
 
+    namedWindow("color", WINDOW_NORMAL);
+    namedWindow("original", WINDOW_NORMAL);
     imshow("color", color);
     imshow("original", img);
     waitKey();
