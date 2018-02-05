@@ -304,7 +304,7 @@ inline cv::viz::Color cv::viz::Color::rose()       { return Color(128,   0, 255)
 inline cv::viz::Color cv::viz::Color::azure()      { return Color(255, 128,   0); }
 inline cv::viz::Color cv::viz::Color::lime()       { return Color(0,   255, 191); }
 inline cv::viz::Color cv::viz::Color::gold()       { return Color(0,   215, 255); }
-inline cv::viz::Color cv::viz::Color::brown()      { return Color(0,    75, 150); }
+inline cv::viz::Color cv::viz::Color::brown()      { return Color(42,    42, 165); }
 inline cv::viz::Color cv::viz::Color::orange()     { return Color(0,   165, 255); }
 inline cv::viz::Color cv::viz::Color::chartreuse() { return Color(0,   255, 128); }
 inline cv::viz::Color cv::viz::Color::orange_red() { return Color(0,    69, 255); }
