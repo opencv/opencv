@@ -1,14 +1,14 @@
-# This file is part of OpenCV project.
-# It is subject to the license terms in the LICENSE file found in the top-level directory
+# This file is a part of OpenCV project.
+# It is a subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
 #
 # Copyright (C) 2018, Intel Corporation, all rights reserved.
 # Third party copyrights are property of their respective owners.
 #
-# Use this script to get a text graph representation (.pbtxt) of SSD-based
+# Use this script to get the text graph representation (.pbtxt) of SSD-based
 # deep learning network trained in TensorFlow Object Detection API.
-# Then you can import it with a binary frozen graph (.pb) using readNetFromTensorflow function.
-# See details and examples on a wiki page https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
+# Then you can import it with a binary frozen graph (.pb) using readNetFromTensorflow() function.
+# See details and examples on the following wiki page: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
 import tensorflow as tf
 import argparse
 from math import sqrt
