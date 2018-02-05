@@ -942,4 +942,3 @@ void icvYMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment
         ptr = icvFSFlush( fs );
     }
 }
-

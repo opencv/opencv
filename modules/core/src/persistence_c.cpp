@@ -1473,5 +1473,3 @@ cvSave( const char* filename, const void* struct_ptr,
     cvWrite( fs, name.c_str(), struct_ptr, attributes );
     cvReleaseFileStorage( &fs );
 }
-
-

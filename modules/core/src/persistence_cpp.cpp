@@ -667,4 +667,3 @@ void read(const FileNode& node, std::string& value, const std::string& default_v
 }
 
 } // cv::
-

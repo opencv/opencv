@@ -1307,4 +1307,3 @@ CvType mat_type( CV_TYPE_NAME_MAT, icvIsMat, (CvReleaseFunc)cvReleaseMat,
 
 CvType matnd_type( CV_TYPE_NAME_MATND, icvIsMatND, (CvReleaseFunc)cvReleaseMatND,
                    icvReadMatND, icvWriteMatND, (CvCloneFunc)cvCloneMatND );
-
