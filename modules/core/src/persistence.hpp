@@ -262,4 +262,19 @@ void icvYMLWriteReal( CvFileStorage* fs, const char* key, double value );
 void icvYMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
 void icvYMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
 
+//
+// JSON
+//
+void icvJSONParse( CvFileStorage* fs );
+void icvJSONWrite( CvFileStorage* fs, const char* key, const char* data );
+void icvJSONStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name CV_DEFAULT(0));
+void icvJSONEndWriteStruct( CvFileStorage* fs );
+void icvJSONStartNextStream( CvFileStorage* fs );
+void icvJSONWriteInt( CvFileStorage* fs, const char* key, int value );
+void icvJSONWriteReal( CvFileStorage* fs, const char* key, double value );
+void icvJSONWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
+void icvJSONWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
+
+
+
 #endif // SRC_PERSISTENCE_HPP
