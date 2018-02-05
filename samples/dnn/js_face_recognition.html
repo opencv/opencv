@@ -70,7 +70,7 @@ function recognize(face) {
 function loadModels(callback) {
   var utils = new Utils('');
   var proto = 'https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt';
-  var weights = 'https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel';
+  var weights = 'https://github.com/opencv/opencv_3rdparty/raw/19512576c112aa2c7b6328cb0e8d589a4a90a26d/res10_300x300_ssd_iter_140000_fp16.caffemodel';
   var recognModel = 'https://raw.githubusercontent.com/pyannote/pyannote-data/master/openface.nn4.small2.v1.t7';
   utils.createFileFromUrl('face_detector.prototxt', proto, () => {
     document.getElementById('status').innerHTML = 'Downloading face_detector.caffemodel';
