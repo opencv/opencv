@@ -191,20 +191,20 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     }
 }
 
-std::vector<Mat> imagesFromBlob(const cv::Mat& blob_)
+void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
 {
     CV_TRACE_FUNCTION();
 
     //A blob is a 4 dimensional matrix in floating point precision
-	//blob_[0] = nbOfInputs = nbOfImages
+	//blob_[0] = batchSize = nbOfImages
 	//blob_[1] = nbOfChannels
 	//blob_[2] = height 
 	//blob_[3] = width
-
     CV_Assert(blob_.depth() == CV_32F);
     CV_Assert(blob_.dims == 4);
 
-	std::vector<cv::Mat> images( blob_.size[0] );
+	images_.create(cv::Size(1, blob_.size[0]), blob_.depth());
+
 	for (int n = 0; n <  blob_.size[0]; ++n)
 	{
 		std::vector<Mat> vectorOfChannels(blob_.size[1]);
@@ -212,13 +212,8 @@ std::vector<Mat> imagesFromBlob(const cv::Mat& blob_)
 		{
 			vectorOfChannels[c] = getPlane(blob_, n, c);
 		}
-		cv::merge(vectorOfChannels, images[n]);
-		CV_Assert(images[n].channels() == blob_.size[1]);
-		CV_Assert(images[n].depth() == CV_32F);
+		cv::merge(vectorOfChannels, images_.getMat(n));
 	}
-
-	CV_Assert(images.size() == blob_.size[0]);
-    return images;
 }
 
 

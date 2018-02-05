@@ -733,15 +733,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
    /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
-    *  (std::vector<cv::Mat>). The number of channels per returned image equals the number of output in the
-	*  layer from which the blob_ was retrieved. The channels could be easily accessed with the cv::split() method.
-    *  The images are returned in floating point precision (CV_32F). They are neither mean added nor normalized.
-    *  @param blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
+    *  (std::vector<cv::Mat>). 
+    *  @param[in] blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
 	*  which you would like to extract the images.
-    *  @returns vector of 2D Mat containing the non normalized multi channels images extracted from the blob in
-    *  floating point precision (CV_32F).
+    *  @param[out] images_ array of 2D Mat containing the images extracted from the blob in floating point precision 
+	*  (CV_32F). They are non normalized neither mean added. The number of returned images equals the first dimension 
+	*  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
     */
-    CV_EXPORTS_W std::vector<Mat> imagesFromBlob(const cv::Mat& blob_);
+    CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single
