@@ -1,8 +1,17 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+
 #ifndef SRC_PERSISTENCE_HPP
 #define SRC_PERSISTENCE_HPP
 
 #include "opencv2/core/types_c.h"
 #include <deque>
+#include <deque>
+#include <sstream>
+#include <string>
+#include <iterator>
 
 #define USE_ZLIB 1
 #if USE_ZLIB
@@ -97,10 +106,12 @@ private:
 //=====================================================================================
 
 
+
 #define CV_YML_INDENT  3
 #define CV_XML_INDENT  2
 #define CV_YML_INDENT_FLOW  1
 #define CV_FS_MAX_LEN 4096
+#define CV_FS_MAX_FMT_PAIRS  128
 
 #define CV_FILE_STORAGE ('Y' + ('A' << 8) + ('M' << 16) + ('L' << 24))
 #define CV_IS_FILE_STORAGE(fs) ((fs) != 0 && (fs)->flags == CV_FILE_STORAGE)
@@ -195,6 +206,14 @@ typedef struct CvFileStorage
 }
 CvFileStorage;
 
+typedef struct CvFileMapNode
+{
+    CvFileNode value;
+    const CvStringHashNode* key;
+    struct CvFileMapNode* next;
+}
+CvFileMapNode;
+
 /****************************************************************************************\
 *                            Common macros and type definitions                          *
 \****************************************************************************************/
@@ -233,20 +252,31 @@ inline char* cv_skip_BOM(char* ptr)
 
 char* icv_itoa( int _val, char* buffer, int /*radix*/ );
 double icv_strtod( CvFileStorage* fs, char* ptr, char** endptr );
+char* icvFloatToString( char* buf, float value );
 char* icvDoubleToString( char* buf, double value );
 
+char icvTypeSymbol(int depth);
+void icvClose( CvFileStorage* fs, cv::String* out );
+void icvCloseFile( CvFileStorage* fs );
 void icvPuts( CvFileStorage* fs, const char* str );
 char* icvGets( CvFileStorage* fs, char* str, int maxCount );
 int icvEof( CvFileStorage* fs );
-void icvCloseFile( CvFileStorage* fs );
 void icvRewind( CvFileStorage* fs );
 char* icvFSFlush( CvFileStorage* fs );
 void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection );
 char* icvFSResizeWriteBuffer( CvFileStorage* fs, char* ptr, int len );
 int icvCalcStructSize( const char* dt, int initial_size );
+int icvCalcElemSize( const char* dt, int initial_size );
 void icvParseError( CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line );
+char* icvEncodeFormat( int elem_type, char* dt );
+int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len );
+int icvDecodeSimpleFormat( const char* dt );
+void icvWriteFileNode( CvFileStorage* fs, const char* name, const CvFileNode* node );
+void icvWriteCollection( CvFileStorage* fs, const CvFileNode* node );
 void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state );
+void make_write_struct_delayed( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name );
 void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_type_to_base64 = false );
+CvGenericHash* cvCreateMap( int flags, int header_size, int elem_size, CvMemStorage* storage, int start_tab_size );
 
 //
 // XML
