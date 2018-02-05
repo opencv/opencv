@@ -105,15 +105,11 @@ private:
 
 //=====================================================================================
 
-
-
-#define CV_YML_INDENT  3
-#define CV_XML_INDENT  2
-#define CV_YML_INDENT_FLOW  1
 #define CV_FS_MAX_LEN 4096
 #define CV_FS_MAX_FMT_PAIRS  128
 
 #define CV_FILE_STORAGE ('Y' + ('A' << 8) + ('M' << 16) + ('L' << 24))
+
 #define CV_IS_FILE_STORAGE(fs) ((fs) != 0 && (fs)->flags == CV_FILE_STORAGE)
 
 #define CV_CHECK_FILE_STORAGE(fs)                       \
@@ -325,7 +321,5 @@ void icvJSONWriteInt( CvFileStorage* fs, const char* key, int value );
 void icvJSONWriteReal( CvFileStorage* fs, const char* key, double value );
 void icvJSONWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
 void icvJSONWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
-
-
 
 #endif // SRC_PERSISTENCE_HPP

@@ -6,6 +6,7 @@
 #include "precomp.hpp"
 #include "persistence.hpp"
 
+#define CV_XML_INDENT  2
 #define CV_XML_INSIDE_COMMENT 1
 #define CV_XML_INSIDE_TAG 2
 #define CV_XML_INSIDE_DIRECTIVE 3

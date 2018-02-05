@@ -8,68 +8,20 @@
 
 namespace base64 {
 
-/* base64 */
-
 typedef uchar uint8_t;
-
-extern uint8_t const base64_padding;
-extern uint8_t const base64_mapping[65];
-extern uint8_t const base64_demapping[127];
-
-
-/* binary */
-
-template<typename _uint_t>      inline size_t to_binary(_uint_t       val, uchar * cur);
-template<>                      inline size_t to_binary(double        val, uchar * cur);
-template<>                      inline size_t to_binary(float         val, uchar * cur);
-template<typename _primitive_t> inline size_t to_binary(uchar const * val, uchar * cur);
-
-template<typename _uint_t>      inline size_t binary_to(uchar const * cur, _uint_t & val);
-template<>                      inline size_t binary_to(uchar const * cur, double  & val);
-template<>                      inline size_t binary_to(uchar const * cur, float   & val);
-template<typename _primitive_t> inline size_t binary_to(uchar const * cur, uchar   * val);
-
-class RawDataToBinaryConvertor;
-
-class BinaryToCvSeqConvertor;
-
-/* class */
-
-
-/* other */
-
-
-
-
-/* sample */
-
-void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt);
-
-} // base64::
-
-/****************************************************************************
- * Newly added for Base64
- *
- *
- ***************************************************************************/
-
-
-/****************************************************************************
- * constant
- ***************************************************************************/
 
 #if CHAR_BIT != 8
 #error "`char` should be 8 bit."
 #endif
 
-base64::uint8_t const base64::base64_mapping[] =
+uint8_t const base64_mapping[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789+/";
 
-base64::uint8_t const base64::base64_padding = '=';
+uint8_t const base64_padding = '=';
 
-base64::uint8_t const base64::base64_demapping[] = {
+uint8_t const base64_demapping[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0, 62,  0,  0,  0, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,  0,  0,
@@ -90,11 +42,7 @@ base64::uint8_t const base64::base64_demapping[] = {
  *    `````````````````````````````````````````````````````````````````````
  */
 
-/****************************************************************************
- * function
- ***************************************************************************/
-
-size_t base64::base64_encode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
+size_t base64_encode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
 {
     if (!src || !dst || !cnt)
         return 0;
@@ -144,7 +92,7 @@ size_t base64::base64_encode(uint8_t const * src, uint8_t * dst, size_t off, siz
     return static_cast<size_t>(dst_cur - dst_beg);
 }
 
-size_t base64::base64_encode(char const * src, char * dst, size_t off, size_t cnt)
+size_t base64_encode(char const * src, char * dst, size_t off, size_t cnt)
 {
     if (cnt == 0U)
         cnt = std::strlen(src);
@@ -158,7 +106,7 @@ size_t base64::base64_encode(char const * src, char * dst, size_t off, size_t cn
     );
 }
 
-size_t base64::base64_decode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
+size_t base64_decode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
 {
     /* check parameters */
     if (!src || !dst || !cnt)
@@ -195,7 +143,7 @@ size_t base64::base64_decode(uint8_t const * src, uint8_t * dst, size_t off, siz
     return size_t(dst_cur - dst_beg);
 }
 
-size_t base64::base64_decode(char const * src, char * dst, size_t off, size_t cnt)
+size_t base64_decode(char const * src, char * dst, size_t off, size_t cnt)
 {
     if (cnt == 0U)
         cnt = std::strlen(src);
@@ -209,7 +157,7 @@ size_t base64::base64_decode(char const * src, char * dst, size_t off, size_t cn
     );
 }
 
-bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
+bool base64_valid(uint8_t const * src, size_t off, size_t cnt)
 {
     /* check parameters */
     if (src == 0 || src + off == 0)
@@ -240,7 +188,7 @@ bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
     return true;
 }
 
-bool base64::base64_valid(char const * src, size_t off, size_t cnt)
+bool base64_valid(char const * src, size_t off, size_t cnt)
 {
     if (cnt == 0U)
         cnt = std::strlen(src);
@@ -248,24 +196,24 @@ bool base64::base64_valid(char const * src, size_t off, size_t cnt)
     return base64_valid(reinterpret_cast<uint8_t const *>(src), off, cnt);
 }
 
-size_t base64::base64_encode_buffer_size(size_t cnt, bool is_end_with_zero)
+size_t base64_encode_buffer_size(size_t cnt, bool is_end_with_zero)
 {
     size_t additional = static_cast<size_t>(is_end_with_zero == true);
     return (cnt + 2U) / 3U * 4U + additional;
 }
 
-size_t base64::base64_decode_buffer_size(size_t cnt, bool is_end_with_zero)
+size_t base64_decode_buffer_size(size_t cnt, bool is_end_with_zero)
 {
     size_t additional = static_cast<size_t>(is_end_with_zero == true);
     return cnt / 4U * 3U + additional;
 }
 
-size_t base64::base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with_zero)
+size_t base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with_zero)
 {
     return base64_decode_buffer_size(cnt, reinterpret_cast<uchar const *>(src), is_end_with_zero);
 }
 
-size_t base64::base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero)
+size_t base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero)
 {
     size_t padding_cnt = 0U;
     for (uchar const * ptr = src + cnt - 1U; *ptr == base64_padding; ptr--)
@@ -277,7 +225,7 @@ size_t base64::base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_
  * to_binary && binary_to
  ***************************************************************************/
 
-template<typename _uint_t> inline size_t base64::
+template<typename _uint_t> inline size_t
 to_binary(_uint_t val, uchar * cur)
 {
     size_t delta = CHAR_BIT;
@@ -289,28 +237,28 @@ to_binary(_uint_t val, uchar * cur)
     return sizeof(_uint_t);
 }
 
-template<> inline size_t base64::to_binary(double val, uchar * cur)
+template<> inline size_t to_binary(double val, uchar * cur)
 {
     Cv64suf bit64;
     bit64.f = val;
     return to_binary(bit64.u, cur);
 }
 
-template<> inline size_t base64::to_binary(float val, uchar * cur)
+template<> inline size_t to_binary(float val, uchar * cur)
 {
     Cv32suf bit32;
     bit32.f = val;
     return to_binary(bit32.u, cur);
 }
 
-template<typename _primitive_t> inline size_t base64::
+template<typename _primitive_t> inline size_t
 to_binary(uchar const * val, uchar * cur)
 {
     return to_binary<_primitive_t>(*reinterpret_cast<_primitive_t const *>(val), cur);
 }
 
 
-template<typename _uint_t> inline size_t base64::
+template<typename _uint_t> inline size_t
 binary_to(uchar const * cur, _uint_t & val)
 {
     val = static_cast<_uint_t>(0);
@@ -319,7 +267,7 @@ binary_to(uchar const * cur, _uint_t & val)
     return sizeof(_uint_t);
 }
 
-template<> inline size_t base64::binary_to(uchar const * cur, double & val)
+template<> inline size_t binary_to(uchar const * cur, double & val)
 {
     Cv64suf bit64;
     binary_to(cur, bit64.u);
@@ -327,7 +275,7 @@ template<> inline size_t base64::binary_to(uchar const * cur, double & val)
     return sizeof(val);
 }
 
-template<> inline size_t base64::binary_to(uchar const * cur, float & val)
+template<> inline size_t binary_to(uchar const * cur, float & val)
 {
     Cv32suf bit32;
     binary_to(cur, bit32.u);
@@ -335,7 +283,7 @@ template<> inline size_t base64::binary_to(uchar const * cur, float & val)
     return sizeof(val);
 }
 
-template<typename _primitive_t> inline size_t base64::
+template<typename _primitive_t> inline size_t
 binary_to(uchar const * cur, uchar * val)
 {
     return binary_to<_primitive_t>(cur, *reinterpret_cast<_primitive_t *>(val));
@@ -345,7 +293,7 @@ binary_to(uchar const * cur, uchar * val)
  * others
  ***************************************************************************/
 
-std::string base64::make_base64_header(const char * dt)
+std::string make_base64_header(const char * dt)
 {
     std::ostringstream oss;
     oss << dt   << ' ';
@@ -359,7 +307,7 @@ std::string base64::make_base64_header(const char * dt)
     return buffer;
 }
 
-bool base64::read_base64_header(std::vector<char> const & header, std::string & dt)
+bool read_base64_header(std::vector<char> const & header, std::string & dt)
 {
     std::istringstream iss(header.data());
     return !!(iss >> dt);//the "std::basic_ios::operator bool" differs between C++98 and C++11. The "double not" syntax is portable and covers both cases with equivalent meaning
@@ -369,7 +317,7 @@ bool base64::read_base64_header(std::vector<char> const & header, std::string & 
  * Parser
  ***************************************************************************/
 
-base64::Base64ContextParser::Base64ContextParser(uchar * buffer, size_t size)
+Base64ContextParser::Base64ContextParser(uchar * buffer, size_t size)
     : dst_cur(buffer)
     , dst_end(buffer + size)
     , base64_buffer(BUFFER_LEN)
@@ -383,15 +331,14 @@ base64::Base64ContextParser::Base64ContextParser(uchar * buffer, size_t size)
     src_end = src_beg + BUFFER_LEN;
 }
 
-base64::Base64ContextParser::~Base64ContextParser()
+Base64ContextParser::~Base64ContextParser()
 {
     /* encode the rest binary data to base64 buffer */
     if (src_cur != src_beg)
         flush();
 }
 
-base64::Base64ContextParser & base64::Base64ContextParser::
-read(const uchar * beg, const uchar * end)
+Base64ContextParser & Base64ContextParser::read(const uchar * beg, const uchar * end)
 {
     if (beg >= end)
         return *this;
@@ -414,7 +361,7 @@ read(const uchar * beg, const uchar * end)
     return *this;
 }
 
-bool base64::Base64ContextParser::flush()
+bool Base64ContextParser::flush()
 {
     if ( !base64_valid(src_beg, 0U, src_cur - src_beg) )
         return false;
@@ -450,7 +397,7 @@ bool base64::Base64ContextParser::flush()
  * - not safe for now
  * - move constructor may be needed if C++11
  */
-class base64::Base64ContextEmitter
+class Base64ContextEmitter
 {
 public:
     explicit Base64ContextEmitter(CvFileStorage * fs)
@@ -592,7 +539,7 @@ private:
 };
 
 
-class base64::RawDataToBinaryConvertor
+class RawDataToBinaryConvertor
 {
 public:
 
@@ -712,7 +659,7 @@ private:
     std::vector<elem_to_binary_t> to_binary_funcs;
 };
 
-class base64::BinaryToCvSeqConvertor
+class BinaryToCvSeqConvertor
 {
 public:
     BinaryToCvSeqConvertor(const void* src, int len, const char* dt)
@@ -888,19 +835,19 @@ private:
     std::vector<binary_to_filenode_t>::iterator functor_iter;
 };
 
+
 /****************************************************************************
- * Wapper
+ * Wrapper
  ***************************************************************************/
 
-
-base64::Base64Writer::Base64Writer(::CvFileStorage * fs)
+Base64Writer::Base64Writer(::CvFileStorage * fs)
     : emitter(new Base64ContextEmitter(fs))
     , data_type_string()
 {
     CV_CHECK_OUTPUT_FILE_STORAGE(fs);
 }
 
-void base64::Base64Writer::write(const void* _data, size_t len, const char* dt)
+void Base64Writer::write(const void* _data, size_t len, const char* dt)
 {
     check_dt(dt);
     RawDataToBinaryConvertor convertor(_data, static_cast<int>(len), data_type_string);
@@ -908,18 +855,18 @@ void base64::Base64Writer::write(const void* _data, size_t len, const char* dt)
 }
 
 template<typename _to_binary_convertor_t> inline
-void base64::Base64Writer::write(_to_binary_convertor_t & convertor, const char* dt)
+void Base64Writer::write(_to_binary_convertor_t & convertor, const char* dt)
 {
     check_dt(dt);
     emitter->write(convertor);
 }
 
-base64::Base64Writer::~Base64Writer()
+Base64Writer::~Base64Writer()
 {
     delete emitter;
 }
 
-void base64::Base64Writer::check_dt(const char* dt)
+void Base64Writer::check_dt(const char* dt)
 {
     if ( dt == 0 )
         CV_Error( CV_StsBadArg, "Invalid \'dt\'." );
@@ -937,7 +884,7 @@ void base64::Base64Writer::check_dt(const char* dt)
 }
 
 
-void base64::make_seq(void * binary, int elem_cnt, const char * dt, ::CvSeq & seq)
+void make_seq(void * binary, int elem_cnt, const char * dt, ::CvSeq & seq)
 {
     ::CvFileNode node;
     node.info = 0;
@@ -948,7 +895,13 @@ void base64::make_seq(void * binary, int elem_cnt, const char * dt, ::CvSeq & se
     }
 }
 
-void base64::cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt)
+} // base64::
+
+/****************************************************************************
+ * Interface
+ ***************************************************************************/
+
+CV_IMPL void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt)
 {
     CV_Assert(fs);
     CV_CHECK_OUTPUT_FILE_STORAGE(fs);
@@ -965,13 +918,4 @@ void base64::cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int le
     }
 
     fs->base64_writer->write(_data, len, dt);
-}
-
-/****************************************************************************
- * Interface
- ***************************************************************************/
-
-CV_IMPL void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt)
-{
-    ::base64::cvWriteRawDataBase64(fs, _data, len, dt);
 }

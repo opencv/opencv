@@ -898,7 +898,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
     if (fs->is_default_using_base64 ||
         fs->state_of_writing_base64 == base64::fs::InUse )
     {
-        base64::cvWriteRawDataBase64( fs, _data, len, dt );
+        cvWriteRawDataBase64( fs, _data, len, dt );
         return;
     }
     else if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
