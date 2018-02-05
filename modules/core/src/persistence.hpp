@@ -248,6 +248,27 @@ void icvParseError( CvFileStorage* fs, const char* func_name, const char* err_ms
 void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state );
 void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_type_to_base64 = false );
 
+//
+// XML
+//
+void icvXMLParse( CvFileStorage* fs );
+void icvXMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name CV_DEFAULT(0));
+void icvXMLEndWriteStruct( CvFileStorage* fs );
+void icvXMLStartNextStream( CvFileStorage* fs );
+void icvXMLWriteScalar( CvFileStorage* fs, const char* key, const char* data, int len );
+void icvXMLWriteInt( CvFileStorage* fs, const char* key, int value );
+void icvXMLWriteReal( CvFileStorage* fs, const char* key, double value );
+void icvXMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quote );
+void icvXMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
+
+typedef struct CvXMLStackRecord
+{
+    CvMemStoragePos pos;
+    CvString struct_tag;
+    int struct_indent;
+    int struct_flags;
+}
+CvXMLStackRecord;
 
 //
 // YML
