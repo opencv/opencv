@@ -1656,7 +1656,7 @@ Size _InputArray::size(int i) const
     {
         const Mat* vv = (const Mat*)obj;
         if( i < 0 )
-            return sz.height==0 ? Size() : Size(sz.height, 1);
+            return sz.height==0 ? Size() : Size(1, sz.height);
         CV_Assert( i < sz.height );
 
         return vv[i].size();
