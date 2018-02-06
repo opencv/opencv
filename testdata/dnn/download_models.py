@@ -259,6 +259,16 @@ models = [
         member='rfcn_models/resnet50_rfcn_final.caffemodel',
         sha='e00beca7af2790801efb1724d77bddba89e7081c',
         filename='resnet50_rfcn_final.caffemodel'),
+    Model(
+        name='OpenPose/pose/coco',  # https://github.com/CMU-Perceptual-Computing-Lab/openpose
+        url='http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/coco/pose_iter_440000.caffemodel',
+        sha='ac7e97da66f3ab8169af2e601384c144e23a95c1',
+        filename='openpose_pose_coco.caffemodel'),
+    Model(
+        name='OpenPose/pose/mpi',  # https://github.com/CMU-Perceptual-Computing-Lab/openpose
+        url='http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/mpi/pose_iter_160000.caffemodel',
+        sha='a344f4da6b52892e44a0ca8a4c68ee605fc611cf',
+        filename='openpose_pose_mpi.caffemodel'),
 ]
 
 # Note: models will be downloaded to current working directory
