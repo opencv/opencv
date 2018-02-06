@@ -139,7 +139,7 @@ public:
     }
 };
 
-typedef std::tr1::tuple<double, double, double, double> HoughLinesPointSetInput_t;
+typedef tuple<double, double, double, double> HoughLinesPointSetInput_t;
 class HoughLinesPointSetTest : public testing::TestWithParam<HoughLinesPointSetInput_t>
 {
 protected:
@@ -290,7 +290,6 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 10 ),
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
-
 
 INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesPointSetTest, testing::Combine(testing::Values( 0.0f, 120.0f ),
                                                                            testing::Values( 360.0f, 480.0f ),
