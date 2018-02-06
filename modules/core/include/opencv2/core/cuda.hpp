@@ -388,6 +388,19 @@ stacks.
     }
 @endcode
 
+@warning When utilizing StackAllocator, mind that deallocation order is important.
+
+Just like a stack, deallocation must be done in LIFO order.
+
+@code
+    {
+        GpuMat mat1 = pool.getBuffer(1024, 1024, CV_8UC1);      // Allocate mat1
+        GpuMat mat2 = pool.getBuffer(1024, 1024, CV_8UC1);      // Allocate mat2
+
+        mat1.release();                                         // erroneous usage : mat2 must be deallocated before mat1
+    }
+@endcode
+
  */
 class CV_EXPORTS BufferPool
 {
