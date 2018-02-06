@@ -650,6 +650,19 @@ static inline float getScale(int level, int firstLevel, double scaleFactor)
     return (float)std::pow(scaleFactor, (double)(level - firstLevel));
 }
 
+static inline int getLevel(KeyPoint &kp)
+{
+    int level = kp.octave;
+    CV_Assert(0 <= level);
+    //SIFT encodes layer and octave together
+    if (level >= 255)
+    {
+        level &= 255;
+        //extract SIFT negative octave
+        if (level >= 128) level |= -128;
+    }
+    return level;
+}
 
 class ORB_Impl : public ORB
 {
@@ -995,15 +1008,23 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
         // In short, ultimately the descriptor should
         // ignore octave parameter and deal only with the keypoint size.
         nLevels = 0;
+        int prevLevel = firstLevel;
         for( i = 0; i < nkeypoints; i++ )
         {
-            level = keypoints[i].octave;
-            CV_Assert(level >= 0);
-            if( i > 0 && level < keypoints[i-1].octave )
+            level = getLevel(keypoints[i]);
+            if (level < 0)
+            {
+                scaleFactor = 2; //SIFT scale factor
+                sortedByLevel = false; //Need to update octave IDs
+                //Use the negative level to adjust the firstLevel parameter
+                firstLevel = std::max(firstLevel, -level);
+            }
+            if(sortedByLevel && i > 0 && level < prevLevel)
                 sortedByLevel = false;
             nLevels = std::max(nLevels, level);
+            prevLevel = level;
         }
-        nLevels++;
+        nLevels += 1 + firstLevel;
     }
 
     std::vector<Rect> layerInfo(nLevels);
@@ -1112,9 +1133,12 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             nkeypoints = (int)keypoints.size();
             for( i = 0; i < nkeypoints; i++ )
             {
-                level = keypoints[i].octave;
-                CV_Assert(0 <= level);
-                allKeypoints[level].push_back(keypoints[i]);
+                level = getLevel(keypoints[i]);
+                /* Although getLevel can return negative octaves,
+                 it gets compensated by the already computed firstLevel */
+                keypoints[i].octave = level + firstLevel;
+                CV_Assert(keypoints[i].octave >= 0);
+                allKeypoints[keypoints[i].octave].push_back(keypoints[i]);
             }
             keypoints.clear();
             for( level = 0; level < nLevels; level++ )
