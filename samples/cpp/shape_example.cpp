@@ -43,7 +43,7 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
     }
 
     // Uniformly sampling
-    random_shuffle(contoursQuery.begin(), contoursQuery.end());
+    cv::randShuffle(contoursQuery);
     vector<Point> cont;
     for (int i=0; i<n; i++)
     {
