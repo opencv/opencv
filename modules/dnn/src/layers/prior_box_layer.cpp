@@ -550,7 +550,7 @@ public:
         for (int i = 1; i < _variance.size(); ++i)
             ieLayer->params["variance"] += format(",%f", _variance[i]);
 
-        ieLayer->params["step"] = "0";
+        ieLayer->params["step"] = _stepX == _stepY ? format("%f", _stepX) : "0";
         ieLayer->params["step_h"] = _stepY;
         ieLayer->params["step_w"] = _stepX;
 

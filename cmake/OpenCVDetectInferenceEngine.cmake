@@ -20,6 +20,9 @@ if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/inference_engin
     if(DEFINED ENV{INTEL_CVSDK_DIR})
         list(APPEND ie_root_paths "$ENV{INTEL_CVSDK_DIR}")
     endif()
+    if(DEFINED INTEL_CVSDK_DIR)
+        list(APPEND ie_root_paths "${INTEL_CVSDK_DIR}")
+    endif()
 
     if(WITH_INF_ENGINE AND NOT ie_root_paths)
         list(APPEND ie_root_paths "/opt/intel/deeplearning_deploymenttoolkit/deployment_tools")

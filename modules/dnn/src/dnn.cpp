@@ -1077,35 +1077,72 @@ struct Net::Impl
         }
     }
 
+#ifdef HAVE_INF_ENGINE
+    // Before launching Inference Engine graph we need to specify output blobs.
+    // This function requests output blobs based on inputs references of
+    // layers from default backend or layers from different graphs.
+    void addInfEngineNetOutputs(LayerData &ld)
+    {
+        Ptr<InfEngineBackendNet> layerNet;
+        if (ld.backendNodes.find(preferableBackend) != ld.backendNodes.end())
+        {
+            Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
+            if (!node.empty())
+            {
+                Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
+                CV_Assert(!ieNode.empty(), !ieNode->net.empty());
+                layerNet = ieNode->net;
+            }
+        }
+        // For an every input reference we check that it belongs to one of
+        // the Inference Engine backend graphs. Request an output blob if it is.
+        // Do nothing if layer's input is from the same graph.
+        for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+        {
+            LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+            Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+            if (!inpNode.empty())
+            {
+                Ptr<InfEngineBackendNode> ieInpNode = inpNode.dynamicCast<InfEngineBackendNode>();
+                CV_Assert(!ieInpNode.empty(), !ieInpNode->net.empty());
+                if (layerNet != ieInpNode->net)
+                {
+                    // layerNet is empty or nodes are from different graphs.
+                    ieInpNode->net->addOutput(inpLd.name);
+                }
+            }
+        }
+    }
+#endif  // HAVE_INF_ENGINE
+
     void initInfEngineBackend()
     {
         // Build Inference Engine networks from sets of layers that support this
-        // backend. If an internal layer isn't supported we'll use default
-        // implementation of it but build a new network after it.
+        // backend. Split a whole model on several Inference Engine networks if
+        // some of layers is not implemented.
         CV_TRACE_FUNCTION();
         CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
 #ifdef HAVE_INF_ENGINE
         MapIdToLayerData::iterator it;
         Ptr<InfEngineBackendNet> net;
+        // Set of all input and output blobs wrappers for current network.
+        std::map<int, Ptr<BackendWrapper> > netBlobsWrappers;
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
-            ld.skip = true;
+            ld.skip = true;  // Initially skip all Inference Engine supported layers.
             Ptr<Layer> layer = ld.layerInstance;
 
             if (!layer->supportBackend(preferableBackend))
             {
-                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
-                {
-                    auto dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
-                    dataPtr->name = ld.name;
-                }
+                addInfEngineNetOutputs(ld);
                 ld.skip = false;
                 net = Ptr<InfEngineBackendNet>();
+                netBlobsWrappers.clear();
                 continue;
             }
 
-            // Check what all inputs are from the same network or from default backend.
+            // Create a new network if one of inputs from different Inference Engine graph.
             for (int i = 0; i < ld.inputBlobsId.size(); ++i)
             {
                 LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
@@ -1113,9 +1150,35 @@ struct Net::Impl
                 if (!inpNode.empty())
                 {
                     Ptr<InfEngineBackendNode> ieInpNode = inpNode.dynamicCast<InfEngineBackendNode>();
-                    CV_Assert(!ieInpNode.empty(), net.empty() || net == ieInpNode->net);
+                    CV_Assert(!ieInpNode.empty(), !ieInpNode->net.empty());
+                    if (ieInpNode->net != net)
+                    {
+                        net = Ptr<InfEngineBackendNet>();
+                        netBlobsWrappers.clear();
+                        break;
+                    }
                 }
             }
+
+            // The same blobs wrappers cannot be shared between two Inference Engine
+            // networks because of explicit references between layers and blobs.
+            // So we need to rewrap all the external blobs.
+            for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+            {
+                int lid = ld.inputBlobsId[i].lid;
+                LayerData &inpLd = layers[lid];
+                auto it = netBlobsWrappers.find(lid);
+                if (it == netBlobsWrappers.end())
+                {
+                    ld.inputBlobsWrappers[i] = wrap(*ld.inputBlobs[i]);
+                    auto dataPtr = infEngineDataNode(ld.inputBlobsWrappers[i]);
+                    dataPtr->name = inpLd.name;
+                    netBlobsWrappers[lid] = ld.inputBlobsWrappers[i];
+                }
+                else
+                    ld.inputBlobsWrappers[i] = it->second;
+            }
+            netBlobsWrappers[ld.id] = ld.outputBlobsWrappers[0];
 
             bool fused = false;
             Ptr<BackendNode> node;
@@ -1153,6 +1216,7 @@ struct Net::Impl
 
             if (!fused)
                 net->addLayer(ieNode->layer);
+            addInfEngineNetOutputs(ld);
         }
 
         // Initialize all networks.

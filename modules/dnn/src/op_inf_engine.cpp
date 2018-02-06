@@ -116,31 +116,6 @@ InferenceEngine::Precision InfEngineBackendNet::getPrecision() noexcept
 // Assume that outputs of network is unconnected blobs.
 void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) noexcept
 {
-    if (outputs.empty())
-    {
-        for (const auto& l : layers)
-        {
-            // Add all outputs.
-            for (const InferenceEngine::DataPtr& out : l->outData)
-            {
-                // TODO: Replace to uniquness assertion.
-                if (outputs.find(out->name) == outputs.end())
-                    outputs[out->name] = out;
-            }
-            // Remove internally connected outputs.
-            for (const InferenceEngine::DataWeakPtr& inp : l->insData)
-            {
-                outputs.erase(InferenceEngine::DataPtr(inp)->name);
-            }
-        }
-        CV_Assert(layers.empty() || !outputs.empty());
-    }
-    outBlobs.clear();
-    for (const auto& it : outputs)
-    {
-        CV_Assert(allBlobs.find(it.first) != allBlobs.end());
-        outBlobs[it.first] = allBlobs[it.first];
-    }
     outputs_ = outputs;
 }
 
@@ -216,7 +191,18 @@ InferenceEngine::StatusCode
 InfEngineBackendNet::addOutput(const std::string &layerName, size_t outputIndex,
                                InferenceEngine::ResponseDesc *resp) noexcept
 {
-    CV_Error(Error::StsNotImplemented, "");
+    for (const auto& l : layers)
+    {
+        for (const InferenceEngine::DataPtr& out : l->outData)
+        {
+            if (out->name == layerName)
+            {
+                outputs[out->name] = out;
+                return InferenceEngine::StatusCode::OK;
+            }
+        }
+    }
+    CV_Error(Error::StsObjectNotFound, "Cannot find a layer " + layerName);
     return InferenceEngine::StatusCode::OK;
 }
 
@@ -254,6 +240,39 @@ size_t InfEngineBackendNet::getBatchSize() const noexcept
 void InfEngineBackendNet::initEngine()
 {
     CV_Assert(!isInitialized());
+
+    // Add all unconnected blobs to output blobs.
+    InferenceEngine::OutputsDataMap unconnectedOuts;
+    for (const auto& l : layers)
+    {
+        // Add all outputs.
+        for (const InferenceEngine::DataPtr& out : l->outData)
+        {
+            // TODO: Replace to uniquness assertion.
+            if (unconnectedOuts.find(out->name) == unconnectedOuts.end())
+                unconnectedOuts[out->name] = out;
+        }
+        // Remove internally connected outputs.
+        for (const InferenceEngine::DataWeakPtr& inp : l->insData)
+        {
+            unconnectedOuts.erase(InferenceEngine::DataPtr(inp)->name);
+        }
+    }
+    CV_Assert(layers.empty() || !unconnectedOuts.empty());
+
+    for (auto it = unconnectedOuts.begin(); it != unconnectedOuts.end(); ++it)
+    {
+        outputs[it->first] = it->second;
+    }
+
+    // Set up output blobs.
+    outBlobs.clear();
+    for (const auto& it : outputs)
+    {
+        CV_Assert(allBlobs.find(it.first) != allBlobs.end());
+        outBlobs[it.first] = allBlobs[it.first];
+    }
+
     engine = InferenceEngine::InferenceEnginePluginPtr("libMKLDNNPlugin.so");
     InferenceEngine::ResponseDesc resp;
     InferenceEngine::StatusCode status = engine->LoadNetwork(*this, &resp);
