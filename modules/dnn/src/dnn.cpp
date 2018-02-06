@@ -196,26 +196,25 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
     CV_TRACE_FUNCTION();
 
     //A blob is a 4 dimensional matrix in floating point precision
-	//blob_[0] = batchSize = nbOfImages
-	//blob_[1] = nbOfChannels
-	//blob_[2] = height 
-	//blob_[3] = width
+    //blob_[0] = batchSize = nbOfImages
+    //blob_[1] = nbOfChannels
+    //blob_[2] = height
+    //blob_[3] = width
     CV_Assert(blob_.depth() == CV_32F);
     CV_Assert(blob_.dims == 4);
 
-	images_.create(cv::Size(1, blob_.size[0]), blob_.depth());
+    images_.create(cv::Size(1, blob_.size[0]), blob_.depth());
 
-	for (int n = 0; n <  blob_.size[0]; ++n)
-	{
-		std::vector<Mat> vectorOfChannels(blob_.size[1]);
-		for (int c = 0; c < blob_.size[1]; ++c)
-		{
-			vectorOfChannels[c] = getPlane(blob_, n, c);
-		}
-		cv::merge(vectorOfChannels, images_.getMat(n));
-	}
+    std::vector<Mat> vectorOfChannels(blob_.size[1]);
+    for (int n = 0; n <  blob_.size[0]; ++n)
+    {
+        for (int c = 0; c < blob_.size[1]; ++c)
+        {
+            vectorOfChannels[c] = getPlane(blob_, n, c);
+        }
+        cv::merge(vectorOfChannels, images_.getMatRef(n));
+    }
 }
-
 
 class OpenCLBackendWrapper : public BackendWrapper
 {
