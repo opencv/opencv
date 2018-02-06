@@ -190,6 +190,9 @@ inline Size getContinuousSize( const Mat& m1, const Mat& m2,
                               m1.cols, m1.rows, widthScale);
 }
 
+void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
+void finalizeHdr(Mat& m);
+
 struct NoVec
 {
     size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
