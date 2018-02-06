@@ -476,7 +476,6 @@ void WorkerThread::thread_body()
                 }
                 else
                 {
-                    has_wake_signal = false;
                     CV_LOG_VERBOSE(NULL, 5, "Thread: no free job tasks");
                 }
             }
