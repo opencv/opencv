@@ -526,6 +526,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 
 #define CV__PERF_TEST_BODY_IMPL(name) \
     { \
+       CV__TEST_NAMESPACE_CHECK \
        CV__TRACE_APP_FUNCTION_NAME("PERF_TEST: " name); \
        RunPerfTestBody(); \
     }

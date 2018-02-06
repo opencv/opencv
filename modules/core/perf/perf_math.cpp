@@ -1,7 +1,7 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
 
 namespace {
@@ -158,3 +158,5 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , KMeans,
 );
 
 }
+
+} // namespace

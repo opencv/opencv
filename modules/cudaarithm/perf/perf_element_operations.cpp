@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 #define ARITHM_MAT_DEPTH Values(CV_8U, CV_16U, CV_32F, CV_64F)
 
@@ -1499,3 +1497,5 @@ PERF_TEST_P(Sz_Depth_Op, Threshold,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

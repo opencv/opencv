@@ -44,11 +44,9 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/cudev.hpp"
 
+#define CV_TEST_SKIP_NAMESPACE_CHECK
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 

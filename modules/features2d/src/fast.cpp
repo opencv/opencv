@@ -445,12 +445,12 @@ static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int t
 
     cv::KeyPoint kpt(0, 0, 7.f, -1, 0);
 
-    uint32_t uthreshold = (uint32_t) threshold;
+    unsigned uthreshold = (unsigned) threshold;
 
     int ofs = 3;
 
     int stride = (int)suppressedScores.step;
-    const uint8_t* pscore = suppressedScores.data;
+    const unsigned char* pscore = suppressedScores.data;
 
     keypoints.clear();
 
@@ -459,11 +459,11 @@ static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int t
         kpt.pt.y = (float)(y);
         for (int x = ofs; x + ofs < suppressedScores.cols; ++x)
         {
-            uint32_t score = pscore[y * stride + x];
+            unsigned score = pscore[y * stride + x];
             if (score > uthreshold)
             {
                 kpt.pt.x = (float)(x);
-                kpt.response = (nonmax_suppression != 0) ? (float)((int32_t)score - 1) : 0.f;
+                kpt.response = (nonmax_suppression != 0) ? (float)((int)score - 1) : 0.f;
                 keypoints.push_back(kpt);
             }
         }

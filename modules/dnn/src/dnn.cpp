@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "halide_scheduler.hpp"
 #include <set>
 #include <algorithm>
@@ -471,9 +472,9 @@ public:
         }
     }
 
-    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst)
+    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool forceCreate)
     {
-        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS)
+        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS && !forceCreate)
         {
             Mat bestBlob;
             LayerPin bestBlobPin;
@@ -518,7 +519,8 @@ public:
     }
 
     void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes,
-                               std::vector<LayerPin>& pinsForInternalBlobs)
+                               std::vector<LayerPin>& pinsForInternalBlobs,
+                               bool forceCreate = false)
     {
         CV_TRACE_FUNCTION();
 
@@ -589,7 +591,7 @@ public:
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
                     else
-                        reuseOrCreate(shapes[index], blobPin, *blobs[index]);
+                        reuseOrCreate(shapes[index], blobPin, *blobs[index], forceCreate);
                 }
             }
         }
@@ -638,6 +640,13 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 #ifdef HAVE_HALIDE
         return Ptr<BackendWrapper>(new HalideBackendWrapper(targetId, m));
 #endif  // HAVE_HALIDE
+    }
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        CV_Assert(haveInfEngine());
+#ifdef HAVE_INF_ENGINE
+        return Ptr<BackendWrapper>(new InfEngineBackendWrapper(targetId, m));
+#endif  // HAVE_INF_ENGINE
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
@@ -709,6 +718,10 @@ struct Net::Impl
   #ifdef HAVE_HALIDE
                 return Ptr<BackendWrapper>(new HalideBackendWrapper(baseBuffer, shape));
   #endif  // HAVE_HALIDE
+            }
+            else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+            {
+                return wrapMat(preferableBackend, preferableTarget, host);
             }
             else
                 CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
@@ -999,12 +1012,20 @@ struct Net::Impl
     void initBackend()
     {
         CV_TRACE_FUNCTION();
-
         if (preferableBackend == DNN_BACKEND_DEFAULT)
-        {
             CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_OPENCL);
-            return;
-        }
+        else if (preferableBackend == DNN_BACKEND_HALIDE)
+            initHalideBackend();
+        else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+            initInfEngineBackend();
+        else
+            CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+    }
+
+    void initHalideBackend()
+    {
+        CV_TRACE_FUNCTION();
+        CV_Assert(preferableBackend == DNN_BACKEND_HALIDE, haveHalide());
 
         // Iterator to current layer.
         MapIdToLayerData::iterator it = layers.begin();
@@ -1050,17 +1071,115 @@ struct Net::Impl
             }
             // No layers fusion.
             ldTop.skip = false;
-            if (preferableBackend == DNN_BACKEND_HALIDE)
+            ldTop.backendNodes[DNN_BACKEND_HALIDE] =
+                layerTop->initHalide(ldTop.inputBlobsWrappers);
+            baseIt = it;
+        }
+    }
+
+    void initInfEngineBackend()
+    {
+        // Build Inference Engine networks from sets of layers that support this
+        // backend. If an internal layer isn't supported we'll use default
+        // implementation of it but build a new network after it.
+        CV_TRACE_FUNCTION();
+        CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
+#ifdef HAVE_INF_ENGINE
+        MapIdToLayerData::iterator it;
+        Ptr<InfEngineBackendNet> net;
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData &ld = it->second;
+            ld.skip = true;
+            Ptr<Layer> layer = ld.layerInstance;
+
+            if (!layer->supportBackend(preferableBackend))
             {
-                ldTop.backendNodes[DNN_BACKEND_HALIDE] =
-                    layerTop->initHalide(ldTop.inputBlobsWrappers);
-                baseIt = it;
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    auto dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+                    dataPtr->name = ld.name;
+                }
+                ld.skip = false;
+                net = Ptr<InfEngineBackendNet>();
+                continue;
+            }
+
+            // Check what all inputs are from the same network or from default backend.
+            for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+            {
+                LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                if (!inpNode.empty())
+                {
+                    Ptr<InfEngineBackendNode> ieInpNode = inpNode.dynamicCast<InfEngineBackendNode>();
+                    CV_Assert(!ieInpNode.empty(), net.empty() || net == ieInpNode->net);
+                }
+            }
+
+            bool fused = false;
+            Ptr<BackendNode> node;
+            if (!net.empty())
+            {
+                // Try to fuse.
+                bool inPlace = ld.inputBlobsId.size() == 1 && ld.outputBlobs.size() == 1 &&
+                               ld.inputBlobs[0]->data == ld.outputBlobs[0].data;
+                if (inPlace)
+                {
+                    node = layer->tryAttach(layers[ld.inputBlobsId[0].lid].backendNodes[preferableBackend]);
+                    fused = !node.empty();
+                    if (fused)
+                        ld.inputBlobsWrappers = layers[ld.inputBlobsId[0].lid].inputBlobsWrappers;
+                }
             }
             else
+                net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet());
+
+            if (!fused)
             {
-                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+                node = layer->initInfEngine(ld.inputBlobsWrappers);
+            }
+
+            CV_Assert(!node.empty());
+            ld.backendNodes[preferableBackend] = node;
+
+            Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
+            CV_Assert(!ieNode.empty());
+            ieNode->net = net;
+
+            ieNode->connect(ld.inputBlobsWrappers, ld.outputBlobsWrappers);
+            net->addBlobs(ld.inputBlobsWrappers);
+            net->addBlobs(ld.outputBlobsWrappers);
+
+            if (!fused)
+                net->addLayer(ieNode->layer);
+        }
+
+        // Initialize all networks.
+        std::set<InfEngineBackendNet> initializedNets;
+        for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
+        {
+            LayerData &ld = it->second;
+            if (ld.backendNodes.find(preferableBackend) == ld.backendNodes.end())
+                continue;
+
+            Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
+            if (node.empty())
+                continue;
+
+            Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
+            if (ieNode.empty())
+                continue;
+
+            CV_Assert(!ieNode->net.empty());
+
+            if (!ieNode->net->isInitialized())
+            {
+                ieNode->net->initEngine();
+                ld.skip = false;
             }
         }
+#endif  // HAVE_INF_ENGINE
     }
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes)
@@ -1117,7 +1236,8 @@ struct Net::Impl
         CV_Assert(layerShapesIt != layersShapes.end());
 
         std::vector<LayerPin> pinsForInternalBlobs;
-        blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs);
+        blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs,
+                                          preferableBackend == DNN_BACKEND_INFERENCE_ENGINE);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
         for (int i = 0; i < ld.outputBlobs.size(); ++i)
         {
@@ -1266,8 +1386,11 @@ struct Net::Impl
 
                         if ( preferableTarget == DNN_TARGET_OPENCL )
                         {
-                            nextData = &layers[activData->consumers[0].lid];
-                            lpNext = LayerPin(activData->consumers[0].lid, 0);
+                            if ( !activData->consumers.empty() )
+                            {
+                                nextData = &layers[activData->consumers[0].lid];
+                                lpNext = LayerPin(activData->consumers[0].lid, 0);
+                            }
                         }
                     }
                 }
@@ -1563,6 +1686,10 @@ struct Net::Impl
             if (preferableBackend == DNN_BACKEND_HALIDE)
             {
                 forwardHalide(ld.outputBlobsWrappers, node);
+            }
+            else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+            {
+                forwardInfEngine(node);
             }
             else
             {
@@ -2325,6 +2452,13 @@ bool Layer::supportBackend(int backendId)
 Ptr<BackendNode> Layer::initHalide(const std::vector<Ptr<BackendWrapper> > &)
 {
     CV_Error(Error::StsNotImplemented, "Halide pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
+Ptr<BackendNode> Layer::initInfEngine(const std::vector<Ptr<BackendWrapper> > &)
+{
+    CV_Error(Error::StsNotImplemented, "Inference Engine pipeline of " + type +
                                        " layers is not defined.");
     return Ptr<BackendNode>();
 }

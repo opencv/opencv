@@ -3,15 +3,13 @@
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/flann.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 typedef TestBaseWithParam<size_t> FeaturesFinderVec;
 typedef TestBaseWithParam<string> match;
-typedef std::tr1::tuple<string, int> matchVector_t;
+typedef tuple<string, int> matchVector_t;
 typedef TestBaseWithParam<matchVector_t> matchVector;
 
 #define NUMBER_IMAGES testing::Values(1, 5, 20)
@@ -299,3 +297,5 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
 
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

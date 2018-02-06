@@ -9,13 +9,9 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
-namespace ocl {
-
-using namespace cv;
+namespace opencv_test {
 using namespace perf;
-using namespace std;
-using namespace std::tr1;
+namespace ocl {
 
 #define SURF_MATCH_CONFIDENCE 0.65f
 #define ORB_MATCH_CONFIDENCE  0.3f
@@ -146,6 +142,6 @@ OCL_PERF_TEST_P(stitch, boat, TEST_DETECTORS)
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

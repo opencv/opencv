@@ -41,9 +41,15 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "cvconfig.h"
+#include "../src/input_array_utility.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
+namespace opencv_test {
+
 #ifdef HAVE_VIDEO_INPUT
+
+namespace {
 
 class AllignedFrameSource : public cv::superres::FrameSource
 {
@@ -281,9 +287,10 @@ TEST_F(SuperResolution, BTVL1_CUDA)
 
 #endif
 
+} // namespace
+
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
 namespace ocl {
 
 OCL_TEST_F(SuperResolution, BTVL1)
@@ -291,8 +298,10 @@ OCL_TEST_F(SuperResolution, BTVL1)
     RunTest<cv::UMat>(cv::superres::createSuperResolution_BTVL1());
 }
 
-} } // namespace cvtest::ocl
+} // namespace opencv_test::ocl
 
 #endif
 
 #endif // HAVE_VIDEO_INPUT
+
+} // namespace

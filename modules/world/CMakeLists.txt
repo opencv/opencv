@@ -38,20 +38,20 @@ endif()
 
 ocv_add_module(world opencv_core)
 
-set(headers_list "HEADERS")
-set(sources_list "SOURCES")
+set(headers_list)
+set(sources_list)
 set(link_deps "")
 foreach(m ${OPENCV_MODULE_${the_module}_DEPS} opencv_world)
   if(OPENCV_MODULE_${m}_IS_PART_OF_WORLD)
-    set(headers_list "${headers_list};${OPENCV_MODULE_${m}_HEADERS}")
-    set(sources_list "${sources_list};${OPENCV_MODULE_${m}_SOURCES}")
+    list(APPEND headers_list ${OPENCV_MODULE_${m}_HEADERS})
+    list(APPEND sources_list ${OPENCV_MODULE_${m}_SOURCES})
   endif()
   if(NOT " ${OPENCV_MODULE_${m}_LINK_DEPS}" STREQUAL " ")
     list(APPEND link_deps ${OPENCV_MODULE_${m}_LINK_DEPS})
   endif()
 endforeach()
 
-ocv_glob_module_sources(${headers_list} ${sources_list})
+ocv_glob_module_sources(HEADERS ${headers_list} SOURCES ${sources_list})
 
 ocv_module_include_directories()
 

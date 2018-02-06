@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 #include <stdlib.h>
@@ -63,7 +64,7 @@ public:
     SoftMaxLayerImpl(const LayerParams& params)
     {
         axisRaw = params.get<int>("axis", 1);
-        logSoftMax = params.get<int>("log_softmax", false);
+        logSoftMax = params.get<bool>("log_softmax", false);
         setParamsFrom(params);
     }
 
@@ -87,7 +88,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1;
+               backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1 ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax;
     }
 
 #ifdef HAVE_OPENCL
@@ -304,6 +306,20 @@ public:
         top(x, y, c, n) = expInput(x, y, c, n) / globalSum;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "SoftMax";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::SoftMaxLayer> ieLayer(new InferenceEngine::SoftMaxLayer(lp));
+        ieLayer->axis = axisRaw;
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 

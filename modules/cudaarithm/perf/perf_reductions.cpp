@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // Norm
@@ -518,3 +516,5 @@ PERF_TEST_P(Sz, IntegralSqr,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace

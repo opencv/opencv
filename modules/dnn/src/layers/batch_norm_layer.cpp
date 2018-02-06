@@ -11,6 +11,7 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include "opencl_kernels_dnn.hpp"
 
@@ -32,6 +33,8 @@ public:
 
         hasWeights = params.get<bool>("has_weight", false);
         hasBias = params.get<bool>("has_bias", false);
+        if(params.get<bool>("scale_bias", false))
+            hasWeights = hasBias = true;
         epsilon = params.get<float>("eps", 1E-5);
 
         size_t n = blobs[0].total();
@@ -47,8 +50,8 @@ public:
                 varMeanScale = 1/varMeanScale;
         }
 
-        const int weightsBlobIndex = 2;
-        const int biasBlobIndex = weightsBlobIndex + hasWeights;
+        const int biasBlobIndex = blobs.size() - 1;
+        const int weightsBlobIndex = biasBlobIndex - hasBias;
 
         if( hasWeights )
         {
@@ -101,7 +104,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
 #ifdef HAVE_OPENCL
@@ -144,7 +148,7 @@ public:
                 UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
                 UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
                 int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
-                String buildopt = format("-DNUM=%d ", number);
+                String buildopt = format("-DNUM=%d", number);
                 String kname = format("batch_norm%d", number);
                 ocl::Kernel kernel(kname.c_str(), ocl::dnn::batchnorm_oclsrc, buildopt);
                 if (kernel.empty())
@@ -224,6 +228,19 @@ public:
 #endif  // HAVE_HALIDE
                 break;
             }
+            case DNN_BACKEND_INFERENCE_ENGINE:
+            {
+#ifdef HAVE_INF_ENGINE
+                auto base = node.dynamicCast<InfEngineBackendNode>();
+                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
+                if (conv)
+                {
+                    fuseConvWeights(conv, weights_, bias_);
+                    return base;
+                }
+#endif  // HAVE_INF_ENGINE
+                break;
+            }
         }
         return Ptr<BackendNode>();
     }
@@ -254,6 +271,25 @@ public:
         return top;
     }
 #endif  // HAVE_HALIDE
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "BatchNormalization";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::BatchNormalizationLayer> ieLayer(new InferenceEngine::BatchNormalizationLayer(lp));
+
+        size_t numChannels = weights_.total();
+        ieLayer->epsilon = epsilon;
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[1], {numChannels});
+        ieLayer->_biases = wrapToInfEngineBlob(blobs[0], {numChannels});
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const

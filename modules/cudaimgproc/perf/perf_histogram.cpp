@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // HistEvenC1
@@ -217,3 +215,5 @@ PERF_TEST_P(Sz_ClipLimit, CLAHE,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

@@ -42,11 +42,9 @@
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
-#include <cmath>
-
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////////// LUT /////////////////////////////////////////////////
@@ -138,8 +136,8 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
-        double minV = getMinVal(type);
-        double maxV = getMaxVal(type);
+        double minV = cvtest::getMinVal(type);
+        double maxV = cvtest::getMaxVal(type);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -1964,6 +1962,6 @@ OCL_TEST(Normalize, DISABLED_regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(um, uresult, NORM_INF));
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

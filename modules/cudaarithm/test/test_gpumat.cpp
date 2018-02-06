@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
 // SetTo
@@ -408,4 +408,5 @@ CUDA_TEST_P(CreateContinuous, BufferReuse)
 
 INSTANTIATE_TEST_CASE_P(CUDA, CreateContinuous, ALL_DEVICES);
 
+}} // namespace
 #endif // HAVE_CUDA

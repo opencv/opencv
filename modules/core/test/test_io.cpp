@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 static SparseMat cvTsGetRandomSparseMat(int dims, const int* sz, int type,
                                         int nzcount, double a, double b, RNG& rng)
@@ -122,7 +124,7 @@ protected:
                 exp(test_mat, test_mat);
                 Mat test_mat_scale(test_mat.size(), test_mat.type());
                 rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
-                multiply(test_mat, test_mat_scale, test_mat);
+                cv::multiply(test_mat, test_mat_scale, test_mat);
             }
 
             CvSeq* seq = cvCreateSeq(test_mat.type(), (int)sizeof(CvSeq),
@@ -158,7 +160,7 @@ protected:
                 exp(test_mat_nd, test_mat_nd);
                 MatND test_mat_scale(test_mat_nd.dims, test_mat_nd.size, test_mat_nd.type());
                 rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
-                multiply(test_mat_nd, test_mat_scale, test_mat_nd);
+                cv::multiply(test_mat_nd, test_mat_scale, test_mat_nd);
             }
 
             int ssz[] = {
@@ -386,8 +388,6 @@ protected:
 };
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
-
-extern void testFormatter();
 
 
 struct UserDefinedType
@@ -1058,7 +1058,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
 
             for(size_t k = 0; k < testMats[j].size(); k++)
             {
-                ASSERT_TRUE(norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
+                ASSERT_TRUE(cvtest::norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
             }
         }
 
@@ -1597,7 +1597,7 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     const std::string fileName = "FileStorage_free_file_after_exception_test.yml";
     const std::string content = "%YAML:1.0\n cameraMatrix;:: !<tag:yaml.org,2002:opencv-matrix>\n";
 
-    fstream testFile;
+    std::fstream testFile;
     testFile.open(fileName.c_str(), std::fstream::out);
     if(!testFile.is_open()) FAIL();
     testFile << content;
@@ -1611,5 +1611,7 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     catch (const std::exception&)
     {
     }
-    ASSERT_EQ(std::remove(fileName.c_str()), 0);
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
+
+}} // namespace

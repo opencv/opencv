@@ -54,7 +54,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(FilterTestBase, MatType,
@@ -761,6 +761,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Bool()));
 
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

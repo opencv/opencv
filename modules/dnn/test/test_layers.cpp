@@ -41,17 +41,12 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
-#include <iostream>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static String _tf(TString filename)
@@ -65,13 +60,13 @@ static String _tf(TString filename)
 
 void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &outBlobs)
 {
-    size_t i, ninputs = inpBlobs.size();
+    size_t ninputs = inpBlobs.size();
     std::vector<Mat> inp_(ninputs);
     std::vector<Mat*> inp(ninputs);
     std::vector<Mat> outp, intp;
     std::vector<MatShape> inputs, outputs, internals;
 
-    for( i = 0; i < ninputs; i++ )
+    for (size_t i = 0; i < ninputs; i++)
     {
         inp_[i] = inpBlobs[i].clone();
         inp[i] = &inp_[i];
@@ -79,11 +74,11 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
     }
 
     layer->getMemoryShapes(inputs, 0, outputs, internals);
-    for(int i = 0; i < outputs.size(); i++)
+    for (size_t i = 0; i < outputs.size(); i++)
     {
         outp.push_back(Mat(outputs[i], CV_32F));
     }
-    for(int i = 0; i < internals.size(); i++)
+    for (size_t i = 0; i < internals.size(); i++)
     {
         intp.push_back(Mat(internals[i], CV_32F));
     }
@@ -93,7 +88,7 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
 
     size_t noutputs = outp.size();
     outBlobs.resize(noutputs);
-    for( i = 0; i < noutputs; i++ )
+    for (size_t i = 0; i < noutputs; i++)
         outBlobs[i] = outp[i];
 }
 
@@ -367,10 +362,13 @@ OCL_TEST(Layer_Test_PReLU, Accuracy)
 //    );
 //}
 
-static void test_Reshape_Split_Slice_layers()
+static void test_Reshape_Split_Slice_layers(int targetId)
 {
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -384,7 +382,12 @@ static void test_Reshape_Split_Slice_layers()
 
 TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
 {
-    test_Reshape_Split_Slice_layers();
+    test_Reshape_Split_Slice_layers(DNN_TARGET_CPU);
+}
+
+OCL_TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
+{
+    test_Reshape_Split_Slice_layers(DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Conv_Elu, Accuracy)
@@ -803,4 +806,4 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 /*offset value*/        Values(3, 4)
 ));
 
-}
+}} // namespace

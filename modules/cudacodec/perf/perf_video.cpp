@@ -43,9 +43,7 @@
 #include "perf_precomp.hpp"
 #include "opencv2/highgui/highgui_c.h"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 DEF_PARAM_TEST_1(FileName, string);
 
@@ -147,3 +145,4 @@ PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/19
 }
 
 #endif
+}} // namespace

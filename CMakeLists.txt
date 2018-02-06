@@ -126,6 +126,8 @@ ocv_clear_vars(OpenCVModules_TARGETS)
 
 include(cmake/OpenCVDownload.cmake)
 
+set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
+
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
@@ -195,6 +197,7 @@ OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        WIN32 O
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE)
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 OR ANDROID OR APPLE)
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (WIN32 OR ANDROID OR APPLE) AND NOT WINRT)
+OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (WIN32 OR ANDROID OR APPLE) AND NOT WINRT)
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           NOT MINGW IF (X86_64 OR X86) AND NOT WINRT )
 OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        NOT MINGW IF (X86_64 OR X86) AND NOT WINRT AND NOT APPLE_FRAMEWORK )
@@ -220,6 +223,7 @@ OCV_OPTION(WITH_GTK            "Include GTK support"                         ON 
 OCV_OPTION(WITH_GTK_2_X        "Use GTK version 2"                           OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)  IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS )
 OCV_OPTION(WITH_HALIDE         "Include Halide support"                      OFF)
+OCV_OPTION(WITH_INF_ENGINE     "Include Intel Inference Engine support"      OFF)
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
 OCV_OPTION(WITH_WEBP           "Include WebP support"                        ON   IF (NOT WINRT) )
@@ -495,7 +499,7 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 # ----------------------------------------------------------------------------
 #  Path for additional modules
 # ----------------------------------------------------------------------------
-set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules")
+set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
 
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository
@@ -552,8 +556,22 @@ endif(WIN32 AND NOT MINGW)
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
-  if(NOT APPLE_FRAMEWORK)
-    find_package(PkgConfig QUIET)
+  if(NOT APPLE_FRAMEWORK OR OPENCV_ENABLE_PKG_CONFIG)
+    if(CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{PKG_CONFIG_LIBDIR}
+        AND NOT OPENCV_ENABLE_PKG_CONFIG
+    )
+      if(NOT PkgConfig_FOUND)
+        message(STATUS "OpenCV disables pkg-config to avoid using of host libraries. Consider using PKG_CONFIG_LIBDIR to specify target SYSROOT")
+      elseif(OPENCV_SKIP_PKG_CONFIG_WARNING)
+        message(WARNING "pkg-config is enabled in cross-compilation mode without defining of PKG_CONFIG_LIBDIR environment variable. This may lead to misconfigured host-based dependencies.")
+      endif()
+    elseif(OPENCV_DISABLE_PKG_CONFIG)
+      if(PkgConfig_FOUND)
+        message(WARNING "OPENCV_DISABLE_PKG_CONFIG flag has no effect")
+      endif()
+    else()
+      find_package(PkgConfig QUIET)
+    endif()
   endif()
   include(CheckFunctionExists)
   include(CheckIncludeFile)
@@ -611,6 +629,7 @@ include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
+include(cmake/OpenCVFindProtobuf.cmake)
 
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
@@ -649,6 +668,11 @@ endif()
 # --- Halide ---
 if(WITH_HALIDE)
   include(cmake/OpenCVDetectHalide.cmake)
+endif()
+
+# --- Inference Engine ---
+if(WITH_INF_ENGINE)
+  include(cmake/OpenCVDetectInferenceEngine.cmake)
 endif()
 
 # --- DirectX ---
@@ -1335,6 +1359,10 @@ if(WITH_HALIDE OR HAVE_HALIDE)
   status("    Halide:"     HAVE_HALIDE      THEN "YES (${HALIDE_LIBRARIES} ${HALIDE_INCLUDE_DIRS})" ELSE NO)
 endif()
 
+if(WITH_INF_ENGINE OR HAVE_INF_ENGINE)
+  status("    Inference Engine:"     HAVE_INF_ENGINE     THEN "YES (${INF_ENGINE_LIBRARIES} ${INF_ENGINE_INCLUDE_DIRS})" ELSE NO)
+endif()
+
 if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 endif()
@@ -1344,6 +1372,10 @@ if(WITH_OPENVX OR HAVE_OPENVX)
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")
+
+foreach(s ${CUSTOM_STATUS})
+  status(${CUSTOM_STATUS_${s}})
+endforeach()
 
 if(WITH_CUDA OR HAVE_CUDA)
   ocv_build_features_string(cuda_features

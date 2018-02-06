@@ -4,6 +4,8 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
 namespace testUtil
 {
 
@@ -169,3 +171,5 @@ TEST(Regression, MM_AFFINE)
 {
     EXPECT_LT(testUtil::performTest(cv::videostab::MM_AFFINE, 6), 9.f);
 }
+
+}} // namespace
