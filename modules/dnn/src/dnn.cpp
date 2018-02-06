@@ -1386,8 +1386,11 @@ struct Net::Impl
 
                         if ( preferableTarget == DNN_TARGET_OPENCL )
                         {
-                            nextData = &layers[activData->consumers[0].lid];
-                            lpNext = LayerPin(activData->consumers[0].lid, 0);
+                            if ( !activData->consumers.empty() )
+                            {
+                                nextData = &layers[activData->consumers[0].lid];
+                                lpNext = LayerPin(activData->consumers[0].lid, 0);
+                            }
                         }
                     }
                 }
