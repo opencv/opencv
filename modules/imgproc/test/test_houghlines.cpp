@@ -151,11 +151,11 @@ protected:
 public:
     HoughLinesPointSetTest()
     {
-        rhoMin = std::tr1::get<0>(GetParam());
-        rhoMax = std::tr1::get<1>(GetParam());
+        rhoMin = get<0>(GetParam());
+        rhoMax = get<1>(GetParam());
         rhoStep = (rhoMax - rhoMin) / 360.0f;
-        thetaMin = std::tr1::get<2>(GetParam());
-        thetaMax = std::tr1::get<3>(GetParam());
+        thetaMin = get<2>(GetParam());
+        thetaMax = get<3>(GetParam());
         thetaStep = CV_PI / 180.0f;
         Rho = 320.00000;
         Theta = 1.04719;
