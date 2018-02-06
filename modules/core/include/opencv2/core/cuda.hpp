@@ -329,11 +329,65 @@ CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr
 
 /** @brief BufferPool for use with CUDA streams
 
- * BufferPool utilizes cuda::Stream's allocator to create new buffers. It is
- * particularly useful when BufferPoolUsage is set to true, or a custom
- * allocator is specified for the cuda::Stream, and you want to implement your
- * own stream based functions utilizing the same underlying GPU memory
- * management.
+BufferPool utilizes cuda::Stream's allocator to create new buffers. It is
+only useful when #setBufferPoolUsage is set to true. Users may specify custom
+allocator for cuda::Stream, and may implement their own stream based
+functions utilizing the same underlying GPU memory management.
+
+If custom allocator is not specified, BufferPool utilizes StackAllocator by
+default. StackAllocator allocates a chunk of GPU device memory beforehand,
+and when GpuMat is declared later on, it is given the pre-allocated memory.
+This kind of strategy reduces the number of calls for memory allocating APIs
+such as cudaMalloc or cudaMallocPitch.
+
+Below is an example that utilizes BufferPool with StackAllocator:
+
+@code
+    #include <opencv2/opencv.hpp>
+
+    using namespace cv;
+    using namespace cv::cuda
+
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
+
+        Stream stream1, stream2;                                // Each stream uses 1 stack
+        BufferPool pool1(stream1), pool2(stream2);
+
+        GpuMat d_src1 = pool1.getBuffer(4096, 4096, CV_8UC1);   // 16MB
+        GpuMat d_dst1 = pool1.getBuffer(4096, 4096, CV_8UC3);   // 48MB, pool1 is now full
+
+        GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
+        GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
+
+        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+    }
+@endcode
+
+If we allocate another GpuMat on pool1 in the above example, it will be carried out by
+the DefaultAllocator since the stack for pool1 full.
+
+@code
+    {
+        GpuMat d_add1 = pool1.getBuffer(1024, 1024, CV_8UC1);   // Stack for pool1 is full, memory is allocated with DefaultAllocator
+    }
+@endcode
+
+If a third stream is declared in the above example, allocating with #getBuffer
+within that stream will be carried out by the DefaultAllocator becuase we've run out of
+stacks.
+
+@code
+    {
+        Stream stream3;                                         // Only 2 stacks were allocated, we've run out of stacks
+        BufferPool pool3(stream3);
+        GpuMat d_src3 = pool3.getBuffer(1024, 1024, CV_8UC1);   // Memory is allocated with DefaultAllocator
+    }
+@endcode
+
  */
 class CV_EXPORTS BufferPool
 {
