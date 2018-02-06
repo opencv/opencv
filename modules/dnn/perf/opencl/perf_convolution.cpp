@@ -4,25 +4,16 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest
-{
-namespace ocl
-{
+namespace opencv_test { namespace ocl {
+using namespace ::perf;
 
-using std::tr1::tuple;
-using std::tr1::get;
-using std::tr1::make_tuple;
-using std::make_pair;
-using namespace perf;
-using namespace testing;
-using namespace cv;
-using namespace cv::dnn;
-
+namespace {
 enum {STRIDE_OFF = 1, STRIDE_ON = 2};
 CV_ENUM(StrideSize, STRIDE_OFF, STRIDE_ON);
 
 enum {GROUP_OFF = 1, GROUP_2 = 2};
 CV_ENUM(GroupSize, GROUP_OFF, GROUP_2);
+} // namespace
 
 //Squared Size
 #define SSZ(n) cv::Size(n, n)
@@ -80,11 +71,11 @@ OCL_PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     Ptr<Layer> layer = cv::dnn::LayerFactory::createLayerInstance("Convolution", lp);
     std::vector<MatShape> inputShapes(1, shape(inpBlob)), outShapes, internals;
     layer->getMemoryShapes(inputShapes, 0, outShapes, internals);
-    for (int i = 0; i < outShapes.size(); i++)
+    for (size_t i = 0; i < outShapes.size(); i++)
     {
         outBlobs.push_back(Mat(outShapes[i], CV_32F));
     }
-    for (int i = 0; i < internals.size(); i++)
+    for (size_t i = 0; i < internals.size(); i++)
     {
         internalBlobs.push_back(Mat());
         if (total(internals[i]))

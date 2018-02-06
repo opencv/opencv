@@ -4,13 +4,8 @@
 
 #include "test_precomp.hpp"
 
-#include <vector>
+namespace opencv_test { namespace {
 
-using namespace cv;
-using namespace std;
-
-namespace
-{
     static const int fixedShiftU8 = 8;
     static const int64_t fixedOne = (1L << fixedShiftU8);
 
@@ -40,7 +35,6 @@ namespace
         }
         return saturate_cast<T>((val + fixedRound) >> (fixedShift * 2));
     }
-}
 
 TEST(GaussianBlur_Bitexact, Linear8U)
 {
@@ -131,7 +125,7 @@ TEST(GaussianBlur_Bitexact, Linear8U)
         for (int borderind = 0, _bordercnt = sizeof(bordermodes) / sizeof(bordermodes[0]); borderind < _bordercnt; ++borderind)
         {
             Mat src_border;
-            copyMakeBorder(src_roi, src_border, kernel.height / 2, kernel.height / 2, kernel.width / 2, kernel.width / 2, bordermodes[borderind]);
+            cv::copyMakeBorder(src_roi, src_border, kernel.height / 2, kernel.height / 2, kernel.width / 2, kernel.width / 2, bordermodes[borderind]);
             for (int c = 0; c < src_border.channels(); c++)
             {
                 int fromTo[2] = { c, 0 };
@@ -156,7 +150,7 @@ TEST(GaussianBlur_Bitexact, Linear8U)
                 mixChannels(dst_chan, refdst, toFrom, 1);
             }
 
-            GaussianBlur(src_roi, dst, kernel, modes[modeind].sigma_x, modes[modeind].sigma_y, bordermodes[borderind]);
+            cv::GaussianBlur(src_roi, dst, kernel, modes[modeind].sigma_x, modes[modeind].sigma_y, bordermodes[borderind]);
 
             EXPECT_GE(0, cvtest::norm(refdst, dst, cv::NORM_L1))
                 << "GaussianBlur " << cn << "-chan mat " << drows << "x" << dcols << " by kernel " << kernel << " sigma(" << modes[modeind].sigma_x << ";" << modes[modeind].sigma_y << ") failed with max diff " << cvtest::norm(refdst, dst, cv::NORM_INF);
@@ -164,4 +158,4 @@ TEST(GaussianBlur_Bitexact, Linear8U)
     }
 }
 
-///* End of file. */
+}} // namespace

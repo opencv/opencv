@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_BaseHistTest : public cvtest::BaseTest
 {
@@ -1919,4 +1918,5 @@ TEST(Imgproc_Hist_CalcBackProject, accuracy) { CV_CalcBackProjectTest test; test
 TEST(Imgproc_Hist_CalcBackProjectPatch, accuracy) { CV_CalcBackProjectPatchTest test; test.safe_run(); }
 TEST(Imgproc_Hist_BayesianProb, accuracy) { CV_BayesianProbTest test; test.safe_run(); }
 
+}} // namespace
 /* End Of File */

@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // FAST
@@ -310,3 +308,5 @@ PERF_TEST_P(DescSize_Norm, BFRadiusMatch,
         SANITY_CHECK_MATCHES(cpu_matches);
     }
 }
+
+}} // namespace

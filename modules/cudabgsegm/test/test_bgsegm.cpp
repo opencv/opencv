@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////
 // MOG2
@@ -167,4 +167,5 @@ INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG2, testing::Combine(
 
 #endif
 
+}} // namespace
 #endif // HAVE_CUDA

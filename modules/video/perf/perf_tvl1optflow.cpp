@@ -1,14 +1,13 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 using namespace perf;
 
-typedef TestBaseWithParam< pair<string, string> > ImagePair;
+typedef TestBaseWithParam< std::pair<string, string> > ImagePair;
 
-pair<string, string> impair(const char* im1, const char* im2)
+std::pair<string, string> impair(const char* im1, const char* im2)
 {
-    return make_pair(string(im1), string(im2));
+    return std::make_pair(string(im1), string(im2));
 }
 
 PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1, testing::Values(impair("cv/optflow/RubberWhale1.png", "cv/optflow/RubberWhale2.png")))
@@ -28,3 +27,5 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1, testing::Values(impair("cv/optflow/
 
     SANITY_CHECK_NOTHING();
 }
+
+}} // namespace

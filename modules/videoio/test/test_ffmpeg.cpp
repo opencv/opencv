@@ -41,9 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_FFMPEG
 
@@ -441,3 +440,4 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
 }
 
 #endif
+}} // namespace

@@ -46,9 +46,7 @@
 
 #include "opencv2/calib3d.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 DEF_PARAM_TEST_1(Count, int);
 
@@ -138,4 +136,5 @@ PERF_TEST_P(Count, Calib3D_SolvePnPRansac,
     }
 }
 
+}} // namespace
 #endif

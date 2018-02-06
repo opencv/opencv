@@ -85,7 +85,7 @@ Mat blobFromNPY(const std::string& path)
 
     Mat blob(shape, CV_32F);
     ifs.read((char*)blob.data, blob.total() * blob.elemSize());
-    CV_Assert(ifs.gcount() == blob.total() * blob.elemSize());
+    CV_Assert((size_t)ifs.gcount() == blob.total() * blob.elemSize());
 
     return blob;
 }

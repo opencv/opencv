@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // CvtColor
@@ -251,3 +249,5 @@ PERF_TEST_P(Sz_Type_Op, AlphaComp,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace

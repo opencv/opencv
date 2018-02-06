@@ -41,9 +41,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/ts/cuda_test.hpp>
+#include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 #include "../src/fisheye.hpp"
 #include "opencv2/videoio.hpp"
+
+namespace opencv_test { namespace {
 
 class fisheyeTest : public ::testing::Test {
 
@@ -701,3 +703,5 @@ void fisheyeTest::merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl
     bl.copyTo(merged(cv::Rect(0, sz.height, sz.width, sz.height)));
     br.copyTo(merged(cv::Rect(sz.width, sz.height, sz.width, sz.height)));
 }
+
+}} // namespace

@@ -44,7 +44,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// Lut ////////////////////////
@@ -352,7 +352,7 @@ enum
 
 CV_ENUM(FlipType, FLIP_BOTH, FLIP_ROWS, FLIP_COLS)
 
-typedef std::tr1::tuple<Size, MatType, FlipType> FlipParams;
+typedef tuple<Size, MatType, FlipType> FlipParams;
 typedef TestBaseWithParam<FlipParams> FlipFixture;
 
 OCL_PERF_TEST_P(FlipFixture, Flip,
@@ -570,7 +570,7 @@ OCL_PERF_TEST_P(BitwiseNotFixture, Bitwise_not,
 
 CV_ENUM(CmpCode, CMP_LT, CMP_LE, CMP_EQ, CMP_NE, CMP_GE, CMP_GT)
 
-typedef std::tr1::tuple<Size, MatType, CmpCode> CompareParams;
+typedef tuple<Size, MatType, CmpCode> CompareParams;
 typedef TestBaseWithParam<CompareParams> CompareFixture;
 
 OCL_PERF_TEST_P(CompareFixture, Compare,
@@ -773,7 +773,7 @@ OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDevWithMask,
 
 CV_ENUM(NormType, NORM_INF, NORM_L1, NORM_L2)
 
-typedef std::tr1::tuple<Size, MatType, NormType> NormParams;
+typedef tuple<Size, MatType, NormType> NormParams;
 typedef TestBaseWithParam<NormParams> NormFixture;
 
 OCL_PERF_TEST_P(NormFixture, Norm1Arg,
@@ -1176,6 +1176,6 @@ OCL_PERF_TEST_P(ReduceAccFixture, Reduce,
     SANITY_CHECK(dst, eps);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

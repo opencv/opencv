@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
@@ -128,4 +128,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, GoodFeaturesToTrack, testing::Combine(
     ALL_DEVICES,
     testing::Values(MinDistance(0.0), MinDistance(3.0))));
 
+
+}} // namespace
 #endif // HAVE_CUDA

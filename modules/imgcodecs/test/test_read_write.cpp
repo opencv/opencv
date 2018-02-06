@@ -1,12 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <iostream>
-
-using namespace cv;
-using namespace std;
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 TEST(Imgcodecs_Image, read_write_bmp)
 {
@@ -129,3 +126,5 @@ TEST(Imgcodecs_Image, regression_9376)
     EXPECT_EQ(32, m.cols);
     EXPECT_EQ(32, m.rows);
 }
+
+}} // namespace

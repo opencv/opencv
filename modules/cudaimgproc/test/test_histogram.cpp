@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
@@ -257,6 +255,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CLAHE, testing::Combine(
     DIFFERENT_SIZES,
     testing::Values(0.0, 40.0)));
 
-} // namespace
 
+}} // namespace
 #endif // HAVE_CUDA

@@ -24,7 +24,7 @@ int main( int, const char** )
 }
 #else
 
-//using std::tr1::shared_ptr;
+//using std::shared_ptr;
 using cv::Ptr;
 
 #define PARAM_LEFT  "--left"

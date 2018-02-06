@@ -42,12 +42,9 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/videoio/videoio_c.h"
-#include "opencv2/highgui.hpp"
-#include <cstdio>
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
+namespace opencv_test
+{
 
 class Videoio_Test_Base
 {
@@ -454,3 +451,5 @@ INSTANTIATE_TEST_CASE_P(videoio, Videoio_Synthetic,
                         testing::Combine(
                             testing::ValuesIn(all_sizes),
                             testing::ValuesIn(synthetic_params)));
+
+} // namespace

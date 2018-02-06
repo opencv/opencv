@@ -8,11 +8,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/core/ocl.hpp"
 
-namespace cvtest {
-
-using namespace cv;
-using namespace dnn;
-using namespace testing;
+namespace opencv_test { namespace {
 
 CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
 CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
@@ -224,6 +220,6 @@ const tuple<DNNBackend, DNNTarget> testCases[] = {
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL)
 };
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, ValuesIn(testCases));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, testing::ValuesIn(testCases));
 
-}  // namespace cvtest
+}} // namespace

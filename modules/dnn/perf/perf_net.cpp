@@ -10,8 +10,7 @@
 
 #include "opencv2/dnn/shape_utils.hpp"
 
-namespace
-{
+namespace opencv_test {
 
 CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
 CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
@@ -40,7 +39,7 @@ public:
             if (!cv::ocl::useOpenCL())
 #endif
             {
-                throw ::SkipTestException("OpenCL is not available/disabled in OpenCV");
+                throw cvtest::SkipTestException("OpenCL is not available/disabled in OpenCV");
             }
         }
         if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
@@ -54,7 +53,7 @@ public:
         if (backend == DNN_BACKEND_HALIDE)
         {
             if (halide_scheduler == "disabled")
-                throw ::SkipTestException("Halide test is disabled");
+                throw cvtest::SkipTestException("Halide test is disabled");
             if (!halide_scheduler.empty())
                 halide_scheduler = findDataFile(std::string("dnn/halide_scheduler_") + (target == DNN_TARGET_OPENCL ? "opencl_" : "") + halide_scheduler, true);
         }
