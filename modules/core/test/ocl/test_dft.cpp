@@ -56,7 +56,7 @@ enum OCL_FFT_TYPE
     C2C = 3
 };
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ////////////////////////////////////////////////////////////////////////////
@@ -185,6 +185,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(45, 72), cv::Size
                                                )
                             );
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

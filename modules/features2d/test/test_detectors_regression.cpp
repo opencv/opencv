@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -114,7 +113,7 @@ bool CV_FeatureDetectorTest::isSimilarKeypoints( const KeyPoint& p1, const KeyPo
     const float maxAngleDif = 2.f;
     const float maxResponseDif = 0.1f;
 
-    float dist = (float)norm( p1.pt - p2.pt );
+    float dist = (float)cv::norm( p1.pt - p2.pt );
     return (dist < maxPtDif &&
             fabs(p1.size - p2.size) < maxSizeDif &&
             abs(p1.angle - p2.angle) < maxAngleDif &&
@@ -147,7 +146,7 @@ void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validK
         for( size_t c = 0; c < calcKeypoints.size(); c++ )
         {
             progress = update_progress( progress, (int)(v*calcKeypoints.size() + c), progressCount, 0 );
-            float curDist = (float)norm( calcKeypoints[c].pt - validKeypoints[v].pt );
+            float curDist = (float)cv::norm( calcKeypoints[c].pt - validKeypoints[v].pt );
             if( curDist < minDist )
             {
                 minDist = curDist;
@@ -307,3 +306,5 @@ TEST( Features2d_Detector_AKAZE_DESCRIPTOR_KAZE, regression )
     CV_FeatureDetectorTest test( "detector-akaze-with-kaze-desc", AKAZE::create(AKAZE::DESCRIPTOR_KAZE) );
     test.safe_run();
 }
+
+}} // namespace

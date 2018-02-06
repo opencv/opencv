@@ -21,13 +21,21 @@
 
 #include "cvconfig.h"
 
+#include <cmath>
+#include <vector>
+#include <list>
+#include <map>
+#include <queue>
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
+#include <cstdio>
 #include <iterator>
 #include <limits>
-#include <numeric>
+#include <algorithm>
+
 
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
@@ -47,6 +55,14 @@
 #define GTEST_DONT_DEFINE_ASSERT_GT 0
 #define GTEST_DONT_DEFINE_TEST      0
 
+#ifndef GTEST_LANG_CXX11
+#if __cplusplus >= 201103L || (defined(_MSVC_LANG) && !(_MSVC_LANG < 201103))
+#  define GTEST_LANG_CXX11 1
+#  define GTEST_HAS_TR1_TUPLE 0
+#  define GTEST_HAS_COMBINE 1
+# endif
+#endif
+
 #include "opencv2/ts/ts_gtest.h"
 #include "opencv2/ts/ts_ext.hpp"
 
@@ -64,10 +80,34 @@ namespace cvtest
 {
 
 using std::vector;
+using std::map;
 using std::string;
-using namespace cv;
+using std::stringstream;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::min;
+using std::max;
+using std::numeric_limits;
+using std::pair;
+using std::make_pair;
+using testing::TestWithParam;
 using testing::Values;
 using testing::Combine;
+
+using cv::Mat;
+using cv::Mat_;
+using cv::UMat;
+using cv::InputArray;
+using cv::OutputArray;
+using cv::noArray;
+
+using cv::Range;
+using cv::Point;
+using cv::Rect;
+using cv::Size;
+using cv::Scalar;
+using cv::RNG;
 
 // Tuple stuff from Google Tests
 using testing::get;
@@ -661,6 +701,7 @@ int main(int argc, char **argv) \
 
 namespace cvtest {
 using perf::MatDepth;
+using perf::MatType;
 }
 
 #ifdef WINRT
@@ -761,5 +802,32 @@ public:
 } // namespace std
 #endif // __FSTREAM_EMULATED__
 #endif // WINRT
+
+
+namespace opencv_test {
+using namespace cvtest;
+using namespace cv;
+
+#ifdef CV_CXX11
+#define CVTEST_GUARD_SYMBOL(name) \
+    class required_namespace_specificatin_here_for_symbol_ ## name {}; \
+    using name = required_namespace_specificatin_here_for_symbol_ ## name;
+#else
+#define CVTEST_GUARD_SYMBOL(name) /* nothing */
+#endif
+
+CVTEST_GUARD_SYMBOL(norm)
+CVTEST_GUARD_SYMBOL(add)
+CVTEST_GUARD_SYMBOL(multiply)
+CVTEST_GUARD_SYMBOL(divide)
+CVTEST_GUARD_SYMBOL(transpose)
+CVTEST_GUARD_SYMBOL(copyMakeBorder)
+CVTEST_GUARD_SYMBOL(filter2D)
+CVTEST_GUARD_SYMBOL(compare)
+CVTEST_GUARD_SYMBOL(minMaxIdx)
+CVTEST_GUARD_SYMBOL(threshold)
+
+extern bool required_opencv_test_namespace;  // compilation check for non-refactored tests
+}
 
 #endif // OPENCV_TS_HPP

@@ -1,8 +1,7 @@
 #include "perf_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-namespace
-{
+namespace opencv_test {
 
 enum {STRIDE_OFF = 1, STRIDE_ON = 2};
 CV_ENUM(StrideSize, STRIDE_OFF, STRIDE_ON);

@@ -1,13 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using namespace testing;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef tr1::tuple<Size, MatType> Size_Source_t;
+typedef tuple<Size, MatType> Size_Source_t;
 typedef TestBaseWithParam<Size_Source_t> Size_Source;
 typedef TestBaseWithParam<Size> TestMatSize;
 
@@ -118,7 +116,7 @@ PERF_TEST_P(MatSize, equalizeHist,
 }
 #undef MatSize
 
-typedef tr1::tuple<Size, double> Sz_ClipLimit_t;
+typedef tuple<Size, double> Sz_ClipLimit_t;
 typedef TestBaseWithParam<Sz_ClipLimit_t> Sz_ClipLimit;
 
 PERF_TEST_P(Sz_ClipLimit, CLAHE,
@@ -139,3 +137,5 @@ PERF_TEST_P(Sz_ClipLimit, CLAHE,
 
     SANITY_CHECK(dst);
 }
+
+} // namespace

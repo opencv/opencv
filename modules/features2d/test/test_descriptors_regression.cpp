@@ -41,9 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace testing;
+namespace opencv_test { namespace {
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -151,7 +149,7 @@ protected:
 
         float exact_percents = (100 * (float)exact_count / validDescriptors.rows);
         float failed_percents = (100 * (float)failed_count / validDescriptors.rows);
-        stringstream ss;
+        std::stringstream ss;
         ss << "Exact count (dist == 0): " << exact_count << " (" << (int)exact_percents << "%)" << std::endl
                 << "Failed count (dist > " << maxDist << "): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
                 << "Max distance between valid and computed descriptors (" << validDescriptors.size() << "): " << curMaxDist;
@@ -497,3 +495,5 @@ INSTANTIATE_TEST_CASE_P(Features2d, DescriptorImage,
             "shared/templ.png"
         )
 );
+
+}} // namespace

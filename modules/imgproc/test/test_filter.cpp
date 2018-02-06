@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_FilterBaseTest : public cvtest::ArrayTest
 {
@@ -1905,27 +1904,27 @@ protected:
                 randu(src, 0, 100);
                 // non-separable filtering with a small kernel
                 fidx = 0;
-                filter2D(src, dst, ddepth, small_kernel);
+                cv::filter2D(src, dst, ddepth, small_kernel);
                 fidx++;
-                filter2D(src, dst, ddepth, big_kernel);
+                cv::filter2D(src, dst, ddepth, big_kernel);
                 fidx++;
-                sepFilter2D(src, dst, ddepth, kernelX, kernelY);
+                cv::sepFilter2D(src, dst, ddepth, kernelX, kernelY);
                 fidx++;
-                sepFilter2D(src, dst, ddepth, symkernelX, symkernelY);
+                cv::sepFilter2D(src, dst, ddepth, symkernelX, symkernelY);
                 fidx++;
-                Sobel(src, dst, ddepth, 2, 0, 5);
+                cv::Sobel(src, dst, ddepth, 2, 0, 5);
                 fidx++;
-                Scharr(src, dst, ddepth, 0, 1);
+                cv::Scharr(src, dst, ddepth, 0, 1);
                 if( sdepth != ddepth )
                     continue;
                 fidx++;
-                GaussianBlur(src, dst, Size(5, 5), 1.2, 1.2);
+                cv::GaussianBlur(src, dst, Size(5, 5), 1.2, 1.2);
                 fidx++;
-                blur(src, dst, Size(11, 11));
+                cv::blur(src, dst, Size(11, 11));
                 fidx++;
-                morphologyEx(src, dst, MORPH_GRADIENT, elem_ellipse);
+                cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_ellipse);
                 fidx++;
-                morphologyEx(src, dst, MORPH_GRADIENT, elem_rect);
+                cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_rect);
             }
         }
         catch(...)
@@ -1964,7 +1963,7 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_EQ(227, dst.at<uchar>(0, 0));
 
     // should work like BORDER_ISOLATED
-    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE | BORDER_ISOLATED);
+    cv::blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE | BORDER_ISOLATED);
     EXPECT_EQ(0, dst.at<uchar>(0, 0));
 
     /// ksize <= src_roi.size()
@@ -1974,7 +1973,7 @@ TEST(Imgproc_Blur, borderTypes)
     src.at<uchar>(2, 2) = 255;
 
     // should work like !BORDER_ISOLATED
-    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
+    cv::blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
     Mat expected_dst =
             (Mat_<uchar>(3, 3) << 170, 113, 170, 113, 28, 113, 170, 113, 170);
     EXPECT_EQ(expected_dst.type(), dst.type());
@@ -2017,23 +2016,23 @@ TEST(Imgproc_Morphology, iterated)
 
         randu(src, 0, 256);
         if( op == 0 )
-            dilate(src, dst0, Mat(), Point(-1,-1), iterations);
+            cv::dilate(src, dst0, Mat(), Point(-1,-1), iterations);
         else
-            erode(src, dst0, Mat(), Point(-1,-1), iterations);
+            cv::erode(src, dst0, Mat(), Point(-1,-1), iterations);
 
         for( int i = 0; i < iterations; i++ )
             if( op == 0 )
-                dilate(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
+                cv::dilate(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
             else
-                erode(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
+                cv::erode(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
 
         Mat kern = getStructuringElement(MORPH_RECT, Size(3,3));
         if( op == 0 )
-            dilate(src, dst2, kern, Point(-1,-1), iterations);
+            cv::dilate(src, dst2, kern, Point(-1,-1), iterations);
         else
-            erode(src, dst2, kern, Point(-1,-1), iterations);
-        ASSERT_EQ(0.0, norm(dst0, dst1, NORM_INF));
-        ASSERT_EQ(0.0, norm(dst0, dst2, NORM_INF));
+            cv::erode(src, dst2, kern, Point(-1,-1), iterations);
+        ASSERT_EQ(0.0, cvtest::norm(dst0, dst1, NORM_INF));
+        ASSERT_EQ(0.0, cvtest::norm(dst0, dst2, NORM_INF));
     }
 }
 
@@ -2047,15 +2046,15 @@ TEST(Imgproc_Sobel, borderTypes)
     src_roi.setTo(cv::Scalar::all(0));
 
     // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
     EXPECT_EQ(8, dst.at<short>(0, 0));
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT);
     EXPECT_EQ(8, dst.at<short>(0, 0));
 
     // should work like BORDER_ISOLATED
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE | BORDER_ISOLATED);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE | BORDER_ISOLATED);
     EXPECT_EQ(0, dst.at<short>(0, 0));
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
     EXPECT_EQ(0, dst.at<short>(0, 0));
 
     /// ksize <= src_roi.size()
@@ -2066,22 +2065,22 @@ TEST(Imgproc_Sobel, borderTypes)
     // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
     expected_dst =
         (Mat_<short>(3, 3) << -15, 0, 15, -20, 0, 20, -15, 0, 15);
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT);
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
 
     // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
     expected_dst = Mat::zeros(3, 3, CV_16SC1);
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE | BORDER_ISOLATED);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE | BORDER_ISOLATED);
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
-    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
+    cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
@@ -2097,12 +2096,12 @@ TEST(Imgproc_MorphEx, hitmiss_regression_8957)
     Mat_<uchar> kernel = src / 255;
 
     Mat dst;
-    morphologyEx(src, dst, MORPH_HITMISS, kernel);
+    cv::morphologyEx(src, dst, MORPH_HITMISS, kernel);
 
     Mat ref = Mat::zeros(3, 3, CV_8U);
     ref.at<uchar>(1, 1) = 255;
 
-    ASSERT_DOUBLE_EQ(norm(dst, ref, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(dst, ref, NORM_INF), 0.);
 }
 
 TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
@@ -2115,7 +2114,9 @@ TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
     Mat_<uchar> kernel = Mat_<uchar>::zeros(3, 3);
 
     Mat dst;
-    morphologyEx(src, dst, MORPH_HITMISS, kernel);
+    cv::morphologyEx(src, dst, MORPH_HITMISS, kernel);
 
-    ASSERT_DOUBLE_EQ(norm(dst, src, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(dst, src, NORM_INF), 0.);
 }
+
+}} // namespace

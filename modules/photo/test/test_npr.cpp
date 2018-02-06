@@ -39,13 +39,9 @@
 //
 //M*/
 
-
 #include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 static const double numerical_precision = 100.;
 
@@ -115,7 +111,7 @@ TEST(Photo_NPR_PencilSketch, regression)
     pencilSketch(source,pencil_result, color_pencil_result, 10, 0.1f, 0.03f);
 
     Mat pencil_reference = imread(folder + "pencil_sketch_reference.png", 0 /* == grayscale*/);
-    double pencil_error = norm(pencil_reference, pencil_result, NORM_L1);
+    double pencil_error = cvtest::norm(pencil_reference, pencil_result, NORM_L1);
     EXPECT_LE(pencil_error, numerical_precision);
 
     Mat color_pencil_reference = imread(folder + "color_pencil_sketch_reference.png");
@@ -140,3 +136,5 @@ TEST(Photo_NPR_Stylization, regression)
     EXPECT_LE(stylized_error, numerical_precision);
 
 }
+
+}} // namespace

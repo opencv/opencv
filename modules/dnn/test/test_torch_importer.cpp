@@ -44,7 +44,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
+namespace opencv_test
 {
 
 using namespace std;

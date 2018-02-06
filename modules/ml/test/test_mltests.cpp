@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test {
 
 CV_AMLTest::CV_AMLTest( const char* _modelName ) : CV_MLBaseTest( _modelName )
 {
@@ -124,6 +123,8 @@ int CV_AMLTest::validate_test_results( int testCaseIdx )
     }
     return cvtest::TS::OK;
 }
+
+namespace {
 
 TEST(ML_DTree, regression) { CV_AMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, regression) { CV_AMLTest test( CV_BOOST ); test.safe_run(); }
@@ -219,4 +220,5 @@ TEST(ML_RTrees, getVotes)
     EXPECT_EQ(result.at<float>(0, predicted_class), rt->predict(test));
 }
 
+}} // namespace
 /* End of file. */

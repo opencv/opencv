@@ -1,8 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_TIFF
 
@@ -217,3 +218,5 @@ TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
 }
 
 #endif
+
+}} // namespace
