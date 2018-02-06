@@ -150,6 +150,7 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 
 PERF_TEST_P_(DNNTestNetwork, OpenFace)
 {
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
             Mat(cv::Size(96, 96), CV_32FC3), "", "torch");
 }
@@ -195,6 +196,15 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", "",
                Mat(cv::Size(368, 368), CV_32FC3), "", "caffe");
+}
+
+PERF_TEST_P_(DNNTestNetwork, opencv_face_detector)
+{
+    if (backend == DNN_BACKEND_HALIDE ||
+        backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("");
+    processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt", "",
+               Mat(cv::Size(300, 300), CV_32FC3), "", "caffe");
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {

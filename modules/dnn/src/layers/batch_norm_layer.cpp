@@ -277,14 +277,12 @@ public:
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
         lp.name = name;
-        lp.type = "BatchNormalization";
+        lp.type = "ScaleShift";
         lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::BatchNormalizationLayer> ieLayer(new InferenceEngine::BatchNormalizationLayer(lp));
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
 
-        size_t numChannels = weights_.total();
-        ieLayer->epsilon = epsilon;
-        ieLayer->_weights = wrapToInfEngineBlob(blobs[1], {numChannels});
-        ieLayer->_biases = wrapToInfEngineBlob(blobs[0], {numChannels});
+        ieLayer->_weights = wrapToInfEngineBlob(weights_);
+        ieLayer->_biases = wrapToInfEngineBlob(bias_);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE

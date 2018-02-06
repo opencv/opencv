@@ -279,9 +279,8 @@ TEST(Test_TensorFlow, Inception_v2_SSD)
     normAssert(detections, ref);
 }
 
-OCL_TEST(Test_TensorFlow, MobileNet_SSD)
+OCL_TEST(Test_TensorFlow, DISABLED_MobileNet_SSD)
 {
-    throw SkipTestException("TODO: test is failed");
     std::string netPath = findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false);
     std::string netConfig = findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false);
     std::string imgPath = findDataFile("dnn/street.png", false);
