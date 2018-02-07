@@ -78,7 +78,7 @@ unset(OPENCV_WORLD_MODULES CACHE)
 # Usage:
 #   add_dependencies(opencv_<name> [REQUIRED] [<list of dependencies>] [OPTIONAL <list of modules>] [WRAP <list of wrappers>])
 # Notes:
-# * <list of dependencies> - can include full names of modules or full pathes to shared/static libraries or cmake targets
+# * <list of dependencies> - can include full names of modules or full paths to shared/static libraries or cmake targets
 macro(ocv_add_dependencies full_modname)
   ocv_debug_message("ocv_add_dependencies(" ${full_modname} ${ARGN} ")")
   #we don't clean the dependencies here to allow this macro several times for every module
@@ -138,7 +138,7 @@ macro(ocv_add_module _name)
 
   # the first pass - collect modules info, the second pass - create targets
   if(OPENCV_INITIAL_PASS)
-    #guard agains redefinition
+    #guard against redefinition
     if(";${OPENCV_MODULES_BUILD};${OPENCV_MODULES_DISABLED_USER};" MATCHES ";${the_module};")
       message(FATAL_ERROR "Redefinition of the ${the_module} module.
   at:                    ${CMAKE_CURRENT_SOURCE_DIR}
@@ -407,7 +407,7 @@ function(__ocv_sort_modules_by_deps __lst)
             break()
           endif()
         endforeach()
-        # chek if all dependencies for this module has been resolved
+        # check if all dependencies for this module has been resolved
         if (NOT unresolved_deps_found)
           list(APPEND result ${m})
           list(REMOVE_ITEM input ${m})

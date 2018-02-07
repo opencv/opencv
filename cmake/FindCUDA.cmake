@@ -82,7 +82,7 @@
 #      CUDA_NVCC_FLAGS_<CONFIG> variables.  For Visual Studio targets,
 #      the host compiler is constructed with one or more visual studio macros
 #      such as $(VCInstallDir), that expands out to the path when
-#      the command is run from withing VS.
+#      the command is run from within VS.
 #
 #   CUDA_NVCC_FLAGS
 #   CUDA_NVCC_FLAGS_<CONFIG>
@@ -204,7 +204,7 @@
 #      The arguments passed in after OPTIONS are extra command line options to
 #      give to nvcc.  You can also specify per configuration options by
 #      specifying the name of the configuration followed by the options.  General
-#      options must preceed configuration specific options.  Not all
+#      options must precede configuration specific options.  Not all
 #      configurations need to be specified, only the ones provided will be used.
 #
 #         OPTIONS -DFLAG=2 "-DFLAG_OTHER=space in flag"
@@ -271,7 +271,7 @@
 #                            implementation (alternative to:
 #                            CUDA_ADD_CUFFT_TO_TARGET macro)
 #   CUDA_CUBLAS_LIBRARIES -- Device or emulation library for the Cuda BLAS
-#                            implementation (alterative to:
+#                            implementation (alternative to:
 #                            CUDA_ADD_CUBLAS_TO_TARGET macro).
 #   CUDA_cupti_LIBRARY    -- CUDA Profiling Tools Interface library.
 #                            Only available for CUDA version 4.0+.
@@ -493,7 +493,7 @@ mark_as_advanced(
 # Makefile and similar generators don't define CMAKE_CONFIGURATION_TYPES, so we
 # need to add another entry for the CMAKE_BUILD_TYPE.  We also need to add the
 # standerd set of 4 build types (Debug, MinSizeRel, Release, and RelWithDebInfo)
-# for completeness.  We need run this loop in order to accomodate the addition
+# for completeness.  We need run this loop in order to accommodate the addition
 # of extra configuration types.  Duplicate entries will be removed by
 # REMOVE_DUPLICATES.
 set(CUDA_configuration_types ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE} Debug MinSizeRel Release RelWithDebInfo)
