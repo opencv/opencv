@@ -1731,7 +1731,7 @@ TEST(Mat_, from_initializer_list)
 {
     Mat_<float> A = {1, 2, 3};
     Mat_<float> B(3, 1); B << 1, 2, 3;
-    Mat_<float> C({1}, {1,2,3} );
+    Mat_<float> C({1}, {1,2,3});
 
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
