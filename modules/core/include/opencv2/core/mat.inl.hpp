@@ -584,6 +584,25 @@ Mat::Mat(const std::initializer_list<_Tp> list)
         return;
     Mat((int)list.size(), 1, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
+
+template<typename _Tp, typename> inline
+Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list)
+    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows((int)list.size()),
+      cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
+{
+    if(sizes.size() != 1 || list.size() == 0)
+        return;
+    this->rows = *sizes.begin();
+    if(sizes.size() == 2)
+    {
+        this->cols = *(sizes.begin + 1);
+    }
+    else
+    {
+        this->cols = (int)list.size() / *sizes.begin()
+    }
+    Mat(rows, cols, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
+}
 #endif
 
 #ifdef CV_CXX_STD_ARRAY
@@ -1627,6 +1646,11 @@ Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
 #ifdef CV_CXX11
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(std::initializer_list<_Tp> list)
+    : Mat(list)
+{}
+
+template<typename _Tp> inline
+Mat_<_Tp>::Mat_(const std::initializer_list<int> sizes, std::initializer_list<_Tp> list)
     : Mat(list)
 {}
 #endif
