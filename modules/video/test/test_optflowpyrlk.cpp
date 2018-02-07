@@ -42,6 +42,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
 
+namespace opencv_test { namespace {
+
 /* ///////////////////// pyrlk_test ///////////////////////// */
 
 class CV_OptFlowPyrLKTest : public cvtest::BaseTest
@@ -256,3 +258,5 @@ TEST(Video_OpticalFlowPyrLK, submat)
 
     ASSERT_NO_THROW(cv::calcOpticalFlowPyrLK(img1, img2, prev, next, status, error));
 }
+
+}} // namespace

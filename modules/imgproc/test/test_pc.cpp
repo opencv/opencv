@@ -42,11 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-
-namespace cvtest
-{
+namespace opencv_test { namespace {
 
 /// phase correlation
 class CV_PhaseCorrelatorTest : public cvtest::ArrayTest
@@ -124,4 +120,4 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
-}
+}} // namespace

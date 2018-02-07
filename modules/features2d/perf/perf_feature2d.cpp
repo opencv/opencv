@@ -1,5 +1,9 @@
 #include "perf_feature2d.hpp"
 
+namespace opencv_test
+{
+using namespace perf;
+
 PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
@@ -64,3 +68,5 @@ PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DETECT
     EXPECT_EQ((size_t)descriptors.rows, points.size());
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

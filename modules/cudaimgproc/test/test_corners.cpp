@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CornerHarris
@@ -146,4 +146,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CornerMinEigen, testing::Combine(
     testing::Values(BlockSize(3), BlockSize(5), BlockSize(7)),
     testing::Values(ApertureSize(0), ApertureSize(3), ApertureSize(5), ApertureSize(7))));
 
+
+}} // namespace
 #endif // HAVE_CUDA

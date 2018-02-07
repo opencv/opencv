@@ -39,15 +39,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
 #ifndef OPENCV_TEST_PRECOMP_HPP
 #define OPENCV_TEST_PRECOMP_HPP
 
@@ -55,7 +46,6 @@
 #include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/cudacodec.hpp"
-#include "opencv2/highgui.hpp"
 
 #include "cvconfig.h"
 

@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ImgWarpBaseTest : public cvtest::ArrayTest
 {
@@ -1419,7 +1418,7 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
         for (int dx = 0; dx < dsize.width && next; ++dx)
             if (fabs(static_cast<double>(aD[dx] - eD[dx])) > tolerance)
             {
-                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(norm(actual, expected, NORM_INF)));
+                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(cvtest::norm(actual, expected, NORM_INF)));
                 cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Error in : (%d, %d)\n", dx, dy);
 
                 const int radius = 3;
@@ -1434,7 +1433,7 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
             }
     }
 
-    ASSERT_EQ(0, norm(one_channel_diff, cv::NORM_INF));
+    ASSERT_EQ(0, cvtest::norm(one_channel_diff, cv::NORM_INF));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1736,11 +1735,11 @@ TEST(Imgproc_Warp, multichannel)
 
         Mat rot = getRotationMatrix2D(Point2f(0.f, 0.f), 1.0, 1.0);
         warpAffine(src, dst, rot, src.size(), inter, border);
-        ASSERT_EQ(0.0, norm(dst, NORM_INF));
+        ASSERT_EQ(0.0, cvtest::norm(dst, NORM_INF));
         Mat rot2 = Mat::eye(3, 3, rot.type());
         rot.copyTo(rot2.rowRange(0, 2));
         warpPerspective(src, dst, rot2, src.size(), inter, border);
-        ASSERT_EQ(0.0, norm(dst, NORM_INF));
+        ASSERT_EQ(0.0, cvtest::norm(dst, NORM_INF));
     }
 }
 
@@ -1755,7 +1754,7 @@ TEST(Imgproc_GetAffineTransform, singularity)
     B_sample[1] = Point2f(15.0113f, 12.8994f);
     B_sample[2] = Point2f(38.9943f, 9.56297f);
     Mat trans = getAffineTransform(A_sample, B_sample);
-    ASSERT_EQ(0.0, norm(trans, NORM_INF));
+    ASSERT_EQ(0.0, cvtest::norm(trans, NORM_INF));
 }
 
 TEST(Imgproc_Remap, DISABLED_memleak)
@@ -1864,4 +1863,5 @@ TEST(Imgproc_logPolar, identity)
 }
 
 
+}} // namespace
 /* End of file. */

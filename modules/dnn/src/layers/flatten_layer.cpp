@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "op_inf_engine.hpp"
 #include <float.h>
 #include <algorithm>
 #include <opencv2/dnn/shape_utils.hpp>
@@ -59,6 +60,12 @@ public:
         _startAxis = params.get<int>("axis", 1);
         _endAxis = params.get<int>("end_axis", -1);
         setParamsFrom(params);
+    }
+
+    virtual bool supportBackend(int backendId)
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -151,6 +158,21 @@ public:
             MatShape outShape = shape(outputs[i]);
             outputs[i] = inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]);
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Flatten";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+        ieLayer->params["axis"] = format("%d", _startAxis);
+        ieLayer->params["end_axis"] = format("%d", _endAxis);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 
     int _startAxis;

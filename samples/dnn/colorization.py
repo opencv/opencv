@@ -1,6 +1,6 @@
-# Script is based on https://github.com/richzhang/colorization/blob/master/colorize.py
-# To download the caffemodel and the prototxt, see: https://github.com/richzhang/colorization/tree/master/models
-# To download pts_in_hull.npy, see: https://github.com/richzhang/colorization/blob/master/resources/pts_in_hull.npy
+# Script is based on https://github.com/richzhang/colorization/blob/master/colorization/colorize.py
+# To download the caffemodel and the prototxt, see: https://github.com/richzhang/colorization/tree/master/colorization/models
+# To download pts_in_hull.npy, see: https://github.com/richzhang/colorization/blob/master/colorization/resources/pts_in_hull.npy
 import numpy as np
 import argparse
 import cv2 as cv
@@ -8,9 +8,9 @@ import cv2 as cv
 def parse_args():
     parser = argparse.ArgumentParser(description='iColor: deep interactive colorization')
     parser.add_argument('--input', help='Path to image or video. Skip to capture frames from camera')
-    parser.add_argument('--prototxt', help='Path to colorization_deploy_v2.prototxt', default='./models/colorization_release_v2.prototxt')
-    parser.add_argument('--caffemodel', help='Path to colorization_release_v2.caffemodel', default='./models/colorization_release_v2.caffemodel')
-    parser.add_argument('--kernel', help='Path to pts_in_hull.npy', default='./resources/pts_in_hull.npy')
+    parser.add_argument('--prototxt', help='Path to colorization_deploy_v2.prototxt', required=True)
+    parser.add_argument('--caffemodel', help='Path to colorization_release_v2.caffemodel', required=True)
+    parser.add_argument('--kernel', help='Path to pts_in_hull.npy', required=True)
 
     args = parser.parse_args()
     return args

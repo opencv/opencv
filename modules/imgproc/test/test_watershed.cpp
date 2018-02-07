@@ -41,10 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_WatershedTest : public cvtest::BaseTest
 {
@@ -121,12 +119,9 @@ void CV_WatershedTest::run( int /* start_from */)
         exp = markers8U;
     }
 
-    if (0 != norm(markers8U, exp, NORM_INF))
-    {
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-        return;
-    }
-    ts->set_failed_test_info(cvtest::TS::OK);
+    ASSERT_EQ(0, cvtest::norm(markers8U, exp, NORM_INF));
 }
 
 TEST(Imgproc_Watershed, regression) { CV_WatershedTest test; test.safe_run(); }
+
+}} // namespace

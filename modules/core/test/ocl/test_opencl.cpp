@@ -4,7 +4,6 @@
 #include "../test_precomp.hpp"
 
 #include <opencv2/core/ocl.hpp>
-#include <fstream>
 
 namespace opencv_test { namespace {
 

@@ -42,10 +42,9 @@
 #include "test_precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-using namespace cv;
-using namespace std;
+namespace cvtest {
 
-int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
+static int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
 {
     int depth;
     int i;
@@ -348,14 +347,18 @@ int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
 }
 
 
-void cvtest::Rodrigues(const Mat& src, Mat& dst, Mat* jac)
+/*extern*/ void Rodrigues(const Mat& src, Mat& dst, Mat* jac)
 {
+    CV_Assert(src.data != dst.data && "Inplace is not supported");
+    CV_Assert(!dst.empty() && "'dst' must be allocated");
     CvMat _src = src, _dst = dst, _jac;
     if( jac )
         _jac = *jac;
     cvTsRodrigues(&_src, &_dst, jac ? &_jac : 0);
 }
 
+} // namespace
+namespace opencv_test {
 
 static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
 {
@@ -463,6 +466,7 @@ static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
         dst.convertTo(_dst, _dst.depth());
 }
 
+namespace {
 
 void
 test_projectPoints( const Mat& _3d, const Mat& Rt, const Mat& A, Mat& _2d, RNG* rng, double sigma )
@@ -728,7 +732,7 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
     cvtest::Rodrigues( m, vec2, m2v_jac );
     cvtest::copy( vec, vec2 );
 
-    theta0 = norm( vec2, CV_L2 );
+    theta0 = cvtest::norm( vec2, CV_L2 );
     theta1 = fmod( theta0, CV_PI*2 );
 
     if( theta1 > CV_PI )
@@ -1067,7 +1071,9 @@ protected:
     void run_func();
     void prepare_to_validation( int );
 
+#if 0
     double sampson_error(const double* f, double x1, double y1, double x2, double y2);
+#endif
 
     int method;
     int img_size;
@@ -1299,6 +1305,7 @@ void CV_EssentialMatTest::run_func()
     mask2.copyTo(test_mat[TEMP][4]);
 }
 
+#if 0
 double CV_EssentialMatTest::sampson_error(const double * f, double x1, double y1, double x2, double y2)
 {
     double Fx1[3] = {
@@ -1316,8 +1323,8 @@ double CV_EssentialMatTest::sampson_error(const double * f, double x1, double y1
     double error = x2tFx1 * x2tFx1 / (Fx1[0] * Fx1[0] + Fx1[1] * Fx1[1] + Ftx2[0] * Ftx2[0] + Ftx2[1] * Ftx2[1]);
     error = sqrt(error);
     return error;
-
 }
+#endif
 
 void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 {
@@ -1395,10 +1402,10 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 
     double* pose_prop1 = test_mat[REF_OUTPUT][2].ptr<double>();
     double* pose_prop2 = test_mat[OUTPUT][2].ptr<double>();
-    double terr1 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) + test_mat[TEMP][3], NORM_L2);
-    double terr2 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) - test_mat[TEMP][3], NORM_L2);
-    Mat rvec;
-    Rodrigues(Rt0.colRange(0, 3), rvec);
+    double terr1 = cvtest::norm(Rt0.col(3) / cvtest::norm(Rt0.col(3), NORM_L2) + test_mat[TEMP][3], NORM_L2);
+    double terr2 = cvtest::norm(Rt0.col(3) / cvtest::norm(Rt0.col(3), NORM_L2) - test_mat[TEMP][3], NORM_L2);
+    Mat rvec(3, 1, CV_32F);
+    cvtest::Rodrigues(Rt0.colRange(0, 3), rvec);
     pose_prop1[0] = 0;
     // No check for CV_LMeDS on translation. Since it
     // involves with some degraded problem, when data is exact inliers.
@@ -1726,4 +1733,5 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
     cout << np2 << endl;
 }
 
+}} // namespace
 /* End of file. */

@@ -20,6 +20,10 @@ if(APPLE)
   list(APPEND HIGHGUI_LIBRARIES ${ZLIB_LIBRARIES})
 endif()
 
+if(HAVE_WEBP)
+  add_definitions(-DHAVE_WEBP)
+endif()
+
 set(highgui_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
     )

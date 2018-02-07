@@ -43,10 +43,7 @@
 #include "test_chessboardgenerator.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-#include <iostream>
-
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_CameraCalibrationBadArgTest : public cvtest::BadArgTest
 {
@@ -507,8 +504,8 @@ protected:
         objectPoints_c = objectPoints_cpp;
 
         Mat t_vec_cpp(Mat::zeros(1, 3, CV_32F)); t_vec_c = t_vec_cpp;
-        Mat r_vec_cpp;
-        Rodrigues(Mat::eye(3, 3, CV_32F), r_vec_cpp); r_vec_c = r_vec_cpp;
+        Mat r_vec_cpp(3, 1, CV_32F);
+        cvtest::Rodrigues(Mat::eye(3, 3, CV_32F), r_vec_cpp); r_vec_c = r_vec_cpp;
 
         Mat A_cpp = camMat.clone(); A_c = A_cpp;
         Mat distCoeffs_cpp = distCoeffs.clone(); distCoeffs_c = distCoeffs_cpp;
@@ -735,3 +732,5 @@ protected:
 TEST(Calib3d_CalibrateCamera_C, badarg) { CV_CameraCalibrationBadArgTest test; test.safe_run(); }
 TEST(Calib3d_Rodrigues_C, badarg) { CV_Rodrigues2BadArgTest test; test.safe_run(); }
 TEST(Calib3d_ProjectPoints_C, badarg) { CV_ProjectPoints2BadArgTest test; test.safe_run(); }
+
+}} // namespace

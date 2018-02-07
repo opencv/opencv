@@ -134,7 +134,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
-  # The -Wno-long-long is required in 64bit systems when including sytem headers.
+  # The -Wno-long-long is required in 64bit systems when including system headers.
   if(X86_64)
     add_extra_compiler_option(-Wno-long-long)
   endif()
@@ -244,8 +244,8 @@ if(MSVC)
   endif()
 
   if(ENABLE_LTO)
-    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /GL")
-    set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} /LTCG")
+    set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} /GL")
+    set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /LTCG")
   endif()
 
 endif()

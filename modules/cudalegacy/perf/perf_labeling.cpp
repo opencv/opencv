@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 DEF_PARAM_TEST_1(Image, string);
 
@@ -193,3 +191,5 @@ PERF_TEST_P(Image, DISABLED_Labeling_ConnectedComponents,
         CPU_SANITY_CHECK(components);
     }
 }
+
+}} // namespace

@@ -44,11 +44,8 @@
  //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d.hpp"
-#include <vector>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_HomographyDecompTest: public cvtest::BaseTest {
 
@@ -118,9 +115,9 @@ private:
              riter != rotations.end() && titer != translations.end() && niter != normals.end();
              ++riter, ++titer, ++niter) {
 
-            double rdist = norm(*riter, _R, NORM_INF);
-            double tdist = norm(*titer, _t, NORM_INF);
-            double ndist = norm(*niter, _n, NORM_INF);
+            double rdist = cvtest::norm(*riter, _R, NORM_INF);
+            double tdist = cvtest::norm(*titer, _t, NORM_INF);
+            double ndist = cvtest::norm(*niter, _n, NORM_INF);
 
             if (   rdist < max_error
                 && tdist < max_error
@@ -136,3 +133,5 @@ private:
 };
 
 TEST(Calib3d_DecomposeHomography, regression) { CV_HomographyDecompTest test; test.safe_run(); }
+
+}} // namespace

@@ -43,8 +43,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 template<typename T>
 struct SimilarWith
@@ -59,13 +58,13 @@ struct SimilarWith
 template<>
 bool SimilarWith<Vec2f>::operator()(Vec2f other)
 {
-    return abs(other[0] - value[0]) < rho_eps && abs(other[1] - value[1]) < theta_eps;
+    return std::abs(other[0] - value[0]) < rho_eps && std::abs(other[1] - value[1]) < theta_eps;
 }
 
 template<>
 bool SimilarWith<Vec4i>::operator()(Vec4i other)
 {
-    return norm(value, other) < theta_eps;
+    return cv::norm(value, other) < theta_eps;
 }
 
 template <typename T>
@@ -110,33 +109,33 @@ protected:
     int maxGap;
 };
 
-typedef std::tr1::tuple<string, double, double, int> Image_RhoStep_ThetaStep_Threshold_t;
+typedef tuple<string, double, double, int> Image_RhoStep_ThetaStep_Threshold_t;
 class StandartHoughLinesTest : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_t>
 {
 public:
     StandartHoughLinesTest()
     {
-        picture_name = std::tr1::get<0>(GetParam());
-        rhoStep = std::tr1::get<1>(GetParam());
-        thetaStep = std::tr1::get<2>(GetParam());
-        threshold = std::tr1::get<3>(GetParam());
+        picture_name = get<0>(GetParam());
+        rhoStep = get<1>(GetParam());
+        thetaStep = get<2>(GetParam());
+        threshold = get<3>(GetParam());
         minLineLength = 0;
         maxGap = 0;
     }
 };
 
-typedef std::tr1::tuple<string, double, double, int, int, int> Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t;
+typedef tuple<string, double, double, int, int, int> Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t;
 class ProbabilisticHoughLinesTest : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t>
 {
 public:
     ProbabilisticHoughLinesTest()
     {
-        picture_name = std::tr1::get<0>(GetParam());
-        rhoStep = std::tr1::get<1>(GetParam());
-        thetaStep = std::tr1::get<2>(GetParam());
-        threshold = std::tr1::get<3>(GetParam());
-        minLineLength = std::tr1::get<4>(GetParam());
-        maxGap = std::tr1::get<5>(GetParam());
+        picture_name = get<0>(GetParam());
+        rhoStep = get<1>(GetParam());
+        thetaStep = get<2>(GetParam());
+        threshold = get<3>(GetParam());
+        minLineLength = get<4>(GetParam());
+        maxGap = get<5>(GetParam());
     }
 };
 
@@ -219,3 +218,5 @@ INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(
                                                                                 testing::Values( 0, 10 ),
                                                                                 testing::Values( 0, 4 )
                                                                                 ));
+
+}} // namespace

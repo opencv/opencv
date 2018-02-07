@@ -36,7 +36,7 @@
 
 #include "perf_precomp.hpp"
 
-namespace cvtest
+namespace opencv_test
 {
 using namespace perf;
 using namespace testing;

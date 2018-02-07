@@ -44,11 +44,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -109,7 +105,7 @@ TEST(IntermediateBlobs_GoogLeNet, Accuracy)
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
-    for (int i = 0; i < blobsNames.size(); i++)
+    for (size_t i = 0; i < blobsNames.size(); i++)
     {
         std::string filename = blobsNames[i];
         std::replace( filename.begin(), filename.end(), '/', '#');
@@ -138,7 +134,7 @@ OCL_TEST(IntermediateBlobs_GoogLeNet, Accuracy)
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
-    for (int i = 0; i < blobsNames.size(); i++)
+    for (size_t i = 0; i < blobsNames.size(); i++)
     {
         std::string filename = blobsNames[i];
         std::replace( filename.begin(), filename.end(), '/', '#');
@@ -209,4 +205,4 @@ OCL_TEST(SeveralCalls_GoogLeNet, Accuracy)
     normAssert(outs[0], ref, "", 1E-4, 1E-2);
 }
 
-}
+}} // namespace

@@ -42,10 +42,7 @@
 
 #include "test_precomp.hpp"
 
-namespace {
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 //#define DRAW_TEST_IMAGE
 
@@ -757,4 +754,4 @@ TEST(Drawing, line)
     ASSERT_THROW(line(mat, Point(1,1),Point(99,99),Scalar(255),0), cv::Exception);
 }
 
-} // namespace
+}} // namespace

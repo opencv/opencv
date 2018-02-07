@@ -42,6 +42,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
+namespace opencv_test { namespace {
+
 class CV_UndistortPointsBadArgTest : public cvtest::BadArgTest
 {
 public:
@@ -525,4 +527,5 @@ TEST(Calib3d_UndistortPoints, badarg) { CV_UndistortPointsBadArgTest test; test.
 TEST(Calib3d_InitUndistortRectifyMap, badarg) { CV_InitUndistortRectifyMapBadArgTest test; test.safe_run(); }
 TEST(Calib3d_Undistort, badarg) { CV_UndistortBadArgTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

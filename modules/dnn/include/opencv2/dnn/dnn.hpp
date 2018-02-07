@@ -70,7 +70,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     enum Backend
     {
         DNN_BACKEND_DEFAULT,
-        DNN_BACKEND_HALIDE
+        DNN_BACKEND_HALIDE,
+        DNN_BACKEND_INFERENCE_ENGINE
     };
 
     /**
@@ -241,6 +242,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * Halide tests will be failed).
          */
         virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.

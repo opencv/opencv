@@ -552,7 +552,7 @@ Stream cv::cuda::StreamAccessor::wrapStream(cudaStream_t stream)
 
 namespace
 {
-    bool enableMemoryPool = true;
+    bool enableMemoryPool = false;
 
     class StackAllocator : public GpuMat::Allocator
     {
