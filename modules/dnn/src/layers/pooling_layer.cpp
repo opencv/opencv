@@ -239,7 +239,7 @@ public:
         ieLayer->_stride_y = stride.height;
         ieLayer->_padding_x = pad.width;
         ieLayer->_padding_y = pad.height;
-        ieLayer->_exclude_pad = false;
+        ieLayer->_exclude_pad = type == AVE && padMode == "SAME";
         ieLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
         if (type == MAX)
             ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
