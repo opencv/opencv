@@ -206,7 +206,19 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 
 TEST_P(DNNTestNetwork, OpenFace)
 {
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", "torch");
+}
+
+TEST_P(DNNTestNetwork, opencv_face_detector)
+{
+    if (backend == DNN_BACKEND_HALIDE ||
+        backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("");
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+    Mat inp = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
+    processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt",
+               inp, "detection_out", "caffe");
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {
