@@ -280,7 +280,7 @@ OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                        
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON  IF NOT WINRT)
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT APPLE_FRAMEWORK) )
-OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
+OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSVC only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of statically linked CRT for statically linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_WITH_DYNAMIC_IPP   "Enables dynamic linking of IPP (only for standalone IPP)" OFF )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create Java wrapper exporting all functions of OpenCV library (requires static build of OpenCV modules)" ANDROID IF NOT BUILD_SHARED_LIBS)
@@ -538,20 +538,6 @@ endif()
 
 include(cmake/OpenCVCompilerOptions.cmake)
 
-
-# ----------------------------------------------------------------------------
-# Use statically or dynamically linked CRT?
-# Default: dynamic
-# ----------------------------------------------------------------------------
-if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake)
-endif(MSVC)
-
-if(WIN32 AND NOT MINGW)
-  add_definitions(-D_VARIADIC_MAX=10)
-endif(WIN32 AND NOT MINGW)
-
-
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
@@ -799,6 +785,9 @@ include(cmake/OpenCVExtraTargets.cmake)
 
 # opencv.hpp and legacy headers
 add_subdirectory(include)
+
+# Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)
+ocv_add_modules_compiler_options()
 
 # OpenCV modules
 add_subdirectory(modules)
