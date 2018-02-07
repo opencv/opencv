@@ -590,18 +590,9 @@ Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp
     : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows((int)list.size()),
       cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
-    if(sizes.size() != 1 || list.size() == 0)
+    if(sizes.size() != 1 || *sizes.begin() == 0 || list.size() == 0)
         return;
-    this->rows = *sizes.begin();
-    if(sizes.size() == 2)
-    {
-        this->cols = *(sizes.begin + 1);
-    }
-    else
-    {
-        this->cols = (int)list.size() / *sizes.begin()
-    }
-    Mat(rows, cols, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
+    Mat((int)list.size() / *sizes.begin(), *sizes.begin(), traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
 #endif
 
@@ -1651,7 +1642,7 @@ Mat_<_Tp>::Mat_(std::initializer_list<_Tp> list)
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const std::initializer_list<int> sizes, std::initializer_list<_Tp> list)
-    : Mat(list)
+    : Mat(sizes, list)
 {}
 #endif
 
