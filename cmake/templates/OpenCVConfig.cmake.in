@@ -80,7 +80,7 @@ set(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}")
 get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/@OpenCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE@" REALPATH)
 
 # Search packages for host system instead of packages for target system.
-# in case of cross compilation thess macro should be defined by toolchain file
+# in case of cross compilation this macro should be defined by toolchain file
 if(NOT COMMAND find_host_package)
     macro(find_host_package)
         find_package(${ARGN})

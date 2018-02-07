@@ -34,7 +34,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
 # Following block can break build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
-# so we will try to detect cross-compiling by presense of CMAKE_TOOLCHAIN_FILE
+# so we will try to detect cross-compiling by the presence of CMAKE_TOOLCHAIN_FILE
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
   if(NOT CMAKE_TOOLCHAIN_FILE)
     # it _must_ go before project(OpenCV) in order to work

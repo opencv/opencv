@@ -134,7 +134,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
-  # The -Wno-long-long is required in 64bit systems when including sytem headers.
+  # The -Wno-long-long is required in 64bit systems when including system headers.
   if(X86_64)
     add_extra_compiler_option(-Wno-long-long)
   endif()
