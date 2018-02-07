@@ -54,7 +54,8 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
     return InferenceEngine::DataPtr(
-      new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32)
+      new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32,
+                                InferenceEngine::Layout::ANY)
     );
 }
 
@@ -122,37 +123,6 @@ void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &output
 // Returns input references that aren't connected to internal outputs.
 void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_) noexcept
 {
-    if (inputs.empty())
-    {
-        std::map<std::string, InferenceEngine::DataPtr> internalOutputs;
-        for (const auto& l : layers)
-        {
-            for (const InferenceEngine::DataWeakPtr& ptr : l->insData)
-            {
-                InferenceEngine::DataPtr inp(ptr);
-                if (internalOutputs.find(inp->name) == internalOutputs.end())
-                {
-                    InferenceEngine::InputInfo::Ptr inpInfo(new InferenceEngine::InputInfo());
-                    inpInfo->setInputData(inp);
-                    if (inputs.find(inp->name) == inputs.end())
-                        inputs[inp->name] = inpInfo;
-                }
-            }
-            for (const InferenceEngine::DataPtr& out : l->outData)
-            {
-                // TODO: Replace to uniquness assertion.
-                if (internalOutputs.find(out->name) == internalOutputs.end())
-                    internalOutputs[out->name] = out;
-            }
-        }
-        CV_Assert(layers.empty() || !inputs.empty());
-    }
-    inpBlobs.clear();
-    for (const auto& it : inputs)
-    {
-        CV_Assert(allBlobs.find(it.first) != allBlobs.end());
-        inpBlobs[it.first] = allBlobs[it.first];
-    }
     inputs_ = inputs;
 }
 
@@ -239,7 +209,31 @@ size_t InfEngineBackendNet::getBatchSize() const noexcept
 
 void InfEngineBackendNet::initEngine()
 {
-    CV_Assert(!isInitialized());
+    CV_Assert(!isInitialized(), !layers.empty());
+
+    // Collect all external input blobs.
+    std::map<std::string, InferenceEngine::DataPtr> internalOutputs;
+    for (const auto& l : layers)
+    {
+        for (const InferenceEngine::DataWeakPtr& ptr : l->insData)
+        {
+            InferenceEngine::DataPtr inp(ptr);
+            if (internalOutputs.find(inp->name) == internalOutputs.end())
+            {
+                InferenceEngine::InputInfo::Ptr inpInfo(new InferenceEngine::InputInfo());
+                inpInfo->setInputData(inp);
+                if (inputs.find(inp->name) == inputs.end())
+                    inputs[inp->name] = inpInfo;
+            }
+        }
+        for (const InferenceEngine::DataPtr& out : l->outData)
+        {
+            // TODO: Replace to uniquness assertion.
+            if (internalOutputs.find(out->name) == internalOutputs.end())
+                internalOutputs[out->name] = out;
+        }
+    }
+    CV_Assert(!inputs.empty());
 
     // Add all unconnected blobs to output blobs.
     InferenceEngine::OutputsDataMap unconnectedOuts;
@@ -258,11 +252,19 @@ void InfEngineBackendNet::initEngine()
             unconnectedOuts.erase(InferenceEngine::DataPtr(inp)->name);
         }
     }
-    CV_Assert(layers.empty() || !unconnectedOuts.empty());
+    CV_Assert(!unconnectedOuts.empty());
 
     for (auto it = unconnectedOuts.begin(); it != unconnectedOuts.end(); ++it)
     {
         outputs[it->first] = it->second;
+    }
+
+    // Set up input blobs.
+    inpBlobs.clear();
+    for (const auto& it : inputs)
+    {
+        CV_Assert(allBlobs.find(it.first) != allBlobs.end());
+        inpBlobs[it.first] = allBlobs[it.first];
     }
 
     // Set up output blobs.
@@ -273,7 +275,11 @@ void InfEngineBackendNet::initEngine()
         outBlobs[it.first] = allBlobs[it.first];
     }
 
+#ifdef _WIN32
+    engine = InferenceEngine::InferenceEnginePluginPtr("MKLDNNPlugin.dll");
+#else
     engine = InferenceEngine::InferenceEnginePluginPtr("libMKLDNNPlugin.so");
+#endif  // _WIN32
     InferenceEngine::ResponseDesc resp;
     InferenceEngine::StatusCode status = engine->LoadNetwork(*this, &resp);
     if (status != InferenceEngine::StatusCode::OK)
@@ -305,7 +311,8 @@ void InfEngineBackendNet::forward()
 static inline Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
 {
     // NOTE: Inference Engine sizes are reversed.
-    std::vector<int> size(blob->dims().begin(), blob->dims().end());
+    std::vector<size_t> dims = blob->dims();
+    std::vector<int> size(dims.begin(), dims.end());
     std::reverse(size.begin(), size.end());
     return Mat(size, CV_32F, (void*)blob->buffer());
 }
@@ -313,28 +320,32 @@ static inline Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
 void fuseConvWeights(const std::shared_ptr<InferenceEngine::ConvolutionLayer>& conv,
                      const Mat& w, const Mat& b)
 {
-    // Get convolution's weights. Clone the data because Inference Engine can host it
-    // and conv->_weights->allocate() below will deallocate it.
-    Mat originWeights = infEngineBlobToMat(conv->_weights).clone();
-
-    // Create new weights blob.
-    conv->_weights = InferenceEngine::make_shared_blob<float>(
-                        InferenceEngine::Precision::FP32, conv->_weights->dims());
-    conv->_weights->allocate();
-
-    // Convolution weights have OIHW data layout.
-    // (conv(I) + b1 ) * w + b2
-    // w*conv(I) + b1 * w + b2
-    Mat fusedWeights = infEngineBlobToMat(conv->_weights);
-
-    const int numChannels = fusedWeights.size[0];
-    // Mat weights = blobs[0].reshape(1, 1);
-    // Mat bias = hasBias ? blobs[1].reshape(1, 1) : Mat();
-    CV_Assert(numChannels == w.total());
-    CV_Assert(b.empty() || numChannels == b.total());
-    for (int i = 0; i < numChannels; ++i)
+    CV_Assert(!w.empty() || !b.empty());
+    if (!w.empty())
     {
-        cv::multiply(slice(originWeights, i), w.at<float>(i), slice(fusedWeights, i));
+        // Get convolution's weights. Clone the data because Inference Engine can host it
+        // and conv->_weights->allocate() below will deallocate it.
+        Mat originWeights = infEngineBlobToMat(conv->_weights).clone();
+
+        // Create new weights blob.
+        conv->_weights = InferenceEngine::make_shared_blob<float>(
+                            InferenceEngine::Precision::FP32, conv->_weights->dims());
+        conv->_weights->allocate();
+
+        // Convolution weights have OIHW data layout.
+        // (conv(I) + b1 ) * w + b2
+        // w*conv(I) + b1 * w + b2
+        Mat fusedWeights = infEngineBlobToMat(conv->_weights);
+
+        const int numChannels = fusedWeights.size[0];
+        // Mat weights = blobs[0].reshape(1, 1);
+        // Mat bias = hasBias ? blobs[1].reshape(1, 1) : Mat();
+        CV_Assert(numChannels == w.total());
+        CV_Assert(b.empty() || numChannels == b.total());
+        for (int i = 0; i < numChannels; ++i)
+        {
+            cv::multiply(slice(originWeights, i), w.at<float>(i), slice(fusedWeights, i));
+        }
     }
     if (conv->_biases)
     {
@@ -345,8 +356,10 @@ void fuseConvWeights(const std::shared_ptr<InferenceEngine::ConvolutionLayer>& c
                             InferenceEngine::Precision::FP32, conv->_biases->dims());
         conv->_biases->allocate();
         Mat fusedBiases = infEngineBlobToMat(conv->_biases);
+        originBiases.copyTo(fusedBiases);
 
-        cv::multiply(w.reshape(1, fusedBiases.dims, &fusedBiases.size[0]), originBiases, fusedBiases);
+        if (!w.empty())
+            cv::multiply(w.reshape(1, fusedBiases.dims, &fusedBiases.size[0]), fusedBiases, fusedBiases);
         if (!b.empty())
             cv::add(fusedBiases, b.reshape(1, fusedBiases.dims, &fusedBiases.size[0]), fusedBiases);
     }

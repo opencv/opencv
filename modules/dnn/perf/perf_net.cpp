@@ -157,13 +157,16 @@ PERF_TEST_P_(DNNTestNetwork, OpenFace)
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt", "",
             Mat(cv::Size(300, 300), CV_32FC3), "detection_out", "caffe");
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_TensorFlow)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
+    if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL ||
+        backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
     processNet("dnn/ssd_mobilenet_v1_coco.pb", "ssd_mobilenet_v1_coco.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3), "", "tensorflow");
 }
@@ -205,6 +208,13 @@ PERF_TEST_P_(DNNTestNetwork, opencv_face_detector)
         throw SkipTestException("");
     processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt", "",
                Mat(cv::Size(300, 300), CV_32FC3), "", "caffe");
+}
+
+PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
+{
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
+    processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
+            Mat(cv::Size(300, 300), CV_32FC3), "", "tensorflow");
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {
