@@ -19,7 +19,7 @@ if(NOT VTK_FOUND)
   return()
 endif()
 
-# Don't support ealier VTKs
+# Don't support earlier VTKs
 if(${VTK_VERSION} VERSION_LESS "5.8.0")
   message(STATUS "VTK support is disabled. VTK ver. 5.8.0 is minimum required, but found VTK ver. ${VTK_VERSION}")
   return()

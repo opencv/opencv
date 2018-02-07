@@ -319,7 +319,7 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 
 # Generates the use of precompiled in a target,
-# without using depency targets (2 extra for each target)
+# without using dependency targets (2 extra for each target)
 # Using Visual, must also add ${_targetName}_pch to sources
 # Not needed by Xcode
 
@@ -346,7 +346,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
         # Auto include the precompile (useful for moc processing, since the use of
         # precompiled is specified at the target level
-        # and I don't want to specifiy /F- for each moc/res/ui generated files (using Qt)
+        # and I don't want to specify /F- for each moc/res/ui generated files (using Qt)
 
         get_target_property(_sources ${_targetName} SOURCES)
         foreach(src ${_sources})
@@ -392,7 +392,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
     else()
 
-        #Fallback to the "old" precompiled suppport
+        #Fallback to the "old" precompiled support
         #ADD_PRECOMPILED_HEADER(${_targetName} ${_input} ${_dowarn})
 
     endif()
