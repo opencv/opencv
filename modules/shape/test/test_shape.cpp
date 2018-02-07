@@ -105,7 +105,7 @@ protected:
         }
 
         // Uniformly sampling
-        random_shuffle(contoursQuery.begin(), contoursQuery.end());
+        cv::randShuffle(contoursQuery);
         int nStart=NP;
         vector<PointType> cont;
         for (int i=0; i<nStart; i++)
