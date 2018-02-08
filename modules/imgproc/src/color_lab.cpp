@@ -1173,6 +1173,7 @@ enum
     LAB_LUT_DIM = (1 << lab_lut_shift)+1,
     lab_base_shift = 14,
     LAB_BASE = (1 << lab_base_shift),
+    LUT_BASE = (1 << 14),
     trilinear_shift = 8 - lab_lut_shift + 1,
     TRILINEAR_BASE = (1 << trilinear_shift)
 };
@@ -1206,7 +1207,7 @@ static const softdouble gammaThreshold    = softdouble(809)/softdouble(20000);  
 static const softdouble gammaInvThreshold = softdouble(7827)/softdouble(2500000); //  0.0031308
 static const softdouble gammaLowScale     = softdouble(323)/softdouble(25);       // 12.92
 static const softdouble gammaPower        = softdouble(12)/softdouble(5);         //  2.4
-static const softdouble gammaXshift       = softdouble(11)/softdouble(200);       // 0.055
+static const softdouble gammaXshift       = softdouble(11)/softdouble(200);       //  0.055
 
 static const softfloat lthresh = softfloat(216) / softfloat(24389); // 0.008856f = (6/29)^3
 static const softfloat lscale  = softfloat(841) / softfloat(108); // 7.787f = (29/3)^3/(29*4)
@@ -1223,6 +1224,7 @@ static inline softfloat applyGamma(softfloat x)
                 pow((xd + gammaXshift)/(softdouble::one()+gammaXshift), gammaPower));
 }
 
+
 static inline softfloat applyInvGamma(softfloat x)
 {
     //return x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
@@ -1232,8 +1234,17 @@ static inline softfloat applyInvGamma(softfloat x)
                 pow(xd, softdouble::one()/gammaPower)*(softdouble::one()+gammaXshift) - gammaXshift);
 }
 
-static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn)
+
+static LUVLUT_T initLUTforLUV(const softfloat &un, const softfloat &vn)
 {
+    //when XYZ are limited to [0, 2]
+    /*
+        up: [-402, 1431.57]
+        min abs diff up: 0.010407
+        vp: [-0.25, 0.25]
+        min abs(vp): 0.00034207
+    */
+
     const softfloat oneof4 = softfloat::one()/softfloat(4);
     int *LuToUp_b = cv::allocSingleton<int>(256*256);
     int *LvToVp_b = cv::allocSingleton<int>(256*256);
@@ -1245,7 +1256,7 @@ static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn
         {
             softfloat u = softfloat(uu)*uRange/f255 + uLow;
             softfloat up = softfloat(9)*(u + L*un);
-            LuToUp_b[LL*256+uu] = cvRound(up*softfloat(BASE/1024));//1024 is OK, 2048 gave maxerr 3
+            LuToUp_b[LL*256+uu] = cvRound(up*softfloat(LUT_BASE/1024));//1024 is OK, 2048 gave maxerr 3
         }
         for(int vv = 0; vv < 256; vv++)
         {
@@ -1253,10 +1264,10 @@ static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn
             softfloat vp = oneof4/(v + L*vn);
             if(vp >  oneof4) vp =  oneof4;
             if(vp < -oneof4) vp = -oneof4;
-            int ivp = cvRound(vp*softfloat(BASE*1024));
+            int ivp = cvRound(vp*softfloat(LUT_BASE*1024));
             LvToVp_b[LL*256+vv] = ivp;
             int vpl = ivp*LL;
-            LvToVpl_b[LL*256+vv] = (12*13*100*(BASE/1024))*(long long)vpl;
+            LvToVpl_b[LL*256+vv] = (12*13*100*(LUT_BASE/1024))*(long long)vpl;
         }
     }
     LUVLUT_T res;
@@ -1266,7 +1277,8 @@ static LUVLUT_T initLUTforLUV(int BASE, const softfloat &un, const softfloat &vn
     return res;
 }
 
-static int * initLUTforABXZ(int BASE)
+
+static int * initLUTforABXZ()
 {
     int * res = cv::allocSingleton<int>(LAB_BASE*9/4);
     for(int i = minABvalue; i < LAB_BASE*9/4+minABvalue; i++)
@@ -1277,34 +1289,34 @@ static int * initLUTforABXZ(int BASE)
         {
             //fxz[k] = (fxz[k] - 16.0f / 116.0f) / 7.787f;
             // 7.787f = (29/3)^3/(29*4)
-            v = i*108/841 - BASE*16/116*108/841;
+            v = i*108/841 - LUT_BASE*16/116*108/841;
         }
         else
         {
             //fxz[k] = fxz[k] * fxz[k] * fxz[k];
-            v = i*i/BASE*i/BASE;
+            v = i*i/LUT_BASE*i/LUT_BASE;
         }
         res[i-minABvalue] = v; // -1335 <= v <= 88231
     }
     return res;
 }
 
+
 inline void fill_one(int16_t *LAB, const int16_t *LAB_prev, int16_t *LUV, const int16_t *LUV_prev, int p, int q, int r, int _p, int _q, int _r)
 {
-    do {
-        int idxold = 0;
-        idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;
-        idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
-        idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
-        int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);
-        LAB[idxnew]    = LAB_prev[idxold];
-        LAB[idxnew+8]  = LAB_prev[idxold+1];
-        LAB[idxnew+16] = LAB_prev[idxold+2];
-        LUV[idxnew]    = LUV_prev[idxold];
-        LUV[idxnew+8]  = LUV_prev[idxold+1];
-        LUV[idxnew+16] = LUV_prev[idxold+2];
-    } while(0);
+    int idxold = 0;
+    idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;
+    idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
+    idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
+    int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);
+    LAB[idxnew]    = LAB_prev[idxold];
+    LAB[idxnew+8]  = LAB_prev[idxold+1];
+    LAB[idxnew+16] = LAB_prev[idxold+2];
+    LUV[idxnew]    = LUV_prev[idxold];
+    LUV[idxnew+8]  = LUV_prev[idxold+1];
+    LUV[idxnew+16] = LUV_prev[idxold+2];
 }
+
 
 static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat & vn)
 {
@@ -1413,6 +1425,7 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
     return res;
 }
 
+
 static void initLabTabs()
 {
     static bool initialized = false;
@@ -1463,7 +1476,6 @@ static void initLabTabs()
         }
 
         //Lookup table for L to y and ify calculations
-        static const int BASE = (1 << 14);
         for(i = 0; i < 256; i++)
         {
             int y, ify;
@@ -1472,18 +1484,18 @@ static void initLabTabs()
             {
                 //yy = li / 903.3f;
                 //y = L*100/903.3f; 903.3f = (29/3)^3, 255 = 17*3*5
-                y = cvRound(softfloat(i*BASE*20*9)/softfloat(17*29*29*29));
+                y = cvRound(softfloat(i*LUT_BASE*20*9)/softfloat(17*29*29*29));
                 //fy = 7.787f * yy + 16.0f / 116.0f; 7.787f = (29/3)^3/(29*4)
-                ify = cvRound(softfloat(BASE)*(softfloat(16)/softfloat(116) + softfloat(i*5)/softfloat(3*17*29)));
+                ify = cvRound(softfloat(LUT_BASE)*(softfloat(16)/softfloat(116) + softfloat(i*5)/softfloat(3*17*29)));
             }
             else
             {
                 //fy = (li + 16.0f) / 116.0f;
-                softfloat fy = (softfloat(i*100*BASE)/softfloat(255*116) +
-                                softfloat(16*BASE)/softfloat(116));
+                softfloat fy = (softfloat(i*100*LUT_BASE)/softfloat(255*116) +
+                                softfloat(16*LUT_BASE)/softfloat(116));
                 ify = cvRound(fy);
                 //yy = fy * fy * fy;
-                y = cvRound(fy*fy*fy/softfloat(BASE*BASE));
+                y = cvRound(fy*fy*fy/softfloat(LUT_BASE*LUT_BASE));
             }
 
             LabToYF_b[i*2  ] = (ushort)y;   // 2260 <= y <= BASE
@@ -1491,23 +1503,15 @@ static void initLabTabs()
         }
 
         //Lookup table for a,b to x,z conversion
-        abToXZ_b = initLUTforABXZ(BASE);
+        abToXZ_b = initLUTforABXZ();
 
         softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
         dd = softfloat::one()/max(dd, softfloat::eps());
         softfloat un = dd*softfloat(13*4)*D65[0];
         softfloat vn = dd*softfloat(13*9)*D65[1];
 
-        //when XYZ are limited to [0, 2]
-        /*
-            up: [-402, 1431.57]
-            min abs diff up: 0.010407
-            vp: [-0.25, 0.25]
-            min abs(vp): 0.00034207
-        */
-
         //Luv LUT
-        LUVLUT = initLUTforLUV(BASE, un, vn);
+        LUVLUT = initLUTforLUV(un, vn);
 
         //try to suppress warning
         static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
