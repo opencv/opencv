@@ -131,7 +131,7 @@ void printHelp()
             "  --mi-dist-thresh=<float_number>\n"
             "      Estimated flow distance threshold for motion inpainting. The default is 5.0.\n\n"
             "  -ci=, --color-inpaint=(no|average|ns|telea)\n"
-            "      Do color inpainting. The defailt is no.\n"
+            "      Do color inpainting. The default is no.\n"
             "  --ci-radius=<float_number>\n"
             "      Set color inpainting radius (for ns and telea options only).\n"
             "      The default is 2.0\n\n"
@@ -163,9 +163,9 @@ void printHelp()
             "  -gpu=(yes|no)\n"
             "      Use CUDA optimization whenever possible. The default is no.\n\n"
             "  -o=, --output=(no|<file_path>)\n"
-            "      Set output file path explicitely. The default is stabilized.avi.\n"
+            "      Set output file path explicitly. The default is stabilized.avi.\n"
             "  --fps=(<float_number>|auto)\n"
-            "      Set output video FPS explicitely. By default the source FPS is used (auto).\n"
+            "      Set output video FPS explicitly. By default the source FPS is used (auto).\n"
             "  -q, --quiet\n"
             "      Don't show output video frames.\n\n"
             "  -h, --help\n"
@@ -487,7 +487,7 @@ int main(int argc, const char **argv)
             stabilizer->setDeblurer(deblurer);
         }
 
-        // set up trimming paramters
+        // set up trimming parameters
         stabilizer->setTrimRatio(argf("trim-ratio"));
         stabilizer->setCorrectionForInclusion(arg("incl-constr") == "yes");
 

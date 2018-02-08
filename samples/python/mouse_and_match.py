@@ -67,7 +67,7 @@ if __name__ == '__main__':
     cv.setMouseCallback("gray", onmouse)
     '''Loop through all the images in the directory'''
     for infile in glob.glob( os.path.join(path, '*.*') ):
-        ext = os.path.splitext(infile)[1][1:] #get the filename extenstion
+        ext = os.path.splitext(infile)[1][1:] #get the filename extension
         if ext == "png" or ext == "jpg" or ext == "bmp" or ext == "tiff" or ext == "pbm":
             print(infile)
 

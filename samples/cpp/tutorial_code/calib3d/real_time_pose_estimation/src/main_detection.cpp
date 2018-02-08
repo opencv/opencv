@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
       "{keypoints k   |2000  | number of keypoints to detect        }"
       "{ratio r       |0.7   | threshold for ratio test             }"
       "{iterations it |500   | RANSAC maximum iterations count      }"
-      "{error e       |2.0   | RANSAC reprojection errror           }"
+      "{error e       |2.0   | RANSAC reprojection error            }"
       "{confidence c  |0.95  | RANSAC confidence                    }"
       "{inliers in    |30    | minimum inliers for Kalman update    }"
       "{method  pnp   |0     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS}"
