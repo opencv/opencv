@@ -2075,7 +2075,7 @@ CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
 /** @brief Finds lines in a set of points using the standard Hough transform.
 
 The function finds lines in a set of points using a modification of the Hough transform.
-@include snippets/imgproc_houghlines.cpp
+@include snippets/imgproc_HoughLinesPointSet.cpp
 @param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
