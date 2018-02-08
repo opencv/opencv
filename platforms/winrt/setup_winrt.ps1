@@ -317,7 +317,7 @@ Function Execute() {
 }
 
 Function ShowHelp() {
-    Write-Host "Configures OpenCV and generates projects for specified verion of Visual Studio/platforms/architectures."
+    Write-Host "Configures OpenCV and generates projects for specified version of Visual Studio/platforms/architectures."
     Write-Host "Must be executed from the sources folder containing main CMakeLists configuration."
     Write-Host "Parameter keys can be shortened down to a single symbol (e.g. '-a') and are not case sensitive."
     Write-Host "Proper parameter sequencing is required when omitting keys."
@@ -348,7 +348,7 @@ Function ShowHelp() {
     Write-Host "     setup_winrt -a x86 -g 'Visual Studio 15 2017' -pl WP "
     Write-Host " WHERE: "
     Write-Host "     options -  Options to call "
-    Write-Host "                 -h: diplays command line help "
+    Write-Host "                 -h: displays command line help "
     Write-Host "                 -b: builds BUILD_ALL and INSTALL projects for each generated configuration in both Debug and Release modes."
     Write-Host "     platform -  Array of target platforms. "
     Write-Host "                 Default: WP "

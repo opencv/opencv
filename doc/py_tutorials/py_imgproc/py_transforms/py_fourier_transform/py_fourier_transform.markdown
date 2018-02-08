@@ -239,7 +239,7 @@ from matplotlib import pyplot as plt
 # simple averaging filter without scaling parameter
 mean_filter = np.ones((3,3))
 
-# creating a guassian filter
+# creating a gaussian filter
 x = cv.getGaussianKernel(5,10)
 gaussian = x*x.T
 
