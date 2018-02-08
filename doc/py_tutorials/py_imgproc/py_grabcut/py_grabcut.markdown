@@ -124,8 +124,8 @@ got with corresponding values in newly added mask image. Check the code below:*
 # newmask is the mask image I manually labelled
 newmask = cv.imread('newmask.png',0)
 
-# whereever it is marked white (sure foreground), change mask=1
-# whereever it is marked black (sure background), change mask=0
+# wherever it is marked white (sure foreground), change mask=1
+# wherever it is marked black (sure background), change mask=0
 mask[newmask == 0] = 0
 mask[newmask == 255] = 1
 

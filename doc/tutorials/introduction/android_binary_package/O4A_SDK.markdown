@@ -239,7 +239,7 @@ Well, running samples from Eclipse is very simple:
     @code{.sh}
     adb shell getprop ro.product.cpu.abi
     @endcode
-    If you're using an AVD emulator, go Window \> AVD Manager to see the list of availible devices.
+    If you're using an AVD emulator, go Window \> AVD Manager to see the list of available devices.
     Click Edit in the context menu of the selected device. In the window, which then pop-ups, find
     the CPU field.
 

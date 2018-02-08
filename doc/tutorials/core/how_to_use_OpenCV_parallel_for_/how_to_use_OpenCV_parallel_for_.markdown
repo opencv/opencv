@@ -25,12 +25,12 @@ In OpenCV 3.2, the following parallel frameworks are available in that order:
 7.   Pthreads (if available)
 
 As you can see, several parallel frameworks can be used in the OpenCV library. Some parallel libraries
-are third party libraries and have to be explictly built and enabled in CMake (e.g. TBB, C=), others are
+are third party libraries and have to be explicitly built and enabled in CMake (e.g. TBB, C=), others are
 automatically available with the platform (e.g. APPLE GCD) but chances are that you should be enable to
 have access to a parallel framework either directly or by enabling the option in CMake and rebuild the library.
 
 The second (weak) precondition is more related to the task you want to achieve as not all computations
-are suitable / can be adatapted to be run in a parallel way. To remain simple, tasks that can be splitted
+are suitable / can be adatapted to be run in a parallel way. To remain simple, tasks that can be split
 into multiple elementary operations with no memory dependency (no possible race condition) are easily
 parallelizable. Computer vision processing are often easily parallelizable as most of the time the processing of
 one pixel does not depend to the state of other pixels.
@@ -39,7 +39,7 @@ Simple example: drawing a Mandelbrot set
 ----
 
 We will use the example of drawing a Mandelbrot set to show how from a regular sequential code you can easily adapt
-the code to parallize the computation.
+the code to parallelize the computation.
 
 Theory
 -----------

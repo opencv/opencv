@@ -142,7 +142,7 @@ Results
 
     ![](images/Threshold_Tutorial_Original_Image.jpg)
 
--#  First, we try to threshold our image with a *binary threhold inverted*. We expect that the
+-#  First, we try to threshold our image with a *binary threshold inverted*. We expect that the
     pixels brighter than the \f$thresh\f$ will turn dark, which is what actually happens, as we can see
     in the snapshot below (notice from the original image, that the doggie's tongue and eyes are
     particularly bright in comparison with the image, this is reflected in the output image).

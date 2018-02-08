@@ -146,7 +146,7 @@ void CvHOGEvaluator::Feature::write(FileStorage &fs) const
 //}
 
 //cell[0] and featComponent idx writing. By cell[0] it's possible to recover all block
-//All block is nessesary for block normalization
+//All block is necessary for block normalization
 void CvHOGEvaluator::Feature::write(FileStorage &fs, int featComponentIdx) const
 {
     fs << CC_RECT << "[:" << rect[0].x << rect[0].y <<
