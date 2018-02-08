@@ -1,9 +1,13 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1800)
 // eliminating duplicated round() declaration
 #define HAVE_ROUND 1
+#pragma warning(push)
+#pragma warning(disable:5033)  // 'register' is no longer a supported storage class
 #endif
-
 #include <Python.h>
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#pragma warning(pop)
+#endif
 
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
