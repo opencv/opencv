@@ -3961,6 +3961,47 @@ struct Luv2RGB_b
 };
 
 //
+// IPP functions
+//
+
+#if NEED_IPP
+
+#if !IPP_DISABLE_RGB_XYZ
+static ippiGeneralFunc ippiRGB2XYZTab[] =
+{
+    (ippiGeneralFunc)ippiRGBToXYZ_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToXYZ_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiRGBToXYZ_32f_C3R, 0, 0
+};
+#endif
+
+#if !IPP_DISABLE_XYZ_RGB
+static ippiGeneralFunc ippiXYZ2RGBTab[] =
+{
+    (ippiGeneralFunc)ippiXYZToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiXYZToRGB_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiXYZToRGB_32f_C3R, 0, 0
+};
+#endif
+
+#if !IPP_DISABLE_RGB_LAB
+static ippiGeneralFunc ippiRGBToLUVTab[] =
+{
+    (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiRGBToLUV_32f_C3R, 0, 0
+};
+#endif
+
+#if !IPP_DISABLE_LAB_RGB
+static ippiGeneralFunc ippiLUVToRGBTab[] =
+{
+    (ippiGeneralFunc)ippiLUVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiLUVToRGB_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiLUVToRGB_32f_C3R, 0, 0
+};
+#endif
+
+#endif
+
+
+//
 // HAL functions
 //
 
@@ -4017,6 +4058,7 @@ void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2XYZ_f<float>(scn, blueIdx, 0));
 }
 
+
 void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -4066,6 +4108,7 @@ void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
     else
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, XYZ2RGB_f<float>(dcn, blueIdx, 0));
 }
+
 
 // 8u, 32f
 void cvtBGRtoLab(const uchar * src_data, size_t src_step,
@@ -4146,7 +4189,6 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
     }
 #endif
 
-
     int blueIdx = swapBlue ? 2 : 0;
     if(isLab)
     {
@@ -4163,6 +4205,7 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
             CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Luv_f(scn, blueIdx, 0, 0, srgb));
     }
 }
+
 
 // 8u, 32f
 void cvtLabtoBGR(const uchar * src_data, size_t src_step,

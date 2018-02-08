@@ -221,7 +221,13 @@ void CvtColorLoop(const uchar * src_data, size_t src_step, uchar * dst_data, siz
                   (width * height) / static_cast<double>(1<<16));
 }
 
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
+#define NEED_IPP (defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700))
+
+#if NEED_IPP
+
+#define MAX_IPP8u   255
+#define MAX_IPP16u  65535
+#define MAX_IPP32f  1.0
 
 typedef IppStatus (CV_STDCALL* ippiReorderFunc)(const void *, int, void *, int, IppiSize, const int *);
 typedef IppStatus (CV_STDCALL* ippiGeneralFunc)(const void *, int, void *, int, IppiSize);
@@ -263,6 +269,7 @@ private:
     const CvtColorIPPLoop_Invoker& operator= (const CvtColorIPPLoop_Invoker&);
 };
 
+
 template <typename Cvt>
 bool CvtColorIPPLoop(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
 {
@@ -270,6 +277,7 @@ bool CvtColorIPPLoop(const uchar * src_data, size_t src_step, uchar * dst_data, 
     parallel_for_(Range(0, height), CvtColorIPPLoop_Invoker<Cvt>(src_data, src_step, dst_data, dst_step, width, cvt, &ok), (width * height)/(double)(1<<16) );
     return ok;
 }
+
 
 template <typename Cvt>
 bool CvtColorIPPLoopCopy(const uchar * src_data, size_t src_step, int src_type, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
@@ -290,6 +298,7 @@ bool CvtColorIPPLoopCopy(const uchar * src_data, size_t src_step, int src_type, 
     return ok;
 }
 
+
 struct IPPGeneralFunctor
 {
     IPPGeneralFunctor(ippiGeneralFunc _func) : ippiColorConvertGeneral(_func){}
@@ -300,6 +309,7 @@ struct IPPGeneralFunctor
 private:
     ippiGeneralFunc ippiColorConvertGeneral;
 };
+
 
 struct IPPReorderFunctor
 {
@@ -319,50 +329,6 @@ private:
     int order[4];
 };
 
-struct IPPColor2GrayFunctor
-{
-    IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
-        ippiColorToGray(_func)
-    {
-        coeffs[0] = B2YF;
-        coeffs[1] = G2YF;
-        coeffs[2] = R2YF;
-    }
-    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
-    {
-        return ippiColorToGray ? CV_INSTRUMENT_FUN_IPP(ippiColorToGray, src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0 : false;
-    }
-private:
-    ippiColor2GrayFunc ippiColorToGray;
-    Ipp32f coeffs[3];
-};
-
-template <typename T>
-struct IPPGray2BGRFunctor
-{
-    IPPGray2BGRFunctor(){}
-
-    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
-    {
-        return ippiGrayToRGB_C1C3R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows)) >= 0;
-    }
-};
-
-template <typename T>
-struct IPPGray2BGRAFunctor
-{
-    IPPGray2BGRAFunctor()
-    {
-        alpha = ColorChannel<T>::max();
-    }
-
-    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
-    {
-        return ippiGrayToRGB_C1C4R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows), alpha) >= 0;
-    }
-
-    T alpha;
-};
 
 struct IPPReorderGeneralFunctor
 {
@@ -392,6 +358,7 @@ private:
     int depth;
 };
 
+
 struct IPPGeneralReorderFunctor
 {
     IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, int _depth) :
@@ -419,6 +386,61 @@ private:
     int order[4];
     int depth;
 };
+
+
+//TODO: should they be static?
+
+static IppStatus CV_STDCALL ippiSwapChannels_8u_C3C4Rf(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep,
+         IppiSize roiSize, const int *dstOrder)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_8u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP8u);
+}
+
+static IppStatus CV_STDCALL ippiSwapChannels_16u_C3C4Rf(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep,
+         IppiSize roiSize, const int *dstOrder)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_16u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP16u);
+}
+
+static IppStatus CV_STDCALL ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep,
+         IppiSize roiSize, const int *dstOrder)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_32f_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP32f);
+}
+
+static ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C3C4Rf, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3C4Rf, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C3C4Rf, 0, 0
+};
+
+static ippiGeneralFunc ippiCopyAC4C3RTab[] =
+{
+    (ippiGeneralFunc)ippiCopy_8u_AC4C3R, 0, (ippiGeneralFunc)ippiCopy_16u_AC4C3R, 0,
+    0, (ippiGeneralFunc)ippiCopy_32f_AC4C3R, 0, 0
+};
+
+static ippiReorderFunc ippiSwapChannelsC4C3RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C4C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4C3R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C4C3R, 0, 0
+};
+
+static ippiReorderFunc ippiSwapChannelsC3RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
+};
+
+#if IPP_VERSION_X100 >= 810
+static ippiReorderFunc ippiSwapChannelsC4RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C4R, 0, 0
+};
+#endif
+
+
 
 #endif
 

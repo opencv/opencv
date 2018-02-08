@@ -1240,6 +1240,110 @@ struct mRGBA2RGBA
 };
 
 //
+// IPP functions
+//
+
+#if NEED_IPP
+
+static ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
+{
+    (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
+    0, (ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R, 0, 0
+};
+
+static ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
+{
+    (ippiColor2GrayFunc)ippiColorToGray_8u_AC4C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_AC4C1R, 0,
+    0, (ippiColor2GrayFunc)ippiColorToGray_32f_AC4C1R, 0, 0
+};
+
+static ippiGeneralFunc ippiRGB2GrayC3Tab[] =
+{
+    (ippiGeneralFunc)ippiRGBToGray_8u_C3C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_C3C1R, 0,
+    0, (ippiGeneralFunc)ippiRGBToGray_32f_C3C1R, 0, 0
+};
+
+static ippiGeneralFunc ippiRGB2GrayC4Tab[] =
+{
+    (ippiGeneralFunc)ippiRGBToGray_8u_AC4C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_AC4C1R, 0,
+    0, (ippiGeneralFunc)ippiRGBToGray_32f_AC4C1R, 0, 0
+};
+
+
+static IppStatus ippiGrayToRGB_C1C3R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
+}
+static IppStatus ippiGrayToRGB_C1C3R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
+}
+static IppStatus ippiGrayToRGB_C1C3R(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, IppiSize roiSize)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_32f_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
+}
+
+static IppStatus ippiGrayToRGB_C1C4R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize, Ipp8u  aval)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
+}
+static IppStatus ippiGrayToRGB_C1C4R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize, Ipp16u aval)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
+}
+static IppStatus ippiGrayToRGB_C1C4R(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, IppiSize roiSize, Ipp32f aval)
+{
+    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_32f_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
+}
+
+struct IPPColor2GrayFunctor
+{
+    IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
+        ippiColorToGray(_func)
+    {
+        coeffs[0] = B2YF;
+        coeffs[1] = G2YF;
+        coeffs[2] = R2YF;
+    }
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return ippiColorToGray ? CV_INSTRUMENT_FUN_IPP(ippiColorToGray, src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0 : false;
+    }
+private:
+    ippiColor2GrayFunc ippiColorToGray;
+    Ipp32f coeffs[3];
+};
+
+template <typename T>
+struct IPPGray2BGRFunctor
+{
+    IPPGray2BGRFunctor(){}
+
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return ippiGrayToRGB_C1C3R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows)) >= 0;
+    }
+};
+
+template <typename T>
+struct IPPGray2BGRAFunctor
+{
+    IPPGray2BGRAFunctor()
+    {
+        alpha = ColorChannel<T>::max();
+    }
+
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return ippiGrayToRGB_C1C4R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows), alpha) >= 0;
+    }
+
+    T alpha;
+};
+
+#endif
+
+//
 // HAL functions
 //
 namespace hal
