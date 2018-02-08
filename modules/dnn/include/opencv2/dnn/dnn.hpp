@@ -736,8 +736,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  (std::vector<cv::Mat>).
      *  @param[in] blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
      *  which you would like to extract the images.
-     *  @param[out] images_ array of 2D Mat containing the images extracted from the blob in floating point precision 
-     *  (CV_32F). They are non normalized neither mean added. The number of returned images equals the first dimension 
+     *  @param[out] images_ array of 2D Mat containing the images extracted from the blob in floating point precision
+     *  (CV_32F). They are non normalized neither mean added. The number of returned images equals the first dimension
      *  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
      */
     CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
