@@ -10,6 +10,8 @@
 
 #include "color.hpp"
 
+using cv::softfloat;
+
 static const float * splineBuild(const softfloat* f, size_t n)
 {
     float* tab = cv::allocSingleton<float>(n * 4);
@@ -4406,5 +4408,228 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
 }
 
 } // namespace hal
+
+
+//
+// OCL calls
+//
+
+//TODO: to be rewritten
+
+bool oclCvtColorBGR2Lxx(int scn, int dcn, int depth, int bidx, int code,
+                        ocl::Kernel& k, const cv::String& opts,
+                        UMat src, UMat dst, OutputArray _dst, Size sz,
+                        Size dstSz, size_t globalsize[2]/* to be written */)
+{
+    CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
+
+    bidx = code == COLOR_BGR2Lab || code == COLOR_LBGR2Lab || code == COLOR_BGR2Luv || code == COLOR_LBGR2Luv ? 0 : 2;
+    bool srgb = code == COLOR_BGR2Lab || code == COLOR_RGB2Lab || code == COLOR_RGB2Luv || code == COLOR_BGR2Luv;
+    bool lab = code == COLOR_BGR2Lab || code == COLOR_RGB2Lab || code == COLOR_LBGR2Lab || code == COLOR_LRGB2Lab;
+    float un, vn;
+    dcn = 3;
+
+    k.create(format("BGR2%s", lab ? "Lab" : "Luv").c_str(),
+             ocl::imgproc::cvtcolor_oclsrc,
+             opts + format("-D dcn=%d -D bidx=%d%s",
+                           dcn, bidx, srgb ? " -D SRGB" : ""));
+    if (k.empty())
+        return false;
+
+    initLabTabs();
+
+    _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+    dst = _dst.getUMat();
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst);
+
+    if (depth == CV_8U && lab)
+    {
+        static UMat usRGBGammaTab, ulinearGammaTab, uLabCbrtTab, ucoeffs;
+
+        if (srgb && usRGBGammaTab.empty())
+            Mat(1, 256, CV_16UC1, sRGBGammaTab_b).copyTo(usRGBGammaTab);
+        else if (ulinearGammaTab.empty())
+            Mat(1, 256, CV_16UC1, linearGammaTab_b).copyTo(ulinearGammaTab);
+        if (uLabCbrtTab.empty())
+            Mat(1, LAB_CBRT_TAB_SIZE_B, CV_16UC1, LabCbrtTab_b).copyTo(uLabCbrtTab);
+
+        {
+            int coeffs[9];
+            static const softfloat lshift(1 << lab_shift);
+            for( int i = 0; i < 3; i++ )
+            {
+                coeffs[i*3+(bidx^2)] = cvRound(lshift*sRGB2XYZ_D65[i*3  ]/D65[i]);
+                coeffs[i*3+1]        = cvRound(lshift*sRGB2XYZ_D65[i*3+1]/D65[i]);
+                coeffs[i*3+bidx]     = cvRound(lshift*sRGB2XYZ_D65[i*3+2]/D65[i]);
+
+                CV_Assert(coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
+                          coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift));
+            }
+            Mat(1, 9, CV_32SC1, coeffs).copyTo(ucoeffs);
+        }
+
+        const int Lscale = (116*255+50)/100;
+        const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
+
+        k.args(srcarg, dstarg,
+               ocl::KernelArg::PtrReadOnly(srgb ? usRGBGammaTab : ulinearGammaTab),
+               ocl::KernelArg::PtrReadOnly(uLabCbrtTab), ocl::KernelArg::PtrReadOnly(ucoeffs),
+               Lscale, Lshift);
+    }
+    else
+    {
+        static UMat usRGBGammaTab, ucoeffs, uLabCbrtTab;
+
+        if (srgb && usRGBGammaTab.empty())
+            Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(sRGBGammaTab)).copyTo(usRGBGammaTab);
+        if (!lab && uLabCbrtTab.empty())
+            Mat(1, LAB_CBRT_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(LabCbrtTab)).copyTo(uLabCbrtTab);
+
+        {
+            float coeffs[9];
+            softdouble whitePt[3];
+            for(int i = 0; i < 3; i++)
+                whitePt[i] = D65[i];
+
+            softdouble scale[] = { softdouble::one() / whitePt[0],
+                                   softdouble::one(),
+                                   softdouble::one() / whitePt[2] };
+
+            for (int i = 0; i < 3; i++)
+            {
+                int j = i * 3;
+
+                softfloat c0 = (lab ? scale[i] : softdouble::one()) * sRGB2XYZ_D65[j    ];
+                softfloat c1 = (lab ? scale[i] : softdouble::one()) * sRGB2XYZ_D65[j + 1];
+                softfloat c2 = (lab ? scale[i] : softdouble::one()) * sRGB2XYZ_D65[j + 2];
+
+                coeffs[j + (bidx ^ 2)] = c0;
+                coeffs[j + 1]          = c1;
+                coeffs[j + bidx]       = c2;
+
+                CV_Assert( c0 >= 0 && c1 >= 0 && c2 >= 0 &&
+                           c0 + c1 + c2 < (lab ? softfloat((int)LAB_CBRT_TAB_SIZE) : softfloat(3)/softfloat(2)));
+            }
+
+            softfloat d = whitePt[0] +
+                          whitePt[1]*softdouble(15) +
+                          whitePt[2]*softdouble(3);
+            d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+            un = d*softfloat(13*4)*whitePt[0];
+            vn = d*softfloat(13*9)*whitePt[1];
+
+            Mat(1, 9, CV_32FC1, coeffs).copyTo(ucoeffs);
+        }
+
+        static const float _a = softfloat(16)/softfloat(116);
+        static const float _1_3f = softfloat::one()/softfloat(3);
+        ocl::KernelArg ucoeffsarg = ocl::KernelArg::PtrReadOnly(ucoeffs);
+
+        if (lab)
+        {
+            if (srgb)
+                k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBGammaTab),
+                       ucoeffsarg, _1_3f, _a);
+            else
+                k.args(srcarg, dstarg, ucoeffsarg, _1_3f, _a);
+        }
+        else
+        {
+            ocl::KernelArg LabCbrtTabarg = ocl::KernelArg::PtrReadOnly(uLabCbrtTab);
+            if (srgb)
+                k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBGammaTab),
+                       LabCbrtTabarg, ucoeffsarg, un, vn);
+            else
+                k.args(srcarg, dstarg, LabCbrtTabarg, ucoeffsarg, un, vn);
+        }
+    }
+
+    return k.run(2, globalsize, NULL, false);
+}
+
+
+//TODO: to be rewritten
+
+bool oclCvtColorLxx2BGR(int scn, int dcn, int depth, int bidx, int code,
+                        ocl::Kernel& k, const cv::String& opts,
+                        UMat src, UMat dst, OutputArray _dst, Size sz,
+                        Size dstSz, size_t globalsize[2]/* to be written */)
+{
+    if( dcn <= 0 )
+        dcn = 3;
+    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
+
+    bidx = code == COLOR_Lab2BGR || code == COLOR_Lab2LBGR || code == COLOR_Luv2BGR || code == COLOR_Luv2LBGR ? 0 : 2;
+    bool srgb = code == COLOR_Lab2BGR || code == COLOR_Lab2RGB || code == COLOR_Luv2BGR || code == COLOR_Luv2RGB;
+    bool lab = code == COLOR_Lab2BGR || code == COLOR_Lab2RGB || code == COLOR_Lab2LBGR || code == COLOR_Lab2LRGB;
+    float un, vn;
+
+    k.create(format("%s2BGR", lab ? "Lab" : "Luv").c_str(),
+             ocl::imgproc::cvtcolor_oclsrc,
+             opts + format("-D dcn=%d -D bidx=%d%s",
+                           dcn, bidx, srgb ? " -D SRGB" : ""));
+    if (k.empty())
+        return false;
+
+    initLabTabs();
+    static UMat ucoeffs, usRGBInvGammaTab;
+
+    if (srgb && usRGBInvGammaTab.empty())
+        Mat(1, GAMMA_TAB_SIZE*4, CV_32FC1, const_cast<float*>(sRGBInvGammaTab)).copyTo(usRGBInvGammaTab);
+
+    {
+        float coeffs[9];
+        softdouble whitePt[3];
+        for(int i = 0; i < 3; i++)
+            whitePt[i] = D65[i];
+
+        for( int i = 0; i < 3; i++ )
+        {
+            coeffs[i+(bidx^2)*3] = (float)(XYZ2sRGB_D65[i  ]*(lab ? whitePt[i] : softdouble::one()));
+            coeffs[i+3]          = (float)(XYZ2sRGB_D65[i+3]*(lab ? whitePt[i] : softdouble::one()));
+            coeffs[i+bidx*3]     = (float)(XYZ2sRGB_D65[i+6]*(lab ? whitePt[i] : softdouble::one()));
+        }
+
+        softfloat d = whitePt[0] +
+                      whitePt[1]*softdouble(15) +
+                      whitePt[2]*softdouble(3);
+        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        un = softfloat(4*13)*d*whitePt[0];
+        vn = softfloat(9*13)*d*whitePt[1];
+
+        Mat(1, 9, CV_32FC1, coeffs).copyTo(ucoeffs);
+    }
+
+    _dst.create(sz, CV_MAKETYPE(depth, dcn));
+    dst = _dst.getUMat();
+
+    float lThresh = softfloat(8); // 0.008856f * 903.3f  = (6/29)^3*(29/3)^3 = 8
+    float fThresh = softfloat(6)/softfloat(29); // 7.787f * 0.008856f + 16.0f / 116.0f = 6/29
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst),
+            coeffsarg = ocl::KernelArg::PtrReadOnly(ucoeffs);
+
+    if (lab)
+    {
+        if (srgb)
+            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBInvGammaTab),
+                   coeffsarg, lThresh, fThresh);
+        else
+            k.args(srcarg, dstarg, coeffsarg, lThresh, fThresh);
+    }
+    else
+    {
+        if (srgb)
+            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBInvGammaTab),
+                   coeffsarg, un, vn);
+        else
+            k.args(srcarg, dstarg, coeffsarg, un, vn);
+    }
+
+    return k.run(2, globalsize, NULL, false);
+}
 
 } // namespace cv

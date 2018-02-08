@@ -290,7 +290,7 @@ private:
 };
 
 
-//TODO: should they be static?
+//TODO: make them external (or rewrite IPP code)
 
 static IppStatus CV_STDCALL ippiSwapChannels_8u_C3C4Rf(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep,
          IppiSize roiSize, const int *dstOrder)
@@ -342,9 +342,11 @@ static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 };
 #endif
 
-
-
 #endif
 
+// TODO: rewrite this
+
+bool oclCvtColorBGR2Lxx(int scn, int dcn, int depth, int bidx, int code, ocl::Kernel &k, const String &opts, UMat src, UMat dst, OutputArray _dst, Size sz, Size dstSz, size_t globalsize[]);
+bool oclCvtColorLxx2BGR(int scn, int dcn, int depth, int bidx, int code, ocl::Kernel &k, const String &opts, UMat src, UMat dst, OutputArray _dst, Size sz, Size dstSz, size_t globalsize[]);
 
 } //namespace cv
