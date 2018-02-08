@@ -115,7 +115,7 @@ Explanation
 -#  __Set up SVM's parameters__
 
     @note In the previous tutorial @ref tutorial_introduction_to_svm there is an explanation of the
-    atributes of the class @ref cv::ml::SVM that we configure here before training the SVM.
+    attributes of the class @ref cv::ml::SVM that we configure here before training the SVM.
 
     @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp init
 

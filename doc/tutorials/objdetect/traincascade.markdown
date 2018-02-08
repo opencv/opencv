@@ -10,7 +10,7 @@ To support this tutorial, several official OpenCV applications will be used: [op
 
 ### Important notes
 
- - If you come accross any tutorial mentioning the old opencv_haartraining tool <i>(which is deprecated and still using the OpenCV1.x interface)</i>, then please ignore that tutorial and stick to the opencv_traincascade tool. This tool is a newer version, written in C++ in accordance to the OpenCV 2.x and OpenCV 3.x API. The opencv_traincascade supports both HAAR like wavelet features @cite Viola01 and LBP (Local Binary Patterns) @cite Liao2007 features. LBP features yield integer precision in contrast to HAAR features, yielding floating point precision, so both training and detection with LBP are several times faster then with HAAR features. Regarding the LBP and HAAR detection quality, it mainly depends on the training data used and the training parameters selected. It's possible to train a LBP-based classifier that will provide almost the same quality as HAAR-based one, within a percentage of the training time.
+ - If you come across any tutorial mentioning the old opencv_haartraining tool <i>(which is deprecated and still using the OpenCV1.x interface)</i>, then please ignore that tutorial and stick to the opencv_traincascade tool. This tool is a newer version, written in C++ in accordance to the OpenCV 2.x and OpenCV 3.x API. The opencv_traincascade supports both HAAR like wavelet features @cite Viola01 and LBP (Local Binary Patterns) @cite Liao2007 features. LBP features yield integer precision in contrast to HAAR features, yielding floating point precision, so both training and detection with LBP are several times faster then with HAAR features. Regarding the LBP and HAAR detection quality, it mainly depends on the training data used and the training parameters selected. It's possible to train a LBP-based classifier that will provide almost the same quality as HAAR-based one, within a percentage of the training time.
 
  - The newer cascade classifier detection interface from OpenCV 2.x and OpenCV 3.x (@ref cv::CascadeClassifier) supports working with both old and new model formats. opencv_traincascade can even save (export) a trained cascade in the older format if for some reason you are stuck using the old interface. At least training the model could then be done in the most stable interface.
 
@@ -69,7 +69,7 @@ Command line arguments:
 
  - `-num <number_of_samples>` : Number of positive samples to generate.
 
- - `-bgcolor <background_color>` : Background color (currently grayscale images are assumed); the background color denotes the transparent color. Since there might be compression artifacts, the amount of color tolerance can be specified by -bgthresh. All pixels withing bgcolor-bgthresh and bgcolor+bgthresh range are interpreted as transparent.
+ - `-bgcolor <background_color>` : Background color (currently grayscale images are assumed); the background color denotes the transparent color. Since there might be compression artifacts, the amount of color tolerance can be specified by -bgthresh. All pixels within bgcolor-bgthresh and bgcolor+bgthresh range are interpreted as transparent.
 
  - `-bgthresh <background_color_threshold>`
  - `-inv` : If specified, colors will be inverted.
@@ -188,7 +188,7 @@ Training is finished and you can test your cascade classifier!
 Visualising Cascade Classifiers
 -------------------------------
 
-From time to time it can be usefull to visualise the trained cascade, to see which features it selected and how complex its stages are. For this OpenCV supplies a opencv_visualisation application. This application has the following commands:
+From time to time it can be useful to visualise the trained cascade, to see which features it selected and how complex its stages are. For this OpenCV supplies a opencv_visualisation application. This application has the following commands:
 
  - `--image` <b>(required)</b> : path to a reference image for your object model. This should be an annotation with dimensions [`-w`,`-h`] as passed to both opencv_createsamples and opencv_traincascade application.
  - `--model` <b>(required)</b> : path to the trained model, which should be in the folder supplied to the `-data` parameter of the opencv_traincascade application.

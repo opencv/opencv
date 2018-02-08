@@ -139,7 +139,7 @@ some, they are not.
 Additional Resources
 --------------------
 
--#  CMM page on [Watershed Tranformation](http://cmm.ensmp.fr/~beucher/wtshed.html)
+-#  CMM page on [Watershed Transformation](http://cmm.ensmp.fr/~beucher/wtshed.html)
 
 Exercises
 ---------

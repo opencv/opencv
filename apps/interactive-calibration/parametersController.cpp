@@ -89,7 +89,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 
     if(!checkAssertion(mCapParams.squareSize > 0, "Distance between corners or circles must be positive"))
         return false;
-    if(!checkAssertion(mCapParams.templDst > 0, "Distance betwen parts of dual template must be positive"))
+    if(!checkAssertion(mCapParams.templDst > 0, "Distance between parts of dual template must be positive"))
         return false;
 
     if (parser.has("v")) {

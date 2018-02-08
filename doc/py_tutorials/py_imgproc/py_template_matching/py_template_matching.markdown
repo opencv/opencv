@@ -104,7 +104,7 @@ Template Matching with Multiple Objects
 ---------------------------------------
 
 In the previous section, we searched image for Messi's face, which occurs only once in the image.
-Suppose you are searching for an object which has multiple occurances, **cv.minMaxLoc()** won't
+Suppose you are searching for an object which has multiple occurrences, **cv.minMaxLoc()** won't
 give you all the locations. In that case, we will use thresholding. So in this example, we will use
 a screenshot of the famous game **Mario** and we will find the coins in it.
 @code{.py}

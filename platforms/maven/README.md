@@ -57,7 +57,7 @@ Generally all that is required is the standard Maven command:
 
 One of the first things the build will do is check the required native dependencies. The Maven build indicates the status of the required dependencies and will fail at this point if any are missing. Install using the package manager e.g. aptitude or apt-get, and restart the build with the above command.
 
-Once the build succesfully completes the OSGi compatible artifacts are available as described above in 'Build Directory'.
+Once the build successfully completes the OSGi compatible artifacts are available as described above in 'Build Directory'.
 
 #### 3.4 - ARM 32-bit Architecture - Raspbian Distribution
 Similar to the x86 architecture the native dependencies are first checked so install any that are missing, however at the time of writing there are no official `libtbb2` and `libtbb-dev` packages in Raspbian. Version 4.4.3 of Intel's Thread Building Blocks library are available [here](http://www.javatechnics.com/thread-building-blocks-tbb-4-4-3-for-raspbian) as a Raspbian-compatible Debian packages.

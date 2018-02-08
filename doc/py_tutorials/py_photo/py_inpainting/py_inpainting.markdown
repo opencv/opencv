@@ -16,7 +16,7 @@ Most of you will have some old degraded photos at your home with some black spot
 on it. Have you ever thought of restoring it back? We can't simply erase them in a paint tool
 because it is will simply replace black structures with white structures which is of no use. In
 these cases, a technique called image inpainting is used. The basic idea is simple: Replace those
-bad marks with its neighbouring pixels so that it looks like the neigbourhood. Consider the image
+bad marks with its neighbouring pixels so that it looks like the neighbourhood. Consider the image
 shown below (taken from [Wikipedia](http://en.wikipedia.org/wiki/Inpainting)):
 
 ![image](images/inpaint_basics.jpg)
@@ -28,8 +28,8 @@ First algorithm is based on the paper **"An Image Inpainting Technique Based on 
 Method"** by Alexandru Telea in 2004. It is based on Fast Marching Method. Consider a region in the
 image to be inpainted. Algorithm starts from the boundary of this region and goes inside the region
 gradually filling everything in the boundary first. It takes a small neighbourhood around the pixel
-on the neigbourhood to be inpainted. This pixel is replaced by normalized weighted sum of all the
-known pixels in the neigbourhood. Selection of the weights is an important matter. More weightage is
+on the neighbourhood to be inpainted. This pixel is replaced by normalized weighted sum of all the
+known pixels in the neighbourhood. Selection of the weights is an important matter. More weightage is
 given to those pixels lying near to the point, near to the normal of the boundary and those lying on
 the boundary contours. Once a pixel is inpainted, it moves to next nearest pixel using Fast Marching
 Method. FMM ensures those pixels near the known pixels are inpainted first, so that it just works
