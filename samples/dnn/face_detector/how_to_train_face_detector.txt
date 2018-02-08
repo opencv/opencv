@@ -1,6 +1,6 @@
 This is a brief description of training process which has been used to get res10_300x300_ssd_iter_140000.caffemodel.
 The model was created with SSD framework using ResNet-10 like architecture as a backbone. Channels count in ResNet-10 convolution layers was significantly dropped (2x- or 4x- fewer channels).
-The model was trained in Caffe framework on some huge and avaliable online dataset.
+The model was trained in Caffe framework on some huge and available online dataset.
 
 1. Prepare training tools
 You need to use "ssd" branch from this repository https://github.com/weiliu89/caffe/tree/ssd . Checkout this branch and built it (see instructions in repo's README)

@@ -60,7 +60,7 @@ const std::string keys =
 static void help(void)
 {
 
-    cout << "\nThis file demostrates the use of the ECC image alignment algorithm. When one image"
+    cout << "\nThis file demonstrates the use of the ECC image alignment algorithm. When one image"
         " is given, the template image is artificially formed by a random warp. When both images"
         " are given, the initialization of the warp by command line parsing is possible. "
         "If inputWarp is missing, the identity transformation initializes the algorithm. \n" << endl;

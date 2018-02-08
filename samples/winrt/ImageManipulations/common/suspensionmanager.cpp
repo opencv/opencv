@@ -244,7 +244,7 @@ task<void> SuspensionManager::SaveAsync(void)
 /// state, which in turn gives their active <see cref="Page"/> an opportunity restore its
 /// state.
 /// </summary>
-/// <param name="version">A version identifer compared to the session state to prevent
+/// <param name="version">A version identifier compared to the session state to prevent
 /// incompatible versions of session state from reaching app code.  Saved state with a
 /// different version will be ignored, resulting in an empty <see cref="SessionState"/>
 /// dictionary.</param>
