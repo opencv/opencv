@@ -3,8 +3,10 @@
 using namespace cv;
 using namespace std;
 
-static void houghtransform_pointset(Mat& lines)
+int main()
 {
+    Mat lines;
+    vector<Vec3d> line3d;
     vector<Point2f> point;
     const static float Points[20][2] = {
     { 0.0f,   369.0f }, { 10.0f,  364.0f }, { 20.0f,  358.0f }, { 30.0f,  352.0f },
@@ -18,19 +20,14 @@ static void houghtransform_pointset(Mat& lines)
     {
         point.push_back(Point2f(Points[i][0],Points[i][1]));
     }
+
     double rhoMin = 0.0f, rhoMax = 360.0f, rhoStep = 1;
     double thetaMin = 0.0f, thetaMax = CV_PI / 2.0f, thetaStep = CV_PI / 180.0f;
 
     HoughLinesPointSet(point, lines, 20, 1,
                        rhoMin, rhoMax, rhoStep,
                        thetaMin, thetaMax, thetaStep);
-}
 
-int main(int argc, char** argv)
-{
-    Mat lines_pointset;
-    vector<Vec3d> line3d;
-    houghtransform_pointset(lines_pointset);
-    lines_pointset.copyTo(line3d);
+    lines.copyTo(line3d);
     printf("votes:%d, rho:%.7f, theta:%.7f\n",(int)line3d.at(0).val[0], line3d.at(0).val[1], line3d.at(0).val[2]);
 }
