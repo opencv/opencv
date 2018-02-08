@@ -371,7 +371,7 @@ int main(int argc, char** argv)
         DeviceInfo devInfo(i);
         if (!devInfo.isCompatible())
         {
-            cerr << "CUDA module was't built for GPU #" << i << " ("
+            cerr << "CUDA module wasn't built for GPU #" << i << " ("
                  << devInfo.name() << ", CC " << devInfo.majorVersion()
                  << devInfo.minorVersion() << endl;
             return -1;

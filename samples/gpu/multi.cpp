@@ -1,4 +1,4 @@
-/* This sample demonstrates the way you can perform independed tasks
+/* This sample demonstrates the way you can perform independent tasks
    on the different GPUs */
 
 // Disable some warnings which are caused with CUDA headers

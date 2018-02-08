@@ -16,7 +16,7 @@ using namespace cv;
 static void help()
 {
     printf("\n"
-            "This program demonstrates a method for shape comparisson based on Shape Context\n"
+            "This program demonstrates a method for shape comparison based on Shape Context\n"
             "You should run the program providing a number between 1 and 20 for selecting an image in the folder ../data/shape_sample.\n"
             "Call\n"
             "./shape_example [number between 1 and 20, 1 default]\n\n");
