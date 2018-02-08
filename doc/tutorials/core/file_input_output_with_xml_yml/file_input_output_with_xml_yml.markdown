@@ -112,7 +112,7 @@ you may access it. For sequences you need to go through them to query a specific
     for (; it != it_end; ++it)
         cout << (string)*it << endl;
     @endcode
-    For maps you can use the [] operator again to acces the given item (or the \>\> operator too):
+    For maps you can use the [] operator again to access the given item (or the \>\> operator too):
     @code{.cpp}
     n = fs["Mapping"];                                // Read mappings from a sequence
     cout << "Two  " << (int)(n["Two"]) << "; ";

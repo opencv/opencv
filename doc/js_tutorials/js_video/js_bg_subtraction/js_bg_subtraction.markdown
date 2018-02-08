@@ -28,7 +28,7 @@ BackgroundSubtractorMOG2
 ------------------------
 
 It is a Gaussian Mixture-based Background/Foreground Segmentation Algorithm. It is based on two
-papers by Z.Zivkovic, "Improved adaptive Gausian mixture model for background subtraction" in 2004
+papers by Z.Zivkovic, "Improved adaptive Gaussian mixture model for background subtraction" in 2004
 and "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction"
 in 2006. One important feature of this algorithm is that it selects the appropriate number of
 gaussian distribution for each pixel. It provides better adaptibility to varying scenes due illumination
