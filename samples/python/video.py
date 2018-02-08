@@ -8,7 +8,7 @@ frames from a camera of a movie file. Also the sample provides
 an example of procedural video generation by an object, mimicking
 the VideoCapture interface (see Chess class).
 
-'create_capture' is a convinience function for capture creation,
+'create_capture' is a convenience function for capture creation,
 falling back to procedural video in case of error.
 
 Usage:
