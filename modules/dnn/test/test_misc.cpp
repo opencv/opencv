@@ -37,4 +37,24 @@ TEST(blobFromImage, allocated)
     ASSERT_EQ(blobData, blob.data);
 }
 
+TEST(imagesFromBlob, Regression)
+{
+    int nbOfImages = 3;
+
+    std::vector<cv::Mat> inputImgs(nbOfImages);
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        inputImgs[i] = Mat::ones(10, 10, CV_32FC3) * (i + 1);
+    }
+
+    cv::Mat blob = dnn::blobFromImages(inputImgs, 1., Size(), Scalar(), false, false);
+    std::vector<cv::Mat> outputImgs;
+    dnn::imagesFromBlob(blob, outputImgs);
+
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        ASSERT_EQ(*inputImgs[i].data,*outputImgs[i].data);
+    }
+}
+
 }
