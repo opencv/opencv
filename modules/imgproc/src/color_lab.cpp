@@ -4430,9 +4430,10 @@ bool oclCvtColorBGR2Lxx(int scn, int dcn, int depth, int bidx, int code,
     dcn = 3;
 
     k.create(format("BGR2%s", lab ? "Lab" : "Luv").c_str(),
-             ocl::imgproc::cvtcolor_oclsrc,
+             ocl::imgproc::color_lab_oclsrc,
              opts + format("-D dcn=%d -D bidx=%d%s",
                            dcn, bidx, srgb ? " -D SRGB" : ""));
+
     if (k.empty())
         return false;
 
@@ -4567,7 +4568,7 @@ bool oclCvtColorLxx2BGR(int scn, int dcn, int depth, int bidx, int code,
     float un, vn;
 
     k.create(format("%s2BGR", lab ? "Lab" : "Luv").c_str(),
-             ocl::imgproc::cvtcolor_oclsrc,
+             ocl::imgproc::color_lab_oclsrc,
              opts + format("-D dcn=%d -D bidx=%d%s",
                            dcn, bidx, srgb ? " -D SRGB" : ""));
     if (k.empty())
