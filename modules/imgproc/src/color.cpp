@@ -11077,7 +11077,7 @@ void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst
     dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
     uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
     CV_Assert( dcn == 3 || dcn == 4 );
-    CV_Assert( ysz.width == uvs.width );
+    CV_Assert( ysz.width == uvs.width * 2 );
     CV_Assert( ysz.width % 2 == 0 && depth == CV_8U );
     CV_Assert( ysz.height == uvs.height * 2 );
     _dst.create( ysz, CV_MAKETYPE(depth, dcn));

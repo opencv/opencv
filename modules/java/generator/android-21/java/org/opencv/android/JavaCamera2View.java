@@ -200,7 +200,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                     ByteBuffer y_plane = planes[0].getBuffer();
                     ByteBuffer uv_plane = planes[1].getBuffer();
                     Mat y_mat = new Mat( h, w, CvType.CV_8UC1, y_plane );
-                    Mat uv_mat = new Mat( h/2, w, CvType.CV_8UC1, uv_plane );
+                    Mat uv_mat = new Mat( h/2, w/2, CvType.CV_8UC2, uv_plane );
                     JavaCamera2Frame tempFrame = new JavaCamera2Frame(y_mat,uv_mat,w,h);
                     deliverAndDrawFrame(tempFrame);
                     tempFrame.release();
@@ -355,7 +355,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4);  // COLOR_YUV2RGBA_YV12 produces inverted colors
             else if (mPreviewFormat == ImageFormat.YUV_420_888) {
                 assert(mUVFrameData != null);
-                Imgproc.cvtColorTwoPlane(mYuvFrameData,mUVFrameData,mRgba,Imgproc.COLOR_YUV2RGB_NV21, 4);
+                Imgproc.cvtColorTwoPlane(mYuvFrameData,mUVFrameData,mRgba,Imgproc.COLOR_YUV2RGBA_NV21);
             } else
                 throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
 
