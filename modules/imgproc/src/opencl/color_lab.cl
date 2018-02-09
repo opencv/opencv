@@ -73,17 +73,118 @@
 
 enum
 {
-    yuv_shift  = 14,
     xyz_shift  = 12,
-    hsv_shift  = 12,
-    R2Y        = 4899,
-    G2Y        = 9617,
-    B2Y        = 1868,
-    BLOCK_SIZE = 256
 };
 
 #define scnbytes ((int)sizeof(DATA_TYPE)*scn)
 #define dcnbytes ((int)sizeof(DATA_TYPE)*dcn)
+
+#define __CAT(x, y) x##y
+#define CAT(x, y) __CAT(x, y)
+
+#define DATA_TYPE_4 CAT(DATA_TYPE, 4)
+#define DATA_TYPE_3 CAT(DATA_TYPE, 3)
+
+///////////////////////////////////// RGB <-> XYZ //////////////////////////////////////
+
+__kernel void RGB2XYZ(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset,
+                      int rows, int cols, __constant COEFF_TYPE * coeffs)
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (dx < cols)
+    {
+        int src_index = mad24(dy, src_step, mad24(dx, scnbytes, src_offset));
+        int dst_index = mad24(dy, dst_step, mad24(dx, dcnbytes, dst_offset));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (dy < rows)
+            {
+                __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
+                __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
+
+                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE r = src_pix.x, g = src_pix.y, b = src_pix.z;
+
+#ifdef DEPTH_5
+                float x = fma(r, coeffs[0], fma(g, coeffs[1], b * coeffs[2]));
+                float y = fma(r, coeffs[3], fma(g, coeffs[4], b * coeffs[5]));
+                float z = fma(r, coeffs[6], fma(g, coeffs[7], b * coeffs[8]));
+#else
+                int x = CV_DESCALE(mad24(r, coeffs[0], mad24(g, coeffs[1], b * coeffs[2])), xyz_shift);
+                int y = CV_DESCALE(mad24(r, coeffs[3], mad24(g, coeffs[4], b * coeffs[5])), xyz_shift);
+                int z = CV_DESCALE(mad24(r, coeffs[6], mad24(g, coeffs[7], b * coeffs[8])), xyz_shift);
+#endif
+                dst[0] = SAT_CAST(x);
+                dst[1] = SAT_CAST(y);
+                dst[2] = SAT_CAST(z);
+
+                ++dy;
+                dst_index += dst_step;
+                src_index += src_step;
+            }
+        }
+    }
+}
+
+__kernel void XYZ2RGB(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset,
+                      int rows, int cols, __constant COEFF_TYPE * coeffs)
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (dx < cols)
+    {
+        int src_index = mad24(dy, src_step, mad24(dx, scnbytes, src_offset));
+        int dst_index = mad24(dy, dst_step, mad24(dx, dcnbytes, dst_offset));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (dy < rows)
+            {
+                __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
+                __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
+
+                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE x = src_pix.x, y = src_pix.y, z = src_pix.z;
+
+#ifdef DEPTH_5
+                float b = fma(x, coeffs[0], fma(y, coeffs[1], z * coeffs[2]));
+                float g = fma(x, coeffs[3], fma(y, coeffs[4], z * coeffs[5]));
+                float r = fma(x, coeffs[6], fma(y, coeffs[7], z * coeffs[8]));
+#else
+                int b = CV_DESCALE(mad24(x, coeffs[0], mad24(y, coeffs[1], z * coeffs[2])), xyz_shift);
+                int g = CV_DESCALE(mad24(x, coeffs[3], mad24(y, coeffs[4], z * coeffs[5])), xyz_shift);
+                int r = CV_DESCALE(mad24(x, coeffs[6], mad24(y, coeffs[7], z * coeffs[8])), xyz_shift);
+#endif
+
+                DATA_TYPE dst0 = SAT_CAST(b);
+                DATA_TYPE dst1 = SAT_CAST(g);
+                DATA_TYPE dst2 = SAT_CAST(r);
+#if dcn == 3 || defined DEPTH_5
+                dst[0] = dst0;
+                dst[1] = dst1;
+                dst[2] = dst2;
+#if dcn == 4
+                dst[3] = MAX_NUM;
+#endif
+#else
+                *(__global DATA_TYPE_4 *)dst = (DATA_TYPE_4)(dst0, dst1, dst2, MAX_NUM);
+#endif
+
+                ++dy;
+                dst_index += dst_step;
+                src_index += src_step;
+            }
+        }
+    }
+}
 
 /////////////////////////////////// [l|s]RGB <-> Lab ///////////////////////////
 

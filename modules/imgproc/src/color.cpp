@@ -379,7 +379,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         _dst.create(dstSz, CV_MAKETYPE(depth, 3));
         dst = _dst.getUMat();
 
-        k.create("RGB2XYZ", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB2XYZ", ocl::imgproc::color_lab_oclsrc,
                  opts + format("-D dcn=3 -D bidx=%d", bidx));
         if (k.empty())
             return false;
@@ -430,7 +430,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
         dst = _dst.getUMat();
 
-        k.create("XYZ2RGB", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("XYZ2RGB", ocl::imgproc::color_lab_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
         if (k.empty())
             return false;
@@ -528,7 +528,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 4 && depth == CV_8U);
         dcn = 4;
 
-        k.create(code == COLOR_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA", ocl::imgproc::cvtcolor_oclsrc,
+        k.create(code == COLOR_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA", ocl::imgproc::color_rgb_oclsrc,
                  opts + "-D dcn=4 -D bidx=3");
         break;
     }

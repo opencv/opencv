@@ -378,3 +378,77 @@ __kernel void Gray2BGR5x5(__global const uchar* src, int src_step, int src_offse
         }
     }
 }
+
+/////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
+
+#ifdef DEPTH_0
+
+__kernel void RGBA2mRGBA(__global const uchar* src, int src_step, int src_offset,
+                         __global uchar* dst, int dst_step, int dst_offset,
+                         int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols)
+    {
+        int src_index = mad24(y, src_step, src_offset + (x << 2));
+        int dst_index = mad24(y, dst_step, dst_offset + (x << 2));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows)
+            {
+                uchar4 src_pix = *(__global const uchar4 *)(src + src_index);
+
+                *(__global uchar4 *)(dst + dst_index) =
+                    (uchar4)(mad24(src_pix.x, src_pix.w, HALF_MAX_NUM) / MAX_NUM,
+                             mad24(src_pix.y, src_pix.w, HALF_MAX_NUM) / MAX_NUM,
+                             mad24(src_pix.z, src_pix.w, HALF_MAX_NUM) / MAX_NUM, src_pix.w);
+
+                ++y;
+                dst_index += dst_step;
+                src_index += src_step;
+            }
+        }
+    }
+}
+
+__kernel void mRGBA2RGBA(__global const uchar* src, int src_step, int src_offset,
+                         __global uchar* dst, int dst_step, int dst_offset,
+                         int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols)
+    {
+        int src_index = mad24(y, src_step, mad24(x, 4, src_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, 4, dst_offset));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows)
+            {
+                uchar4 src_pix = *(__global const uchar4 *)(src + src_index);
+                uchar v3 = src_pix.w, v3_half = v3 / 2;
+
+                if (v3 == 0)
+                    *(__global uchar4 *)(dst + dst_index) = (uchar4)(0, 0, 0, 0);
+                else
+                    *(__global uchar4 *)(dst + dst_index) =
+                        (uchar4)(mad24(src_pix.x, MAX_NUM, v3_half) / v3,
+                                 mad24(src_pix.y, MAX_NUM, v3_half) / v3,
+                                 mad24(src_pix.z, MAX_NUM, v3_half) / v3, v3);
+
+                ++y;
+                dst_index += dst_step;
+                src_index += src_step;
+            }
+        }
+    }
+}
+
+#endif
