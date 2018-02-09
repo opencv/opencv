@@ -39,21 +39,22 @@ TEST(blobFromImage, allocated)
 
 TEST(imagesFromBlob, Regression)
 {
-    int nbOfImages = 3;
+    int nbOfImages = 8;
 
     std::vector<cv::Mat> inputImgs(nbOfImages);
     for (int i = 0; i < nbOfImages; i++)
     {
-        inputImgs[i] = Mat::ones(10, 10, CV_32FC3) * (i + 1);
+        inputImgs[i] = cv::Mat::ones(100, 100, CV_32FC3);
+        cv::randu(inputImgs[i], cv::Scalar::all(0), cv::Scalar::all(1));
     }
 
-    cv::Mat blob = dnn::blobFromImages(inputImgs, 1., Size(), Scalar(), false, false);
+    cv::Mat blob = cv::dnn::blobFromImages(inputImgs, 1., cv::Size(), cv::Scalar(), false, false);
     std::vector<cv::Mat> outputImgs;
-    dnn::imagesFromBlob(blob, outputImgs);
+    cv::dnn::imagesFromBlob(blob, outputImgs);
 
     for (int i = 0; i < nbOfImages; i++)
     {
-        ASSERT_EQ(*inputImgs[i].data,*outputImgs[i].data);
+        ASSERT_EQ(cv::countNonZero(inputImgs[i] != outputImgs[i]), 0);
     }
 }
 
