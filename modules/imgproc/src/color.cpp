@@ -123,7 +123,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 3 || scn == 4);
         dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
         bool reverse = !(code == COLOR_BGR2BGRA || code == COLOR_BGRA2BGR);
-        k.create("RGB", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D dcn=%d -D bidx=0 -D %s", dcn,
                         reverse ? "REVERSE" : "ORDER"));
         break;
@@ -137,7 +137,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA ? 0 : 2;
         int greenbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
             code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
-        k.create("RGB5x52RGB", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB5x52RGB", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D greenbits=%d", dcn, bidx, greenbits));
         break;
     }
@@ -150,7 +150,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         int greenbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
             code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
         dcn = 2;
-        k.create("RGB2RGB5x5", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB2RGB5x5", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D dcn=2 -D bidx=%d -D greenbits=%d", bidx, greenbits));
         break;
     }
@@ -159,7 +159,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 2 && depth == CV_8U);
         dcn = 1;
         int greenbits = code == COLOR_BGR5652GRAY ? 6 : 5;
-        k.create("BGR5x52Gray", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("BGR5x52Gray", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D dcn=1 -D bidx=0 -D greenbits=%d", greenbits));
         break;
     }
@@ -168,7 +168,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 1 && depth == CV_8U);
         dcn = 2;
         int greenbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
-        k.create("Gray2BGR5x5", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("Gray2BGR5x5", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D dcn=2 -D bidx=0 -D greenbits=%d", greenbits));
         break;
     }
@@ -178,7 +178,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
         dcn = 1;
-        k.create("RGB2Gray", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB2Gray", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d",
                                bidx, stripeSize));
         globalsize[0] = (src.cols + stripeSize-1)/stripeSize;
@@ -189,7 +189,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         CV_Assert(scn == 1);
         dcn = code == COLOR_GRAY2BGRA ? 4 : 3;
-        k.create("Gray2RGB", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("Gray2RGB", ocl::imgproc::color_rgb_oclsrc,
                  opts + format("-D bidx=0 -D dcn=%d", dcn));
         break;
     }
