@@ -199,7 +199,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_RGB2YUV ? 2 : 0;
         dcn = 3;
-        k.create("RGB2YUV", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB2YUV", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=3 -D bidx=%d", bidx));
         break;
     }
@@ -209,7 +209,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         if(dcn <= 0) dcn = 3;
         CV_Assert(dcn == 3 || dcn == 4);
         bidx = code == COLOR_YUV2RGB ? 2 : 0;
-        k.create("YUV2RGB", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YUV2RGB", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
         break;
     }
@@ -227,7 +227,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         dstSz = Size(sz.width, sz.height * 2 / 3);
         globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/2 + pxPerWIy - 1) / pxPerWIy;
-        k.create("YUV2RGB_NVx", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YUV2RGB_NVx", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx));
         break;
     }
@@ -245,7 +245,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         dstSz = Size(sz.width, sz.height * 2 / 3);
         globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/2 + pxPerWIy - 1) / pxPerWIy;
-        k.create("YUV2RGB_YV12_IYUV", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YUV2RGB_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D uidx=%d%s", dcn, bidx, uidx,
                  src.isContinuous() ? " -D SRC_CONT" : ""));
         break;
@@ -288,7 +288,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         }
         globalsize[0] = dstSz.width / (2 * pxPerWIx); globalsize[1] = (dstSz.height/3 + pxPerWIy - 1) / pxPerWIy;
 
-        k.create("RGB2YUV_YV12_IYUV", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB2YUV_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D PIX_PER_WI_X=%d", dcn, bidx, uidx, pxPerWIx));
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
         return k.run(2, globalsize, NULL, false);
@@ -311,7 +311,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert( dcn == 3 || dcn == 4 );
         CV_Assert( scn == 2 && depth == CV_8U );
 
-        k.create("YUV2RGB_422", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YUV2RGB_422", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d%s", dcn, bidx, uidx, yidx,
                                 src.offset % 4 == 0 && src.step % 4 == 0 ? " -D USE_OPTIMIZED_LOAD" : ""));
         break;
@@ -322,7 +322,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2YCrCb ? 0 : 2;
         dcn = 3;
-        k.create("RGB2YCrCb", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("RGB2YCrCb", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=3 -D bidx=%d", bidx));
         break;
     }
@@ -333,7 +333,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dcn = 3;
         CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
         bidx = code == COLOR_YCrCb2BGR ? 0 : 2;
-        k.create("YCrCb2RGB", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YCrCb2RGB", ocl::imgproc::color_yuv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
         break;
     }
