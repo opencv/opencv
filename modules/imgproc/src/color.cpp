@@ -11051,7 +11051,7 @@ inline bool isFullRange(int code)
 } // namespace::
 
 // helper function for dual-plane modes
-void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code, int dcn )
+void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code )
 {
     // only YUV420 is currently supported
     switch (code) {
@@ -11059,11 +11059,12 @@ void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             break;
         default:
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
             return;
     }
 
     int stype = _ysrc.type();
-    int depth = CV_MAT_DEPTH(stype), uidx;
+    int depth = CV_MAT_DEPTH(stype), uidx, dcn;
 
     Mat ysrc, uvsrc, dst;
     ysrc = _ysrc.getMat();
@@ -11073,7 +11074,7 @@ void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst
 
     // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
     // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-    if (dcn <= 0) dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
+    dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
     uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
     CV_Assert( dcn == 3 || dcn == 4 );
     CV_Assert( ysz.width == uvs.width );
