@@ -1251,6 +1251,13 @@ function(ocv_add_samples)
           set_target_properties(${the_target} PROPERTIES
             FOLDER "samples/${module_id}")
         endif()
+        # Add single target to build all samples for the module: 'make opencv_samples_bioinspired'
+        set(parent_target opencv_samples_${module_id})
+        if(NOT TARGET ${parent_target})
+          add_custom_target(${parent_target})
+          add_dependencies(opencv_samples ${parent_target})
+        endif()
+        add_dependencies(${parent_target} ${the_target})
 
         if(WIN32)
           install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT samples)
