@@ -15,6 +15,15 @@ function(ocv_define_sample out_target source sub)
   if(WIN32)
     install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${sub}" COMPONENT samples)
   endif()
+  # Add single target to build all samples in the group: 'make opencv_samples_cpp'
+  set(parent_target opencv_samples_${sub})
+  if(NOT TARGET ${parent_target})
+    add_custom_target(${parent_target})
+    if(TARGET opencv_samples)
+      add_dependencies(opencv_samples ${parent_target})
+    endif()
+  endif()
+  add_dependencies(${parent_target} ${the_target})
   set(${out_target} ${the_target} PARENT_SCOPE)
 endfunction()
 
@@ -63,7 +72,7 @@ ocv_install_example_src("." CMakeLists.txt)
 if(INSTALL_C_EXAMPLES)
   install(DIRECTORY data
           DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/data"
-          COMPONENT samples)
+        COMPONENT samples_data)
 endif()
 
 else()
