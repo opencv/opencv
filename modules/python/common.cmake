@@ -3,11 +3,11 @@ set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 ocv_add_module(${MODULE_NAME} BINDINGS PRIVATE_REQUIRED opencv_python_bindings_generator)
 
-ocv_module_include_directories(
+include_directories(SYSTEM
     "${${PYTHON}_INCLUDE_PATH}"
-)
-include_directories(
     ${${PYTHON}_NUMPY_INCLUDE_DIRS}
+)
+ocv_module_include_directories(
     "${PYTHON_SOURCE_DIR}/src2"
     "${OPENCV_PYTHON_BINDINGS_DIR}"
 )
