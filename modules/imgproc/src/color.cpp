@@ -486,7 +486,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(dstSz, CV_8UC3);
             dst = _dst.getUMat();
 
-            k.create("RGB2HSV", ocl::imgproc::cvtcolor_oclsrc,
+            k.create("RGB2HSV", ocl::imgproc::color_hsv_oclsrc,
                      opts + format("-D hrange=%d -D bidx=%d -D dcn=3",
                                    hrange, bidx));
             if (k.empty())
@@ -499,7 +499,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             return k.run(2, globalsize, NULL, false);
         }
         else
-            k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+            k.create(kernelName.c_str(), ocl::imgproc::color_hsv_oclsrc,
                      opts + format("-D hscale=%ff -D bidx=%d -D dcn=3",
                                    hrange*(1.f/360.f), bidx));
         break;
@@ -518,7 +518,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 code == COLOR_HSV2BGR_FULL || code == COLOR_HSV2RGB_FULL;
 
         String kernelName = String(is_hsv ? "HSV" : "HLS") + "2RGB";
-        k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+        k.create(kernelName.c_str(), ocl::imgproc::color_hsv_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff",
                                dcn, bidx, hrange, 6.f/hrange));
         break;
