@@ -2213,7 +2213,7 @@ public:
 
 #ifdef CV_CXX11
     Mat_(std::initializer_list<_Tp> values);
-    Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
+    explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
 #endif
 
 #ifdef CV_CXX_STD_ARRAY

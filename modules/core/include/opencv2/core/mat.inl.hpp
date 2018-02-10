@@ -587,12 +587,15 @@ Mat::Mat(const std::initializer_list<_Tp> list)
 
 template<typename _Tp, typename> inline
 Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows((int)list.size()),
-      cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
+    : Mat()
 {
-    if(sizes.size() != 1 || *sizes.begin() == 0 || list.size() == 0)
-        return;
-    Mat((int)list.size() / *sizes.begin(), *sizes.begin(), traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
+    size_t size_total = 1;
+    int *sz = (int*)sizes.begin();
+    for(int i = 0; i < sizes.size(); i++)
+        size_total *= sz[i];
+    CV_Assert(list.size() != 0 || size_total != list.size());
+    flags |= (traits::Type<_Tp>::value | CV_MAT_CONT_FLAG);
+    Mat((int)sizes.size(), sz, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
 #endif
 
