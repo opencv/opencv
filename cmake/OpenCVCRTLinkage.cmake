@@ -1,3 +1,5 @@
+# Use statically or dynamically linked CRT?
+
 if(NOT MSVC)
   message(FATAL_ERROR "CRT options are available only for MSVC")
 endif()
