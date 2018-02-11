@@ -249,7 +249,8 @@ public:
             kernel.set(6, (int)num_loc_classes);
             kernel.set(7, (int)background_label_id);
             kernel.set(8, (int)clip);
-            kernel.set(9, ocl::KernelArg::PtrWriteOnly(outmat));
+            kernel.set(9, (int)_locPredTransposed);
+            kernel.set(10, ocl::KernelArg::PtrWriteOnly(outmat));
 
             if (!kernel.run(1, &nthreads, NULL, false))
                 return false;
