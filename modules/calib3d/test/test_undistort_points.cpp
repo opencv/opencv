@@ -1,8 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_UndistortTest : public cvtest::BaseTest
 {
@@ -29,7 +30,7 @@ CV_UndistortTest::~CV_UndistortTest() {}
 
 void CV_UndistortTest::generate3DPointCloud(vector<Point3f>& points, Point3f pmin, Point3f pmax)
 {
-    RNG rng_Point = ::theRNG(); // fix the seed to use "fixed" input 3D points
+    RNG rng_Point = cv::theRNG(); // fix the seed to use "fixed" input 3D points
     for (size_t i = 0; i < points.size(); i++)
     {
         float _x = rng_Point.uniform(pmin.x, pmax.x);
@@ -117,3 +118,5 @@ TEST(Calib3d_Undistort, stop_criteria)
 
     ASSERT_LE(obtainedError, maxError);
 }
+
+}} // namespace

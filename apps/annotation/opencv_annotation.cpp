@@ -43,7 +43,7 @@
 
 /*****************************************************************************************************
 USAGE:
-./opencv_annotation -images <folder location> -annotations <ouput file>
+./opencv_annotation -images <folder location> -annotations <output file>
 
 Created by: Puttemans Steven - February 2015
 Adapted by: Puttemans Steven - April 2016 - Vectorize the process to enable better processing

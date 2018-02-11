@@ -47,7 +47,7 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// equalizeHist ////////////////////////
@@ -323,4 +323,4 @@ OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl

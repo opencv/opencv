@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
 #if defined _WIN32 || defined WINCE
@@ -125,18 +126,14 @@
 #  define CV_PARALLEL_FRAMEWORK "pthreads"
 #endif
 
+#include "parallel_impl.hpp"
+
 using namespace cv;
 
 namespace cv
 {
     ParallelLoopBody::~ParallelLoopBody() {}
-#ifdef HAVE_PTHREADS_PF
-    void parallel_for_pthreads(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes);
-    size_t parallel_pthreads_get_threads_num();
-    void parallel_pthreads_set_threads_num(int num);
-#endif
 }
-
 
 namespace
 {
@@ -298,6 +295,12 @@ namespace
         {
             this->ParallelLoopBodyWrapper::operator()(cv::Range(range.begin(), range.end()));
         }
+
+        void operator ()() const  // run parallel job
+        {
+            cv::Range stripeRange = this->stripeRange();
+            tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), *this);
+        }
     };
 #elif defined HAVE_CSTRIPES || defined HAVE_OPENMP
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
@@ -328,7 +331,11 @@ namespace
 static int numThreads = -1;
 
 #if defined HAVE_TBB
-static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+    #if TBB_INTERFACE_VERSION >= 8000
+        static tbb::task_arena tbbArena(tbb::task_arena::automatic);
+    #else
+        static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+    #endif
 #elif defined HAVE_CSTRIPES
 // nothing for C=
 #elif defined HAVE_OPENMP
@@ -424,7 +431,11 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 
 #if defined HAVE_TBB
 
-        tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
+#if TBB_INTERFACE_VERSION >= 8000
+        tbbArena.execute(pbody);
+#else
+        pbody();
+#endif
 
 #elif defined HAVE_CSTRIPES
 
@@ -494,9 +505,17 @@ int cv::getNumThreads(void)
 
 #if defined HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 9100
+    return tbbArena.max_concurrency();
+#elif TBB_INTERFACE_VERSION >= 8000
+    return numThreads > 0
+        ? numThreads
+        : tbb::task_scheduler_init::default_num_threads();
+#else
     return tbbScheduler.is_active()
            ? numThreads
            : tbb::task_scheduler_init::default_num_threads();
+#endif
 
 #elif defined HAVE_CSTRIPES
 
@@ -536,17 +555,47 @@ int cv::getNumThreads(void)
 #endif
 }
 
-void cv::setNumThreads( int threads )
+namespace cv {
+unsigned defaultNumberOfThreads()
 {
-    (void)threads;
+#ifdef __ANDROID__
+    // many modern phones/tables have 4-core CPUs. Let's use no more
+    // than 2 threads by default not to overheat the devices
+    const unsigned int default_number_of_threads = 2;
+#else
+    const unsigned int default_number_of_threads = (unsigned int)std::max(1, cv::getNumberOfCPUs());
+#endif
+
+    unsigned result = default_number_of_threads;
+
+    static int config_num_threads = (int)utils::getConfigurationParameterSizeT("OPENCV_FOR_THREADS_NUM", 0);
+
+    if (config_num_threads)
+    {
+        result = (unsigned)std::max(1, config_num_threads);
+        //do we need upper limit of threads number?
+    }
+    return result;
+}
+}
+
+void cv::setNumThreads( int threads_ )
+{
+    (void)threads_;
 #ifdef CV_PARALLEL_FRAMEWORK
+    int threads = (threads_ < 0) ? defaultNumberOfThreads() : (unsigned)threads_;
     numThreads = threads;
 #endif
 
 #ifdef HAVE_TBB
 
+#if TBB_INTERFACE_VERSION >= 8000
+    if(tbbArena.is_active()) tbbArena.terminate();
+    if(threads > 0) tbbArena.initialize(threads);
+#else
     if(tbbScheduler.is_active()) tbbScheduler.terminate();
     if(threads > 0) tbbScheduler.initialize(threads);
+#endif
 
 #elif defined HAVE_CSTRIPES
 

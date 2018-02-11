@@ -3,18 +3,10 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
-#include <sstream>
-#include <queue>
-#include <cstdio>
 
 #ifdef HAVE_MFX
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
-
+namespace opencv_test { namespace {
 
 TEST(Videoio_MFX, read_invalid)
 {
@@ -71,7 +63,7 @@ const int FRAME_COUNT = 20;
 
 inline void generateFrame(int i, Mat & frame)
 {
-    generateFrame(i, FRAME_COUNT, frame);
+    ::generateFrame(i, FRAME_COUNT, frame);
 }
 
 inline int fourccByExt(const String &ext)
@@ -99,7 +91,7 @@ TEST_P(Videoio_MFX, read_write_raw)
     const int fourcc = fourccByExt(ext);
 
     bool isColor = true;
-    queue<Mat> goodFrames;
+    std::queue<Mat> goodFrames;
 
     // Write video
     VideoWriter writer;
@@ -150,5 +142,7 @@ INSTANTIATE_TEST_CASE_P(videoio, Videoio_MFX,
                             testing::Values(Size(640, 480), Size(638, 478), Size(636, 476), Size(1920, 1080)),
                             testing::Values(1, 30, 100),
                             testing::Values(".mpeg2", ".264", ".265")));
+
+}} // namespace
 
 #endif

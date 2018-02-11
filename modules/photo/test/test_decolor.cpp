@@ -39,13 +39,9 @@
 //
 //M*/
 
-
 #include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 TEST(Photo_Decolor, regression)
 {
@@ -68,3 +64,5 @@ TEST(Photo_Decolor, regression)
         double boost_psnr = cvtest::PSNR(reference_boost, color_boost);
         EXPECT_GT(boost_psnr, 60.0);
 }
+
+}} // namespace

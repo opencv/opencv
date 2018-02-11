@@ -54,7 +54,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 PARAM_TEST_CASE(BruteForceMatcher, int, int)
 {

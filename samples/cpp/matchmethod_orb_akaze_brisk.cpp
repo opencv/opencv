@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     }
     int i=0;
     cout << "Cumulative distance between keypoint match for different algorithm and feature detector \n\t";
-    cout << "We cannot say which is the best but we can say results are differents! \n\t";
+    cout << "We cannot say which is the best but we can say results are different! \n\t";
     for (vector<String>::iterator itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); ++itMatcher)
     {
         cout<<*itMatcher<<"\t";

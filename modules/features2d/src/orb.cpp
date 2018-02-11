@@ -673,7 +673,7 @@ public:
     void setEdgeThreshold(int edgeThreshold_) { edgeThreshold = edgeThreshold_; }
     int getEdgeThreshold() const { return edgeThreshold; }
 
-    void setFirstLevel(int firstLevel_) { firstLevel = firstLevel_; }
+    void setFirstLevel(int firstLevel_) { CV_Assert(firstLevel_ >= 0);  firstLevel = firstLevel_; }
     int getFirstLevel() const { return firstLevel; }
 
     void setWTA_K(int wta_k_) { wta_k = wta_k_; }
@@ -1014,7 +1014,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
     int level_dy = image.rows + border*2;
     Point level_ofs(0,0);
-    Size bufSize((image.cols + border*2 + 15) & -16, 0);
+    Size bufSize((cvRound(image.cols/getScale(0, firstLevel, scaleFactor)) + border*2 + 15) & -16, 0);
 
     for( level = 0; level < nLevels; level++ )
     {
@@ -1082,8 +1082,11 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
                 copyMakeBorder(mask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
         }
-        prevImg = currImg;
-        prevMask = currMask;
+        if (level > firstLevel)
+        {
+            prevImg = currImg;
+            prevMask = currMask;
+        }
     }
 
     if( useOCL )
@@ -1194,6 +1197,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
            int firstLevel, int wta_k, int scoreType, int patchSize, int fastThreshold)
 {
+    CV_Assert(firstLevel >= 0);
     return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,
                              firstLevel, wta_k, scoreType, patchSize, fastThreshold);
 }

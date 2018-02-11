@@ -1,12 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef std::tr1::tuple<Size, MatType, int> Size_MatType_kSize_t;
+typedef tuple<Size, MatType, int> Size_MatType_kSize_t;
 typedef perf::TestBaseWithParam<Size_MatType_kSize_t> Size_MatType_kSize;
 
 PERF_TEST_P(Size_MatType_kSize, medianBlur,
@@ -37,13 +36,13 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
 CV_ENUM(BorderType3x3, BORDER_REPLICATE, BORDER_CONSTANT)
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT101)
 
-typedef std::tr1::tuple<Size, MatType, BorderType3x3> Size_MatType_BorderType3x3_t;
+typedef tuple<Size, MatType, BorderType3x3> Size_MatType_BorderType3x3_t;
 typedef perf::TestBaseWithParam<Size_MatType_BorderType3x3_t> Size_MatType_BorderType3x3;
 
-typedef std::tr1::tuple<Size, MatType, BorderType> Size_MatType_BorderType_t;
+typedef tuple<Size, MatType, BorderType> Size_MatType_BorderType_t;
 typedef perf::TestBaseWithParam<Size_MatType_BorderType_t> Size_MatType_BorderType;
 
-typedef std::tr1::tuple<Size, int, BorderType3x3> Size_ksize_BorderType_t;
+typedef tuple<Size, int, BorderType3x3> Size_ksize_BorderType_t;
 typedef perf::TestBaseWithParam<Size_ksize_BorderType_t> Size_ksize_BorderType;
 
 PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
@@ -230,3 +229,5 @@ PERF_TEST_P(Size_MatType_BorderType, blur5x5,
 
     SANITY_CHECK(dst, 1);
 }
+
+} // namespace

@@ -35,7 +35,7 @@ different scale. It is OK with small corner. But to detect larger corners we nee
 For this, scale-space filtering is used. In it, Laplacian of Gaussian is found for the image with
 various \f$\sigma\f$ values. LoG acts as a blob detector which detects blobs in various sizes due to
 change in \f$\sigma\f$. In short, \f$\sigma\f$ acts as a scaling parameter. For eg, in the above image,
-gaussian kernel with low \f$\sigma\f$ gives high value for small corner while guassian kernel with high
+gaussian kernel with low \f$\sigma\f$ gives high value for small corner while gaussian kernel with high
 \f$\sigma\f$ fits well for larger corner. So, we can find the local maxima across the scale and space
 which gives us a list of \f$(x,y,\sigma)\f$ values which means there is a potential keypoint at (x,y) at
 \f$\sigma\f$ scale.
@@ -66,7 +66,7 @@ the intensity at this extrema is less than a threshold value (0.03 as per the pa
 rejected. This threshold is called **contrastThreshold** in OpenCV
 
 DoG has higher response for edges, so edges also need to be removed. For this, a concept similar to
-Harris corner detector is used. They used a 2x2 Hessian matrix (H) to compute the pricipal
+Harris corner detector is used. They used a 2x2 Hessian matrix (H) to compute the principal
 curvature. We know from Harris corner detector that for edges, one eigen value is larger than the
 other. So here they used a simple function,
 
@@ -79,7 +79,7 @@ points.
 ### 3. Orientation Assignment
 
 Now an orientation is assigned to each keypoint to achieve invariance to image rotation. A
-neigbourhood is taken around the keypoint location depending on the scale, and the gradient
+neighbourhood is taken around the keypoint location depending on the scale, and the gradient
 magnitude and direction is calculated in that region. An orientation histogram with 36 bins covering
 360 degrees is created. (It is weighted by gradient magnitude and gaussian-weighted circular window
 with \f$\sigma\f$ equal to 1.5 times the scale of keypoint. The highest peak in the histogram is taken
@@ -89,7 +89,7 @@ with same location and scale, but different directions. It contribute to stabili
 ### 4. Keypoint Descriptor
 
 Now keypoint descriptor is created. A 16x16 neighbourhood around the keypoint is taken. It is
-devided into 16 sub-blocks of 4x4 size. For each sub-block, 8 bin orientation histogram is created.
+divided into 16 sub-blocks of 4x4 size. For each sub-block, 8 bin orientation histogram is created.
 So a total of 128 bin values are available. It is represented as a vector to form keypoint
 descriptor. In addition to this, several measures are taken to achieve robustness against
 illumination changes, rotation etc.

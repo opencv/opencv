@@ -25,7 +25,7 @@ used.
 Second param is boolean variable, crossCheck which is false by default. If it is true, Matcher
 returns only those matches with value (i,j) such that i-th descriptor in set A has j-th descriptor
 in set B as the best match and vice-versa. That is, the two features in both sets should match each
-other. It provides consistant result, and is a good alternative to ratio test proposed by D.Lowe in
+other. It provides consistent result, and is a good alternative to ratio test proposed by D.Lowe in
 SIFT paper.
 
 Once it is created, two important methods are *BFMatcher.match()* and *BFMatcher.knnMatch()*. First
@@ -164,7 +164,7 @@ Second dictionary is the SearchParams. It specifies the number of times the tree
 should be recursively traversed. Higher values gives better precision, but also takes more time. If
 you want to change the value, pass search_params = dict(checks=100).
 
-With these informations, we are good to go.
+With this information, we are good to go.
 @code{.py}
 import numpy as np
 import cv2 as cv

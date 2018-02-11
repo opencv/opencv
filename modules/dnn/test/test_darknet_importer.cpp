@@ -43,15 +43,10 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include <algorithm>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -305,4 +300,4 @@ TEST(Reproducibility_YoloVoc, Accuracy)
     normAssert(ref, detection);
 }
 
-}
+}} // namespace

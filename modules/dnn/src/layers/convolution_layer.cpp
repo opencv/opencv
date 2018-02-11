@@ -43,9 +43,11 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
+#include "opencl_kernels_dnn.hpp"
 
 #ifdef HAVE_OPENCL
 using namespace cv::dnn::ocl4dnn;
@@ -64,7 +66,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
@@ -245,6 +248,11 @@ public:
                 power = activ_power->power;
                 activType = OCL4DNN_CONV_FUSED_ACTIV_POWER;
             }
+            Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
+            if (!activ_tanh.empty())
+            {
+                activType = OCL4DNN_CONV_FUSED_ACTIV_TANH;
+            }
         }
 #endif
         return !activ.empty();
@@ -326,6 +334,42 @@ public:
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode({ padded_input, top }));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+        CV_Assert(input->dims.size() == 4);
+
+        const int inpCn = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+        const int outCn = blobs[0].size[0];
+        const int inpGroupCn = blobs[0].size[1];
+        const int group = inpCn / inpGroupCn;
+
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Convolution";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ConvolutionLayer> ieLayer(new InferenceEngine::ConvolutionLayer(lp));
+
+        ieLayer->_kernel_x = kernel.width;
+        ieLayer->_kernel_y = kernel.height;
+        ieLayer->_stride_x = stride.width;
+        ieLayer->_stride_y = stride.height;
+        ieLayer->_out_depth = outCn;
+        ieLayer->_padding_x = pad.width;
+        ieLayer->_padding_y = pad.height;
+        ieLayer->_dilation_x = dilation.width;
+        ieLayer->_dilation_y = dilation.height;
+        ieLayer->_group = group;
+
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0]);
+        if (hasBias())
+            ieLayer->_biases = wrapToInfEngineBlob(blobs[1]);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 
@@ -876,11 +920,16 @@ public:
             {
                 convolutionOp->setActivPower(true, power);
             }
+            else if ( activType == OCL4DNN_CONV_FUSED_ACTIV_TANH)
+            {
+                convolutionOp->setActivTanh(true);
+            }
             else
             {
                 convolutionOp->setActivReLU(false, 0);
                 convolutionOp->setActivPReLU(false, reluslope);
                 convolutionOp->setActivPower(false, 1.f);
+                convolutionOp->setActivTanh(false);
             }
             newActiv = false;
         }
@@ -1051,6 +1100,8 @@ class DeConvolutionLayerImpl : public BaseConvolutionLayerImpl
 {
 public:
     Mat weightsMat, biasesMat;
+    UMat umat_weights;
+    UMat umat_biases;
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
     {
@@ -1341,10 +1392,106 @@ public:
         }
     };
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+        std::vector<UMat> internals;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        internals_.getUMatVector(internals);
+
+        int outCn = numOutput;
+        int inpCn = inputs[0].size[1];
+
+        if (is1x1())
+            return false;
+
+        if (umat_weights.empty())
+        {
+            transpose(blobs[0].reshape(1, inpCn), umat_weights);
+            umat_biases = hasBias() ? blobs[1].reshape(1, outCn).getUMat(ACCESS_READ) :
+                          UMat::zeros(outCn, 1, CV_32F);
+        }
+
+        String buildopt = format("-DT=%s ", ocl::typeToStr(inputs[0].type()));
+        buildopt += format("-DPAD_H=%d -DPAD_W=%d -DKERNEL_H=%d -DKERNEL_W=%d -DSTRIDE_H=%d -DSTRIDE_W=%d ",
+                           pad.height, pad.width, kernel.height, kernel.width, stride.height, stride.width);
+
+        for (size_t ii = 0; ii < outputs.size(); ii++)
+        {
+            int ngroups = outCn / blobs[0].size[1];
+            int inpGroupCn = inpCn / ngroups;
+            int outGroupCn = blobs[0].size[1];
+            const UMat& inp = inputs[ii];
+            UMat& out = outputs[ii];
+            int numImg = inp.size[0];
+            int inpH = inp.size[2], inpW = inp.size[3];
+            int outH = out.size[2], outW = out.size[3];
+
+            MatShape inpshape = shape(numImg*inpCn, inpH*inpW);
+            MatShape outshape = shape(numImg*outCn, outH*outW);
+            UMat convBlob = inputs[ii].reshape(1, inpshape.size(), &inpshape[0]);
+            UMat decnBlob = out.reshape(1, outshape.size(), &outshape[0]);
+            int rows = internals[0].rows / ngroups;
+
+            for (int n = 0; n < numImg; n++)
+            {
+                for (int g = 0; g < ngroups; g++)
+                {
+                    UMat colMat = internals[0].rowRange(_Range(g * rows, rows));
+                    UMat convMat = convBlob.rowRange(_Range((g + n * ngroups) * inpGroupCn, inpGroupCn));
+                    UMat wghtMat = umat_weights.colRange(_Range(g * inpGroupCn, inpGroupCn));
+                    gemm(wghtMat, convMat, 1, noArray(), 0, colMat, 0);
+                }
+
+                for (int g = 0; g < ngroups; g++)
+                {
+                    int total = outGroupCn * decnBlob.cols;
+                    int index = 0;
+                    int height_col = (outH + 2 * pad.height - kernel.height) / stride.height + 1;
+                    int width_col = (outW + 2 * pad.width - kernel.width) / stride.width + 1;
+                    int coeff_h = (1 - stride.height * kernel.width * height_col) * width_col;
+                    int coeff_w = (1 - stride.width * height_col * width_col);
+
+                    ocl::Kernel k("col2im", ocl::dnn::col2im_oclsrc, buildopt);
+                    k.set(index++, total);
+                    k.set(index++, ocl::KernelArg::PtrReadOnly(internals[0]));
+                    k.set(index++, (int)(g * rows * internals[0].cols));
+                    k.set(index++, outGroupCn);
+                    k.set(index++, outH);
+                    k.set(index++, outW);
+                    k.set(index++, height_col);
+                    k.set(index++, width_col);
+                    k.set(index++, coeff_h);
+                    k.set(index++, coeff_w);
+                    k.set(index++, ocl::KernelArg::PtrReadOnly(umat_biases));
+                    k.set(index++, (int)(g * outGroupCn * umat_biases.cols));
+                    k.set(index++, ocl::KernelArg::PtrWriteOnly(decnBlob));
+                    k.set(index++, (int)((g + n * ngroups) * outGroupCn * decnBlob.cols));
+
+                    size_t global[] = { (size_t)total };
+                    bool ret = k.run(1, global, NULL, false);
+                    if (!ret)
+                        return false;
+                }
+            }
+        }
+
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }

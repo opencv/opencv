@@ -7,8 +7,7 @@
 
 #include "test_precomp.hpp"
 
-namespace cvtest
-{
+namespace opencv_test { namespace {
 
 TEST(blobFromImage_4ch, Regression)
 {
@@ -58,4 +57,4 @@ TEST(imagesFromBlob, Regression)
     }
 }
 
-}
+}} // namespace

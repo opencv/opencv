@@ -23,7 +23,7 @@ else()
     FIND_LIBRARY(WEBP_LIBRARY NAMES webp)
     MARK_AS_ADVANCED(WEBP_LIBRARY)
 
-    # handle the QUIETLY and REQUIRED arguments and set WEBFOUND_FOUND to TRUE if
+    # handle the QUIETLY and REQUIRED arguments and set WEBP_FOUND to TRUE if
     # all listed variables are TRUE
     INCLUDE(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
     FIND_PACKAGE_HANDLE_STANDARD_ARGS(WebP DEFAULT_MSG WEBP_LIBRARY WEBP_INCLUDE_DIR)

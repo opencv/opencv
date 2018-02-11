@@ -41,17 +41,12 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
-#include <iostream>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static String _tf(TString filename)
@@ -65,13 +60,13 @@ static String _tf(TString filename)
 
 void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &outBlobs)
 {
-    size_t i, ninputs = inpBlobs.size();
+    size_t ninputs = inpBlobs.size();
     std::vector<Mat> inp_(ninputs);
     std::vector<Mat*> inp(ninputs);
     std::vector<Mat> outp, intp;
     std::vector<MatShape> inputs, outputs, internals;
 
-    for( i = 0; i < ninputs; i++ )
+    for (size_t i = 0; i < ninputs; i++)
     {
         inp_[i] = inpBlobs[i].clone();
         inp[i] = &inp_[i];
@@ -79,11 +74,11 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
     }
 
     layer->getMemoryShapes(inputs, 0, outputs, internals);
-    for(int i = 0; i < outputs.size(); i++)
+    for (size_t i = 0; i < outputs.size(); i++)
     {
         outp.push_back(Mat(outputs[i], CV_32F));
     }
-    for(int i = 0; i < internals.size(); i++)
+    for (size_t i = 0; i < internals.size(); i++)
     {
         intp.push_back(Mat(internals[i], CV_32F));
     }
@@ -93,7 +88,7 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
 
     size_t noutputs = outp.size();
     outBlobs.resize(noutputs);
-    for( i = 0; i < noutputs; i++ )
+    for (size_t i = 0; i < noutputs; i++)
         outBlobs[i] = outp[i];
 }
 
@@ -167,6 +162,11 @@ TEST(Layer_Test_DeConvolution, Accuracy)
     testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_CPU, true, false);
 }
 
+OCL_TEST(Layer_Test_DeConvolution, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_OPENCL, true, false);
+}
+
 TEST(Layer_Test_InnerProduct, Accuracy)
 {
     testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_CPU, true);
@@ -200,6 +200,11 @@ OCL_TEST(Layer_Test_Pooling_ave, Accuracy)
 TEST(Layer_Test_MVN, Accuracy)
 {
     testLayerUsingCaffeModels("layer_mvn");
+}
+
+OCL_TEST(Layer_Test_MVN, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_mvn", DNN_TARGET_OPENCL);
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
@@ -331,6 +336,12 @@ TEST(Layer_Test_PReLU, Accuracy)
     testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_CPU, true, false);
 }
 
+OCL_TEST(Layer_Test_PReLU, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_OPENCL, true);
+    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_OPENCL, true, false);
+}
+
 //template<typename XMat>
 //static void test_Layer_Concat()
 //{
@@ -351,10 +362,13 @@ TEST(Layer_Test_PReLU, Accuracy)
 //    );
 //}
 
-static void test_Reshape_Split_Slice_layers()
+static void test_Reshape_Split_Slice_layers(int targetId)
 {
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -368,7 +382,12 @@ static void test_Reshape_Split_Slice_layers()
 
 TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
 {
-    test_Reshape_Split_Slice_layers();
+    test_Reshape_Split_Slice_layers(DNN_TARGET_CPU);
+}
+
+OCL_TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
+{
+    test_Reshape_Split_Slice_layers(DNN_TARGET_OPENCL);
 }
 
 TEST(Layer_Conv_Elu, Accuracy)
@@ -704,4 +723,87 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Scale_untrainable, Combine(
 /*conv fusion*/  testing::Bool()
 ));
 
+typedef testing::TestWithParam<tuple<Vec4i, Vec4i, int, int, int> > Crop;
+TEST_P(Crop, Accuracy)
+{
+    Vec4i inpShapeVec = get<0>(GetParam());
+    Vec4i sizShapeVec = get<1>(GetParam());
+    int axis = get<2>(GetParam());
+    int numOffsets = get<3>(GetParam());
+    int offsetVal = get<4>(GetParam());
+    const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+    const int sizShape[] = {sizShapeVec[0], sizShapeVec[1], sizShapeVec[2], sizShapeVec[3]};
+
+    // Create a network with two inputs. Crop layer crops a first input to
+    // the size of a second one.
+    // See http://caffe.berkeleyvision.org/tutorial/layers/crop.html
+    Net net;
+
+    LayerParams lp;
+    lp.name = "testCrop";
+    lp.type = "Crop";
+    lp.set("axis", axis);
+    if (numOffsets > 0)
+    {
+        std::vector<int> offsets(numOffsets, offsetVal);
+        lp.set("offset", DictValue::arrayInt<int*>(&offsets[0], offsets.size()));
+    }
+    else
+        offsetVal = 0;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+
+    Mat inpImage(4, inpShape, CV_32F);
+    Mat sizImage(4, sizShape, CV_32F);
+    randu(inpImage, -1, 1);
+    randu(sizImage, -1, 1);
+
+    std::vector<String> inpNames(2);
+    inpNames[0] = "cropImage";
+    inpNames[1] = "sizImage";
+    net.setInputsNames(inpNames);
+    net.setInput(inpImage, inpNames[0]);
+    net.setInput(sizImage, inpNames[1]);
+
+    // There are a few conditions that represent invalid input to the crop
+    // layer, so in those cases we want to verify an exception is thrown.
+
+    bool shouldThrowException = false;
+    if (numOffsets > 1 && numOffsets != 4 - axis)
+        shouldThrowException = true;
+    else
+        for (int i = axis; i < 4; i++)
+            if (sizShape[i] + offsetVal > inpShape[i])
+                shouldThrowException = true;
+
+    Mat out;
+    if (shouldThrowException)
+    {
+        ASSERT_ANY_THROW(out = net.forward());
+        return;
+    }
+    else
+        out = net.forward();
+
+    // Finally, compare the cropped output blob from the DNN layer (out)
+    // to a reference blob (ref) that we compute here.
+
+    std::vector<Range> crop_range;
+    crop_range.resize(4, Range::all());
+    for (int i = axis; i < 4; i++)
+        crop_range[i] = Range(offsetVal, sizShape[i] + offsetVal);
+
+    Mat ref(sizImage.dims, sizImage.size, CV_32F);
+    inpImage(&crop_range[0]).copyTo(ref);
+    normAssert(out, ref);
 }
+
+INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
+/*input blob shape*/    Values(Vec4i(1, 3, 20, 30)),
+/*cropsize blob shape*/ Values(Vec4i(1, 3, 10, 12)),
+/*start axis*/          Values(0, 1, 2),
+/*number of offsets*/   Values(0, 1, 2, 4),
+/*offset value*/        Values(3, 4)
+));
+
+}} // namespace

@@ -43,18 +43,14 @@
 #include "test_chessboardgenerator.hpp"
 
 #include <functional>
-#include <limits>
-#include <numeric>
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 #define _L2_ERR
 
 //#define DEBUG_CHESSBOARD
 
 #ifdef DEBUG_CHESSBOARD
-#include "opencv2/highgui.hpp"
 void show_points( const Mat& gray, const Mat& expected, const vector<Point2f>& actual, bool was_found )
 {
     Mat rgb( gray.size(), CV_8U);
@@ -103,7 +99,7 @@ double calcError(const vector<Point2f>& v, const Mat& u)
     int count_exp = u.cols * u.rows;
     const Point2f* u_data = u.ptr<Point2f>();
 
-    double err = numeric_limits<double>::max();
+    double err = std::numeric_limits<double>::max();
     for( int k = 0; k < 2; ++k )
     {
         double err1 = 0;
@@ -336,19 +332,19 @@ bool validateData(const ChessBoardGenerator& cbg, const Size& imgSz,
         {
             const Point2f& cur = mat(i, j);
 
-            tmp = norm( cur - mat(i + 1, j + 1) );
+            tmp = cv::norm(cur - mat(i + 1, j + 1)); // TODO cvtest
             if (tmp < minNeibDist)
                 tmp = minNeibDist;
 
-            tmp = norm( cur - mat(i - 1, j + 1 ) );
+            tmp = cv::norm(cur - mat(i - 1, j + 1)); // TODO cvtest
             if (tmp < minNeibDist)
                 tmp = minNeibDist;
 
-            tmp = norm( cur - mat(i + 1, j - 1) );
+            tmp = cv::norm(cur - mat(i + 1, j - 1)); // TODO cvtest
             if (tmp < minNeibDist)
                 tmp = minNeibDist;
 
-            tmp = norm( cur - mat(i - 1, j - 1) );
+            tmp = cv::norm(cur - mat(i - 1, j - 1)); // TODO cvtest
             if (tmp < minNeibDist)
                 tmp = minNeibDist;
         }
@@ -438,7 +434,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         if (found)
             res = false;
 
-        Point2f c = std::accumulate(cg.begin(), cg.end(), Point2f(), plus<Point2f>()) * (1.f/cg.size());
+        Point2f c = std::accumulate(cg.begin(), cg.end(), Point2f(), std::plus<Point2f>()) * (1.f/cg.size());
 
         Mat_<double> aff(2, 3);
         aff << 1.0, 0.0, -(double)c.x, 0.0, 1.0, 0.0;
@@ -472,4 +468,5 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetector
 TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
 #endif
 
+}} // namespace
 /* End of file. */

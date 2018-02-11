@@ -61,6 +61,21 @@
 namespace cv
 {
 
+/**
+ * Compute the number of iterations given the confidence, outlier ratio, number
+ * of model points and the maximum iteration number.
+ *
+ * @param p confidence value
+ * @param ep outlier ratio
+ * @param modelPoints number of model points required for estimation
+ * @param maxIters maximum number of iterations
+ * @return
+ * \f[
+ * \frac{\ln(1-p)}{\ln\left(1-(1-ep)^\mathrm{modelPoints}\right)}
+ * \f]
+ *
+ * If the computed number of iterations is larger than maxIters, then maxIters is returned.
+ */
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
 
 class CV_EXPORTS LMSolver : public Algorithm

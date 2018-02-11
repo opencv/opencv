@@ -41,6 +41,8 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
 #ifdef GTEST_CAN_COMPARE_NULL
 #  define EXPECT_NULL(ptr) EXPECT_EQ(NULL, ptr)
 #else
@@ -366,6 +368,8 @@ TEST(Core_Ptr, make)
     EXPECT_TRUE(deleted);
 }
 
+}} // namespace
+
 namespace {
 
 struct SpeciallyDeletable
@@ -385,6 +389,8 @@ void DefaultDeleter<SpeciallyDeletable>::operator()(SpeciallyDeletable * obj) co
 
 }
 
+namespace opencv_test { namespace {
+
 TEST(Core_Ptr, specialized_deleter)
 {
     SpeciallyDeletable sd;
@@ -393,3 +399,5 @@ TEST(Core_Ptr, specialized_deleter)
 
     ASSERT_TRUE(sd.deleted);
 }
+
+}} // namespace

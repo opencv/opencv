@@ -41,8 +41,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #define OCL_TUNING_MODE 0
 #if OCL_TUNING_MODE
@@ -442,3 +441,5 @@ protected:
 };
 
 TEST(Imgproc_ContourMoment, small) { CV_SmallContourMomentTest test; test.safe_run(); }
+
+}} // namespace

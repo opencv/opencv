@@ -46,9 +46,7 @@
 #  include "opencv2/cudaimgproc.hpp"
 #endif
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////
 // FGDStatModel
@@ -234,3 +232,5 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
 }
 
 #endif
+
+}} // namespace

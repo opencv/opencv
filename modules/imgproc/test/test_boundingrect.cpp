@@ -41,14 +41,12 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <time.h>
+
+namespace opencv_test { namespace {
 
 #define IMGPROC_BOUNDINGRECT_ERROR_DIFF 1
 
 #define MESSAGE_ERROR_DIFF "Bounding rectangle found by boundingRect function is incorrect."
-
-using namespace cv;
-using namespace std;
 
 class CV_BoundingRectTest: public cvtest::ArrayTest
 {
@@ -142,3 +140,5 @@ void CV_BoundingRectTest::run(int)
 }
 
 TEST (Imgproc_BoundingRect, accuracy) { CV_BoundingRectTest test; test.safe_run(); }
+
+}} // namespace

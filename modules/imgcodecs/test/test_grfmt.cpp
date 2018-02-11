@@ -42,9 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
+namespace opencv_test { namespace {
 
 typedef tuple<string, int> File_Mode;
 typedef testing::TestWithParam<File_Mode> Imgcodecs_FileMode;
@@ -119,8 +117,8 @@ struct notForGDAL {
 inline vector<string> gdal_images()
 {
     vector<string> res;
-    back_insert_iterator< vector<string> > it(res);
-    remove_copy_if(all_images, all_images + sizeof(all_images)/sizeof(all_images[0]), it, notForGDAL());
+    std::back_insert_iterator< vector<string> > it(res);
+    std::remove_copy_if(all_images, all_images + sizeof(all_images)/sizeof(all_images[0]), it, notForGDAL());
     return res;
 }
 
@@ -327,3 +325,5 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
 }
+
+}} // namespace
