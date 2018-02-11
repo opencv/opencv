@@ -449,18 +449,32 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         break;
     }
     case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
+    {
+        bidx = code == COLOR_BGR2Lab || code == COLOR_LBGR2Lab ? 0 : 2;
+        bool srgb = code == COLOR_BGR2Lab || code == COLOR_RGB2Lab ;
+
+        return oclCvtColorBGR2Lab(_src, _dst, dcn, bidx, srgb);
+    }
     case COLOR_BGR2Luv: case COLOR_RGB2Luv: case COLOR_LBGR2Luv: case COLOR_LRGB2Luv:
     {
-        return oclCvtColorBGR2Lxx(scn, dcn, depth, bidx, code, k,
-                                  opts, src, dst, _dst, sz, dstSz,
-                                  globalsize);
+        bidx = code == COLOR_BGR2Luv || code == COLOR_LBGR2Luv ? 0 : 2;
+        bool srgb = code == COLOR_RGB2Luv || code == COLOR_BGR2Luv;
+
+        return oclCvtColorBGR2Luv(_src, _dst, dcn, bidx, srgb);
     }
     case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+    {
+        bidx = code == COLOR_Lab2BGR || code == COLOR_Lab2LBGR ? 0 : 2;
+        bool srgb = code == COLOR_Lab2BGR || code == COLOR_Lab2RGB;
+
+        return oclCvtColorLab2BGR(_src, _dst, dcn, bidx, srgb);
+    }
     case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
     {
-        return oclCvtColorLxx2BGR(scn, dcn, depth, bidx, code, k,
-                                  opts, src, dst, _dst, sz, dstSz,
-                                  globalsize);
+        bidx = code == COLOR_Luv2BGR || code == COLOR_Luv2LBGR ? 0 : 2;
+        bool srgb = code == COLOR_Luv2BGR || code == COLOR_Luv2RGB;
+
+        return oclCvtColorLuv2BGR(_src, _dst, dcn, bidx, srgb);
     }
     default:
         break;
@@ -658,22 +672,17 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
+            cvtColorBGR2Lab(_src, _dst, swapBlue(code), issRGB(code));
+            break;
         case COLOR_BGR2Luv: case COLOR_RGB2Luv: case COLOR_LBGR2Luv: case COLOR_LRGB2Luv:
-            CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-            hal::cvtBGRtoLab(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, scn, swapBlue(code), isLab(code), issRGB(code));
+            cvtColorBGR2Luv(_src, _dst, swapBlue(code), issRGB(code));
             break;
 
         case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+            cvtColorLab2BGR(_src, _dst, dcn, swapBlue(code), issRGB(code));
+            break;
         case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtLabtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, dcn, swapBlue(code), isLab(code), issRGB(code));
+            cvtColorLuv2BGR(_src, _dst, dcn, swapBlue(code), issRGB(code));
             break;
 
         case COLOR_BayerBG2GRAY: case COLOR_BayerGB2GRAY: case COLOR_BayerRG2GRAY: case COLOR_BayerGR2GRAY:

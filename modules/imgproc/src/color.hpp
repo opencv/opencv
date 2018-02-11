@@ -431,8 +431,16 @@ static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 #endif
 
 // TODO: rewrite this
+bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
+bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
 
-bool oclCvtColorBGR2Lxx(int scn, int dcn, int depth, int bidx, int code, ocl::Kernel &k, const String &opts, UMat src, UMat dst, OutputArray _dst, Size sz, Size dstSz, size_t globalsize[]);
-bool oclCvtColorLxx2BGR(int scn, int dcn, int depth, int bidx, int code, ocl::Kernel &k, const String &opts, UMat src, UMat dst, OutputArray _dst, Size sz, Size dstSz, size_t globalsize[]);
+bool oclCvtColorLab2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
+bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
+
+void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
+void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
+void cvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb );
+void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb );
+
 
 } //namespace cv
