@@ -284,6 +284,10 @@ cv::Affine3d cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
+    if (!actor->GetUserMatrix())
+    {
+        return Affine3d(); // empty user matrix, return an identity transform.
+    }
     return Affine3d(*actor->GetUserMatrix()->Element);
 }
 
