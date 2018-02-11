@@ -590,7 +590,6 @@ Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp
     : Mat()
 {
     size_t size_total = 1;
-    int *sz = (int*)sizes.begin();
     for(auto sz : sizes)
         size_total *= sz;
     CV_Assert(list.size() != 0 || size_total == list.size());
