@@ -64,7 +64,7 @@ methods to interact with scene and widgets.
     @defgroup viz_widget Widget
 
 In this section, the widget framework is explained. Widgets represent 2D or 3D objects, varying from
-simple ones such as lines to complex one such as point clouds and meshes.
+simple ones such as lines to complex ones such as point clouds and meshes.
 
 Widgets are **implicitly shared**. Therefore, one can add a widget to the scene, and modify the
 widget without re-adding the widget.
