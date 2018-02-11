@@ -585,16 +585,15 @@ Mat::Mat(const std::initializer_list<_Tp> list)
     Mat((int)list.size(), 1, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
 
-template<typename _Tp, typename> inline
+template<typename _Tp> inline
 Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list)
     : Mat()
 {
     size_t size_total = 1;
     int *sz = (int*)sizes.begin();
-    for(int i = 0; i < sizes.size(); i++)
-        size_total *= sz[i];
-    CV_Assert(list.size() != 0 || size_total != list.size());
-    flags |= (traits::Type<_Tp>::value | CV_MAT_CONT_FLAG);
+    for(auto sz : sizes)
+        size_total *= sz;
+    CV_Assert(list.size() != 0 || size_total == list.size());
     Mat((int)sizes.size(), sz, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
 #endif
