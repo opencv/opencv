@@ -759,6 +759,13 @@ public:
         for (int i = 0; i < inputs.size(); ++i)
             CV_Assert(inputs[i].u != outputs[0].u);
 
+        int inpH = inputs[0].size[2];
+        int inpW = inputs[0].size[3];
+        int out_h = (inpH + 2 * pad.height - (dilation.height * (kernel.height - 1) + 1)) / stride.height + 1;
+        int out_w = (inpW + 2 * pad.width - (dilation.width * (kernel.width - 1) + 1)) / stride.width + 1;
+        if (out_h != outputs[0].size[2] || out_w != outputs[0].size[3])
+            return false;
+
         int group = inputs[0].size[1] / umat_blobs[0].size[1];
 
         if (convolutionOp.empty())
