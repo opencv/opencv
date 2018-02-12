@@ -1192,7 +1192,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
     }
 }
 
-// Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
+// Case 2: concurrent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
 OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
 {
     if (!cv::ocl::useOpenCL())

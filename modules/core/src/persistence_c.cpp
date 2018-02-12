@@ -259,7 +259,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
                 xml_buf_size = MIN(xml_buf_size, int(file_size));
                 fseek( fs->file, -xml_buf_size, SEEK_END );
                 char* xml_buf = (char*)cvAlloc( xml_buf_size+2 );
-                // find the last occurence of </opencv_storage>
+                // find the last occurrence of </opencv_storage>
                 for(;;)
                 {
                     int line_offset = (int)ftell( fs->file );
