@@ -294,9 +294,9 @@ void cv::viz::Widget3D::applyTransform(const Affine3d &transform)
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
     CV_Assert("Widget doesn't have a polydata mapper" && mapper);
-    mapper->Update();
 
     VtkUtils::SetInputData(mapper, VtkUtils::TransformPolydata(mapper->GetInput(), transform));
+    mapper->Update();
 }
 
 void cv::viz::Widget3D::setColor(const Color &color)
