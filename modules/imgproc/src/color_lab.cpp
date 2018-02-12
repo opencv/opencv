@@ -147,6 +147,19 @@ static const softdouble XYZ2sRGB_D65[] =
     softdouble::fromRaw(0x3ff0eabef06b3786)
 };
 
+static const int sRGB2XYZ_D65_i[] =
+{
+    1689,    1465,    739,
+    871,     2929,    296,
+    79,      488,     3892
+};
+
+static const int XYZ2sRGB_D65_i[] =
+{
+    13273,  -6296,  -2042,
+    -3970,   7684,    170,
+      228,   -836,   4331
+};
 
 template<typename _Tp> struct RGB2XYZ_f
 {
@@ -376,14 +389,8 @@ template<typename _Tp> struct RGB2XYZ_i
 
     RGB2XYZ_i(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const int coeffs0[] =
-        {
-            1689,    1465,    739,
-            871,     2929,    296,
-            79,      488,     3892
-        };
         for( int i = 0; i < 9; i++ )
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : coeffs0[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
         {
             std::swap(coeffs[0], coeffs[2]);
@@ -421,14 +428,8 @@ struct RGB2XYZ_i<uchar>
 
     RGB2XYZ_i(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const int coeffs0[] =
-        {
-            1689,    1465,    739,
-            871,     2929,    296,
-            79,      488,     3892
-        };
         for( int i = 0; i < 9; i++ )
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : coeffs0[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
         {
             std::swap(coeffs[0], coeffs[2]);
@@ -527,14 +528,8 @@ struct RGB2XYZ_i<ushort>
 
     RGB2XYZ_i(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const int coeffs0[] =
-        {
-            1689,    1465,    739,
-            871,     2929,    296,
-            79,      488,     3892
-        };
         for( int i = 0; i < 9; i++ )
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : coeffs0[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
         {
             std::swap(coeffs[0], coeffs[2]);
@@ -826,14 +821,8 @@ template<typename _Tp> struct XYZ2RGB_i
     XYZ2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
     : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] =
-        {
-            13273,  -6296,  -2042,
-            -3970,   7684,    170,
-              228,   -836,   4331
-        };
         for(int i = 0; i < 9; i++)
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : coeffs0[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
         {
@@ -875,14 +864,8 @@ struct XYZ2RGB_i<uchar>
     XYZ2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
     : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] =
-        {
-            13273,  -6296,  -2042,
-            -3970,   7684,    170,
-              228,   -836,   4331
-        };
         for(int i = 0; i < 9; i++)
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : coeffs0[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
         {
@@ -993,14 +976,8 @@ struct XYZ2RGB_i<ushort>
     XYZ2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
     : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] =
-        {
-            13273,  -6296,  -2042,
-            -3970,   7684,    170,
-              228,   -836,   4331
-        };
         for(int i = 0; i < 9; i++)
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : coeffs0[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
         {
@@ -4743,6 +4720,125 @@ bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
         k.args(srcarg, dstarg, coeffsarg, un, vn);
 
     return k.run(2, globalsize, NULL, false);
+}
+
+
+bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
+{
+    UMat src = _src.getUMat(), dst;
+    Size sz = src.size(), dstSz = sz;
+    int scn = src.channels(), depth = src.depth();
+    CV_Assert(scn == 3 || scn == 4);
+    CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_32F);
+
+    _dst.create(dstSz, CV_MAKETYPE(depth, 3));
+    dst = _dst.getUMat();
+
+    ocl::Device dev = ocl::Device::getDefault();
+    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+
+    size_t globalsize[] = { (size_t)src.cols, ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy };
+    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                             depth, scn, pxPerWIy);
+
+    ocl::Kernel k;
+    k.create("RGB2XYZ", ocl::imgproc::color_lab_oclsrc,
+             opts + format("-D dcn=3 -D bidx=%d", bidx));
+    if (k.empty())
+        return false;
+
+    UMat c;
+    if (depth == CV_32F)
+    {
+        float coeffs[9];
+        for(int i = 0; i < 9; i++)
+            coeffs[i] = (float)sRGB2XYZ_D65[i];
+        if (bidx == 0)
+        {
+            std::swap(coeffs[0], coeffs[2]);
+            std::swap(coeffs[3], coeffs[5]);
+            std::swap(coeffs[6], coeffs[8]);
+        }
+        Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
+    }
+    else
+    {
+        int coeffs[9];
+        for(int i = 0; i < 9; i++)
+            coeffs[i] = sRGB2XYZ_D65_i[i];
+        if (bidx == 0)
+        {
+            std::swap(coeffs[0], coeffs[2]);
+            std::swap(coeffs[3], coeffs[5]);
+            std::swap(coeffs[6], coeffs[8]);
+        }
+        Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
+    }
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
+
+    return k.run(2, globalsize, 0, false);
+}
+
+
+bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
+{
+    UMat src = _src.getUMat(), dst;
+    Size sz = src.size(), dstSz = sz;
+    int scn = src.channels(), depth = src.depth();
+    if (dcn <= 0)
+        dcn = 3;
+    CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
+    CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_32F);
+
+    _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+    dst = _dst.getUMat();
+
+    ocl::Device dev = ocl::Device::getDefault();
+    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+
+    size_t globalsize[] = { (size_t)src.cols, ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy };
+    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                             depth, scn, pxPerWIy);
+
+    ocl::Kernel k;
+    k.create("XYZ2RGB", ocl::imgproc::color_lab_oclsrc,
+             opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
+
+    if (k.empty())
+        return false;
+
+    UMat c;
+    if (depth == CV_32F)
+    {
+        float coeffs[9];
+        for(int i = 0; i < 9; i++)
+            coeffs[i] = (float)XYZ2sRGB_D65[i];
+        if (bidx == 0)
+        {
+            std::swap(coeffs[0], coeffs[6]);
+            std::swap(coeffs[1], coeffs[7]);
+            std::swap(coeffs[2], coeffs[8]);
+        }
+        Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
+    }
+    else
+    {
+        int coeffs[9];
+        for(int i = 0; i < 9; i++)
+            coeffs[i] = XYZ2sRGB_D65_i[i];
+        if (bidx == 0)
+        {
+            std::swap(coeffs[0], coeffs[6]);
+            std::swap(coeffs[1], coeffs[7]);
+            std::swap(coeffs[2], coeffs[8]);
+        }
+        Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
+    }
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
+
+    return k.run(2, globalsize, 0, false);
 }
 
 
