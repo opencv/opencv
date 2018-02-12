@@ -111,7 +111,7 @@ private:
 
 /** @brief Affine transformation based estimator.
 
-This estimator uses pairwise tranformations estimated by matcher to estimate
+This estimator uses pairwise transformations estimated by matcher to estimate
 final transformation for each camera.
 
 @sa cv::detail::HomographyBasedEstimator

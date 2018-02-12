@@ -106,7 +106,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template<typename InIt, typename OutIt, class UnOp>
-        static __device__ __forceinline__ void transfrom(InIt beg, InIt end, OutIt out, UnOp op)
+        static __device__ __forceinline__ void transform(InIt beg, InIt end, OutIt out, UnOp op)
         {
             int STRIDE = stride();
             InIt  t = beg + flattenedThreadId();
@@ -117,7 +117,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template<typename InIt1, typename InIt2, typename OutIt, class BinOp>
-        static __device__ __forceinline__ void transfrom(InIt1 beg1, InIt1 end1, InIt2 beg2, OutIt out, BinOp op)
+        static __device__ __forceinline__ void transform(InIt1 beg1, InIt1 end1, InIt2 beg2, OutIt out, BinOp op)
         {
             int STRIDE = stride();
             InIt1 t1 = beg1 + flattenedThreadId();

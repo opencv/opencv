@@ -294,8 +294,8 @@ bool EmdL1::greedySolution2()
             // move to up
             pBV	= &(m_EdgesUp[r][c]);
             m_NBVEdges[nNBV++]	= &(m_EdgesRight[r][c]);
-            D[r+1][c] += dFlow;		// auxilary matrix maintanence
-            d1s[r+1] += dFlow;		// auxilary matrix maintanence
+            D[r+1][c] += dFlow;		// auxiliary matrix maintenance
+            d1s[r+1] += dFlow;		// auxiliary matrix maintenance
         }
         else
         {
@@ -304,8 +304,8 @@ bool EmdL1::greedySolution2()
             if(r<binsDim1-1)
                 m_NBVEdges[nNBV++]	= &(m_EdgesUp[r][c]);
 
-            D[r][c+1] += dFlow;		// auxilary matrix maintanence
-            d2s[c+1] += dFlow;		// auxilary matrix maintanence
+            D[r][c+1] += dFlow;		// auxiliary matrix maintenance
+            d2s[c+1] += dFlow;		// auxiliary matrix maintenance
         }
         pBV->pParent->pChild = pBV;
         pBV->flow = fabs(dFlow);
@@ -318,7 +318,7 @@ bool EmdL1::greedySolution2()
     {
         dFlow = D[r][c];
         pBV = &(m_EdgesUp[r][c]);
-        D[r+1][c] += dFlow;		// auxilary matrix maintanence
+        D[r+1][c] += dFlow;		// auxiliary matrix maintenance
         pBV->pParent->pChild= pBV;
         pBV->flow = fabs(dFlow);
         pBV->iDir = dFlow>0;		// 1:outward, 0:inward
@@ -402,7 +402,7 @@ bool EmdL1::greedySolution3()
                     pBV	= &(m_3dEdgesUp[i1][i2][i3]); // up
                     if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
                     if(i3<binsDim3-1) m_NBVEdges[nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
-                    D[i1+1][i2][i3]	+= dFlow; // maintain auxilary matrix
+                    D[i1+1][i2][i3]	+= dFlow; // maintain auxiliary matrix
                     d1s[i1+1] += dFlow;
                 }
                 else if(f2<f3)
@@ -410,7 +410,7 @@ bool EmdL1::greedySolution3()
                     pBV	= &(m_3dEdgesRight[i1][i2][i3]); // right
                     if(i1<binsDim1-1) m_NBVEdges[nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
                     if(i3<binsDim3-1) m_NBVEdges[nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
-                    D[i1][i2+1][i3]	+= dFlow; // maintain auxilary matrix
+                    D[i1][i2+1][i3]	+= dFlow; // maintain auxiliary matrix
                     d2s[i2+1] += dFlow;
                 }
                 else
@@ -418,7 +418,7 @@ bool EmdL1::greedySolution3()
                     pBV	= &(m_3dEdgesDeep[i1][i2][i3]); // deep
                     if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
                     if(i1<binsDim1-1) m_NBVEdges[nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
-                    D[i1][i2][i3+1]	+= dFlow; // maintain auxilary matrix
+                    D[i1][i2][i3+1]	+= dFlow; // maintain auxiliary matrix
                     d3s[i3+1] += dFlow;
                 }
 

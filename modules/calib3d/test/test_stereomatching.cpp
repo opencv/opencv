@@ -41,7 +41,7 @@
 
 /*
   This is a regression test for stereo matching algorithms. This test gets some quality metrics
-  discribed in "A Taxonomy and Evaluation of Dense Two-Frame Stereo Correspondence Algorithms".
+  described in "A Taxonomy and Evaluation of Dense Two-Frame Stereo Correspondence Algorithms".
   Daniel Scharstein, Richard Szeliski
 */
 
