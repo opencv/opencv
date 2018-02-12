@@ -94,7 +94,7 @@ void CV_POSITTest::run( int start_from )
     const float flFocalLength = 760.f;
     const float flEpsilon = 0.5f;
 
-    /* Initilization */
+    /* Initialization */
     criteria.type = CV_TERMCRIT_EPS|CV_TERMCRIT_ITER;
     criteria.epsilon = flEpsilon;
     criteria.max_iter = 10000;

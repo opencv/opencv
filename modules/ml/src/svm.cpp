@@ -52,7 +52,7 @@
   The code has been derived from libsvm library (version 2.6)
   (http://www.csie.ntu.edu.tw/~cjlin/libsvm).
 
-  Here is the orignal copyright:
+  Here is the original copyright:
 ------------------------------------------------------------------------------------------
     Copyright (c) 2000-2003 Chih-Chung Chang and Chih-Jen Lin
     All rights reserved.
@@ -287,7 +287,7 @@ public:
                 double d = sample[k]-another[k];
                 double devisor = sample[k]+another[k];
                 /// if devisor == 0, the Chi2 distance would be zero,
-                // but calculation would rise an error because of deviding by zero
+                // but calculation would rise an error because of dividing by zero
                 if (devisor != 0)
                 {
                     chi2 += d*d/devisor;

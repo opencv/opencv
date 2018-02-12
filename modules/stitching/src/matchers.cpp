@@ -859,7 +859,7 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
     /* should we remove matches between too close images? */
     // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
-    // extend H to represent linear tranformation in homogeneous coordinates
+    // extend H to represent linear transformation in homogeneous coordinates
     matches_info.H.push_back(Mat::zeros(1, 3, CV_64F));
     matches_info.H.at<double>(2, 2) = 1;
 }
