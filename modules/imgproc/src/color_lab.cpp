@@ -4842,57 +4842,6 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 }
 
 
-// TODO: make helper
-template<int i0, int i1 = -1, int i2 = -1>
-struct ValueSet
-{
-    static bool contains(int i)
-    {
-        return (i == i0 || i == i1 || i == i2);
-    }
-};
-
-template<int i0, int i1>
-struct ValueSet<i0, i1, -1>
-{
-    static bool contains(int i)
-    {
-        return (i == i0 || i == i1);
-    }
-};
-
-template<int i0>
-struct ValueSet<i0, -1, -1>
-{
-    static bool contains(int i)
-    {
-        return (i == i0);
-    }
-};
-
-template< typename VScn, typename VDcn, typename VDepth >
-struct CvtHelper
-{
-    CvtHelper(InputArray _src, OutputArray _dst, int dcn)
-    {
-        int stype = _src.type();
-        scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
-
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
-
-        if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-            _src.copyTo(src);
-        else
-            src = _src.getMat();
-        Size sz = src.size();
-        _dst.create(sz, CV_MAKETYPE(depth, dcn));
-        dst = _dst.getMat();
-    }
-    Mat src, dst;
-    int depth, scn;
-};
-
-
 void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 {
     CvtHelper<ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);

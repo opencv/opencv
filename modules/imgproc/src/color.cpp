@@ -532,21 +532,12 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
         case COLOR_BGR2YUV: case COLOR_RGB2YUV:
-            CV_Assert( scn == 3 || scn == 4 );
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-            hal::cvtBGRtoYUV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, scn, swapBlue(code), code == COLOR_BGR2YCrCb || code == COLOR_RGB2YCrCb);
+            cvtColorBGR2YUV(_src, _dst, swapBlue(code), code == COLOR_BGR2YCrCb || code == COLOR_RGB2YCrCb);
             break;
 
         case COLOR_YCrCb2BGR: case COLOR_YCrCb2RGB:
         case COLOR_YUV2BGR: case COLOR_YUV2RGB:
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtYUVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, dcn, swapBlue(code), code == COLOR_YCrCb2BGR || code == COLOR_YCrCb2RGB);
+            cvtColorYUV2BGR(_src, _dst, dcn, swapBlue(code), code == COLOR_YCrCb2BGR || code == COLOR_YCrCb2RGB);
             break;
 
         case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:

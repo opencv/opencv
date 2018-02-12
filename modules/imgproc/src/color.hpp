@@ -165,6 +165,55 @@ inline bool isFullRange(int code)
 
 } // namespace::
 
+template<int i0, int i1 = -1, int i2 = -1>
+struct ValueSet
+{
+    static bool contains(int i)
+    {
+        return (i == i0 || i == i1 || i == i2);
+    }
+};
+
+template<int i0, int i1>
+struct ValueSet<i0, i1, -1>
+{
+    static bool contains(int i)
+    {
+        return (i == i0 || i == i1);
+    }
+};
+
+template<int i0>
+struct ValueSet<i0, -1, -1>
+{
+    static bool contains(int i)
+    {
+        return (i == i0);
+    }
+};
+
+template< typename VScn, typename VDcn, typename VDepth >
+struct CvtHelper
+{
+    CvtHelper(InputArray _src, OutputArray _dst, int dcn)
+    {
+        int stype = _src.type();
+        scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+
+        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+
+        if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+            _src.copyTo(src);
+        else
+            src = _src.getMat();
+
+        _dst.create(src.size(), CV_MAKETYPE(depth, dcn));
+        dst = _dst.getMat();
+    }
+    Mat src, dst;
+    int depth, scn;
+};
+
 ///////////////////////////// Top-level template function ////////////////////////////////
 
 template <typename Cvt>
@@ -433,9 +482,9 @@ static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 // TODO: rewrite this
 bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
 bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
-bool oclCvtColorLab2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
-bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
-bool oclCvtColorBGR2XYZ(InputArray _src, OutputArray _dst, int bidx );
+bool oclCvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
+bool oclCvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
+bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx );
 bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx );
 
 void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
@@ -445,5 +494,7 @@ void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb );
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
 
+void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, bool crcb);
+void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb);
 
 } //namespace cv
