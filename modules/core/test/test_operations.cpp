@@ -466,7 +466,7 @@ bool CV_OperationsTest::TestSubMatAccess()
         Vec3f ydir(1.f, 0.f, 1.f);
         Vec3f fpt(0.1f, 0.7f, 0.2f);
         T_bs.setTo(0);
-        T_bs(Range(0,3),Range(2,3)) = 1.0*Mat(cdir); // wierd OpenCV stuff, need to do multiply
+        T_bs(Range(0,3),Range(2,3)) = 1.0*Mat(cdir); // weird OpenCV stuff, need to do multiply
         T_bs(Range(0,3),Range(1,2)) = 1.0*Mat(ydir);
         T_bs(Range(0,3),Range(0,1)) = 1.0*Mat(cdir.cross(ydir));
         T_bs(Range(0,3),Range(3,4)) = 1.0*Mat(fpt);

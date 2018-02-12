@@ -1096,9 +1096,9 @@ void TFImporter::populateNet(Net dstNet)
             dstNet.setInputsNames(netInputs);
         }
         else if (type == "Split") {
-            // TODO: determing axis index remapping by input dimensions order of input blob
+            // TODO: determining axis index remapping by input dimensions order of input blob
             // TODO: slicing input may be Const op
-            // TODO: slicing kernels for convolutions - in current implenmentation it is impossible
+            // TODO: slicing kernels for convolutions - in current implementation it is impossible
             // TODO: add parsing num of slices parameter
             CV_Assert(layer.input_size() == 2);
             // num_split

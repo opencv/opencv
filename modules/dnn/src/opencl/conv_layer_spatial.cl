@@ -188,7 +188,7 @@ __kernel void ConvolveBasic(
 #define VLOAD4(_v, _p) do { _v = vload4(0, _p); } while(0)
 
 // Each work-item computes a OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT region of one output map.
-// Each work-group (which will be mapped to 1 SIMD16/SIMD8 EU thread) will compute 16/8 different feature maps, but each feature map is for the same region of the imput image.
+// Each work-group (which will be mapped to 1 SIMD16/SIMD8 EU thread) will compute 16/8 different feature maps, but each feature map is for the same region of the input image.
 // NDRange:  (output_width+pad)/ OUT_BLOCK_WIDTH, (output_height+pad)/OUT_BLOCK_HEIGHT, NUM_FILTERS/OUT_BLOCK_DEPTH
 
 // NOTE: for beignet this reqd_work_group_size does not guarantee that SIMD16 mode will be used, the compiler could choose to use two SIMD8 threads, and if that happens the code will break.
@@ -220,7 +220,7 @@ convolve_simd(
 
   int in_addr;
 
-  // find weights adress of given neuron (lid is index)
+  // find weights address of given neuron (lid is index)
   unsigned int weight_addr = (fmg % (ALIGNED_NUM_FILTERS/SIMD_SIZE)) * INPUT_DEPTH * KERNEL_WIDTH * KERNEL_HEIGHT * SIMD_SIZE + lid;
 
   for(int i=0;i<OUT_BLOCK_SIZE;i++) {
