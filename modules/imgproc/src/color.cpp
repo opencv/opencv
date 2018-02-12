@@ -473,57 +473,36 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
         case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
-            CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
             gbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
                     code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
-            _dst.create(sz, CV_8UC2);
-            dst = _dst.getMat();
-            hal::cvtBGRtoBGR5x5(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                                scn, swapBlue(code), gbits);
+            cvtColorBGR25x5(_src, _dst, swapBlue(code), gbits);
             break;
 
         case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
         case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
             if(dcn <= 0) dcn = (code==COLOR_BGR5652BGRA || code==COLOR_BGR5552BGRA || code==COLOR_BGR5652RGBA || code==COLOR_BGR5552RGBA) ? 4 : 3;
-            CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
             gbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
                     code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtBGR5x5toBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                                dcn, swapBlue(code), gbits);
+            cvtColor5x52BGR(_src, _dst, dcn, swapBlue(code), gbits);
             break;
 
         case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY: case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
-            CV_Assert( scn == 3 || scn == 4 );
-            _dst.create(sz, CV_MAKETYPE(depth, 1));
-            dst = _dst.getMat();
-            hal::cvtBGRtoGray(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                              depth, scn, swapBlue(code));
+            cvtColorBGR2Gray(_src, _dst, swapBlue(code));
             break;
 
         case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
-            CV_Assert( scn == 2 && depth == CV_8U );
             gbits = code == COLOR_BGR5652GRAY ? 6 : 5;
-            _dst.create(sz, CV_8UC1);
-            dst = _dst.getMat();
-            hal::cvtBGR5x5toGray(src.data, src.step, dst.data, dst.step, src.cols, src.rows, gbits);
+            cvtColor5x52Gray(_src, _dst, gbits);
             break;
 
         case COLOR_GRAY2BGR: case COLOR_GRAY2BGRA:
             if( dcn <= 0 ) dcn = (code==COLOR_GRAY2BGRA) ? 4 : 3;
-            CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtGraytoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn);
+            cvtColorGray2BGR(_src, _dst, dcn);
             break;
 
         case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
-            CV_Assert( scn == 1 && depth == CV_8U );
             gbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
-            _dst.create(sz, CV_8UC2);
-            dst = _dst.getMat();
-            hal::cvtGraytoBGR5x5(src.data, src.step, dst.data, dst.step, src.cols, src.rows, gbits);
+            cvtColorGray25x5(_src, _dst, gbits);
             break;
 
         case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
@@ -669,18 +648,10 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             }
             break;
         case COLOR_RGBA2mRGBA:
-            if (dcn <= 0) dcn = 4;
-            CV_Assert( scn == 4 && dcn == 4 && depth == CV_8U );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtRGBAtoMultipliedRGBA(src.data, src.step, dst.data, dst.step, src.cols, src.rows);
+            cvtColorRGBA2mRGBA(_src, _dst, dcn);
             break;
         case COLOR_mRGBA2RGBA:
-            if (dcn <= 0) dcn = 4;
-            CV_Assert( scn == 4 && dcn == 4 && depth == CV_8U );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtMultipliedRGBAtoRGBA(src.data, src.step, dst.data, dst.step, src.cols, src.rows);
+            cvtColormRGBA2RGBA(_src, _dst, dcn);
             break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );

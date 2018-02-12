@@ -1597,6 +1597,69 @@ void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb)
                      h.depth, h.scn, dcn, swapb);
 }
 
+void cvtColorBGR25x5( InputArray _src, OutputArray _dst, bool swapb, int gbits)
+{
+    CvtHelper< ValueSet<3, 4>, ValueSet<2>, ValueSet<CV_8U> > h(_src, _dst, 2);
 
+    hal::cvtBGRtoBGR5x5(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                        h.scn, swapb, gbits);
+}
+
+void cvtColor5x52BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int gbits)
+{
+    if(dcn <= 0) dcn = 3;
+    CvtHelper< ValueSet<2>, ValueSet<3, 4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+
+    hal::cvtBGR5x5toBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                        dcn, swapb, gbits);
+}
+
+void cvtColorBGR2Gray( InputArray _src, OutputArray _dst, bool swapb)
+{
+    CvtHelper< ValueSet<3, 4>, ValueSet<1>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 1);
+
+    hal::cvtBGRtoGray(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                      h.depth, h.scn, swapb);
+}
+
+void cvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn)
+{
+    if(dcn <= 0) dcn = 3;
+    CvtHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+
+    hal::cvtGraytoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, h.depth, dcn);
+}
+
+void cvtColor5x52Gray( InputArray _src, OutputArray _dst, int gbits)
+{
+    CvtHelper< ValueSet<2>, ValueSet<1>, ValueSet<CV_8U> > h(_src, _dst, 1);
+
+    hal::cvtBGR5x5toGray(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, gbits);
+}
+
+void cvtColorGray25x5( InputArray _src, OutputArray _dst, int gbits)
+{
+    CvtHelper< ValueSet<1>, ValueSet<2>, ValueSet<CV_8U> > h(_src, _dst, 2);
+
+    hal::cvtGraytoBGR5x5(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, gbits);
+}
+
+//TODO: ignore dcn here (for user it's not more than a chance to make a mistake)
+void cvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst, int dcn)
+{
+    if(dcn <= 0) dcn = 4;
+    CvtHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+
+    hal::cvtRGBAtoMultipliedRGBA(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows);
+}
+
+//TODO: and here
+void cvtColormRGBA2RGBA( InputArray _src, OutputArray _dst, int dcn)
+{
+    if(dcn <= 0) dcn = 4;
+    CvtHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+
+    hal::cvtMultipliedRGBAtoRGBA(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows);
+}
 
 } // namespace cv

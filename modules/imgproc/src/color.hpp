@@ -503,5 +503,16 @@ void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange);
 
 void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb);
+void cvtColorBGR25x5( InputArray _src, OutputArray _dst, bool swapb, int gbits);
+void cvtColor5x52BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int gbits);
+
+void cvtColorBGR2Gray( InputArray _src, OutputArray _dst, bool swapb);
+void cvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn);
+
+void cvtColor5x52Gray( InputArray _src, OutputArray _dst, int gbits);
+void cvtColorGray25x5( InputArray _src, OutputArray _dst, int gbits);
+
+void cvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst, int dcn);
+void cvtColormRGBA2RGBA( InputArray _src, OutputArray _dst, int dcn);
 
 } //namespace cv
