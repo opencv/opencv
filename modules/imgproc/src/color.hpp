@@ -502,4 +502,6 @@ void cvtColorBGR2HSV( InputArray _src, OutputArray _dst, bool swapb, bool fullRa
 void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange);
 void cvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange);
 
+void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb);
+
 } //namespace cv

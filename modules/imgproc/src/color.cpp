@@ -467,12 +467,8 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
         case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
-            CV_Assert( scn == 3 || scn == 4 );
             dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
-            _dst.create( sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtBGRtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, scn, dcn, swapBlue(code));
+            cvtColorBGR2BGR(_src, _dst, dcn, swapBlue(code));
             break;
 
         case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
