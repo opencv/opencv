@@ -558,6 +558,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
         ) &&
         (tileSizeX * tileSizeYmin <= wgs) &&
         (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeYmin, kernelX.cols, loc_mem_cn * 4) <= lmsz)
+        && OCL_PERFORMANCE_CHECK(!dev.isAMD())  // TODO FIXIT 2018: Problem with AMDGPU on Linux (2482.3)
        )
     {
         Size size = _src.size(), wholeSize;
