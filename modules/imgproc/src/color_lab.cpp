@@ -4842,120 +4842,109 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 }
 
 
+// TODO: make helper
+template<int i0, int i1 = -1, int i2 = -1>
+struct ValueSet
+{
+    static bool contains(int i)
+    {
+        return (i == i0 || i == i1 || i == i2);
+    }
+};
+
+template<int i0, int i1>
+struct ValueSet<i0, i1, -1>
+{
+    static bool contains(int i)
+    {
+        return (i == i0 || i == i1);
+    }
+};
+
+template<int i0>
+struct ValueSet<i0, -1, -1>
+{
+    static bool contains(int i)
+    {
+        return (i == i0);
+    }
+};
+
+template< typename VScn, typename VDcn, typename VDepth >
+struct CvtHelper
+{
+    CvtHelper(InputArray _src, OutputArray _dst, int dcn)
+    {
+        int stype = _src.type();
+        scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+
+        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+
+        if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+            _src.copyTo(src);
+        else
+            src = _src.getMat();
+        Size sz = src.size();
+        _dst.create(sz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getMat();
+    }
+    Mat src, dst;
+    int depth, scn;
+};
+
+
 void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
-    CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
+    CvtHelper<ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
 
-    Mat src;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    _dst.create(sz, CV_MAKETYPE(depth, 3));
-    Mat dst = _dst.getMat();
-    hal::cvtBGRtoLab(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                     depth, scn, swapb, true, srgb);
+    hal::cvtBGRtoLab(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, h.scn, swapb, true, srgb);
 }
 
 
 void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
-    CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
+    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
 
-    Mat src;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    _dst.create(sz, CV_MAKETYPE(depth, 3));
-    Mat dst = _dst.getMat();
-    hal::cvtBGRtoLab(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                     depth, scn, swapb, false, srgb);
+    hal::cvtBGRtoLab(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, h.scn, swapb, false, srgb);
 }
 
 
 void cvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb )
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
     if( dcn <= 0 ) dcn = 3;
-    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
+    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
-    Mat src;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    _dst.create(sz, CV_MAKETYPE(depth, dcn));
-    Mat dst = _dst.getMat();
-    hal::cvtLabtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                     depth, dcn, swapb, true, srgb);
+    hal::cvtLabtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, dcn, swapb, true, srgb);
 }
 
 
 void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb )
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
     if( dcn <= 0 ) dcn = 3;
-    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
+    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
-    Mat src;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    _dst.create(sz, CV_MAKETYPE(depth, dcn));
-    Mat dst = _dst.getMat();
-    hal::cvtLabtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                     depth, dcn, swapb, false, srgb);
+    hal::cvtLabtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, dcn, swapb, false, srgb);
 }
 
 
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb )
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
-    CV_Assert( scn == 3 || scn == 4 );
+    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
-    Mat src, dst;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    _dst.create(sz, CV_MAKETYPE(depth, 3));
-    dst = _dst.getMat();
-    hal::cvtBGRtoXYZ(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, scn, swapb);
+    hal::cvtBGRtoXYZ(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, h.depth, h.scn, swapb);
 }
 
 
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb )
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
     if( dcn <= 0 ) dcn = 3;
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
-    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
+    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
-    Mat src, dst;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    _dst.create(sz, CV_MAKETYPE(depth, dcn));
-    dst = _dst.getMat();
-    hal::cvtXYZtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn, swapb);
+    hal::cvtXYZtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, h.depth, dcn, swapb);
 }
 
 } // namespace cv
