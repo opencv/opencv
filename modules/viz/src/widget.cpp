@@ -181,7 +181,7 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
             break;
         }
         default:
-            CV_Assert("setPointCloudRenderingProperties: Unknown property");
+            CV_Assert("setRenderingProperty: Unknown property");
     }
     actor->Modified();
 }
@@ -230,7 +230,7 @@ double cv::viz::Widget::getRenderingProperty(int property) const
             break;
         }
         default:
-            CV_Assert("getPointCloudRenderingProperties: Unknown property");
+            CV_Assert("getRenderingProperty: Unknown property");
     }
     return value;
 }

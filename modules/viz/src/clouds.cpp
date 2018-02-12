@@ -89,9 +89,7 @@ cv::viz::WCloud::WCloud(cv::InputArray cloud, cv::InputArray colors, cv::InputAr
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-
 }
-
 
 template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
 {
