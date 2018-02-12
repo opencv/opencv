@@ -73,7 +73,7 @@ namespace cv
         CV_EXPORTS Affine3d makeTransformToGlobal(const Vec3d& axis_x, const Vec3d& axis_y, const Vec3d& axis_z, const Vec3d& origin = Vec3d::all(0));
 
         /** @brief Constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more
-        infromation).
+        information).
 
         @param position Position of the camera in global coordinate frame.
         @param focal_point Focal point of the camera in global coordinate frame.

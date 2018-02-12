@@ -56,7 +56,7 @@
   @{
     @defgroup cudacore Core part
     @{
-      @defgroup cudacore_init Initalization and Information
+      @defgroup cudacore_init Initialization and Information
       @defgroup cudacore_struct Data Structures
     @}
   @}

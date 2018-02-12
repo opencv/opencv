@@ -88,7 +88,7 @@ public:
                 for (int curAxis = 0; curAxis < outputs[0].size(); curAxis++)
                 {
                     if (curAxis != cAxis && outputs[0][curAxis] != curShape[curAxis])
-                        CV_Error(Error::StsBadSize, "Inconsitent shape for ConcatLayer");
+                        CV_Error(Error::StsBadSize, "Inconsistent shape for ConcatLayer");
                 }
             }
 

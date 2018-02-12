@@ -129,7 +129,7 @@ system("pause");
 return 0;
 }
 
-****Suggesttion for imporving Simplex implentation***************************************************************************************
+****Suggestion for improving Simplex implementation***************************************************************************************
 
 Currently the downhilll simplex method outputs the function value that is minimized. It should also return the coordinate points where the
 function is minimized. This is very useful in many applications such as using back projection methods to find a point of intersection of

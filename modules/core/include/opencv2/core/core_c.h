@@ -1788,7 +1788,7 @@ CVAPI(int)  cvGraphRemoveVtx( CvGraph* graph, int index );
 CVAPI(int)  cvGraphRemoveVtxByPtr( CvGraph* graph, CvGraphVtx* vtx );
 
 
-/** Link two vertices specifed by indices or pointers if they
+/** Link two vertices specified by indices or pointers if they
    are not connected or return pointer to already existing edge
    connecting the vertices.
    Functions return 1 if a new edge was created, 0 otherwise */
@@ -2648,7 +2648,7 @@ CVAPI(void) cvSetErrStatus( int status );
 #define CV_ErrModeParent   1   /* Print error and continue */
 #define CV_ErrModeSilent   2   /* Don't print and continue */
 
-/** Retrives current error processing mode */
+/** Retrieves current error processing mode */
 CVAPI(int)  cvGetErrMode( void );
 
 /** Sets error processing mode, returns previously used mode */
@@ -2738,7 +2738,7 @@ static char cvFuncName[] = Name
 /**
  CV_CALL macro calls CV (or IPL) function, checks error status and
  signals a error if the function failed. Useful in "parent node"
- error procesing mode
+ error processing mode
  */
 #define CV_CALL( Func )                                             \
 {                                                                   \

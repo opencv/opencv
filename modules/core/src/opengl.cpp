@@ -1630,7 +1630,7 @@ Context& initializeContextFromGL()
 
     for (int i = 0; i < (int)numPlatforms; i++)
     {
-        // query platform extension: presence of "cl_khr_gl_sharing" extension is requred
+        // query platform extension: presence of "cl_khr_gl_sharing" extension is required
         {
             AutoBuffer<char> extensionStr;
 
