@@ -1465,7 +1465,7 @@ static void initLabTabs()
                 //y = L*100/903.3f; 903.3f = (29/3)^3, 255 = 17*3*5
                 y = cvRound(softfloat(i*LUT_BASE*20*9)/softfloat(17*29*29*29));
                 //fy = 7.787f * yy + 16.0f / 116.0f; 7.787f = (29/3)^3/(29*4)
-                ify = cvRound(softfloat(LUT_BASE)*(softfloat(16)/softfloat(116) + softfloat(i*5)/softfloat(3*17*29)));
+                ify = cvRound(softfloat((int)LUT_BASE)*(softfloat(16)/softfloat(116) + softfloat(i*5)/softfloat(3*17*29)));
             }
             else
             {
