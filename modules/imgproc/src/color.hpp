@@ -512,7 +512,7 @@ void cvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn);
 void cvtColor5x52Gray( InputArray _src, OutputArray _dst, int gbits);
 void cvtColorGray25x5( InputArray _src, OutputArray _dst, int gbits);
 
-void cvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst, int dcn);
-void cvtColormRGBA2RGBA( InputArray _src, OutputArray _dst, int dcn);
+void cvtColorRGBA2mRGBA(InputArray _src, OutputArray _dst);
+void cvtColormRGBA2RGBA(InputArray _src, OutputArray _dst);
 
 } //namespace cv

@@ -648,10 +648,10 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             }
             break;
         case COLOR_RGBA2mRGBA:
-            cvtColorRGBA2mRGBA(_src, _dst, dcn);
+            cvtColorRGBA2mRGBA(_src, _dst);
             break;
         case COLOR_mRGBA2RGBA:
-            cvtColormRGBA2RGBA(_src, _dst, dcn);
+            cvtColormRGBA2RGBA(_src, _dst);
             break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );

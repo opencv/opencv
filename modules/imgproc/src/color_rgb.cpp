@@ -1644,20 +1644,16 @@ void cvtColorGray25x5( InputArray _src, OutputArray _dst, int gbits)
     hal::cvtGraytoBGR5x5(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, gbits);
 }
 
-//TODO: ignore dcn here (for user it's not more than a chance to make a mistake)
-void cvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst, int dcn)
+void cvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst)
 {
-    if(dcn <= 0) dcn = 4;
-    CvtHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+    CvtHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, 4);
 
     hal::cvtRGBAtoMultipliedRGBA(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows);
 }
 
-//TODO: and here
-void cvtColormRGBA2RGBA( InputArray _src, OutputArray _dst, int dcn)
+void cvtColormRGBA2RGBA( InputArray _src, OutputArray _dst)
 {
-    if(dcn <= 0) dcn = 4;
-    CvtHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+    CvtHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, 4);
 
     hal::cvtMultipliedRGBAtoRGBA(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows);
 }
