@@ -1,3 +1,12 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+
+#ifndef SRC_CONVERT_HPP
+#define SRC_CONVERT_HPP
+
+#include "opencv2/core/types.hpp"
 
 namespace
 {
@@ -186,3 +195,5 @@ namespace opt_SSE4_1
     int Cvt_SIMD_f64u16_SSE41(const double * src, ushort * dst, int width);
 }
 }
+
+#endif // SRC_CONVERT_HPP
