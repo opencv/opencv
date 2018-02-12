@@ -549,22 +549,19 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
+            cvtColorBGR2HSV(_src, _dst, swapBlue(code), isFullRange(code));
+            break;
+
         case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
-            CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-            hal::cvtBGRtoHSV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, scn, swapBlue(code), isFullRange(code), isHSV(code));
+            cvtColorBGR2HLS(_src, _dst, swapBlue(code), isFullRange(code));
             break;
 
         case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+            cvtColorHSV2BGR(_src, _dst, dcn, swapBlue(code), isFullRange(code));
+            break;
+
         case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtHSVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                             depth, dcn, swapBlue(code), isFullRange(code), isHSV(code));
+            cvtColorHLS2BGR(_src, _dst, dcn, swapBlue(code), isFullRange(code));
             break;
 
         case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:

@@ -1568,4 +1568,39 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
 
 } // namespace hal
 
+void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
+{
+    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+
+    hal::cvtBGRtoHSV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, h.scn, swapb, fullRange, false);
+}
+
+void cvtColorBGR2HSV( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
+{
+    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+
+    hal::cvtBGRtoHSV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, h.scn, swapb, fullRange, true);
+}
+
+void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange)
+{
+    if(dcn <= 0) dcn = 3;
+    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+
+    hal::cvtHSVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, dcn, swapb, fullRange, false);
+}
+
+void cvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange)
+{
+    if(dcn <= 0) dcn = 3;
+    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+
+    hal::cvtHSVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                     h.depth, dcn, swapb, fullRange, true);
+}
+
+
 } // namespace cv
