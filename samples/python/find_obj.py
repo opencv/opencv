@@ -120,10 +120,11 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
             r = 8
             m = (anorm(np.array(p1) - (x, y)) < r) | (anorm(np.array(p2) - (x, y)) < r)
             idxs = np.where(m)[0]
+
             kp1s, kp2s = [], []
             for i in idxs:
                 (x1, y1), (x2, y2) = p1[i], p2[i]
-                col = (red, green)[status[i]]
+                col = (red, green)[status[i][0]]
                 cv.line(cur_vis, (x1, y1), (x2, y2), col)
                 kp1, kp2 = kp_pairs[i]
                 kp1s.append(kp1)
