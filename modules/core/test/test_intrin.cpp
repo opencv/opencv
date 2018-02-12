@@ -239,7 +239,7 @@ TEST(hal_intrin, float64x2) {
 
 TEST(hal_intrin,float16x4)
 {
-    CV_CPU_CALL_FP16(test_hal_intrin_float16x4, ());
+    CV_CPU_CALL_FP16_(test_hal_intrin_float16x4, ());
     throw SkipTestException("Unsupported hardware: FP16 is not available");
 }
 

@@ -3420,7 +3420,7 @@ cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size);
 template<> void
 cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size )
 {
-    CV_CPU_CALL_FP16(cvtScaleHalf_SIMD32f16f, (src, sstep, dst, dstep, size));
+    CV_CPU_CALL_FP16_(cvtScaleHalf_SIMD32f16f, (src, sstep, dst, dstep, size));
 
 #if !defined(CV_CPU_COMPILE_FP16)
     sstep /= sizeof(src[0]);
@@ -3439,7 +3439,7 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
 template<> void
 cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size )
 {
-    CV_CPU_CALL_FP16(cvtScaleHalf_SIMD16f32f, (src, sstep, dst, dstep, size));
+    CV_CPU_CALL_FP16_(cvtScaleHalf_SIMD16f32f, (src, sstep, dst, dstep, size));
 
 #if !defined(CV_CPU_COMPILE_FP16)
     sstep /= sizeof(src[0]);
