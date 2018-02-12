@@ -114,7 +114,7 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && this->type != "Sigmoid";
     }
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node)
@@ -397,8 +397,11 @@ struct ReLU6Functor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        CV_Error(Error::StsNotImplemented, "ReLU6");
-        return InferenceEngine::CNNLayerPtr();
+        lp.type = "Clamp";
+        std::shared_ptr<InferenceEngine::ClampLayer> ieLayer(new InferenceEngine::ClampLayer(lp));
+        ieLayer->min_value = minValue;
+        ieLayer->max_value = maxValue;
+        return ieLayer;
     }
 #endif  // HAVE_INF_ENGINE
 
