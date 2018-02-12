@@ -4823,4 +4823,43 @@ void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
                      depth, dcn, swapb, false, srgb);
 }
 
+
+void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb )
+{
+    int stype = _src.type();
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
+    CV_Assert( scn == 3 || scn == 4 );
+
+    Mat src, dst;
+    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+        _src.copyTo(src);
+    else
+        src = _src.getMat();
+    Size sz = src.size();
+    _dst.create(sz, CV_MAKETYPE(depth, 3));
+    dst = _dst.getMat();
+    hal::cvtBGRtoXYZ(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, scn, swapb);
+}
+
+
+void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb )
+{
+    int stype = _src.type();
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+    if( dcn <= 0 ) dcn = 3;
+    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
+    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
+
+    Mat src, dst;
+    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+        _src.copyTo(src);
+    else
+        src = _src.getMat();
+    Size sz = src.size();
+    _dst.create(sz, CV_MAKETYPE(depth, dcn));
+    dst = _dst.getMat();
+    hal::cvtXYZtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn, swapb);
+}
+
 } // namespace cv

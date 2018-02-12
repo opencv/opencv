@@ -441,6 +441,8 @@ void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
 void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
 void cvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb );
 void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb );
+void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb );
+void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
 
 
 } //namespace cv

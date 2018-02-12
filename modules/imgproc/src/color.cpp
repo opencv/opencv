@@ -638,18 +638,11 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
-            CV_Assert( scn == 3 || scn == 4 );
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-            hal::cvtBGRtoXYZ(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, scn, swapBlue(code));
+            cvtColorBGR2XYZ(_src, _dst, swapBlue(code));
             break;
 
         case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtXYZtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn, swapBlue(code));
+            cvtColorXYZ2BGR(_src, _dst, dcn, swapBlue(code));
             break;
 
         case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
