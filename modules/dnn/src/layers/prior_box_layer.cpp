@@ -252,7 +252,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+              _scales.empty() && !_explicitSizes;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

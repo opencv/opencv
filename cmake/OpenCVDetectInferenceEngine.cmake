@@ -15,23 +15,25 @@ macro(ie_fail)
     return()
 endmacro()
 
-if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/inference_engine/include/inference_engine.hpp")
+if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/include/inference_engine.hpp")
     set(ie_root_paths "${INF_ENGINE_ROOT_DIR}")
     if(DEFINED ENV{INTEL_CVSDK_DIR})
         list(APPEND ie_root_paths "$ENV{INTEL_CVSDK_DIR}")
+        list(APPEND ie_root_paths "$ENV{INTEL_CVSDK_DIR}/inference_engine")
     endif()
     if(DEFINED INTEL_CVSDK_DIR)
         list(APPEND ie_root_paths "${INTEL_CVSDK_DIR}")
+        list(APPEND ie_root_paths "${INTEL_CVSDK_DIR}/inference_engine")
     endif()
 
     if(WITH_INF_ENGINE AND NOT ie_root_paths)
-        list(APPEND ie_root_paths "/opt/intel/deeplearning_deploymenttoolkit/deployment_tools")
+        list(APPEND ie_root_paths "/opt/intel/deeplearning_deploymenttoolkit/deployment_tools/inference_engine")
     endif()
 
-    find_path(INF_ENGINE_ROOT_DIR inference_engine/include/inference_engine.hpp PATHS ${ie_root_paths})
+    find_path(INF_ENGINE_ROOT_DIR include/inference_engine.hpp PATHS ${ie_root_paths})
 endif()
 
-set(INF_ENGINE_INCLUDE_DIRS "${INF_ENGINE_ROOT_DIR}/inference_engine/include" CACHE PATH "Path to Inference Engine include directory")
+set(INF_ENGINE_INCLUDE_DIRS "${INF_ENGINE_ROOT_DIR}/include" CACHE PATH "Path to Inference Engine include directory")
 
 if(NOT INF_ENGINE_ROOT_DIR
     OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}"
@@ -42,12 +44,21 @@ if(NOT INF_ENGINE_ROOT_DIR
 endif()
 
 set(INF_ENGINE_LIBRARIES "")
-foreach(lib inference_engine mklml_intel iomp5)
+
+set(ie_lib_list inference_engine)
+if(UNIX)
+    list(APPEND ie_lib_list mklml_intel iomp5)
+endif()
+
+foreach(lib ${ie_lib_list})
     find_library(${lib}
         NAMES ${lib}
+        # For inference_engine
         HINTS ${IE_PLUGINS_PATH}
         HINTS "$ENV{IE_PLUGINS_PATH}"
-        HINTS ${INF_ENGINE_ROOT_DIR}/external/mklml_lnx/lib
+        # For mklml_intel, iomp5
+        HINTS ${INTEL_CVSDK_DIR}/external/mklml_lnx/lib
+        HINTS ${INTEL_CVSDK_DIR}/inference_engine/external/mklml_lnx/lib
     )
     if(NOT ${lib})
         ie_fail()
