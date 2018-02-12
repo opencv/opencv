@@ -2470,4 +2470,95 @@ void cvtColorYUV2BGR(InputArray _src, OutputArray _dst, int dcn, bool swapb, boo
                      h.depth, dcn, swapb, crcb);
 }
 
+void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn)
+{
+    CvtHelper< ValueSet<2>, ValueSet<3, 4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+
+    hal::cvtOnePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                             dcn, swapb, uidx, ycn);
+}
+
+void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi )
+{
+    int stype = _src.type();
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+    CV_Assert( scn == 2 && depth == CV_8U );
+
+    extractChannel(_src, _dst, coi);
+}
+
+template< typename VScn, typename VDcn, typename VDepth, bool toYUV >
+struct CvtYUVHelper
+{
+    CvtYUVHelper(InputArray _src, OutputArray _dst, int dcn)
+    {
+        int stype = _src.type();
+        scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+
+        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+
+        if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+            _src.copyTo(src);
+        else
+            src = _src.getMat();
+        Size sz = src.size();
+        if(toYUV)
+        {
+            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0);
+            dstSz = Size(sz.width, sz.height / 2 * 3);
+        }
+        else
+        {
+            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0);
+            dstSz = Size(sz.width, sz.height * 2 / 3);
+        }
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getMat();
+    }
+    Mat src, dst;
+    int depth, scn;
+    Size dstSz;
+};
+
+
+void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx)
+{
+    CvtYUVHelper< ValueSet<3, 4>, ValueSet<1>, ValueSet<CV_8U>, true > h(_src, _dst, 1);
+
+    hal::cvtBGRtoThreePlaneYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                               h.scn, swapb, uidx);
+}
+
+void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
+{
+    CvtYUVHelper< ValueSet<1>, ValueSet<1>, ValueSet<CV_8U>, false > h(_src, _dst, 1);
+
+#ifdef HAVE_IPP
+#if IPP_VERSION_X100 >= 201700
+    if (CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, h.src.data, (IppSizeL)h.src.step, h.dst.data, (IppSizeL)h.dst.step,
+                              ippiSizeL(h.dstSz.width, h.dstSz.height)) >= 0)
+        return;
+#endif
+#endif
+    h.src(Range(0, h.dstSz.height), Range::all()).copyTo(h.dst);
+}
+
+void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx)
+{
+    if(dcn <= 0) dcn = 3;
+    CvtYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false> h(_src, _dst, dcn);
+
+    hal::cvtThreePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
+                               dcn, swapb, uidx);
+}
+
+void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx )
+{
+    if(dcn <= 0) dcn = 3;
+    CvtYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false> h(_src, _dst, dcn);
+
+    hal::cvtTwoPlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
+                             dcn, swapb, uidx);
+}
+
 } // namespace cv

@@ -449,19 +449,10 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     CV_INSTRUMENT_REGION()
 
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), uidx, gbits, ycn;
-
-    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(depth == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(CV_MAT_DEPTH(_src.type()) == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
 
-    Mat src, dst;
-    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-        _src.copyTo(src);
-    else
-        src = _src.getMat();
-    Size sz = src.size();
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
+    int uidx, gbits, ycn;
 
     switch( code )
     {
@@ -558,8 +549,15 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case COLOR_BayerBG2BGR_VNG: case COLOR_BayerGB2BGR_VNG: case COLOR_BayerRG2BGR_VNG: case COLOR_BayerGR2BGR_VNG:
         case COLOR_BayerBG2BGR_EA: case COLOR_BayerGB2BGR_EA: case COLOR_BayerRG2BGR_EA: case COLOR_BayerGR2BGR_EA:
         case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
-            demosaicing(src, _dst, code, dcn);
-            break;
+            {
+                Mat src;
+                if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+                    _src.copyTo(src);
+                else
+                    src = _src.getMat();
+                demosaicing(src, _dst, code, dcn);
+                break;
+            }
 
         case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21:  case COLOR_YUV2BGR_NV12:  case COLOR_YUV2RGB_NV12:
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
@@ -567,59 +565,28 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
             if (dcn <= 0) dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
             uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
-            CV_Assert( dcn == 3 || dcn == 4 );
-            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-            _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtTwoPlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows,
-                                     dcn, swapBlue(code), uidx);
+            cvtColorTwoPlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uidx);
             break;
+
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
         case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
             //http://www.fourcc.org/yuv.php#YV12 == yuv420p -> It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes.
             //http://www.fourcc.org/yuv.php#IYUV == I420 -> It comprises an NxN Y plane followed by (N/2)x(N/2) U and V planes
             if (dcn <= 0) dcn = (code==COLOR_YUV2BGRA_YV12 || code==COLOR_YUV2RGBA_YV12 || code==COLOR_YUV2RGBA_IYUV || code==COLOR_YUV2BGRA_IYUV) ? 4 : 3;
             uidx  = (code==COLOR_YUV2BGR_YV12 || code==COLOR_YUV2RGB_YV12 || code==COLOR_YUV2BGRA_YV12 || code==COLOR_YUV2RGBA_YV12) ? 1 : 0;
-            CV_Assert( dcn == 3 || dcn == 4 );
-            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-            _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtThreePlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows,
-                                       dcn, swapBlue(code), uidx);
+            cvtColorThreePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uidx);
             break;
 
         case COLOR_YUV2GRAY_420:
-            {
-                if (dcn <= 0) dcn = 1;
-
-                CV_Assert( dcn == 1 );
-                CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-
-                Size dstSz(sz.width, sz.height * 2 / 3);
-                _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-                dst = _dst.getMat();
-#ifdef HAVE_IPP
-#if IPP_VERSION_X100 >= 201700
-                if (CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, src.data, (IppSizeL)src.step, dst.data, (IppSizeL)dst.step,
-                                                   ippiSizeL(dstSz.width, dstSz.height)) >= 0)
-                    break;
-#endif
-#endif
-                src(Range(0, dstSz.height), Range::all()).copyTo(dst);
-            }
+            cvtColorYUV2Gray_420(_src, _dst);
             break;
+
         case COLOR_RGB2YUV_YV12: case COLOR_BGR2YUV_YV12: case COLOR_RGBA2YUV_YV12: case COLOR_BGRA2YUV_YV12:
         case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
-            if (dcn <= 0) dcn = 1;
             uidx = (code == COLOR_BGR2YUV_IYUV || code == COLOR_BGRA2YUV_IYUV || code == COLOR_RGB2YUV_IYUV || code == COLOR_RGBA2YUV_IYUV) ? 1 : 2;
-            CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-            CV_Assert( dcn == 1 );
-            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
-            _dst.create(Size(sz.width, sz.height / 2 * 3), CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-            hal::cvtBGRtoThreePlaneYUV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                                       scn, swapBlue(code), uidx);
+            cvtColorBGR2ThreePlaneYUV(_src, _dst, swapBlue(code), uidx);
             break;
+
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
         case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
         case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
@@ -629,27 +596,17 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if (dcn <= 0) dcn = (code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY || code==COLOR_YUV2RGBA_YUY2 || code==COLOR_YUV2BGRA_YUY2 || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 4 : 3;
             ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
             uidx = (code==COLOR_YUV2RGB_YVYU || code==COLOR_YUV2BGR_YVYU || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 1 : 0;
-            CV_Assert( dcn == 3 || dcn == 4 );
-            CV_Assert( scn == 2 && depth == CV_8U );
-            _dst.create(sz, CV_8UC(dcn));
-            dst = _dst.getMat();
-            hal::cvtOnePlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
-                                     dcn, swapBlue(code), uidx, ycn);
+            cvtColorOnePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uidx, ycn);
             break;
+
         case COLOR_YUV2GRAY_UYVY: case COLOR_YUV2GRAY_YUY2:
-            {
-                if (dcn <= 0) dcn = 1;
-
-                CV_Assert( dcn == 1 );
-                CV_Assert( scn == 2 && depth == CV_8U );
-
-                src.release(); // T-API datarace fixup
-                extractChannel(_src, _dst, code == COLOR_YUV2GRAY_UYVY ? 1 : 0);
-            }
+            cvtColorYUV2Gray_ch(_src, _dst, code == COLOR_YUV2GRAY_UYVY ? 1 : 0);
             break;
+
         case COLOR_RGBA2mRGBA:
             cvtColorRGBA2mRGBA(_src, _dst);
             break;
+
         case COLOR_mRGBA2RGBA:
             cvtColormRGBA2RGBA(_src, _dst);
             break;
