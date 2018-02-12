@@ -1230,7 +1230,7 @@ static void* icvReadGraph( CvFileStorage* fs, CvFileNode* node )
                     vtx_buf[vtx1], vtx_buf[vtx2], 0, &edge );
 
                 if( result == 0 )
-                    CV_Error( CV_StsBadArg, "Duplicated edge has occured" );
+                    CV_Error( CV_StsBadArg, "Duplicated edge has occurred" );
 
                 edge->weight = *(float*)(dst_ptr + sizeof(int)*2);
                 if( elem_size > (int)sizeof(CvGraphEdge) )

@@ -112,7 +112,7 @@ OCL_TEST_P(Dft, Mat)
     OCL_OFF(cv::dft(src, dst, dft_flags, nonzero_rows));
     OCL_ON(cv::dft(usrc, udst, dft_flags, nonzero_rows));
 
-    // In case forward R2C 1d tranform dst contains only half of output
+    // In case forward R2C 1d transform dst contains only half of output
     // without complex conjugate
     if (dft_type == R2C && is1d && (dft_flags & cv::DFT_INVERSE) == 0)
     {

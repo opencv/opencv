@@ -58,7 +58,7 @@ namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
-// this option is usefull to run valgrind memory errors detection
+// this option is useful to run valgrind memory errors detection
 static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterBool("OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS", false);
 
 using std::vector;
@@ -911,7 +911,7 @@ struct Net::Impl
         int id = getLayerId(layerName);
 
         if (id < 0)
-            CV_Error(Error::StsError, "Requsted layer \"" + layerName + "\" not found");
+            CV_Error(Error::StsError, "Requested layer \"" + layerName + "\" not found");
 
         return getLayerData(id);
     }
@@ -1897,7 +1897,7 @@ struct Net::Impl
         if ((size_t)pin.oid >= ld.outputBlobs.size())
         {
             CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %d outputs, "
-                                           "the #%d was requsted", ld.name.c_str(),
+                                           "the #%d was requested", ld.name.c_str(),
                                            ld.outputBlobs.size(), pin.oid));
         }
         if (preferableTarget != DNN_TARGET_CPU)

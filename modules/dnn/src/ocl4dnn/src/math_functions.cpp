@@ -185,7 +185,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
     int blockC_height = blocksize;
 
     int use_buffer_indicator = 8;
-    // To fix the edge problem casued by the sub group block read.
+    // To fix the edge problem caused by the sub group block read.
     // we have to pad the image if it's not multiple of tile.
     // just padding one line is enough as the sub group block read
     // will clamp to edge according to the spec.
