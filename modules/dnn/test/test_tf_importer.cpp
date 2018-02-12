@@ -150,6 +150,8 @@ TEST(Test_TensorFlow, batch_norm)
     runTensorFlowNet("batch_norm");
     runTensorFlowNet("fused_batch_norm");
     runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true);
+    runTensorFlowNet("mvn_batch_norm");
+    runTensorFlowNet("mvn_batch_norm_1x1");
 }
 
 OCL_TEST(Test_TensorFlow, batch_norm)
@@ -170,6 +172,10 @@ TEST(Test_TensorFlow, pooling)
 TEST(Test_TensorFlow, deconvolution)
 {
     runTensorFlowNet("deconvolution");
+    runTensorFlowNet("deconvolution_same");
+    runTensorFlowNet("deconvolution_stride_2_same");
+    runTensorFlowNet("deconvolution_adj_pad_valid");
+    runTensorFlowNet("deconvolution_adj_pad_same");
 }
 
 OCL_TEST(Test_TensorFlow, deconvolution)
