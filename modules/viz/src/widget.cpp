@@ -202,6 +202,8 @@ double cv::viz::Widget::getRenderingProperty(int property) const
 #else
         case IMMEDIATE_RENDERING: std::cerr << "this property has no effect" << std::endl; break;
 #endif
+        case AMBIENT: value = actor->GetProperty()->GetAmbient(); break;
+        case LIGHTING: value = actor->GetProperty()->GetLighting(); break;
         case FONT_SIZE:
         {
             vtkTextActor* text_actor = vtkTextActor::SafeDownCast(actor);
