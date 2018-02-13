@@ -472,7 +472,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool hasWeights, hasBias;
         float epsilon;
 
-        virtual void getScaleShift(Mat& scale, Mat& shift) const = 0;
         static Ptr<BatchNormLayer> create(const LayerParams &params);
     };
 

@@ -61,7 +61,23 @@ namespace dnn
 class BaseConvolutionLayerImpl : public ConvolutionLayer
 {
 public:
-    BaseConvolutionLayerImpl() {}
+    BaseConvolutionLayerImpl(const LayerParams &params)
+    {
+        setParamsFrom(params);
+        getConvolutionKernelParams(params, kernel.height, kernel.width, pad.height,
+                                   pad.width, stride.height, stride.width, dilation.height,
+                                   dilation.width, padMode);
+
+        numOutput = params.get<int>("num_output");
+        int ngroups = params.get<int>("group", 1);
+
+        adjustPad.height = params.get<int>("adj_h", 0);
+        adjustPad.width = params.get<int>("adj_w", 0);
+
+        CV_Assert(numOutput % ngroups == 0);
+        CV_Assert(adjustPad.width < stride.width &&
+                  adjustPad.height < stride.height);
+    }
 
     virtual bool supportBackend(int backendId)
     {
@@ -153,12 +169,10 @@ class ConvolutionLayerImpl : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    Mat weightsMat;
+    Mat weightsMat, weightsMat_doubles;
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
-    Ptr<BatchNormLayer> bnorm;
-    Ptr<ScaleLayer> scaleLayer;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
@@ -169,7 +183,7 @@ public:
     ocl4dnnFusedActiv_t activType;
     float power;
 #endif
-    ConvolutionLayerImpl()
+    ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
 #ifdef HAVE_OPENCL
         fusedBias = false;
@@ -225,6 +239,42 @@ public:
         return false;
     }
 
+    virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    {
+        BaseConvolutionLayerImpl::finalize(inputs, outputs);
+
+        CV_Assert(!blobs.empty());
+        const int outCn = blobs[0].size[0];
+        // prepare weightsMat where each row is aligned and has enough zero padding on the right to
+        // use vectorized (i.e. with intrinsics) loops without tail processing
+        Mat wm = blobs[0].reshape(1, outCn).clone();
+        if( wm.step1() % VEC_ALIGN != 0 )
+        {
+            int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
+            Mat wm_buffer = Mat(outCn, newcols, wm.type());
+            Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
+            wm_padding.setTo(Scalar::all(0.));
+            Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
+            wm.copyTo(wm_aligned);
+            wm = wm_aligned;
+        }
+        weightsMat = wm;
+        weightsMat.convertTo(weightsMat_doubles, CV_64F);
+
+        Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
+        biasvec.resize(outCn+2);
+        if( biasMat.empty() )
+        {
+            for(int i = 0; i < outCn; i++ )
+                biasvec[i] = 0.f;
+        }
+        else
+        {
+            for(int i = 0; i < outCn; i++ )
+                biasvec[i] = biasMat.at<float>(i);
+        }
+    }
+
     bool setActivation(const Ptr<ActivationLayer>& layer)
     {
         activ = layer;
@@ -240,10 +290,11 @@ public:
             if (!activ_power.empty())
             {
                 if (activ_power->scale != 1.f || activ_power->shift != 0.f)
-                    newWeightAndBias = true;
-
-                if (activ_power->scale != 1.f)
-                    weightsMat.release();
+                {
+                    const int outCh = blobs[0].size[0];
+                    fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
+                                Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
+                }
 
                 power = activ_power->power;
                 activType = OCL4DNN_CONV_FUSED_ACTIV_POWER;
@@ -258,35 +309,49 @@ public:
         return !activ.empty();
     }
 
-    bool setBatchNorm(const Ptr<BatchNormLayer>& layer )
+    virtual bool tryFuse(Ptr<Layer>& top)
     {
-        // for now the scale layer followed by the batch norm cannot be fused, only vice versa.
-        if( !scaleLayer.empty() )
-            return false;
-        bnorm = layer;
-        // we will need to re-compute the weights with the batch
-        // norm coefficients taken into account
-        weightsMat.release();
-#ifdef HAVE_OPENCL
-        newWeightAndBias = true;
-        fusedBias = false;
-#endif
-        return !bnorm.empty();
+        Mat w, b;
+        top->getScaleShift(w, b);
+        if (!w.empty() || !b.empty())
+        {
+            fuseWeights(w, b);
+            return true;
+        }
+        return false;
     }
 
-    bool setScale(const Ptr<ScaleLayer>& layer)
+    void fuseWeights(const Mat& w, const Mat& b)
     {
-        if (layer.empty() || layer->blobs.empty())
-            return false;
-        scaleLayer = layer;
-        // we will need to re-compute the weights with the scaling
-        // coefficients taken into account
-        weightsMat.release();
+        // Convolution weights have OIHW data layout. Parameters fusion in case of
+        // (conv(I) + b1 ) * w + b2
+        // means to replace convolution's weights to [w*conv(I)] and bias to [b1 * w + b2]
+        const int outCn = weightsMat.size[0];
+        CV_Assert(!weightsMat.empty(), biasvec.size() == outCn + 2,
+                  w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
+
+        if (!w.empty())
+        {
+            for (int i = 0; i < outCn; ++i)
+            {
+                double wi = w.at<float>(i);
+                cv::multiply(slice(weightsMat_doubles, i), wi, slice(weightsMat_doubles, i));
+                biasvec[i] *= wi;
+            }
+            weightsMat_doubles.convertTo(weightsMat, weightsMat.type());
+        }
+
+        if (!b.empty())
+        {
+            for (int i = 0; i < outCn; ++i)
+                biasvec[i] += b.at<float>(i);
+        }
+
 #ifdef HAVE_OPENCL
-        newWeightAndBias = true;
-        fusedBias = false;
+        newWeightAndBias = !w.empty() || !b.empty();
+        fusedBias = hasBias() || !b.empty();
 #endif
-        return true;
+        biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
@@ -776,97 +841,7 @@ public:
             convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
         }
 
-        int k, outCn = umat_blobs[0].size[0];
-        if( weightsMat.empty() )
-        {
-            // prepare weightsMat where each row is aligned and has enough zero padding on the right to
-            // use vectorized (i.e. with intrinsics) loops without tail processing
-            Mat wm = blobs[0].reshape(1, outCn).clone();
-            if( wm.step1() % VEC_ALIGN != 0 )
-            {
-                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-                Mat wm_buffer = Mat(outCn, newcols, wm.type());
-                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
-                wm_padding.setTo(Scalar::all(0.));
-                Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
-                wm.copyTo(wm_aligned);
-                wm = wm_aligned;
-            }
-            weightsMat = wm;
-
-            Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
-            biasvec.resize(outCn+2);
-            if( biasMat.empty() )
-            {
-                for( k = 0; k < outCn; k++ )
-                    biasvec[k] = 0.f;
-            }
-            else
-            {
-                for( k = 0; k < outCn; k++ )
-                    biasvec[k] = biasMat.at<float>(k);
-            }
-
-            if( !bnorm.empty() || !scaleLayer.empty() || IS_POWER_LAYER(activ))
-            {
-                Mat scale, shift, scale2, shift2;
-                const float *scaleptr = 0, *shiftptr = 0;
-                const float *scaleptr2 = 0, *shiftptr2 = 0;
-                float a = 1.f, b = 0.f;
-
-                if( !bnorm.empty() )
-                {
-                    bnorm->getScaleShift(scale, shift);
-                    CV_Assert( scale.isContinuous() && shift.isContinuous() &&
-                               scale.type() == CV_32F && shift.type() == CV_32F &&
-                               scale.total() == (size_t)outCn &&
-                               shift.total() == (size_t)outCn );
-                    scaleptr = scale.ptr<float>();
-                    shiftptr = shift.ptr<float>();
-                }
-                if( !scaleLayer.empty() )
-                {
-                    scale2 = scaleLayer->blobs[0];
-                    CV_Assert( scale2.isContinuous() && scale2.type() == CV_32F &&
-                               scale2.total() == (size_t)outCn );
-                    scaleptr2 = scale2.ptr<float>();
-                    if( scaleLayer->hasBias )
-                    {
-                        shift2 = scaleLayer->blobs[1];
-                        CV_Assert( shift2.isContinuous() && shift2.type() == CV_32F &&
-                                   shift2.total() == (size_t)outCn );
-                        shiftptr2 = shift2.ptr<float>();
-                    }
-                }
-
-                if( IS_POWER_LAYER(activ) )
-                {
-                    Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
-                    CV_Assert(activ_power);
-                    a = activ_power->scale;
-                    b = activ_power->shift;
-                }
-
-                if (shiftptr || shiftptr2 || b != 0.f)
-                    fusedBias = true;
-
-                for( int i = 0; i < outCn; i++ )
-                {
-                    float s1 = scaleptr ? scaleptr[i] : 1.f;
-                    float delta1 = shiftptr ? shiftptr[i] : 0.f;
-                    float s2 = scaleptr2 ? scaleptr2[i] : 1.f;
-                    float delta2 = shiftptr2 ? shiftptr2[i] : 0.f;
-                    float* w_i = weightsMat.ptr<float>(i);
-                    int j, wcols = weightsMat.cols;
-
-                    for( j = 0; j < wcols; j++ )
-                        w_i[j] *= (s1*s2*a);
-
-                    biasvec[i] = biasvec[i]*(s1*s2*a) + (delta1*s2*a + delta2*a + b);
-                }
-            }
-            biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
-        }
+        int outCn = umat_blobs[0].size[0];
 
         reluslope.clear();
         if( activ )
@@ -973,86 +948,7 @@ public:
 
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
-        int k, outCn = blobs[0].size[0];
-
-        if( weightsMat.empty() )
-        {
-            // prepare weightsMat where each row is aligned and has enough zero padding on the right to
-            // use vectorized (i.e. with intrinsics) loops without tail processing
-            Mat wm = blobs[0].reshape(1, outCn).clone();
-            if( wm.step1() % VEC_ALIGN != 0 )
-            {
-                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-                Mat wm_buffer = Mat(outCn, newcols, wm.type());
-                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
-                wm_padding.setTo(Scalar::all(0.));
-                Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
-                wm.copyTo(wm_aligned);
-                wm = wm_aligned;
-            }
-            weightsMat = wm;
-
-            Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
-            biasvec.resize(outCn+2);
-            if( biasMat.empty() )
-            {
-                for( k = 0; k < outCn; k++ )
-                    biasvec[k] = 0.f;
-            }
-            else
-            {
-                for( k = 0; k < outCn; k++ )
-                    biasvec[k] = biasMat.at<float>(k);
-            }
-
-            if( !bnorm.empty() || !scaleLayer.empty() )
-            {
-                Mat scale, shift, scale2, shift2;
-                const float *scaleptr = 0, *shiftptr = 0;
-                const float *scaleptr2 = 0, *shiftptr2 = 0;
-
-                if( !bnorm.empty() )
-                {
-                    bnorm->getScaleShift(scale, shift);
-                    CV_Assert( scale.isContinuous() && shift.isContinuous() &&
-                               scale.type() == CV_32F && shift.type() == CV_32F &&
-                               scale.total() == (size_t)outCn &&
-                               shift.total() == (size_t)outCn );
-                    scaleptr = scale.ptr<float>();
-                    shiftptr = shift.ptr<float>();
-                }
-                if( !scaleLayer.empty() )
-                {
-                    scale2 = scaleLayer->blobs[0];
-                    CV_Assert( scale2.isContinuous() && scale2.type() == CV_32F &&
-                               scale2.total() == (size_t)outCn );
-                    scaleptr2 = scale2.ptr<float>();
-                    if( scaleLayer->hasBias )
-                    {
-                        shift2 = scaleLayer->blobs[1];
-                        CV_Assert( shift2.isContinuous() && shift2.type() == CV_32F &&
-                                   shift2.total() == (size_t)outCn );
-                        shiftptr2 = shift2.ptr<float>();
-                    }
-                }
-
-                for( int i = 0; i < outCn; i++ )
-                {
-                    float s1 = scaleptr ? scaleptr[i] : 1.f;
-                    float delta1 = shiftptr ? shiftptr[i] : 0.f;
-                    float s2 = scaleptr2 ? scaleptr2[i] : 1.f;
-                    float delta2 = shiftptr2 ? shiftptr2[i] : 0.f;
-                    float* w_i = weightsMat.ptr<float>(i);
-                    int j, wcols = weightsMat.cols;
-
-                    for( j = 0; j < wcols; j++ )
-                        w_i[j] *= (s1*s2);
-
-                    biasvec[i] = biasvec[i]*(s1*s2) + (delta1*s2 + delta2);
-                }
-            }
-            biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
-        }
+        int outCn = blobs[0].size[0];
 
         reluslope.clear();
         if( activ )
@@ -1102,6 +998,8 @@ public:
     Mat weightsMat, biasesMat;
     UMat umat_weights;
     UMat umat_biases;
+
+    DeConvolutionLayerImpl(const LayerParams& params) : BaseConvolutionLayerImpl(params) {}
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
     {
@@ -1619,36 +1517,15 @@ public:
     }
 };
 
-//Convolution and Deconvolution
-static void initConvDeconvLayerFromCaffe(Ptr<BaseConvolutionLayer> l, const LayerParams &params)
-{
-    l->setParamsFrom(params);
-    getConvolutionKernelParams(params, l->kernel.height, l->kernel.width, l->pad.height,
-                               l->pad.width, l->stride.height, l->stride.width, l->dilation.height,
-                               l->dilation.width, l->padMode);
-
-    l->numOutput = params.get<int>("num_output");
-    int ngroups = params.get<int>("group", 1);
-
-    l->adjustPad.height = params.get<int>("adj_h", 0);
-    l->adjustPad.width = params.get<int>("adj_w", 0);
-
-    CV_Assert(l->numOutput % ngroups == 0);
-    CV_Assert(l->adjustPad.width < l->stride.width &&
-              l->adjustPad.height < l->stride.height);
-}
-
 Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 {
-    ConvolutionLayerImpl* conv_ptr = new ConvolutionLayerImpl;
-    Ptr<BaseConvolutionLayer> l(conv_ptr);
-    initConvDeconvLayerFromCaffe(l, params);
+    Ptr<ConvolutionLayerImpl> l(new ConvolutionLayerImpl(params));
 
 #ifdef HAVE_OPENCL
     size_t n = params.blobs.size();
-    conv_ptr->umat_blobs.resize(n);
+    l->umat_blobs.resize(n);
     for (int i = 0; i < n; i++)
-        conv_ptr->umat_blobs[i] = params.blobs[i].getUMat(ACCESS_READ);
+        l->umat_blobs[i] = params.blobs[i].getUMat(ACCESS_READ);
 #endif
 
     return l;
@@ -1656,10 +1533,7 @@ Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 
 Ptr<BaseConvolutionLayer> DeconvolutionLayer::create(const LayerParams &params)
 {
-    Ptr<BaseConvolutionLayer> l(new DeConvolutionLayerImpl);
-    initConvDeconvLayerFromCaffe(l, params);
-
-    return l;
+    return Ptr<BaseConvolutionLayer>(new DeConvolutionLayerImpl(params));
 }
 
 }
