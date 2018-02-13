@@ -590,7 +590,7 @@ protected:
 
         if( errCaseCount > 0 )
         {
-            ts->printf( cvtest::TS::LOG, "Different prediction results before writeing and after reading (errCaseCount=%d).\n", errCaseCount );
+            ts->printf( cvtest::TS::LOG, "Different prediction results before writing and after reading (errCaseCount=%d).\n", errCaseCount );
             code = cvtest::TS::FAIL_BAD_ACCURACY;
         }
 

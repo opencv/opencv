@@ -1391,7 +1391,7 @@ icvCheckQuadGroup( CvCBQuad **quad_group, int quad_count,
         }
     }
 
-    // start with a corner that belongs to a quad with a signle neighbor.
+    // start with a corner that belongs to a quad with a single neighbor.
     // if we do not have such, start with a corner of a quad with two neighbors.
     if( !first )
         first = first2;
@@ -2173,7 +2173,7 @@ bool cv::findCirclesGrid2( InputArray _image, Size patternSize,
         boxFinder.getAsymmetricHoles(centers);
         break;
           default:
-            CV_Error(CV_StsBadArg, "Unkown pattern type");
+            CV_Error(CV_StsBadArg, "Unknown pattern type");
         }
 
         if (i != 0)

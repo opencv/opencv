@@ -382,7 +382,7 @@ the DefaultAllocator since the stack for pool1 is full.
 @endcode
 
 If a third stream is declared in the above example, allocating with #getBuffer
-within that stream will also be carried out by the DefaultAllocator becuase we've run out of
+within that stream will also be carried out by the DefaultAllocator because we've run out of
 stacks.
 
 @code
