@@ -201,6 +201,12 @@ public:
         return Ptr<BackendNode>();
     }
 
+    void getScaleShift(Mat& scale, Mat& shift) const
+    {
+        scale = !blobs.empty() ? blobs[0] : Mat();
+        shift = hasBias ? blobs[1] : Mat();
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const
     {

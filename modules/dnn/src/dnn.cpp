@@ -1407,46 +1407,30 @@ struct Net::Impl
             if( ld.consumers.size() == 1 && pinsToKeep.count(LayerPin(lid, 0)) == 0 )
             {
                 LayerData* nextData = &layers[ld.consumers[0].lid];
-                Ptr<BatchNormLayer> nextBNormLayer =
-                    nextData->layerInstance.dynamicCast<BatchNormLayer>();
                 LayerPin lpNext(ld.consumers[0].lid, 0);
-                if( !nextBNormLayer.empty() && pinsToKeep.count(lpNext) == 0 )
+                while (nextData)
                 {
-                    LayerData* bnormData = nextData;
-                    nextData = 0;
-                    if( currLayer->setBatchNorm(nextBNormLayer) )
+                    Ptr<Layer> nextLayer = nextData->layerInstance;
+                    if (currLayer->tryFuse(nextLayer))
                     {
-                        printf_(("\tfused with %s\n", nextBNormLayer->name.c_str()));
-                        bnormData->skip = true;
+                        printf_(("\tfused with %s\n", nextLayer->name.c_str()));
+                        nextData->skip = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
-                        if( bnormData->consumers.size() == 1 )
+                        if (nextData->consumers.size() == 1)
                         {
-                            nextData = &layers[bnormData->consumers[0].lid];
-                            lpNext = LayerPin(bnormData->consumers[0].lid, 0);
+                            int nextLayerId = nextData->consumers[0].lid;
+                            nextData = &layers[nextLayerId];
+                            lpNext = LayerPin(nextLayerId, 0);
+                        }
+                        else
+                        {
+                            nextData = 0;
+                            break;
                         }
                     }
-                }
-
-                Ptr<ScaleLayer> nextScaleLayer;
-                if( nextData )
-                    nextScaleLayer = nextData->layerInstance.dynamicCast<ScaleLayer>();
-                if( !nextScaleLayer.empty() && pinsToKeep.count(lpNext) == 0 )
-                {
-                    LayerData* scaleData = nextData;
-                    nextData = 0;
-                    if( currLayer->setScale(nextScaleLayer) )
-                    {
-                        printf_(("\tfused with %s\n", nextScaleLayer->name.c_str()));
-                        scaleData->skip = true;
-                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
-                        ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
-                        if( scaleData->consumers.size() == 1 )
-                        {
-                            nextData = &layers[scaleData->consumers[0].lid];
-                            lpNext = LayerPin(scaleData->consumers[0].lid, 0);
-                        }
-                    }
+                    else
+                        break;
                 }
 
                 // For now, OpenCL target support fusion with activation of ReLU/ChannelsPReLU/Power/Tanh
@@ -2627,13 +2611,16 @@ Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 }
 
 bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
-bool Layer::setBatchNorm(const Ptr<BatchNormLayer>&) { return false; }
-bool Layer::setScale(const Ptr<ScaleLayer>&) { return false; }
+bool Layer::tryFuse(Ptr<Layer>&) { return false; }
+void Layer::getScaleShift(Mat& scale, Mat& shift) const
+{
+    scale = Mat();
+    shift = Mat();
+}
+
 void Layer::unsetAttached()
 {
     setActivation(Ptr<ActivationLayer>());
-    setBatchNorm(Ptr<BatchNormLayer>());
-    setScale(Ptr<ScaleLayer>());
 }
 
 template <typename T>
