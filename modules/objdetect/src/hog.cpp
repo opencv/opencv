@@ -3608,7 +3608,7 @@ void HOGDescriptor::detectROI(const cv::Mat& img, const std::vector<cv::Point> &
             const HOGCache::BlockData& bj = blockData[j];
             Point pt = pt0 + bj.imgOffset;
 
-            // need to devide this into 4 parts!
+            // need to divide this into 4 parts!
             const float* vec = cache.getBlock(pt, &blockHist[0]);
 #if CV_SSE2
             __m128 _vec = _mm_loadu_ps(vec);
@@ -3699,7 +3699,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
     }
     if(strcmp(version_buffer,"V6.01")) {
-        String eerr("version doesnot match");
+        String eerr("version does not match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
         fclose(modelfl);
@@ -3715,7 +3715,7 @@ void HOGDescriptor::readALTModel(String modelfile)
     }
     if (version < 200)
     {
-        String eerr("version doesnot match");
+        String eerr("version does not match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
         fclose(modelfl);

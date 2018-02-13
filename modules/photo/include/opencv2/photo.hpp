@@ -189,7 +189,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
         float h = 3, float hColor = 3,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
-/** @brief Modification of fastNlMeansDenoising function for images sequence where consequtive images have been
+/** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>
@@ -216,7 +216,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputA
         int imgToDenoiseIndex, int temporalWindowSize,
         float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
 
-/** @brief Modification of fastNlMeansDenoising function for images sequence where consequtive images have been
+/** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>

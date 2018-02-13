@@ -506,7 +506,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     // Do the cheirality check.
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
-    // there depth may vary between postive and negtive.
+    // their depth may vary between positive and negtive.
     std::vector<Mat> allTriangulations(4);
     Mat Q;
 

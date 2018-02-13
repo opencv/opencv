@@ -441,8 +441,8 @@ Batch Gradient Descent and Mini-Batch Gradient Descent algorithms are used (see
 discriminative classifier (see <http://www.cs.cmu.edu/~tom/NewChapters.html> for more details).
 Logistic Regression is implemented as a C++ class in LogisticRegression.
 
-In Logistic Regression, we try to optimize the training paramater \f$\theta\f$ such that the
-hypothesis \f$0 \leq h_\theta(x) \leq 1\f$ is acheived. We have \f$h_\theta(x) = g(h_\theta(x))\f$
+In Logistic Regression, we try to optimize the training parameter \f$\theta\f$ such that the
+hypothesis \f$0 \leq h_\theta(x) \leq 1\f$ is achieved. We have \f$h_\theta(x) = g(h_\theta(x))\f$
 and \f$g(z) = \frac{1}{1+e^{-z}}\f$ as the logistic or sigmoid function. The term "Logistic" in
 Logistic Regression refers to this function. For given data of a binary classification problem of
 classes 0 and 1, one can determine that the given data instance belongs to class 1 if \f$h_\theta(x)
@@ -472,7 +472,7 @@ training error and ensuring high training accuracy:
     cv::ml::LogisticRegression::BATCH "LogisticRegression::BATCH" or @ref
     cv::ml::LogisticRegression::MINI_BATCH "LogisticRegression::MINI_BATCH". If training method is
     set to @ref cv::ml::LogisticRegression::MINI_BATCH "MINI_BATCH", the size of the mini batch has
-    to be to a postive integer set with @ref cv::ml::LogisticRegression::setMiniBatchSize
+    to be to a positive integer set with @ref cv::ml::LogisticRegression::setMiniBatchSize
     "setMiniBatchSize".
 
 A sample set of training parameters for the Logistic Regression classifier can be initialized as follows:
