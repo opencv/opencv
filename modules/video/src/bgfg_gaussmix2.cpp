@@ -42,7 +42,7 @@
 
 /*//Implementation of the Gaussian mixture model background subtraction from:
 //
-//"Improved adaptive Gausian mixture model for background subtraction"
+//"Improved adaptive Gaussian mixture model for background subtraction"
 //Z.Zivkovic
 //International Conference Pattern Recognition, UK, August, 2004
 //http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
@@ -91,7 +91,7 @@ namespace cv
 /*
  Interface of Gaussian mixture algorithm from:
 
- "Improved adaptive Gausian mixture model for background subtraction"
+ "Improved adaptive Gaussian mixture model for background subtraction"
  Z.Zivkovic
  International Conference Pattern Recognition, UK, August, 2004
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
@@ -351,7 +351,7 @@ protected:
     // and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
 
     /////////////////////////
-    // less important parameters - things you might change but be carefull
+    // less important parameters - things you might change but be careful
     ////////////////////////
     float backgroundRatio;
     // corresponds to fTB=1-cf from the paper
@@ -407,7 +407,7 @@ struct GaussBGStatModel2Params
     int nHeight;
     int nND;//number of data dimensions (image channels)
 
-    bool bPostFiltering;//defult 1 - do postfiltering - will make shadow detection results also give value 255
+    bool bPostFiltering;//default 1 - do postfiltering - will make shadow detection results also give value 255
     double  minArea; // for postfiltering
 
     bool bInit;//default 1, faster updates at start
@@ -417,7 +417,7 @@ struct GaussBGStatModel2Params
     ////////////////////////
     float fAlphaT;
     //alpha - speed of update - if the time interval you want to average over is T
-    //set alpha=1/T. It is also usefull at start to make T slowly increase
+    //set alpha=1/T. It is also useful at start to make T slowly increase
     //from 1 until the desired T
     float fTb;
     //Tb - threshold on the squared Mahalan. dist. to decide if it is well described
@@ -426,7 +426,7 @@ struct GaussBGStatModel2Params
     //and that is Tb=4*4=16;
 
     /////////////////////////
-    //less important parameters - things you might change but be carefull
+    //less important parameters - things you might change but be careful
     ////////////////////////
     float fTg;
     //Tg - threshold on the squared Mahalan. dist. to decide
@@ -471,7 +471,7 @@ struct GMM
 };
 
 // shadow detection performed per pixel
-// should work for rgb data, could be usefull for gray scale and depth data as well
+// should work for rgb data, could be useful for gray scale and depth data as well
 // See: Prati,Mikic,Trivedi,Cucchiara,"Detecting Moving Shadows...",IEEE PAMI,2003.
 CV_INLINE bool
 detectShadowGMM(const float* data, int nchannels, int nmodes,

@@ -279,7 +279,7 @@ static int areaSign( Point2f a, Point2f b, Point2f c )
 }
 
 //---------------------------------------------------------------------
-// Returns true iff point c lies on the closed segement ab.
+// Returns true iff point c lies on the closed segment ab.
 // Assumes it is already known that abc are collinear.
 //---------------------------------------------------------------------
 static bool between( Point2f a, Point2f b, Point2f c )

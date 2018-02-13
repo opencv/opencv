@@ -382,7 +382,7 @@ public:
     @param _delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
     @param _min_area prune the area which smaller than minArea
     @param _max_area prune the area which bigger than maxArea
-    @param _max_variation prune the area have simliar size to its children
+    @param _max_variation prune the area have similar size to its children
     @param _min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
     @param _max_evolution  for color image, the evolution steps
     @param _area_threshold for color image, the area threshold to cause re-initialize

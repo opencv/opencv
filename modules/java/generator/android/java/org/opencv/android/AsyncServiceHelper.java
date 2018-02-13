@@ -110,7 +110,7 @@ class AsyncServiceHelper
 
                 public void wait_install()
                 {
-                    Log.e(TAG, "Instalation was not started! Nothing to wait!");
+                    Log.e(TAG, "Installation was not started! Nothing to wait!");
                 }
             };
 

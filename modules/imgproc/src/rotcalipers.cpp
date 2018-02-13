@@ -243,7 +243,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
         {
         case CALIPERS_MAXHEIGHT:
             {
-            /* now main element lies on edge alligned to calipers side */
+            /* now main element lies on edge aligned to calipers side */
 
             /* find opposite element i.e. transform  */
             /* 0->2, 1->3, 2->0, 3->1                */

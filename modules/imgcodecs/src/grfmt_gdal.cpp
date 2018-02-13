@@ -469,7 +469,7 @@ bool GdalDecoder::readHeader(){
         return false;
     }
 
-    //extract the driver infomation
+    //extract the driver information
     m_driver = m_dataset->GetDriver();
 
     // if the driver failed, then exit

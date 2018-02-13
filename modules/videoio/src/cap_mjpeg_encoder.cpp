@@ -1047,7 +1047,7 @@ static const int idct_prescale[] =
 
 static const char jpegHeader[] =
 "\xFF\xD8"  // SOI  - start of image
-"\xFF\xE0"  // APP0 - jfif extention
+"\xFF\xE0"  // APP0 - jfif extension
 "\x00\x10"  // 2 bytes: length of APP0 segment
 "JFIF\x00"  // JFIF signature
 "\x01\x02"  // version of JFIF

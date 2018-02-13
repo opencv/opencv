@@ -258,7 +258,7 @@ private:
     void* userdata;
 };
 
-//Both are top level window, so that a way to differenciate them.
+//Both are top level window, so that a way to differentiate them.
 //if (obj->metaObject ()->className () == "CvWindow") does not give me robust result
 
 enum typeWindow { type_CvWindow = 1, type_CvWinProperties = 2 };

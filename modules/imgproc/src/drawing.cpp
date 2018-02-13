@@ -1395,7 +1395,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
         {
             if( last && last->y1 == y )
             {
-                // exclude edge if y reachs its lower point
+                // exclude edge if y reaches its lower point
                 prelast->next = last->next;
                 last = last->next;
                 continue;
@@ -1409,7 +1409,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
             }
             else if( i < total )
             {
-                // insert new edge into active list if y reachs its upper point
+                // insert new edge into active list if y reaches its upper point
                 prelast->next = e;
                 e->next = last;
                 prelast = e;

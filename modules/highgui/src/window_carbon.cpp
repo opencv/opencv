@@ -910,7 +910,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         }
         else
         {
-            fprintf(stderr, "Failed to tranform process type: %d\n", (int) ret);
+            fprintf(stderr, "Failed to transform process type: %d\n", (int) ret);
             fflush (stderr);
         }
     }
