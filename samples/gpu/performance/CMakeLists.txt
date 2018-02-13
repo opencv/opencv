@@ -34,10 +34,4 @@ if(WIN32)
   install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/gpu" COMPONENT samples)
 endif()
 
-if(INSTALL_C_EXAMPLES AND NOT WIN32)
-  file(GLOB CUDA_FILES performance/*.cpp performance/*.h)
-  install(FILES ${CUDA_FILES}
-          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu/performance
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
-          COMPONENT samples)
-endif()
+ocv_install_example_src("gpu/performance" performance/*.cpp performance/*.h)

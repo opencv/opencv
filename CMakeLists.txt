@@ -420,7 +420,7 @@ else()
       ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}lib${LIB_SUFFIX}")
     endif()
     ocv_update(OPENCV_3P_LIB_INSTALL_PATH  "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
-    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples/native)
+    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples)
     ocv_update(OPENCV_JAR_INSTALL_PATH java)
     ocv_update(OPENCV_OTHER_INSTALL_PATH   etc)
     ocv_update(OPENCV_CONFIG_INSTALL_PATH  ".")
@@ -804,7 +804,7 @@ if(BUILD_opencv_apps)
 endif()
 
 # examples
-if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
+if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES OR INSTALL_C_EXAMPLES)
   add_subdirectory(samples)
 endif()
 

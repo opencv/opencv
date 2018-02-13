@@ -1,4 +1,4 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 using namespace cv;
 using namespace std;
