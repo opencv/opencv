@@ -281,20 +281,26 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual bool setActivation(const Ptr<ActivationLayer>& layer);
 
         /**
-         * @brief Tries to attach to the layer the subsequent batch normalization layer, i.e. do the layer fusion in a partial case.
-         * @param[in] layer The subsequent batch normalization layer.
-         *
-         * Returns true if the batch normalization layer has been attached successfully.
+         * @brief Try to fuse current layer with a next one
+         * @param[in] top Next layer to be fused.
+         * @returns True if fusion was performed.
          */
-        virtual bool setBatchNorm(const Ptr<BatchNormLayer>& layer);
+        virtual bool tryFuse(Ptr<Layer>& top);
 
         /**
-         * @brief Tries to attach to the layer the subsequent scaling layer, i.e. do the layer fusion in a partial case.
-         * @param[in] layer The subsequent scaling layer.
+         * @brief Returns parameters of layers with channel-wise multiplication and addition.
+         * @param[out] scale Channel-wise multipliers. Total number of values should
+         *                   be equal to number of channels.
+         * @param[out] shift Channel-wise offsets. Total number of values should
+         *                   be equal to number of channels.
          *
-         * Returns true if the scaling layer has been attached successfully.
+         * Some layers can fuse their transformations with further layers.
+         * In example, convolution + batch normalization. This way base layer
+         * use weights from layer after it. Fused layer is skipped.
+         * By default, @p scale and @p shift are empty that means layer has no
+         * element-wise multiplications or additions.
          */
-        virtual bool setScale(const Ptr<ScaleLayer>& layer);
+        virtual void getScaleShift(Mat& scale, Mat& shift) const;
 
         /**
          * @brief "Deattaches" all the layers, attached to particular layer.
