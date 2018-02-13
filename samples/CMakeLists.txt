@@ -1,58 +1,104 @@
-# Detect if we want to build samples with library binaries or not
+# Utility function: adds sample executable target with name "example_<group>_<file_name>"
+# Usage:
+#   ocv_define_sample(<output target> <relative filename> <group>)
+function(ocv_define_sample out_target source sub)
+  get_filename_component(name "${source}" NAME_WE)
+  set(the_target "example_${sub}_${name}")
+  add_executable(${the_target} "${source}")
+  set_target_properties(${the_target} PROPERTIES PROJECT_LABEL "(sample) ${name}")
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(${the_target} PROPERTIES FOLDER "samples/${sub}")
+  endif()
+  if(WIN32 AND MSVC AND NOT BUILD_SHARED_LIBS)
+    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+  endif()
+  if(WIN32)
+    install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${sub}" COMPONENT samples)
+  endif()
+  # Add single target to build all samples in the group: 'make opencv_samples_cpp'
+  set(parent_target opencv_samples_${sub})
+  if(NOT TARGET ${parent_target})
+    add_custom_target(${parent_target})
+    if(TARGET opencv_samples)
+      add_dependencies(opencv_samples ${parent_target})
+    endif()
+  endif()
+  add_dependencies(${parent_target} ${the_target})
+  set(${out_target} ${the_target} PARENT_SCOPE)
+endfunction()
+
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
+#===================================================================================================
 #
-# BUILD CASE 1: Build samples with library sources
+# Build as part of OpenCV
 #
+#===================================================================================================
 
-
-# ----------------------------------------------------------------------------
-#  CMake file for samples. See root CMakeLists.txt
-#
-# ----------------------------------------------------------------------------
+function(ocv_install_example_src relpath)
+  if(INSTALL_C_EXAMPLES)
+    file(GLOB files ${ARGN})
+    install(FILES ${files}
+            DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${relpath}"
+            COMPONENT samples)
+  endif()
+endfunction()
 
 add_subdirectory(cpp)
 add_subdirectory(java/tutorial_code)
 add_subdirectory(dnn)
 add_subdirectory(gpu)
 add_subdirectory(tapi)
-
+add_subdirectory(opencl)
 if(WIN32 AND HAVE_DIRECTX)
   add_subdirectory(directx)
 endif()
-
 if((NOT ANDROID) AND HAVE_OPENGL)
   add_subdirectory(opengl)
 endif()
-
 if(HAVE_OPENVX)
   add_subdirectory(openvx)
 endif()
-
 if(UNIX AND NOT ANDROID AND (HAVE_VA OR HAVE_VA_INTEL))
   add_subdirectory(va_intel)
 endif()
-
 if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
-
 if(INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(python)
 endif()
 
-#
-# END OF BUILD CASE 1: Build samples with library sources
-#
+ocv_install_example_src("." CMakeLists.txt)
+if(INSTALL_C_EXAMPLES)
+  install(DIRECTORY data
+          DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/data"
+        COMPONENT samples_data)
+endif()
+
 else()
+#===================================================================================================
 #
-# BUILD CASE 2: Build samples with library binaries
+#  Standalone mode
 #
+#===================================================================================================
 cmake_minimum_required(VERSION 2.8)
 
 project(samples C CXX)
 option(BUILD_EXAMPLES "Build samples" ON)
 
-find_package(OpenCV REQUIRED)
+# Assuming following installation folder structure (default for UNIX):
+# <install_root>/share/
+# └── OpenCV/  <-- OPENCV_CONFIG_INSTALL_PATH
+#     ├── OpenCVConfig.cmake  <-- file to be found by find_package
+#     ├── ...
+#     ├── samples/  <-- OPENCV_SAMPLES_SRC_INSTALL_PATH
+#     │   ├── CMakeLists.txt  <-- this file
+#     │   ├── cpp/
+find_package(OpenCV REQUIRED PATHS "..")
+
+function(ocv_install_example_src)
+  # not used in this branch
+endfunction()
 
 if(MSVC)
   if(NOT ENABLE_BUILD_HARDENING)
@@ -80,16 +126,15 @@ if(MSVC)
 endif()
 
 add_subdirectory(cpp)
-add_subdirectory(dnn)
-# FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
-
-add_subdirectory(opencl)
-
 if(WIN32)
   add_subdirectory(directx)
 endif()
+add_subdirectory(dnn)
+# add_subdirectory(gpu)
+add_subdirectory(opencl)
+# add_subdirectory(opengl)
+# add_subdirectory(openvx)
+add_subdirectory(tapi)
+# add_subdirectory(va_intel)
 
-#
-# END OF BUILD CASE 2: Build samples with library binaries
-#
 endif()

@@ -4,7 +4,10 @@
  * @author OpenCV team
  */
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <iostream>
 
 void show_wait_destroy(const char* winname, cv::Mat img);
 
