@@ -4393,34 +4393,76 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
 
 //TODO: to be rewritten
 
-bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb)
+template< typename VScn, typename VDcn, typename VDepth >
+struct OclHelper
 {
-    UMat src = _src.getUMat(), dst;
-    Size sz = src.size(), dstSz = sz;
-    int scn = src.channels(), depth = src.depth();
-    dcn = 3;
+    OclHelper( InputArray _src, OutputArray _dst, int dcn)
+    {
+        src = _src.getUMat();
+        Size sz = src.size(), dstSz = sz;
+        int scn = src.channels();
+        int depth = src.depth();
 
-    CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
+        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
 
-    _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-    dst = _dst.getUMat();
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
 
-    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-                   dstarg = ocl::KernelArg::WriteOnly(dst);
+        srcarg = ocl::KernelArg::ReadOnlyNoSize(src);
+        dstarg = ocl::KernelArg::WriteOnly(dst);
+    }
 
-    ocl::Device dev = ocl::Device::getDefault();
-    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+    bool createKernel(cv::String name, ocl::ProgramSource& source, cv::String options)
+    {
+        ocl::Device dev = ocl::Device::getDefault();
+        int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
 
-    size_t globalsize[] = { (size_t)src.cols, ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy };
-    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
-                             depth, scn, pxPerWIy);
+        globalSize[0] = (size_t)src.cols;
+        globalSize[1] = ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy;
 
+        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                                        src.depth(), src.channels(), pxPerWIy);
+
+        k.create(name.c_str(), source, baseOptions + options);
+
+        if(k.empty())
+            return false;
+
+        nArgs = k.set(0, srcarg);
+        nArgs = k.set(nArgs, dstarg);
+        return true;
+    }
+
+    bool run()
+    {
+        return k.run(2, globalSize, NULL, false);
+    }
+
+    template<typename T>
+    void setArg(const T& arg)
+    {
+        nArgs = k.set(nArgs, arg);
+    }
+
+    UMat src, dst;
     ocl::Kernel k;
-    k.create("BGR2Luv", ocl::imgproc::color_lab_oclsrc,
-             opts + format("-D dcn=%d -D bidx=%d%s", dcn, bidx, srgb ? " -D SRGB" : ""));
+    size_t globalSize[2];
+    ocl::KernelArg srcarg, dstarg;
+    int nArgs;
+};
 
-    if (k.empty())
+
+bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb)
+{
+    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+
+    if(!h.createKernel("BGR2Luv", ocl::imgproc::color_lab_oclsrc,
+                       format("-D dcn=3 -D bidx=%d%s", bidx, srgb ? " -D SRGB" : "")))
+    {
         return false;
+    }
+
+    // Prepare additional arguments
 
     initLabTabs();
 
@@ -4464,48 +4506,35 @@ bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int dcn, int bidx, b
     ocl::KernelArg ucoeffsarg = ocl::KernelArg::PtrReadOnly(ucoeffs);
 
     ocl::KernelArg LabCbrtTabarg = ocl::KernelArg::PtrReadOnly(uLabCbrtTab);
-    if (srgb)
-        k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBGammaTab),
-               LabCbrtTabarg, ucoeffsarg, un, vn);
-    else
-        k.args(srcarg, dstarg, LabCbrtTabarg, ucoeffsarg, un, vn);
 
-    return k.run(2, globalsize, NULL, false);
+    // Setup additional arguments and run
+
+    if(srgb)
+        h.setArg(ocl::KernelArg::PtrReadOnly(usRGBGammaTab));
+
+    h.setArg(LabCbrtTabarg);
+    h.setArg(ucoeffsarg);
+    h.setArg(un); h.setArg(vn);
+
+    return h.run();
 }
 
 
-bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb )
+bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb )
 {
-    UMat src = _src.getUMat(), dst;
-    Size sz = src.size(), dstSz = sz;
-    int scn = src.channels(), depth = src.depth();
-    dcn = 3;
+    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
 
-    CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-
-    _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-    dst = _dst.getUMat();
-
-    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-                   dstarg = ocl::KernelArg::WriteOnly(dst);
-
-    ocl::Device dev = ocl::Device::getDefault();
-    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
-
-    size_t globalsize[] = { (size_t)src.cols, ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy };
-    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
-                             depth, scn, pxPerWIy);
-
-    ocl::Kernel k;
-    k.create("BGR2Lab", ocl::imgproc::color_lab_oclsrc,
-             opts + format("-D dcn=%d -D bidx=%d%s", dcn, bidx, srgb ? " -D SRGB" : ""));
-
-    if (k.empty())
+    if(!h.createKernel("BGR2Lab", ocl::imgproc::color_lab_oclsrc,
+                       format("-D dcn=3 -D bidx=%d%s", bidx, srgb ? " -D SRGB" : "")))
+    {
         return false;
+    }
+
+    // Prepare and set additional arguments
 
     initLabTabs();
 
-    if (depth == CV_8U)
+    if (_src.depth() == CV_8U)
     {
         static UMat usRGBGammaTab, ulinearGammaTab, uLabCbrtTab, ucoeffs;
 
@@ -4525,17 +4554,17 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, b
             coeffs[i*3+bidx]     = cvRound(lshift*sRGB2XYZ_D65[i*3+2]/D65[i]);
 
             CV_Assert(coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-                    coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift));
+                      coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift));
         }
         Mat(1, 9, CV_32SC1, coeffs).copyTo(ucoeffs);
 
         const int Lscale = (116*255+50)/100;
         const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
 
-        k.args(srcarg, dstarg,
-               ocl::KernelArg::PtrReadOnly(srgb ? usRGBGammaTab : ulinearGammaTab),
-               ocl::KernelArg::PtrReadOnly(uLabCbrtTab), ocl::KernelArg::PtrReadOnly(ucoeffs),
-               Lscale, Lshift);
+        h.setArg(ocl::KernelArg::PtrReadOnly(srgb ? usRGBGammaTab : ulinearGammaTab));
+        h.setArg(ocl::KernelArg::PtrReadOnly(uLabCbrtTab));
+        h.setArg(ocl::KernelArg::PtrReadOnly(ucoeffs));
+        h.setArg(Lscale); h.setArg(Lshift);
     }
     else
     {
@@ -4544,7 +4573,6 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, b
         if (srgb && usRGBGammaTab.empty())
             Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(sRGBGammaTab)).copyTo(usRGBGammaTab);
 
-        float coeffs[9];
         softdouble whitePt[3];
         for(int i = 0; i < 3; i++)
             whitePt[i] = D65[i];
@@ -4553,6 +4581,7 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, b
                                softdouble::one(),
                                softdouble::one() / whitePt[2] };
 
+        float coeffs[9];
         for (int i = 0; i < 3; i++)
         {
             int j = i * 3;
@@ -4576,13 +4605,13 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, b
         ocl::KernelArg ucoeffsarg = ocl::KernelArg::PtrReadOnly(ucoeffs);
 
         if (srgb)
-            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBGammaTab),
-                   ucoeffsarg, _1_3f, _a);
-        else
-            k.args(srcarg, dstarg, ucoeffsarg, _1_3f, _a);
+            h.setArg(ocl::KernelArg::PtrReadOnly(usRGBGammaTab));
+
+        h.setArg(ucoeffsarg);
+        h.setArg(_1_3f); h.setArg(_a);
     }
 
-    return k.run(2, globalsize, NULL, false);
+    return h.run();
 }
 
 

@@ -557,8 +557,8 @@ static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 #endif
 
 // TODO: rewrite this
-bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
-bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
+bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb );
+bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb );
 bool oclCvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
 bool oclCvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
 bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx );

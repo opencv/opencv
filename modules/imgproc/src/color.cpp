@@ -365,14 +365,14 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         bidx = code == COLOR_BGR2Lab || code == COLOR_LBGR2Lab ? 0 : 2;
         bool srgb = code == COLOR_BGR2Lab || code == COLOR_RGB2Lab ;
 
-        return oclCvtColorBGR2Lab(_src, _dst, dcn, bidx, srgb);
+        return oclCvtColorBGR2Lab(_src, _dst, bidx, srgb);
     }
     case COLOR_BGR2Luv: case COLOR_RGB2Luv: case COLOR_LBGR2Luv: case COLOR_LRGB2Luv:
     {
         bidx = code == COLOR_BGR2Luv || code == COLOR_LBGR2Luv ? 0 : 2;
         bool srgb = code == COLOR_RGB2Luv || code == COLOR_BGR2Luv;
 
-        return oclCvtColorBGR2Luv(_src, _dst, dcn, bidx, srgb);
+        return oclCvtColorBGR2Luv(_src, _dst, bidx, srgb);
     }
     case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
     {
