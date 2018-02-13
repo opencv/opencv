@@ -517,7 +517,7 @@ bool  PAMDecoder::readData( Mat& img )
 
         /* the case where data fits the opencv matrix */
         if (m_sampledepth == img.depth() && target_channels == m_channels && !bit_mode) {
-            /* special case for 16bit images with wrong endianess */
+            /* special case for 16bit images with wrong endianness */
             if (m_sampledepth == CV_16U && !isBigEndian())
             {
                 for (y = 0; y < m_height; y++, data += imp_stride )
@@ -564,7 +564,7 @@ bool  PAMDecoder::readData( Mat& img )
                 {
                     m_strm.getBytes( src, src_stride );
 
-                    /* endianess correction */
+                    /* endianness correction */
                     if( m_sampledepth == CV_16U && !isBigEndian() )
                     {
                         for( x = 0; x < src_elems_per_row; x++ )
@@ -698,7 +698,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     if (img.depth() == CV_8U)
         strm.putBytes( data, stride*height );
     else if (img.depth() == CV_16U) {
-        /* fix endianess */
+        /* fix endianness */
         if (!isBigEndian()) {
             for( y = 0; y < height; y++ ) {
                 memcpy( buffer, img.ptr(y), stride );

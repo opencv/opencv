@@ -65,7 +65,7 @@ namespace cv { namespace cudacodec {
 ////////////////////////////////// Video Encoding //////////////////////////////////
 
 // Works only under Windows.
-// Supports olny H264 video codec and AVI files.
+// Supports only H264 video codec and AVI files.
 
 enum SurfaceFormat
 {

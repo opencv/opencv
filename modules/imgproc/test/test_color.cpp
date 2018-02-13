@@ -2053,7 +2053,7 @@ static void validateResult(const Mat& reference, const Mat& actual, const Mat& s
     int cn = reference.channels();
     ssize.width *= cn;
     bool next = true;
-    //RGB2Lab_f works throug LUT and brings additional error
+    //RGB2Lab_f works through LUT and brings additional error
     static const float maxErr = 1.f/192.f;
 
     for (int y = 0; y < ssize.height && next; ++y)

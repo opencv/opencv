@@ -585,7 +585,7 @@ namespace cv{
             const int h = img.rows;
             const int w = img.cols;
 
-            //A quick and dirty upper bound for the maximimum number of labels.
+            //A quick and dirty upper bound for the maximum number of labels.
             //Following formula comes from the fact that a 2x2 block in 4-way connectivity
             //labeling can never have more than 2 new labels and 1 label for background.
             //Worst case image example pattern:
@@ -663,7 +663,7 @@ namespace cv{
             const int h = img.rows;
             const int w = img.cols;
 
-            //A quick and dirty upper bound for the maximimum number of labels.
+            //A quick and dirty upper bound for the maximum number of labels.
             //Following formula comes from the fact that a 2x2 block in 4-way connectivity
             //labeling can never have more than 2 new labels and 1 label for background.
             //Worst case image example pattern:
@@ -2536,7 +2536,7 @@ namespace cv{
             const int h = img.rows;
             const int w = img.cols;
 
-            //A quick and dirty upper bound for the maximimum number of labels.
+            //A quick and dirty upper bound for the maximum number of labels.
             //Following formula comes from the fact that a 2x2 block in 8-connectivity case
             //can never have more than 1 new label and 1 label for background.
             //Worst case image example pattern:
@@ -2598,7 +2598,7 @@ namespace cv{
             const int h = img.rows;
             const int w = img.cols;
 
-            //A quick and dirty upper bound for the maximimum number of labels.
+            //A quick and dirty upper bound for the maximum number of labels.
             //Following formula comes from the fact that a 2x2 block in 8-connectivity case
             //can never have more than 1 new label and 1 label for background.
             //Worst case image example pattern:

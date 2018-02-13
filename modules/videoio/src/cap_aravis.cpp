@@ -129,12 +129,12 @@ protected:
 
     unsigned int    payload;                // Width x height x Pixel width.
 
-    int             widthMin;               // Camera sensor minium width.
+    int             widthMin;               // Camera sensor minimum width.
     int             widthMax;               // Camera sensor maximum width.
-    int             heightMin;              // Camera sensor minium height.
+    int             heightMin;              // Camera sensor minimum height.
     int             heightMax;              // Camera sensor maximum height.
     bool            fpsAvailable;
-    double          fpsMin;                 // Camera minium fps.
+    double          fpsMin;                 // Camera minimum fps.
     double          fpsMax;                 // Camera maximum fps.
     bool            gainAvailable;
     double          gainMin;                // Camera minimum gain.
@@ -392,7 +392,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
             ng = CLIP( gain + ev + exposureCompensation, gainMin, gainMax);
 
             if( ng < gain ) {
-                // piority 1 - reduce gain
+                // priority 1 - reduce gain
                 arv_camera_set_gain(camera, (gain = ng));
                 return;
             }

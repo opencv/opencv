@@ -170,7 +170,7 @@ void CV_DescriptorMatcherTest::generateData( Mat& query, Mat& train )
     rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
     buf.convertTo( query, CV_32FC1 );
 
-    // Generate train decriptors as follows:
+    // Generate train descriptors as follows:
     // copy each query descriptor to train set countFactor times
     // and perturb some one element of the copied descriptors in
     // in ascending order. General boundaries of the perturbation
