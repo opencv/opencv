@@ -64,7 +64,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     private void startBackgroundThread() {
         Log.i(LOGTAG, "startBackgroundThread");
         stopBackgroundThread();
-        mBackgroundThread = new HandlerThread("CameraBackground");
+        mBackgroundThread = new HandlerThread("OpenCVCameraBackground");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
@@ -111,6 +111,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 Log.i(LOGTAG, "Opening camera: " + mCameraID);
                 manager.openCamera(mCameraID, mStateCallback, mBackgroundHandler);
             }
+            return true;
         } catch (CameraAccessException e) {
             Log.e(LOGTAG, "OpenCamera - Camera Access Exception", e);
         } catch (IllegalArgumentException e) {
@@ -118,7 +119,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         } catch (SecurityException e) {
             Log.e(LOGTAG, "OpenCamera - Security Exception", e);
         }
-        return true;
+        return false;
     }
 
     private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
@@ -192,28 +193,35 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(CameraCaptureSession cameraCaptureSession) {
-                    mCaptureSession = cameraCaptureSession;
-                    try {
-                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            mCameraDevice.createCaptureSession(Arrays.asList(surface),
+                new CameraCaptureSession.StateCallback() {
+                    @Override
+                    public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+                        Log.i(LOGTAG, "createCaptureSession::onConfigured");
+                        if (null == mCameraDevice) {
+                            return; // camera is already closed
+                        }
+                        mCaptureSession = cameraCaptureSession;
+                        try {
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
-                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
-                        Log.i(LOGTAG, "CameraPreviewSession has been started");
-                    } catch (CameraAccessException e) {
-                        Log.e(LOGTAG, "createCaptureSession failed", e);
+                            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
+                            Log.i(LOGTAG, "CameraPreviewSession has been started");
+                        } catch (Exception e) {
+                            Log.e(LOGTAG, "createCaptureSession failed", e);
+                        }
                     }
-                }
 
-                @Override
-                public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
-                    Log.e(LOGTAG, "createCameraPreviewSession failed");
-                }
-            }, mBackgroundHandler);
+                    @Override
+                    public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+                        Log.e(LOGTAG, "createCameraPreviewSession failed");
+                    }
+                },
+                null
+            );
         } catch (CameraAccessException e) {
             Log.e(LOGTAG, "createCameraPreviewSession", e);
         }
@@ -223,13 +231,18 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     protected void disconnectCamera() {
         Log.i(LOGTAG, "closeCamera");
         try {
+            CameraDevice c = mCameraDevice;
+            mCameraDevice = null;
             if (null != mCaptureSession) {
                 mCaptureSession.close();
                 mCaptureSession = null;
             }
-            if (null != mCameraDevice) {
-                mCameraDevice.close();
-                mCameraDevice = null;
+            if (null != c) {
+                c.close();
+            }
+            if (null != mImageReader) {
+                mImageReader.close();
+                mImageReader = null;
             }
         } finally {
             stopBackgroundThread();
@@ -248,8 +261,11 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             int bestWidth = 0, bestHeight = 0;
             float aspect = (float) width / height;
-            for (android.util.Size psize : map.getOutputSizes(ImageReader.class)) {
-                int w = psize.getWidth(), h = psize.getHeight();
+            android.util.Size[] sizes = map.getOutputSizes(ImageReader.class);
+            bestWidth = sizes[0].getWidth();
+            bestHeight = sizes[0].getHeight();
+            for (android.util.Size sz : sizes) {
+                int w = sz.getWidth(), h = sz.getHeight();
                 Log.d(LOGTAG, "trying size: " + w + "x" + h);
                 if (width >= w && height >= h && bestWidth <= w && bestHeight <= h
                         && Math.abs(aspect - (float) w / h) < 0.2) {
@@ -258,8 +274,8 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 }
             }
             Log.i(LOGTAG, "best size: " + bestWidth + "x" + bestHeight);
-            if (bestWidth == 0 || bestHeight == 0 ||
-                    (mPreviewSize.getWidth() == bestWidth && mPreviewSize.getHeight() == bestHeight))
+            assert(!(bestWidth == 0 || bestHeight == 0));
+            if (mPreviewSize.getWidth() == bestWidth && mPreviewSize.getHeight() == bestHeight)
                 return false;
             else {
                 mPreviewSize = new android.util.Size(bestWidth, bestHeight);
@@ -292,15 +308,14 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
             AllocateCache();
 
-            if (!needReconfig) {
-                return false;
+            if (needReconfig) {
+                if (null != mCaptureSession) {
+                    Log.d(LOGTAG, "closing existing previewSession");
+                    mCaptureSession.close();
+                    mCaptureSession = null;
+                }
+                createCameraPreviewSession();
             }
-            if (null != mCaptureSession) {
-                Log.d(LOGTAG, "closing existing previewSession");
-                mCaptureSession.close();
-                mCaptureSession = null;
-            }
-            createCameraPreviewSession();
         } catch (RuntimeException e) {
             throw new RuntimeException("Interrupted while setCameraPreviewSize.", e);
         }
