@@ -2480,9 +2480,7 @@ void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool s
 
 void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi )
 {
-    int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
-    CV_Assert( scn == 2 && depth == CV_8U );
+    CV_Assert( _src.channels() == 2 && _src.depth() == CV_8U );
 
     extractChannel(_src, _dst, coi);
 }

@@ -452,29 +452,24 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(CV_MAT_DEPTH(_src.type()) == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
 
-    int uidx, gbits, ycn;
+    if(dcn <= 0)
+        dcn = dstChannels(code);
 
     switch( code )
     {
         case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
         case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
-            dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
             cvtColorBGR2BGR(_src, _dst, dcn, swapBlue(code));
             break;
 
         case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
         case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
-            gbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
-                    code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
-            cvtColorBGR25x5(_src, _dst, swapBlue(code), gbits);
+            cvtColorBGR25x5(_src, _dst, swapBlue(code), greenBits(code));
             break;
 
         case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
         case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
-            if(dcn <= 0) dcn = (code==COLOR_BGR5652BGRA || code==COLOR_BGR5552BGRA || code==COLOR_BGR5652RGBA || code==COLOR_BGR5552RGBA) ? 4 : 3;
-            gbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
-                    code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
-            cvtColor5x52BGR(_src, _dst, dcn, swapBlue(code), gbits);
+            cvtColor5x52BGR(_src, _dst, dcn, swapBlue(code), greenBits(code));
             break;
 
         case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY: case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
@@ -482,18 +477,15 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
-            gbits = code == COLOR_BGR5652GRAY ? 6 : 5;
-            cvtColor5x52Gray(_src, _dst, gbits);
+            cvtColor5x52Gray(_src, _dst, greenBits(code));
             break;
 
         case COLOR_GRAY2BGR: case COLOR_GRAY2BGRA:
-            if( dcn <= 0 ) dcn = (code==COLOR_GRAY2BGRA) ? 4 : 3;
             cvtColorGray2BGR(_src, _dst, dcn);
             break;
 
         case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
-            gbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
-            cvtColorGray25x5(_src, _dst, gbits);
+            cvtColorGray25x5(_src, _dst, greenBits(code));
             break;
 
         case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
@@ -563,18 +555,14 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
             // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-            if (dcn <= 0) dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
-            uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
-            cvtColorTwoPlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uidx);
+            cvtColorTwoPlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code));
             break;
 
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
         case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
             //http://www.fourcc.org/yuv.php#YV12 == yuv420p -> It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes.
             //http://www.fourcc.org/yuv.php#IYUV == I420 -> It comprises an NxN Y plane followed by (N/2)x(N/2) U and V planes
-            if (dcn <= 0) dcn = (code==COLOR_YUV2BGRA_YV12 || code==COLOR_YUV2RGBA_YV12 || code==COLOR_YUV2RGBA_IYUV || code==COLOR_YUV2BGRA_IYUV) ? 4 : 3;
-            uidx  = (code==COLOR_YUV2BGR_YV12 || code==COLOR_YUV2RGB_YV12 || code==COLOR_YUV2BGRA_YV12 || code==COLOR_YUV2RGBA_YV12) ? 1 : 0;
-            cvtColorThreePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uidx);
+            cvtColorThreePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code));
             break;
 
         case COLOR_YUV2GRAY_420:
@@ -583,8 +571,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case COLOR_RGB2YUV_YV12: case COLOR_BGR2YUV_YV12: case COLOR_RGBA2YUV_YV12: case COLOR_BGRA2YUV_YV12:
         case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
-            uidx = (code == COLOR_BGR2YUV_IYUV || code == COLOR_BGRA2YUV_IYUV || code == COLOR_RGB2YUV_IYUV || code == COLOR_RGBA2YUV_IYUV) ? 1 : 2;
-            cvtColorBGR2ThreePlaneYUV(_src, _dst, swapBlue(code), uidx);
+            cvtColorBGR2ThreePlaneYUV(_src, _dst, swapBlue(code), uIndex(code));
             break;
 
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
@@ -593,11 +580,11 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             //http://www.fourcc.org/yuv.php#UYVY
             //http://www.fourcc.org/yuv.php#YUY2
             //http://www.fourcc.org/yuv.php#YVYU
-            if (dcn <= 0) dcn = (code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY || code==COLOR_YUV2RGBA_YUY2 || code==COLOR_YUV2BGRA_YUY2 || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 4 : 3;
-            ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
-            uidx = (code==COLOR_YUV2RGB_YVYU || code==COLOR_YUV2BGR_YVYU || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 1 : 0;
-            cvtColorOnePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uidx, ycn);
-            break;
+            {
+                int ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
+                cvtColorOnePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code), ycn);
+                break;
+            }
 
         case COLOR_YUV2GRAY_UYVY: case COLOR_YUV2GRAY_YUY2:
             cvtColorYUV2Gray_ch(_src, _dst, code == COLOR_YUV2GRAY_UYVY ? 1 : 0);
@@ -612,7 +599,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
-        }
+    }
 }
 } //namespace cv
 

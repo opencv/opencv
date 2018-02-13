@@ -163,6 +163,83 @@ inline bool isFullRange(int code)
     }
 }
 
+inline int dstChannels(int code)
+{
+    switch( code )
+    {
+        case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2RGBA:
+        case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
+        case COLOR_GRAY2BGRA:
+        case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
+        case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
+        case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
+        case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2:
+
+            return 4;
+
+        case COLOR_BGRA2BGR: case COLOR_RGBA2BGR: case COLOR_RGB2BGR:
+        case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
+        case COLOR_GRAY2BGR:
+        case COLOR_YUV2BGR_NV21: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV12:
+        case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV:
+        case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
+        case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2:
+
+            return 3;
+
+        default:
+            return 0;
+    }
+}
+
+inline int greenBits(int code)
+{
+    switch( code )
+    {
+        case COLOR_BGR2BGR565: case COLOR_RGB2BGR565: case COLOR_BGRA2BGR565: case COLOR_RGBA2BGR565:
+        case COLOR_BGR5652BGR: case COLOR_BGR5652RGB: case COLOR_BGR5652BGRA: case COLOR_BGR5652RGBA:
+        case COLOR_BGR5652GRAY: case COLOR_GRAY2BGR565:
+
+            return 6;
+
+        case COLOR_BGR2BGR555: case COLOR_RGB2BGR555: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR555:
+        case COLOR_BGR5552BGR: case COLOR_BGR5552RGB: case COLOR_BGR5552BGRA: case COLOR_BGR5552RGBA:
+        case COLOR_BGR5552GRAY: case COLOR_GRAY2BGR555:
+
+            return 5;
+
+        default:
+            return 0;
+    }
+}
+
+inline int uIndex(int code)
+{
+    switch( code )
+    {
+        case COLOR_RGB2YUV_YV12: case COLOR_BGR2YUV_YV12: case COLOR_RGBA2YUV_YV12: case COLOR_BGRA2YUV_YV12:
+
+            return 2;
+
+        case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
+        case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
+        case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21:
+        case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
+
+            return 1;
+
+        case COLOR_YUV2BGR_NV12:  case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
+        case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
+        case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
+        case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2:
+
+            return 0;
+
+        default:
+            return -1;
+    }
+}
+
 } // namespace::
 
 template<int i0, int i1 = -1, int i2 = -1>
