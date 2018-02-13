@@ -15,7 +15,7 @@
 * 6- Texture Flattening
 
 * The program takes as input a source and a destination image (for 1-3 methods)
-* and ouputs the cloned image.
+* and outputs the cloned image.
 
 * Step 1:
 * -> In the source image, select the region of interest by left click mouse button. A Polygon ROI will be created by left clicking mouse button.
@@ -447,7 +447,7 @@ int main()
     }
     else
     {
-        cout << "Wrong Option Choosen" << endl;
+        cout << "Wrong Option Chosen" << endl;
         exit(1);
     }
 

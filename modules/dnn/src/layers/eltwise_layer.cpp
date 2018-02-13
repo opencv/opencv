@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencl_kernels_dnn.hpp"
 
 namespace cv
@@ -93,7 +94,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -399,6 +401,27 @@ public:
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Eltwise";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::EltwiseLayer> ieLayer(new InferenceEngine::EltwiseLayer(lp));
+        if (op == SUM)
+            ieLayer->_operation = InferenceEngine::EltwiseLayer::Sum;
+        else if (op == PROD)
+            ieLayer->_operation = InferenceEngine::EltwiseLayer::Prod;
+        else if (op == MAX)
+            ieLayer->_operation = InferenceEngine::EltwiseLayer::Max;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 

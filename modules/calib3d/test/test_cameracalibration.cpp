@@ -42,10 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-#include <limits>
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 #if 0
 class CV_ProjectPointsTest : public cvtest::ArrayTest
@@ -861,7 +858,7 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
     for( int i = 0; i < imageCount; ++rvecsIt, ++tvecsIt, i++, rm+=9, tm+=3 )
     {
         Mat r9( 3, 3, CV_64FC1 );
-        Rodrigues( *rvecsIt, r9 );
+        cvtest::Rodrigues( *rvecsIt, r9 );
         memcpy( rm, r9.ptr(), 9*sizeof(double) );
         memcpy( tm, tvecsIt->ptr(), 3*sizeof(double) );
     }
@@ -878,7 +875,7 @@ void CV_CameraCalibrationTest_CPP::project( int pointCount, CvPoint3D64f* _objec
     Mat cameraMatrix( 3, 3, CV_64FC1, _cameraMatrix );
     Mat distCoeffs( 1, 4, CV_64FC1, distortion );
     vector<Point2f> imagePoints;
-    Rodrigues( rmat, rvec );
+    cvtest::Rodrigues( rmat, rvec );
 
     objectPoints.convertTo( objectPoints, CV_32FC1 );
     projectPoints( objectPoints, rvec, tvec,
@@ -982,7 +979,7 @@ void CV_CalibrationMatrixValuesTest::run(int)
         code = cvtest::TS::FAIL_BAD_ACCURACY;
         goto _exit_;
     }
-    if( norm( principalPoint - goodPrincipalPoint ) > FLT_EPSILON )
+    if( cv::norm(principalPoint - goodPrincipalPoint) > FLT_EPSILON ) // Point2d
     {
         ts->printf( cvtest::TS::LOG, "bad principalPoint\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1117,7 +1114,8 @@ void CV_ProjectPointsTest::run(int)
     rvec(0,0) = rng.uniform( rMinVal, rMaxVal );
     rvec(0,1) = rng.uniform( rMinVal, rMaxVal );
     rvec(0,2) = rng.uniform( rMinVal, rMaxVal );
-    Rodrigues( rvec, rmat );
+    rmat = cv::Mat_<float>::zeros(3, 3);
+    cvtest::Rodrigues( rvec, rmat );
 
     tvec(0,0) = rng.uniform( tMinVal, tMaxVal );
     tvec(0,1) = rng.uniform( tMinVal, tMaxVal );
@@ -2135,7 +2133,7 @@ TEST(Calib3d_Triangulate, accuracy)
     Mat res_, res;
 
     triangulatePoints(P1, P2, x1, x2, res_);
-    transpose(res_, res_);
+    cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
     convertPointsFromHomogeneous(res_, res);
     res = res.reshape(1, 1);
 
@@ -2143,7 +2141,7 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres0: " << res0 << endl;
     cout << "\tres: " << res << endl;
 
-    ASSERT_LE(norm(res, res0, NORM_INF), 1e-1);
+    ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 1e-1);
     }
 
     // another testcase http://code.opencv.org/issues/3461
@@ -2175,7 +2173,7 @@ TEST(Calib3d_Triangulate, accuracy)
     Mat res_, res;
 
     triangulatePoints(P1, P2, x1, x2, res_);
-    transpose(res_, res_);
+    cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
     convertPointsFromHomogeneous(res_, res);
     res = res.reshape(1, 1);
 
@@ -2183,6 +2181,8 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres0: " << res0 << endl;
     cout << "\tres: " << res << endl;
 
-    ASSERT_LE(norm(res, res0, NORM_INF), 2);
+    ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 2);
     }
 }
+
+}} // namespace

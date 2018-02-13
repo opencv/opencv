@@ -43,6 +43,8 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
 
+namespace opencv_test { namespace {
+
 class CV_ChessboardDetectorTimingTest : public cvtest::BaseTest
 {
 public:
@@ -182,4 +184,5 @@ _exit_:
 
 TEST(Calib3d_ChessboardDetector, timing) { CV_ChessboardDetectorTimingTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

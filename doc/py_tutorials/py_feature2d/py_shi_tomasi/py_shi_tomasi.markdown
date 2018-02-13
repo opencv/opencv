@@ -39,7 +39,7 @@ grayscale image. Then you specify number of corners you want to find. Then you s
 level, which is a value between 0-1, which denotes the minimum quality of corner below which
 everyone is rejected. Then we provide the minimum euclidean distance between corners detected.
 
-With all these informations, the function finds corners in the image. All corners below quality
+With all this information, the function finds corners in the image. All corners below quality
 level are rejected. Then it sorts the remaining corners based on quality in the descending order.
 Then function takes first strongest corner, throws away all the nearby corners in the range of
 minimum distance and returns N strongest corners.

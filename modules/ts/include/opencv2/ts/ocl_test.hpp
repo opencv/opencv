@@ -364,4 +364,9 @@ CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WR
 
 } } // namespace cvtest::ocl
 
+namespace opencv_test {
+namespace ocl {
+using namespace cvtest::ocl;
+}} // namespace
+
 #endif // OPENCV_TS_OCL_TEST_HPP

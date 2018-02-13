@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // Remap
@@ -434,3 +432,5 @@ PERF_TEST_P(Sz_Depth_Cn, PyrUp,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

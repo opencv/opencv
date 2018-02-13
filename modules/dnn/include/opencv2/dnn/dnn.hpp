@@ -70,7 +70,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     enum Backend
     {
         DNN_BACKEND_DEFAULT,
-        DNN_BACKEND_HALIDE
+        DNN_BACKEND_HALIDE,
+        DNN_BACKEND_INFERENCE_ENGINE
     };
 
     /**
@@ -241,6 +242,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * Halide tests will be failed).
          */
         virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
@@ -688,7 +691,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
-     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
@@ -716,7 +719,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
-     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
@@ -732,6 +735,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
+    /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
+     *  (std::vector<cv::Mat>).
+     *  @param[in] blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
+     *  which you would like to extract the images.
+     *  @param[out] images_ array of 2D Mat containing the images extracted from the blob in floating point precision
+     *  (CV_32F). They are non normalized neither mean added. The number of returned images equals the first dimension
+     *  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
+     */
+    CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single

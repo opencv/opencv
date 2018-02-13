@@ -122,7 +122,7 @@ Selecting a region of interest:
     Rect r(10, 10, 100, 100);
     Mat smallImg = img(r);
 @endcode
-A convertion from Mat to C API data structures:
+A conversion from Mat to C API data structures:
 @code{.cpp}
     Mat img = imread("image.jpg");
     IplImage img1 = img;

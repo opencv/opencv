@@ -26,7 +26,7 @@ and location.
 ![image](images/surf_boxfilter.jpg)
 
 For orientation assignment, SURF uses wavelet responses in horizontal and vertical direction for a
-neighbourhood of size 6s. Adequate guassian weights are also applied to it. Then they are plotted in
+neighbourhood of size 6s. Adequate gaussian weights are also applied to it. Then they are plotted in
 a space as given in below image. The dominant orientation is estimated by calculating the sum of all
 responses within a sliding orientation window of angle 60 degrees. Interesting thing is that,
 wavelet response can be found out using integral images very easily at any scale. For many

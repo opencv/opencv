@@ -989,6 +989,10 @@ public:
     */
     template<typename _Tp, typename = typename std::enable_if<std::is_arithmetic<_Tp>::value>::type>
     explicit Mat(const std::initializer_list<_Tp> list);
+
+    /** @overload
+    */
+    template<typename _Tp> explicit Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list);
 #endif
 
 #ifdef CV_CXX_STD_ARRAY
@@ -2180,7 +2184,7 @@ public:
     Mat_(int _ndims, const int* _sizes);
     //! n-dim array constructor that sets each matrix element to specified value
     Mat_(int _ndims, const int* _sizes, const _Tp& value);
-    //! copy/conversion contructor. If m is of different type, it's converted
+    //! copy/conversion constructor. If m is of different type, it's converted
     Mat_(const Mat& m);
     //! copy constructor
     Mat_(const Mat_& m);
@@ -2208,6 +2212,7 @@ public:
 
 #ifdef CV_CXX11
     Mat_(std::initializer_list<_Tp> values);
+    explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
 #endif
 
 #ifdef CV_CXX_STD_ARRAY
@@ -2270,7 +2275,7 @@ public:
     static MatExpr eye(int rows, int cols);
     static MatExpr eye(Size size);
 
-    //! some more overriden methods
+    //! some more overridden methods
     Mat_& adjustROI( int dtop, int dbottom, int dleft, int dright );
     Mat_ operator()( const Range& rowRange, const Range& colRange ) const;
     Mat_ operator()( const Rect& roi ) const;
@@ -2938,7 +2943,7 @@ public:
 
     //! the default constructor
     SparseMat_();
-    //! the full constructor equivelent to SparseMat(dims, _sizes, DataType<_Tp>::type)
+    //! the full constructor equivalent to SparseMat(dims, _sizes, DataType<_Tp>::type)
     SparseMat_(int dims, const int* _sizes);
     //! the copy constructor. If DataType<_Tp>.type != m.type(), the m elements are converted
     SparseMat_(const SparseMat& m);

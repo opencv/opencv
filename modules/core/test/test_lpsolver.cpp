@@ -39,7 +39,8 @@
 //
 //M*/
 #include "test_precomp.hpp"
-#include <iostream>
+
+namespace opencv_test { namespace {
 
 TEST(Core_LPSolver, regression_basic){
     cv::Mat A,B,z,etalon_z;
@@ -139,3 +140,5 @@ TEST(Core_LPSolver, regression_cycling){
     //ASSERT_EQ(res,1);
 #endif
 }
+
+}} // namespace

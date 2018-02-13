@@ -41,12 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
-#include <vector>
-#include <string>
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 #undef RENDER_MSERS
 #define RENDER_MSERS 0
@@ -127,7 +123,7 @@ TEST(Features2d_MSER, cases)
         if( invert )
             bitwise_not(src, src);
         if( binarize )
-            threshold(src, src, thresh, 255, THRESH_BINARY);
+            cv::threshold(src, src, thresh, 255, THRESH_BINARY);
         if( blur )
             GaussianBlur(src, src, Size(5, 5), 1.5, 1.5);
 
@@ -182,3 +178,5 @@ TEST(Features2d_MSER, history_update_regression)
         }
     }
 }
+
+}} // namespace

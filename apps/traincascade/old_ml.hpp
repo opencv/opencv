@@ -54,7 +54,7 @@
 #include <iostream>
 
 // Apple defines a check() macro somewhere in the debug headers
-// that interferes with a method definiton in this header
+// that interferes with a method definition in this header
 #undef check
 
 /****************************************************************************************\
@@ -1243,9 +1243,9 @@ struct CvGBTreesParams : public CvDTreeParams
 // weak             - array[0..(class_count-1)] of CvSeq
 //                    for storing tree ensembles
 // orig_response    - original responses of the training set samples
-// sum_response     - predicitons of the current model on the training dataset.
+// sum_response     - predictions of the current model on the training dataset.
 //                    this matrix is updated on every iteration.
-// sum_response_tmp - predicitons of the model on the training set on the next
+// sum_response_tmp - predictions of the model on the training set on the next
 //                    step. On every iteration values of sum_responses_tmp are
 //                    computed via sum_responses values. When the current
 //                    step is complete sum_response values become equal to
@@ -1270,7 +1270,7 @@ struct CvGBTreesParams : public CvDTreeParams
 //                    matrix has the same size as train_data. 1 - missing
 //                    value, 0 - not a missing value.
 // class_labels     - output class labels map.
-// rng              - random number generator. Used for spliting the
+// rng              - random number generator. Used for splitting the
 //                    training set.
 // class_count      - count of output classes.
 //                    class_count == 1 in the case of regression,
@@ -1536,7 +1536,7 @@ public:
     // type  - defines which error is to compute: train (CV_TRAIN_ERROR) or
     //         test (CV_TEST_ERROR).
     // OUTPUT
-    // resp  - vector of predicitons
+    // resp  - vector of predictions
     // RESULT
     // Error value.
     */

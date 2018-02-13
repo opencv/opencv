@@ -7,8 +7,7 @@
 
 #include "test_precomp.hpp"
 
-namespace cvtest
-{
+namespace opencv_test { namespace {
 
 TEST(blobFromImage_4ch, Regression)
 {
@@ -37,4 +36,25 @@ TEST(blobFromImage, allocated)
     ASSERT_EQ(blobData, blob.data);
 }
 
+TEST(imagesFromBlob, Regression)
+{
+    int nbOfImages = 8;
+
+    std::vector<cv::Mat> inputImgs(nbOfImages);
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        inputImgs[i] = cv::Mat::ones(100, 100, CV_32FC3);
+        cv::randu(inputImgs[i], cv::Scalar::all(0), cv::Scalar::all(1));
+    }
+
+    cv::Mat blob = cv::dnn::blobFromImages(inputImgs, 1., cv::Size(), cv::Scalar(), false, false);
+    std::vector<cv::Mat> outputImgs;
+    cv::dnn::imagesFromBlob(blob, outputImgs);
+
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        ASSERT_EQ(cv::countNonZero(inputImgs[i] != outputImgs[i]), 0);
+    }
 }
+
+}} // namespace

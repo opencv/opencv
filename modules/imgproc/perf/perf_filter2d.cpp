@@ -1,17 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using namespace testing;
-using std::tr1::make_tuple;
-using std::tr1::get;
-
+namespace opencv_test {
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 
-typedef TestBaseWithParam< tr1::tuple<Size, int, BorderMode> > TestFilter2d;
-typedef TestBaseWithParam< tr1::tuple<string, int> > Image_KernelSize;
+typedef TestBaseWithParam< tuple<Size, int, BorderMode> > TestFilter2d;
+typedef TestBaseWithParam< tuple<string, int> > Image_KernelSize;
 
 PERF_TEST_P( TestFilter2d, Filter2d,
              Combine(
@@ -37,7 +34,7 @@ PERF_TEST_P( TestFilter2d, Filter2d,
 
     declare.in(src, WARMUP_RNG).out(dst).time(20);
 
-    TEST_CYCLE() filter2D(src, dst, CV_8UC4, kernel, Point(1, 1), 0., borderMode);
+    TEST_CYCLE() cv::filter2D(src, dst, CV_8UC4, kernel, Point(1, 1), 0., borderMode);
 
     SANITY_CHECK(dst, 1);
 }
@@ -64,7 +61,7 @@ PERF_TEST_P(TestFilter2d, Filter2d_ovx,
 
     declare.in(src, WARMUP_RNG).out(dst).time(20);
 
-    TEST_CYCLE() filter2D(src, dst, CV_16SC1, kernel, Point(kSize / 2, kSize / 2), 0., borderMode);
+    TEST_CYCLE() cv::filter2D(src, dst, CV_16SC1, kernel, Point(kSize / 2, kSize / 2), 0., borderMode);
 
     SANITY_CHECK(dst, 1);
 }
@@ -94,8 +91,10 @@ PERF_TEST_P( Image_KernelSize, GaborFilter2d,
 
     TEST_CYCLE()
     {
-        filter2D(sourceImage, filteredImage, CV_32F, gaborKernel);
+        cv::filter2D(sourceImage, filteredImage, CV_32F, gaborKernel);
     }
 
     SANITY_CHECK(filteredImage, 1e-6, ERROR_RELATIVE);
 }
+
+} // namespace

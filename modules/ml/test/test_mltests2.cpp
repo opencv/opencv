@@ -43,8 +43,7 @@
 
 //#define GENERATE_TESTDATA
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 int str_to_svm_type(String& str)
 {
@@ -89,6 +88,7 @@ int str_to_ann_train_method( String& str )
     return -1;
 }
 
+#if 0
 int str_to_ann_activation_function(String& str)
 {
     if (!str.compare("IDENTITY"))
@@ -104,6 +104,7 @@ int str_to_ann_activation_function(String& str)
     CV_Error(CV_StsBadArg, "incorrect ann activation function string");
     return -1;
 }
+#endif
 
 void ann_check_data( Ptr<TrainData> _data )
 {
@@ -372,6 +373,8 @@ int str_to_margin_type( String& str )
         return SVMSGD::HARD_MARGIN;
     CV_Error( CV_StsBadArg, "incorrect svmsgd margin type string" );
     return -1;
+}
+
 }
 // ---------------------------------- MLBaseTest ---------------------------------------------------
 
@@ -700,4 +703,5 @@ void CV_MLBaseTest::load( const char* filename )
         CV_Error( CV_StsNotImplemented, "invalid stat model name");
 }
 
+} // namespace
 /* End of file. */

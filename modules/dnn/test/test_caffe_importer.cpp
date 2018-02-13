@@ -45,11 +45,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -460,10 +456,11 @@ TEST(Test_Caffe, multiple_inputs)
     normAssert(out, first_image + second_image);
 }
 
-TEST(Test_Caffe, opencv_face_detector)
+typedef testing::TestWithParam<std::string> opencv_face_detector;
+TEST_P(opencv_face_detector, Accuracy)
 {
     std::string proto = findDataFile("dnn/opencv_face_detector.prototxt", false);
-    std::string model = findDataFile("dnn/opencv_face_detector.caffemodel", false);
+    std::string model = findDataFile(GetParam(), false);
 
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
@@ -482,6 +479,11 @@ TEST(Test_Caffe, opencv_face_detector)
                                     0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref);
 }
+INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector, Values(
+    "dnn/opencv_face_detector.caffemodel",
+    "dnn/opencv_face_detector_fp16.caffemodel"
+));
+
 
 TEST(Test_Caffe, FasterRCNN_and_RFCN)
 {
@@ -525,4 +527,4 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
     }
 }
 
-}
+}} // namespace

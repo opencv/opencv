@@ -41,11 +41,7 @@
 
 #include "test_precomp.hpp"
 
-#include <iostream>
-#include <fstream>
-
-using namespace cv;
-using namespace std;
+namespace opencv_test {
 
 CV_SLMLTest::CV_SLMLTest( const char* _modelName ) : CV_MLBaseTest( _modelName )
 {
@@ -147,6 +143,8 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     }
     return code;
 }
+
+namespace {
 
 TEST(ML_NaiveBayes, save_load) { CV_SLMLTest test( CV_NBAYES ); test.safe_run(); }
 TEST(ML_KNearest, save_load) { CV_SLMLTest test( CV_KNEAREST ); test.safe_run(); }
@@ -295,10 +293,11 @@ TEST(DISABLED_ML_SVM, linear_save_load)
     svm3->predict(samples, r3);
 
     double eps = 1e-4;
-    EXPECT_LE(norm(r1, r2, NORM_INF), eps);
-    EXPECT_LE(norm(r1, r3, NORM_INF), eps);
+    EXPECT_LE(cvtest::norm(r1, r2, NORM_INF), eps);
+    EXPECT_LE(cvtest::norm(r1, r3, NORM_INF), eps);
 
     remove(tname.c_str());
 }
 
+}} // namespace
 /* End of file. */

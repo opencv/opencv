@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // FAST
@@ -54,8 +54,6 @@ namespace
     IMPLEMENT_PARAM_CLASS(FAST_Threshold, int)
     IMPLEMENT_PARAM_CLASS(FAST_NonmaxSuppression, bool)
 }
-
-namespace {
 
 PARAM_TEST_CASE(FAST, cv::cuda::DeviceInfo, FAST_Threshold, FAST_NonmaxSuppression)
 {
@@ -710,6 +708,5 @@ INSTANTIATE_TEST_CASE_P(CUDA_Features2D, BruteForceMatcher, testing::Combine(
     testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
     testing::Values(UseMask(false), UseMask(true))));
 
-} // namespace
-
+}} // namespace
 #endif // HAVE_CUDA

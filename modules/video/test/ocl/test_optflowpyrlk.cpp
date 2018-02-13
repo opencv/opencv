@@ -48,9 +48,7 @@
 
 #ifdef HAVE_OPENCL
 
-
-namespace cvtest {
-namespace ocl {
+namespace opencv_test { namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // PyrLKOpticalFlow
@@ -158,7 +156,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlow,
                                 )
                            );
 
-} } // namespace cvtest::ocl
 
-
+}} // namespace
 #endif // HAVE_OPENCL

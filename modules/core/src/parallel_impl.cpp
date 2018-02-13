@@ -197,7 +197,6 @@ public:
     volatile bool stop_thread;
 
     volatile bool has_wake_signal;
-    volatile bool dont_wait;
 
     Ptr<ParallelJob> job;
 
@@ -213,8 +212,7 @@ public:
         posix_thread(0),
         is_created(false),
         stop_thread(false),
-        has_wake_signal(false),
-        dont_wait(false)
+        has_wake_signal(false)
 #if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
         , isActive(true)
 #endif
@@ -386,7 +384,7 @@ void WorkerThread::thread_body()
 
     while (!stop_thread)
     {
-        CV_LOG_VERBOSE(NULL, 5, "Thread: ... loop iteration: allow_active_wait=" << allow_active_wait << "   has_wake_signal=" << has_wake_signal << "   dont_wait=" << dont_wait   );
+        CV_LOG_VERBOSE(NULL, 5, "Thread: ... loop iteration: allow_active_wait=" << allow_active_wait << "   has_wake_signal=" << has_wake_signal);
         if (allow_active_wait && CV_WORKER_ACTIVE_WAIT > 0)
         {
             allow_active_wait = false;
@@ -404,7 +402,7 @@ void WorkerThread::thread_body()
 #ifdef CV_PROFILE_THREADS
         stat.threadWait = getTickCount();
 #endif
-        while (!has_wake_signal && !dont_wait) // to handle spurious wakeups
+        while (!has_wake_signal) // to handle spurious wakeups
         {
             //CV_LOG_VERBOSE(NULL, 5, "Thread: wait (sleep) ...");
 #if defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
@@ -416,7 +414,6 @@ void WorkerThread::thread_body()
 #endif
             CV_LOG_VERBOSE(NULL, 5, "Thread: wake ... (has_wake_signal=" << has_wake_signal << " stop_thread=" << stop_thread << ")")
         }
-        dont_wait = false;
 #ifdef CV_PROFILE_THREADS
         stat.threadWake = getTickCount();
 #endif
@@ -479,7 +476,6 @@ void WorkerThread::thread_body()
                 }
                 else
                 {
-                    has_wake_signal = false;
                     CV_LOG_VERBOSE(NULL, 5, "Thread: no free job tasks");
                 }
             }
@@ -611,12 +607,11 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
 #if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
                     isActive = threads[i]->isActive;
 #endif
-                    threads[i]->dont_wait = true;
+                    threads[i]->has_wake_signal = true;
 #ifdef CV_PROFILE_THREADS
                     threads_stat[i + 1].reset();
 #endif
                     pthread_mutex_unlock(&threads[i]->mutex);
-                    threads[i]->has_wake_signal = true;
 #if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
                     if (!isActive)
                     {
@@ -628,7 +623,6 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
                 {
                     CV_Assert(threads[i]->job.empty());
                     threads[i]->job = job;
-                    threads[i]->dont_wait = true;
                     threads[i]->has_wake_signal = true;
 #ifdef CV_PROFILE_THREADS
                     threads_stat[i + 1].reset();
@@ -736,7 +730,7 @@ void ThreadPool::setNumOfThreads(unsigned n)
     {
         num_threads = n;
         if (n == 1)
-           if (job == NULL) reconfigure(0);  // stop worker threads immediatelly
+           if (job == NULL) reconfigure(0);  // stop worker threads immediately
     }
 }
 

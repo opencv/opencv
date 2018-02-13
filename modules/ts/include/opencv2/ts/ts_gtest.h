@@ -18240,9 +18240,9 @@ internal::CartesianProductHolder10<Generator1, Generator2, Generator3,
 // alphanumeric characters or underscore.
 
 # define INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator, ...) \
-  ::testing::internal::ParamGenerator<test_case_name::ParamType> \
+  static ::testing::internal::ParamGenerator<test_case_name::ParamType> \
       gtest_##prefix##test_case_name##_EvalGenerator_() { return generator; } \
-  ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
+  static ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
       const ::testing::TestParamInfo<test_case_name::ParamType>& info) { \
     return ::testing::internal::GetParamNameGen<test_case_name::ParamType> \
         (__VA_ARGS__)(info); \

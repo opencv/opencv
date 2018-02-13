@@ -48,11 +48,6 @@
 
 #include <opencv2/viz/vizcore.hpp>
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <limits>
-
 namespace cv
 {
     struct Path

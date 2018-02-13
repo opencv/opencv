@@ -181,7 +181,7 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
             break;
         }
         default:
-            CV_Assert("setPointCloudRenderingProperties: Unknown property");
+            CV_Assert("setRenderingProperty: Unknown property");
     }
     actor->Modified();
 }
@@ -202,6 +202,8 @@ double cv::viz::Widget::getRenderingProperty(int property) const
 #else
         case IMMEDIATE_RENDERING: std::cerr << "this property has no effect" << std::endl; break;
 #endif
+        case AMBIENT: value = actor->GetProperty()->GetAmbient(); break;
+        case LIGHTING: value = actor->GetProperty()->GetLighting(); break;
         case FONT_SIZE:
         {
             vtkTextActor* text_actor = vtkTextActor::SafeDownCast(actor);
@@ -230,7 +232,7 @@ double cv::viz::Widget::getRenderingProperty(int property) const
             break;
         }
         default:
-            CV_Assert("getPointCloudRenderingProperties: Unknown property");
+            CV_Assert("getRenderingProperty: Unknown property");
     }
     return value;
 }
@@ -284,6 +286,10 @@ cv::Affine3d cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
+    if (!actor->GetUserMatrix())
+    {
+        return Affine3d(); // empty user matrix, return an identity transform.
+    }
     return Affine3d(*actor->GetUserMatrix()->Element);
 }
 
@@ -294,9 +300,9 @@ void cv::viz::Widget3D::applyTransform(const Affine3d &transform)
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
     CV_Assert("Widget doesn't have a polydata mapper" && mapper);
-    mapper->Update();
 
     VtkUtils::SetInputData(mapper, VtkUtils::TransformPolydata(mapper->GetInput(), transform));
+    mapper->Update();
 }
 
 void cv::viz::Widget3D::setColor(const Color &color)

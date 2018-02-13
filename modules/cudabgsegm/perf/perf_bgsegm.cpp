@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////
 // MOG
@@ -390,3 +388,5 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 }
 
 #endif
+
+}} // namespace

@@ -11,6 +11,7 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include "opencl_kernels_dnn.hpp"
 
@@ -103,7 +104,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
 #ifdef HAVE_OPENCL
@@ -226,6 +228,19 @@ public:
 #endif  // HAVE_HALIDE
                 break;
             }
+            case DNN_BACKEND_INFERENCE_ENGINE:
+            {
+#ifdef HAVE_INF_ENGINE
+                auto base = node.dynamicCast<InfEngineBackendNode>();
+                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
+                if (conv)
+                {
+                    fuseConvWeights(conv, weights_, bias_);
+                    return base;
+                }
+#endif  // HAVE_INF_ENGINE
+                break;
+            }
         }
         return Ptr<BackendNode>();
     }
@@ -256,6 +271,23 @@ public:
         return top;
     }
 #endif  // HAVE_HALIDE
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
+        ieLayer->_weights = wrapToInfEngineBlob(weights_);
+        ieLayer->_biases = wrapToInfEngineBlob(bias_);
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const

@@ -87,7 +87,7 @@ namespace cv
 
         /////////////////////////////////////////////////////////////////////////////
 
-        /** @brief Base class of all widgets. Widget is implicitly shared. :
+        /** @brief Base class of all widgets. Widget is implicitly shared.
         */
         class CV_EXPORTS Widget
         {
@@ -108,22 +108,22 @@ namespace cv
             @param property Property that will be modified.
             @param value The new value of the property.
 
-            **Rendering property** can be one of the following:
+            Rendering property can be one of the following:
             -   **POINT_SIZE**
             -   **OPACITY**
             -   **LINE_WIDTH**
             -   **FONT_SIZE**
-            -
-            **REPRESENTATION**: Expected values are
+
+            REPRESENTATION: Expected values are
             -   **REPRESENTATION_POINTS**
             -   **REPRESENTATION_WIREFRAME**
             -   **REPRESENTATION_SURFACE**
-            -
-            **IMMEDIATE_RENDERING**:
+
+            IMMEDIATE_RENDERING:
             -   Turn on immediate rendering by setting the value to 1.
             -   Turn off immediate rendering by setting the value to 0.
-            -
-            **SHADING**: Expected values are
+
+            SHADING: Expected values are
             -   **SHADING_FLAT**
             -   **SHADING_GOURAUD**
             -   **SHADING_PHONG**
@@ -133,24 +133,24 @@ namespace cv
 
             @param property Property.
 
-            **Rendering property** can be one of the following:
+            Rendering property can be one of the following:
             -   **POINT_SIZE**
             -   **OPACITY**
             -   **LINE_WIDTH**
             -   **FONT_SIZE**
             -   **AMBIENT**
-            -
-            **REPRESENTATION**: Expected values are
-            :   -   **REPRESENTATION_POINTS**
+
+            REPRESENTATION: Expected values are
+            -   **REPRESENTATION_POINTS**
             -   **REPRESENTATION_WIREFRAME**
             -   **REPRESENTATION_SURFACE**
-            -
+
             **IMMEDIATE_RENDERING**:
-            :   -   Turn on immediate rendering by setting the value to 1.
+            -   Turn on immediate rendering by setting the value to 1.
             -   Turn off immediate rendering by setting the value to 0.
-            -
-            **SHADING**: Expected values are
-            :   -   **SHADING_FLAT**
+
+            SHADING: Expected values are
+            -   **SHADING_FLAT**
             -   **SHADING_GOURAUD**
             -   **SHADING_PHONG**
              */
@@ -306,7 +306,7 @@ namespace cv
         class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            /** @brief Constructs default planar circle centred at origin with plane normal along z-axis
+            /** @brief Constructs default planar circle centered at origin with plane normal along z-axis
 
             @param radius Radius of the circle.
             @param thickness Thickness of the circle.

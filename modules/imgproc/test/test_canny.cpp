@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_CannyTest : public cvtest::ArrayTest
 {
@@ -426,4 +425,5 @@ TEST_P(CannyVX, Accuracy)
                 )
     );
 
+}} // namespace
 /* End of file. */

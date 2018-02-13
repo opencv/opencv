@@ -4,8 +4,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 TEST(Features2d_AKAZE, detect_and_compute_split)
 {
@@ -45,3 +44,5 @@ TEST(Features2d_AKAZE, uninitialized_and_nans)
     Ptr<Feature2D> akaze = AKAZE::create();
     akaze->detectAndCompute(b1, noArray(), keypoints, desc);
 }
+
+}} // namespace

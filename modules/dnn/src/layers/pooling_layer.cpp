@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include <float.h>
 #include <algorithm>
@@ -130,7 +131,8 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == MAX || type == AVE && !pad.width && !pad.height);
+               (type == MAX || type == AVE && !pad.width && !pad.height) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (type == MAX || type == AVE);
     }
 
 #ifdef HAVE_OPENCL
@@ -222,6 +224,35 @@ public:
             return Ptr<BackendNode>();
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Pooling";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::PoolingLayer> ieLayer(new InferenceEngine::PoolingLayer(lp));
+
+        ieLayer->_kernel_x = kernel.width;
+        ieLayer->_kernel_y = kernel.height;
+        ieLayer->_stride_x = stride.width;
+        ieLayer->_stride_y = stride.height;
+        ieLayer->_padding_x = pad.width;
+        ieLayer->_padding_y = pad.height;
+        ieLayer->_exclude_pad = type == AVE && padMode == "SAME";
+        ieLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
+        if (type == MAX)
+            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
+        else if (type == AVE)
+            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::AVG;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
     class PoolingInvoker : public ParallelLoopBody
     {
     public:
@@ -289,7 +320,7 @@ public:
             bool compMaxIdx = computeMaxIdx;
 
 #if CV_SIMD128
-            const int* ofsptr = &ofsbuf[0];
+            const int* ofsptr = ofsbuf.empty() ? 0 : (const int*)&ofsbuf[0];
             v_float32x4 idx00(0.f, (float)stride_w, (float)(stride_w*2), (float)(stride_w*3));
             v_float32x4 ones = v_setall_f32(1.f);
             v_float32x4 idx_delta = v_setall_f32((float)(inp_width - kernel_w));

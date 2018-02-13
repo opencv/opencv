@@ -1,6 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "opencv2/core/hal/intrin.hpp"
 
-namespace cvtest { namespace hal {
+namespace opencv_test { namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 void test_hal_intrin_float16x4();

@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // BlendLinear
@@ -86,3 +84,5 @@ PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace
