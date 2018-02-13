@@ -291,6 +291,65 @@ struct CvtHelper
     int depth, scn;
 };
 
+
+template< typename VScn, typename VDcn, typename VDepth >
+struct OclHelper
+{
+    OclHelper( InputArray _src, OutputArray _dst, int dcn)
+    {
+        src = _src.getUMat();
+        Size sz = src.size(), dstSz = sz;
+        int scn = src.channels();
+        int depth = src.depth();
+
+        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        srcarg = ocl::KernelArg::ReadOnlyNoSize(src);
+        dstarg = ocl::KernelArg::WriteOnly(dst);
+    }
+
+    bool createKernel(cv::String name, ocl::ProgramSource& source, cv::String options)
+    {
+        ocl::Device dev = ocl::Device::getDefault();
+        int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+
+        globalSize[0] = (size_t)src.cols;
+        globalSize[1] = ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy;
+
+        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                                        src.depth(), src.channels(), pxPerWIy);
+
+        k.create(name.c_str(), source, baseOptions + options);
+
+        if(k.empty())
+            return false;
+
+        nArgs = k.set(0, srcarg);
+        nArgs = k.set(nArgs, dstarg);
+        return true;
+    }
+
+    bool run()
+    {
+        return k.run(2, globalSize, NULL, false);
+    }
+
+    template<typename T>
+    void setArg(const T& arg)
+    {
+        nArgs = k.set(nArgs, arg);
+    }
+
+    UMat src, dst;
+    ocl::Kernel k;
+    size_t globalSize[2];
+    ocl::KernelArg srcarg, dstarg;
+    int nArgs;
+};
+
 ///////////////////////////// Top-level template function ////////////////////////////////
 
 template <typename Cvt>
@@ -563,6 +622,8 @@ bool oclCvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
 bool oclCvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
 bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx );
 bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx );
+
+bool oclCvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst);
 
 void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
 void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
