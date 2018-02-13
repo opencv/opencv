@@ -61,7 +61,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
-    private Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
     public JavaCamera2View(Context context, int cameraId) {
         super(context, cameraId);
@@ -117,10 +116,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 }
             }
             if(mCameraID != null) {
-                if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-                    throw new RuntimeException(
-                            "Time out waiting to lock camera opening.");
-                }
                 Log.i(LOGTAG, "Opening camera: " + mCameraID);
                 manager.openCamera(mCameraID, mStateCallback, mBackgroundHandler);
             }
@@ -130,8 +125,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             Log.e(LOGTAG, "OpenCamera - Illegal Argument Exception");
         } catch (SecurityException e) {
             Log.e(LOGTAG, "OpenCamera - Security Exception");
-        } catch (InterruptedException e) {
-            Log.e(LOGTAG, "OpenCamera - Interrupted Exception");
         }
         return true;
     }
@@ -141,7 +134,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         @Override
         public void onOpened(CameraDevice cameraDevice) {
             mCameraDevice = cameraDevice;
-            mCameraOpenCloseLock.release();
             createCameraPreviewSession();
         }
 
@@ -149,14 +141,12 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         public void onDisconnected(CameraDevice cameraDevice) {
             cameraDevice.close();
             mCameraDevice = null;
-            mCameraOpenCloseLock.release();
         }
 
         @Override
         public void onError(CameraDevice cameraDevice, int error) {
             cameraDevice.close();
             mCameraDevice = null;
-            mCameraOpenCloseLock.release();
         }
 
     };
@@ -167,14 +157,11 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         if(w<0 || h<0)
             return;
         try {
-            mCameraOpenCloseLock.acquire();
             if (null == mCameraDevice) {
-                mCameraOpenCloseLock.release();
                 Log.e(LOGTAG, "createCameraPreviewSession: camera isn't opened");
                 return;
             }
             if (null != mCaptureSession) {
-                mCameraOpenCloseLock.release();
                 Log.e(LOGTAG, "createCameraPreviewSession: mCaptureSession is already started");
                 return;
             }
@@ -226,24 +213,16 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                             } catch (CameraAccessException e) {
                                 Log.e(LOGTAG, "createCaptureSession failed");
                             }
-                            mCameraOpenCloseLock.release();
                         }
 
                         @Override
                         public void onConfigureFailed(
                                 CameraCaptureSession cameraCaptureSession) {
                             Log.e(LOGTAG, "createCameraPreviewSession failed");
-                            mCameraOpenCloseLock.release();
                         }
                     }, mBackgroundHandler);
         } catch (CameraAccessException e) {
             Log.e(LOGTAG, "createCameraPreviewSession");
-        } catch (InterruptedException e) {
-            throw new RuntimeException(
-                    "Interrupted while createCameraPreviewSession", e);
-        }
-        finally {
-            //mCameraOpenCloseLock.release();
         }
     }
 
@@ -251,7 +230,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     protected void disconnectCamera() {
         Log.i(LOGTAG, "closeCamera");
         try {
-            mCameraOpenCloseLock.acquire();
             if (null != mCaptureSession) {
                 mCaptureSession.close();
                 mCaptureSession = null;
@@ -260,10 +238,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 mCameraDevice.close();
                 mCameraDevice = null;
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
         } finally {
-            mCameraOpenCloseLock.release();
             stopBackgroundThread();
         }
     }
@@ -315,8 +290,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         startBackgroundThread();
         initializeCamera();
         try {
-            mCameraOpenCloseLock.acquire();
-
             boolean needReconfig = calcPreviewSize(width, height);
             mFrameWidth  = mPreviewSize.getWidth();
             mFrameHeight = mPreviewSize.getHeight();
@@ -324,7 +297,6 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             AllocateCache();
 
             if( !needReconfig ) {
-                mCameraOpenCloseLock.release();
                 return false;
             }
             if (null != mCaptureSession) {
@@ -332,10 +304,8 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 mCaptureSession.close();
                 mCaptureSession = null;
             }
-            mCameraOpenCloseLock.release();
             createCameraPreviewSession();
-        } catch (InterruptedException e) {
-            mCameraOpenCloseLock.release();
+        } catch (RuntimeException e) {
             throw new RuntimeException("Interrupted while setCameraPreviewSize.", e);
         }
         return true;
