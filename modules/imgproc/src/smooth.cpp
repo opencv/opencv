@@ -1930,33 +1930,17 @@ void hlineSmooth3N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
 
         src += cn; dst += cn;
         int i = cn, lencn = (len - 1)*cn;
-        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
-        v_int16x8 v_mul2 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 2))));
+        v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
+        v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)(m + 1)));
+        v_uint16x8 v_mul2 = v_setall_u16(*((uint16_t*)(m + 2)));
         for (; i < lencn - 15; i += 16, src += 16, dst += 16)
         {
-            v_uint16x8 v_src00, v_src01, v_src10, v_src11;
-            v_int16x8 v_tmp0, v_tmp1;
-
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
             v_expand(v_load(src - cn), v_src00, v_src01);
             v_expand(v_load(src), v_src10, v_src11);
-            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
-            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
-            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
-            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul01);
-
-            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
-            v_expand(v_load(src + cn), v_src00, v_src01);
-            v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul2, v_resj0, v_resj1);
-            v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul2, v_resj2, v_resj3);
-            v_res0 += v_resj0;
-            v_res1 += v_resj1;
-            v_res2 += v_resj2;
-            v_res3 += v_resj3;
-
-            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
-            v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+            v_expand(v_load(src + cn), v_src20, v_src21);
+            v_store((uint16_t*)dst, v_src00 * v_mul0 + v_src10 * v_mul1 + v_src20 * v_mul2);
+            v_store((uint16_t*)dst + 8, v_src01 * v_mul0 + v_src11 * v_mul1 + v_src21 * v_mul2);
         }
         for (; i < lencn; i++, src++, dst++)
             *dst = m[0] * src[-cn] + m[1] * src[0] + m[2] * src[cn];
@@ -2128,22 +2112,16 @@ void hlineSmooth3Naba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const 
 
         src += cn; dst += cn;
         int i = cn, lencn = (len - 1)*cn;
-        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+        v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
+        v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)m+1));
         for (; i < lencn - 15; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
-            v_int16x8 v_tmp0, v_tmp1;
             v_expand(v_load(src - cn), v_src00, v_src01);
             v_expand(v_load(src), v_src10, v_src11);
             v_expand(v_load(src + cn), v_src20, v_src21);
-            v_zip(v_reinterpret_as_s16(v_src00 + v_src20), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
-            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
-            v_zip(v_reinterpret_as_s16(v_src01 + v_src21), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
-            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul01);
-            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
-            v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+            v_store((uint16_t*)dst, (v_src00 + v_src20) * v_mul0 + v_src10 * v_mul1);
+            v_store((uint16_t*)dst + 8, (v_src01 + v_src21) * v_mul0 + v_src11 * v_mul1);
         }
         for (; i < lencn; i++, src++, dst++)
             *((uint16_t*)dst) = ((uint16_t*)m)[1] * src[0] + ((uint16_t*)m)[0] * ((uint16_t)(src[-cn]) + (uint16_t)(src[cn]));
@@ -2330,44 +2308,21 @@ void hlineSmooth5N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
 
         src += 2 * cn; dst += 2 * cn;
         int i = 2*cn, lencn = (len - 2)*cn;
-        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
-        v_int16x8 v_mul23 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + 2))));
-        v_int16x8 v_mul4 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 4))));
+        v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
+        v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)(m + 1)));
+        v_uint16x8 v_mul2 = v_setall_u16(*((uint16_t*)(m + 2)));
+        v_uint16x8 v_mul3 = v_setall_u16(*((uint16_t*)(m + 3)));
+        v_uint16x8 v_mul4 = v_setall_u16(*((uint16_t*)(m + 4)));
         for (; i < lencn - 15; i += 16, src += 16, dst += 16)
         {
-            v_uint16x8 v_src00, v_src01, v_src10, v_src11;
-            v_int16x8 v_tmp0, v_tmp1;
-
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
             v_expand(v_load(src - 2*cn), v_src00, v_src01);
             v_expand(v_load(src - cn), v_src10, v_src11);
-            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
-            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
-            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
-            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul01);
-
-
-            v_expand(v_load(src), v_src00, v_src01);
-            v_expand(v_load(src + cn), v_src10, v_src11);
-            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
-            v_res0 += v_dotprod(v_tmp0, v_mul23);
-            v_res1 += v_dotprod(v_tmp1, v_mul23);
-            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
-            v_res2 += v_dotprod(v_tmp0, v_mul23);
-            v_res3 += v_dotprod(v_tmp1, v_mul23);
-
-            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
-            v_expand(v_load(src + 2*cn), v_src00, v_src01);
-            v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul4, v_resj0, v_resj1);
-            v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul4, v_resj2, v_resj3);
-            v_res0 += v_resj0;
-            v_res1 += v_resj1;
-            v_res2 += v_resj2;
-            v_res3 += v_resj3;
-
-            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
-            v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+            v_expand(v_load(src), v_src20, v_src21);
+            v_expand(v_load(src + cn), v_src30, v_src31);
+            v_expand(v_load(src + 2*cn), v_src40, v_src41);
+            v_store((uint16_t*)dst, v_src00 * v_mul0 + v_src10 * v_mul1 + v_src20 * v_mul2 + v_src30 * v_mul3 + v_src40 * v_mul4);
+            v_store((uint16_t*)dst + 8, v_src01 * v_mul0 + v_src11 * v_mul1 + v_src21 * v_mul2 + v_src31 * v_mul3 + v_src41 * v_mul4);
         }
         for (; i < lencn; i++, src++, dst++)
             *dst = m[0] * src[-2*cn] + m[1] * src[-cn] + m[2] * src[0] + m[3] * src[cn] + m[4] * src[2*cn];
@@ -2770,36 +2725,19 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
 
         src += 2 * cn; dst += 2 * cn;
         int i = 2 * cn, lencn = (len - 2)*cn;
-        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
-        v_int16x8 v_mul2 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 2))));
+        v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
+        v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)(m + 1)));
+        v_uint16x8 v_mul2 = v_setall_u16(*((uint16_t*)(m + 2)));
         for (; i < lencn - 15; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
-            v_int16x8 v_tmp0, v_tmp1;
-
             v_expand(v_load(src - 2 * cn), v_src00, v_src01);
             v_expand(v_load(src - cn), v_src10, v_src11);
             v_expand(v_load(src), v_src20, v_src21);
             v_expand(v_load(src + cn), v_src30, v_src31);
             v_expand(v_load(src + 2 * cn), v_src40, v_src41);
-
-            v_zip(v_reinterpret_as_s16(v_src00 + v_src40), v_reinterpret_as_s16(v_src10 + v_src30), v_tmp0, v_tmp1);
-            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
-            v_zip(v_reinterpret_as_s16(v_src01 + v_src41), v_reinterpret_as_s16(v_src11 + v_src31), v_tmp0, v_tmp1);
-            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul01);
-            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul01);
-
-            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
-            v_mul_expand(v_reinterpret_as_s16(v_src20), v_mul2, v_resj0, v_resj1);
-            v_mul_expand(v_reinterpret_as_s16(v_src21), v_mul2, v_resj2, v_resj3);
-            v_res0 += v_resj0;
-            v_res1 += v_resj1;
-            v_res2 += v_resj2;
-            v_res3 += v_resj3;
-
-            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
-            v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+            v_store((uint16_t*)dst, (v_src00 + v_src40) * v_mul0 + (v_src10 + v_src30)* v_mul1 + v_src20 * v_mul2);
+            v_store((uint16_t*)dst + 8, (v_src01 + v_src41) * v_mul0 + (v_src11 + v_src31) * v_mul1 + v_src21 * v_mul2);
         }
         for (; i < lencn; i++, src++, dst++)
             *((uint16_t*)dst) = ((uint16_t*)m)[0] * ((uint16_t)(src[-2 * cn]) + (uint16_t)(src[2 * cn])) + ((uint16_t*)m)[1] * ((uint16_t)(src[-cn]) + (uint16_t)(src[cn])) + ((uint16_t*)m)[2] * src[0];
@@ -2912,49 +2850,20 @@ void hlineSmooth<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixe
     int lencn = (len - post_shift + 1)*cn;
     for (; i < lencn - 15; i+=16, src+=16, dst+=16)
     {
-        v_uint16x8 v_src00, v_src01, v_src10, v_src11;
-        v_int16x8 v_tmp0, v_tmp1;
-
-        v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
-
-        v_expand(v_load(src), v_src00, v_src01);
-        v_expand(v_load(src+cn), v_src10, v_src11);
-        v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
-        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
-        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
-        v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
-        v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul);
-        v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul);
-
-        int j = 2;
-        for (; j < n - 1; j += 2)
+        v_uint16x8 v_src0, v_src1;
+        v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
+        v_expand(v_load(src), v_src0, v_src1);
+        v_uint16x8 v_res0 = v_src0 * v_mul;
+        v_uint16x8 v_res1 = v_src1 * v_mul;
+        for (int j = 1; j < n; j++)
         {
-            v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + j))));
-
-            v_expand(v_load(src + j * cn), v_src00, v_src01);
-            v_expand(v_load(src + (j + 1) * cn), v_src10, v_src11);
-            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
-            v_res0 += v_dotprod(v_tmp0, v_mul);
-            v_res1 += v_dotprod(v_tmp1, v_mul);
-            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
-            v_res2 += v_dotprod(v_tmp0, v_mul);
-            v_res3 += v_dotprod(v_tmp1, v_mul);
+            v_mul = v_setall_u16(*((uint16_t*)(m + j)));
+            v_expand(v_load(src + j * cn), v_src0, v_src1);
+            v_res0 += v_src0 * v_mul;
+            v_res1 += v_src1 * v_mul;
         }
-        if (j < n)
-        {
-            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
-            v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
-            v_expand(v_load(src + j * cn), v_src00, v_src01);
-            v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul, v_resj0, v_resj1);
-            v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul, v_resj2, v_resj3);
-            v_res0 += v_resj0;
-            v_res1 += v_resj1;
-            v_res2 += v_resj2;
-            v_res3 += v_resj3;
-        }
-
-        v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
-        v_store((uint16_t*)dst+8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+        v_store((uint16_t*)dst, v_res0);
+        v_store((uint16_t*)dst+8, v_res1);
     }
     for (; i < lencn; i++, src++, dst++)
     {
@@ -3067,65 +2976,23 @@ void hlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, co
     int lencn = (len - post_shift + 1)*cn;
     for (; i < lencn - 15; i += 16, src += 16, dst += 16)
     {
-        v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_srcN00, v_srcN01, v_srcN10, v_srcN11;
-        v_int16x8 v_tmp0, v_tmp1;
+        v_uint16x8 v_src00, v_src01, v_srcN00, v_srcN01;
 
-        v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
-
-        v_expand(v_load(src), v_src00, v_src01);
-        v_expand(v_load(src + cn), v_src10, v_src11);
-        v_expand(v_load(src + (n - 1)*cn), v_srcN00, v_srcN01);
-        v_expand(v_load(src + (n - 2)*cn), v_srcN10, v_srcN11);
-        v_zip(v_reinterpret_as_s16(v_src00 + v_srcN00), v_reinterpret_as_s16(v_src10 + v_srcN10), v_tmp0, v_tmp1);
-        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
-        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
-        v_zip(v_reinterpret_as_s16(v_src01 + v_srcN01), v_reinterpret_as_s16(v_src11 + v_srcN11), v_tmp0, v_tmp1);
-        v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul);
-        v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul);
-
-        int j = 2;
-        for (; j < pre_shift - 1; j += 2)
-        {
-            v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + j))));
-
-            v_expand(v_load(src + j * cn), v_src00, v_src01);
-            v_expand(v_load(src + (j + 1)*cn), v_src10, v_src11);
-            v_expand(v_load(src + (n - 1 - j)*cn), v_srcN00, v_srcN01);
-            v_expand(v_load(src + (n - 2 - j)*cn), v_srcN10, v_srcN11);
-            v_zip(v_reinterpret_as_s16(v_src00 + v_srcN00), v_reinterpret_as_s16(v_src10 + v_srcN10), v_tmp0, v_tmp1);
-            v_res0 += v_dotprod(v_tmp0, v_mul);
-            v_res1 += v_dotprod(v_tmp1, v_mul);
-            v_zip(v_reinterpret_as_s16(v_src01 + v_srcN01), v_reinterpret_as_s16(v_src11 + v_srcN11), v_tmp0, v_tmp1);
-            v_res2 += v_dotprod(v_tmp0, v_mul);
-            v_res3 += v_dotprod(v_tmp1, v_mul);
-        }
-        if(j < pre_shift)
-        {
-            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
-            v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
-
-            v_expand(v_load(src + j * cn), v_src00, v_src01);
-            v_expand(v_load(src + (n - 1 - j)*cn), v_srcN00, v_srcN01);
-            v_mul_expand(v_reinterpret_as_s16(v_src00 + v_srcN00), v_mul, v_resj0, v_resj1);
-            v_mul_expand(v_reinterpret_as_s16(v_src01 + v_srcN01), v_mul, v_resj2, v_resj3);
-            v_res0 += v_resj0;
-            v_res1 += v_resj1;
-            v_res2 += v_resj2;
-            v_res3 += v_resj3;
-        }
-
-        v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
-        v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + pre_shift))));
+        v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)(m + pre_shift)));
         v_expand(v_load(src + pre_shift * cn), v_src00, v_src01);
-        v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul, v_resj0, v_resj1);
-        v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul, v_resj2, v_resj3);
-        v_res0 += v_resj0;
-        v_res1 += v_resj1;
-        v_res2 += v_resj2;
-        v_res3 += v_resj3;
+        v_uint16x8 v_res0 = v_src00 * v_mul;
+        v_uint16x8 v_res1 = v_src01 * v_mul;
+        for (int j = 0; j < pre_shift; j ++)
+        {
+            v_mul = v_setall_u16(*((uint16_t*)(m + j)));
+            v_expand(v_load(src + j * cn), v_src00, v_src01);
+            v_expand(v_load(src + (n - 1 - j)*cn), v_srcN00, v_srcN01);
+            v_res0 += (v_src00 + v_srcN00) * v_mul;
+            v_res1 += (v_src01 + v_srcN01) * v_mul;
+        }
 
-        v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
-        v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+        v_store((uint16_t*)dst, v_res0);
+        v_store((uint16_t*)dst + 8, v_res1);
     }
     for (; i < lencn; i++, src++, dst++)
     {
