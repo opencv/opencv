@@ -2,16 +2,10 @@ package org.opencv.android;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.ImageFormat;
-import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
-import android.hardware.Camera.PreviewCallback;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -21,7 +15,6 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.AttributeSet;
@@ -29,10 +22,8 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.ViewGroup.LayoutParams;
 
-import org.opencv.BuildConfig;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -80,7 +71,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     private void stopBackgroundThread() {
         Log.i(LOGTAG, "stopBackgroundThread");
-        if(mBackgroundThread == null)
+        if (mBackgroundThread == null)
             return;
         mBackgroundThread.quitSafely();
         try {
@@ -88,7 +79,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             mBackgroundThread = null;
             mBackgroundHandler = null;
         } catch (InterruptedException e) {
-            Log.e(LOGTAG, "stopBackgroundThread");
+            Log.e(LOGTAG, "stopBackgroundThread", e);
         }
     }
 
@@ -97,34 +88,35 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         CameraManager manager = (CameraManager) getContext().getSystemService(Context.CAMERA_SERVICE);
         try {
             String camList[] = manager.getCameraIdList();
-            if(camList.length == 0) {
+            if (camList.length == 0) {
                 Log.e(LOGTAG, "Error: camera isn't detected.");
                 return false;
             }
-            if(mCameraIndex == CameraBridgeViewBase.CAMERA_ID_ANY) {
+            if (mCameraIndex == CameraBridgeViewBase.CAMERA_ID_ANY) {
                 mCameraID = camList[0];
             } else {
                 for (String cameraID : camList) {
                     CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraID);
-                    if(mCameraIndex == CameraBridgeViewBase.CAMERA_ID_BACK &&
-                            characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK ||
-                            mCameraIndex == CameraBridgeViewBase.CAMERA_ID_FRONT &&
-                                    characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+                    if ((mCameraIndex == CameraBridgeViewBase.CAMERA_ID_BACK &&
+                            characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) ||
+                        (mCameraIndex == CameraBridgeViewBase.CAMERA_ID_FRONT &&
+                            characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT)
+                    ) {
                         mCameraID = cameraID;
                         break;
                     }
                 }
             }
-            if(mCameraID != null) {
+            if (mCameraID != null) {
                 Log.i(LOGTAG, "Opening camera: " + mCameraID);
                 manager.openCamera(mCameraID, mStateCallback, mBackgroundHandler);
             }
         } catch (CameraAccessException e) {
-            Log.e(LOGTAG, "OpenCamera - Camera Access Exception");
+            Log.e(LOGTAG, "OpenCamera - Camera Access Exception", e);
         } catch (IllegalArgumentException e) {
-            Log.e(LOGTAG, "OpenCamera - Illegal Argument Exception");
+            Log.e(LOGTAG, "OpenCamera - Illegal Argument Exception", e);
         } catch (SecurityException e) {
-            Log.e(LOGTAG, "OpenCamera - Security Exception");
+            Log.e(LOGTAG, "OpenCamera - Security Exception", e);
         }
         return true;
     }
@@ -152,9 +144,9 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     };
 
     private void createCameraPreviewSession() {
-        final int w=mPreviewSize.getWidth(), h=mPreviewSize.getHeight();
-        Log.i(LOGTAG, "createCameraPreviewSession("+w+"x"+h+")");
-        if(w<0 || h<0)
+        final int w = mPreviewSize.getWidth(), h = mPreviewSize.getHeight();
+        Log.i(LOGTAG, "createCameraPreviewSession(" + w + "x" + h + ")");
+        if (w < 0 || h < 0)
             return;
         try {
             if (null == mCameraDevice) {
@@ -166,29 +158,30 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 return;
             }
 
-            mImageReader = ImageReader.newInstance(w,h,mPreviewFormat,2);
+            mImageReader = ImageReader.newInstance(w, h, mPreviewFormat, 2);
             mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
                     Image image = reader.acquireLatestImage();
-                    if (image == null) return;
+                    if (image == null)
+                        return;
 
                     // sanity checks - 3 planes
                     Image.Plane[] planes = image.getPlanes();
-                    assert(planes.length == 3);
-                    assert(image.getFormat() == mPreviewFormat);
+                    assert (planes.length == 3);
+                    assert (image.getFormat() == mPreviewFormat);
 
                     // see also https://developer.android.com/reference/android/graphics/ImageFormat.html#YUV_420_888
                     // Y plane (0) non-interleaved => stride == 1; U/V plane interleaved => stride == 2
-                    assert(planes[0].getPixelStride() == 1);
-                    assert(planes[1].getPixelStride() == 2);
-                    assert(planes[2].getPixelStride() == 2);
+                    assert (planes[0].getPixelStride() == 1);
+                    assert (planes[1].getPixelStride() == 2);
+                    assert (planes[2].getPixelStride() == 2);
 
                     ByteBuffer y_plane = planes[0].getBuffer();
                     ByteBuffer uv_plane = planes[1].getBuffer();
-                    Mat y_mat = new Mat( h, w, CvType.CV_8UC1, y_plane );
-                    Mat uv_mat = new Mat( h/2, w/2, CvType.CV_8UC2, uv_plane );
-                    JavaCamera2Frame tempFrame = new JavaCamera2Frame(y_mat,uv_mat,w,h);
+                    Mat y_mat = new Mat(h, w, CvType.CV_8UC1, y_plane);
+                    Mat uv_mat = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane);
+                    JavaCamera2Frame tempFrame = new JavaCamera2Frame(y_mat, uv_mat, w, h);
                     deliverAndDrawFrame(tempFrame);
                     tempFrame.release();
                     image.close();
@@ -199,30 +192,30 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(surface),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured( CameraCaptureSession cameraCaptureSession) {
-                            mCaptureSession = cameraCaptureSession;
-                            try {
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+                    mCaptureSession = cameraCaptureSession;
+                    try {
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
-                                mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
-                                Log.i(LOGTAG, "CameraPreviewSession has been started");
-                            } catch (CameraAccessException e) {
-                                Log.e(LOGTAG, "createCaptureSession failed");
-                            }
-                        }
+                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
+                        Log.i(LOGTAG, "CameraPreviewSession has been started");
+                    } catch (CameraAccessException e) {
+                        Log.e(LOGTAG, "createCaptureSession failed", e);
+                    }
+                }
 
-                        @Override
-                        public void onConfigureFailed(
-                                CameraCaptureSession cameraCaptureSession) {
-                            Log.e(LOGTAG, "createCameraPreviewSession failed");
-                        }
-                    }, mBackgroundHandler);
+                @Override
+                public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+                    Log.e(LOGTAG, "createCameraPreviewSession failed");
+                }
+            }, mBackgroundHandler);
         } catch (CameraAccessException e) {
-            Log.e(LOGTAG, "createCameraPreviewSession");
+            Log.e(LOGTAG, "createCameraPreviewSession", e);
         }
     }
 
@@ -244,8 +237,8 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     }
 
     boolean calcPreviewSize(final int width, final int height) {
-        Log.i(LOGTAG, "calcPreviewSize: "+width+"x"+height);
-        if(mCameraID == null) {
+        Log.i(LOGTAG, "calcPreviewSize: " + width + "x" + height);
+        if (mCameraID == null) {
             Log.e(LOGTAG, "Camera isn't initialized!");
             return false;
         }
@@ -254,49 +247,47 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(mCameraID);
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             int bestWidth = 0, bestHeight = 0;
-            float aspect = (float)width / height;
+            float aspect = (float) width / height;
             for (android.util.Size psize : map.getOutputSizes(ImageReader.class)) {
                 int w = psize.getWidth(), h = psize.getHeight();
-                Log.d(LOGTAG, "trying size: "+w+"x"+h);
-                if ( width >= w && height >= h &&
-                        bestWidth <= w && bestHeight <= h &&
-                        Math.abs(aspect - (float)w/h) < 0.2 ) {
+                Log.d(LOGTAG, "trying size: " + w + "x" + h);
+                if (width >= w && height >= h && bestWidth <= w && bestHeight <= h
+                        && Math.abs(aspect - (float) w / h) < 0.2) {
                     bestWidth = w;
                     bestHeight = h;
                 }
             }
-            Log.i(LOGTAG, "best size: "+bestWidth+"x"+bestHeight);
-            if( bestWidth == 0 || bestHeight == 0 ||
-                    mPreviewSize.getWidth() == bestWidth &&
-                            mPreviewSize.getHeight() == bestHeight )
+            Log.i(LOGTAG, "best size: " + bestWidth + "x" + bestHeight);
+            if (bestWidth == 0 || bestHeight == 0 ||
+                    (mPreviewSize.getWidth() == bestWidth && mPreviewSize.getHeight() == bestHeight))
                 return false;
             else {
                 mPreviewSize = new android.util.Size(bestWidth, bestHeight);
                 return true;
             }
         } catch (CameraAccessException e) {
-            Log.e(LOGTAG, "calcPreviewSize - Camera Access Exception");
+            Log.e(LOGTAG, "calcPreviewSize - Camera Access Exception", e);
         } catch (IllegalArgumentException e) {
-            Log.e(LOGTAG, "calcPreviewSize - Illegal Argument Exception");
+            Log.e(LOGTAG, "calcPreviewSize - Illegal Argument Exception", e);
         } catch (SecurityException e) {
-            Log.e(LOGTAG, "calcPreviewSize - Security Exception");
+            Log.e(LOGTAG, "calcPreviewSize - Security Exception", e);
         }
         return false;
     }
 
     @Override
     protected boolean connectCamera(int width, int height) {
-        Log.i(LOGTAG, "setCameraPreviewSize("+width+"x"+height+")");
+        Log.i(LOGTAG, "setCameraPreviewSize(" + width + "x" + height + ")");
         startBackgroundThread();
         initializeCamera();
         try {
             boolean needReconfig = calcPreviewSize(width, height);
-            mFrameWidth  = mPreviewSize.getWidth();
+            mFrameWidth = mPreviewSize.getWidth();
             mFrameHeight = mPreviewSize.getHeight();
 
             AllocateCache();
 
-            if( !needReconfig ) {
+            if (!needReconfig) {
                 return false;
             }
             if (null != mCaptureSession) {
@@ -322,10 +313,10 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             if (mPreviewFormat == ImageFormat.NV21)
                 Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
             else if (mPreviewFormat == ImageFormat.YV12)
-                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4);  // COLOR_YUV2RGBA_YV12 produces inverted colors
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4); // COLOR_YUV2RGBA_YV12 produces inverted colors
             else if (mPreviewFormat == ImageFormat.YUV_420_888) {
-                assert(mUVFrameData != null);
-                Imgproc.cvtColorTwoPlane(mYuvFrameData,mUVFrameData,mRgba,Imgproc.COLOR_YUV2RGBA_NV21);
+                assert (mUVFrameData != null);
+                Imgproc.cvtColorTwoPlane(mYuvFrameData, mUVFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21);
             } else
                 throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
 
