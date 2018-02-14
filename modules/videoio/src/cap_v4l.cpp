@@ -61,7 +61,7 @@ Second Patch:   August 28, 2004 Sfuncia Fabio fiblan@yahoo.it
 For Release:  OpenCV-Linux Beta4 Opencv-0.9.6
 
 FS: this patch fix not sequential index of device (unplugged device), and real numCameras.
-    for -1 index (icvOpenCAM_V4L) i dont use /dev/video but real device available, because
+    for -1 index (icvOpenCAM_V4L) I don't use /dev/video but real device available, because
     if /dev/video is a link to /dev/video0 and i unplugged device on /dev/video0, /dev/video
     is a bad link. I search the first available device with indexList.
 
@@ -159,7 +159,7 @@ the symptoms were damaged image and 'Corrupt JPEG data: premature end of data se
 11th patch: April 2, 2013, Forrest Reiling forrest.reiling@gmail.com
 Added v4l2 support for getting capture property CV_CAP_PROP_POS_MSEC.
 Returns the millisecond timestamp of the last frame grabbed or 0 if no frames have been grabbed
-Used to successfully synchonize 2 Logitech C310 USB webcams to within 16 ms of one another
+Used to successfully synchronize 2 Logitech C310 USB webcams to within 16 ms of one another
 
 
 make & enjoy!
@@ -231,7 +231,7 @@ make & enjoy!
 #endif
 
 #ifdef HAVE_VIDEOIO
-// NetBSD compability layer with V4L2
+// NetBSD compatibility layer with V4L2
 #include <sys/videoio.h>
 #endif
 
@@ -398,7 +398,7 @@ static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
 
 static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
 {
-  // Test device for V4L2 compability
+  // Test device for V4L2 compatibility
   // Return value:
   // -1 then unable to open device
   //  0 then detected nothing
@@ -786,7 +786,7 @@ bool CvCaptureCAM_V4L::open(int _index)
    char _deviceName[MAX_DEVICE_DRIVER_NAME];
 
    if (!numCameras)
-      icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
+      icvInitCapture_V4L(); /* Haven't called icvInitCapture yet - do it now! */
    if (!numCameras)
      return false; /* Are there any /dev/video input sources? */
 

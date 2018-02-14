@@ -977,7 +977,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
             if( propValue != 0.0 ) // "on"
             {
                 // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
-                // then the property isn't avaliable
+                // then the property isn't available
                 if( imageGenerator.IsValid() )
                 {
                     if( !depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) )

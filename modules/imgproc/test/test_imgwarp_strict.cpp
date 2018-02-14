@@ -126,7 +126,7 @@ String CV_ImageWarpBaseTest::interpolation_to_string(int inter) const
     if (inverse)
         str += " | WARP_INVERSE_MAP";
 
-    return str.empty() ? "Unsupported/Unkown interpolation type" : str;
+    return str.empty() ? "Unsupported/Unknown interpolation type" : str;
 }
 
 Size CV_ImageWarpBaseTest::randSize(RNG& rng) const
@@ -851,7 +851,7 @@ const char* CV_Remap_Test::borderType_to_string() const
         return "BORDER_WRAP";
     if (borderType == BORDER_REFLECT_101)
         return "BORDER_REFLECT_101";
-    return "Unsupported/Unkown border type";
+    return "Unsupported/Unknown border type";
 }
 
 void CV_Remap_Test::prepare_test_data_for_reference_func()
