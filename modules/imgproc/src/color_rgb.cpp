@@ -1603,6 +1603,8 @@ void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
 // OCL calls
 //
 
+#ifdef HAVE_OPENCL
+
 bool oclCvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool reverse )
 {
     OclHelper< Set<3, 4>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
@@ -1721,10 +1723,11 @@ bool oclCvtColormRGBA2RGBA( InputArray _src, OutputArray _dst)
     return h.run();
 }
 
+#endif
+
 //
 // HAL calls
 //
-
 
 void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb)
 {

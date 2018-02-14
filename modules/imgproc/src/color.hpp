@@ -263,6 +263,7 @@ struct CvtHelper
     int depth, scn;
 };
 
+#ifdef HAVE_OPENCL
 
 template< typename VScn, typename VDcn, typename VDepth >
 struct OclHelper
@@ -321,6 +322,8 @@ struct OclHelper
     ocl::KernelArg srcarg, dstarg;
     int nArgs;
 };
+
+#endif
 
 ///////////////////////////// Top-level template function ////////////////////////////////
 
@@ -538,6 +541,8 @@ extern ippiReorderFunc ippiSwapChannelsC3RTab[8];
 
 #endif
 
+#ifdef HAVE_OPENCL
+
 bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb );
 bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb );
 bool oclCvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb);
@@ -570,6 +575,8 @@ bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int
 bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx );
 bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, int uidx );
 bool oclCvtColorYUV2Gray_420( InputArray _src, OutputArray _dst );
+
+#endif
 
 void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb);
 void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb);

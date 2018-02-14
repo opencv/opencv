@@ -2487,6 +2487,8 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 // OCL calls
 //
 
+#ifdef HAVE_OPENCL
+
 bool oclCvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 {
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
@@ -2685,6 +2687,8 @@ bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, 
 
     return h.run();
 }
+
+#endif
 
 //
 // HAL calls

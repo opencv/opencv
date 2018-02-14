@@ -1570,6 +1570,8 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
 // OCL calls
 //
 
+#ifdef HAVE_OPENCL
+
 bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full )
 {
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
@@ -1671,6 +1673,12 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
     return h.run();
 }
+
+#endif
+
+//
+// HAL calls
+//
 
 void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
 {

@@ -4389,6 +4389,8 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
 // OCL calls
 //
 
+#ifdef HAVE_OPENCL
+
 bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb)
 {
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
@@ -4751,6 +4753,8 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 
     return h.run();
 }
+
+#endif
 
 //
 // HAL calls
