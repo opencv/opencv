@@ -1568,6 +1568,109 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
 
 } // namespace hal
 
+
+bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full )
+{
+    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+
+    int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
+
+    if(!h.createKernel("HSV2RGB", ocl::imgproc::color_hsv_oclsrc,
+                       format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff", dcn, bidx, hrange, 6.f/hrange)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full )
+{
+    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+
+    int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
+
+    if(!h.createKernel("HLS2RGB", ocl::imgproc::color_hsv_oclsrc,
+                       format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff", dcn, bidx, hrange, 6.f/hrange)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full )
+{
+    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+
+    float hscale = (_src.depth() == CV_32F ? 360.f : (!full ? 180.f : 256.f))/360.f;
+
+    if(!h.createKernel("RGB2HLS", ocl::imgproc::color_hsv_oclsrc,
+                       format("-D hscale=%ff -D bidx=%d -D dcn=3", hscale, bidx)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full )
+{
+    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+
+    int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 256);
+
+    cv::String options = (_src.depth() == CV_8U ?
+                          format("-D hrange=%d -D bidx=%d -D dcn=3", hrange, bidx) :
+                          format("-D hscale=%ff -D bidx=%d -D dcn=3", hrange*(1.f/360.f), bidx));
+
+    if(!h.createKernel("RGB2HSV", ocl::imgproc::color_hsv_oclsrc, options))
+    {
+        return false;
+    }
+
+    if(_src.depth() == CV_8U)
+    {
+        static UMat sdiv_data;
+        static UMat hdiv_data180;
+        static UMat hdiv_data256;
+        static int sdiv_table[256];
+        static int hdiv_table180[256];
+        static int hdiv_table256[256];
+        static volatile bool initialized180 = false, initialized256 = false;
+        volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
+
+        if (!initialized)
+        {
+            int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
+            UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+
+            sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+
+            int v = 255 << hsv_shift;
+            if (!initialized180 && !initialized256)
+            {
+                for(int i = 1; i < 256; i++ )
+                    sdiv_table[i] = saturate_cast<int>(v/(1.*i));
+                Mat(1, 256, CV_32SC1, sdiv_table).copyTo(sdiv_data);
+            }
+
+            v = hrange << hsv_shift;
+            for (int i = 1; i < 256; i++ )
+                hdiv_table[i] = saturate_cast<int>(v/(6.*i));
+
+            Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
+            initialized = true;
+        }
+
+        h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
+        h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
+                                 ocl::KernelArg::PtrReadOnly(hdiv_data180));
+    }
+
+    return h.run();
+}
+
 void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
 {
     CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);

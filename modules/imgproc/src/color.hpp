@@ -623,6 +623,11 @@ bool oclCvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
 bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx );
 bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx );
 
+bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full );
+bool oclCvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full );
+bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full );
+bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full );
+
 bool oclCvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool reverse );
 bool oclCvtColorBGR25x5( InputArray _src, OutputArray _dst, int bidx, int gbits );
 bool oclCvtColor5x52BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int gbits );
