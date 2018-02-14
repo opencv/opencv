@@ -117,8 +117,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
         Mat tmpRow = dists.row(minIdx);
         Mat tmpCol = dists.col(minIdx);
         cv::min(dists.row(minLoc.x), dists.row(minLoc.y), tmpRow);
-		tmpRow = tmpRow.t();
-        tmpRow.copyTo(tmpCol);
+        transpose(tmpRow, tmpCol);
 
         clusters[minIdx].splice(clusters[minIdx].end(), clusters[maxIdx]);
         patternClusterIdx = minIdx;
