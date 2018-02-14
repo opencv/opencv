@@ -1588,6 +1588,126 @@ void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
 
 } // namespace hal
 
+bool oclCvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool reverse )
+{
+    OclHelper< ValueSet<3, 4>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+
+    if(!h.createKernel("RGB", ocl::imgproc::color_rgb_oclsrc,
+                       format("-D dcn=%d -D bidx=0 -D %s", dcn,
+                              reverse ? "REVERSE" : "ORDER")))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorBGR25x5( InputArray _src, OutputArray _dst, int bidx, int gbits )
+{
+    OclHelper< ValueSet<3, 4>, ValueSet<2>, ValueSet<CV_8U> > h(_src, _dst, 2);
+
+    if(!h.createKernel("RGB2RGB5x5", ocl::imgproc::color_rgb_oclsrc,
+                       format("-D dcn=2 -D bidx=%d -D greenbits=%d", bidx, gbits)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColor5x52BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int gbits)
+{
+    OclHelper< ValueSet<2>, ValueSet<3, 4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+
+    if(!h.createKernel("RGB5x52RGB", ocl::imgproc::color_rgb_oclsrc,
+                       format("-D dcn=%d -D bidx=%d -D greenbits=%d", dcn, bidx, gbits)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColor5x52Gray( InputArray _src, OutputArray _dst, int gbits)
+{
+    OclHelper< ValueSet<2>, ValueSet<1>, ValueSet<CV_8U> > h(_src, _dst, 1);
+
+    if(!h.createKernel("BGR5x52Gray", ocl::imgproc::color_rgb_oclsrc,
+                       format("-D dcn=1 -D bidx=0 -D greenbits=%d", gbits)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorGray25x5( InputArray _src, OutputArray _dst, int gbits)
+{
+    OclHelper< ValueSet<1>, ValueSet<2>, ValueSet<CV_8U> > h(_src, _dst, 2);
+
+    if(!h.createKernel("Gray2BGR5x5", ocl::imgproc::color_rgb_oclsrc,
+                        format("-D dcn=2 -D bidx=0 -D greenbits=%d", gbits)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorBGR2Gray( InputArray _src, OutputArray _dst, int bidx)
+{
+    OclHelper< ValueSet<3, 4>, ValueSet<1>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 1);
+
+    int stripeSize = 1;
+    if(!h.createKernel("RGB2Gray", ocl::imgproc::color_rgb_oclsrc,
+                       format("-D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d", bidx, stripeSize)))
+    {
+        return false;
+    }
+
+    h.globalSize[0] = (h.src.cols + stripeSize - 1)/stripeSize;
+    return h.run();
+}
+
+bool oclCvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn)
+{
+    OclHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    //TODO: why bidx==0 ?
+    if(!h.createKernel("Gray2RGB", ocl::imgproc::color_rgb_oclsrc,
+                       format("-D bidx=0 -D dcn=%d", dcn)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst)
+{
+    OclHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, 4);
+
+    if(!h.createKernel("RGBA2mRGBA", ocl::imgproc::color_rgb_oclsrc,
+                       "-D dcn=4 -D bidx=3"))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColormRGBA2RGBA( InputArray _src, OutputArray _dst)
+{
+    OclHelper< ValueSet<4>, ValueSet<4>, ValueSet<CV_8U> > h(_src, _dst, 4);
+
+    if(!h.createKernel("mRGBA2RGBA", ocl::imgproc::color_rgb_oclsrc,
+                       "-D dcn=4 -D bidx=3"))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
 
 void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb)
 {

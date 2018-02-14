@@ -17,7 +17,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx, uidx, yidx;
-    int dims = 2, stripeSize = 1;
+    int dims = 2;
     ocl::Kernel k;
 
     if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
@@ -36,79 +36,51 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
     case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
     {
-        CV_Assert(scn == 3 || scn == 4);
         dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
         bool reverse = !(code == COLOR_BGR2BGRA || code == COLOR_BGRA2BGR);
-        k.create("RGB", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=0 -D %s", dcn,
-                        reverse ? "REVERSE" : "ORDER"));
-        break;
+        return oclCvtColorBGR2BGR(_src, _dst, dcn, reverse);
     }
     case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
     case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
     {
         dcn = code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA || code == COLOR_BGR5652RGBA || code == COLOR_BGR5552RGBA ? 4 : 3;
-        CV_Assert((dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U);
         bidx = code == COLOR_BGR5652BGR || code == COLOR_BGR5552BGR ||
             code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA ? 0 : 2;
         int greenbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
             code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
-        k.create("RGB5x52RGB", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D greenbits=%d", dcn, bidx, greenbits));
-        break;
+        return oclCvtColor5x52BGR(_src, _dst, dcn, bidx, greenbits);
     }
     case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
     case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
     {
-        CV_Assert((scn == 3 || scn == 4) && depth == CV_8U );
         bidx = code == COLOR_BGR2BGR565 || code == COLOR_BGR2BGR555 ||
             code == COLOR_BGRA2BGR565 || code == COLOR_BGRA2BGR555 ? 0 : 2;
         int greenbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
             code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
-        dcn = 2;
-        k.create("RGB2RGB5x5", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D dcn=2 -D bidx=%d -D greenbits=%d", bidx, greenbits));
-        break;
+
+        return oclCvtColorBGR25x5(_src, _dst, bidx, greenbits );
     }
     case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
     {
-        CV_Assert(scn == 2 && depth == CV_8U);
-        dcn = 1;
         int greenbits = code == COLOR_BGR5652GRAY ? 6 : 5;
-        k.create("BGR5x52Gray", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D dcn=1 -D bidx=0 -D greenbits=%d", greenbits));
-        break;
+        return oclCvtColor5x52Gray(_src, _dst, greenbits);
     }
     case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
     {
-        CV_Assert(scn == 1 && depth == CV_8U);
-        dcn = 2;
         int greenbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
-        k.create("Gray2BGR5x5", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D dcn=2 -D bidx=0 -D greenbits=%d", greenbits));
-        break;
+        return oclCvtColorGray25x5(_src, _dst, greenbits);
     }
     case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
     case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
-    {
-        CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
-        dcn = 1;
-        k.create("RGB2Gray", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d",
-                               bidx, stripeSize));
-        globalsize[0] = (src.cols + stripeSize-1)/stripeSize;
-        break;
-    }
+        return oclCvtColorBGR2Gray(_src, _dst, bidx);
+
     case COLOR_GRAY2BGR:
     case COLOR_GRAY2BGRA:
-    {
-        CV_Assert(scn == 1);
         dcn = code == COLOR_GRAY2BGRA ? 4 : 3;
-        k.create("Gray2RGB", ocl::imgproc::color_rgb_oclsrc,
-                 opts + format("-D bidx=0 -D dcn=%d", dcn));
-        break;
-    }
+        //TODO: why no bidx?
+        return oclCvtColorGray2BGR(_src, _dst, dcn);
+
     case COLOR_BGR2YUV:
     case COLOR_RGB2YUV:
     {
@@ -351,15 +323,12 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                                dcn, bidx, hrange, 6.f/hrange));
         break;
     }
-    case COLOR_RGBA2mRGBA: case COLOR_mRGBA2RGBA:
-    {
-        CV_Assert(scn == 4 && depth == CV_8U);
-        dcn = 4;
+    case COLOR_RGBA2mRGBA:
+        return oclCvtColorRGBA2mRGBA(_src, _dst);
 
-        k.create(code == COLOR_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA", ocl::imgproc::color_rgb_oclsrc,
-                 opts + "-D dcn=4 -D bidx=3");
-        break;
-    }
+    case COLOR_mRGBA2RGBA:
+        return oclCvtColormRGBA2RGBA(_src, _dst);
+
     case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
     {
         bidx = code == COLOR_BGR2Lab || code == COLOR_LBGR2Lab ? 0 : 2;
