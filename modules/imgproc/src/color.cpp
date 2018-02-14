@@ -25,7 +25,6 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
-    int pxPerWIx = 1;
 
     size_t globalsize[] = { (size_t)src.cols, ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy };
     cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
@@ -97,53 +96,29 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV21:
     case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV21:
     {
-        CV_Assert( scn == 1 );
-        CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
         dcn  = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2RGBA_NV12 ||
                code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2RGBA_NV21 ? 4 : 3;
         bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 ||
                code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 0 : 2;
         uidx = code == COLOR_YUV2RGBA_NV21 || code == COLOR_YUV2RGB_NV21 ||
                code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 1 : 0;
-
-        dstSz = Size(sz.width, sz.height * 2 / 3);
-        globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/2 + pxPerWIy - 1) / pxPerWIy;
-        k.create("YUV2RGB_NVx", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx));
-        break;
+        return oclCvtColorTwoPlaneYUV2BGR(_src, _dst, dcn, bidx, uidx);
     }
     case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
     case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
     {
-        CV_Assert( scn == 1 );
-        CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
         dcn  = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2RGBA_YV12 ||
                code == COLOR_YUV2BGRA_IYUV || code == COLOR_YUV2RGBA_IYUV ? 4 : 3;
         bidx = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2BGR_YV12 ||
                code == COLOR_YUV2BGRA_IYUV || code == COLOR_YUV2BGR_IYUV ? 0 : 2;
         uidx = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2BGR_YV12 ||
                code == COLOR_YUV2RGBA_YV12 || code == COLOR_YUV2RGB_YV12 ? 1 : 0;
-
-        dstSz = Size(sz.width, sz.height * 2 / 3);
-        globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/2 + pxPerWIy - 1) / pxPerWIy;
-        k.create("YUV2RGB_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d%s", dcn, bidx, uidx,
-                 src.isContinuous() ? " -D SRC_CONT" : ""));
-        break;
+        return oclCvtColorThreePlaneYUV2BGR(_src, _dst, dcn, bidx, uidx);
     }
     case COLOR_YUV2GRAY_420:
     {
         if (dcn <= 0) dcn = 1;
-
-        CV_Assert( dcn == 1 );
-        CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-
-        dstSz = Size(sz.width, sz.height * 2 / 3);
-        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-        dst = _dst.getUMat();
-
-        src.rowRange(0, dstSz.height).copyTo(dst);
-        return true;
+        return oclCvtColorYUV2Gray_420(_src, _dst);
     }
     case COLOR_RGB2YUV_YV12: case COLOR_BGR2YUV_YV12: case COLOR_RGBA2YUV_YV12: case COLOR_BGRA2YUV_YV12:
     case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
@@ -154,25 +129,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         uidx = code == COLOR_RGBA2YUV_YV12 || code == COLOR_RGB2YUV_YV12 ||
                code == COLOR_BGRA2YUV_YV12 || code == COLOR_BGR2YUV_YV12 ? 1 : 0;
 
-        CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-        CV_Assert( dcn == 1 );
-        CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
-
-        dstSz = Size(sz.width, sz.height / 2 * 3);
-        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-        dst = _dst.getUMat();
-
-        if (dev.isIntel() && src.cols % 4 == 0 && src.step % 4 == 0 && src.offset % 4 == 0 &&
-            dst.step % 4 == 0 && dst.offset % 4 == 0)
-        {
-            pxPerWIx = 2;
-        }
-        globalsize[0] = dstSz.width / (2 * pxPerWIx); globalsize[1] = (dstSz.height/3 + pxPerWIy - 1) / pxPerWIy;
-
-        k.create("RGB2YUV_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D PIX_PER_WI_X=%d", dcn, bidx, uidx, pxPerWIx));
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
-        return k.run(2, globalsize, NULL, false);
+        return oclCvtColorBGR2ThreePlaneYUV(_src, _dst, bidx, uidx );
     }
     case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
     case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
@@ -189,13 +146,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 code==COLOR_YUV2BGR_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 2 : 0;
         uidx = 1 - yidx + uidx;
 
-        CV_Assert( dcn == 3 || dcn == 4 );
-        CV_Assert( scn == 2 && depth == CV_8U );
-
-        k.create("YUV2RGB_422", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d%s", dcn, bidx, uidx, yidx,
-                                src.offset % 4 == 0 && src.step % 4 == 0 ? " -D USE_OPTIMIZED_LOAD" : ""));
-        break;
+        return oclCvtColorOnePlaneYUV2BGR(_src, _dst, dcn, bidx, uidx, yidx);
     }
     case COLOR_BGR2YCrCb:
     case COLOR_RGB2YCrCb:

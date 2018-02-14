@@ -2505,6 +2505,154 @@ bool oclCvtColorBGR2YCrCb( InputArray _src, OutputArray _dst, int bidx)
     return h.run();
 }
 
+bool oclCvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx )
+{
+    OclHelper< ValueSet<2>, ValueSet<3, 4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+
+    bool optimized = _src.offset() % 4 == 0 && _src.step() % 4 == 0;
+    if(!h.createKernel("YUV2RGB_422", ocl::imgproc::color_yuv_oclsrc,
+                       format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d%s", dcn, bidx, uidx, yidx,
+                       optimized ? " -D USE_OPTIMIZED_LOAD" : "")))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+template< typename VScn, typename VDcn, typename VDepth, bool toYUV >
+struct OclYUVHelper
+{
+    OclYUVHelper( InputArray _src, OutputArray _dst, int dcn)
+    {
+        src = _src.getUMat();
+        Size sz = src.size(), dstSz;
+        int scn = src.channels();
+        int depth = src.depth();
+
+        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        if(toYUV)
+        {
+            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
+            dstSz = Size(sz.width, sz.height / 2 * 3);
+        }
+        else
+        {
+            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 );
+            dstSz = Size(sz.width, sz.height * 2 / 3);
+        }
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        srcarg = ocl::KernelArg::ReadOnlyNoSize(src);
+        dstarg = ocl::KernelArg::WriteOnly(dst);
+    }
+
+    bool createKernel(cv::String name, ocl::ProgramSource& source, cv::String options)
+    {
+        ocl::Device dev = ocl::Device::getDefault();
+        int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+        int pxPerWIx = 1;
+
+        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                                        src.depth(), src.channels(), pxPerWIy);
+
+        if(toYUV)
+        {
+            if (dev.isIntel() &&
+                src.cols % 4 == 0 && src.step % 4 == 0 && src.offset % 4 == 0 &&
+                dst.step % 4 == 0 && dst.offset % 4 == 0)
+            {
+                pxPerWIx = 2;
+            }
+            globalSize[0] = dst.cols/(2*pxPerWIx);
+            globalSize[1] = (dst.rows/3 + pxPerWIy - 1) / pxPerWIy;
+            baseOptions += format("-D PIX_PER_WI_X=%d ", pxPerWIx);
+        }
+        else
+        {
+            globalSize[0] = dst.cols/2;
+            globalSize[1] = (dst.rows/2 + pxPerWIy - 1) / pxPerWIy;
+        }
+
+        k.create(name.c_str(), source, baseOptions + options);
+
+        if(k.empty())
+            return false;
+
+        nArgs = k.set(0, srcarg);
+        nArgs = k.set(nArgs, dstarg);
+        return true;
+    }
+
+    bool run()
+    {
+        return k.run(2, globalSize, NULL, false);
+    }
+
+    template<typename T>
+    void setArg(const T& arg)
+    {
+        nArgs = k.set(nArgs, arg);
+    }
+
+    UMat src, dst;
+    ocl::Kernel k;
+    size_t globalSize[2];
+    ocl::KernelArg srcarg, dstarg;
+    int nArgs;
+};
+
+bool oclCvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
+{
+    OclYUVHelper< ValueSet<1>, ValueSet<1>, ValueSet<CV_8U>, false> h(_src, _dst, 1);
+
+    h.src.rowRange(0, _dst.rows()).copyTo(_dst);
+    return true;
+}
+
+bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx )
+{
+    OclYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false > h(_src, _dst, dcn);
+
+    if(!h.createKernel("YUV2RGB_NVx", ocl::imgproc::color_yuv_oclsrc,
+                       format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx )
+{
+    OclYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false > h(_src, _dst, dcn);
+
+    if(!h.createKernel("YUV2RGB_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
+                       format("-D dcn=%d -D bidx=%d -D uidx=%d%s", dcn, bidx, uidx,
+                       _src.isContinuous() ? " -D SRC_CONT" : "")))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, int uidx )
+{
+    OclYUVHelper< ValueSet<3, 4>, ValueSet<1>, ValueSet<CV_8U>, true > h(_src, _dst, 1);
+
+    if(!h.createKernel("RGB2YUV_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
+                       format("-D dcn=1 -D bidx=%d -D uidx=%d", bidx, uidx)))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+
 void cvtColorBGR2YUV(InputArray _src, OutputArray _dst, bool swapb, bool crcb)
 {
     CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
