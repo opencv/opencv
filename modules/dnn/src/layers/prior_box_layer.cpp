@@ -317,7 +317,17 @@ public:
             variance.copyTo(umat_variance);
 
             int real_numPriors = _numPriors >> (_offsetsX.size() - 1);
-            umat_scales = UMat(1, &real_numPriors, CV_32F, 1.0f);
+            if (_scales.empty())
+            {
+                _scales.resize(real_numPriors, 1.0f);
+                umat_scales = UMat(1, &real_numPriors, CV_32F, 1.0f);
+            }
+            else
+            {
+                CV_Assert(_scales.size() == real_numPriors);
+                Mat scales(1, _scales.size(), CV_32FC1, &_scales[0]);
+                scales.copyTo(umat_scales);
+            }
         }
 
         size_t nthreads = _layerHeight * _layerWidth;
