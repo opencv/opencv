@@ -1672,7 +1672,6 @@ bool oclCvtColorBGR2Gray( InputArray _src, OutputArray _dst, int bidx)
 bool oclCvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn)
 {
     OclHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
-    //TODO: why bidx==0 ?
     if(!h.createKernel("Gray2RGB", ocl::imgproc::color_rgb_oclsrc,
                        format("-D bidx=0 -D dcn=%d", dcn)))
     {
