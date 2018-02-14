@@ -220,7 +220,7 @@ PyObject* pyopencv_from(const T& src);
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
-// special case, when the convertor needs full ArgInfo structure
+// special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 {
     bool allowND = true;

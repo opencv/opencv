@@ -128,7 +128,7 @@ struct BitmapInfoHeader
 {
     DWORD biSize;                // Write header size of BITMAPINFO header structure
     LONG  biWidth;               // width in pixels
-    LONG  biHeight;              // heigth in pixels
+    LONG  biHeight;              // height in pixels
     WORD  biPlanes;              // Number of color planes in which the data is stored
     WORD  biBitCount;            // Number of bits per pixel
     DWORD biCompression;         // Type of compression used (uncompressed: NO_COMPRESSION=0)

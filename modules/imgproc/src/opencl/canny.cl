@@ -467,7 +467,7 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
 
 #elif defined GET_EDGES
 
-// Get the edge result. egde type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
+// Get the edge result. edge type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
 // map      edge type mappings
 // dst      edge output
 

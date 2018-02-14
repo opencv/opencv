@@ -175,7 +175,7 @@ class ClassInfo(GeneralInfo):
         self.cname = self.name.replace(".", "::")
         self.methods = []
         self.methods_suffixes = {}
-        self.consts = [] # using a list to save the occurence order
+        self.consts = [] # using a list to save the occurrence order
         self.private_consts = []
         self.imports = set()
         self.props= []

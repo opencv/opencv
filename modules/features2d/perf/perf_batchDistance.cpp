@@ -142,7 +142,7 @@ void generateData( Mat& query, Mat& train, const int sourceType )
     rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
     buf.convertTo( query, sourceType );
 
-    // Generate train decriptors as follows:
+    // Generate train descriptors as follows:
     // copy each query descriptor to train set countFactor times
     // and perturb some one element of the copied descriptors in
     // in ascending order. General boundaries of the perturbation

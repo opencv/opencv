@@ -4825,7 +4825,7 @@ for(int i = 0; i < it2.count; i++, ++it2)
 class CV_EXPORTS LineIterator
 {
 public:
-    /** @brief intializes the iterator
+    /** @brief initializes the iterator
 
     creates iterators for the line connecting pt1 and pt2
     the line will be clipped on the image boundaries
