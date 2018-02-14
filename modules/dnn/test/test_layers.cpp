@@ -806,4 +806,29 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 /*offset value*/        Values(3, 4)
 ));
 
+// Check that by default average pooling layer should not count zero padded values
+// into the normalization area.
+TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
+{
+    LayerParams lp;
+    lp.name = "testAvePool";
+    lp.type = "Pooling";
+    lp.set("kernel_size", 2);
+    lp.set("stride", 2);
+    lp.set("pool", "AVE");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    // 1 2 | 3
+    // 4 5 | 6
+    // ----+--
+    // 7 8 | 9
+    Mat inp = (Mat_<float>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9);
+    Mat target = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
+    Mat tmp = blobFromImage(inp);
+    net.setInput(blobFromImage(inp));
+    Mat out = net.forward();
+    normAssert(out, blobFromImage(target));
+}
+
 }} // namespace

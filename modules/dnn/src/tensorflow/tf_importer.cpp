@@ -1078,6 +1078,7 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "AvgPool")
         {
             layerParams.set("pool", "ave");
+            layerParams.set("ave_pool_padded_area", false);
 
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
