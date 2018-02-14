@@ -267,6 +267,14 @@ public:
             int i, newRows = 1;
             for( i = 0; i < splitDim; i++ )
                 newRows *= inpBlob.size[i];
+
+            if (inpBlob.total() == newRows)
+            {
+                // MVN is applied to single values at an every row.
+                outBlob.setTo(0);
+                return;
+            }
+
             Mat inpMat = inpBlob.reshape(1, newRows);
             Mat outMat = outBlob.reshape(1, newRows);
 
