@@ -1998,7 +1998,7 @@ void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, i
 
         src += cn; dst += cn;
         for (int i = cn; i < (len - 1)*cn; i++, src++, dst++)
-            *dst = ((FT(src[-cn]) + FT(src[cn]))>>2) + (FT(src[0])>>1);
+            *dst = (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[0])>>1);
 
         // Point that fall right from border
         for (int k = 0; k < cn; k++)
@@ -2118,7 +2118,7 @@ void hlineSmooth3Naba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const 
         {
             int src_idx = borderInterpolate(-1, len, borderType);
             for (int k = 0; k < cn; k++)
-                dst[k] = m[1] * src[k] + m[0] * ((uint16_t)(src[cn + k]) + (uint16_t)(src[src_idx*cn + k]));
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[1] * src[k] + ((uint16_t*)m)[0] * ((uint16_t)(src[cn + k]) + (uint16_t)(src[src_idx*cn + k]));
         }
         else
         {
@@ -2146,14 +2146,14 @@ void hlineSmooth3Naba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const 
             v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
         }
         for (; i < lencn; i++, src++, dst++)
-            *dst = m[1] * src[0] + m[0] * ((uint16_t)(src[-cn]) + (uint16_t)(src[cn]));
+            *((uint16_t*)dst) = ((uint16_t*)m)[1] * src[0] + ((uint16_t*)m)[0] * ((uint16_t)(src[-cn]) + (uint16_t)(src[cn]));
 
         // Point that fall right from border
         if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
         {
             int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
             for (int k = 0; k < cn; k++)
-                dst[k] = m[1] * src[k] + m[0] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[src_idx + k]));
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[1] * src[k] + ((uint16_t*)m)[0] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[src_idx + k]));
         }
         else
         {
@@ -2397,7 +2397,7 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
     {
         if (borderType == BORDER_CONSTANT)
             for (int k = 0; k < cn; k++)
-                dst[k] = (FT(src[k])>>3)*3;
+                dst[k] = (FT(src[k])>>3)*(uint8_t)3;
         else
             for (int k = 0; k < cn; k++)
                 dst[k] = src[k];
@@ -2407,8 +2407,8 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
         if (borderType == BORDER_CONSTANT)
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + cn])>>2);
-                dst[k + cn] = (FT(src[k]) >> 2) + (FT(src[k + cn])>>4)*6;
+                dst[k] = (FT(src[k])>>4)*(uint8_t)6 + (FT(src[k + cn])>>2);
+                dst[k + cn] = (FT(src[k]) >> 2) + (FT(src[k + cn])>>4)*(uint8_t)6;
             }
         else
         {
@@ -2418,8 +2418,8 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
             int idxp2 = borderInterpolate(3, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + idxm1])>>2) + (FT(src[k + cn])>>2) + (FT(src[k + idxp1])>>4) + (FT(src[k + idxm2])>>4);
-                dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k + idxp1])>>2) + (FT(src[k + idxm1])>>4) + (FT(src[k + idxp2])>>4);
+                dst[k] = (FT(src[k])>>4)*(uint8_t)6 + (FT(src[k + idxm1])>>2) + (FT(src[k + cn])>>2) + (FT(src[k + idxp1])>>4) + (FT(src[k + idxm2])>>4);
+                dst[k + cn] = (FT(src[k + cn])>>4)*(uint8_t)6 + (FT(src[k])>>2) + (FT(src[k + idxp1])>>2) + (FT(src[k + idxm1])>>4) + (FT(src[k + idxp2])>>4);
             }
         }
     }
@@ -2428,9 +2428,9 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
         if (borderType == BORDER_CONSTANT)
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k + 2 * cn])>>4);
-                dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k + 2 * cn])>>2);
-                dst[k + 2 * cn] = (FT(src[k + 2 * cn])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k])>>4);
+                dst[k] = (FT(src[k])>>4)*(uint8_t)6 + (FT(src[k + cn])>>2) + (FT(src[k + 2 * cn])>>4);
+                dst[k + cn] = (FT(src[k + cn])>>4)*(uint8_t)6 + (FT(src[k])>>2) + (FT(src[k + 2 * cn])>>2);
+                dst[k + 2 * cn] = (FT(src[k + 2 * cn])>>4)*(uint8_t)6 + (FT(src[k + cn])>>2) + (FT(src[k])>>4);
             }
         else
         {
@@ -2440,9 +2440,9 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
             int idxp2 = borderInterpolate(4, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k + idxm1])>>2) + (FT(src[k + 2 * cn])>>4) + (FT(src[k + idxm2])>>4);
-                dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k + 2 * cn])>>2) + (FT(src[k + idxm1])>>4) + (FT(src[k + idxp1])>>4);
-                dst[k + 2 * cn] = (FT(src[k + 2 * cn])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k + idxp1])>>2) + (FT(src[k])>>4) + (FT(src[k + idxp2])>>4);
+                dst[k] = (FT(src[k])>>4)*(uint8_t)6 + (FT(src[k + cn])>>2) + (FT(src[k + idxm1])>>2) + (FT(src[k + 2 * cn])>>4) + (FT(src[k + idxm2])>>4);
+                dst[k + cn] = (FT(src[k + cn])>>4)*(uint8_t)6 + (FT(src[k])>>2) + (FT(src[k + 2 * cn])>>2) + (FT(src[k + idxm1])>>4) + (FT(src[k + idxp1])>>4);
+                dst[k + 2 * cn] = (FT(src[k + 2 * cn])>>4)*(uint8_t)6 + (FT(src[k + cn])>>2) + (FT(src[k + idxp1])>>2) + (FT(src[k])>>4) + (FT(src[k + idxp2])>>4);
             }
         }
     }
@@ -2451,8 +2451,8 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
         // Points that fall left from border
         for (int k = 0; k < cn; k++)
         {
-            dst[k] = (FT(src[k])>>4)*6 + (FT(src[cn + k])>>2) + (FT(src[2 * cn + k])>>4);
-            dst[k + cn] = (FT(src[cn + k])>>4)*6 + (FT(src[k])>>2) + (FT(src[2 * cn + k])>>2) + (FT(src[3 * cn + k])>>4);
+            dst[k] = (FT(src[k])>>4)*(uint8_t)6 + (FT(src[cn + k])>>2) + (FT(src[2 * cn + k])>>4);
+            dst[k + cn] = (FT(src[cn + k])>>4)*(uint8_t)6 + (FT(src[k])>>2) + (FT(src[2 * cn + k])>>2) + (FT(src[3 * cn + k])>>4);
         }
         if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
         {
@@ -2467,13 +2467,13 @@ void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len,
 
         src += 2 * cn; dst += 2 * cn;
         for (int i = 2 * cn; i < (len - 2)*cn; i++, src++, dst++)
-            *dst = (FT(src[0])>>4)*6 + (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[-2 * cn])>>4) + (FT(src[2 * cn])>>4);
+            *dst = (FT(src[0])>>4)*(uint8_t)6 + (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[-2 * cn])>>4) + (FT(src[2 * cn])>>4);
 
         // Points that fall right from border
         for (int k = 0; k < cn; k++)
         {
-            dst[k] = (FT(src[k])>>4)*6 + (FT(src[k - cn])>>2) + (FT(src[k + cn])>>2) + (FT(src[k - 2 * cn])>>4);
-            dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k - cn])>>4);
+            dst[k] = (FT(src[k])>>4)*(uint8_t)6 + (FT(src[k - cn])>>2) + (FT(src[k + cn])>>2) + (FT(src[k - 2 * cn])>>4);
+            dst[k + cn] = (FT(src[k + cn])>>4)*(uint8_t)6 + (FT(src[k])>>2) + (FT(src[k - cn])>>4);
         }
         if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
         {
@@ -2494,7 +2494,7 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
     {
         if (borderType == BORDER_CONSTANT)
             for (int k = 0; k < cn; k++)
-                dst[k] = (ufixedpoint16(src[k])>>3) * 3;
+                dst[k] = (ufixedpoint16(src[k])>>3) * (uint8_t)3;
         else
         {
             for (int k = 0; k < cn; k++)
@@ -2506,8 +2506,8 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
         if (borderType == BORDER_CONSTANT)
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2);
-                dst[k + cn] = (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + cn]) >> 4) * 6;
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k + cn]) >> 2);
+                dst[k + cn] = (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + cn]) >> 4) * (uint8_t)6;
             }
         else
         {
@@ -2517,8 +2517,8 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             int idxp2 = borderInterpolate(3, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + idxm1]) >> 2) + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 4) + (ufixedpoint16(src[k + idxm2]) >> 4);
-                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 4) + (ufixedpoint16(src[k + idxp2]) >> 4);
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k + idxm1]) >> 2) + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 4) + (ufixedpoint16(src[k + idxm2]) >> 4);
+                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 4) + (ufixedpoint16(src[k + idxp2]) >> 4);
             }
         }
     }
@@ -2527,9 +2527,9 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
         if (borderType == BORDER_CONSTANT)
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 4);
-                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 2);
-                dst[k + 2 * cn] = (ufixedpoint16(src[k + 2 * cn]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k]) >> 4);
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 4);
+                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 2);
+                dst[k + 2 * cn] = (ufixedpoint16(src[k + 2 * cn]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k]) >> 4);
             }
         else
         {
@@ -2539,9 +2539,9 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             int idxp2 = borderInterpolate(4, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 4) + (ufixedpoint16(src[k + idxm2]) >> 4);
-                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 4) + (ufixedpoint16(src[k + idxp1]) >> 4);
-                dst[k + 2 * cn] = (ufixedpoint16(src[k + 2 * cn]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 2) + (ufixedpoint16(src[k]) >> 4) + (ufixedpoint16(src[k + idxp2]) >> 4);
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 4) + (ufixedpoint16(src[k + idxm2]) >> 4);
+                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 4) + (ufixedpoint16(src[k + idxp1]) >> 4);
+                dst[k + 2 * cn] = (ufixedpoint16(src[k + 2 * cn]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 2) + (ufixedpoint16(src[k]) >> 4) + (ufixedpoint16(src[k + idxp2]) >> 4);
             }
         }
     }
@@ -2550,8 +2550,8 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
         // Points that fall left from border
         for (int k = 0; k < cn; k++)
         {
-            dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[cn + k]) >> 2) + (ufixedpoint16(src[2 * cn + k]) >> 4);
-            dst[k + cn] = (ufixedpoint16(src[cn + k]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[2 * cn + k]) >> 2) + (ufixedpoint16(src[3 * cn + k]) >> 4);
+            dst[k] = (ufixedpoint16(src[k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[cn + k]) >> 2) + (ufixedpoint16(src[2 * cn + k]) >> 4);
+            dst[k + cn] = (ufixedpoint16(src[cn + k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[2 * cn + k]) >> 2) + (ufixedpoint16(src[3 * cn + k]) >> 4);
         }
         if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
         {
@@ -2584,8 +2584,8 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
         // Points that fall right from border
         for (int k = 0; k < cn; k++)
         {
-            dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k - cn]) >> 2) + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k - 2 * cn]) >> 4);
-            dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k - cn]) >> 4);
+            dst[k] = (ufixedpoint16(src[k]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k - cn]) >> 2) + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k - 2 * cn]) >> 4);
+            dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * (uint8_t)6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k - cn]) >> 4);
         }
         if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
         {
@@ -2718,8 +2718,8 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             int idxp2 = borderInterpolate(3, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = m[1] * ((uint16_t)(src[k + idxm1]) + (uint16_t)(src[k + cn])) + m[2] * src[k] + m[0] * ((uint16_t)(src[k + idxp1]) + (uint16_t)(src[k + idxm2]));
-                dst[k + cn] = m[0] * ((uint16_t)(src[k + idxm1]) + (uint16_t)(src[k + idxp2])) + m[1] * ((uint16_t)(src[k]) + (uint16_t)(src[k + idxp1])) + m[2] * src[k + cn];
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[1] * ((uint16_t)(src[k + idxm1]) + (uint16_t)(src[k + cn])) + ((uint16_t*)m)[2] * src[k] + ((uint16_t*)m)[0] * ((uint16_t)(src[k + idxp1]) + (uint16_t)(src[k + idxm2]));
+                ((uint16_t*)dst)[k + cn] = ((uint16_t*)m)[0] * ((uint16_t)(src[k + idxm1]) + (uint16_t)(src[k + idxp2])) + ((uint16_t*)m)[1] * ((uint16_t)(src[k]) + (uint16_t)(src[k + idxp1])) + ((uint16_t*)m)[2] * src[k + cn];
             }
         }
     }
@@ -2729,7 +2729,7 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             for (int k = 0; k < cn; k++)
             {
                 dst[k] = m[2] * src[k] + m[1] * src[k + cn] + m[0] * src[k + 2 * cn];
-                dst[k + cn] = m[1] * ((uint16_t)(src[k]) + (uint16_t)(src[k + 2 * cn])) + m[2] * src[k + cn];
+                ((uint16_t*)dst)[k + cn] = ((uint16_t*)m)[1] * ((uint16_t)(src[k]) + (uint16_t)(src[k + 2 * cn])) + ((uint16_t*)m)[2] * src[k + cn];
                 dst[k + 2 * cn] = m[0] * src[k] + m[1] * src[k + cn] + m[2] * src[k + 2 * cn];
             }
         else
@@ -2740,9 +2740,9 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             int idxp2 = borderInterpolate(4, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = m[2] * src[k] + m[1] * ((uint16_t)(src[k + cn]) + (uint16_t)(src[k + idxm1])) + m[0] * ((uint16_t)(src[k + 2 * cn]) + (uint16_t)(src[k + idxm2]));
-                dst[k + cn] = m[2] * src[k + cn] + m[1] * ((uint16_t)(src[k]) + (uint16_t)(src[k + 2 * cn])) + m[0] * ((uint16_t)(src[k + idxm1]) + (uint16_t)(src[k + idxp1]));
-                dst[k + 2 * cn] = m[0] * ((uint16_t)(src[k]) + (uint16_t)(src[k + idxp2])) + m[1] * ((uint16_t)(src[k + cn]) + (uint16_t)(src[k + idxp1])) + m[2] * src[k + 2 * cn];
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[2] * src[k] + ((uint16_t*)m)[1] * ((uint16_t)(src[k + cn]) + (uint16_t)(src[k + idxm1])) + ((uint16_t*)m)[0] * ((uint16_t)(src[k + 2 * cn]) + (uint16_t)(src[k + idxm2]));
+                ((uint16_t*)dst)[k + cn] = ((uint16_t*)m)[2] * src[k + cn] + ((uint16_t*)m)[1] * ((uint16_t)(src[k]) + (uint16_t)(src[k + 2 * cn])) + ((uint16_t*)m)[0] * ((uint16_t)(src[k + idxm1]) + (uint16_t)(src[k + idxp1]));
+                ((uint16_t*)dst)[k + 2 * cn] = ((uint16_t*)m)[0] * ((uint16_t)(src[k]) + (uint16_t)(src[k + idxp2])) + ((uint16_t*)m)[1] * ((uint16_t)(src[k + cn]) + (uint16_t)(src[k + idxp1])) + ((uint16_t*)m)[2] * src[k + 2 * cn];
             }
         }
     }
@@ -2755,8 +2755,8 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             int idxm1 = borderInterpolate(-1, len, borderType)*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = m[2] * src[k] + m[1] * ((uint16_t)(src[cn + k]) + (uint16_t)(src[idxm1 + k])) + m[0] * ((uint16_t)(src[2 * cn + k]) + (uint16_t)(src[idxm2 + k]));
-                dst[k + cn] = m[1] * ((uint16_t)(src[k]) + (uint16_t)(src[2 * cn + k])) + m[2] * src[cn + k] + m[0] * ((uint16_t)(src[3 * cn + k]) + (uint16_t)(src[idxm1 + k]));
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[2] * src[k] + ((uint16_t*)m)[1] * ((uint16_t)(src[cn + k]) + (uint16_t)(src[idxm1 + k])) + ((uint16_t*)m)[0] * ((uint16_t)(src[2 * cn + k]) + (uint16_t)(src[idxm2 + k]));
+                ((uint16_t*)dst)[k + cn] = ((uint16_t*)m)[1] * ((uint16_t)(src[k]) + (uint16_t)(src[2 * cn + k])) + ((uint16_t*)m)[2] * src[cn + k] + ((uint16_t*)m)[0] * ((uint16_t)(src[3 * cn + k]) + (uint16_t)(src[idxm1 + k]));
             }
         }
         else
@@ -2764,7 +2764,7 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             for (int k = 0; k < cn; k++)
             {
                 dst[k] = m[2] * src[k] + m[1] * src[cn + k] + m[0] * src[2 * cn + k];
-                dst[k + cn] = m[1] * ((uint16_t)(src[k]) + (uint16_t)(src[2 * cn + k])) + m[2] * src[cn + k] + m[0] * src[3 * cn + k];
+                ((uint16_t*)dst)[k + cn] = ((uint16_t*)m)[1] * ((uint16_t)(src[k]) + (uint16_t)(src[2 * cn + k])) + ((uint16_t*)m)[2] * src[cn + k] + ((uint16_t*)m)[0] * src[3 * cn + k];
             }
         }
 
@@ -2802,7 +2802,7 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
         }
         for (; i < lencn; i++, src++, dst++)
-            *dst = m[0] * ((uint16_t)(src[-2 * cn]) + (uint16_t)(src[2 * cn])) + m[1] * ((uint16_t)(src[-cn]) + (uint16_t)(src[cn])) + m[2] * src[0];
+            *((uint16_t*)dst) = ((uint16_t*)m)[0] * ((uint16_t)(src[-2 * cn]) + (uint16_t)(src[2 * cn])) + ((uint16_t*)m)[1] * ((uint16_t)(src[-cn]) + (uint16_t)(src[cn])) + ((uint16_t*)m)[2] * src[0];
 
         // Points that fall right from border
         if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
@@ -2811,15 +2811,15 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
             int idxp2 = (borderInterpolate(len + 1, len, borderType) - (len - 2))*cn;
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = m[0] * ((uint16_t)(src[k - 2 * cn]) + (uint16_t)(src[idxp1 + k])) + m[1] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[k + cn])) + m[2] * src[k];
-                dst[k + cn] = m[0] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[idxp2 + k])) + m[1] * ((uint16_t)(src[k]) + (uint16_t)(src[idxp1 + k])) + m[2] * src[k + cn];
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[0] * ((uint16_t)(src[k - 2 * cn]) + (uint16_t)(src[idxp1 + k])) + ((uint16_t*)m)[1] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[k + cn])) + ((uint16_t*)m)[2] * src[k];
+                ((uint16_t*)dst)[k + cn] = ((uint16_t*)m)[0] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[idxp2 + k])) + ((uint16_t*)m)[1] * ((uint16_t)(src[k]) + (uint16_t)(src[idxp1 + k])) + ((uint16_t*)m)[2] * src[k + cn];
             }
         }
         else
         {
             for (int k = 0; k < cn; k++)
             {
-                dst[k] = m[0] * src[k - 2 * cn] + m[1] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[k + cn])) + m[2] * src[k];
+                ((uint16_t*)dst)[k] = ((uint16_t*)m)[0] * src[k - 2 * cn] + ((uint16_t*)m)[1] * ((uint16_t)(src[k - cn]) + (uint16_t)(src[k + cn])) + ((uint16_t*)m)[2] * src[k];
                 dst[k + cn] = m[0] * src[k - cn] + m[1] * src[k] + m[2] * src[k + cn];
             }
         }
@@ -3156,7 +3156,7 @@ void vlineSmooth1N(const FT* const * src, const FT* m, int, ET* dst, int len)
 {
     const FT* src0 = src[0];
     for (int i = 0; i < len; i++)
-        dst[i] = m * src0[i];
+        dst[i] = *m * src0[i];
 }
 template <>
 void vlineSmooth1N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len)
@@ -3242,7 +3242,7 @@ template <typename ET, typename FT>
 void vlineSmooth3N121(const FT* const * src, const FT*, int, ET* dst, int len)
 {
     for (int i = 0; i < len; i++)
-        dst[i] = ((FT::WT(src[0][i]) + FT::WT(src[2][i])) >> 2) + (FT::WT(src[1][i]) >> 1);
+        dst[i] = (FT::WT(src[0][i]) >> 2) + (FT::WT(src[2][i]) >> 2) + (FT::WT(src[1][i]) >> 1);
 }
 template <>
 void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
@@ -3318,7 +3318,7 @@ template <typename ET, typename FT>
 void vlineSmooth5N14641(const FT* const * src, const FT*, int, ET* dst, int len)
 {
     for (int i = 0; i < len; i++)
-        dst[i] = (FT::WT(src[2][i])*6 + ((FT::WT(src[1][i]) + FT::WT(src[3][i]))<<2) + FT::WT(src[0][i]) + FT::WT(src[4][i])) >> 4;
+        dst[i] = (FT::WT(src[2][i])*(uint8_t)6 + ((FT::WT(src[1][i]) + FT::WT(src[3][i]))<<2) + FT::WT(src[0][i]) + FT::WT(src[4][i])) >> 4;
 }
 template <>
 void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
@@ -3495,14 +3495,14 @@ public:
     {
         if (kxlen == 1)
         {
-            if ((kx[0] - FT::one()).isZero())
+            if (kx[0] == FT::one())
                 hlineSmoothFunc = hlineSmooth1N1;
             else
                 hlineSmoothFunc = hlineSmooth1N;
         }
         else if (kxlen == 3)
         {
-            if ((kx[0] - (FT::one()>>2)).isZero()&&(kx[1] - (FT::one()>>1)).isZero()&&(kx[2] - (FT::one()>>2)).isZero())
+            if (kx[0] == (FT::one()>>2)&&kx[1] == (FT::one()>>1)&&kx[2] == (FT::one()>>2))
                 hlineSmoothFunc = hlineSmooth3N121;
             else if ((kx[0] - kx[2]).isZero())
                     hlineSmoothFunc = hlineSmooth3Naba;
@@ -3511,11 +3511,11 @@ public:
         }
         else if (kxlen == 5)
         {
-            if ((kx[2] - (FT::one()*3>>3)).isZero()&&
-                (kx[1] - (FT::one()>>2)).isZero()&&(kx[3] - (FT::one()>>2)).isZero()&&
-                (kx[0] - (FT::one()>>4)).isZero()&&(kx[4] - (FT::one()>>4)).isZero())
+            if (kx[2] == (FT::one()*(uint8_t)3>>3) &&
+                kx[1] == (FT::one()>>2) && kx[3] == (FT::one()>>2) &&
+                kx[0] == (FT::one()>>4) && kx[4] == (FT::one()>>4))
                 hlineSmoothFunc = hlineSmooth5N14641;
-            else if ((kx[0] - kx[4]).isZero() && (kx[1] - kx[3]).isZero())
+            else if (kx[0] == kx[4] && kx[1] == kx[3])
                 hlineSmoothFunc = hlineSmooth5Nabcba;
             else
                 hlineSmoothFunc = hlineSmooth5N;
@@ -3524,7 +3524,7 @@ public:
         {
             hlineSmoothFunc = hlineSmoothONa_yzy_a;
             for (int i = 0; i < kxlen / 2; i++)
-                if (!(kx[i] - kx[kxlen - 1 - i]).isZero())
+                if (!(kx[i] == kx[kxlen - 1 - i]))
                 {
                     hlineSmoothFunc = hlineSmooth;
                     break;
@@ -3534,23 +3534,23 @@ public:
             hlineSmoothFunc = hlineSmooth;
         if (kylen == 1)
         {
-            if ((ky[0] - FT::one()).isZero())
+            if (ky[0] == FT::one())
                 vlineSmoothFunc = vlineSmooth1N1;
             else
                 vlineSmoothFunc = vlineSmooth1N;
         }
         else if (kylen == 3)
         {
-            if ((ky[0] - (FT::one() >> 2)).isZero() && (ky[1] - (FT::one() >> 1)).isZero() && (ky[2] - (FT::one() >> 2)).isZero())
+            if (ky[0] == (FT::one() >> 2) && ky[1] == (FT::one() >> 1) && ky[2] == (FT::one() >> 2))
                 vlineSmoothFunc = vlineSmooth3N121;
             else
                 vlineSmoothFunc = vlineSmooth3N;
         }
         else if (kylen == 5)
         {
-            if ((ky[2] - (FT::one() * 3 >> 3)).isZero() &&
-                (ky[1] - (FT::one() >> 2)).isZero() && (ky[3] - (FT::one() >> 2)).isZero() &&
-                (ky[0] - (FT::one() >> 4)).isZero() && (ky[4] - (FT::one() >> 4)).isZero())
+            if (ky[2] == (FT::one() * (uint8_t)3 >> 3) &&
+                ky[1] == (FT::one() >> 2) && ky[3] == (FT::one() >> 2) &&
+                ky[0] == (FT::one() >> 4) && ky[4] == (FT::one() >> 4))
                 vlineSmoothFunc = vlineSmooth5N14641;
             else
                 vlineSmoothFunc = vlineSmooth5N;
@@ -3559,7 +3559,7 @@ public:
         {
             vlineSmoothFunc = vlineSmoothONa_yzy_a;
             for (int i = 0; i < kylen / 2; i++)
-                if (!(ky[i] - ky[kylen - 1 - i]).isZero())
+                if (!(ky[i] == ky[kylen - 1 - i]))
                 {
                     vlineSmoothFunc = vlineSmooth;
                     break;
@@ -4109,7 +4109,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         if (src.data == dst.data)
             src = src.clone();
         fixedSmoothInvoker<uint8_t, ufixedpoint16> invoker(src.ptr<uint8_t>(), src.step1(), dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(), &fkx[0], (int)fkx.size(), &fky[0], (int)fky.size(), borderType & ~BORDER_ISOLATED);
-        parallel_for_(Range(0, dst.rows), invoker, dst.rows / double(1 << 6) / fky.size());
+        parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
         return;
     }
 
