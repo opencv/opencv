@@ -174,9 +174,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_TensorFlow)
 {
-    if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL ||
-        backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     processNet("dnn/ssd_mobilenet_v1_coco.pb", "dnn/ssd_mobilenet_v1_coco.pbtxt",
