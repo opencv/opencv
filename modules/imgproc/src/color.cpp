@@ -84,22 +84,15 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_BGR2YUV:
     case COLOR_RGB2YUV:
     {
-        CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_RGB2YUV ? 2 : 0;
-        dcn = 3;
-        k.create("RGB2YUV", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=3 -D bidx=%d", bidx));
-        break;
+        return oclCvtColorBGR2YUV(_src, _dst, bidx);
     }
     case COLOR_YUV2BGR:
     case COLOR_YUV2RGB:
     {
         if(dcn <= 0) dcn = 3;
-        CV_Assert(dcn == 3 || dcn == 4);
         bidx = code == COLOR_YUV2RGB ? 2 : 0;
-        k.create("YUV2RGB", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
-        break;
+        return oclCvtColorYUV2BGR(_src, _dst, dcn, bidx);
     }
     case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV21:
     case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV21:
@@ -207,23 +200,16 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_BGR2YCrCb:
     case COLOR_RGB2YCrCb:
     {
-        CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2YCrCb ? 0 : 2;
-        dcn = 3;
-        k.create("RGB2YCrCb", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=3 -D bidx=%d", bidx));
-        break;
+        return oclCvtColorBGR2YCrCb(_src, _dst, bidx);
     }
     case COLOR_YCrCb2BGR:
     case COLOR_YCrCb2RGB:
     {
         if( dcn <= 0 )
             dcn = 3;
-        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
         bidx = code == COLOR_YCrCb2BGR ? 0 : 2;
-        k.create("YCrCb2RGB", ocl::imgproc::color_yuv_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
-        break;
+        return oclCvtcolorYCrCb2BGR(_src, _dst, dcn, bidx);
     }
     case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
     {
