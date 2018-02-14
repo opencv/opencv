@@ -2268,7 +2268,7 @@ struct Lab2RGBinteger
         bo = tab[bo];
     }
 
-    // L, a, b shoule be in their natural range
+    // L, a, b should be in their natural range
     inline void processLabToXYZ(const v_uint8x16& lv, const v_uint8x16& av, const v_uint8x16& bv,
                                 v_int32x4& xiv00, v_int32x4& yiv00, v_int32x4& ziv00,
                                 v_int32x4& xiv01, v_int32x4& yiv01, v_int32x4& ziv01,
@@ -3491,7 +3491,6 @@ struct RGB2Luvinterpolate
             dst[i+1] = saturate_cast<uchar>(u/baseDiv);
             dst[i+2] = saturate_cast<uchar>(v/baseDiv);
         }
-
     }
 
     int srccn;
@@ -4386,14 +4385,13 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
 
 } // namespace hal
 
-
 //
 // OCL calls
 //
 
 bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb)
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("BGR2Luv", ocl::imgproc::color_lab_oclsrc,
                        format("-D dcn=3 -D bidx=%d%s", bidx, srgb ? " -D SRGB" : "")))
@@ -4461,7 +4459,7 @@ bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb)
 
 bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb )
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("BGR2Lab", ocl::imgproc::color_lab_oclsrc,
                        format("-D dcn=3 -D bidx=%d%s", bidx, srgb ? " -D SRGB" : "")))
@@ -4556,7 +4554,7 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb 
 
 bool oclCvtColorLab2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb)
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("Lab2BGR", ocl::imgproc::color_lab_oclsrc,
                        format("-D dcn=%d -D bidx=%d%s", dcn, bidx, srgb ? " -D SRGB" : "")))
@@ -4607,7 +4605,7 @@ bool oclCvtColorLab2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
 
 bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bool srgb)
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("Luv2BGR", ocl::imgproc::color_lab_oclsrc,
                        format("-D dcn=%d -D bidx=%d%s", dcn, bidx, srgb ? " -D SRGB" : "")))
@@ -4661,7 +4659,7 @@ bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
 
 bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("RGB2XYZ", ocl::imgproc::color_lab_oclsrc,
                        format("-D dcn=3 -D bidx=%d", bidx)))
@@ -4709,7 +4707,7 @@ bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
 
 bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("XYZ2RGB", ocl::imgproc::color_lab_oclsrc,
                        format("-D dcn=%d -D bidx=%d", dcn, bidx)))
@@ -4754,10 +4752,13 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
     return h.run();
 }
 
+//
+// HAL calls
+//
 
 void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 {
-    CvtHelper<ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper<Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoLab(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, true, srgb);
@@ -4766,7 +4767,7 @@ void cvtColorBGR2Lab( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 
 void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 {
-    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoLab(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, false, srgb);
@@ -4776,7 +4777,7 @@ void cvtColorBGR2Luv( InputArray _src, OutputArray _dst, bool swapb, bool srgb)
 void cvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb )
 {
     if( dcn <= 0 ) dcn = 3;
-    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtLabtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, true, srgb);
@@ -4786,7 +4787,7 @@ void cvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb )
 {
     if( dcn <= 0 ) dcn = 3;
-    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtLabtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, false, srgb);
@@ -4795,7 +4796,7 @@ void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb )
 {
-    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoXYZ(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, h.depth, h.scn, swapb);
 }
@@ -4804,7 +4805,7 @@ void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb )
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb )
 {
     if( dcn <= 0 ) dcn = 3;
-    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtXYZtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, h.depth, dcn, swapb);
 }

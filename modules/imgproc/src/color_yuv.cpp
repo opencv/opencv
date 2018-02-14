@@ -7,6 +7,37 @@
 namespace cv
 {
 
+//constants for conversion from/to RGB and YUV, YCrCb according to BT.601
+
+//to YCbCr
+const float YCBF = 0.564f; // == 1/2/(1-B2YF)
+const float YCRF = 0.713f; // == 1/2/(1-R2YF)
+const int YCBI = 9241;  // == YCBF*16384
+const int YCRI = 11682; // == YCRF*16384
+//to YUV
+const float B2UF = 0.492f;
+const float R2VF = 0.877f;
+const int B2UI = 8061;  // == B2UF*16384
+const int R2VI = 14369; // == R2VF*16384
+//from YUV
+const float U2BF = 2.032f;
+const float U2GF = -0.395f;
+const float V2GF = -0.581f;
+const float V2RF = 1.140f;
+const int U2BI = 33292;
+const int U2GI = -6472;
+const int V2GI = -9519;
+const int V2RI = 18678;
+//from YCrCb
+const float CB2BF = 1.773f;
+const float CB2GF = -0.344f;
+const float CR2GF = -0.714f;
+const float CR2RF = 1.403f;
+const int CB2BI = 29049;
+const int CB2GI = -5636;
+const int CR2GI = -11698;
+const int CR2RI = 22987;
+
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
 template<typename _Tp> struct RGB2YCrCb_f
@@ -2452,10 +2483,13 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 
 } // namespace hal
 
+//
+// OCL calls
+//
 
 bool oclCvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=%d -D bidx=%d", dcn, bidx)))
@@ -2468,7 +2502,7 @@ bool oclCvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
 
 bool oclCvtColorBGR2YUV( InputArray _src, OutputArray _dst, int bidx )
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("RGB2YUV", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=3 -D bidx=%d", bidx)))
@@ -2481,7 +2515,7 @@ bool oclCvtColorBGR2YUV( InputArray _src, OutputArray _dst, int bidx )
 
 bool oclCvtcolorYCrCb2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx)
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("YCrCb2RGB", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=%d -D bidx=%d", dcn, bidx)))
@@ -2494,7 +2528,7 @@ bool oclCvtcolorYCrCb2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx)
 
 bool oclCvtColorBGR2YCrCb( InputArray _src, OutputArray _dst, int bidx)
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("RGB2YCrCb", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=3 -D bidx=%d", bidx)))
@@ -2507,7 +2541,7 @@ bool oclCvtColorBGR2YCrCb( InputArray _src, OutputArray _dst, int bidx)
 
 bool oclCvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx )
 {
-    OclHelper< ValueSet<2>, ValueSet<3, 4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+    OclHelper< Set<2>, Set<3, 4>, Set<CV_8U> > h(_src, _dst, dcn);
 
     bool optimized = _src.offset() % 4 == 0 && _src.step() % 4 == 0;
     if(!h.createKernel("YUV2RGB_422", ocl::imgproc::color_yuv_oclsrc,
@@ -2606,7 +2640,7 @@ struct OclYUVHelper
 
 bool oclCvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 {
-    OclYUVHelper< ValueSet<1>, ValueSet<1>, ValueSet<CV_8U>, false> h(_src, _dst, 1);
+    OclYUVHelper< Set<1>, Set<1>, Set<CV_8U>, false> h(_src, _dst, 1);
 
     h.src.rowRange(0, _dst.rows()).copyTo(_dst);
     return true;
@@ -2614,7 +2648,7 @@ bool oclCvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 
 bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx )
 {
-    OclYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false > h(_src, _dst, dcn);
+    OclYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB_NVx", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx)))
@@ -2627,7 +2661,7 @@ bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int
 
 bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx )
 {
-    OclYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false > h(_src, _dst, dcn);
+    OclYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=%d -D bidx=%d -D uidx=%d%s", dcn, bidx, uidx,
@@ -2641,7 +2675,7 @@ bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, i
 
 bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, int uidx )
 {
-    OclYUVHelper< ValueSet<3, 4>, ValueSet<1>, ValueSet<CV_8U>, true > h(_src, _dst, 1);
+    OclYUVHelper< Set<3, 4>, Set<1>, Set<CV_8U>, true > h(_src, _dst, 1);
 
     if(!h.createKernel("RGB2YUV_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=1 -D bidx=%d -D uidx=%d", bidx, uidx)))
@@ -2652,10 +2686,13 @@ bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, 
     return h.run();
 }
 
+//
+// HAL calls
+//
 
 void cvtColorBGR2YUV(InputArray _src, OutputArray _dst, bool swapb, bool crcb)
 {
-    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, crcb);
@@ -2664,7 +2701,7 @@ void cvtColorBGR2YUV(InputArray _src, OutputArray _dst, bool swapb, bool crcb)
 void cvtColorYUV2BGR(InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb)
 {
     if(dcn <= 0) dcn = 3;
-    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, crcb);
@@ -2672,7 +2709,7 @@ void cvtColorYUV2BGR(InputArray _src, OutputArray _dst, int dcn, bool swapb, boo
 
 void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn)
 {
-    CvtHelper< ValueSet<2>, ValueSet<3, 4>, ValueSet<CV_8U> > h(_src, _dst, dcn);
+    CvtHelper< Set<2>, Set<3, 4>, Set<CV_8U> > h(_src, _dst, dcn);
 
     hal::cvtOnePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                              dcn, swapb, uidx, ycn);
@@ -2721,7 +2758,7 @@ struct CvtYUVHelper
 
 void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx)
 {
-    CvtYUVHelper< ValueSet<3, 4>, ValueSet<1>, ValueSet<CV_8U>, true > h(_src, _dst, 1);
+    CvtYUVHelper< Set<3, 4>, Set<1>, Set<CV_8U>, true > h(_src, _dst, 1);
 
     hal::cvtBGRtoThreePlaneYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                                h.scn, swapb, uidx);
@@ -2729,7 +2766,7 @@ void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, i
 
 void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 {
-    CvtYUVHelper< ValueSet<1>, ValueSet<1>, ValueSet<CV_8U>, false > h(_src, _dst, 1);
+    CvtYUVHelper< Set<1>, Set<1>, Set<CV_8U>, false > h(_src, _dst, 1);
 
 #ifdef HAVE_IPP
 #if IPP_VERSION_X100 >= 201700
@@ -2744,7 +2781,7 @@ void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx)
 {
     if(dcn <= 0) dcn = 3;
-    CvtYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false> h(_src, _dst, dcn);
+    CvtYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false> h(_src, _dst, dcn);
 
     hal::cvtThreePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
                                dcn, swapb, uidx);
@@ -2753,7 +2790,7 @@ void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool
 void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx )
 {
     if(dcn <= 0) dcn = 3;
-    CvtYUVHelper< ValueSet<1>, ValueSet<3, 4>, ValueSet<CV_8U>, false> h(_src, _dst, dcn);
+    CvtYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false> h(_src, _dst, dcn);
 
     hal::cvtTwoPlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
                              dcn, swapb, uidx);

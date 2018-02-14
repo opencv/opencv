@@ -7,8 +7,6 @@
 namespace cv
 {
 
-//TODO: split ocl_cvtColor to different files
-
 #ifdef HAVE_OPENCL
 
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
@@ -82,7 +80,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
     case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
     {
-        int yidx = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
+        int yidx = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2RGBA_UYVY ||
+                    code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
         int uidx = (code==COLOR_YUV2RGB_YVYU || code==COLOR_YUV2RGBA_YVYU ||
                     code==COLOR_YUV2BGR_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 2 : 0;
         uidx = 1 - yidx + uidx;
@@ -97,22 +96,28 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_YCrCb2RGB:
         return oclCvtcolorYCrCb2BGR(_src, _dst, dcn, bidx);
 
-    case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
+    case COLOR_BGR2XYZ:
+    case COLOR_RGB2XYZ:
         return oclCvtColorBGR2XYZ(_src, _dst, bidx);
 
-    case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
+    case COLOR_XYZ2BGR:
+    case COLOR_XYZ2RGB:
         return oclCvtColorXYZ2BGR(_src, _dst, dcn, bidx);
 
-    case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
+    case COLOR_BGR2HSV: case COLOR_BGR2HSV_FULL:
+    case COLOR_RGB2HSV: case COLOR_RGB2HSV_FULL:
         return oclCvtColorBGR2HSV(_src, _dst, bidx, isFullRange(code));
 
-    case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
+    case COLOR_BGR2HLS: case COLOR_BGR2HLS_FULL:
+    case COLOR_RGB2HLS: case COLOR_RGB2HLS_FULL:
         return oclCvtColorBGR2HLS(_src, _dst, bidx, isFullRange(code));
 
-    case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+    case COLOR_HSV2BGR: case COLOR_HSV2BGR_FULL:
+    case COLOR_HSV2RGB: case COLOR_HSV2RGB_FULL:
         return oclCvtColorHSV2BGR(_src, _dst, dcn, bidx, isFullRange(code));
 
-    case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
+    case COLOR_HLS2BGR: case COLOR_HLS2BGR_FULL:
+    case COLOR_HLS2RGB: case COLOR_HLS2RGB_FULL:
         return oclCvtColorHLS2BGR(_src, _dst, dcn, bidx, isFullRange(code));
 
     case COLOR_RGBA2mRGBA:
@@ -121,16 +126,20 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_mRGBA2RGBA:
         return oclCvtColormRGBA2RGBA(_src, _dst);
 
-    case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_LBGR2Lab: case COLOR_LRGB2Lab:
+    case COLOR_BGR2Lab: case COLOR_LBGR2Lab:
+    case COLOR_RGB2Lab: case COLOR_LRGB2Lab:
         return oclCvtColorBGR2Lab(_src, _dst, bidx, issRGB(code));
 
-    case COLOR_BGR2Luv: case COLOR_RGB2Luv: case COLOR_LBGR2Luv: case COLOR_LRGB2Luv:
+    case COLOR_BGR2Luv: case COLOR_LBGR2Luv:
+    case COLOR_RGB2Luv: case COLOR_LRGB2Luv:
         return oclCvtColorBGR2Luv(_src, _dst, bidx, issRGB(code));
 
-    case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+    case COLOR_Lab2BGR: case COLOR_Lab2LBGR:
+    case COLOR_Lab2RGB: case COLOR_Lab2LRGB:
         return oclCvtColorLab2BGR(_src, _dst, dcn, bidx, issRGB(code));
 
-    case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
+    case COLOR_Luv2BGR: case COLOR_Luv2LBGR:
+    case COLOR_Luv2RGB: case COLOR_Luv2LRGB:
         return oclCvtColorLuv2BGR(_src, _dst, dcn, bidx, issRGB(code));
 
     default:
@@ -188,7 +197,8 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     if(dcn <= 0)
             dcn = dstChannels(code);
 
-    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(CV_MAT_DEPTH(_src.type()) == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() &&
+                !(CV_MAT_DEPTH(_src.type()) == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
 
     switch( code )
@@ -333,7 +343,8 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             //http://www.fourcc.org/yuv.php#YUY2
             //http://www.fourcc.org/yuv.php#YVYU
             {
-                int ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
+                int ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY ||
+                            code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
                 cvtColorOnePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code), ycn);
                 break;
             }

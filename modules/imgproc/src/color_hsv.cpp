@@ -1377,8 +1377,6 @@ static ippiGeneralFunc ippiHLS2RGBTab[] =
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
 };
 
-
-
 #endif
 
 //
@@ -1568,10 +1566,13 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
 
 } // namespace hal
 
+//
+// OCL calls
+//
 
 bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full )
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
 
@@ -1586,7 +1587,7 @@ bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
 
 bool oclCvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, bool full )
 {
-    OclHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
 
@@ -1601,7 +1602,7 @@ bool oclCvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
 
 bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full )
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     float hscale = (_src.depth() == CV_32F ? 360.f : (!full ? 180.f : 256.f))/360.f;
 
@@ -1616,7 +1617,7 @@ bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full 
 
 bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full )
 {
-    OclHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 256);
 
@@ -1673,7 +1674,7 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
 void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
 {
-    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoHSV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, fullRange, false);
@@ -1681,7 +1682,7 @@ void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRa
 
 void cvtColorBGR2HSV( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
 {
-    CvtHelper< ValueSet<3, 4>, ValueSet<3>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoHSV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, fullRange, true);
@@ -1690,7 +1691,7 @@ void cvtColorBGR2HSV( InputArray _src, OutputArray _dst, bool swapb, bool fullRa
 void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange)
 {
     if(dcn <= 0) dcn = 3;
-    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtHSVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, fullRange, false);
@@ -1699,7 +1700,7 @@ void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange)
 {
     if(dcn <= 0) dcn = 3;
-    CvtHelper< ValueSet<3>, ValueSet<3, 4>, ValueSet<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtHSVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, fullRange, true);
