@@ -1,3 +1,11 @@
+# This script is used to generate test data for OpenCV deep learning module.
+# To run this script build the TensorFlow graph transformation tool following
+# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/graph_transforms/README.md#using-the-graph-transform-tool
+# and type the command:
+# python generate_tf_models.py \
+#   -f ~/tensorflow/tensorflow/python/tools/freeze_graph.py \
+#   -o ~/tensorflow/tensorflow/python/tools/optimize_for_inference.py \
+#   -t ~/tensorflow/bazel-bin/tensorflow/tools/graph_transforms/transform_graph
 import numpy as np
 import tensorflow as tf
 import os
@@ -348,6 +356,48 @@ inp = tf.placeholder(tf.float32, [1, 4, 6, 1], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1], padding='SAME')
 sliced = tf.slice(conv, [0, 1, 2, 0], [-1, 3, 4, 1])
 save(inp, sliced, 'slice_4d')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 4, 1], 'input')
+#                                             ky kx out in
+deconv_weights = tf.Variable(tf.random_normal([3, 3, 2, 1], dtype=tf.float32))
+deconv = tf.nn.conv2d_transpose(inp, deconv_weights,
+                                output_shape=[1, 4, 4, 2], strides=[1, 1, 1, 1],
+                                padding='SAME')
+leakyRelu = tf.nn.leaky_relu(deconv, alpha=0.2)
+save(inp, leakyRelu, 'deconvolution_same')
+# ################################################################################
+inp = tf.placeholder(tf.float32, [1, 3, 3, 1], 'input')
+deconv_weights = tf.Variable(tf.random_normal([3, 3, 2, 1], dtype=tf.float32))
+deconv = tf.nn.conv2d_transpose(inp, deconv_weights,
+                                output_shape=[1, 5, 5, 2], strides=[1, 2, 2, 1],
+                                padding='SAME')
+save(inp, deconv, 'deconvolution_stride_2_same')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 3, 2, 1], 'input')
+deconv_weights = tf.Variable(tf.random_normal([3, 3, 2, 1], dtype=tf.float32))
+deconv = tf.nn.conv2d_transpose(inp, deconv_weights,
+                                output_shape=[1, 8, 6, 2], strides=[1, 2, 2, 1],
+                                padding='VALID')
+save(inp, deconv, 'deconvolution_adj_pad_valid')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 2, 1], 'input')
+deconv_weights = tf.Variable(np.ones([3, 3, 1, 1]), dtype=tf.float32)
+deconv = tf.nn.conv2d_transpose(inp, deconv_weights,
+                                output_shape=[1, 4, 4, 1], strides=[1, 2, 2, 1],
+                                padding='SAME')
+save(inp, deconv, 'deconvolution_adj_pad_same')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 3, 4, 5], 'input')
+gamma = tf.Variable(tf.random_normal([5], dtype=tf.float32))
+beta = tf.Variable(tf.random_normal([5], dtype=tf.float32))
+bn = tf.nn.fused_batch_norm(inp, gamma, beta, epsilon=1e-5, is_training=True)[0]
+save(inp, bn, 'mvn_batch_norm')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 1, 1, 5], 'input')
+gamma = tf.Variable(tf.random_normal([5], dtype=tf.float32))
+beta = tf.Variable(tf.random_normal([5], dtype=tf.float32))
+bn = tf.nn.fused_batch_norm(inp, gamma, beta, epsilon=1e-5, is_training=True)[0]
+save(inp, bn, 'mvn_batch_norm_1x1')
 ################################################################################
 
 # Uncomment to print the final graph.
