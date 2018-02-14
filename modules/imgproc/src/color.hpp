@@ -560,58 +560,9 @@ private:
     int depth;
 };
 
-
-//TODO: make them external (or rewrite IPP code)
-
-static IppStatus CV_STDCALL ippiSwapChannels_8u_C3C4Rf(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep,
-         IppiSize roiSize, const int *dstOrder)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_8u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP8u);
-}
-
-static IppStatus CV_STDCALL ippiSwapChannels_16u_C3C4Rf(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep,
-         IppiSize roiSize, const int *dstOrder)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_16u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP16u);
-}
-
-static IppStatus CV_STDCALL ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep,
-         IppiSize roiSize, const int *dstOrder)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_32f_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP32f);
-}
-
-static ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C3C4Rf, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3C4Rf, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C3C4Rf, 0, 0
-};
-
-static ippiGeneralFunc ippiCopyAC4C3RTab[] =
-{
-    (ippiGeneralFunc)ippiCopy_8u_AC4C3R, 0, (ippiGeneralFunc)ippiCopy_16u_AC4C3R, 0,
-    0, (ippiGeneralFunc)ippiCopy_32f_AC4C3R, 0, 0
-};
-
-static ippiReorderFunc ippiSwapChannelsC4C3RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C4C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4C3R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C4C3R, 0, 0
-};
-
-static ippiReorderFunc ippiSwapChannelsC3RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
-};
-
-#if IPP_VERSION_X100 >= 810
-static ippiReorderFunc ippiSwapChannelsC4RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C4R, 0, 0
-};
-#endif
+extern ippiReorderFunc ippiSwapChannelsC3C4RTab[8];
+extern ippiReorderFunc ippiSwapChannelsC4C3RTab[8];
+extern ippiReorderFunc ippiSwapChannelsC3RTab[8];
 
 #endif
 
