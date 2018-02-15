@@ -29,6 +29,8 @@ public:
 
     virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) noexcept;
 
+    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) const noexcept;
+
     virtual InferenceEngine::InputInfo::Ptr getInput(const std::string &inputName) noexcept;
 
     virtual void getName(char *pName, size_t len) noexcept;

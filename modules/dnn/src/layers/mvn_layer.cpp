@@ -65,16 +65,18 @@ public:
         relu_slope = 0.f;
     }
 
-    Ptr<BatchNormLayer> bnorm;
     Mat scale, shift;
-    UMat bnorm_weight, bnorm_bias;
     bool fuse_batch_norm;
 
-    bool setBatchNorm(const Ptr<BatchNormLayer>& layer )
+    virtual bool tryFuse(Ptr<Layer>& top)
     {
-        bnorm = layer;
-        fuse_batch_norm = !bnorm.empty() && (preferableTarget == DNN_TARGET_OPENCL);
-        return fuse_batch_norm;
+        if (preferableTarget == DNN_TARGET_OPENCL && !fuse_batch_norm)
+        {
+            top->getScaleShift(scale, shift);
+            fuse_batch_norm = !scale.empty() || !shift.empty();
+            return fuse_batch_norm;
+        }
+        return false;
     }
 
     Ptr<ReLULayer> activ_relu;
@@ -95,12 +97,8 @@ public:
 #ifdef HAVE_OPENCL
     bool fast_forward_ocl(std::vector<UMat> &inputs, std::vector<UMat> &outputs)
     {
-        if( fuse_batch_norm && scale.empty())
-        {
-            bnorm->getScaleShift(scale, shift);
-            bnorm_weight = scale.getUMat(ACCESS_READ);
-            bnorm_bias = shift.getUMat(ACCESS_READ);
-        }
+        UMat bnorm_weight = scale.empty() ? UMat() : scale.getUMat(ACCESS_READ);
+        UMat bnorm_bias = shift.empty() ? UMat() : shift.getUMat(ACCESS_READ);
 
         int splitDim = (acrossChannels) ? 1 : 2;
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
@@ -171,12 +169,8 @@ public:
             return ret;
         }
 
-        if( fuse_batch_norm && scale.empty())
-        {
-            bnorm->getScaleShift(scale, shift);
-            bnorm_weight = scale.getUMat(ACCESS_READ);
-            bnorm_bias = shift.getUMat(ACCESS_READ);
-        }
+        UMat bnorm_weight = scale.empty() ? UMat() : scale.getUMat(ACCESS_READ);
+        UMat bnorm_bias = shift.empty() ? UMat() : shift.getUMat(ACCESS_READ);
 
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
         {
@@ -273,6 +267,14 @@ public:
             int i, newRows = 1;
             for( i = 0; i < splitDim; i++ )
                 newRows *= inpBlob.size[i];
+
+            if (inpBlob.total() == newRows)
+            {
+                // MVN is applied to single values at an every row.
+                outBlob.setTo(0);
+                return;
+            }
+
             Mat inpMat = inpBlob.reshape(1, newRows);
             Mat outMat = outBlob.reshape(1, newRows);
 

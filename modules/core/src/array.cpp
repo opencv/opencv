@@ -1914,7 +1914,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 }
 
 
-// Returns specifed element of n-D array given linear index
+// Returns specified element of n-D array given linear index
 CV_IMPL  CvScalar
 cvGet1D( const CvArr* arr, int idx )
 {
@@ -1949,7 +1949,7 @@ cvGet1D( const CvArr* arr, int idx )
 }
 
 
-// Returns specifed element of 2D array
+// Returns specified element of 2D array
 CV_IMPL  CvScalar
 cvGet2D( const CvArr* arr, int y, int x )
 {
@@ -1983,7 +1983,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 }
 
 
-// Returns specifed element of 3D array
+// Returns specified element of 3D array
 CV_IMPL  CvScalar
 cvGet3D( const CvArr* arr, int z, int y, int x )
 {
@@ -2005,7 +2005,7 @@ cvGet3D( const CvArr* arr, int z, int y, int x )
 }
 
 
-// Returns specifed element of nD array
+// Returns specified element of nD array
 CV_IMPL  CvScalar
 cvGetND( const CvArr* arr, const int* idx )
 {
@@ -2025,7 +2025,7 @@ cvGetND( const CvArr* arr, const int* idx )
 }
 
 
-// Returns specifed element of n-D array given linear index
+// Returns specified element of n-D array given linear index
 CV_IMPL  double
 cvGetReal1D( const CvArr* arr, int idx )
 {
@@ -2064,7 +2064,7 @@ cvGetReal1D( const CvArr* arr, int idx )
 }
 
 
-// Returns specifed element of 2D array
+// Returns specified element of 2D array
 CV_IMPL  double
 cvGetReal2D( const CvArr* arr, int y, int x )
 {
@@ -2103,7 +2103,7 @@ cvGetReal2D( const CvArr* arr, int y, int x )
 }
 
 
-// Returns specifed element of 3D array
+// Returns specified element of 3D array
 CV_IMPL  double
 cvGetReal3D( const CvArr* arr, int z, int y, int x )
 {
@@ -2131,7 +2131,7 @@ cvGetReal3D( const CvArr* arr, int z, int y, int x )
 }
 
 
-// Returns specifed element of nD array
+// Returns specified element of nD array
 CV_IMPL  double
 cvGetRealND( const CvArr* arr, const int* idx )
 {
@@ -2156,7 +2156,7 @@ cvGetRealND( const CvArr* arr, const int* idx )
 }
 
 
-// Assigns new value to specifed element of nD array given linear index
+// Assigns new value to specified element of nD array given linear index
 CV_IMPL  void
 cvSet1D( CvArr* arr, int idx, CvScalar scalar )
 {
@@ -2187,7 +2187,7 @@ cvSet1D( CvArr* arr, int idx, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of 2D array
+// Assigns new value to specified element of 2D array
 CV_IMPL  void
 cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 {
@@ -2216,7 +2216,7 @@ cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of 3D array
+// Assigns new value to specified element of 3D array
 CV_IMPL  void
 cvSet3D( CvArr* arr, int z, int y, int x, CvScalar scalar )
 {
@@ -2234,7 +2234,7 @@ cvSet3D( CvArr* arr, int z, int y, int x, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of nD array
+// Assigns new value to specified element of nD array
 CV_IMPL  void
 cvSetND( CvArr* arr, const int* idx, CvScalar scalar )
 {

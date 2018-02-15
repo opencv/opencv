@@ -1,9 +1,13 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1800)
 // eliminating duplicated round() declaration
 #define HAVE_ROUND 1
+#pragma warning(push)
+#pragma warning(disable:5033)  // 'register' is no longer a supported storage class
 #endif
-
 #include <Python.h>
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#pragma warning(pop)
+#endif
 
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -216,7 +220,7 @@ PyObject* pyopencv_from(const T& src);
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
-// special case, when the convertor needs full ArgInfo structure
+// special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 {
     bool allowND = true;

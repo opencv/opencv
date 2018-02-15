@@ -10,6 +10,7 @@ Implementation of shift layer, which adds up const values to blob.
 */
 
 #include "../precomp.hpp"
+#include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -24,6 +25,12 @@ public:
     {
         setParamsFrom(params);
         CV_Assert(blobs.size() == 1);
+    }
+
+    virtual bool supportBackend(int backendId)
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -81,6 +88,58 @@ public:
                 }
             }
         }
+    }
+
+    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node)
+    {
+        switch (node->backendId)
+        {
+            case DNN_BACKEND_INFERENCE_ENGINE:
+            {
+#ifdef HAVE_INF_ENGINE
+                auto base = node.dynamicCast<InfEngineBackendNode>();
+                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
+                if (conv)
+                {
+                    fuseConvWeights(conv, Mat(), blobs[0]);
+                    return base;
+                }
+#endif  // HAVE_INF_ENGINE
+                break;
+            }
+        }
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        // Inference Engine has no layer just for biases. Create a linear
+        // transformation layer with ones weights.
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
+        auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                {blobs[0].total()});
+        weights->allocate();
+
+        std::vector<float> ones(blobs[0].total(), 1);
+        weights->set(ones);
+        ieLayer->_weights = weights;
+
+        ieLayer->_biases = wrapToInfEngineBlob(blobs[0]);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
+    void getScaleShift(Mat& scale, Mat& shift) const
+    {
+        scale = Mat();
+        shift = blobs[0];
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,

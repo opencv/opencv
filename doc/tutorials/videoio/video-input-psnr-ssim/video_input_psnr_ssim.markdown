@@ -35,7 +35,7 @@ C++ class. This on itself builds on the FFmpeg open source library. This is a ba
 dependency of OpenCV so you shouldn't need to worry about this. A video is composed of a succession
 of images, we refer to these in the literature as frames. In case of a video file there is a *frame
 rate* specifying just how long is between two frames. While for the video cameras usually there is a
-limit of just how many frames they can digitalize per second, this property is less important as at
+limit of just how many frames they can digitize per second, this property is less important as at
 any time the camera sees the current snapshot of the world.
 
 The first task you need to do is to assign to a @ref cv::VideoCapture class its source. You can do

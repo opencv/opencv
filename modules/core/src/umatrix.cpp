@@ -149,45 +149,80 @@ void UMatData::unlock()
 }
 
 
-struct UMatDataAutoLockUsage
+// Do not allow several lock() calls with different UMatData objects.
+struct UMatDataAutoLocker
 {
-    int count;
-    UMatDataAutoLockUsage() : count(0) { }
+    int usage_count;
+    UMatData* locked_objects[2];
+    UMatDataAutoLocker() : usage_count(0) { locked_objects[0] = NULL; locked_objects[1] = NULL; }
+
+    void lock(UMatData*& u1)
+    {
+        bool locked_1 = (u1 == locked_objects[0] || u1 == locked_objects[1]);
+        if (locked_1)
+        {
+            u1 = NULL;
+            return;
+        }
+        CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
+        usage_count = 1;
+        locked_objects[0] = u1;
+        u1->lock();
+    }
+    void lock(UMatData*& u1, UMatData*& u2)
+    {
+        bool locked_1 = (u1 == locked_objects[0] || u1 == locked_objects[1]);
+        bool locked_2 = (u2 == locked_objects[0] || u2 == locked_objects[1]);
+        if (locked_1)
+            u1 = NULL;
+        if (locked_2)
+            u2 = NULL;
+        if (locked_1 && locked_2)
+            return;
+        CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
+        usage_count = 1;
+        locked_objects[0] = u1;
+        locked_objects[1] = u2;
+        if (u1)
+            u1->lock();
+        if (u2)
+            u2->lock();
+    }
+    void release(UMatData* u1, UMatData* u2)
+    {
+        if (u1 == NULL && u2 == NULL)
+            return;
+        CV_Assert(usage_count == 1);
+        usage_count = 0;
+        if (u1)
+            u1->unlock();
+        if (u2)
+            u2->unlock();
+        locked_objects[0] = NULL; locked_objects[1] = NULL;
+    }
 };
-static TLSData<UMatDataAutoLockUsage>& getUMatDataAutoLockUsageTLS()
+static TLSData<UMatDataAutoLocker>& getUMatDataAutoLockerTLS()
 {
-    CV_SINGLETON_LAZY_INIT_REF(TLSData<UMatDataAutoLockUsage>, new TLSData<UMatDataAutoLockUsage>());
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<UMatDataAutoLocker>, new TLSData<UMatDataAutoLocker>());
 }
-static int& getUMatDataAutoLockUsage() { return getUMatDataAutoLockUsageTLS().get()->count; }
+static UMatDataAutoLocker& getUMatDataAutoLocker() { return getUMatDataAutoLockerTLS().getRef(); }
 
 
 UMatDataAutoLock::UMatDataAutoLock(UMatData* u) : u1(u), u2(NULL)
 {
-    int& usage_count = getUMatDataAutoLockUsage();
-    CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
-    usage_count = 1;
-    u1->lock();
+    getUMatDataAutoLocker().lock(u1);
 }
 UMatDataAutoLock::UMatDataAutoLock(UMatData* u1_, UMatData* u2_) : u1(u1_), u2(u2_)
 {
-    int& usage_count = getUMatDataAutoLockUsage();
-    CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
-    usage_count = 1;
     if (getUMatDataLockIndex(u1) > getUMatDataLockIndex(u2))
     {
         std::swap(u1, u2);
     }
-    u1->lock();
-    u2->lock();
+    getUMatDataAutoLocker().lock(u1, u2);
 }
 UMatDataAutoLock::~UMatDataAutoLock()
 {
-    int& usage_count = getUMatDataAutoLockUsage();
-    CV_Assert(usage_count == 1);
-    usage_count = 0;
-    u1->unlock();
-    if (u2)
-      u2->unlock();
+    getUMatDataAutoLocker().release(u1, u2);
 }
 
 

@@ -104,7 +104,7 @@ __device__ __forceinline__ static void blockCopy(InIt beg, InIt end, OutIt out)
 }
 
 template <class InIt, class OutIt, class UnOp>
-__device__ __forceinline__ static void blockTransfrom(InIt beg, InIt end, OutIt out, const UnOp& op)
+__device__ __forceinline__ static void blockTransform(InIt beg, InIt end, OutIt out, const UnOp& op)
 {
     uint STRIDE = Block::blockSize();
     InIt  t = beg + Block::threadLineId();
@@ -115,7 +115,7 @@ __device__ __forceinline__ static void blockTransfrom(InIt beg, InIt end, OutIt 
 }
 
 template <class InIt1, class InIt2, class OutIt, class BinOp>
-__device__ __forceinline__ static void blockTransfrom(InIt1 beg1, InIt1 end1, InIt2 beg2, OutIt out, const BinOp& op)
+__device__ __forceinline__ static void blockTransform(InIt1 beg1, InIt1 end1, InIt2 beg2, OutIt out, const BinOp& op)
 {
     uint STRIDE = Block::blockSize();
     InIt1 t1 = beg1 + Block::threadLineId();

@@ -784,7 +784,7 @@ public:
     `VideoCapture -> API Backend -> Operating System -> Device Driver -> Device Hardware`
     @endcode
     The returned value might be different from what really used by the device or it could be encoded
-    using device dependant rules (eg. steps or percentage). Effective behaviour depends from device
+    using device dependent rules (eg. steps or percentage). Effective behaviour depends from device
     driver and API Backend
 
     */

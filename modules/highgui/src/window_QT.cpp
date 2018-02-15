@@ -1596,7 +1596,7 @@ void CvWinProperties::showEvent(QShowEvent* evnt)
 {
     //why -1,-1 ?: do this trick because the first time the code is run,
     //no value pos was saved so we let Qt move the window in the middle of its parent (event ignored).
-    //then hide will save the last position and thus, we want to retreive it (event accepted).
+    //then hide will save the last position and thus, we want to retrieve it (event accepted).
     QPoint mypos(-1, -1);
     QSettings settings("OpenCV2", objectName());
     mypos = settings.value("pos", mypos).toPoint();

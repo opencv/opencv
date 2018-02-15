@@ -18,7 +18,7 @@
 #
 # Returns:
 #   0 - Successfully written the properties file.
-#   1 - Error occured such as build directory does not exist
+#   1 - Error occurred such as build directory does not exist
 #	or OpenCV version could not be determined or an
 #	unexpected error.
 #

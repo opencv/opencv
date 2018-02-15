@@ -82,7 +82,7 @@ namespace cv
   Both types support the following:
   - Construction from signed and unsigned 32-bit and 64 integers,
   float/double or raw binary representation
-  - Conversions betweeen each other, to float or double and to int
+  - Conversions between each other, to float or double and to int
   using @ref cvRound, @ref cvTrunc, @ref cvFloor, @ref cvCeil or a bunch of
   saturate_cast functions
   - Add, subtract, multiply, divide, remainder, square root, FMA with absolute precision

@@ -150,7 +150,7 @@ namespace cv
         d*=-1.0;
         d.copyTo(r);
 
-        //here everything goes. check that everything is setted properly
+        //here everything goes. check that everything is set properly
         dprintf(("proxy_x\n"));print_matrix(proxy_x);
         dprintf(("d first time\n"));print_matrix(d);
         dprintf(("r\n"));print_matrix(r);

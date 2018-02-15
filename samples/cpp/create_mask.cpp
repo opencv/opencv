@@ -5,7 +5,7 @@
 * Siddharth Kherada <siddharthkherada27[at]gmail[dot]com>
 *
 * This tutorial demonstrates how to make mask image (black and white).
-* The program takes as input a source image and ouputs its corresponding
+* The program takes as input a source image and outputs its corresponding
 * mask image.
 */
 

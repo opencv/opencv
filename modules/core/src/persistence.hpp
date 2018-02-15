@@ -12,6 +12,9 @@
 #include <sstream>
 #include <string>
 #include <iterator>
+#ifdef _MSC_VER
+#include <cstdint>
+#endif // _MSC_VER
 
 #define USE_ZLIB 1
 #if USE_ZLIB

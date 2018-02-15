@@ -730,7 +730,7 @@ void ThreadPool::setNumOfThreads(unsigned n)
     {
         num_threads = n;
         if (n == 1)
-           if (job == NULL) reconfigure(0);  // stop worker threads immediatelly
+           if (job == NULL) reconfigure(0);  // stop worker threads immediately
     }
 }
 
