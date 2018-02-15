@@ -51,7 +51,6 @@
 
 /* Includes */
 #include <opencv2/core.hpp>
-#include <stdint.h>
 
 
 
