@@ -987,8 +987,7 @@ public:
 #ifdef CV_CXX11
     /** @overload
     */
-    template<typename _Tp, typename = typename std::enable_if<std::is_arithmetic<_Tp>::value>::type>
-    explicit Mat(const std::initializer_list<_Tp> list);
+    template<typename _Tp> explicit Mat(const std::initializer_list<_Tp> list);
 
     /** @overload
     */
@@ -2211,7 +2210,7 @@ public:
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
 #ifdef CV_CXX11
-    Mat_(std::initializer_list<_Tp> values);
+    explicit Mat_(const std::initializer_list<_Tp> values);
     explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
 #endif
 
