@@ -4,7 +4,26 @@ node {
   attr {
     key: "dtype"
     value {
-      type: DT_FLOAT
+      type: DT_UINT8
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: 3
+        }
+      }
     }
   }
 }
@@ -3481,37 +3500,6 @@ node {
   input: "BoxPredictor_1/ClassPredictor/Conv2D"
   input: "BoxPredictor_1/ClassPredictor/biases/read/_456__cf__459"
 }
-### Locations ##################################################################
-node {
-  name: "BoxPredictor_0/Flatten"
-  op: "Flatten"
-  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
-}
-node {
-  name: "BoxPredictor_1/Flatten"
-  op: "Flatten"
-  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
-}
-node {
-  name: "BoxPredictor_2/Flatten"
-  op: "Flatten"
-  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
-}
-node {
-  name: "BoxPredictor_3/Flatten"
-  op: "Flatten"
-  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
-}
-node {
-  name: "BoxPredictor_4/Flatten"
-  op: "Flatten"
-  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
-}
-node {
-  name: "BoxPredictor_5/Flatten"
-  op: "Flatten"
-  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
-}
 node {
   name: "concat/axis_flatten"
   op: "Const"
@@ -3528,81 +3516,102 @@ node {
   }
 }
 node {
-  name: "concat"
-  op: "ConcatV2"
-  input: "BoxPredictor_0/Flatten"
-  input: "BoxPredictor_1/Flatten"
-  input: "BoxPredictor_2/Flatten"
-  input: "BoxPredictor_3/Flatten"
-  input: "BoxPredictor_4/Flatten"
-  input: "BoxPredictor_5/Flatten"
-  input: "concat/axis_flatten"
-}
-### Classifications ############################################################
-node {
-  name: "BoxPredictor_0/Flatten_1"
+  name: "BoxPredictor_0/ClassPredictor/BiasAdd/Flatten"
   op: "Flatten"
   input: "BoxPredictor_0/ClassPredictor/BiasAdd"
 }
 node {
-  name: "BoxPredictor_1/Flatten_1"
+  name: "BoxPredictor_1/ClassPredictor/BiasAdd/Flatten"
   op: "Flatten"
   input: "BoxPredictor_1/ClassPredictor/BiasAdd"
 }
 node {
-  name: "BoxPredictor_2/Flatten_1"
+  name: "BoxPredictor_2/ClassPredictor/BiasAdd/Flatten"
   op: "Flatten"
   input: "BoxPredictor_2/ClassPredictor/BiasAdd"
 }
 node {
-  name: "BoxPredictor_3/Flatten_1"
+  name: "BoxPredictor_3/ClassPredictor/BiasAdd/Flatten"
   op: "Flatten"
   input: "BoxPredictor_3/ClassPredictor/BiasAdd"
 }
 node {
-  name: "BoxPredictor_4/Flatten_1"
+  name: "BoxPredictor_4/ClassPredictor/BiasAdd/Flatten"
   op: "Flatten"
   input: "BoxPredictor_4/ClassPredictor/BiasAdd"
 }
 node {
-  name: "BoxPredictor_5/Flatten_1"
+  name: "BoxPredictor_5/ClassPredictor/BiasAdd/Flatten"
   op: "Flatten"
   input: "BoxPredictor_5/ClassPredictor/BiasAdd"
 }
 node {
-  name: "concat_1"
+  name: "ClassPredictor/concat"
   op: "ConcatV2"
-  input: "BoxPredictor_0/Flatten_1"
-  input: "BoxPredictor_1/Flatten_1"
-  input: "BoxPredictor_2/Flatten_1"
-  input: "BoxPredictor_3/Flatten_1"
-  input: "BoxPredictor_4/Flatten_1"
-  input: "BoxPredictor_5/Flatten_1"
+  input: "BoxPredictor_0/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_1/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_2/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_3/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_4/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_5/ClassPredictor/BiasAdd/Flatten"
   input: "concat/axis_flatten"
 }
-################################################################################
 node {
-  name: "PriorBox"
+  name: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxEncodingPredictor/concat"
+  op: "ConcatV2"
+  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "concat/axis_flatten"
+}
+node {
+  name: "PriorBox_0"
   op: "PriorBox"
   input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "flip" value { b: false } }
-  attr { key: "clip" value { b: false } }
-  attr { key: "normalized_bbox" value { b: true } }
   attr {
-    key: "width"
+    key: "clip"
     value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 3
-          }
-        }
-        float_val: 0.1
-        float_val: 0.282843
-        float_val: 0.141421
-      }
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
     }
   }
   attr {
@@ -3615,9 +3624,9 @@ node {
             size: 3
           }
         }
-        float_val: 0.1
-        float_val: 0.141421
-        float_val: 0.282843
+        float_val: 30.0
+        float_val: 42.4264068604
+        float_val: 84.8528137207
       }
     }
   }
@@ -3631,10 +3640,26 @@ node {
             size: 4
           }
         }
-        float_val: 0.1
-        float_val: 0.1
-        float_val: 0.2
-        float_val: 0.2
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        float_val: 30.0
+        float_val: 84.8528137207
+        float_val: 42.4264068604
       }
     }
   }
@@ -3644,26 +3669,16 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "flip" value { b: false } }
-  attr { key: "clip" value { b: false } }
-  attr { key: "normalized_bbox" value { b: true } }
   attr {
-    key: "width"
+    key: "clip"
     value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 6
-          }
-        }
-        float_val: 0.35
-        float_val: 0.494975
-        float_val: 0.247487
-        float_val: 0.606218
-        float_val: 0.202073
-        float_val: 0.41833
-      }
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
     }
   }
   attr {
@@ -3676,12 +3691,12 @@ node {
             size: 6
           }
         }
-        float_val: 0.35
-        float_val: 0.247487
-        float_val: 0.494975
-        float_val: 0.202073
-        float_val: 0.606218
-        float_val: 0.41833
+        float_val: 105.0
+        float_val: 74.2462081909
+        float_val: 148.492416382
+        float_val: 60.6217765808
+        float_val: 181.956329346
+        float_val: 125.499000549
       }
     }
   }
@@ -3695,10 +3710,29 @@ node {
             size: 4
           }
         }
-        float_val: 0.1
-        float_val: 0.1
-        float_val: 0.2
-        float_val: 0.2
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 105.0
+        float_val: 148.492416382
+        float_val: 74.2462081909
+        float_val: 181.865341187
+        float_val: 60.5914611816
+        float_val: 125.499000549
       }
     }
   }
@@ -3708,26 +3742,16 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "flip" value { b: false } }
-  attr { key: "clip" value { b: false } }
-  attr { key: "normalized_bbox" value { b: true } }
   attr {
-    key: "width"
+    key: "clip"
     value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 6
-          }
-        }
-        float_val: 0.5
-        float_val: 0.707107
-        float_val: 0.353553
-        float_val: 0.866025
-        float_val: 0.288675
-        float_val: 0.570088
-      }
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
     }
   }
   attr {
@@ -3740,12 +3764,12 @@ node {
             size: 6
           }
         }
-        float_val: 0.5
-        float_val: 0.353553
-        float_val: 0.707107
-        float_val: 0.288675
-        float_val: 0.866025
-        float_val: 0.570088
+        float_val: 150.0
+        float_val: 106.066017151
+        float_val: 212.132034302
+        float_val: 86.6025390625
+        float_val: 259.93762207
+        float_val: 171.026321411
       }
     }
   }
@@ -3759,10 +3783,29 @@ node {
             size: 4
           }
         }
-        float_val: 0.1
-        float_val: 0.1
-        float_val: 0.2
-        float_val: 0.2
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 150.0
+        float_val: 212.132034302
+        float_val: 106.066017151
+        float_val: 259.807617188
+        float_val: 86.5592269897
+        float_val: 171.026321411
       }
     }
   }
@@ -3772,26 +3815,16 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "flip" value { b: false } }
-  attr { key: "clip" value { b: false } }
-  attr { key: "normalized_bbox" value { b: true } }
   attr {
-    key: "width"
+    key: "clip"
     value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 6
-          }
-        }
-        float_val: 0.65
-        float_val: 0.919239
-        float_val: 0.459619
-        float_val: 1.12583
-        float_val: 0.375278
-        float_val: 0.72111
-      }
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
     }
   }
   attr {
@@ -3804,12 +3837,12 @@ node {
             size: 6
           }
         }
-        float_val: 0.65
-        float_val: 0.459619
-        float_val: 0.919239
-        float_val: 0.375278
-        float_val: 1.12583
-        float_val: 0.72111
+        float_val: 195.0
+        float_val: 137.885818481
+        float_val: 275.771636963
+        float_val: 112.583305359
+        float_val: 337.918914795
+        float_val: 216.333084106
       }
     }
   }
@@ -3823,10 +3856,29 @@ node {
             size: 4
           }
         }
-        float_val: 0.1
-        float_val: 0.1
-        float_val: 0.2
-        float_val: 0.2
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 195.0
+        float_val: 275.771636963
+        float_val: 137.885818481
+        float_val: 337.749908447
+        float_val: 112.527000427
+        float_val: 216.333084106
       }
     }
   }
@@ -3836,26 +3888,16 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "flip" value { b: false } }
-  attr { key: "clip" value { b: false } }
-  attr { key: "normalized_bbox" value { b: true } }
   attr {
-    key: "width"
+    key: "clip"
     value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 6
-          }
-        }
-        float_val: 0.8
-        float_val: 1.13137
-        float_val: 0.565685
-        float_val: 1.38564
-        float_val: 0.46188
-        float_val: 0.87178
-      }
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
     }
   }
   attr {
@@ -3868,12 +3910,12 @@ node {
             size: 6
           }
         }
-        float_val: 0.8
-        float_val: 0.565685
-        float_val: 1.13137
-        float_val: 0.46188
-        float_val: 1.38564
-        float_val: 0.87178
+        float_val: 240.0
+        float_val: 169.705627441
+        float_val: 339.411254883
+        float_val: 138.564071655
+        float_val: 415.90020752
+        float_val: 261.533935547
       }
     }
   }
@@ -3887,10 +3929,29 @@ node {
             size: 4
           }
         }
-        float_val: 0.1
-        float_val: 0.1
-        float_val: 0.2
-        float_val: 0.2
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 240.0
+        float_val: 339.411254883
+        float_val: 169.705627441
+        float_val: 415.692199707
+        float_val: 138.494766235
+        float_val: 261.533935547
       }
     }
   }
@@ -3900,26 +3961,16 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "flip" value { b: false } }
-  attr { key: "clip" value { b: false } }
-  attr { key: "normalized_bbox" value { b: true } }
   attr {
-    key: "width"
+    key: "clip"
     value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 6
-          }
-        }
-        float_val: 0.95
-        float_val: 1.3435
-        float_val: 0.67175
-        float_val: 1.64545
-        float_val: 0.548483
-        float_val: 0.97468
-      }
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
     }
   }
   attr {
@@ -3932,12 +3983,12 @@ node {
             size: 6
           }
         }
-        float_val: 0.95
-        float_val: 0.67175
-        float_val: 1.3435
-        float_val: 0.548483
-        float_val: 1.64545
-        float_val: 0.97468
+        float_val: 285.0
+        float_val: 201.525436401
+        float_val: 403.050872803
+        float_val: 164.544830322
+        float_val: 493.881469727
+        float_val: 292.403839111
       }
     }
   }
@@ -3951,18 +4002,37 @@ node {
             size: 4
           }
         }
-        float_val: 0.1
-        float_val: 0.1
-        float_val: 0.2
-        float_val: 0.2
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 285.0
+        float_val: 403.050872803
+        float_val: 201.525436401
+        float_val: 493.634490967
+        float_val: 164.462539673
+        float_val: 292.403839111
       }
     }
   }
 }
 node {
-  name: "concat_2"
+  name: "PriorBox/concat"
   op: "ConcatV2"
-  input: "PriorBox"
+  input: "PriorBox_0"
   input: "PriorBox_1"
   input: "PriorBox_2"
   input: "PriorBox_3"
@@ -3970,25 +4040,71 @@ node {
   input: "PriorBox_5"
   input: "concat/axis_flatten"
 }
-################################################################################
 node {
-  name: "concat_1_sigmoid"
+  name: "ClassPredictor/concat/sigmoid"
   op: "Sigmoid"
-  input: "concat_1"
+  input: "ClassPredictor/concat"
 }
 node {
   name: "detection_out"
   op: "DetectionOutput"
-  input: "concat"
-  input: "concat_1_sigmoid"
-  input: "concat_2"
-  attr { key: "num_classes" value { i: 91 } }
-  attr { key: "share_location" value { b: true } }
-  attr { key: "background_label_id" value { i: 0 } }
-  attr { key: "nms_threshold" value { f: 0.6 } }
-  attr { key: "top_k" value { i: 100 } }
-  attr { key: "code_type" value { s: "CENTER_SIZE" } }
-  attr { key: "keep_top_k" value { i: 100 } }
-  attr { key: "confidence_threshold" value { f: 0.01 } }
-  attr { key: "loc_pred_transposed" value { b: true } }
+  input: "BoxEncodingPredictor/concat"
+  input: "ClassPredictor/concat/sigmoid"
+  input: "PriorBox/concat"
+  attr {
+    key: "background_label_id"
+    value {
+      i: 0
+    }
+  }
+  attr {
+    key: "code_type"
+    value {
+      s: "CENTER_SIZE"
+    }
+  }
+  attr {
+    key: "confidence_threshold"
+    value {
+      f: 0.00999999977648
+    }
+  }
+  attr {
+    key: "keep_top_k"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "nms_threshold"
+    value {
+      f: 0.600000023842
+    }
+  }
+  attr {
+    key: "num_classes"
+    value {
+      i: 91
+    }
+  }
+  attr {
+    key: "share_location"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "top_k"
+    value {
+      i: 100
+    }
+  }
+}
+library {
 }
