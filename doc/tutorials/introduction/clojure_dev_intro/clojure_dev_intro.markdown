@@ -380,7 +380,7 @@ user=> (.area sq-100)
 100.0
 @endcode
 If you find yourself not remembering a OpenCV class behavior, the REPL gives you the opportunity to
-easily search the corresponding javadoc documention:
+easily search the corresponding javadoc documentation:
 @code{.clojure}
 user=> (javadoc Rect)
 "http://www.google.com/search?btnI=I%27m%20Feeling%20Lucky&q=allinurl:org/opencv/core/Rect.html"
@@ -455,7 +455,7 @@ org.opencv.core.Scalar
 @endcode
 We're going to mimic almost verbatim the original OpenCV java tutorial to:
 
--   create a 5x10 matrix with all its elements intialized to 0
+-   create a 5x10 matrix with all its elements initialized to 0
 -   change the value of every element of the second row to 1
 -   change the value of every element of the 6th column to 5
 -   print the content of the obtained matrix

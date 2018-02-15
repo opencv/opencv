@@ -193,7 +193,7 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !_locPredTransposed;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -249,7 +249,8 @@ public:
             kernel.set(6, (int)num_loc_classes);
             kernel.set(7, (int)background_label_id);
             kernel.set(8, (int)clip);
-            kernel.set(9, ocl::KernelArg::PtrWriteOnly(outmat));
+            kernel.set(9, (int)_locPredTransposed);
+            kernel.set(10, ocl::KernelArg::PtrWriteOnly(outmat));
 
             if (!kernel.run(1, &nthreads, NULL, false))
                 return false;

@@ -574,7 +574,7 @@ namespace
                 int totalWidth = level.workArea.width / step;
                 total += totalWidth * (level.workArea.height / step);
 
-                // go to next pyramide level
+                // go to next pyramid level
                 level = level.next(scaleFactor_, image.size(), NxM, minObjectSize_);
                 area = level.workArea;
 

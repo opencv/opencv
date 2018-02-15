@@ -281,20 +281,26 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual bool setActivation(const Ptr<ActivationLayer>& layer);
 
         /**
-         * @brief Tries to attach to the layer the subsequent batch normalization layer, i.e. do the layer fusion in a partial case.
-         * @param[in] layer The subsequent batch normalization layer.
-         *
-         * Returns true if the batch normalization layer has been attached successfully.
+         * @brief Try to fuse current layer with a next one
+         * @param[in] top Next layer to be fused.
+         * @returns True if fusion was performed.
          */
-        virtual bool setBatchNorm(const Ptr<BatchNormLayer>& layer);
+        virtual bool tryFuse(Ptr<Layer>& top);
 
         /**
-         * @brief Tries to attach to the layer the subsequent scaling layer, i.e. do the layer fusion in a partial case.
-         * @param[in] layer The subsequent scaling layer.
+         * @brief Returns parameters of layers with channel-wise multiplication and addition.
+         * @param[out] scale Channel-wise multipliers. Total number of values should
+         *                   be equal to number of channels.
+         * @param[out] shift Channel-wise offsets. Total number of values should
+         *                   be equal to number of channels.
          *
-         * Returns true if the scaling layer has been attached successfully.
+         * Some layers can fuse their transformations with further layers.
+         * In example, convolution + batch normalization. This way base layer
+         * use weights from layer after it. Fused layer is skipped.
+         * By default, @p scale and @p shift are empty that means layer has no
+         * element-wise multiplications or additions.
          */
-        virtual bool setScale(const Ptr<ScaleLayer>& layer);
+        virtual void getScaleShift(Mat& scale, Mat& shift) const;
 
         /**
          * @brief "Deattaches" all the layers, attached to particular layer.
@@ -691,7 +697,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
-     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
@@ -719,7 +725,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
-     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
@@ -735,6 +741,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
 
+    /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
+     *  (std::vector<cv::Mat>).
+     *  @param[in] blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
+     *  which you would like to extract the images.
+     *  @param[out] images_ array of 2D Mat containing the images extracted from the blob in floating point precision
+     *  (CV_32F). They are non normalized neither mean added. The number of returned images equals the first dimension
+     *  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
+     */
+    CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single

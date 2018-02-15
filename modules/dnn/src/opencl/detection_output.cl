@@ -51,6 +51,7 @@ __kernel void DecodeBBoxesCORNER(const int nthreads,
                                  const int num_loc_classes,
                                  const int background_label_id,
                                  const int clip_bbox,
+                                 const int locPredTransposed,
                                  __global Dtype* bbox_data)
 {
     for (int index = get_global_id(0); index < nthreads; index += get_global_size(0))
@@ -75,10 +76,18 @@ __kernel void DecodeBBoxesCORNER(const int nthreads,
             bbox_vec = loc_vec * prior_variance;
         }
 
-        bbox_xmin = bbox_vec.x;
-        bbox_ymin = bbox_vec.y;
-        bbox_xmax = bbox_vec.z;
-        bbox_ymax = bbox_vec.w;
+        if (locPredTransposed)
+        {
+            bbox_ymin = bbox_vec.x;
+            bbox_xmin = bbox_vec.y;
+            bbox_ymax = bbox_vec.z;
+            bbox_xmax = bbox_vec.w;
+        } else {
+            bbox_xmin = bbox_vec.x;
+            bbox_ymin = bbox_vec.y;
+            bbox_xmax = bbox_vec.z;
+            bbox_ymax = bbox_vec.w;
+        }
 
         Dtype4 prior_vec = vload4(0, prior_data + p);
         Dtype val;
@@ -114,6 +123,7 @@ __kernel void DecodeBBoxesCENTER_SIZE(const int nthreads,
                                       const int num_loc_classes,
                                       const int background_label_id,
                                       const int clip_bbox,
+                                      const int locPredTransposed,
                                       __global Dtype* bbox_data)
 {
     for (int index = get_global_id(0); index < nthreads; index += get_global_size(0))
@@ -138,10 +148,18 @@ __kernel void DecodeBBoxesCENTER_SIZE(const int nthreads,
             bbox_vec = loc_vec * prior_variance;
         }
 
-        bbox_xmin = bbox_vec.x;
-        bbox_ymin = bbox_vec.y;
-        bbox_xmax = bbox_vec.z;
-        bbox_ymax = bbox_vec.w;
+        if (locPredTransposed)
+        {
+            bbox_ymin = bbox_vec.x;
+            bbox_xmin = bbox_vec.y;
+            bbox_ymax = bbox_vec.z;
+            bbox_xmax = bbox_vec.w;
+        } else {
+            bbox_xmin = bbox_vec.x;
+            bbox_ymin = bbox_vec.y;
+            bbox_xmax = bbox_vec.z;
+            bbox_ymax = bbox_vec.w;
+        }
 
         Dtype4 prior_vec = vload4(0, prior_data + p);
         Dtype prior_width = prior_vec.z - prior_vec.x;

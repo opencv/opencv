@@ -10,7 +10,7 @@ of data.
 
     *Author:* Fernando Iglesias García
 
-    Learn what a Suport Vector Machine is.
+    Learn what a Support Vector Machine is.
 
 -   @subpage tutorial_non_linear_svms
 

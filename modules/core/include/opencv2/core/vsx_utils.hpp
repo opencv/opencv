@@ -555,7 +555,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
 // vector population count
 #define vec_popcntu vec_popcnt
 
-// overload and redirect wih setting second arg to zero
+// overload and redirect with setting second arg to zero
 // since we only support conversions without the second arg
 #define VSX_IMPL_OVERLOAD_Z2(rt, rg, fnm) \
 VSX_FINLINE(rt) fnm(const rg& a) { return fnm(a, 0); }
@@ -610,7 +610,7 @@ VSX_IMPL_CONV_ODD_2_4(vec_uint4,  vec_double2, vec_ctuo, vec_ctu)
 
 #endif // XLC VSX compatibility
 
-// ignore GCC warning that casued by -Wunused-but-set-variable in rare cases
+// ignore GCC warning that caused by -Wunused-but-set-variable in rare cases
 #if defined(__GNUG__) && !defined(__clang__)
 #   define VSX_UNUSED(Tvec) Tvec __attribute__((__unused__))
 #else // CLANG, XLC
@@ -736,7 +736,7 @@ VSX_IMPL_LOAD_L8(vec_double2, double)
 #   define vec_cmpne(a, b) vec_not(vec_cmpeq(a, b))
 #endif
 
-// absoulte difference
+// absolute difference
 #ifndef vec_absd
 #   define vec_absd(a, b) vec_sub(vec_max(a, b), vec_min(a, b))
 #endif

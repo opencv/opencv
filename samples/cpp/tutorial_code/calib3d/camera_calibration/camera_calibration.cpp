@@ -245,11 +245,6 @@ static inline void read(const FileNode& node, Settings& x, const Settings& defau
         x.read(node);
 }
 
-static inline void write(FileStorage& fs, const String&, const Settings& s )
-{
-    s.write(fs);
-}
-
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,

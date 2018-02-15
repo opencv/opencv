@@ -1159,7 +1159,7 @@ int DigitalCameraCapture::collectWidgets(std::ostream & os,
 /**
  * Write message to @field msgsBuffer if user want to store them
  * (@field collectMsgs).
- * Print debug informations on screen.
+ * Print debug information on screen.
  */
 template<typename OsstreamPrintable>
 void DigitalCameraCapture::message(MsgType msgType, const char * msg,

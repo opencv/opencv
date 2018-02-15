@@ -2072,6 +2072,27 @@ CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
                                double rho, double theta, int threshold,
                                double minLineLength = 0, double maxLineGap = 0 );
 
+/** @brief Finds lines in a set of points using the standard Hough transform.
+
+The function finds lines in a set of points using a modification of the Hough transform.
+@include snippets/imgproc_HoughLinesPointSet.cpp
+@param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
+@param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
+The larger the value of 'votes', the higher the reliability of the Hough line.
+@param lines_max Max count of hough lines.
+@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+votes ( \f$>\texttt{threshold}\f$ )
+@param min_rho Minimum Distance value of the accumulator in pixels.
+@param max_rho Maximum Distance value of the accumulator in pixels.
+@param rho_step Distance resolution of the accumulator in pixels.
+@param min_theta Minimum angle value of the accumulator in radians.
+@param max_theta Maximum angle value of the accumulator in radians.
+@param theta_step Angle resolution of the accumulator in radians.
+ */
+CV_EXPORTS_W void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, int threshold,
+                                      double min_rho, double max_rho, double rho_step,
+                                      double min_theta, double max_theta, double theta_step );
+
 /** @example houghcircles.cpp
 An example using the Hough circle detector
 */
@@ -4804,7 +4825,7 @@ for(int i = 0; i < it2.count; i++, ++it2)
 class CV_EXPORTS LineIterator
 {
 public:
-    /** @brief intializes the iterator
+    /** @brief initializes the iterator
 
     creates iterators for the line connecting pt1 and pt2
     the line will be clipped on the image boundaries

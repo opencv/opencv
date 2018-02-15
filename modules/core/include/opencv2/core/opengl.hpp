@@ -245,7 +245,7 @@ public:
 
     /** @brief Maps OpenGL buffer to CUDA device memory.
 
-    This operatation doesn't copy data. Several buffer objects can be mapped to CUDA memory at a time.
+    This operation doesn't copy data. Several buffer objects can be mapped to CUDA memory at a time.
 
     A mapped data store must be unmapped with ogl::Buffer::unmapDevice before its buffer object is used.
      */

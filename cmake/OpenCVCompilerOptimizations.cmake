@@ -580,7 +580,8 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
         list(APPEND __result "${fname}")
         #continue()
       elseif(CV_DISABLE_OPTIMIZATION OR NOT CV_ENABLE_INTRINSICS)
-        message(STATUS "Excluding from source files list (optimization is disabled): ${fname}")
+        ocv_get_smart_file_name(fname_ "${fname}")
+        message(STATUS "Excluding from source files list (optimization is disabled): ${fname_}")
         #continue()
       else()
         get_source_file_property(__definitions "${fname}" COMPILE_DEFINITIONS)
@@ -622,7 +623,8 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
           endif()
         endforeach()
         if(NOT __opt_found)
-          message(STATUS "Excluding from source files list: ${fname}")
+          ocv_get_smart_file_name(fname_ "${fname}")
+          message(STATUS "Excluding from source files list: ${fname_}")
         endif()
       endif()
     else()
@@ -702,15 +704,18 @@ macro(ocv_compiler_optimization_fill_cpu_config)
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_${OPT}
 #  define CV_TRY_${OPT} 1
 #  define CV_CPU_HAS_SUPPORT_${OPT} 1
-#  define CV_CPU_CALL_${OPT}(fn, args) return (opt_${OPT}::fn args)
+#  define CV_CPU_CALL_${OPT}(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_${OPT}_(fn, args) return (opt_${OPT}::fn args)
 #elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_${OPT}
 #  define CV_TRY_${OPT} 1
 #  define CV_CPU_HAS_SUPPORT_${OPT} (cv::checkHardwareSupport(CV_CPU_${OPT}))
 #  define CV_CPU_CALL_${OPT}(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
+#  define CV_CPU_CALL_${OPT}_(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
 #else
 #  define CV_TRY_${OPT} 0
 #  define CV_CPU_HAS_SUPPORT_${OPT} 0
 #  define CV_CPU_CALL_${OPT}(fn, args)
+#  define CV_CPU_CALL_${OPT}_(fn, args)
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_${OPT}(fn, args, mode, ...)  CV_CPU_CALL_${OPT}(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 ")
@@ -755,13 +760,18 @@ macro(ocv_add_dispatched_file filename)
       set(__file "${CMAKE_CURRENT_BINARY_DIR}/${filename}.${OPT_LOWER}.cpp")
       if(EXISTS "${__file}")
         file(READ "${__file}" __content)
+      else()
+        set(__content "")
       endif()
       if(__content STREQUAL __codestr)
         #message(STATUS "${__file} contains up-to-date content")
       else()
         file(WRITE "${__file}" "${__codestr}")
       endif()
-      list(APPEND OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED "${__file}")
+
+      if(";${CPU_DISPATCH};" MATCHES "${OPT}" OR __CPU_DISPATCH_INCLUDE_ALL)
+        list(APPEND OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED "${__file}")
+      endif()
 
       set(__declarations_str "${__declarations_str}
 #define CV_CPU_DISPATCH_MODE ${OPT}
@@ -785,6 +795,14 @@ macro(ocv_add_dispatched_file filename)
     endif()
   endif()
 endmacro()
+
+# Workaround to support code which always require all code paths
+macro(ocv_add_dispatched_file_force_all)
+  set(__CPU_DISPATCH_INCLUDE_ALL 1)
+  ocv_add_dispatched_file(${ARGN})
+  unset(__CPU_DISPATCH_INCLUDE_ALL)
+endmacro()
+
 
 if(CV_DISABLE_OPTIMIZATION OR CV_ICC)
   ocv_update(CV_ENABLE_UNROLLED 0)

@@ -227,7 +227,7 @@ protected:
         if (!fs.isOpened())
         {
             fs.open(keypoints_filename, FileStorage::WRITE);
-            ASSERT_TRUE(fs.isOpened()) << "File for writting keypoints can not be opened.";
+            ASSERT_TRUE(fs.isOpened()) << "File for writing keypoints can not be opened.";
             if (detector.empty())
             {
                 Ptr<ORB> fd = ORB::create();

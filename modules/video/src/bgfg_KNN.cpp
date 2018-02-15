@@ -281,7 +281,7 @@ protected:
     ////////////////////////
     int history;
     //alpha=1/history - speed of update - if the time interval you want to average over is T
-    //set alpha=1/history. It is also usefull at start to make T slowly increase
+    //set alpha=1/history. It is also useful at start to make T slowly increase
     //from 1 until the desired T
     float fTb;
     //Tb - threshold on the squared distance from the sample used to decide if it is well described
@@ -289,7 +289,7 @@ protected:
     //and that is Tb=2*2*10*10 =400; where we take typical pixel level sigma=10
 
     /////////////////////////
-    //less important parameters - things you might change but be carefull
+    //less important parameters - things you might change but be careful
     ////////////////////////
     int nN;//totlal number of samples
     int nkNN;//number on NN for detcting background - default K=[0.1*nN]

@@ -239,7 +239,7 @@ public:
         ieLayer->_stride_y = stride.height;
         ieLayer->_padding_x = pad.width;
         ieLayer->_padding_y = pad.height;
-        ieLayer->_exclude_pad = false;
+        ieLayer->_exclude_pad = type == AVE && padMode == "SAME";
         ieLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
         if (type == MAX)
             ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
@@ -320,7 +320,7 @@ public:
             bool compMaxIdx = computeMaxIdx;
 
 #if CV_SIMD128
-            const int* ofsptr = &ofsbuf[0];
+            const int* ofsptr = ofsbuf.empty() ? 0 : (const int*)&ofsbuf[0];
             v_float32x4 idx00(0.f, (float)stride_w, (float)(stride_w*2), (float)(stride_w*3));
             v_float32x4 ones = v_setall_f32(1.f);
             v_float32x4 idx_delta = v_setall_f32((float)(inp_width - kernel_w));

@@ -758,7 +758,7 @@ class CppHeaderParser(object):
     def find_next_token(self, s, tlist, p=0):
         """
         Finds the next token from the 'tlist' in the input 's', starting from position 'p'.
-        Returns the first occured token and its position, or ("", len(s)) when no token is found
+        Returns the first occurred token and its position, or ("", len(s)) when no token is found
         """
         token = ""
         tpos = len(s)

@@ -1277,6 +1277,14 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
 void _OutputArray::create(int d, const int* sizes, int mtype, int i,
                           bool allowTransposed, int fixedDepthMask) const
 {
+    int sizebuf[2];
+    if(d == 1)
+    {
+        d = 2;
+        sizebuf[0] = sizes[0];
+        sizebuf[1] = 1;
+        sizes = sizebuf;
+    }
     int k = kind();
     mtype = CV_MAT_TYPE(mtype);
 

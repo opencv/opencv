@@ -61,7 +61,7 @@ planes.push_back(plane0);
 planes.push_back(plane1);
 cv.merge(planes, complexI);
 
-// in-place dft transfrom
+// in-place dft transform
 cv.dft(complexI, complexI);
 
 // compute log(1 + sqrt(Re(DFT(img))**2 + Im(DFT(img))**2))

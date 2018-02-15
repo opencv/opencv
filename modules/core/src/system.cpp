@@ -105,45 +105,6 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #undef max
 #undef abs
 #include <tchar.h>
-#if defined _MSC_VER
-  #if _MSC_VER >= 1400
-    #include <intrin.h>
-  #elif defined _M_IX86
-    static void __cpuid(int* cpuid_data, int)
-    {
-        __asm
-        {
-            push ebx
-            push edi
-            mov edi, cpuid_data
-            mov eax, 1
-            cpuid
-            mov [edi], eax
-            mov [edi + 4], ebx
-            mov [edi + 8], ecx
-            mov [edi + 12], edx
-            pop edi
-            pop ebx
-        }
-    }
-    static void __cpuidex(int* cpuid_data, int, int)
-    {
-        __asm
-        {
-            push edi
-            mov edi, cpuid_data
-            mov eax, 7
-            mov ecx, 0
-            cpuid
-            mov [edi], eax
-            mov [edi + 4], ebx
-            mov [edi + 8], ecx
-            mov [edi + 12], edx
-            pop edi
-        }
-    }
-  #endif
-#endif
 
 #ifdef WINRT
 #include <wrl/client.h>
@@ -227,6 +188,44 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #ifdef __ANDROID__
 # include <android/log.h>
 #endif
+
+#ifdef DECLARE_CV_CPUID_X86
+DECLARE_CV_CPUID_X86
+#endif
+#ifndef CV_CPUID_X86
+  #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
+    #if _MSC_VER >= 1400  // MSVS 2005
+      #include <intrin.h>  // __cpuidex()
+      #define CV_CPUID_X86 __cpuidex
+    #else
+      #error "Required MSVS 2005+"
+    #endif
+  #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+    static void cv_cpuid(int* cpuid_data, int reg_eax, int reg_ecx)
+    {
+        int __eax = reg_eax, __ebx = 0, __ecx = reg_ecx, __edx = 0;
+// tested with available compilers (-fPIC -O2 -m32/-m64): https://godbolt.org/
+#if !defined(__PIC__) \
+    || defined(__x86_64__) || __GNUC__ >= 5 \
+    || defined(__clang__) || defined(__INTEL_COMPILER)
+        __asm__("cpuid\n\t"
+                : "+a" (__eax), "=b" (__ebx), "+c" (__ecx), "=d" (__edx)
+        );
+#elif defined(__i386__)  // ebx may be reserved as the PIC register
+        __asm__("xchg{l}\t{%%}ebx, %1\n\t"
+                "cpuid\n\t"
+                "xchg{l}\t{%%}ebx, %1\n\t"
+                : "+a" (__eax), "=&r" (__ebx), "+c" (__ecx), "=d" (__edx)
+        );
+#else
+#error "Configuration error"
+#endif
+        cpuid_data[0] = __eax; cpuid_data[1] = __ebx; cpuid_data[2] = __ecx; cpuid_data[3] = __edx;
+    }
+    #define CV_CPUID_X86 cv_cpuid
+  #endif
+#endif
+
 
 namespace cv
 {
@@ -325,38 +324,12 @@ struct HWFeatures
 
         initializeNames();
 
+    #ifdef CV_CPUID_X86
         int cpuid_data[4] = { 0, 0, 0, 0 };
         int cpuid_data_ex[4] = { 0, 0, 0, 0 };
 
-    #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
-    #define OPENCV_HAVE_X86_CPUID 1
-        __cpuid(cpuid_data, 1);
-    #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-    #define OPENCV_HAVE_X86_CPUID 1
-        #ifdef __x86_64__
-        asm __volatile__
-        (
-         "movl $1, %%eax\n\t"
-         "cpuid\n\t"
-         :[eax]"=a"(cpuid_data[0]),[ebx]"=b"(cpuid_data[1]),[ecx]"=c"(cpuid_data[2]),[edx]"=d"(cpuid_data[3])
-         :
-         : "cc"
-        );
-        #else
-        asm volatile
-        (
-         "pushl %%ebx\n\t"
-         "movl $1,%%eax\n\t"
-         "cpuid\n\t"
-         "popl %%ebx\n\t"
-         : "=a"(cpuid_data[0]), "=c"(cpuid_data[2]), "=d"(cpuid_data[3])
-         :
-         : "cc"
-        );
-        #endif
-    #endif
+        CV_CPUID_X86(cpuid_data, 1, 0/*unused*/);
 
-    #ifdef OPENCV_HAVE_X86_CPUID
         int x86_family = (cpuid_data[0] >> 8) & 15;
         if( x86_family >= 6 )
         {
@@ -374,38 +347,8 @@ struct HWFeatures
 
             // make the second call to the cpuid command in order to get
             // information about extended features like AVX2
-        #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
-        #define OPENCV_HAVE_X86_CPUID_EX 1
-            __cpuidex(cpuid_data_ex, 7, 0);
-        #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-        #define OPENCV_HAVE_X86_CPUID_EX 1
-            #ifdef __x86_64__
-            asm __volatile__
-            (
-             "movl $7, %%eax\n\t"
-             "movl $0, %%ecx\n\t"
-             "cpuid\n\t"
-             :[eax]"=a"(cpuid_data_ex[0]),[ebx]"=b"(cpuid_data_ex[1]),[ecx]"=c"(cpuid_data_ex[2]),[edx]"=d"(cpuid_data_ex[3])
-             :
-             : "cc"
-            );
-            #else
-            asm volatile
-            (
-             "pushl %%ebx\n\t"
-             "movl $7,%%eax\n\t"
-             "movl $0,%%ecx\n\t"
-             "cpuid\n\t"
-             "movl %%ebx, %0\n\t"
-             "popl %%ebx\n\t"
-             : "=r"(cpuid_data_ex[1]), "=c"(cpuid_data_ex[2])
-             :
-             : "cc"
-            );
-            #endif
-        #endif
+            CV_CPUID_X86(cpuid_data_ex, 7, 0);
 
-        #ifdef OPENCV_HAVE_X86_CPUID_EX
             have[CV_CPU_AVX2]   = (cpuid_data_ex[1] & (1<<5)) != 0;
 
             have[CV_CPU_AVX_512F]       = (cpuid_data_ex[1] & (1<<16)) != 0;
@@ -417,9 +360,6 @@ struct HWFeatures
             have[CV_CPU_AVX_512BW]      = (cpuid_data_ex[1] & (1<<30)) != 0;
             have[CV_CPU_AVX_512VL]      = (cpuid_data_ex[1] & (1<<31)) != 0;
             have[CV_CPU_AVX_512VBMI]    = (cpuid_data_ex[2] & (1<<1)) != 0;
-        #else
-            CV_UNUSED(cpuid_data_ex);
-        #endif
 
             bool have_AVX_OS_support = true;
             bool have_AVX512_OS_support = true;
@@ -431,7 +371,7 @@ struct HWFeatures
             #ifdef _XCR_XFEATURE_ENABLED_MASK // requires immintrin.h
                 xcr0 = (int)_xgetbv(_XCR_XFEATURE_ENABLED_MASK);
             #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-                __asm__ ("xgetbv" : "=a" (xcr0) : "c" (0) : "%edx" );
+                __asm__ ("xgetbv\n\t" : "=a" (xcr0) : "c" (0) : "%edx" );
             #endif
                 if ((xcr0 & 0x6) != 0x6)
                     have_AVX_OS_support = false; // YMM registers
@@ -464,10 +404,7 @@ struct HWFeatures
                 have[CV_CPU_AVX512_SKX] = have[CV_CPU_AVX_512F] & have[CV_CPU_AVX_512CD] & have[CV_CPU_AVX_512BW] & have[CV_CPU_AVX_512DQ] & have[CV_CPU_AVX_512VL];
             }
         }
-    #else
-        CV_UNUSED(cpuid_data);
-        CV_UNUSED(cpuid_data_ex);
-    #endif // OPENCV_HAVE_X86_CPUID
+    #endif // CV_CPUID_X86
 
     #if defined __ANDROID__ || defined __linux__
     #ifdef __aarch64__
@@ -481,7 +418,7 @@ struct HWFeatures
         have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
         have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
       #else
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "cpufeatures library is not avaialble for CPU detection");
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "cpufeatures library is not available for CPU detection");
         #if CV_NEON
         __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- NEON instructions is enabled via build flags");
         have[CV_CPU_NEON] = true;

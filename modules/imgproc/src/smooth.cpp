@@ -1458,7 +1458,7 @@ namespace cv
                                                   ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standart says nothing about thread-safety for now
+            //since OpenVX standard says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(border, (vx_uint8)(0));
             ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
@@ -3345,7 +3345,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standart says nothing about thread-safety for now
+        //since OpenVX standard says nothing about thread-safety for now
         ivx::border_t prevBorder = ctx.immediateBorder();
         ctx.setImmediateBorder(border, (vx_uint8)(0));
         ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
@@ -4416,7 +4416,7 @@ namespace cv
                     ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standart says nothing about thread-safety for now
+            //since OpenVX standard says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(VX_BORDER_REPLICATE);
 #ifdef VX_VERSION_1_1

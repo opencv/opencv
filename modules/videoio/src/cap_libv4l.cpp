@@ -61,7 +61,7 @@ Second Patch:   August 28, 2004 Sfuncia Fabio fiblan@yahoo.it
 For Release:  OpenCV-Linux Beta4 Opencv-0.9.6
 
 FS: this patch fix not sequential index of device (unplugged device), and real numCameras.
-    for -1 index (icvOpenCAM_V4L) i dont use /dev/video but real device available, because
+    for -1 index (icvOpenCAM_V4L) I don't use /dev/video but real device available, because
     if /dev/video is a link to /dev/video0 and i unplugged device on /dev/video0, /dev/video
     is a bad link. I search the first available device with indexList.
 
@@ -428,7 +428,7 @@ static int try_init_v4l(CvCaptureCAM_V4L* capture, const char *deviceName)
   int detect = 0;
 
 
-  // Test device for V4L compability
+  // Test device for V4L compatibility
 
   /* Test using an open to see if this new device name really does exists. */
   /* No matter what the name - it still must be opened! */
@@ -471,7 +471,7 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
   int detect = 0;
 
 
-  // Test device for V4L2 compability
+  // Test device for V4L2 compatibility
 
   /* Open and test V4L2 device */
   capture->deviceHandle = v4l2_open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
@@ -1033,7 +1033,7 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    char deviceName[MAX_DEVICE_DRIVER_NAME];
 
    if (!numCameras)
-      icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
+      icvInitCapture_V4L(); /* Haven't called icvInitCapture yet - do it now! */
    if (!numCameras)
      return NULL; /* Are there any /dev/video input sources? */
 
@@ -1073,10 +1073,10 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName)
    capture->buffers[MAX_V4L_BUFFERS].start = NULL;
 #endif
 
-   /* w/o memset some parts  arent initialized - AKA: Fill it with zeros so it is clean */
+   /* w/o memset some parts  aren't initialized - AKA: Fill it with zeros so it is clean */
    memset(capture,0,sizeof(CvCaptureCAM_V4L));
 
-   /* Present the routines needed for V4L funtionality.  They are inserted as part of
+   /* Present the routines needed for V4L functionality.  They are inserted as part of
       the standard set of cv calls promoting transparency.  "Vector Table" insertion. */
    capture->FirstCapture = 1;
 
@@ -1580,7 +1580,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     CLEAR (capture->form);
     capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    /* read the current setting, mainly to retreive the pixelformat information */
+    /* read the current setting, mainly to retrieve the pixelformat information */
     xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form);
 
     /* set the values we want to change */
@@ -1788,7 +1788,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
     }
 
     if (v4l1_ioctl(capture->deviceHandle, VIDIOCSPICT, &capture->imageProperties) < 0){
-      fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to set video informations\n");
+      fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to set video information\n");
       icvCloseCAM_V4L(capture);
       return -1;
     }

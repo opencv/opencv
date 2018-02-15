@@ -58,7 +58,7 @@ namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
-// this option is usefull to run valgrind memory errors detection
+// this option is useful to run valgrind memory errors detection
 static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterBool("OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS", false);
 
 using std::vector;
@@ -189,6 +189,31 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
 
            image.copyTo(Mat(image.rows, image.cols, CV_32F, blob.ptr((int)i, 0)));
        }
+    }
+}
+
+void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
+{
+    CV_TRACE_FUNCTION();
+
+    //A blob is a 4 dimensional matrix in floating point precision
+    //blob_[0] = batchSize = nbOfImages
+    //blob_[1] = nbOfChannels
+    //blob_[2] = height
+    //blob_[3] = width
+    CV_Assert(blob_.depth() == CV_32F);
+    CV_Assert(blob_.dims == 4);
+
+    images_.create(cv::Size(1, blob_.size[0]), blob_.depth());
+
+    std::vector<Mat> vectorOfChannels(blob_.size[1]);
+    for (int n = 0; n <  blob_.size[0]; ++n)
+    {
+        for (int c = 0; c < blob_.size[1]; ++c)
+        {
+            vectorOfChannels[c] = getPlane(blob_, n, c);
+        }
+        cv::merge(vectorOfChannels, images_.getMatRef(n));
     }
 }
 
@@ -886,7 +911,7 @@ struct Net::Impl
         int id = getLayerId(layerName);
 
         if (id < 0)
-            CV_Error(Error::StsError, "Requsted layer \"" + layerName + "\" not found");
+            CV_Error(Error::StsError, "Requested layer \"" + layerName + "\" not found");
 
         return getLayerData(id);
     }
@@ -1382,46 +1407,30 @@ struct Net::Impl
             if( ld.consumers.size() == 1 && pinsToKeep.count(LayerPin(lid, 0)) == 0 )
             {
                 LayerData* nextData = &layers[ld.consumers[0].lid];
-                Ptr<BatchNormLayer> nextBNormLayer =
-                    nextData->layerInstance.dynamicCast<BatchNormLayer>();
                 LayerPin lpNext(ld.consumers[0].lid, 0);
-                if( !nextBNormLayer.empty() && pinsToKeep.count(lpNext) == 0 )
+                while (nextData)
                 {
-                    LayerData* bnormData = nextData;
-                    nextData = 0;
-                    if( currLayer->setBatchNorm(nextBNormLayer) )
+                    Ptr<Layer> nextLayer = nextData->layerInstance;
+                    if (currLayer->tryFuse(nextLayer))
                     {
-                        printf_(("\tfused with %s\n", nextBNormLayer->name.c_str()));
-                        bnormData->skip = true;
+                        printf_(("\tfused with %s\n", nextLayer->name.c_str()));
+                        nextData->skip = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
-                        if( bnormData->consumers.size() == 1 )
+                        if (nextData->consumers.size() == 1)
                         {
-                            nextData = &layers[bnormData->consumers[0].lid];
-                            lpNext = LayerPin(bnormData->consumers[0].lid, 0);
+                            int nextLayerId = nextData->consumers[0].lid;
+                            nextData = &layers[nextLayerId];
+                            lpNext = LayerPin(nextLayerId, 0);
+                        }
+                        else
+                        {
+                            nextData = 0;
+                            break;
                         }
                     }
-                }
-
-                Ptr<ScaleLayer> nextScaleLayer;
-                if( nextData )
-                    nextScaleLayer = nextData->layerInstance.dynamicCast<ScaleLayer>();
-                if( !nextScaleLayer.empty() && pinsToKeep.count(lpNext) == 0 )
-                {
-                    LayerData* scaleData = nextData;
-                    nextData = 0;
-                    if( currLayer->setScale(nextScaleLayer) )
-                    {
-                        printf_(("\tfused with %s\n", nextScaleLayer->name.c_str()));
-                        scaleData->skip = true;
-                        ld.outputBlobs = layers[lpNext.lid].outputBlobs;
-                        ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
-                        if( scaleData->consumers.size() == 1 )
-                        {
-                            nextData = &layers[scaleData->consumers[0].lid];
-                            lpNext = LayerPin(scaleData->consumers[0].lid, 0);
-                        }
-                    }
+                    else
+                        break;
                 }
 
                 // For now, OpenCL target support fusion with activation of ReLU/ChannelsPReLU/Power/Tanh
@@ -1872,7 +1881,7 @@ struct Net::Impl
         if ((size_t)pin.oid >= ld.outputBlobs.size())
         {
             CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %d outputs, "
-                                           "the #%d was requsted", ld.name.c_str(),
+                                           "the #%d was requested", ld.name.c_str(),
                                            ld.outputBlobs.size(), pin.oid));
         }
         if (preferableTarget != DNN_TARGET_CPU)
@@ -2602,13 +2611,16 @@ Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 }
 
 bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
-bool Layer::setBatchNorm(const Ptr<BatchNormLayer>&) { return false; }
-bool Layer::setScale(const Ptr<ScaleLayer>&) { return false; }
+bool Layer::tryFuse(Ptr<Layer>&) { return false; }
+void Layer::getScaleShift(Mat& scale, Mat& shift) const
+{
+    scale = Mat();
+    shift = Mat();
+}
+
 void Layer::unsetAttached()
 {
     setActivation(Ptr<ActivationLayer>());
-    setBatchNorm(Ptr<BatchNormLayer>());
-    setScale(Ptr<ScaleLayer>());
 }
 
 template <typename T>

@@ -71,7 +71,7 @@ Explanation
         order in case of color images).
 
 -#  So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost
-    after the program ends). To save it, we will use a function analagous to @ref cv::imread : @ref
+    after the program ends). To save it, we will use a function analogous to @ref cv::imread : @ref
     cv::imwrite
     @code{.cpp}
     imwrite( "../../images/Gray_Image.jpg", gray_image );

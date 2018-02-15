@@ -257,7 +257,7 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::cuda::DeviceInfo, NormCode, DescriptorSiz
         rng.fill(queryBuf, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(3));
         queryBuf.convertTo(queryBuf, CV_32FC1);
 
-        // Generate train decriptors as follows:
+        // Generate train descriptors as follows:
         // copy each query descriptor to train set countFactor times
         // and perturb some one element of the copied descriptors in
         // in ascending order. General boundaries of the perturbation

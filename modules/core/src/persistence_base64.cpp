@@ -470,7 +470,7 @@ public:
 
     /*
      * a convertor must provide :
-     * - `operator >> (uchar * & dst)` for writting current binary data to `dst` and moving to next data.
+     * - `operator >> (uchar * & dst)` for writing current binary data to `dst` and moving to next data.
      * - `operator bool` for checking if current loaction is valid and not the end.
      */
     template<typename _to_binary_convertor_t> inline
@@ -493,7 +493,7 @@ public:
 
     bool flush()
     {
-        /* controll line width, so on. */
+        /* control line width, so on. */
         size_t len = base64_encode(src_beg, base64_buffer.data(), 0U, src_cur - src_beg);
         if (len == 0U)
             return false;

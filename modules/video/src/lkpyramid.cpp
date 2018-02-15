@@ -876,7 +876,7 @@ namespace
             std::vector<UMat> prevPyr; prevPyr.resize(maxLevel + 1);
             std::vector<UMat> nextPyr; nextPyr.resize(maxLevel + 1);
 
-            // allocate buffers with aligned pitch to be able to use cl_khr_image2d_from_buffer extention
+            // allocate buffers with aligned pitch to be able to use cl_khr_image2d_from_buffer extension
             // This is the required pitch alignment in pixels
             int pitchAlign = (int)ocl::Device::getDefault().imagePitchAlignment();
             if (pitchAlign>0)
@@ -886,7 +886,7 @@ namespace
                 for (int level = 1; level <= maxLevel; ++level)
                 {
                     int cols,rows;
-                    // allocate buffers with aligned pitch to be able to use image on buffer extention
+                    // allocate buffers with aligned pitch to be able to use image on buffer extension
                     cols = (prevPyr[level - 1].cols+1)/2;
                     rows = (prevPyr[level - 1].rows+1)/2;
                     prevPyr[level] = UMat(rows,(cols+pitchAlign-1)&(-pitchAlign),prevPyr[level-1].type()).colRange(0,cols);

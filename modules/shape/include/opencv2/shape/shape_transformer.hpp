@@ -92,7 +92,7 @@ public:
 
 /** @brief Definition of the transformation
 
-ocupied in the paper "Principal Warps: Thin-Plate Splines and Decomposition of Deformations", by
+occupied in the paper "Principal Warps: Thin-Plate Splines and Decomposition of Deformations", by
 F.L. Bookstein (PAMI 1989). :
  */
 class CV_EXPORTS_W ThinPlateSplineShapeTransformer : public ShapeTransformer

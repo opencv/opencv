@@ -1096,9 +1096,9 @@ void TFImporter::populateNet(Net dstNet)
             dstNet.setInputsNames(netInputs);
         }
         else if (type == "Split") {
-            // TODO: determing axis index remapping by input dimensions order of input blob
+            // TODO: determining axis index remapping by input dimensions order of input blob
             // TODO: slicing input may be Const op
-            // TODO: slicing kernels for convolutions - in current implenmentation it is impossible
+            // TODO: slicing kernels for convolutions - in current implementation it is impossible
             // TODO: add parsing num of slices parameter
             CV_Assert(layer.input_size() == 2);
             // num_split
@@ -1160,8 +1160,35 @@ void TFImporter::populateNet(Net dstNet)
                 int id;
                 if (scaleMat.total() == 1)  // is a scalar.
                 {
-                    layerParams.set("scale", scaleMat.at<float>(0));
-                    id = dstNet.addLayer(name, "Power", layerParams);
+                    // Try to match with a LeakyRelu:
+                    // node {
+                    //   name: "LeakyRelu/mul"
+                    //   op: "Mul"
+                    //   input: "LeakyRelu/alpha"
+                    //   input: "input"
+                    // }
+                    // node {
+                    //   name: "LeakyRelu/Maximum"
+                    //   op: "Maximum"
+                    //   input: "LeakyRelu/mul"
+                    //   input: "input"
+                    // }
+                    StrIntVector next_layers = getNextLayers(net, name, "Maximum");
+                    if (!next_layers.empty())
+                    {
+                        int maximumLayerIdx = next_layers[0].second;
+                        ExcludeLayer(net, maximumLayerIdx, 0, false);
+                        layers_to_ignore.insert(next_layers[0].first);
+
+                        layerParams.set("negative_slope", scaleMat.at<float>(0));
+                        id = dstNet.addLayer(name, "ReLU", layerParams);
+                    }
+                    else
+                    {
+                        // Just a multiplication.
+                        layerParams.set("scale", scaleMat.at<float>(0));
+                        id = dstNet.addLayer(name, "Power", layerParams);
+                    }
                 }
                 else  // is a vector
                 {
@@ -1241,16 +1268,37 @@ void TFImporter::populateNet(Net dstNet)
             if (layer.input_size() != 5)
                 CV_Error(Error::StsNotImplemented,
                          "Expected gamma, beta, mean and std");
+            Pin inpId = parsePin(layer.input(0));
+
+            bool isTraining = hasLayerAttr(layer, "is_training") && getLayerAttr(layer, "is_training").b();
 
             layerParams.blobs.resize(4);
-            // gamma
-            blobFromTensor(getConstBlob(layer, value_id, 1), layerParams.blobs[2]);
-            // beta
-            blobFromTensor(getConstBlob(layer, value_id, 2), layerParams.blobs[3]);
-            // mean
-            blobFromTensor(getConstBlob(layer, value_id, 3), layerParams.blobs[0]);
-            // std
-            blobFromTensor(getConstBlob(layer, value_id, 4), layerParams.blobs[1]);
+            Mat gamma, beta, mean, std;
+            blobFromTensor(getConstBlob(layer, value_id, 1), gamma);
+            blobFromTensor(getConstBlob(layer, value_id, 2), beta);
+            if (isTraining)
+            {
+                mean = Mat::zeros(1, beta.total(), CV_32F);
+                std = Mat::ones(1, beta.total(), CV_32F);
+
+                // Add an extra layer: Mean-Variance normalization
+                LayerParams mvnParams;
+                std::string mvnName = name + "/MVN";
+                CV_Assert(layer_id.find(mvnName) == layer_id.end());
+                int mvnId = dstNet.addLayer(mvnName, "MVN", mvnParams);
+                layer_id[mvnName] = mvnId;
+                connect(layer_id, dstNet, inpId, mvnId, 0);
+                inpId = Pin(mvnName);
+            }
+            else
+            {
+                blobFromTensor(getConstBlob(layer, value_id, 3), mean);
+                blobFromTensor(getConstBlob(layer, value_id, 4), std);
+            }
+            layerParams.blobs[0] = mean;
+            layerParams.blobs[1] = std;
+            layerParams.blobs[2] = gamma;
+            layerParams.blobs[3] = beta;
 
             if (hasLayerAttr(layer, "epsilon"))
                 layerParams.set("eps", getLayerAttr(layer, "epsilon").f());
@@ -1262,7 +1310,7 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
 
             // one input only
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            connect(layer_id, dstNet, inpId, id, 0);
         }
         else if (type == "Conv2DBackpropInput")
         {
@@ -1293,13 +1341,42 @@ void TFImporter::populateNet(Net dstNet)
             kernelFromTensor(getConstBlob(layer, value_id, 1), layerParams.blobs[0]);
 
             const int* kshape = layerParams.blobs[0].size.p;
-            layerParams.set("kernel_h", kshape[2]);
-            layerParams.set("kernel_w", kshape[3]);
+            const int kernelH = kshape[2];
+            const int kernelW = kshape[3];
+            layerParams.set("kernel_h", kernelH);
+            layerParams.set("kernel_w", kernelW);
             layerParams.set("num_output", kshape[1]);
 
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
 
+            // For convolution layer, output shape computes as
+            // o = 1 + (i - k + 2*p) / s
+            // i - input size, o - output size, k - kernel size, p - pad, s - stride
+            // In TensorFlow, p == 0 is padMode == 'VALID' or p == (k - 1) / 2
+            // considering that k is odd.
+            // SAME:  o = 1 + (i - 1) / s
+            // VALID: o = 1 + i / s
+            // Deconvolution's layer output shape computes as
+            // SAME:  o = 1 + (i - 1)*s
+            // VALID: o = (i - 1)*s
+            // If output_shape differs from formulas above then adjust padding is applied.
+
+            const int strideY = layerParams.get<int>("stride_h");
+            const int strideX = layerParams.get<int>("stride_w");
+            Mat outShape = getTensorContent(getConstBlob(layer, value_id, 0));
+            const int outH = outShape.at<int>(2);
+            const int outW = outShape.at<int>(1);
+            if (layerParams.get<String>("pad_mode") == "SAME")
+            {
+                layerParams.set("adj_w", (outW - 1) % strideX);
+                layerParams.set("adj_h", (outH - 1) % strideY);
+            }
+            else if (layerParams.get<String>("pad_mode") == "VALID")
+            {
+                layerParams.set("adj_w", (outW - kernelW) % strideX);
+                layerParams.set("adj_h", (outH - kernelH) % strideY);
+            }
             int id = dstNet.addLayer(name, "Deconvolution", layerParams);
             layer_id[name] = id;
 
