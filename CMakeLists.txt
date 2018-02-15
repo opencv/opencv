@@ -105,6 +105,16 @@ if(POLICY CMP0067)
 endif()
 
 include(cmake/OpenCVUtils.cmake)
+ocv_cmake_reset_hooks()
+ocv_check_environment_variables(OPENCV_CMAKE_HOOKS_DIR)
+if(DEFINED OPENCV_CMAKE_HOOKS_DIR)
+  foreach(__dir ${OPENCV_CMAKE_HOOKS_DIR})
+    get_filename_component(__dir "${__dir}" ABSOLUTE)
+    ocv_cmake_hook_register_dir(${__dir})
+  endforeach()
+endif()
+
+ocv_cmake_hook(CMAKE_INIT)
 
 # must go before the project command
 ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
@@ -141,6 +151,7 @@ endif()
 # ----------------------------------------------------------------------------
 OCV_OPTION(ENABLE_CXX11 "Enable C++11 compilation mode" "${OPENCV_CXX11}")
 include(cmake/OpenCVDetectCXXCompiler.cmake)
+ocv_cmake_hook(POST_DETECT_COMPILER)
 
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
@@ -336,6 +347,7 @@ endif()
 # ----------------------------------------------------------------------------
 include(cmake/OpenCVVersion.cmake)
 
+ocv_cmake_hook(POST_OPTIONS)
 
 # ----------------------------------------------------------------------------
 #  Build & install layouts
@@ -531,12 +543,16 @@ if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL 
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+ocv_cmake_hook(POST_CMAKE_BUILD_OPTIONS)
+
 # --- Python Support ---
 if(NOT IOS)
   include(cmake/OpenCVDetectPython.cmake)
 endif()
 
 include(cmake/OpenCVCompilerOptions.cmake)
+
+ocv_cmake_hook(POST_COMPILER_OPTIONS)
 
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
@@ -767,6 +783,7 @@ if(CV_TRACE)
   include(cmake/OpenCVDetectTrace.cmake)
 endif()
 
+ocv_cmake_hook(POST_DETECT_DEPENDECIES)
 
 # ----------------------------------------------------------------------------
 # Solution folders:
@@ -815,6 +832,8 @@ endif()
 # ----------------------------------------------------------------------------
 # Finalization: generate configuration-based files
 # ----------------------------------------------------------------------------
+
+ocv_cmake_hook(PRE_FINALIZE)
 
 # Generate platform-dependent and configuration-dependent headers
 include(cmake/OpenCVGenHeaders.cmake)
@@ -1458,6 +1477,8 @@ status("")
 
 
 ocv_finalize_status()
+
+ocv_cmake_hook(POST_FINALIZE)
 
 # ----------------------------------------------------------------------------
 # CPack stuff
