@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     Mat inliers_idx;
     vector<Point2f> list_points2d_inliers;
 
-    if(good_matches.size() > 0) // None matches, then RANSAC crashes
+    if(good_matches.size() >= 4) // OpenCV requires solvePnPRANSAC to minimally have 4 set of points
     {
 
       // -- Step 3: Estimate the pose using RANSAC approach
