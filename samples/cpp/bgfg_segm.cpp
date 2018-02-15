@@ -30,7 +30,11 @@ int main(int argc, const char** argv)
         return 1;
     }
 
-    VideoCapture cap(useCamera ? 0 : file.c_str());
+    VideoCapture cap;
+    if (useCamera)
+        cap.open(0);
+    else
+        cap.open(file.c_str());
     if (!cap.isOpened())
     {
         cout << "Can not open video stream: '" << (useCamera ? "<camera 0>" : file) << "'" << endl;
