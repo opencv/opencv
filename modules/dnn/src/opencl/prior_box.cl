@@ -52,7 +52,9 @@ __kernel void prior_box(const int nthreads,
                         const int offsetsX_size,
                         __global const Dtype* _aspectRatios,
                         const int aspectRatios_size,
-                        __global const Dtype* scales,
+                        __global const Dtype* _widths,
+                        __global const Dtype* _heights,
+                        const int widths_size,
                         __global Dtype* dst,
                         const int _layerHeight,
                         const int _layerWidth,
@@ -64,12 +66,24 @@ __kernel void prior_box(const int nthreads,
         int w = index % _layerWidth;
         int h = index / _layerWidth;
         __global Dtype* outputPtr;
-        int aspect_count = (_maxSize > 0) ? 1 : 0;
-        outputPtr = dst + index * 4 * offsetsX_size * (1 + aspect_count + aspectRatios_size);
+        if (widths_size > 0)
+            outputPtr = dst + index * 4 * offsetsX_size * widths_size;
+        else
+        {
+            int aspect_count = (_maxSize > 0) ? 1 : 0;
+            outputPtr = dst + index * 4 * offsetsX_size * (1 + aspect_count + aspectRatios_size);
+        }
 
         Dtype _boxWidth, _boxHeight;
         Dtype4 vec;
-        _boxWidth = _boxHeight = _minSize * scales[0];
+        if (widths_size > 0)
+        {
+            _boxWidth = _widths[0];
+            _boxHeight = _heights[0];
+        }
+        else
+            _boxWidth = _boxHeight = _minSize;
+
         for (int i = 0; i < offsetsX_size; ++i)
         {
             float center_x = (w + _offsetsX[i]) * stepX;
@@ -86,7 +100,7 @@ __kernel void prior_box(const int nthreads,
 
         if (_maxSize > 0)
         {
-            _boxWidth = _boxHeight = native_sqrt(_minSize * _maxSize) * scales[1];
+            _boxWidth = _boxHeight = native_sqrt(_minSize * _maxSize);
 
             for (int i = 0; i < offsetsX_size; ++i)
             {
@@ -106,15 +120,32 @@ __kernel void prior_box(const int nthreads,
         for (int r = 0; r < aspectRatios_size; ++r)
         {
             float ar = native_sqrt(_aspectRatios[r]);
-            float scale = scales[(_maxSize > 0 ? 2 : 1) + r];
 
-            _boxWidth = _minSize * ar * scale;
-            _boxHeight = _minSize / ar * scale;
+            _boxWidth = _minSize * ar;
+            _boxHeight = _minSize / ar;
 
             for (int i = 0; i < offsetsX_size; ++i)
             {
                 float center_x = (w + _offsetsX[i]) * stepX;
                 float center_y = (h + _offsetsY[i]) * stepY;
+
+                vec.x = (center_x - _boxWidth * 0.5f) / imgWidth;    // xmin
+                vec.y = (center_y - _boxHeight * 0.5f) / imgHeight;  // ymin
+                vec.z = (center_x + _boxWidth * 0.5f) / imgWidth;    // xmax
+                vec.w = (center_y + _boxHeight * 0.5f) / imgHeight;  // ymax
+                vstore4(vec, 0, outputPtr);
+
+                outputPtr += 4;
+            }
+        }
+        for (int i = 1; i < widths_size; ++i)
+        {
+            _boxWidth = _widths[i];
+            _boxHeight = _heights[i];
+            for (int j = 0; j < offsetsX_size; ++j)
+            {
+                float center_x = (w + _offsetsX[j]) * stepX;
+                float center_y = (h + _offsetsY[j]) * stepY;
 
                 vec.x = (center_x - _boxWidth * 0.5f) / imgWidth;    // xmin
                 vec.y = (center_y - _boxHeight * 0.5f) / imgHeight;  // ymin
