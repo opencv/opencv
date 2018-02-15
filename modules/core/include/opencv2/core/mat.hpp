@@ -2210,7 +2210,7 @@ public:
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
 #ifdef CV_CXX11
-    explicit Mat_(const std::initializer_list<_Tp> values);
+    Mat_(const std::initializer_list<_Tp> values);
     explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
 #endif
 
