@@ -1636,12 +1636,12 @@ Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
 
 #ifdef CV_CXX11
 template<typename _Tp> inline
-Mat_<_Tp>::Mat_(const std::initializer_list<_Tp> list)
+Mat_<_Tp>::Mat_(std::initializer_list<_Tp> list)
     : Mat(list)
 {}
 
 template<typename _Tp> inline
-Mat_<_Tp>::Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list)
+Mat_<_Tp>::Mat_(const std::initializer_list<int> sizes, std::initializer_list<_Tp> list)
     : Mat(sizes, list)
 {}
 #endif
