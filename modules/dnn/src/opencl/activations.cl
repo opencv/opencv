@@ -54,6 +54,17 @@ __kernel void ReLUForward(const int count, __global const T* in, __global T* out
 #endif
 }
 
+__kernel void ReLU6Forward(const int count, __global const T* in, __global T* out,
+                           const T minValue, const T maxValue)
+{
+  int index = get_global_id(0);
+  if(index < count)
+  {
+    T x = in[index];
+    out[index] = clamp(x, minValue, maxValue);
+  }
+}
+
 __kernel void PReLUForward(const int count, const int channels, const int plane_size,
                            __global const T* in, __global T* out, __global const T* slope_data)
 {
