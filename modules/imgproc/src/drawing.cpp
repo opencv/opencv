@@ -40,8 +40,6 @@
 //M*/
 #include "precomp.hpp"
 
-#include <stdint.h>
-
 namespace cv
 {
 

@@ -40,9 +40,8 @@
 //
 //M*/
 
+#include "precomp.hpp"
 #include "exif.hpp"
-#include "opencv2/core/cvdef.h"
-#include "opencv2/core/base.hpp"
 
 namespace {
 
