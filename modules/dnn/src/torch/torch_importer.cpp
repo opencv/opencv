@@ -559,7 +559,11 @@ struct TorchImporter
                     layerParams.set("indices_blob_id", tensorParams["indices"].first);
                 }
                 if (nnName == "SpatialAveragePooling")
+                {
                     layerParams.set("pool", "AVE");
+                    layerParams.set("ave_pool_padded_area", scalarParams.has("count_include_pad") &&
+                                                            scalarParams.get<bool>("count_include_pad"));
+                }
                 convertTorchKernelsParams(scalarParams, layerParams);
 
                 CV_Assert(scalarParams.has("ceil_mode"));
