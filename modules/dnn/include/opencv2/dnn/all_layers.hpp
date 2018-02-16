@@ -239,6 +239,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool computeMaxIdx;
         String padMode;
         bool ceilMode;
+        // If true for average pooling with padding, divide an every output region
+        // by a whole kernel area. Otherwise exclude zero padded values and divide
+        // by number of real values.
+        bool avePoolPaddedArea;
         // ROIPooling parameters.
         Size pooledSize;
         float spatialScale;
