@@ -3694,6 +3694,8 @@ channels is derived automatically from src and code.
  */
 CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
 
+CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
+
 //! @} imgproc_misc
 
 // main function for all demosaicing processes

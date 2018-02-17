@@ -11050,6 +11050,42 @@ inline bool isFullRange(int code)
 
 } // namespace::
 
+// helper function for dual-plane modes
+void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code )
+{
+    // only YUV420 is currently supported
+    switch (code) {
+        case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21:  case COLOR_YUV2BGR_NV12:  case COLOR_YUV2RGB_NV12:
+        case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
+            break;
+        default:
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            return;
+    }
+
+    int stype = _ysrc.type();
+    int depth = CV_MAT_DEPTH(stype), uidx, dcn;
+
+    Mat ysrc, uvsrc, dst;
+    ysrc = _ysrc.getMat();
+    uvsrc = _uvsrc.getMat();
+    Size ysz = _ysrc.size();
+    Size uvs = _uvsrc.size();
+
+    // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
+    // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
+    dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
+    uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
+    CV_Assert( dcn == 3 || dcn == 4 );
+    CV_Assert( ysz.width == uvs.width * 2 );
+    CV_Assert( ysz.width % 2 == 0 && depth == CV_8U );
+    CV_Assert( ysz.height == uvs.height * 2 );
+    _dst.create( ysz, CV_MAKETYPE(depth, dcn));
+    dst = _dst.getMat();
+    hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step, dst.data, dst.step, dst.cols, dst.rows, dcn, swapBlue(code), uidx);
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                   The main function                                  //
 //////////////////////////////////////////////////////////////////////////////////////////
