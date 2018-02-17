@@ -421,6 +421,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<ELULayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS SELULayer : public ActivationLayer
+    {
+    public:
+        float scale, alpha;
+
+        static Ptr<SELULayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS TanHLayer : public ActivationLayer
     {
     public:

@@ -1553,6 +1553,14 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
+        else if (type == "Selu")
+        {
+            layerParams.set("scale", 1.0507009873554804934193349852946f);
+            layerParams.set("alpha", 1.6732632423543772848170429916717f);
+            int id = dstNet.addLayer(name, "SELU", layerParams);
+            layer_id[name] = id;
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+        }
         else
         {
             printLayerAttr(layer);

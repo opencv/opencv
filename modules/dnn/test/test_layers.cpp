@@ -404,6 +404,20 @@ TEST(Layer_Conv_Elu, Accuracy)
     normAssert(ref, out);
 }
 
+TEST(Layer_Conv_Selu, Accuracy)
+{
+    Net net = readNetFromTensorflow(_tf("layer_selu_model.pb"));
+    ASSERT_FALSE(net.empty());
+
+    Mat inp = blobFromNPY(_tf("layer_selu_in.npy"));
+    Mat ref = blobFromNPY(_tf("layer_selu_out.npy"));
+
+    net.setInput(inp, "input");
+    Mat out = net.forward();
+
+    normAssert(ref, out);
+}
+
 class Layer_LSTM_Test : public ::testing::Test
 {
 public:
