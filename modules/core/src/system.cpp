@@ -514,7 +514,7 @@ struct HWFeatures
 
     static inline bool isSymbolSeparator(char c)
     {
-        return c == ',' || c == ';' || c == '-';
+        return c == ',' || c == ';';
     }
 
     void readSettings(const int* baseline_features, int baseline_count)
