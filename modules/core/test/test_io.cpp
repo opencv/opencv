@@ -1129,7 +1129,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+000 ]\n");
 #else
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
@@ -1160,7 +1160,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
 
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
@@ -1218,7 +1218,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
     EXPECT_NO_THROW(fs << "dvv" << dvv);
     cv::String fs_result = fs.releaseAndGetString();
 #ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
