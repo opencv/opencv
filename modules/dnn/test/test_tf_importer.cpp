@@ -199,7 +199,7 @@ TEST(Test_TensorFlow, reshape)
 {
     runTensorFlowNet("shift_reshape_no_reorder");
     runTensorFlowNet("reshape_reduce");
-    runTensorFlowNet("flatten", true);
+    runTensorFlowNet("flatten", DNN_TARGET_CPU, true);
 }
 
 TEST(Test_TensorFlow, fp16)
