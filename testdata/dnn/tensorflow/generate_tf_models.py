@@ -1,33 +1,33 @@
 # This script is used to generate test data for OpenCV deep learning module.
-# To run this script build the TensorFlow graph transformation tool following
-# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/graph_transforms/README.md#using-the-graph-transform-tool
-# and type the command:
-# python generate_tf_models.py \
-#   -f ~/tensorflow/tensorflow/python/tools/freeze_graph.py \
-#   -o ~/tensorflow/tensorflow/python/tools/optimize_for_inference.py \
-#   -t ~/tensorflow/bazel-bin/tensorflow/tools/graph_transforms/transform_graph
 import numpy as np
 import tensorflow as tf
 import os
 import argparse
 import struct
 import cv2 as cv
-from prepare_for_dnn import prepare_for_dnn
 
-parser = argparse.ArgumentParser(description='Script for OpenCV\'s DNN module '
-                                             'test data generation')
-parser.add_argument('-f', dest='freeze_graph_tool', required=True,
-                    help='Path to freeze_graph.py tool')
-parser.add_argument('-o', dest='optimizer_tool', required=True,
-                    help='Path to optimize_for_inference.py tool')
-parser.add_argument('-t', dest='transform_graph_tool', required=True,
-                    help='Path to transform_graph tool')
-args = parser.parse_args()
+from tensorflow.python.tools import optimize_for_inference_lib
+from tensorflow.tools.graph_transforms import TransformGraph
 
 np.random.seed(2701)
 
 def gen_data(placeholder):
     return np.random.standard_normal(placeholder.shape).astype(placeholder.dtype.as_numpy_dtype())
+
+def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, quantize=False):
+    # Freeze graph. Replaces variables to constants.
+    frozen_graph = tf.graph_util.convert_variables_to_constants(sess, graph_def, [out_node])
+    # Optimize graph. Removes training-only ops, unused nodes.
+    opt_graph = optimize_for_inference_lib.optimize_for_inference(frozen_graph, [in_node], [out_node], dtype.as_datatype_enum)
+    # Fuse constant operations.
+    transforms = ["fold_constants(ignore_errors=True)"]
+    if quantize:
+        transforms += ["quantize_weights(minimum_size=0)"]
+    transforms += ["sort_by_execution_order"]
+    fused_graph = TransformGraph(opt_graph, [in_node], [out_node], transforms)
+    # Serialize
+    with tf.gfile.FastGFile(out_graph, 'wb') as f:
+            f.write(fused_graph.SerializeToString())
 
 tf.reset_default_graph()
 tf.Graph().as_default()
@@ -68,13 +68,8 @@ def save(inp, out, name, quantize=False):
     writeBlob(inputData, name + '_in')
     writeBlob(outputData, name + '_out')
 
-    saver = tf.train.Saver()
-    saver.save(sess, os.path.join('.', 'tmp.ckpt'))
-    tf.train.write_graph(sess.graph.as_graph_def(), "", "graph.pb")
-    prepare_for_dnn('graph.pb', 'tmp.ckpt', args.freeze_graph_tool,
-                    args.optimizer_tool, args.transform_graph_tool,
-                    inp.name[:inp.name.rfind(':')], out.name[:out.name.rfind(':')],
-                    name + '_net.pb', inp.dtype, quantize=quantize)
+    prepare_for_dnn(sess, sess.graph.as_graph_def(), inp.name[:inp.name.rfind(':')],
+                    out.name[:out.name.rfind(':')], name + '_net.pb', inp.dtype, quantize)
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
@@ -273,8 +268,6 @@ bn = tf.layers.batch_normalization(inp, training=isTraining, fused=False, name='
                                    moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
                                    moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
 save(inp, bn, 'batch_norm_text')
-# Override the graph by a frozen one.
-os.rename('frozen_graph.pb', 'batch_norm_text_net.pb')
 ################################################################################
 inp = tf.placeholder(tf.float32, [2, 4, 5], 'input')
 flatten = tf.contrib.layers.flatten(inp)
@@ -289,7 +282,7 @@ with tf.gfile.FastGFile('../ssd_mobilenet_v1_coco.pb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
-with tf.Session() as localSession:
+with tf.Session(graph=tf.Graph()) as localSession:
     # Restore session
     localSession.graph.as_default()
     tf.import_graph_def(graph_def, name='')
@@ -405,14 +398,3 @@ save(inp, bn, 'mvn_batch_norm_1x1')
 #     graph_def = tf.GraphDef()
 #     graph_def.ParseFromString(f.read())
 #     print graph_def
-
-def rm(f):
-    if os.path.exists(f):
-        os.remove(f)
-
-rm('checkpoint')
-rm('graph.pb')
-rm('frozen_graph.pb')
-rm('tmp.ckpt.data-00000-of-00001')
-rm('tmp.ckpt.index')
-rm('tmp.ckpt.meta')
