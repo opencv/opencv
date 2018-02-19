@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video.hpp"
@@ -10,10 +14,10 @@ using namespace cv;
 
 int main(int argc, const char** argv)
 {
-    const String keys = "{c camera||use video stream from camera (default is NO)}"
-                        "{fn file_name|../data/tree.avi|video file}"
-                        "{m method|mog2|method: background subtraction algorithm ('knn', 'mog2')}"
-                        "{h help||show help message}";
+    const String keys = "{c camera     | 0 | use video stream from camera (device index starting from 0) }"
+                        "{fn file_name |   | use video file as input }"
+                        "{m method | mog2 | method: background subtraction algorithm ('knn', 'mog2')}"
+                        "{h help | | show help message}";
     CommandLineParser parser(argc, argv, keys);
     parser.about("This sample demonstrates background segmentation.");
     if (parser.has("help"))
@@ -21,7 +25,7 @@ int main(int argc, const char** argv)
         parser.printMessage();
         return 0;
     }
-    bool useCamera = parser.has("camera");
+    int camera = parser.get<int>("camera");
     String file = parser.get<String>("file_name");
     String method = parser.get<String>("method");
     if (!parser.check())
@@ -31,13 +35,13 @@ int main(int argc, const char** argv)
     }
 
     VideoCapture cap;
-    if (useCamera)
-        cap.open(0);
+    if (file.empty())
+        cap.open(camera);
     else
         cap.open(file.c_str());
     if (!cap.isOpened())
     {
-        cout << "Can not open video stream: '" << (useCamera ? "<camera 0>" : file) << "'" << endl;
+        cout << "Can not open video stream: '" << (file.empty() ? "<camera>" : file) << "'" << endl;
         return 2;
     }
 
