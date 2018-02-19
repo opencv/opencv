@@ -26,6 +26,8 @@ parser.add_argument('--max_scale', default=0.95, type=float, help='Hyper-paramet
 parser.add_argument('--num_layers', default=6, type=int, help='Hyper-parameter of ssd_anchor_generator from config file.')
 parser.add_argument('--aspect_ratios', default=[1.0, 2.0, 0.5, 3.0, 0.333], type=float, nargs='+',
                     help='Hyper-parameter of ssd_anchor_generator from config file.')
+parser.add_argument('--image_width', default=300, type=int, help='Training images width.')
+parser.add_argument('--image_height', default=300, type=int, help='Training images height.')
 args = parser.parse_args()
 
 # Nodes that should be kept.
@@ -192,7 +194,6 @@ for i in range(args.num_layers):
 
     text_format.Merge('b: false', priorBox.attr["flip"])
     text_format.Merge('b: false', priorBox.attr["clip"])
-    text_format.Merge('b: true', priorBox.attr["normalized_bbox"])
 
     if i == 0:
         widths = [args.min_scale * 0.5, args.min_scale * sqrt(2.0), args.min_scale * sqrt(0.5)]
@@ -203,6 +204,8 @@ for i in range(args.num_layers):
 
         widths += [sqrt(scales[i] * scales[i + 1])]
         heights += [sqrt(scales[i] * scales[i + 1])]
+    widths = [w * args.image_width for w in widths]
+    heights = [h * args.image_height for h in heights]
     text_format.Merge(tensorMsg(widths), priorBox.attr["width"])
     text_format.Merge(tensorMsg(heights), priorBox.attr["height"])
     text_format.Merge(tensorMsg([0.1, 0.1, 0.2, 0.2]), priorBox.attr["variance"])
