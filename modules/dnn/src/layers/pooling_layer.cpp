@@ -145,6 +145,9 @@ public:
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
+        if (type == AVE && padMode == "SAME")
+            return false;
+
         if (poolOp.empty())
         {
             OCL4DNNPoolConfig config;
