@@ -179,7 +179,6 @@ public:
     }
 
     PriorBoxLayerImpl(const LayerParams &params)
-        : _boxWidth(0), _boxHeight(0)
     {
         setParamsFrom(params);
         _minSize = getParameter<float>(params, "min_size", 0, false, 0);
@@ -191,30 +190,51 @@ public:
 
         getAspectRatios(params);
         getVariance(params);
-        getParams("width", params, &_widths);
-        getParams("height", params, &_heights);
-        _explicitSizes = !_widths.empty();
-        CV_Assert(_widths.size() == _heights.size());
-
-        if (_explicitSizes)
-        {
-            CV_Assert(_aspectRatios.empty(), !params.has("min_size"), !params.has("max_size"));
-            _numPriors = _widths.size();
-        }
-        else
-        {
-            CV_Assert(!_aspectRatios.empty(), _minSize > 0);
-            _numPriors = _aspectRatios.size() + 1;  // + 1 for an aspect ratio 1.0
-        }
 
         _maxSize = -1;
         if (params.has("max_size"))
         {
             _maxSize = params.get("max_size").get<float>(0);
             CV_Assert(_maxSize > _minSize);
-
-            _numPriors += 1;
         }
+
+        std::vector<float> widths, heights;
+        getParams("width", params, &widths);
+        getParams("height", params, &heights);
+        _explicitSizes = !widths.empty();
+        CV_Assert(widths.size() == heights.size());
+
+        if (_explicitSizes)
+        {
+            CV_Assert(_aspectRatios.empty(), !params.has("min_size"), !params.has("max_size"));
+            _boxWidths = widths;
+            _boxHeights = heights;
+        }
+        else
+        {
+            CV_Assert(!_aspectRatios.empty(), _minSize > 0);
+            _boxWidths.resize(1 + (_maxSize > 0 ? 1 : 0) + _aspectRatios.size());
+            _boxHeights.resize(_boxWidths.size());
+            _boxWidths[0] = _boxHeights[0] = _minSize;
+
+            int i = 1;
+            if (_maxSize > 0)
+            {
+                // second prior: aspect_ratio = 1, size = sqrt(min_size * max_size)
+                _boxWidths[i] = _boxHeights[i] = sqrt(_minSize * _maxSize);
+                i += 1;
+            }
+
+            // rest of priors
+            for (size_t r = 0; r < _aspectRatios.size(); ++r)
+            {
+                float arSqrt = sqrt(_aspectRatios[r]);
+                _boxWidths[i + r] = _minSize * arSqrt;
+                _boxHeights[i + r] = _minSize / arSqrt;
+            }
+        }
+        CV_Assert(_boxWidths.size() == _boxHeights.size());
+        _numPriors = _boxWidths.size();
 
         if (params.has("step_h") || params.has("step_w")) {
           CV_Assert(!params.has("step"));
@@ -277,14 +297,6 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    static inline void setKernelArg(ocl::Kernel& kernel, int id, const UMat& m)
-    {
-        if (!m.empty())
-            kernel.set(id, ocl::KernelArg::PtrReadOnly(m));
-        else
-            kernel.set(id, nullptr);
-    }
-
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         std::vector<UMat> inputs;
@@ -314,17 +326,14 @@ public:
             Mat offsetsX(1, _offsetsX.size(), CV_32FC1, &_offsetsX[0]);
             Mat offsetsY(1, _offsetsY.size(), CV_32FC1, &_offsetsY[0]);
             Mat variance(1, _variance.size(), CV_32FC1, &_variance[0]);
+            Mat widths(1, _boxWidths.size(), CV_32FC1, &_boxWidths[0]);
+            Mat heights(1, _boxHeights.size(), CV_32FC1, &_boxHeights[0]);
 
             offsetsX.copyTo(umat_offsetsX);
             offsetsY.copyTo(umat_offsetsY);
             variance.copyTo(umat_variance);
-
-            if (!_aspectRatios.empty())
-                Mat(1, _aspectRatios.size(), CV_32FC1, &_aspectRatios[0]).copyTo(umat_aspectRatios);
-            if (!_widths.empty())
-                Mat(1, _widths.size(), CV_32FC1, &_widths[0]).copyTo(umat_widths);
-            if (!_heights.empty())
-                Mat(1, _heights.size(), CV_32FC1, &_heights[0]).copyTo(umat_heights);
+            widths.copyTo(umat_widths);
+            heights.copyTo(umat_heights);
         }
 
         size_t nthreads = _layerHeight * _layerWidth;
@@ -333,21 +342,17 @@ public:
         kernel.set(0, (int)nthreads);
         kernel.set(1, (float)stepX);
         kernel.set(2, (float)stepY);
-        kernel.set(3, (float)_minSize);
-        kernel.set(4, (float)_maxSize);
-        kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_offsetsX));
-        kernel.set(6, ocl::KernelArg::PtrReadOnly(umat_offsetsY));
-        kernel.set(7, (int)_offsetsX.size());
-        setKernelArg(kernel, 8, umat_aspectRatios);
-        kernel.set(9, (int)_aspectRatios.size());
-        setKernelArg(kernel, 10, umat_widths);
-        setKernelArg(kernel, 11, umat_heights);
-        kernel.set(12, (int)_widths.size());
-        kernel.set(13, ocl::KernelArg::PtrWriteOnly(outputs[0]));
-        kernel.set(14, (int)_layerHeight);
-        kernel.set(15, (int)_layerWidth);
-        kernel.set(16, (int)_imageHeight);
-        kernel.set(17, (int)_imageWidth);
+        kernel.set(3, ocl::KernelArg::PtrReadOnly(umat_offsetsX));
+        kernel.set(4, ocl::KernelArg::PtrReadOnly(umat_offsetsY));
+        kernel.set(5, (int)_offsetsX.size());
+        kernel.set(6, ocl::KernelArg::PtrReadOnly(umat_widths));
+        kernel.set(7, ocl::KernelArg::PtrReadOnly(umat_heights));
+        kernel.set(8, (int)_boxWidths.size());
+        kernel.set(9, ocl::KernelArg::PtrWriteOnly(outputs[0]));
+        kernel.set(10, (int)_layerHeight);
+        kernel.set(11, (int)_layerWidth);
+        kernel.set(12, (int)_imageHeight);
+        kernel.set(13, (int)_imageWidth);
         kernel.run(1, &nthreads, NULL, false);
 
         // clip the prior's coordidate such that it is within [0, 1]
@@ -418,59 +423,15 @@ public:
         int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
 
         float* outputPtr = outputs[0].ptr<float>();
+        float _boxWidth, _boxHeight;
         for (size_t h = 0; h < _layerHeight; ++h)
         {
             for (size_t w = 0; w < _layerWidth; ++w)
             {
-                // first prior: aspect_ratio = 1, size = min_size
-                if (_explicitSizes)
+                for (size_t i = 0; i < _boxWidths.size(); ++i)
                 {
-                    _boxWidth = _widths[0];
-                    _boxHeight = _heights[0];
-                }
-                else
-                    _boxWidth = _boxHeight = _minSize;
-
-                for (int i = 0; i < _offsetsX.size(); ++i)
-                {
-                    float center_x = (w + _offsetsX[i]) * stepX;
-                    float center_y = (h + _offsetsY[i]) * stepY;
-                    outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
-                                         _imageHeight, _bboxesNormalized, outputPtr);
-                }
-                if (_maxSize > 0)
-                {
-                    // second prior: aspect_ratio = 1, size = sqrt(min_size * max_size)
-                    _boxWidth = _boxHeight = sqrt(_minSize * _maxSize);
-                    for (int i = 0; i < _offsetsX.size(); ++i)
-                    {
-                        float center_x = (w + _offsetsX[i]) * stepX;
-                        float center_y = (h + _offsetsY[i]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
-                                             _imageHeight, _bboxesNormalized, outputPtr);
-                    }
-                }
-
-                // rest of priors
-                for (size_t r = 0; r < _aspectRatios.size(); ++r)
-                {
-                    float ar = _aspectRatios[r];
-                    _boxWidth = _minSize * sqrt(ar);
-                    _boxHeight = _minSize / sqrt(ar);
-                    for (int i = 0; i < _offsetsX.size(); ++i)
-                    {
-                        float center_x = (w + _offsetsX[i]) * stepX;
-                        float center_y = (h + _offsetsY[i]) * stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
-                                             _imageHeight, _bboxesNormalized, outputPtr);
-                    }
-                }
-
-                // rest of sizes
-                for (size_t i = 1; i < _widths.size(); ++i)
-                {
-                    _boxWidth = _widths[i];
-                    _boxHeight = _heights[i];
+                    _boxWidth = _boxWidths[i];
+                    _boxHeight = _boxHeights[i];
                     for (int j = 0; j < _offsetsX.size(); ++j)
                     {
                         float center_x = (w + _offsetsX[j]) * stepX;
@@ -571,22 +532,19 @@ private:
     float _minSize;
     float _maxSize;
 
-    float _boxWidth;
-    float _boxHeight;
-
     float _stepX, _stepY;
 
     std::vector<float> _aspectRatios;
     std::vector<float> _variance;
-    std::vector<float> _widths;
-    std::vector<float> _heights;
     std::vector<float> _offsetsX;
     std::vector<float> _offsetsY;
+    // Precomputed final widhts and heights based on aspect ratios or explicit sizes.
+    std::vector<float> _boxWidths;
+    std::vector<float> _boxHeights;
 
 #ifdef HAVE_OPENCL
     UMat umat_offsetsX;
     UMat umat_offsetsY;
-    UMat umat_aspectRatios;
     UMat umat_widths;
     UMat umat_heights;
     UMat umat_variance;

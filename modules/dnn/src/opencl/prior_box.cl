@@ -45,13 +45,9 @@
 __kernel void prior_box(const int nthreads,
                         const Dtype stepX,
                         const Dtype stepY,
-                        const Dtype _minSize,
-                        const Dtype _maxSize,
                         __global const Dtype* _offsetsX,
                         __global const Dtype* _offsetsY,
                         const int offsetsX_size,
-                        __global const Dtype* _aspectRatios,
-                        const int aspectRatios_size,
                         __global const Dtype* _widths,
                         __global const Dtype* _heights,
                         const int widths_size,
@@ -66,79 +62,12 @@ __kernel void prior_box(const int nthreads,
         int w = index % _layerWidth;
         int h = index / _layerWidth;
         __global Dtype* outputPtr;
-        if (widths_size > 0)
-            outputPtr = dst + index * 4 * offsetsX_size * widths_size;
-        else
-        {
-            int aspect_count = (_maxSize > 0) ? 1 : 0;
-            outputPtr = dst + index * 4 * offsetsX_size * (1 + aspect_count + aspectRatios_size);
-        }
+
+        outputPtr = dst + index * 4 * offsetsX_size * widths_size;
 
         Dtype _boxWidth, _boxHeight;
         Dtype4 vec;
-        if (widths_size > 0)
-        {
-            _boxWidth = _widths[0];
-            _boxHeight = _heights[0];
-        }
-        else
-            _boxWidth = _boxHeight = _minSize;
-
-        for (int i = 0; i < offsetsX_size; ++i)
-        {
-            float center_x = (w + _offsetsX[i]) * stepX;
-            float center_y = (h + _offsetsY[i]) * stepY;
-
-            vec.x = (center_x - _boxWidth * 0.5f) / imgWidth;    // xmin
-            vec.y = (center_y - _boxHeight * 0.5f) / imgHeight;  // ymin
-            vec.z = (center_x + _boxWidth * 0.5f) / imgWidth;    // xmax
-            vec.w = (center_y + _boxHeight * 0.5f) / imgHeight;  // ymax
-            vstore4(vec, 0, outputPtr);
-
-            outputPtr += 4;
-        }
-
-        if (_maxSize > 0)
-        {
-            _boxWidth = _boxHeight = native_sqrt(_minSize * _maxSize);
-
-            for (int i = 0; i < offsetsX_size; ++i)
-            {
-                float center_x = (w + _offsetsX[i]) * stepX;
-                float center_y = (h + _offsetsY[i]) * stepY;
-
-                vec.x = (center_x - _boxWidth * 0.5f) / imgWidth;    // xmin
-                vec.y = (center_y - _boxHeight * 0.5f) / imgHeight;  // ymin
-                vec.z = (center_x + _boxWidth * 0.5f) / imgWidth;    // xmax
-                vec.w = (center_y + _boxHeight * 0.5f) / imgHeight;  // ymax
-                vstore4(vec, 0, outputPtr);
-
-                outputPtr += 4;
-            }
-        }
-
-        for (int r = 0; r < aspectRatios_size; ++r)
-        {
-            float ar = native_sqrt(_aspectRatios[r]);
-
-            _boxWidth = _minSize * ar;
-            _boxHeight = _minSize / ar;
-
-            for (int i = 0; i < offsetsX_size; ++i)
-            {
-                float center_x = (w + _offsetsX[i]) * stepX;
-                float center_y = (h + _offsetsY[i]) * stepY;
-
-                vec.x = (center_x - _boxWidth * 0.5f) / imgWidth;    // xmin
-                vec.y = (center_y - _boxHeight * 0.5f) / imgHeight;  // ymin
-                vec.z = (center_x + _boxWidth * 0.5f) / imgWidth;    // xmax
-                vec.w = (center_y + _boxHeight * 0.5f) / imgHeight;  // ymax
-                vstore4(vec, 0, outputPtr);
-
-                outputPtr += 4;
-            }
-        }
-        for (int i = 1; i < widths_size; ++i)
+        for (int i = 0; i < widths_size; ++i)
         {
             _boxWidth = _widths[i];
             _boxHeight = _heights[i];
