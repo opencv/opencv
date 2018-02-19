@@ -68,7 +68,7 @@ public:
         val0_l &= 0xFFFFFFFF;
 
         if ( (sh2 >> 32) || (val0_h >> ressign ? 32 : 31) )
-            return (ressign ? ~0x7FFFFFFFFFFFFFFF : 0x7FFFFFFFFFFFFFFF);
+            return (ressign ? ~(int64_t)0x7FFFFFFFFFFFFFFF : (int64_t)0x7FFFFFFFFFFFFFFF);
 
         if (ressign)
         {
@@ -134,17 +134,17 @@ public:
         val0_l &= 0xFFFFFFFF;
 
         if ((sh2 >> 32) || (val0_h >> 32))
-            return (0xFFFFFFFFFFFFFFFF);
+            return ((uint64_t)0xFFFFFFFFFFFFFFFF);
 
         return val0_h << 32 | val0_l;
     }
     CV_ALWAYS_INLINE ufixedpoint64 operator + (const ufixedpoint64& val2) const
     {
         uint64_t res = val + val2.val;
-        return (val > res) ? 0xFFFFFFFFFFFFFFFF : res;
+        return (val > res) ? (uint64_t)0xFFFFFFFFFFFFFFFF : res;
     }
     CV_ALWAYS_INLINE ufixedpoint64 operator - (const ufixedpoint64& val2) const
-    { 
+    {
         return val > val2.val ? (val - val2.val) : 0;
     }
     CV_ALWAYS_INLINE ufixedpoint64 operator >> (int n) const { return ufixedpoint64(val >> n); }
@@ -235,7 +235,7 @@ public:
         return (val > res) ? 0xFFFFFFFF : res;
     }
     CV_ALWAYS_INLINE ufixedpoint32 operator - (const ufixedpoint32& val2) const
-    { 
+    {
         return val > val2.val ? (val - val2.val) : 0;
     }
     CV_ALWAYS_INLINE ufixedpoint32 operator >> (int n) const { return ufixedpoint32(val >> n); }
@@ -276,7 +276,7 @@ public:
         return ((val ^ res) & (val2.val ^ res)) >> 15 ? (int16_t)(~(res & ~0x7FFF)) : res;
     }
     CV_ALWAYS_INLINE fixedpoint16 operator - (const fixedpoint16& val2) const
-    { 
+    {
         int16_t res = val - val2.val;
         return ((val ^ val2.val) & (val ^ res)) >> 15 ? (int16_t)(~(res & ~(int16_t)0x7FFF)) : res;
     }

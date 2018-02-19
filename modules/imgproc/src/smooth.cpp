@@ -1826,7 +1826,7 @@ void hlineSmooth1N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
     int lencn = len*cn;
     v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
     int i = 0;
-    for (; i < lencn - 15; i += 16)
+    for (; i <= lencn - 16; i += 16)
     {
         v_uint8x16 v_src = v_load(src + i);
         v_uint16x8 v_tmp0, v_tmp1;
@@ -1834,7 +1834,7 @@ void hlineSmooth1N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
         v_store((uint16_t*)dst + i, v_mul*v_tmp0);
         v_store((uint16_t*)dst + i + 8, v_mul*v_tmp1);
     }
-    if (i < lencn - 7)
+    if (i <= lencn - 8)
     {
         v_uint16x8 v_src = v_load_expand(src + i);
         v_store((uint16_t*)dst + i, v_mul*v_src);
@@ -1854,7 +1854,7 @@ void hlineSmooth1N1<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const uf
 {
     int lencn = len*cn;
     int i = 0;
-    for (; i < lencn - 15; i += 16)
+    for (; i <= lencn - 16; i += 16)
     {
         v_uint8x16 v_src = v_load(src + i);
         v_uint16x8 v_tmp0, v_tmp1;
@@ -1862,7 +1862,7 @@ void hlineSmooth1N1<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const uf
         v_store((uint16_t*)dst + i, v_shl<8>(v_tmp0));
         v_store((uint16_t*)dst + i + 8, v_shl<8>(v_tmp1));
     }
-    if (i < lencn - 7)
+    if (i <= lencn - 8)
     {
         v_uint16x8 v_src = v_load_expand(src + i);
         v_store((uint16_t*)dst + i, v_shl<8>(v_src));
@@ -1933,7 +1933,7 @@ void hlineSmooth3N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
         v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
         v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)(m + 1)));
         v_uint16x8 v_mul2 = v_setall_u16(*((uint16_t*)(m + 2)));
-        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
             v_expand(v_load(src - cn), v_src00, v_src01);
@@ -2021,7 +2021,7 @@ void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const 
 
         src += cn; dst += cn;
         int i = cn, lencn = (len - 1)*cn;
-        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
             v_expand(v_load(src - cn), v_src00, v_src01);
@@ -2114,7 +2114,7 @@ void hlineSmooth3Naba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const 
         int i = cn, lencn = (len - 1)*cn;
         v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
         v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)m+1));
-        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
             v_expand(v_load(src - cn), v_src00, v_src01);
@@ -2313,7 +2313,7 @@ void hlineSmooth5N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
         v_uint16x8 v_mul2 = v_setall_u16(*((uint16_t*)(m + 2)));
         v_uint16x8 v_mul3 = v_setall_u16(*((uint16_t*)(m + 3)));
         v_uint16x8 v_mul4 = v_setall_u16(*((uint16_t*)(m + 4)));
-        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
             v_expand(v_load(src - 2*cn), v_src00, v_src01);
@@ -2522,7 +2522,7 @@ void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
         src += 2 * cn; dst += 2 * cn;
         int i = 2 * cn, lencn = (len - 2)*cn;
         v_uint16x8 v_6 = v_setall_u16(6);
-        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
             v_expand(v_load(src - 2*cn), v_src00, v_src01);
@@ -2728,7 +2728,7 @@ void hlineSmooth5Nabcba<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, cons
         v_uint16x8 v_mul0 = v_setall_u16(*((uint16_t*)m));
         v_uint16x8 v_mul1 = v_setall_u16(*((uint16_t*)(m + 1)));
         v_uint16x8 v_mul2 = v_setall_u16(*((uint16_t*)(m + 2)));
-        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
         {
             v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
             v_expand(v_load(src - 2 * cn), v_src00, v_src01);
@@ -2848,7 +2848,7 @@ void hlineSmooth<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixe
     }
     i *= cn;
     int lencn = (len - post_shift + 1)*cn;
-    for (; i < lencn - 15; i+=16, src+=16, dst+=16)
+    for (; i <= lencn - 16; i+=16, src+=16, dst+=16)
     {
         v_uint16x8 v_src0, v_src1;
         v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
@@ -2974,7 +2974,7 @@ void hlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, co
     }
     i *= cn;
     int lencn = (len - post_shift + 1)*cn;
-    for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+    for (; i <= lencn - 16; i += 16, src += 16, dst += 16)
     {
         v_uint16x8 v_src00, v_src01, v_srcN00, v_srcN01;
 
@@ -3035,7 +3035,7 @@ void vlineSmooth1N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
     v_mul += v_mul;
 #endif
     int i = 0;
-    for (; i < len - 15; i += 16)
+    for (; i <= len - 16; i += 16)
     {
         v_uint16x8 v_src0 = v_load((uint16_t*)src0 + i);
         v_uint16x8 v_src1 = v_load((uint16_t*)src0 + i + 8);
@@ -3066,7 +3066,7 @@ void vlineSmooth1N1<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, co
 {
     const ufixedpoint16* src0 = src[0];
     int i = 0;
-    for (; i < len - 7; i += 8)
+    for (; i <= len - 8; i += 8)
         v_rshr_pack_store<8>(dst + i, v_load((uint16_t*)(src0 + i)));
     for (; i < len; i++)
         dst[i] = src0[i];
@@ -3090,7 +3090,7 @@ void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
     }
     v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
     v_int16x8 v_mul2 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 2))));
-    for (; i < len - 31; i += 32)
+    for (; i <= len - 32; i += 32)
     {
         v_int16x8 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
         v_int16x8 v_tmp0, v_tmp1;
@@ -3161,7 +3161,7 @@ template <>
 void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
 {
     int i = 0;
-    for (; i < len - 15; i += 16)
+    for (; i <= len - 16; i += 16)
     {
         v_uint32x4 v_src00, v_src01, v_src02, v_src03, v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
         v_expand(v_load((uint16_t*)(src[0]) + i), v_src00, v_src01);
@@ -3196,7 +3196,7 @@ void vlineSmooth5N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
     v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
     v_int16x8 v_mul23 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + 2))));
     v_int16x8 v_mul4 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 4))));
-    for (; i < len - 31; i += 32)
+    for (; i <= len - 32; i += 32)
     {
         v_int16x8 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
         v_int16x8 v_tmp0, v_tmp1;
@@ -3289,7 +3289,7 @@ void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src
 {
     int i = 0;
     v_uint32x4 v_6 = v_setall_u32(6);
-    for (; i < len - 15; i += 16)
+    for (; i <= len - 16; i += 16)
     {
         v_uint32x4 v_src00, v_src10, v_src20, v_src30, v_src40;
         v_uint32x4 v_src01, v_src11, v_src21, v_src31, v_src41;
@@ -3340,7 +3340,7 @@ void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const
         ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
         v_128_4 = v_setall_s32(*((int32_t*)val));
     }
-    for (; i < len - 31; i += 32)
+    for (; i <= len - 32; i += 32)
     {
         v_int16x8 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
         v_int16x8 v_tmp0, v_tmp1;
@@ -3466,7 +3466,7 @@ void vlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const ufixedpoint16* const * s
         ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
         v_128_4 = v_setall_s32(*((int32_t*)val));
     }
-    for (; i < len - 31; i += 32)
+    for (; i <= len - 32; i += 32)
     {
         v_int16x8 v_src00, v_src10, v_src20, v_src30, v_src01, v_src11, v_src21, v_src31;
         v_int32x4 v_res0, v_res1, v_res2, v_res3, v_res4, v_res5, v_res6, v_res7;
