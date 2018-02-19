@@ -1825,25 +1825,10 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "min_size" value { i: 60 } }
-  attr { key: "flip" value { b: true } }
+  attr { key: "flip" value { b: false } }
   attr { key: "clip" value { b: false } }
   attr {
-    key: "aspect_ratio"
-    value {
-      tensor {
-        dtype: DT_FLOAT
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        float_val: 2.0
-      }
-    }
-  }
-  attr {
-    key: "scales"
+    key: "width"
     value {
       tensor {
         dtype: DT_FLOAT
@@ -1852,9 +1837,25 @@ node {
             size: 3
           }
         }
-        float_val: 0.5
-        float_val: 1.0
-        float_val: 1.0
+        float_val: 30
+        float_val: 84.8528
+        float_val: 42.4264
+      }
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        float_val: 30
+        float_val: 42.4264
+        float_val: 84.8528
       }
     }
   }
@@ -1881,22 +1882,43 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "min_size" value { i: 105 } }
-  attr { key: "max_size" value { i: 150 } }
-  attr { key: "flip" value { b: true } }
+  attr { key: "flip" value { b: false } }
   attr { key: "clip" value { b: false } }
   attr {
-    key: "aspect_ratio"
+    key: "width"
     value {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 2
+            size: 6
           }
         }
-        float_val: 2.0
-        float_val: 3.0
+        float_val: 105
+        float_val: 125.499
+        float_val: 148.492
+        float_val: 74.2462
+        float_val: 181.865
+        float_val: 60.6218
+      }
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 105
+        float_val: 125.499
+        float_val: 74.2462
+        float_val: 148.492
+        float_val: 60.6218
+        float_val: 181.865
       }
     }
   }
@@ -1923,22 +1945,43 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "min_size" value { i: 150 } }
-  attr { key: "max_size" value { i: 195 } }
-  attr { key: "flip" value { b: true } }
+  attr { key: "flip" value { b: false } }
   attr { key: "clip" value { b: false } }
   attr {
-    key: "aspect_ratio"
+    key: "width"
     value {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 2
+            size: 6
           }
         }
-        float_val: 2.0
-        float_val: 3.0
+        float_val: 150
+        float_val: 171.026
+        float_val: 212.132
+        float_val: 106.066
+        float_val: 259.808
+        float_val: 86.6025
+      }
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 150
+        float_val: 171.026
+        float_val: 106.066
+        float_val: 212.132
+        float_val: 86.6025
+        float_val: 259.808
       }
     }
   }
@@ -1965,22 +2008,43 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "min_size" value { i: 195 } }
-  attr { key: "max_size" value { i: 240 } }
-  attr { key: "flip" value { b: true } }
+  attr { key: "flip" value { b: false } }
   attr { key: "clip" value { b: false } }
   attr {
-    key: "aspect_ratio"
+    key: "width"
     value {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 2
+            size: 6
           }
         }
-        float_val: 2.0
-        float_val: 3.0
+        float_val: 195
+        float_val: 216.333
+        float_val: 275.772
+        float_val: 137.886
+        float_val: 337.75
+        float_val: 112.583
+      }
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 195
+        float_val: 216.333
+        float_val: 137.886
+        float_val: 275.772
+        float_val: 112.583
+        float_val: 337.75
       }
     }
   }
@@ -2007,22 +2071,43 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "min_size" value { i: 240 } }
-  attr { key: "max_size" value { i: 285 } }
-  attr { key: "flip" value { b: true } }
+  attr { key: "flip" value { b: false } }
   attr { key: "clip" value { b: false } }
   attr {
-    key: "aspect_ratio"
+    key: "width"
     value {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 2
+            size: 6
           }
         }
-        float_val: 2.0
-        float_val: 3.0
+        float_val: 240
+        float_val: 261.534
+        float_val: 339.411
+        float_val: 169.706
+        float_val: 415.692
+        float_val: 138.564
+      }
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 240
+        float_val: 261.534
+        float_val: 169.706
+        float_val: 339.411
+        float_val: 138.564
+        float_val: 415.692
       }
     }
   }
@@ -2049,22 +2134,43 @@ node {
   op: "PriorBox"
   input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
   input: "image_tensor"
-  attr { key: "min_size" value { i: 285 } }
-  attr { key: "max_size" value { i: 300 } }
-  attr { key: "flip" value { b: true } }
+  attr { key: "flip" value { b: false } }
   attr { key: "clip" value { b: false } }
   attr {
-    key: "aspect_ratio"
+    key: "width"
     value {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 2
+            size: 6
           }
         }
-        float_val: 2.0
-        float_val: 3.0
+        float_val: 285
+        float_val: 292.404
+        float_val: 403.051
+        float_val: 201.525
+        float_val: 493.634
+        float_val: 164.545
+      }
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 285
+        float_val: 292.404
+        float_val: 201.525
+        float_val: 403.051
+        float_val: 164.545
+        float_val: 493.634
       }
     }
   }
