@@ -241,7 +241,12 @@ struct Set<i0, -1, -1>
     }
 };
 
-template< typename VScn, typename VDcn, typename VDepth >
+enum SizePolicy
+{
+    TO_YUV, FROM_YUV, NONE
+};
+
+template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
 struct CvtHelper
 {
     CvtHelper(InputArray _src, OutputArray _dst, int dcn)
@@ -255,27 +260,58 @@ struct CvtHelper
             _src.copyTo(src);
         else
             src = _src.getMat();
-
-        _dst.create(src.size(), CV_MAKETYPE(depth, dcn));
+        Size sz = src.size();
+        switch (sizePolicy)
+        {
+        case TO_YUV:
+            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0);
+            dstSz = Size(sz.width, sz.height / 2 * 3);
+            break;
+        case FROM_YUV:
+            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0);
+            dstSz = Size(sz.width, sz.height * 2 / 3);
+            break;
+        case NONE:
+        default:
+            dstSz = sz;
+            break;
+        }
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
         dst = _dst.getMat();
     }
     Mat src, dst;
     int depth, scn;
+    Size dstSz;
 };
 
 #ifdef HAVE_OPENCL
 
-template< typename VScn, typename VDcn, typename VDepth >
+template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
 struct OclHelper
 {
     OclHelper( InputArray _src, OutputArray _dst, int dcn)
     {
         src = _src.getUMat();
-        Size sz = src.size(), dstSz = sz;
+        Size sz = src.size(), dstSz;
         int scn = src.channels();
         int depth = src.depth();
 
         CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        switch (sizePolicy)
+        {
+        case TO_YUV:
+            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
+            dstSz = Size(sz.width, sz.height / 2 * 3);
+            break;
+        case FROM_YUV:
+            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 );
+            dstSz = Size(sz.width, sz.height * 2 / 3);
+            break;
+        case NONE:
+        default:
+            dstSz = sz;
+            break;
+        }
 
         _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
         dst = _dst.getUMat();
@@ -288,12 +324,34 @@ struct OclHelper
     {
         ocl::Device dev = ocl::Device::getDefault();
         int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
-
-        globalSize[0] = (size_t)src.cols;
-        globalSize[1] = ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy;
+        int pxPerWIx = 1;
 
         cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
                                         src.depth(), src.channels(), pxPerWIy);
+
+        switch (sizePolicy)
+        {
+        case TO_YUV:
+            if (dev.isIntel() &&
+                    src.cols % 4 == 0 && src.step % 4 == 0 && src.offset % 4 == 0 &&
+                    dst.step % 4 == 0 && dst.offset % 4 == 0)
+            {
+                pxPerWIx = 2;
+            }
+            globalSize[0] = (size_t)dst.cols/(2*pxPerWIx);
+            globalSize[1] = ((size_t)dst.rows/3 + pxPerWIy - 1) / pxPerWIy;
+            baseOptions += format("-D PIX_PER_WI_X=%d ", pxPerWIx);
+            break;
+        case FROM_YUV:
+            globalSize[0] = (size_t)dst.cols/2;
+            globalSize[1] = ((size_t)dst.rows/2 + pxPerWIy - 1) / pxPerWIy;
+            break;
+        case NONE:
+        default:
+            globalSize[0] = (size_t)src.cols;
+            globalSize[1] = ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy;
+            break;
+        }
 
         k.create(name.c_str(), source, baseOptions + options);
 

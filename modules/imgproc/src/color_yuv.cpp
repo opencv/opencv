@@ -2556,93 +2556,9 @@ bool oclCvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int
     return h.run();
 }
 
-template< typename VScn, typename VDcn, typename VDepth, bool toYUV >
-struct OclYUVHelper
-{
-    OclYUVHelper( InputArray _src, OutputArray _dst, int dcn)
-    {
-        src = _src.getUMat();
-        Size sz = src.size(), dstSz;
-        int scn = src.channels();
-        int depth = src.depth();
-
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
-        if(toYUV)
-        {
-            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
-            dstSz = Size(sz.width, sz.height / 2 * 3);
-        }
-        else
-        {
-            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 );
-            dstSz = Size(sz.width, sz.height * 2 / 3);
-        }
-
-        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-        dst = _dst.getUMat();
-
-        srcarg = ocl::KernelArg::ReadOnlyNoSize(src);
-        dstarg = ocl::KernelArg::WriteOnly(dst);
-    }
-
-    bool createKernel(cv::String name, ocl::ProgramSource& source, cv::String options)
-    {
-        ocl::Device dev = ocl::Device::getDefault();
-        int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
-        int pxPerWIx = 1;
-
-        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
-                                        src.depth(), src.channels(), pxPerWIy);
-
-        if(toYUV)
-        {
-            if (dev.isIntel() &&
-                src.cols % 4 == 0 && src.step % 4 == 0 && src.offset % 4 == 0 &&
-                dst.step % 4 == 0 && dst.offset % 4 == 0)
-            {
-                pxPerWIx = 2;
-            }
-            globalSize[0] = dst.cols/(2*pxPerWIx);
-            globalSize[1] = (dst.rows/3 + pxPerWIy - 1) / pxPerWIy;
-            baseOptions += format("-D PIX_PER_WI_X=%d ", pxPerWIx);
-        }
-        else
-        {
-            globalSize[0] = dst.cols/2;
-            globalSize[1] = (dst.rows/2 + pxPerWIy - 1) / pxPerWIy;
-        }
-
-        k.create(name.c_str(), source, baseOptions + options);
-
-        if(k.empty())
-            return false;
-
-        nArgs = k.set(0, srcarg);
-        nArgs = k.set(nArgs, dstarg);
-        return true;
-    }
-
-    bool run()
-    {
-        return k.run(2, globalSize, NULL, false);
-    }
-
-    template<typename T>
-    void setArg(const T& arg)
-    {
-        nArgs = k.set(nArgs, arg);
-    }
-
-    UMat src, dst;
-    ocl::Kernel k;
-    size_t globalSize[2];
-    ocl::KernelArg srcarg, dstarg;
-    int nArgs;
-};
-
 bool oclCvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 {
-    OclYUVHelper< Set<1>, Set<1>, Set<CV_8U>, false> h(_src, _dst, 1);
+    OclHelper< Set<1>, Set<1>, Set<CV_8U>, FROM_YUV> h(_src, _dst, 1);
 
     h.src.rowRange(0, _dst.rows()).copyTo(_dst);
     return true;
@@ -2650,7 +2566,7 @@ bool oclCvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 
 bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx )
 {
-    OclYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false > h(_src, _dst, dcn);
+    OclHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB_NVx", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx)))
@@ -2663,7 +2579,7 @@ bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int
 
 bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx )
 {
-    OclYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false > h(_src, _dst, dcn);
+    OclHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=%d -D bidx=%d -D uidx=%d%s", dcn, bidx, uidx,
@@ -2677,7 +2593,7 @@ bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, i
 
 bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, int uidx )
 {
-    OclYUVHelper< Set<3, 4>, Set<1>, Set<CV_8U>, true > h(_src, _dst, 1);
+    OclHelper< Set<3, 4>, Set<1>, Set<CV_8U>, TO_YUV > h(_src, _dst, 1);
 
     if(!h.createKernel("RGB2YUV_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
                        format("-D dcn=1 -D bidx=%d -D uidx=%d", bidx, uidx)))
@@ -2726,43 +2642,9 @@ void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi )
     extractChannel(_src, _dst, coi);
 }
 
-template< typename VScn, typename VDcn, typename VDepth, bool toYUV >
-struct CvtYUVHelper
-{
-    CvtYUVHelper(InputArray _src, OutputArray _dst, int dcn)
-    {
-        int stype = _src.type();
-        scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
-
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
-
-        if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
-            _src.copyTo(src);
-        else
-            src = _src.getMat();
-        Size sz = src.size();
-        if(toYUV)
-        {
-            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0);
-            dstSz = Size(sz.width, sz.height / 2 * 3);
-        }
-        else
-        {
-            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0);
-            dstSz = Size(sz.width, sz.height * 2 / 3);
-        }
-        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-        dst = _dst.getMat();
-    }
-    Mat src, dst;
-    int depth, scn;
-    Size dstSz;
-};
-
-
 void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx)
 {
-    CvtYUVHelper< Set<3, 4>, Set<1>, Set<CV_8U>, true > h(_src, _dst, 1);
+    CvtHelper< Set<3, 4>, Set<1>, Set<CV_8U>, TO_YUV > h(_src, _dst, 1);
 
     hal::cvtBGRtoThreePlaneYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                                h.scn, swapb, uidx);
@@ -2770,7 +2652,7 @@ void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, i
 
 void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 {
-    CvtYUVHelper< Set<1>, Set<1>, Set<CV_8U>, false > h(_src, _dst, 1);
+    CvtHelper< Set<1>, Set<1>, Set<CV_8U>, FROM_YUV > h(_src, _dst, 1);
 
 #ifdef HAVE_IPP
 #if IPP_VERSION_X100 >= 201700
@@ -2785,16 +2667,19 @@ void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx)
 {
     if(dcn <= 0) dcn = 3;
-    CvtYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false> h(_src, _dst, dcn);
+    CvtHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV> h(_src, _dst, dcn);
 
     hal::cvtThreePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
                                dcn, swapb, uidx);
 }
 
+// http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
+// http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
+
 void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx )
 {
     if(dcn <= 0) dcn = 3;
-    CvtYUVHelper< Set<1>, Set<3, 4>, Set<CV_8U>, false> h(_src, _dst, dcn);
+    CvtHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV> h(_src, _dst, dcn);
 
     hal::cvtTwoPlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
                              dcn, swapb, uidx);
