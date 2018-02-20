@@ -1707,7 +1707,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     const int CV_STEP_ALIGNMENT = 32;
     const size_t CV_SIMD_SIZE = 32;
     const size_t CV_PAGE_MASK = ~(4096 - 1);
-    const uchar* dataend = data + ((size_t)height * step);
+    const unsigned char* dataend = data + ((size_t)height * step);
     if (step % CV_STEP_ALIGNMENT != 0 ||
         (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
     {
