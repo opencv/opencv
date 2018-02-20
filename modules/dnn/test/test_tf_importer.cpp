@@ -353,4 +353,28 @@ TEST(Test_TensorFlow, memory_read)
     runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true, l1, lInf, true);
 }
 
+TEST(Test_TensorFlow, opencv_face_detector_uint8)
+{
+    std::string proto = findDataFile("dnn/opencv_face_detector.pbtxt", false);
+    std::string model = findDataFile("dnn/opencv_face_detector_uint8.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+    Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
+
+    net.setInput(blob);
+    // Output has shape 1x1xNx7 where N - number of detections.
+    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+    Mat out = net.forward();
+
+    // References are from test for Caffe model.
+    Mat ref = (Mat_<float>(6, 5) << 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
+                                    0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
+                                    0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
+                                    0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
+                                    0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
+                                    0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
+    normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref, "", 2.8e-4, 3.4e-3);
+}
+
 }
