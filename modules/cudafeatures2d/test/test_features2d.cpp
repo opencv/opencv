@@ -42,10 +42,6 @@
 
 #include "test_precomp.hpp"
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 #ifdef HAVE_CUDA
 
 #include <cuda_runtime_api.h>
@@ -86,15 +82,7 @@ CUDA_TEST_P(FAST, Accuracy)
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
     {
-        try
-        {
-            std::vector<cv::KeyPoint> keypoints;
-            fast->detect(loadMat(image), keypoints);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
-        }
+        throw SkipTestException("CUDA device doesn't support global atomics");
     }
     else
     {
@@ -108,50 +96,51 @@ CUDA_TEST_P(FAST, Accuracy)
     }
 }
 
-#ifdef _OPENMP
+class FastAsyncParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    FastAsyncParallelLoopBody(cv::cuda::HostMem& src, cv::cuda::GpuMat* d_kpts, cv::Ptr<cv::cuda::FastFeatureDetector>* d_fast)
+        : src_(src), kpts_(d_kpts), fast_(d_fast) {}
+    ~FastAsyncParallelLoopBody() {};
+    void operator()(const cv::Range& r) const
+    {
+        for (int i = r.start; i < r.end; i++) {
+            cv::cuda::Stream stream;
+            cv::cuda::GpuMat d_src_(src_.rows, src_.cols, CV_8UC1);
+            d_src_.upload(src_);
+            fast_[i]->detectAsync(d_src_, kpts_[i], noArray(), stream);
+        }
+    }
+protected:
+    cv::cuda::HostMem src_;
+    cv::cuda::GpuMat* kpts_;
+    cv::Ptr<cv::cuda::FastFeatureDetector>* fast_;
+};
+
 CUDA_TEST_P(FAST, Async)
 {
-    cv::Mat image_ = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(image_.empty());
-
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
     {
-        try
-        {
-            cv::Ptr<cv::cuda::FastFeatureDetector> fast = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
-            std::vector<cv::KeyPoint> keypoints;
-            fast->detect(loadMat(image_), keypoints);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
-        }
+        throw SkipTestException("CUDA device doesn't support global atomics");
     }
     else
     {
+        cv::Mat image_ = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(image_.empty());
+
         cv::cuda::HostMem image(image_);
 
-        GpuMat d_keypoints[2];
-        std::vector<cv::KeyPoint> keypoints[2];
+        cv::cuda::GpuMat d_keypoints[2];
         cv::Ptr<cv::cuda::FastFeatureDetector> d_fast[2];
 
         d_fast[0] = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
         d_fast[1] = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
 
-        #pragma omp parallel num_threads(2)
-        {
-            int threadNum = omp_get_thread_num();
-
-            cv::cuda::Stream stream;
-
-            GpuMat d_src(image.rows, image.cols, CV_8UC1);
-
-            d_src.upload(image, stream);
-            d_fast[threadNum]->detectAsync(d_src, d_keypoints[threadNum], noArray(), stream);
-        }
+        cv::parallel_for_(cv::Range(0, 2), FastAsyncParallelLoopBody(image, d_keypoints, d_fast));
 
         cudaDeviceSynchronize();
 
+        std::vector<cv::KeyPoint> keypoints[2];
         d_fast[0]->convert(d_keypoints[0], keypoints[0]);
         d_fast[1]->convert(d_keypoints[1], keypoints[1]);
 
@@ -162,7 +151,6 @@ CUDA_TEST_P(FAST, Async)
         ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints[1]);
     }
 }
-#endif
 
 INSTANTIATE_TEST_CASE_P(CUDA_Features2D, FAST, testing::Combine(
     ALL_DEVICES,
