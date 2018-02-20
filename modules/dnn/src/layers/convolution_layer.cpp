@@ -860,6 +860,15 @@ public:
                 activType = OCL4DNN_CONV_FUSED_ACTIV_RELU;
             }
 
+            Ptr<ReLU6Layer> activ_relu6 = activ.dynamicCast<ReLU6Layer>();
+            if( !activ_relu6.empty() )
+            {
+                reluslope.resize(2);
+                reluslope[0] = activ_relu6->minValue;
+                reluslope[1] = activ_relu6->maxValue;
+                activType = OCL4DNN_CONV_FUSED_ACTIV_RELU6;
+            }
+
             Ptr<ChannelsPReLULayer> activ_chprelu = activ.dynamicCast<ChannelsPReLULayer>();
             if( !activ_chprelu.empty() )
             {
@@ -906,12 +915,17 @@ public:
             {
                 convolutionOp->setActivTanh(true);
             }
+            else if ( activType == OCL4DNN_CONV_FUSED_ACTIV_RELU6)
+            {
+                convolutionOp->setActivReLU6(true, reluslope[0], reluslope[1]);
+            }
             else
             {
                 convolutionOp->setActivReLU(false, 0);
                 convolutionOp->setActivPReLU(false, reluslope);
                 convolutionOp->setActivPower(false, 1.f);
                 convolutionOp->setActivTanh(false);
+                convolutionOp->setActivReLU6(false, 0, 0);
             }
             newActiv = false;
         }

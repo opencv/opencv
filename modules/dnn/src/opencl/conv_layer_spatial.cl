@@ -48,19 +48,22 @@
 
 #if defined(FUSED_CONV_RELU)
 #define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope)))
-#define NEGATIVE_SLOPE_ARG Dtype negative_slope,
+#define FUSED_ARG Dtype negative_slope,
 #elif defined(FUSED_CONV_PRELU)
 #define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope[c])))
-#define NEGATIVE_SLOPE_ARG __global const Dtype *negative_slope,
+#define FUSED_ARG __global const Dtype *negative_slope,
 #elif defined(FUSED_CONV_POWER)
 #define ACTIVATION_RELU_FUNCTION(x, c) pow(x, power)
-#define NEGATIVE_SLOPE_ARG Dtype power,
+#define FUSED_ARG Dtype power,
 #elif defined(FUSED_CONV_TANH)
 #define ACTIVATION_RELU_FUNCTION(x, c) tanh(x)
-#define NEGATIVE_SLOPE_ARG
+#define FUSED_ARG
+#elif defined(FUSED_CONV_RELU6)
+#define ACTIVATION_RELU_FUNCTION(x, c) (clamp((Dtype)(x), min_value, max_value))
+#define FUSED_ARG Dtype min_value, Dtype max_value,
 #else
 #define ACTIVATION_RELU_FUNCTION(x, c) (x)
-#define NEGATIVE_SLOPE_ARG
+#define FUSED_ARG
 #endif
 
 #ifdef FUSED_CONV_ELTWISE
@@ -108,7 +111,7 @@
 
 __kernel void ConvolveBasic(
     ELTWISE_DATA_ARG
-    NEGATIVE_SLOPE_ARG
+    FUSED_ARG
     __global Dtype* image_data,
     int image_offset,
     __global Dtype* kernel_data,
@@ -197,7 +200,7 @@ __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 __kernel void
 convolve_simd(
     ELTWISE_DATA_ARG
-    NEGATIVE_SLOPE_ARG
+    FUSED_ARG
     __global Dtype* inputs_base,
     filter_qualifier Dtype* weights_base,
     BIAS_KERNEL_ARG
@@ -417,7 +420,7 @@ typedef struct float0 { float s0; } float0; //never used but makes compiler happ
 
 #define GEMM_LIKE_KERNEL_ARGS     \
     ELTWISE_DATA_ARG              \
-    NEGATIVE_SLOPE_ARG            \
+    FUSED_ARG                     \
     const __global Dtype *src0,   \
     const __global Dtype *src1,   \
     BIAS_KERNEL_ARG               \
@@ -1731,7 +1734,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 
 __kernel void DWCONV(
     ELTWISE_DATA_ARG
-    NEGATIVE_SLOPE_ARG
+    FUSED_ARG
     __global Dtype* image_data,
     __global Dtype* kernel_data,
     BIAS_KERNEL_ARG
