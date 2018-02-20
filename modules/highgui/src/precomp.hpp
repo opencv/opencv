@@ -54,7 +54,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <assert.h>
+#include <assert.h>  // FIX IT: remove this
 
 #if defined WIN32 || defined WINCE
     #if !defined _WIN32_WINNT
