@@ -1439,6 +1439,7 @@ struct Net::Impl
                          nextData &&
                         ((nextData->type == "ReLU") ||
                          (nextData->type == "ChannelsPReLU") ||
+                         (nextData->type == "ReLU6") ||
                          (nextData->type == "TanH") ||
                          (nextData->type == "Power"))) )
                 {

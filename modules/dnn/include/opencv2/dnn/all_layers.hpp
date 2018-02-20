@@ -406,6 +406,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ReLU6Layer : public ActivationLayer
     {
     public:
+        float minValue, maxValue;
+
         static Ptr<ReLU6Layer> create(const LayerParams &params);
     };
 
