@@ -809,6 +809,36 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
         return false;
     }
 
+    //Get dpi.
+    int dpix = 300;
+    int dpiy = 300;
+
+    //Check for resolution inches.
+    int resUnit = RESUNIT_NONE;
+    readParam(params, IMWRITE_TIFF_RESUNIT_INCH, resUnit);
+
+    //Check for resolution centemeters.
+    if (resUnit == RESUNIT_NONE)
+    {
+        readParam(params, IMWRITE_TIFF_RESUNIT_CM, resUnit);
+    }
+
+    //If we have a resolution unit...
+    if (resUnit != RESUNIT_NONE)
+    {
+        //Read resolution values.
+        readParam(params, TIFF_TAG_X_RESOLUTION, dpix);
+        readParam(params, TIFF_TAG_Y_RESOLUTION, dpiy);
+
+        //Set resolution.
+        if ( !TIFFSetField(pTiffHandle, TIFFTAG_XRESOLUTION, (float) dpix)
+        || !TIFFSetField(pTiffHandle, TIFFTAG_YRESOLUTION, (float) dpiy)
+        || !TIFFSetField(pTiffHandle, TIFFTAG_RESOLUTIONUNIT, resUnit)) {
+            TIFFClose(pTiffHandle);
+            return false;
+        }
+    }
+
     // row buffer, because TIFFWriteScanline modifies the original data!
     size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
     AutoBuffer<uchar> _buffer(scanlineSize+32);
