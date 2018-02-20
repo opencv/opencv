@@ -42,7 +42,13 @@
 
 #include "test_precomp.hpp"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #ifdef HAVE_CUDA
+
+#include <cuda_runtime_api.h>
 
 namespace opencv_test { namespace {
 
@@ -101,6 +107,62 @@ CUDA_TEST_P(FAST, Accuracy)
         ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
     }
 }
+
+#ifdef _OPENMP
+CUDA_TEST_P(FAST, Async)
+{
+    cv::Mat image_ = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image_.empty());
+
+    if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
+    {
+        try
+        {
+            cv::Ptr<cv::cuda::FastFeatureDetector> fast = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
+            std::vector<cv::KeyPoint> keypoints;
+            fast->detect(loadMat(image_), keypoints);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        cv::cuda::HostMem image(image_);
+
+        GpuMat d_keypoints[2];
+        std::vector<cv::KeyPoint> keypoints[2];
+        cv::Ptr<cv::cuda::FastFeatureDetector> d_fast[2];
+
+        d_fast[0] = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
+        d_fast[1] = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
+
+        #pragma omp parallel num_threads(2)
+        {
+            int threadNum = omp_get_thread_num();
+
+            cv::cuda::Stream stream;
+
+            GpuMat d_src(image.rows, image.cols, CV_8UC1);
+
+            d_src.upload(image, stream);
+            d_fast[threadNum]->detectAsync(d_src, d_keypoints[threadNum], noArray(), stream);
+        }
+
+        cudaDeviceSynchronize();
+
+        d_fast[0]->convert(d_keypoints[0], keypoints[0]);
+        d_fast[1]->convert(d_keypoints[1], keypoints[1]);
+
+        std::vector<cv::KeyPoint> keypoints_gold;
+        cv::FAST(image, keypoints_gold, threshold, nonmaxSuppression);
+
+        ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints[0]);
+        ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints[1]);
+    }
+}
+#endif
 
 INSTANTIATE_TEST_CASE_P(CUDA_Features2D, FAST, testing::Combine(
     ALL_DEVICES,
