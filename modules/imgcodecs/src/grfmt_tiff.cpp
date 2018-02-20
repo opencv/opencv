@@ -300,7 +300,6 @@ bool  TiffDecoder::readData( Mat& img )
     }
     bool result = false;
     bool color = img.channels() > 1;
-    uchar* data = img.ptr();
 
     if( img.depth() != CV_8U && img.depth() != CV_16U && img.depth() != CV_32F && img.depth() != CV_64F )
         return false;
@@ -316,6 +315,10 @@ bool  TiffDecoder::readData( Mat& img )
         uint16 bpp = 8, ncn = photometric > 1 ? 3 : 1;
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
+        uint16 img_orientation = ORIENTATION_TOPLEFT;
+        TIFFGetField( tif, TIFFTAG_ORIENTATION, &img_orientation);
+        bool vert_flip = (img_orientation == ORIENTATION_BOTRIGHT) || (img_orientation == ORIENTATION_RIGHTBOT) ||
+                         (img_orientation == ORIENTATION_BOTLEFT) || (img_orientation == ORIENTATION_LEFTBOT);
         const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         int wanted_channels = normalizeChannelsNumber(img.channels());
@@ -358,12 +361,14 @@ bool  TiffDecoder::readData( Mat& img )
             double* buffer64 = (double*)buffer;
             int tileidx = 0;
 
-            for( y = 0; y < m_height; y += tile_height0, data += img.step*tile_height0 )
+            for( y = 0; y < m_height; y += tile_height0 )
             {
                 int tile_height = tile_height0;
 
                 if( y + tile_height > m_height )
                     tile_height = m_height - y;
+
+                uchar* data = img.ptr(vert_flip ? m_height - y - tile_height : y);
 
                 for( x = 0; x < m_width; x += tile_width0, tileidx++ )
                 {
