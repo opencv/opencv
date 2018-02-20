@@ -2685,4 +2685,23 @@ void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool s
                              dcn, swapb, uidx);
 }
 
+void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx )
+{
+    int stype = _ysrc.type();
+    int depth = CV_MAT_DEPTH(stype);
+    Size ysz = _ysrc.size(), uvs = _uvsrc.size();
+    CV_Assert( dcn == 3 || dcn == 4 );
+    CV_Assert( depth == CV_8U );
+    CV_Assert( ysz.width == uvs.width * 2 && ysz.height == uvs.height * 2 );
+
+    Mat ysrc = _ysrc.getMat(), uvsrc = _uvsrc.getMat();
+
+    _dst.create( ysz, CV_MAKETYPE(depth, dcn));
+    Mat dst = _dst.getMat();
+
+    hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step,
+                             dst.data, dst.step, dst.cols, dst.rows,
+                             dcn, swapb, uidx);
+}
+
 } // namespace cv
