@@ -44,6 +44,8 @@
 
 #ifdef HAVE_CUDA
 
+#include <cuda_runtime_api.h>
+
 namespace opencv_test { namespace {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,15 +82,7 @@ CUDA_TEST_P(FAST, Accuracy)
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
     {
-        try
-        {
-            std::vector<cv::KeyPoint> keypoints;
-            fast->detect(loadMat(image), keypoints);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
-        }
+        throw SkipTestException("CUDA device doesn't support global atomics");
     }
     else
     {
@@ -99,6 +93,62 @@ CUDA_TEST_P(FAST, Accuracy)
         cv::FAST(image, keypoints_gold, threshold, nonmaxSuppression);
 
         ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+    }
+}
+
+class FastAsyncParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    FastAsyncParallelLoopBody(cv::cuda::HostMem& src, cv::cuda::GpuMat* d_kpts, cv::Ptr<cv::cuda::FastFeatureDetector>* d_fast)
+        : src_(src), kpts_(d_kpts), fast_(d_fast) {}
+    ~FastAsyncParallelLoopBody() {};
+    void operator()(const cv::Range& r) const
+    {
+        for (int i = r.start; i < r.end; i++) {
+            cv::cuda::Stream stream;
+            cv::cuda::GpuMat d_src_(src_.rows, src_.cols, CV_8UC1);
+            d_src_.upload(src_);
+            fast_[i]->detectAsync(d_src_, kpts_[i], noArray(), stream);
+        }
+    }
+protected:
+    cv::cuda::HostMem src_;
+    cv::cuda::GpuMat* kpts_;
+    cv::Ptr<cv::cuda::FastFeatureDetector>* fast_;
+};
+
+CUDA_TEST_P(FAST, Async)
+{
+    if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
+    {
+        throw SkipTestException("CUDA device doesn't support global atomics");
+    }
+    else
+    {
+        cv::Mat image_ = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(image_.empty());
+
+        cv::cuda::HostMem image(image_);
+
+        cv::cuda::GpuMat d_keypoints[2];
+        cv::Ptr<cv::cuda::FastFeatureDetector> d_fast[2];
+
+        d_fast[0] = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
+        d_fast[1] = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
+
+        cv::parallel_for_(cv::Range(0, 2), FastAsyncParallelLoopBody(image, d_keypoints, d_fast));
+
+        cudaDeviceSynchronize();
+
+        std::vector<cv::KeyPoint> keypoints[2];
+        d_fast[0]->convert(d_keypoints[0], keypoints[0]);
+        d_fast[1]->convert(d_keypoints[1], keypoints[1]);
+
+        std::vector<cv::KeyPoint> keypoints_gold;
+        cv::FAST(image, keypoints_gold, threshold, nonmaxSuppression);
+
+        ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints[0]);
+        ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints[1]);
     }
 }
 
