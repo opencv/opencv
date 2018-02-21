@@ -104,7 +104,6 @@ void  RBaseStream::readBlock()
     fseek( m_file, m_block_pos, SEEK_SET );
     size_t readed = fread( m_start, 1, m_block_size, m_file );
     m_end = m_start + readed;
-    m_current = m_start;
 
     if( readed == 0 || m_current >= m_end )
         throw RBS_THROW_EOS;
