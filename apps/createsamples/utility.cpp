@@ -909,7 +909,7 @@ void icvGetBackgroundImage( CvBackgroundData* data,
         icvGetNextFromBackgroundData( data, reader );
     }
 
-    img = reader->img(Rect(reader->point.x, reader->point.y, data->winsize.height, data->winsize.width)).clone();
+    img = reader->img(Rect(reader->point.x, reader->point.y, data->winsize.width, data->winsize.height)).clone();
 
     if( (int) ( reader->point.x + (1.0F + reader->stepfactor ) * data->winsize.width )
             < reader->img.cols )
