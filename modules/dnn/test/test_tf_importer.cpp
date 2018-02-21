@@ -150,6 +150,9 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("batch_norm_text", targetId, true);
     runTensorFlowNet("mvn_batch_norm", targetId);
     runTensorFlowNet("mvn_batch_norm_1x1", targetId);
+    runTensorFlowNet("unfused_batch_norm", targetId);
+    runTensorFlowNet("fused_batch_norm_no_gamma", targetId);
+    runTensorFlowNet("unfused_batch_norm_no_gamma", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, pooling)
@@ -185,6 +188,8 @@ TEST_P(Test_TensorFlow_layers, reshape)
     runTensorFlowNet("shift_reshape_no_reorder", targetId);
     runTensorFlowNet("reshape_reduce", targetId);
     runTensorFlowNet("flatten", targetId, true);
+    runTensorFlowNet("unfused_flatten", targetId);
+    runTensorFlowNet("unfused_flatten_unknown_batch", targetId);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, availableDnnTargets());
