@@ -406,6 +406,29 @@ inline int _opencv_ffmpeg_av_image_get_buffer_size(enum AVPixelFormat pix_fmt, i
 #endif
 };
 
+static AVRational _opencv_ffmpeg_get_sample_aspect_ratio(AVStream *stream)
+{
+#if LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(54, 5, 100)
+    return av_guess_sample_aspect_ratio(NULL, stream, NULL);
+#else
+    AVRational undef = {0, 1};
+
+    // stream
+    AVRational ratio = stream ? stream->sample_aspect_ratio : undef;
+    av_reduce(&ratio.num, &ratio.den, ratio.num, ratio.den, INT_MAX);
+    if (ratio.num > 0 && ratio.den > 0)
+        return ratio;
+
+    // codec
+    ratio  = stream && stream->codec ? stream->codec->sample_aspect_ratio : undef;
+    av_reduce(&ratio.num, &ratio.den, ratio.num, ratio.den, INT_MAX);
+    if (ratio.num > 0 && ratio.den > 0)
+        return ratio;
+
+    return undef;
+#endif
+}
+
 
 struct CvCapture_FFMPEG
 {
@@ -427,7 +450,6 @@ struct CvCapture_FFMPEG
     double  get_duration_sec() const;
     double  get_fps() const;
     int     get_bitrate() const;
-    AVRational get_sample_aspect_ratio(AVStream *stream) const;
 
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
@@ -1089,9 +1111,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return (double)video_st->codec.codec_tag;
 #endif
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
-        return get_sample_aspect_ratio(ic->streams[video_stream]).num;
+        return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:
-        return get_sample_aspect_ratio(ic->streams[video_stream]).den;
+        return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).den;
     default:
         break;
     }
@@ -1162,28 +1184,6 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 {
     double sec = dts_to_sec(dts);
     return (int64_t)(get_fps() * sec + 0.5);
-}
-
-AVRational CvCapture_FFMPEG::get_sample_aspect_ratio(AVStream *stream) const
-{
-    AVRational undef = {0, 1};
-    AVRational stream_sample_aspect_ratio = stream ? stream->sample_aspect_ratio : undef;
-    AVRational frame_sample_aspect_ratio  = stream && stream->codec ? stream->codec->sample_aspect_ratio : undef;
-
-    av_reduce(&stream_sample_aspect_ratio.num, &stream_sample_aspect_ratio.den,
-        stream_sample_aspect_ratio.num,  stream_sample_aspect_ratio.den, INT_MAX);
-    if (stream_sample_aspect_ratio.num <= 0 || stream_sample_aspect_ratio.den <= 0)
-        stream_sample_aspect_ratio = undef;
-
-    av_reduce(&frame_sample_aspect_ratio.num, &frame_sample_aspect_ratio.den,
-        frame_sample_aspect_ratio.num,  frame_sample_aspect_ratio.den, INT_MAX);
-    if (frame_sample_aspect_ratio.num <= 0 || frame_sample_aspect_ratio.den <= 0)
-        frame_sample_aspect_ratio = undef;
-
-    if (stream_sample_aspect_ratio.num)
-        return stream_sample_aspect_ratio;
-    else
-        return frame_sample_aspect_ratio;
 }
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
