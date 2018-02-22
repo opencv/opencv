@@ -211,7 +211,7 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
     FOREACH(src ${_sources})
-      if(NOT "${src}" MATCHES "\\.mm$")
+      if(NOT "${src}" MATCHES "\\.mm$" AND NOT "${src}" MATCHES "\\.rc$")
         get_source_file_property(_flags "${src}" COMPILE_FLAGS)
         get_source_file_property(_flags2 "${src}" COMPILE_DEFINITIONS)
         if(NOT _flags AND NOT _flags2)

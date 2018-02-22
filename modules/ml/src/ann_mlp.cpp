@@ -92,7 +92,7 @@ protected:
     double varTmp;
     int index;
 public:
-    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d)
+    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d), varTmp(0.0), index(0)
     {
         initVarMap();
     }
