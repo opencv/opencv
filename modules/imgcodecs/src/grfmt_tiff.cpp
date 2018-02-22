@@ -587,12 +587,13 @@ bool TiffDecoder::readData_32FC1(Mat& img)
     tsize_t scanlength = TIFFScanlineSize(tif);
     tdata_t buf = _TIFFmalloc(scanlength);
     float* data;
+    bool result = true;
     for (uint32 row = 0; row < img_height; row++)
     {
         if (TIFFReadScanline(tif, buf, row) != 1)
         {
-            close();
-            return false;
+            result = false;
+            break;
         }
         data=(float*)buf;
         for (uint32 i=0; i<img_width; i++)
@@ -603,7 +604,7 @@ bool TiffDecoder::readData_32FC1(Mat& img)
     _TIFFfree(buf);
     close();
 
-    return true;
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
