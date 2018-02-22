@@ -270,7 +270,7 @@ public:
         int poolingType;
         float spatialScale;
 
-        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), nstripes(0),
+        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), avePoolPaddedArea(false), nstripes(0),
                            computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask, Size kernel,

@@ -7,66 +7,57 @@
 namespace cv
 {
 
-const unsigned int RIFF_CC = CV_FOURCC('R','I','F','F');
-const unsigned int LIST_CC = CV_FOURCC('L','I','S','T');
-const unsigned int HDRL_CC = CV_FOURCC('h','d','r','l');
-const unsigned int AVIH_CC = CV_FOURCC('a','v','i','h');
-const unsigned int STRL_CC = CV_FOURCC('s','t','r','l');
-const unsigned int STRH_CC = CV_FOURCC('s','t','r','h');
-const unsigned int STRF_CC = CV_FOURCC('s','t','r','f');
-const unsigned int VIDS_CC = CV_FOURCC('v','i','d','s');
-const unsigned int MJPG_CC = CV_FOURCC('M','J','P','G');
-const unsigned int MOVI_CC = CV_FOURCC('m','o','v','i');
-const unsigned int IDX1_CC = CV_FOURCC('i','d','x','1');
-const unsigned int AVI_CC  = CV_FOURCC('A','V','I',' ');
-const unsigned int AVIX_CC = CV_FOURCC('A','V','I','X');
-const unsigned int JUNK_CC = CV_FOURCC('J','U','N','K');
-const unsigned int INFO_CC = CV_FOURCC('I','N','F','O');
-const unsigned int ODML_CC = CV_FOURCC('o','d','m','l');
-const unsigned int DMLH_CC = CV_FOURCC('d','m','l','h');
+const uint32_t RIFF_CC = CV_FOURCC('R','I','F','F');
+const uint32_t LIST_CC = CV_FOURCC('L','I','S','T');
+const uint32_t HDRL_CC = CV_FOURCC('h','d','r','l');
+const uint32_t AVIH_CC = CV_FOURCC('a','v','i','h');
+const uint32_t STRL_CC = CV_FOURCC('s','t','r','l');
+const uint32_t STRH_CC = CV_FOURCC('s','t','r','h');
+const uint32_t STRF_CC = CV_FOURCC('s','t','r','f');
+const uint32_t VIDS_CC = CV_FOURCC('v','i','d','s');
+const uint32_t MJPG_CC = CV_FOURCC('M','J','P','G');
+const uint32_t MOVI_CC = CV_FOURCC('m','o','v','i');
+const uint32_t IDX1_CC = CV_FOURCC('i','d','x','1');
+const uint32_t AVI_CC  = CV_FOURCC('A','V','I',' ');
+const uint32_t AVIX_CC = CV_FOURCC('A','V','I','X');
+const uint32_t JUNK_CC = CV_FOURCC('J','U','N','K');
+const uint32_t INFO_CC = CV_FOURCC('I','N','F','O');
+const uint32_t ODML_CC = CV_FOURCC('o','d','m','l');
+const uint32_t DMLH_CC = CV_FOURCC('d','m','l','h');
 
-String fourccToString(unsigned int fourcc);
+String fourccToString(uint32_t fourcc);
 
-#ifndef DWORD
-typedef unsigned int DWORD;
-#endif
-#ifndef WORD
-typedef unsigned short int WORD;
-#endif
-#ifndef LONG
-typedef int  LONG;
-#endif
 
 #pragma pack(push, 1)
 struct AviMainHeader
 {
-    DWORD dwMicroSecPerFrame;    //  The period between video frames
-    DWORD dwMaxBytesPerSec;      //  Maximum data rate of the file
-    DWORD dwReserved1;           // 0
-    DWORD dwFlags;               //  0x10 AVIF_HASINDEX: The AVI file has an idx1 chunk containing an index at the end of the file.
-    DWORD dwTotalFrames;         // Field of the main header specifies the total number of frames of data in file.
-    DWORD dwInitialFrames;       // Is used for interleaved files
-    DWORD dwStreams;             // Specifies the number of streams in the file.
-    DWORD dwSuggestedBufferSize; // Field specifies the suggested buffer size forreading the file
-    DWORD dwWidth;               // Fields specify the width of the AVIfile in pixels.
-    DWORD dwHeight;              // Fields specify the height of the AVIfile in pixels.
-    DWORD dwReserved[4];         // 0, 0, 0, 0
+    uint32_t dwMicroSecPerFrame;    //  The period between video frames
+    uint32_t dwMaxBytesPerSec;      //  Maximum data rate of the file
+    uint32_t dwReserved1;           // 0
+    uint32_t dwFlags;               //  0x10 AVIF_HASINDEX: The AVI file has an idx1 chunk containing an index at the end of the file.
+    uint32_t dwTotalFrames;         // Field of the main header specifies the total number of frames of data in file.
+    uint32_t dwInitialFrames;       // Is used for interleaved files
+    uint32_t dwStreams;             // Specifies the number of streams in the file.
+    uint32_t dwSuggestedBufferSize; // Field specifies the suggested buffer size forreading the file
+    uint32_t dwWidth;               // Fields specify the width of the AVIfile in pixels.
+    uint32_t dwHeight;              // Fields specify the height of the AVIfile in pixels.
+    uint32_t dwReserved[4];         // 0, 0, 0, 0
 };
 
 struct AviStreamHeader
 {
-    unsigned int fccType;              // 'vids', 'auds', 'txts'...
-    unsigned int fccHandler;           // "cvid", "DIB "
-    DWORD dwFlags;               // 0
-    DWORD dwPriority;            // 0
-    DWORD dwInitialFrames;       // 0
-    DWORD dwScale;               // 1
-    DWORD dwRate;                // Fps (dwRate - frame rate for video streams)
-    DWORD dwStart;               // 0
-    DWORD dwLength;              // Frames number (playing time of AVI file as defined by scale and rate)
-    DWORD dwSuggestedBufferSize; // For reading the stream
-    DWORD dwQuality;             // -1 (encoding quality. If set to -1, drivers use the default quality value)
-    DWORD dwSampleSize;          // 0 means that each frame is in its own chunk
+    uint32_t fccType;              // 'vids', 'auds', 'txts'...
+    uint32_t fccHandler;           // "cvid", "DIB "
+    uint32_t dwFlags;               // 0
+    uint32_t dwPriority;            // 0
+    uint32_t dwInitialFrames;       // 0
+    uint32_t dwScale;               // 1
+    uint32_t dwRate;                // Fps (dwRate - frame rate for video streams)
+    uint32_t dwStart;               // 0
+    uint32_t dwLength;              // Frames number (playing time of AVI file as defined by scale and rate)
+    uint32_t dwSuggestedBufferSize; // For reading the stream
+    uint32_t dwQuality;             // -1 (encoding quality. If set to -1, drivers use the default quality value)
+    uint32_t dwSampleSize;          // 0 means that each frame is in its own chunk
     struct {
         short int left;
         short int top;
@@ -77,39 +68,39 @@ struct AviStreamHeader
 
 struct AviIndex
 {
-    DWORD ckid;
-    DWORD dwFlags;
-    DWORD dwChunkOffset;
-    DWORD dwChunkLength;
+    uint32_t ckid;
+    uint32_t dwFlags;
+    uint32_t dwChunkOffset;
+    uint32_t dwChunkLength;
 };
 
 struct BitmapInfoHeader
 {
-    DWORD biSize;                // Write header size of BITMAPINFO header structure
-    LONG  biWidth;               // width in pixels
-    LONG  biHeight;              // height in pixels
-    WORD  biPlanes;              // Number of color planes in which the data is stored
-    WORD  biBitCount;            // Number of bits per pixel
-    DWORD biCompression;         // Type of compression used (uncompressed: NO_COMPRESSION=0)
-    DWORD biSizeImage;           // Image Buffer. Quicktime needs 3 bytes also for 8-bit png
+    uint32_t biSize;                // Write header size of BITMAPINFO header structure
+    int32_t  biWidth;               // width in pixels
+    int32_t  biHeight;              // height in pixels
+    uint16_t  biPlanes;              // Number of color planes in which the data is stored
+    uint16_t  biBitCount;            // Number of bits per pixel
+    uint32_t biCompression;         // Type of compression used (uncompressed: NO_COMPRESSION=0)
+    uint32_t biSizeImage;           // Image Buffer. Quicktime needs 3 bytes also for 8-bit png
                                  //   (biCompression==NO_COMPRESSION)?0:xDim*yDim*bytesPerPixel;
-    LONG  biXPelsPerMeter;       // Horizontal resolution in pixels per meter
-    LONG  biYPelsPerMeter;       // Vertical resolution in pixels per meter
-    DWORD biClrUsed;             // 256 (color table size; for 8-bit only)
-    DWORD biClrImportant;        // Specifies that the first x colors of the color table. Are important to the DIB.
+    int32_t  biXPelsPerMeter;       // Horizontal resolution in pixels per meter
+    int32_t  biYPelsPerMeter;       // Vertical resolution in pixels per meter
+    uint32_t biClrUsed;             // 256 (color table size; for 8-bit only)
+    uint32_t biClrImportant;        // Specifies that the first x colors of the color table. Are important to the DIB.
 };
 
 struct RiffChunk
 {
-    unsigned int m_four_cc;
-    unsigned int m_size;
+    uint32_t m_four_cc;
+    uint32_t m_size;
 };
 
 struct RiffList
 {
-    unsigned int m_riff_or_list_cc;
-    unsigned int m_size;
-    unsigned int m_list_type_cc;
+    uint32_t m_riff_or_list_cc;
+    uint32_t m_size;
+    uint32_t m_list_type_cc;
 };
 
 class VideoInputStream
@@ -118,9 +109,9 @@ public:
     VideoInputStream();
     VideoInputStream(const String& filename);
     ~VideoInputStream();
-    VideoInputStream& read(char*, unsigned long long int);
-    VideoInputStream& seekg(unsigned long long int);
-    unsigned long long int tellg();
+    VideoInputStream& read(char*, uint64_t);
+    VideoInputStream& seekg(uint64_t);
+    uint64_t tellg();
     bool isOpened() const;
     bool open(const String& filename);
     void close();
@@ -178,7 +169,7 @@ static const int AVIIF_KEYFRAME = 0x10;
 static const int MAX_BYTES_PER_SEC = 99999999;
 static const int SUG_BUFFER_SIZE = 1048576;
 
-String fourccToString(unsigned int fourcc)
+String fourccToString(uint32_t fourcc)
 {
     return format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
 }
@@ -221,7 +212,7 @@ void VideoInputStream::close()
     }
 }
 
-VideoInputStream& VideoInputStream::read(char* buf, unsigned long long int count)
+VideoInputStream& VideoInputStream::read(char* buf, uint64_t count)
 {
     if(isOpened())
     {
@@ -231,14 +222,14 @@ VideoInputStream& VideoInputStream::read(char* buf, unsigned long long int count
     return *this;
 }
 
-VideoInputStream& VideoInputStream::seekg(unsigned long long int pos)
+VideoInputStream& VideoInputStream::seekg(uint64_t pos)
 {
-    m_is_valid = (fseek(m_f, (long)pos, SEEK_SET) == 0);
+    m_is_valid = (fseek(m_f, (int32_t)pos, SEEK_SET) == 0);
 
     return *this;
 }
 
-unsigned long long int VideoInputStream::tellg()
+uint64_t VideoInputStream::tellg()
 {
     return ftell(m_f);
 }
@@ -283,9 +274,9 @@ void AVIReadContainer::close()
     m_file_stream->close();
 }
 
-bool AVIReadContainer::parseIndex(unsigned int index_size, frame_list& in_frame_list)
+bool AVIReadContainer::parseIndex(uint32_t index_size, frame_list& in_frame_list)
 {
-    unsigned long long int index_end = m_file_stream->tellg();
+    uint64_t index_end = m_file_stream->tellg();
     index_end += index_size;
     bool result = false;
 
@@ -296,7 +287,7 @@ bool AVIReadContainer::parseIndex(unsigned int index_size, frame_list& in_frame_
 
         if(idx1.ckid == m_stream_id)
         {
-            unsigned long long int absolute_pos = m_movi_start + idx1.dwChunkOffset;
+            uint64_t absolute_pos = m_movi_start + idx1.dwChunkOffset;
 
             if(absolute_pos < m_movi_end)
             {
@@ -322,7 +313,7 @@ bool AVIReadContainer::parseStrl(char stream_id, Codecs codec_)
 
     if(m_file_stream && strh.m_four_cc == STRH_CC)
     {
-        unsigned long long int next_strl_list = m_file_stream->tellg();
+        uint64_t next_strl_list = m_file_stream->tellg();
         next_strl_list += strh.m_size;
 
         AviStreamHeader strm_hdr;
@@ -332,8 +323,8 @@ bool AVIReadContainer::parseStrl(char stream_id, Codecs codec_)
         {
             if(strm_hdr.fccType == VIDS_CC && strm_hdr.fccHandler == MJPG_CC)
             {
-                char first_digit = (stream_id/10) + '0';
-                char second_digit = (stream_id%10) + '0';
+                uint8_t first_digit = (stream_id/10) + '0';
+                uint8_t second_digit = (stream_id%10) + '0';
 
                 if(m_stream_id == 0)
                 {
@@ -382,7 +373,7 @@ bool AVIReadContainer::parseHdrlList(Codecs codec_)
 
     if(m_file_stream && avih.m_four_cc == AVIH_CC)
     {
-        unsigned long long int next_strl_list = m_file_stream->tellg();
+        uint64_t next_strl_list = m_file_stream->tellg();
         next_strl_list += avih.m_size;
 
         AviMainHeader avi_hdr;
@@ -391,13 +382,13 @@ bool AVIReadContainer::parseHdrlList(Codecs codec_)
         if(m_file_stream)
         {
             m_is_indx_present = ((avi_hdr.dwFlags & 0x10) != 0);
-            DWORD number_of_streams = avi_hdr.dwStreams;
+            uint32_t number_of_streams = avi_hdr.dwStreams;
             CV_Assert(number_of_streams < 0xFF);
             m_width = avi_hdr.dwWidth;
             m_height = avi_hdr.dwHeight;
 
             //the number of strl lists must be equal to number of streams specified in main avi header
-            for(DWORD i = 0; i < number_of_streams; ++i)
+            for(uint32_t i = 0; i < number_of_streams; ++i)
             {
                 m_file_stream->seekg(next_strl_list);
                 RiffList strl_list;
@@ -433,7 +424,7 @@ bool AVIReadContainer::parseAviWithFrameList(frame_list& in_frame_list, Codecs c
 
     if( m_file_stream && hdrl_list.m_riff_or_list_cc == LIST_CC && hdrl_list.m_list_type_cc == HDRL_CC )
     {
-        unsigned long long int next_list = m_file_stream->tellg();
+        uint64_t next_list = m_file_stream->tellg();
         //RiffList::m_size includes fourCC field which we have already read
         next_list += (hdrl_list.m_size - 4);
         //parseHdrlList sets m_is_indx_present flag which would be used later
@@ -472,7 +463,7 @@ bool AVIReadContainer::parseAviWithFrameList(frame_list& in_frame_list, Codecs c
                 if(m_is_indx_present)
                 {
                     //we are expecting to find index section after movi list
-                    unsigned int indx_pos = (unsigned int)m_movi_start + 4;
+                    uint32_t indx_pos = (uint32_t)m_movi_start + 4;
                     indx_pos += (some_list.m_size - 4);
                     m_file_stream->seekg(indx_pos);
 
@@ -520,6 +511,7 @@ std::vector<char> AVIReadContainer::readFrame(frame_iterator it)
 
     RiffChunk chunk;
     *(m_file_stream) >> chunk;
+    CV_Assert(chunk.m_size <= 0xFFFF);
 
     std::vector<char> result;
 
@@ -543,7 +535,7 @@ bool AVIReadContainer::parseRiff(frame_list &m_mjpeg_frames_)
         if( *m_file_stream && riff_list.m_riff_or_list_cc == RIFF_CC &&
             ((riff_list.m_list_type_cc == AVI_CC) | (riff_list.m_list_type_cc == AVIX_CC)) )
         {
-            unsigned long long int next_riff = m_file_stream->tellg();
+            uint64_t next_riff = m_file_stream->tellg();
             //RiffList::m_size includes fourCC field which we have already read
             next_riff += (riff_list.m_size - 4);
 
@@ -559,7 +551,7 @@ bool AVIReadContainer::parseRiff(frame_list &m_mjpeg_frames_)
     return result;
 }
 
-void AVIReadContainer::printError(RiffList &list, unsigned int expected_fourcc)
+void AVIReadContainer::printError(RiffList &list, uint32_t expected_fourcc)
 {
     if(!m_file_stream)
     {
@@ -575,7 +567,7 @@ void AVIReadContainer::printError(RiffList &list, unsigned int expected_fourcc)
     }
 }
 
-void AVIReadContainer::printError(RiffChunk &chunk, unsigned int expected_fourcc)
+void AVIReadContainer::printError(RiffChunk &chunk, uint32_t expected_fourcc)
 {
     if(!m_file_stream)
     {
@@ -742,6 +734,7 @@ void BitStream::patchInt(int val, size_t pos)
     }
     else
     {
+        CV_Assert(pos < (1u<<31));
         long fpos = ftell(m_f);
         fseek(m_f, (long)pos, SEEK_SET);
         uchar buf[] = { (uchar)val, (uchar)(val >> 8), (uchar)(val >> 16), (uchar)(val >> 24) };
