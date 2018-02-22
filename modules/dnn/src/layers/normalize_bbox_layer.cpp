@@ -105,6 +105,18 @@ public:
                 float norm = pow(absSum, 1.0f / pnorm);
                 multiply(src, 1.0f / norm, dst);
             }
+            else
+            {
+                Mat norm;
+                reduce(buffer, norm, 0, REDUCE_SUM);
+                norm += epsilon;
+
+                // compute inverted norm to call multiply instead divide
+                cv::pow(norm, -1.0f / pnorm, norm);
+
+                repeat(norm, channels, 1, buffer);
+                multiply(src, buffer, dst);
+            }
 
             if (!blobs.empty())
             {

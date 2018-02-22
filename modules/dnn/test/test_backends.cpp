@@ -222,9 +222,7 @@ TEST_P(DNNTestNetwork, OpenFace)
 
 TEST_P(DNNTestNetwork, opencv_face_detector)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
     processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt",
@@ -233,9 +231,7 @@ TEST_P(DNNTestNetwork, opencv_face_detector)
 
 TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
-    if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL ||
-        backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
