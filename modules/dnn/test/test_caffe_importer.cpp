@@ -456,15 +456,20 @@ TEST(Test_Caffe, multiple_inputs)
     normAssert(out, first_image + second_image);
 }
 
-typedef testing::TestWithParam<std::string> opencv_face_detector;
+CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+typedef testing::TestWithParam<tuple<std::string, DNNTarget> > opencv_face_detector;
 TEST_P(opencv_face_detector, Accuracy)
 {
     std::string proto = findDataFile("dnn/opencv_face_detector.prototxt", false);
-    std::string model = findDataFile(GetParam(), false);
+    std::string model = findDataFile(get<0>(GetParam()), false);
+    dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
 
     net.setInput(blob);
     // Output has shape 1x1xNx7 where N - number of detections.
@@ -479,11 +484,13 @@ TEST_P(opencv_face_detector, Accuracy)
                                     0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref);
 }
-INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector, Values(
-    "dnn/opencv_face_detector.caffemodel",
-    "dnn/opencv_face_detector_fp16.caffemodel"
-));
-
+INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
+    Combine(
+        Values("dnn/opencv_face_detector.caffemodel",
+               "dnn/opencv_face_detector_fp16.caffemodel"),
+        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+    )
+);
 
 TEST(Test_Caffe, FasterRCNN_and_RFCN)
 {
