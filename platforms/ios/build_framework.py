@@ -150,6 +150,7 @@ class Builder:
             buildcmd += [
                 "IPHONEOS_DEPLOYMENT_TARGET=8.0",
                 "ONLY_ACTIVE_ARCH=NO",
+                "BITCODE_GENERATION_MODE=bitcode"
             ]
 
             for arch in archs:
