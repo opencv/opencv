@@ -1558,7 +1558,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
      and qmin since they will be set to reasonable defaults by the libx264
      preset system. Also, use a crf encode with the default quality rating,
      this seems easier than finding an appropriate default bitrate. */
-    if (c->codec_id == AV_CODEC_ID_H264) {
+    if (c->codec_id == AV_CODEC_ID_H264 || c->codec_id == AV_CODEC_ID_HEVC) {
       c->gop_size = -1;
       c->qmin = -1;
       c->bit_rate = 0;
@@ -1707,7 +1707,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     const int CV_STEP_ALIGNMENT = 32;
     const size_t CV_SIMD_SIZE = 32;
     const size_t CV_PAGE_MASK = ~(4096 - 1);
-    const unsigned char* dataend = data + ((size_t)height * step);
+    const uchar* dataend = data + ((size_t)height * step);
     if (step % CV_STEP_ALIGNMENT != 0 ||
         (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
     {
@@ -2555,6 +2555,9 @@ enum
     VideoCodec_JPEG,
     VideoCodec_H264_SVC,
     VideoCodec_H264_MVC,
+    VideoCodec_HEVC,
+    VideoCodec_VP8,
+    VideoCodec_VP9,
 
     // Uncompressed YUV
     VideoCodec_YUV420 = (('I'<<24)|('Y'<<16)|('U'<<8)|('V')),   // Y,U,V (4:2:0)
@@ -2665,6 +2668,10 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
                 *codec = ::VideoCodec_H264;
                 break;
 
+           case CV_CODEC(CODEC_ID_HEVC):
+                *codec = ::VideoCodec_HEVC;
+                break;
+
             default:
                 return false;
             };
@@ -2672,6 +2679,7 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
             switch (enc->pix_fmt)
             {
             case AV_PIX_FMT_YUV420P:
+	    case AV_PIX_FMT_YUVJ420P:
                 *chroma_format = ::VideoChromaFormat_YUV420;
                 break;
 

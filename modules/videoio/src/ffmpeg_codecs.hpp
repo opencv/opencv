@@ -78,6 +78,7 @@ typedef struct AVCodecTag {
 } AVCodecTag;
 
 #if (LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(54, 51, 100))
+#define AV_CODEC_ID_HEVC CODEC_ID_HEVC
 #define AV_CODEC_ID_H264 CODEC_ID_H264
 #define AV_CODEC_ID_H263 CODEC_ID_H263
 #define AV_CODEC_ID_H263P CODEC_ID_H263P
@@ -143,6 +144,11 @@ typedef struct AVCodecTag {
 #endif
 
 const AVCodecTag codec_bmp_tags[] = {
+    { AV_CODEC_ID_HEVC, MKTAG('H', 'E', 'V', 'C') },
+    { AV_CODEC_ID_HEVC, MKTAG('h', 'e', 'v', 'c') },
+    { AV_CODEC_ID_HEVC, MKTAG('H', '2', '6', '5') },
+    { AV_CODEC_ID_HEVC, MKTAG('h', '2', '6', '5') },
+
     { AV_CODEC_ID_H264, MKTAG('H', '2', '6', '4') },
     { AV_CODEC_ID_H264, MKTAG('h', '2', '6', '4') },
     { AV_CODEC_ID_H264, MKTAG('X', '2', '6', '4') },

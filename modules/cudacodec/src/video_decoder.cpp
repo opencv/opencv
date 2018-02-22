@@ -63,6 +63,11 @@ void cv::cudacodec::detail::VideoDecoder::create(const FormatInfo& videoFormat)
               cudaVideoCodec_VC1   == _codec ||
               cudaVideoCodec_H264  == _codec ||
               cudaVideoCodec_JPEG  == _codec ||
+              cudaVideoCodec_H264_SVC == _codec ||
+              cudaVideoCodec_H264_MVC == _codec ||
+              cudaVideoCodec_HEVC == _codec ||
+              cudaVideoCodec_VP8 == _codec ||
+              cudaVideoCodec_VP9 == _codec ||
               cudaVideoCodec_YUV420== _codec ||
               cudaVideoCodec_YV12  == _codec ||
               cudaVideoCodec_NV12  == _codec ||
@@ -84,7 +89,7 @@ void cv::cudacodec::detail::VideoDecoder::create(const FormatInfo& videoFormat)
     createInfo_.ulNumDecodeSurfaces = FrameQueue::MaximumSize;
 
     // Limit decode memory to 24MB (16M pixels at 4:2:0 = 24M bytes)
-    while (createInfo_.ulNumDecodeSurfaces * videoFormat.width * videoFormat.height > 16 * 1024 * 1024)
+    while (createInfo_.ulNumDecodeSurfaces * videoFormat.width * videoFormat.height > 16 * 4096 * 4096)
         createInfo_.ulNumDecodeSurfaces--;
 
     createInfo_.ChromaFormat    = _chromaFormat;
@@ -114,3 +119,4 @@ void cv::cudacodec::detail::VideoDecoder::release()
 }
 
 #endif // HAVE_NVCUVID
+
