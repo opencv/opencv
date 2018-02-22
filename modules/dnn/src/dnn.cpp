@@ -338,7 +338,7 @@ struct LayerPin
 
 struct LayerData
 {
-    LayerData() : id(-1), flag(0) {}
+    LayerData() : id(-1), skip(false), flag(0) {}
     LayerData(int _id, const String &_name, const String &_type, LayerParams &_params)
         : id(_id), name(_name), type(_type), params(_params), skip(false), flag(0)
     {
