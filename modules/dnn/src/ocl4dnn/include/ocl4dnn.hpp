@@ -344,7 +344,8 @@ struct OCL4DNNPoolConfig
         dilation(1, 1),
         channels(0),
         pool_method(LIBDNN_POOLING_METHOD_MAX),
-        global_pooling(false)
+        global_pooling(false),
+        avePoolPaddedArea(false)
     {}
     MatShape in_shape;
     MatShape out_shape;
