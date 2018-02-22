@@ -56,6 +56,7 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
 
     channels_ = config.channels;
     pool_method_ = config.pool_method;
+    avePoolPaddedArea = config.avePoolPaddedArea;
 
     for (int i = 0; i < spatial_dims; ++i)
     {
@@ -143,10 +144,11 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
                 format("-D KERNEL_AVE_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d"
-                       " -D PAD_W=%d -D PAD_H=%d",
+                       " -D PAD_W=%d -D PAD_H=%d%s",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_,
-                       pad_w_, pad_h_
+                       pad_w_, pad_h_,
+                       avePoolPaddedArea ? " -D AVE_POOL_PADDING_AREA" : ""
                 ));
 
             if (oclk_ave_pool_forward.empty())
