@@ -344,7 +344,8 @@ struct OCL4DNNPoolConfig
         dilation(1, 1),
         channels(0),
         pool_method(LIBDNN_POOLING_METHOD_MAX),
-        global_pooling(false)
+        global_pooling(false),
+        avePoolPaddedArea(false)
     {}
     MatShape in_shape;
     MatShape out_shape;
@@ -356,6 +357,7 @@ struct OCL4DNNPoolConfig
     int channels;
     ocl4dnnPoolingMethod_t pool_method; // = LIBDNN_POOLING_METHOD_MAX;
     bool global_pooling; // = false;
+    bool avePoolPaddedArea;
 };
 
 template<typename Dtype>
@@ -388,6 +390,7 @@ class OCL4DNNPool
         int32_t width_;
         int32_t pooled_height_;
         int32_t pooled_width_;
+        bool avePoolPaddedArea;
 };
 
 struct OCL4DNNInnerProductConfig
