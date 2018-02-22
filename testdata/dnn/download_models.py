@@ -226,6 +226,11 @@ models = [
         sha='31fc22bfdd907567a04bb45b7cfad29966caddc1',
         filename='opencv_face_detector_fp16.caffemodel'),
     Model(
+        name='Face_detector (UINT8)',
+        url='https://github.com/opencv/opencv_3rdparty/raw/8033c2bc31b3256f0d461c919ecc01c2428ca03b/opencv_face_detector_uint8.pb',
+        sha='4f2fdf6f231d759d7bbdb94353c5a68690f3d2ae',
+        filename='opencv_face_detector_uint8.pb'),
+    Model(
         name='InceptionV2-SSD (TensorFlow)',
         url='http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2017_11_17.tar.gz',
         sha='b9546dcd1ba99282b5bfa81c460008c885ca591b',
