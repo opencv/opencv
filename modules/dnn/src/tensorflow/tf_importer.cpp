@@ -651,7 +651,8 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
             tensor->set_dtype(tensorflow::DT_FLOAT);
             tensor->set_tensor_content(content.data, content.total() * content.elemSize1());
 
-            ExcludeLayer(net, li, 0, false);
+            net.mutable_node(tensorId)->set_name(name);
+            CV_Assert(const_layers.insert(std::make_pair(name, tensorId)).second);
             layers_to_ignore.insert(name);
             continue;
         }
@@ -1477,6 +1478,17 @@ void TFImporter::populateNet(Net dstNet)
 
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
         }
+        else if (type == "L2Normalize")
+        {
+            // op: "L2Normalize"
+            // input: "input"
+            CV_Assert(layer.input_size() == 1);
+            layerParams.set("across_spatial", false);
+            layerParams.set("channel_shared", false);
+            int id = dstNet.addLayer(name, "Normalize", layerParams);
+            layer_id[name] = id;
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
         else if (type == "PriorBox")
         {
             if (hasLayerAttr(layer, "min_size"))
@@ -1489,6 +1501,8 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("clip", getLayerAttr(layer, "clip").b());
             if (hasLayerAttr(layer, "offset"))
                 layerParams.set("offset", getLayerAttr(layer, "offset").f());
+            if (hasLayerAttr(layer, "step"))
+                layerParams.set("step", getLayerAttr(layer, "step").f());
 
             const std::string paramNames[] = {"variance", "aspect_ratio", "scales",
                                               "width", "height"};
@@ -1538,8 +1552,17 @@ void TFImporter::populateNet(Net dstNet)
                 connect(layer_id, dstNet, parsePin(layer.input(i)), id, i);
             data_layouts[name] = DATA_LAYOUT_UNKNOWN;
         }
+        else if (type == "Softmax")
+        {
+            if (hasLayerAttr(layer, "axis"))
+                layerParams.set("axis", getLayerAttr(layer, "axis").i());
+
+            int id = dstNet.addLayer(name, "Softmax", layerParams);
+            layer_id[name] = id;
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+        }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
-                 type == "Relu" || type == "Elu" || type == "Softmax" ||
+                 type == "Relu" || type == "Elu" ||
                  type == "Identity" || type == "Relu6")
         {
             std::string dnnType = type;
