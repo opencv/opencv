@@ -181,6 +181,10 @@ TEST(Test_TensorFlow, deconvolution)
 OCL_TEST(Test_TensorFlow, deconvolution)
 {
     runTensorFlowNet("deconvolution", DNN_TARGET_OPENCL);
+    runTensorFlowNet("deconvolution_same", DNN_TARGET_OPENCL);
+    runTensorFlowNet("deconvolution_stride_2_same", DNN_TARGET_OPENCL);
+    runTensorFlowNet("deconvolution_adj_pad_valid", DNN_TARGET_OPENCL);
+    runTensorFlowNet("deconvolution_adj_pad_same", DNN_TARGET_OPENCL);
 }
 
 TEST(Test_TensorFlow, matmul)
