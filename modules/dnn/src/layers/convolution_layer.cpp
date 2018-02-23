@@ -1390,8 +1390,8 @@ public:
                 {
                     int total = outGroupCn * decnBlob.cols;
                     int index = 0;
-                    int height_col = (outH + 2 * pad.height - kernel.height) / stride.height + 1;
-                    int width_col = (outW + 2 * pad.width - kernel.width) / stride.width + 1;
+                    int height_col = inpH;
+                    int width_col = inpW;
                     int coeff_h = (1 - stride.height * kernel.width * height_col) * width_col;
                     int coeff_w = (1 - stride.width * height_col * width_col);
 
