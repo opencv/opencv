@@ -775,6 +775,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             }
             default:
             {
+                TIFFClose(pTiffHandle);
                 return false;
             }
         }
