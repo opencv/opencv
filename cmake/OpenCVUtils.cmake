@@ -1002,6 +1002,18 @@ function(ocv_install_target)
   endif()
 endfunction()
 
+# ocv_install_3rdparty_licenses(<library-name> <filename1> [<filename2> ..])
+function(ocv_install_3rdparty_licenses library)
+  foreach(filename ${ARGN})
+    get_filename_component(name "${filename}" NAME)
+    install(
+      FILES "${filename}"
+      DESTINATION "${OPENCV_OTHER_INSTALL_PATH}/licenses"
+      COMPONENT licenses
+      RENAME "${library}-${name}"
+      OPTIONAL)
+  endforeach()
+endfunction()
 
 # read set of version defines from the header file
 macro(ocv_parse_header FILENAME FILE_VAR)

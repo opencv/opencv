@@ -31,3 +31,5 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${OPENCV_CPUFEATURES_TARGET_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(cpufeatures LICENSE README.md)
