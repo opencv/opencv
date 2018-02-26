@@ -60,3 +60,5 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${ITT_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(ittnotify src/ittnotify/LICENSE.BSD src/ittnotify/LICENSE.GPL)
