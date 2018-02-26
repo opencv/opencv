@@ -329,11 +329,14 @@ OCL_TEST_P(Mul, Mat_Scale)
         OCL_OFF(cv::multiply(src1_roi, src2_roi, dst1_roi, val[0]));
         OCL_ON(cv::multiply(usrc1_roi, usrc2_roi, udst1_roi, val[0]));
 
+        if (udst1_roi.depth() >= CV_32F)
 #ifdef __ANDROID__
-        Near(udst1_roi.depth() >= CV_32F ? 2e-1 : 1);
+            Near(2e-1, true);
 #else
-        Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
+            Near(1e-3, true);
 #endif
+        else
+            Near(1);
     }
 }
 
@@ -867,7 +870,10 @@ OCL_TEST_P(AddWeighted, Mat)
         OCL_OFF(cv::addWeighted(src1_roi, alpha, src2_roi, beta, gama, dst1_roi));
         OCL_ON(cv::addWeighted(usrc1_roi, alpha, usrc2_roi, beta, gama, udst1_roi));
 
-        Near(3e-4);
+        if(dst1_roi.depth() >= CV_32F)
+            Near(3e-4, true);
+        else
+            Near(1);
     }
 }
 
