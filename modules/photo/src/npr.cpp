@@ -49,16 +49,11 @@
 using namespace std;
 using namespace cv;
 
-void cv::edgePreservingFilter(InputArray _src, OutputArray _dst, int flags, float sigma_s, float sigma_r)
+void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float sigma_s, float sigma_r)
 {
     CV_INSTRUMENT_REGION()
 
     Mat I = _src.getMat();
-    _dst.create(I.size(), CV_8UC3);
-    Mat dst = _dst.getMat();
-
-    int h = I.size().height;
-    int w = I.size().width;
 
     Domain_Filter obj;
 
@@ -71,16 +66,12 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray _dst, int flags, floa
     convertScaleAbs(res, dst, 255,0);
 }
 
-void cv::detailEnhance(InputArray _src, OutputArray _dst, float sigma_s, float sigma_r)
+void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float sigma_r)
 {
     CV_INSTRUMENT_REGION()
 
     Mat I = _src.getMat();
-    _dst.create(I.size(), CV_8UC3);
-    Mat dst = _dst.getMat();
 
-    int h = I.size().height;
-    int w = I.size().width;
     float factor = 3.0f;
 
     Mat img;
