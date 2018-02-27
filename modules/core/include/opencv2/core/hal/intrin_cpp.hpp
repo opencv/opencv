@@ -99,7 +99,7 @@ block and to save contents of the register to memory block.
 @ref v_setall_s8, @ref v_setall_u8, ...,
 @ref v_setzero_u8, @ref v_setzero_s8, ...
 - Memory operations:
-@ref v_load, @ref v_load_aligned, @ref v_load_halves,
+@ref v_load, @ref v_load_aligned, @ref v_load_low, @ref v_load_halves,
 @ref v_store, @ref v_store_aligned,
 @ref v_store_high, @ref v_store_low
 
@@ -885,12 +885,59 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator shift_op(const v_reg
 /** @brief Bitwise shift left
 
 For 16-, 32- and 64-bit integer values. */
-OPENCV_HAL_IMPL_SHIFT_OP(<<)
+OPENCV_HAL_IMPL_SHIFT_OP(<< )
 
 /** @brief Bitwise shift right
 
 For 16-, 32- and 64-bit integer values. */
-OPENCV_HAL_IMPL_SHIFT_OP(>>)
+OPENCV_HAL_IMPL_SHIFT_OP(>> )
+
+/** @brief Element shift left among vector
+
+For all type */
+#define OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(suffix,opA,opB) \
+template<int imm, typename _Tp, int n> inline v_reg<_Tp, n> v_rotate_##suffix(const v_reg<_Tp, n>& a) \
+{ \
+    v_reg<_Tp, n> b; \
+    for (int i = 0; i < n; i++) \
+    { \
+        int sIndex = i opA imm; \
+        if (0 <= sIndex && sIndex < n) \
+        { \
+            b.s[i] = a.s[sIndex]; \
+        } \
+        else \
+        { \
+            b.s[i] = 0; \
+        } \
+    } \
+    return b; \
+} \
+template<int imm, typename _Tp, int n> inline v_reg<_Tp, n> v_rotate_##suffix(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+{ \
+    v_reg<_Tp, n> c; \
+    for (int i = 0; i < n; i++) \
+    { \
+        int aIndex = i opA imm; \
+        int bIndex = i opA imm opB n; \
+        if (0 <= bIndex && bIndex < n) \
+        { \
+            c.s[i] = b.s[bIndex]; \
+        } \
+        else if (0 <= aIndex && aIndex < n) \
+        { \
+            c.s[i] = a.s[aIndex]; \
+        } \
+        else \
+        { \
+            c.s[i] = 0; \
+        } \
+    } \
+    return c; \
+}
+
+OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(left,  -, +)
+OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(right, +, -)
 
 /** @brief Sum packed values
 
@@ -1078,6 +1125,26 @@ template<typename _Tp>
 inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_aligned(const _Tp* ptr)
 {
     return v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes>(ptr);
+}
+
+/** @brief Load 64-bits of data to lower part (high part is undefined).
+
+@param ptr memory block containing data for first half (0..n/2)
+
+@code{.cpp}
+int lo[2] = { 1, 2 };
+v_int32x4 r = v_load_low(lo);
+@endcode
+ */
+template<typename _Tp>
+inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_low(const _Tp* ptr)
+{
+    v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> c;
+    for( int i = 0; i < c.nlanes/2; i++ )
+    {
+        c.s[i] = ptr[i];
+    }
+    return c;
 }
 
 /** @brief Load register contents from two memory blocks
@@ -1695,14 +1762,14 @@ OPENCV_HAL_IMPL_C_RSHIFTR(v_int64x2, int64)
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_PACK(_Tpvec, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_PACK(_Tpvec, _Tpnvec, _Tpn, pack_suffix, cast) \
 inline _Tpnvec v_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 { \
     _Tpnvec c; \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
     { \
-        c.s[i] = saturate_cast<_Tpn>(a.s[i]); \
-        c.s[i+_Tpvec::nlanes] = saturate_cast<_Tpn>(b.s[i]); \
+        c.s[i] = cast<_Tpn>(a.s[i]); \
+        c.s[i+_Tpvec::nlanes] = cast<_Tpn>(b.s[i]); \
     } \
     return c; \
 }
@@ -1716,26 +1783,28 @@ inline _Tpnvec v_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_PACK(v_uint16x8, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_PACK(v_uint32x4, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_PACK(v_uint64x2, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int64x2, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_PACK(v_uint16x8, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_uint32x4, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_uint64x2, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int64x2, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int16x8, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(v_int32x4, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_RSHR_PACK(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_RSHR_PACK(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix, cast) \
 template<int n> inline _Tpnvec v_rshr_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 { \
     _Tpnvec c; \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
     { \
-        c.s[i] = saturate_cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
-        c.s[i+_Tpvec::nlanes] = saturate_cast<_Tpn>((b.s[i] + ((_Tp)1 << (n - 1))) >> n); \
+        c.s[i] = cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
+        c.s[i+_Tpvec::nlanes] = cast<_Tpn>((b.s[i] + ((_Tp)1 << (n - 1))) >> n); \
     } \
     return c; \
 }
@@ -1749,51 +1818,55 @@ template<int n> inline _Tpnvec v_rshr_##pack_suffix(const _Tpvec& a, const _Tpve
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint16x8, ushort, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint32x4, unsigned, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint64x2, uint64, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int64x2, int64, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint16x8, ushort, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint32x4, unsigned, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_uint64x2, uint64, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int64x2, int64, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int16x8, short, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(v_int32x4, int, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix, cast) \
 inline void v_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
 { \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
-        ptr[i] = saturate_cast<_Tpn>(a.s[i]); \
+        ptr[i] = cast<_Tpn>(a.s[i]); \
 }
 
 //! @name Pack and store
 //! @{
 //! @brief Store values from the input vector into memory with pack
 //!
-//! Values will be stored into memory with saturating conversion to narrower type.
+//! Values will be stored into memory with conversion to narrower type.
 //! Variant with _u_ suffix converts to corresponding unsigned type.
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix) \
+#define OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(_Tpvec, _Tp, _Tpnvec, _Tpn, pack_suffix, cast) \
 template<int n> inline void v_rshr_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
 { \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
-        ptr[i] = saturate_cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
+        ptr[i] = cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
 }
 
 //! @name Pack and store with rounding shift
@@ -1805,14 +1878,16 @@ template<int n> inline void v_rshr_##pack_suffix##_store(_Tpn* ptr, const _Tpvec
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
 //! - pack_u: for 16- and 32-bit signed integer input types
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_int16x8, short, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u)
-OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u)
+//!
+//! @note All variants except 64-bit use saturation.
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint16x8, ushort, v_uint8x16, uchar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_int8x16, schar, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint32x4, unsigned, v_uint16x8, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_int16x8, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_uint64x2, uint64, v_uint32x4, unsigned, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int64x2, int64, v_int32x4, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int16x8, short, v_uint8x16, uchar, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(v_int32x4, int, v_uint16x8, ushort, pack_u, saturate_cast)
 //! @}
 
 /** @brief Matrix multiplication
@@ -1838,6 +1913,30 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[1] + v.s[1]*m1.s[1] + v.s[2]*m2.s[1] + v.s[3]*m3.s[1],
                        v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + v.s[3]*m3.s[2],
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + v.s[3]*m3.s[3]);
+}
+
+/** @brief Matrix multiplication and add
+
+Scheme:
+@code
+{A0 A1 A2   }   |V0|   |D0|
+{B0 B1 B2   }   |V1|   |D1|
+{C0 C1 C2   } x |V2| + |D2|
+====================
+{R0 R1 R2 R3}, where:
+R0 = A0V0 + A1V1 + A2V2 + D0,
+R1 = B0V0 + B1V1 + B2V2 + D1
+...
+@endcode
+*/
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& m3)
+{
+    return v_float32x4(v.s[0]*m0.s[0] + v.s[1]*m1.s[0] + v.s[2]*m2.s[0] + m3.s[0],
+                       v.s[0]*m0.s[1] + v.s[1]*m1.s[1] + v.s[2]*m2.s[1] + m3.s[1],
+                       v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + m3.s[2],
+                       v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
 
 //! @}

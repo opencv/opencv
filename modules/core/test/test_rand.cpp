@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class Core_RandTest : public cvtest::BaseTest
 {
@@ -383,7 +385,6 @@ TEST(Core_Rand, Regression_Stack_Corruption)
     ASSERT_EQ(param2,  2);
 }
 
-namespace {
 
 class RandRowFillParallelLoopBody : public cv::ParallelLoopBody
 {
@@ -417,4 +418,4 @@ TEST(Core_Rand, parallel_for_stable_results)
     ASSERT_EQ(0, countNonZero(dst1 != dst2));
 }
 
-} // namespace
+}} // namespace

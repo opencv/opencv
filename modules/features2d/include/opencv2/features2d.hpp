@@ -43,8 +43,12 @@
 #ifndef OPENCV_FEATURES_2D_HPP
 #define OPENCV_FEATURES_2D_HPP
 
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
+
+#ifdef HAVE_OPENCV_FLANN
 #include "opencv2/flann/miniflann.hpp"
+#endif
 
 /**
   @defgroup features2d 2D Features Framework
@@ -117,6 +121,10 @@ public:
      * Remove duplicated keypoints.
      */
     static void removeDuplicated( std::vector<KeyPoint>& keypoints );
+    /*
+     * Remove duplicated keypoints and sort the remaining keypoints
+     */
+    static void removeDuplicatedSorted( std::vector<KeyPoint>& keypoints );
 
     /*
      * Retain the specified number of the best keypoints (according to the response)
@@ -202,10 +210,15 @@ public:
 
     virtual void write( FileStorage&) const;
 
-    virtual void read( const FileNode&);
+    // see corresponding cv::Algorithm method
+    CV_WRAP virtual void read( const FileNode&);
 
     //! Return true if detector object is empty
     CV_WRAP virtual bool empty() const;
+    CV_WRAP virtual String getDefaultName() const;
+
+    // see corresponding cv::Algorithm method
+    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
 };
 
 /** Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
@@ -250,6 +263,24 @@ public:
     @param indexChange index remapping of the bits. */
     CV_WRAP static Ptr<BRISK> create(const std::vector<float> &radiusList, const std::vector<int> &numberList,
         float dMax=5.85f, float dMin=8.2f, const std::vector<int>& indexChange=std::vector<int>());
+
+    /** @brief The BRISK constructor for a custom pattern, detection threshold and octaves
+
+    @param thresh AGAST detection threshold score.
+    @param octaves detection octaves. Use 0 to do single scale.
+    @param radiusList defines the radii (in pixels) where the samples around a keypoint are taken (for
+    keypoint scale 1).
+    @param numberList defines the number of sampling points on the sampling circle. Must be the same
+    size as radiusList..
+    @param dMax threshold for the short pairings used for descriptor formation (in pixels for keypoint
+    scale 1).
+    @param dMin threshold for the long pairings used for orientation determination (in pixels for
+    keypoint scale 1).
+    @param indexChange index remapping of the bits. */
+    CV_WRAP static Ptr<BRISK> create(int thresh, int octaves, const std::vector<float> &radiusList,
+        const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
+        const std::vector<int>& indexChange=std::vector<int>());
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
@@ -273,10 +304,11 @@ public:
     will mean that to cover certain scale range you will need more pyramid levels and so the speed
     will suffer.
     @param nlevels The number of pyramid levels. The smallest level will have linear size equal to
-    input_image_linear_size/pow(scaleFactor, nlevels).
+    input_image_linear_size/pow(scaleFactor, nlevels - firstLevel).
     @param edgeThreshold This is size of the border where the features are not detected. It should
     roughly match the patchSize parameter.
-    @param firstLevel It should be 0 in the current implementation.
+    @param firstLevel The level of pyramid to put source image to. Previous layers are filled
+    with upscaled source image.
     @param WTA_K The number of points that produce each element of the oriented BRIEF descriptor. The
     default value 2 means the BRIEF where we take a random point pair and compare their brightnesses,
     so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3
@@ -323,6 +355,7 @@ public:
 
     CV_WRAP virtual void setFastThreshold(int fastThreshold) = 0;
     CV_WRAP virtual int getFastThreshold() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Maximally stable extremal region extractor
@@ -349,7 +382,7 @@ public:
     @param _delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
     @param _min_area prune the area which smaller than minArea
     @param _max_area prune the area which bigger than maxArea
-    @param _max_variation prune the area have simliar size to its children
+    @param _max_variation prune the area have similar size to its children
     @param _min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
     @param _max_evolution  for color image, the evolution steps
     @param _area_threshold for color image, the area threshold to cause re-initialize
@@ -382,6 +415,7 @@ public:
 
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @overload */
@@ -437,6 +471,7 @@ public:
 
     CV_WRAP virtual void setType(int type) = 0;
     CV_WRAP virtual int getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @overload */
@@ -491,6 +526,7 @@ public:
 
     CV_WRAP virtual void setType(int type) = 0;
     CV_WRAP virtual int getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Wrapping class for feature detection using the goodFeaturesToTrack function. :
@@ -500,6 +536,8 @@ class CV_EXPORTS_W GFTTDetector : public Feature2D
 public:
     CV_WRAP static Ptr<GFTTDetector> create( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
                                              int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+    CV_WRAP static Ptr<GFTTDetector> create( int maxCorners, double qualityLevel, double minDistance,
+                                             int blockSize, int gradiantSize, bool useHarrisDetector=false, double k=0.04 );
     CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
     CV_WRAP virtual int getMaxFeatures() const = 0;
 
@@ -517,6 +555,7 @@ public:
 
     CV_WRAP virtual void setK(double k) = 0;
     CV_WRAP virtual double getK() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 /** @brief Class for extracting blobs from an image. :
@@ -583,6 +622,7 @@ public:
 
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+  CV_WRAP virtual String getDefaultName() const;
 };
 
 //! @} features2d_main
@@ -639,15 +679,25 @@ public:
 
     CV_WRAP virtual void setDiffusivity(int diff) = 0;
     CV_WRAP virtual int getDiffusivity() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
-/** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13 . :
+/** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13.
 
-@note AKAZE descriptors can only be used with KAZE or AKAZE keypoints. Try to avoid using *extract*
-and *detect* instead of *operator()* due to performance reasons. .. [ANB13] Fast Explicit Diffusion
-for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien
-Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
- */
+@details AKAZE descriptors can only be used with KAZE or AKAZE keypoints. This class is thread-safe.
+
+@note When you need descriptors use Feature2D::detectAndCompute, which
+provides better performance. When using Feature2D::detect followed by
+Feature2D::compute scale space pyramid is computed twice.
+
+@note AKAZE implements T-API. When image is passed as UMat some parts of the algorithm
+will use OpenCL.
+
+@note [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear
+Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In
+British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
+
+*/
 class CV_EXPORTS_W AKAZE : public Feature2D
 {
 public:
@@ -697,6 +747,7 @@ public:
 
     CV_WRAP virtual void setDiffusivity(int diff) = 0;
     CV_WRAP virtual int getDiffusivity() const = 0;
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 //! @} features2d_main
@@ -736,7 +787,7 @@ struct CV_EXPORTS SL2
  * Euclidean distance functor
  */
 template<class T>
-struct CV_EXPORTS L2
+struct L2
 {
     enum { normType = NORM_L2 };
     typedef T ValueType;
@@ -752,7 +803,7 @@ struct CV_EXPORTS L2
  * Manhattan distance (city block distance) functor
  */
 template<class T>
-struct CV_EXPORTS L1
+struct L1
 {
     enum { normType = NORM_L1 };
     typedef T ValueType;
@@ -939,7 +990,8 @@ public:
         read(fs.root());
     }
     // Reads matcher object from a file node
-    virtual void read( const FileNode& );
+    // see corresponding cv::Algorithm method
+    CV_WRAP virtual void read( const FileNode& );
     // Writes matcher object to a file storage
     virtual void write( FileStorage& ) const;
 
@@ -965,6 +1017,10 @@ public:
     CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
     CV_WRAP static Ptr<DescriptorMatcher> create( int matcherType );
+
+
+    // see corresponding cv::Algorithm method
+    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
 
 protected:
     /**
@@ -1032,7 +1088,7 @@ public:
 
     virtual bool isMaskSupported() const { return true; }
 
-    /* @brief Brute-force matcher create method.
+    /** @brief Brute-force matcher create method.
     @param normType One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are
     preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be used with ORB, BRISK and
     BRIEF, NORM_HAMMING2 should be used with ORB when WTA_K==3 or 4 (see ORB::ORB constructor
@@ -1057,6 +1113,7 @@ protected:
     bool crossCheck;
 };
 
+#if defined(HAVE_OPENCV_FLANN) || defined(CV_DOXYGEN)
 
 /** @brief Flann-based descriptor matcher.
 
@@ -1102,6 +1159,8 @@ protected:
     DescriptorCollection mergedDescriptors;
     int addedDescCount;
 };
+
+#endif
 
 //! @} features2d_match
 

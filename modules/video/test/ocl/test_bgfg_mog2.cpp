@@ -4,7 +4,7 @@
 #ifdef HAVE_OPENCL
 #ifdef HAVE_VIDEO_INPUT
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////Mog2_Update///////////////////////////////////
@@ -139,7 +139,7 @@ OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_getBackgroundImage, Combine(
                                                      Values(UseFloat(false),UseFloat(true)))
                            );
 
-}}// namespace cvtest::ocl
+}}// namespace opencv_test::ocl
 
 #endif
 #endif

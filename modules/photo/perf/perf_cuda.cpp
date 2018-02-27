@@ -49,8 +49,7 @@
 
 #if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAIMGPROC)
 
-using namespace std;
-using namespace testing;
+namespace opencv_test { namespace {
 using namespace perf;
 
 #define CUDA_DENOISING_IMAGE_SIZES testing::Values(perf::szVGA, perf::sz720p)
@@ -186,4 +185,5 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, CUDA_FastNonLocalMeansColored,
     }
 }
 
+}} // namespace
 #endif

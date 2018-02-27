@@ -56,9 +56,8 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <assert.h>
 
-#if defined WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
     #undef min

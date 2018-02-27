@@ -1194,10 +1194,8 @@ static IppiHistogram_C1 getIppiHistogramFunction_C1(int type)
 {
     IppiHistogram_C1 ippFunction =
         (type == CV_8UC1) ? (IppiHistogram_C1)ippiHistogram_8u_C1R :
-#if IPP_VERSION_X100 >= 201700 || !(defined HAVE_IPP_ICV_ONLY)
         (type == CV_16UC1) ? (IppiHistogram_C1)ippiHistogram_16u_C1R :
         (type == CV_32FC1) ? (IppiHistogram_C1)ippiHistogram_32f_C1R :
-#endif
         NULL;
 
     return ippFunction;
@@ -1401,9 +1399,9 @@ static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float*
 {
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_VERSION_X100 < 201801
     // No SSE42 optimization for uniform 32f
-#if IPP_DISABLE_PERF_HISTU32F_SSE42
-    if(uniform && image.depth() == CV_32F && !(ipp::getIppFeatures()&ippCPUID_AVX))
+    if(uniform && image.depth() == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
         return false;
 #endif
 
@@ -2451,17 +2449,18 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
                           double scale )
 {
     CV_INSTRUMENT_REGION()
-
+    if (hist.dims() <= 2)
+    {
 #ifdef HAVE_OPENCL
-    Size histSize = hist.size();
-    bool _1D = histSize.height == 1 || histSize.width == 1;
-    size_t histdims = _1D ? 1 : hist.dims();
+        Size histSize = hist.size();
+        bool _1D = histSize.height == 1 || histSize.width == 1;
+        size_t histdims = _1D ? 1 : hist.dims();
 #endif
 
-    CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
-               histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
-               ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
-
+        CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
+            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
+            ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
+    }
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
 

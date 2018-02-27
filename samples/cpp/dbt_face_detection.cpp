@@ -8,8 +8,6 @@
 #include <opencv2/objdetect.hpp>
 
 #include <stdio.h>
-#include <string>
-#include <vector>
 
 using namespace std;
 using namespace cv;
@@ -84,7 +82,7 @@ int main(int , char** )
     do
     {
         VideoStream >> ReferenceFrame;
-        cvtColor(ReferenceFrame, GrayFrame, COLOR_RGB2GRAY);
+        cvtColor(ReferenceFrame, GrayFrame, COLOR_BGR2GRAY);
         Detector.process(GrayFrame);
         Detector.getObjects(Faces);
 

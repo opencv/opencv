@@ -76,6 +76,7 @@
 #include <QDate>
 #include <QFileDialog>
 #include <QToolBar>
+
 #include <QAction>
 #include <QCheckBox>
 #include <QRadioButton>
@@ -98,7 +99,6 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
         shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
     };
-
 //end enum
 
 class CvWindow;
@@ -132,6 +132,7 @@ public slots:
     void displayStatusBar( QString name, QString text, int delayms );
     void timeOut();
     void toggleFullScreen(QString name, double flags );
+    CvRect getWindowRect(QString name);
     double isFullScreen(QString name);
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
@@ -257,7 +258,7 @@ private:
     void* userdata;
 };
 
-//Both are top level window, so that a way to differenciate them.
+//Both are top level window, so that a way to differentiate them.
 //if (obj->metaObject ()->className () == "CvWindow") does not give me robust result
 
 enum typeWindow { type_CvWindow = 1, type_CvWinProperties = 2 };
@@ -298,6 +299,7 @@ public:
     double getRatio();
     void setRatio(int flags);
 
+    CvRect getWindowRect();
     int getPropWindow();
     void setPropWindow(int flags);
 

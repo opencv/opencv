@@ -27,40 +27,49 @@
 
 // declare major namespaces to avoid errors on unknown namespace
 namespace cv { namespace cuda {} namespace ocl {} }
+namespace cvtest { }
 
 namespace perf
 {
+
+// Tuple stuff from Google Tests
+using testing::get;
+using testing::make_tuple;
+using testing::tuple;
+using testing::tuple_size;
+using testing::tuple_element;
+
 class TestBase;
 
 /*****************************************************************************************\
 *                Predefined typical frame sizes and typical test parameters               *
 \*****************************************************************************************/
-const cv::Size szQVGA = cv::Size(320, 240);
-const cv::Size szVGA = cv::Size(640, 480);
-const cv::Size szSVGA = cv::Size(800, 600);
-const cv::Size szXGA = cv::Size(1024, 768);
-const cv::Size szSXGA = cv::Size(1280, 1024);
-const cv::Size szWQHD = cv::Size(2560, 1440);
+const static cv::Size szQVGA = cv::Size(320, 240);
+const static cv::Size szVGA = cv::Size(640, 480);
+const static cv::Size szSVGA = cv::Size(800, 600);
+const static cv::Size szXGA = cv::Size(1024, 768);
+const static cv::Size szSXGA = cv::Size(1280, 1024);
+const static cv::Size szWQHD = cv::Size(2560, 1440);
 
-const cv::Size sznHD = cv::Size(640, 360);
-const cv::Size szqHD = cv::Size(960, 540);
-const cv::Size sz240p = szQVGA;
-const cv::Size sz720p = cv::Size(1280, 720);
-const cv::Size sz1080p = cv::Size(1920, 1080);
-const cv::Size sz1440p = szWQHD;
-const cv::Size sz2160p = cv::Size(3840, 2160);//UHDTV1 4K
-const cv::Size sz4320p = cv::Size(7680, 4320);//UHDTV2 8K
+const static cv::Size sznHD = cv::Size(640, 360);
+const static cv::Size szqHD = cv::Size(960, 540);
+const static cv::Size sz240p = szQVGA;
+const static cv::Size sz720p = cv::Size(1280, 720);
+const static cv::Size sz1080p = cv::Size(1920, 1080);
+const static cv::Size sz1440p = szWQHD;
+const static cv::Size sz2160p = cv::Size(3840, 2160);//UHDTV1 4K
+const static cv::Size sz4320p = cv::Size(7680, 4320);//UHDTV2 8K
 
-const cv::Size sz3MP = cv::Size(2048, 1536);
-const cv::Size sz5MP = cv::Size(2592, 1944);
-const cv::Size sz2K = cv::Size(2048, 2048);
+const static cv::Size sz3MP = cv::Size(2048, 1536);
+const static cv::Size sz5MP = cv::Size(2592, 1944);
+const static cv::Size sz2K = cv::Size(2048, 2048);
 
-const cv::Size szODD = cv::Size(127, 61);
+const static cv::Size szODD = cv::Size(127, 61);
 
-const cv::Size szSmall24 = cv::Size(24, 24);
-const cv::Size szSmall32 = cv::Size(32, 32);
-const cv::Size szSmall64 = cv::Size(64, 64);
-const cv::Size szSmall128 = cv::Size(128, 128);
+const static cv::Size szSmall24 = cv::Size(24, 24);
+const static cv::Size szSmall32 = cv::Size(32, 32);
+const static cv::Size szSmall64 = cv::Size(64, 64);
+const static cv::Size szSmall128 = cv::Size(128, 128);
 
 #define SZ_ALL_VGA ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA)
 #define SZ_ALL_GA  ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA, ::perf::szXGA, ::perf::szSXGA)
@@ -163,7 +172,7 @@ enum ERROR_TYPE
     ERROR_RELATIVE = 1
 };
 
-class CV_EXPORTS Regression
+class Regression
 {
 public:
     static Regression& add(TestBase* test, const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
@@ -210,7 +219,7 @@ private:
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_NOTHING() this->setVerified()
 
-class CV_EXPORTS GpuPerf
+class GpuPerf
 {
 public:
   static bool targetDevice();
@@ -221,7 +230,7 @@ public:
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
 \*****************************************************************************************/
-typedef struct CV_EXPORTS performance_metrics
+typedef struct performance_metrics
 {
     size_t bytesIn;
     size_t bytesOut;
@@ -339,7 +348,7 @@ typedef struct ImplData
     // convert flags register to more handy variables
     void flagsToVars(int flags)
     {
-#if defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP_ICV)
         ipp    = 0;
         icv    = ((flags&CV_IMPL_IPP) > 0);
 #else
@@ -363,7 +372,7 @@ public:
 };
 #endif
 
-class CV_EXPORTS TestBase: public ::testing::Test
+class TestBase: public ::testing::Test
 {
 public:
     TestBase();
@@ -454,7 +463,7 @@ private:
     static cv::Size getSize(cv::InputArray a);
     static void declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype);
 
-    class CV_EXPORTS _declareHelper
+    class _declareHelper
     {
     public:
         _declareHelper& in(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_READ);
@@ -492,21 +501,21 @@ public:
 
 template<typename T> class TestBaseWithParam: public TestBase, public ::testing::WithParamInterface<T> {};
 
-typedef std::tr1::tuple<cv::Size, MatType> Size_MatType_t;
+typedef tuple<cv::Size, MatType> Size_MatType_t;
 typedef TestBaseWithParam<Size_MatType_t> Size_MatType;
 
 /*****************************************************************************************\
 *                              Print functions for googletest                             *
 \*****************************************************************************************/
-CV_EXPORTS void PrintTo(const MatType& t, std::ostream* os);
+void PrintTo(const MatType& t, std::ostream* os);
 
 } //namespace perf
 
 namespace cv
 {
 
-CV_EXPORTS void PrintTo(const String& str, ::std::ostream* os);
-CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
+void PrintTo(const String& str, ::std::ostream* os);
+void PrintTo(const Size& sz, ::std::ostream* os);
 
 } //namespace cv
 
@@ -514,6 +523,14 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 /*****************************************************************************************\
 *                        Macro definitions for performance tests                          *
 \*****************************************************************************************/
+
+#define CV__PERF_TEST_BODY_IMPL(name) \
+    { \
+       CV__TEST_NAMESPACE_CHECK \
+       CV__TRACE_APP_FUNCTION_NAME("PERF_TEST: " name); \
+       RunPerfTestBody(); \
+    }
+
 #define PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name) \
   test_case_name##_##test_name##_perf_namespace_proxy
 
@@ -538,7 +555,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       protected:\
        virtual void PerfTestBody();\
      };\
-     TEST_F(test_case_name, test_name){ CV_TRACE_REGION("PERF_TEST: " #test_case_name "_" #test_name); RunPerfTestBody(); }\
+     TEST_F(test_case_name, test_name){ CV__PERF_TEST_BODY_IMPL(#test_case_name "_" #test_name); }\
     }\
     void PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name)::test_case_name::PerfTestBody()
 
@@ -576,11 +593,19 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       protected:\
        virtual void PerfTestBody();\
      };\
-     TEST_F(fixture, testname){ CV_TRACE_REGION("PERF_TEST: " #fixture "_" #testname); RunPerfTestBody(); }\
+     TEST_F(fixture, testname){ CV__PERF_TEST_BODY_IMPL(#fixture "_" #testname); }\
     }\
     void PERF_PROXY_NAMESPACE_NAME_(fixture, testname)::fixture::PerfTestBody()
 
 // Defines a parametrized performance test.
+//
+// @Note PERF_TEST_P() below violates behavior of original Google Tests - there is no tests instantiation in original TEST_P()
+// This macro is intended for usage with separate INSTANTIATE_TEST_CASE_P macro
+#define PERF_TEST_P_(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, PerfTestBody, CV__PERF_TEST_BODY_IMPL)
+
+// Defines a parametrized performance test.
+//
+// @Note Original TEST_P() macro doesn't instantiate tests with parameters. To keep original usage use PERF_TEST_P_() macro
 //
 // The first parameter is the name of the test fixture class, which
 // also doubles as the test case name.  The second parameter is the
@@ -609,7 +634,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
      protected:\
       virtual void PerfTestBody();\
     };\
-    TEST_P(fixture##_##name, name /*perf*/){ CV_TRACE_REGION("PERF_TEST: " #fixture "_" #name); RunPerfTestBody(); }\
+    CV__TEST_P(fixture##_##name, name, PerfTestBodyDummy, CV__PERF_TEST_BODY_IMPL){} \
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
@@ -682,8 +707,11 @@ namespace comparators
 {
 
 template<typename T>
-struct CV_EXPORTS RectLess_ :
-        public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
+#ifdef CV_CXX11
+struct RectLess_
+#else
+struct RectLess_ : public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
+#endif
 {
   bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
   {
@@ -696,8 +724,11 @@ struct CV_EXPORTS RectLess_ :
 
 typedef RectLess_<int> RectLess;
 
-struct CV_EXPORTS KeypointGreater :
-        public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#ifdef CV_CXX11
+struct KeypointGreater
+#else
+struct KeypointGreater : public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#endif
 {
     bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
     {
@@ -715,7 +746,7 @@ struct CV_EXPORTS KeypointGreater :
 
 } //namespace comparators
 
-void CV_EXPORTS sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
+void sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
 } //namespace perf
 
 #endif //OPENCV_TS_PERF_HPP

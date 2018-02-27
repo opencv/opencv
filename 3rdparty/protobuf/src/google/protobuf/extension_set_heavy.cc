@@ -35,11 +35,14 @@
 // Contains methods defined in extension_set.h which cannot be part of the
 // lite library because they use descriptors or reflection.
 
+#include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include <google/protobuf/descriptor.pb.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/extension_set.h>
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>
+#include <google/protobuf/unknown_field_set.h>
 #include <google/protobuf/wire_format.h>
 #include <google/protobuf/wire_format_lite_inl.h>
 
@@ -340,31 +343,35 @@ bool ExtensionSet::ParseMessageSet(io::CodedInputStream* input,
 }
 
 int ExtensionSet::SpaceUsedExcludingSelf() const {
-  int total_size =
+  return internal::FromIntSize(SpaceUsedExcludingSelfLong());
+}
+
+size_t ExtensionSet::SpaceUsedExcludingSelfLong() const {
+  size_t total_size =
       extensions_.size() * sizeof(ExtensionMap::value_type);
   for (ExtensionMap::const_iterator iter = extensions_.begin(),
        end = extensions_.end();
        iter != end;
        ++iter) {
-    total_size += iter->second.SpaceUsedExcludingSelf();
+    total_size += iter->second.SpaceUsedExcludingSelfLong();
   }
   return total_size;
 }
 
-inline int ExtensionSet::RepeatedMessage_SpaceUsedExcludingSelf(
+inline size_t ExtensionSet::RepeatedMessage_SpaceUsedExcludingSelfLong(
     RepeatedPtrFieldBase* field) {
-  return field->SpaceUsedExcludingSelf<GenericTypeHandler<Message> >();
+  return field->SpaceUsedExcludingSelfLong<GenericTypeHandler<Message> >();
 }
 
-int ExtensionSet::Extension::SpaceUsedExcludingSelf() const {
-  int total_size = 0;
+size_t ExtensionSet::Extension::SpaceUsedExcludingSelfLong() const {
+  size_t total_size = 0;
   if (is_repeated) {
     switch (cpp_type(type)) {
-#define HANDLE_TYPE(UPPERCASE, LOWERCASE)                          \
-      case FieldDescriptor::CPPTYPE_##UPPERCASE:                   \
-        total_size += sizeof(*repeated_##LOWERCASE##_value) +      \
-            repeated_##LOWERCASE##_value->SpaceUsedExcludingSelf();\
-        break
+#define HANDLE_TYPE(UPPERCASE, LOWERCASE)                                     \
+  case FieldDescriptor::CPPTYPE_##UPPERCASE:                                  \
+    total_size += sizeof(*repeated_##LOWERCASE##_value) +                     \
+                  repeated_##LOWERCASE##_value->SpaceUsedExcludingSelfLong(); \
+    break
 
       HANDLE_TYPE(  INT32,   int32);
       HANDLE_TYPE(  INT64,   int64);
@@ -379,24 +386,25 @@ int ExtensionSet::Extension::SpaceUsedExcludingSelf() const {
 
       case FieldDescriptor::CPPTYPE_MESSAGE:
         // repeated_message_value is actually a RepeatedPtrField<MessageLite>,
-        // but MessageLite has no SpaceUsed(), so we must directly call
-        // RepeatedPtrFieldBase::SpaceUsedExcludingSelf() with a different type
-        // handler.
-        total_size += sizeof(*repeated_message_value) +
-            RepeatedMessage_SpaceUsedExcludingSelf(repeated_message_value);
+        // but MessageLite has no SpaceUsedLong(), so we must directly call
+        // RepeatedPtrFieldBase::SpaceUsedExcludingSelfLong() with a different
+        // type handler.
+        total_size +=
+            sizeof(*repeated_message_value) +
+            RepeatedMessage_SpaceUsedExcludingSelfLong(repeated_message_value);
         break;
     }
   } else {
     switch (cpp_type(type)) {
       case FieldDescriptor::CPPTYPE_STRING:
         total_size += sizeof(*string_value) +
-                      StringSpaceUsedExcludingSelf(*string_value);
+                      StringSpaceUsedExcludingSelfLong(*string_value);
         break;
       case FieldDescriptor::CPPTYPE_MESSAGE:
         if (is_lazy) {
-          total_size += lazymessage_value->SpaceUsed();
+          total_size += lazymessage_value->SpaceUsedLong();
         } else {
-          total_size += down_cast<Message*>(message_value)->SpaceUsed();
+          total_size += down_cast<Message*>(message_value)->SpaceUsedLong();
         }
         break;
       default:
@@ -413,12 +421,16 @@ uint8* ExtensionSet::SerializeWithCachedSizesToArray(int start_field_number,
                                                      int end_field_number,
                                                      uint8* target) const {
   return InternalSerializeWithCachedSizesToArray(
-      start_field_number, end_field_number, false, target);
+      start_field_number, end_field_number,
+      google::protobuf::io::CodedOutputStream::IsDefaultSerializationDeterministic(),
+      target);
 }
 
 uint8* ExtensionSet::SerializeMessageSetWithCachedSizesToArray(
     uint8* target) const {
-  return InternalSerializeMessageSetWithCachedSizesToArray(false, target);
+  return InternalSerializeMessageSetWithCachedSizesToArray(
+      google::protobuf::io::CodedOutputStream::IsDefaultSerializationDeterministic(),
+      target);
 }
 
 uint8* ExtensionSet::InternalSerializeWithCachedSizesToArray(
@@ -479,10 +491,10 @@ uint8* ExtensionSet::Extension::InternalSerializeFieldWithCachedSizesToArray(
         HANDLE_TYPE(    ENUM,     Enum,    enum);
 #undef HANDLE_TYPE
 
-        case WireFormatLite::TYPE_STRING:
-        case WireFormatLite::TYPE_BYTES:
-        case WireFormatLite::TYPE_GROUP:
-        case WireFormatLite::TYPE_MESSAGE:
+        case FieldDescriptor::TYPE_STRING:
+        case FieldDescriptor::TYPE_BYTES:
+        case FieldDescriptor::TYPE_GROUP:
+        case FieldDescriptor::TYPE_MESSAGE:
           GOOGLE_LOG(FATAL) << "Non-primitive types can't be packed.";
           break;
       }
@@ -587,11 +599,12 @@ ExtensionSet::Extension::InternalSerializeMessageSetItemWithCachedSizesToArray(
       WireFormatLite::kMessageSetTypeIdNumber, number, target);
   // Write message.
   if (is_lazy) {
-    target = lazymessage_value->WriteMessageToArray(
-        WireFormatLite::kMessageSetMessageNumber, target);
+    target = lazymessage_value->InternalWriteMessageToArray(
+        WireFormatLite::kMessageSetMessageNumber, deterministic, target);
   } else {
-    target = WireFormatLite::WriteMessageToArray(
-        WireFormatLite::kMessageSetMessageNumber, *message_value, target);
+    target = WireFormatLite::InternalWriteMessageToArray(
+        WireFormatLite::kMessageSetMessageNumber, *message_value, deterministic,
+        target);
   }
   // End group.
   target = io::CodedOutputStream::WriteTagToArray(
@@ -656,7 +669,7 @@ bool ExtensionSet::ParseMessageSetItem(io::CodedInputStream* input,
   string message_data;
 
   while (true) {
-    const uint32 tag = input->ReadTag();
+    const uint32 tag = input->ReadTagNoLastTag();
     if (tag == 0) return false;
 
     switch (tag) {

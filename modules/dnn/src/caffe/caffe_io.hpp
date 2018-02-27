@@ -91,7 +91,8 @@
 #define __OPENCV_DNN_CAFFE_IO_HPP__
 #ifdef HAVE_PROTOBUF
 
-#include "caffe.pb.h"
+#include "opencv-caffe.pb.h"
+namespace caffe { using namespace opencv_caffe; } // avoid massive renames from caffe proto package
 
 namespace cv {
 namespace dnn {
@@ -101,6 +102,18 @@ void ReadNetParamsFromTextFileOrDie(const char* param_file,
                                     caffe::NetParameter* param);
 void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
                                       caffe::NetParameter* param);
+
+// Read parameters from a memory buffer into a NetParammeter proto message.
+void ReadNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
+                                        caffe::NetParameter* param);
+void ReadNetParamsFromTextBufferOrDie(const char* data, size_t len,
+                                      caffe::NetParameter* param);
+
+// Utility functions used internally by Caffe and TensorFlow loaders
+bool ReadProtoFromTextFile(const char* filename, ::google::protobuf::Message* proto);
+bool ReadProtoFromBinaryFile(const char* filename, ::google::protobuf::Message* proto);
+bool ReadProtoFromTextBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
+bool ReadProtoFromBinaryBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
 
 }
 }

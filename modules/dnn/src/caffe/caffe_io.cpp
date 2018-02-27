@@ -99,7 +99,6 @@
 #include <fstream>
 #include <vector>
 
-#include "caffe.pb.h"
 #include "caffe_io.hpp"
 #include "glog_emulator.hpp"
 
@@ -1108,28 +1107,37 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
 
 const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
+bool ReadProtoFromBinary(ZeroCopyInputStream* input, Message *proto) {
+    CodedInputStream coded_input(input);
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+
+    return proto->ParseFromCodedStream(&coded_input);
+}
+
 bool ReadProtoFromTextFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
     IstreamInputStream input(&fs);
-    bool success = google::protobuf::TextFormat::Parse(&input, proto);
-    fs.close();
-    return success;
+    return google::protobuf::TextFormat::Parse(&input, proto);
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in | std::ifstream::binary);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
-    ZeroCopyInputStream* raw_input = new IstreamInputStream(&fs);
-    CodedInputStream* coded_input = new CodedInputStream(raw_input);
-    coded_input->SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+    IstreamInputStream raw_input(&fs);
 
-    bool success = proto->ParseFromCodedStream(coded_input);
+    return ReadProtoFromBinary(&raw_input, proto);
+}
 
-    delete coded_input;
-    delete raw_input;
-    fs.close();
-    return success;
+bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream input(data, len);
+    return google::protobuf::TextFormat::Parse(&input, proto);
+}
+
+
+bool ReadProtoFromBinaryBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream raw_input(data, len);
+    return ReadProtoFromBinary(&raw_input, proto);
 }
 
 void ReadNetParamsFromTextFileOrDie(const char* param_file,
@@ -1139,11 +1147,25 @@ void ReadNetParamsFromTextFileOrDie(const char* param_file,
   UpgradeNetAsNeeded(param_file, param);
 }
 
+void ReadNetParamsFromTextBufferOrDie(const char* data, size_t len,
+                                      NetParameter* param) {
+  CHECK(ReadProtoFromTextBuffer(data, len, param))
+      << "Failed to parse NetParameter buffer";
+  UpgradeNetAsNeeded("memory buffer", param);
+}
+
 void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
                                       NetParameter* param) {
   CHECK(ReadProtoFromBinaryFile(param_file, param))
       << "Failed to parse NetParameter file: " << param_file;
   UpgradeNetAsNeeded(param_file, param);
+}
+
+void ReadNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
+                                        NetParameter* param) {
+  CHECK(ReadProtoFromBinaryBuffer(data, len, param))
+      << "Failed to parse NetParameter buffer";
+  UpgradeNetAsNeeded("memory buffer", param);
 }
 
 }

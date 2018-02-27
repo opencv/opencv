@@ -281,13 +281,13 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
         // compute appearance cost
         if ( !transDown.empty() )
         {
-            resize(warpedImage, warpedImage, image1.size());
+            resize(warpedImage, warpedImage, image1.size(), 0, 0, INTER_LINEAR_EXACT);
             Mat temp=(warpedImage-image1);
             multiply(temp, temp, diffIm);
         }
         else
         {
-            resize(warpedImage, warpedImage, image2.size());
+            resize(warpedImage, warpedImage, image2.size(), 0, 0, INTER_LINEAR_EXACT);
             Mat temp=(warpedImage-image2);
             multiply(temp, temp, diffIm);
         }

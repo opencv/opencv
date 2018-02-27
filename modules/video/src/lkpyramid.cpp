@@ -876,7 +876,7 @@ namespace
             std::vector<UMat> prevPyr; prevPyr.resize(maxLevel + 1);
             std::vector<UMat> nextPyr; nextPyr.resize(maxLevel + 1);
 
-            // allocate buffers with aligned pitch to be able to use cl_khr_image2d_from_buffer extention
+            // allocate buffers with aligned pitch to be able to use cl_khr_image2d_from_buffer extension
             // This is the required pitch alignment in pixels
             int pitchAlign = (int)ocl::Device::getDefault().imagePitchAlignment();
             if (pitchAlign>0)
@@ -886,7 +886,7 @@ namespace
                 for (int level = 1; level <= maxLevel; ++level)
                 {
                     int cols,rows;
-                    // allocate buffers with aligned pitch to be able to use image on buffer extention
+                    // allocate buffers with aligned pitch to be able to use image on buffer extension
                     cols = (prevPyr[level - 1].cols+1)/2;
                     rows = (prevPyr[level - 1].rows+1)/2;
                     prevPyr[level] = UMat(rows,(cols+pitchAlign-1)&(-pitchAlign),prevPyr[level-1].type()).colRange(0,cols);
@@ -1226,7 +1226,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
 {
     CV_INSTRUMENT_REGION()
 
-    CV_OCL_RUN(ocl::useOpenCL() &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() &&
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
@@ -1610,7 +1610,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         Point2f a[RANSAC_SIZE0];
         Point2f b[RANSAC_SIZE0];
 
-        // choose random 3 non-complanar points from A & B
+        // choose random 3 non-coplanar points from A & B
         for( i = 0; i < RANSAC_SIZE0; i++ )
         {
             for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )

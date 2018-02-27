@@ -1,12 +1,8 @@
 project(libprotobuf)
-
 include(CheckIncludeFiles)
 
-if(NOT MSVC)
-  check_include_files("pthread.h" HAVE_PTHREAD)
-  if(HAVE_PTHREAD)
-    add_definitions(-DHAVE_PTHREAD=1)
-  endif()
+if(HAVE_PTHREAD)
+  add_definitions(-DHAVE_PTHREAD=1)
 endif()
 
 if(MSVC)
@@ -14,12 +10,16 @@ if(MSVC)
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146
                                        /wd4305 /wd4127 /wd4100 /wd4512 /wd4125 /wd4389 /wd4510 /wd4610
                                        /wd4702 /wd4456 /wd4457 /wd4065 /wd4310 /wd4661 /wd4506
+                                       /wd4701 /wd4703     # potentially uninitialized local/pointer variable 'value' used
+                                       /wd4505             # unreferenced local function has been removed
   )
 else()
+  #NOTE: -Wno-invalid-offsetof was used as solution for invalid offset warning on protobuf #3450
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
                                        -Wunused-parameter -Wunused-local-typedefs -Wsign-compare -Wsign-promo
                                        -Wundef -Wtautological-undefined-compare -Wignored-qualifiers -Wextra
-                                       -Wunused-function -Wunused-const-variable -Wshorten-64-to-32
+                                       -Wunused-function -Wunused-const-variable -Wshorten-64-to-32 -Wno-invalid-offsetof
+                                       -Wenum-compare-switch
   )
 endif()
 if(CV_ICC)
@@ -55,6 +55,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/arena.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/arenastring.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/extension_set.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_table_driven_lite.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_util.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/coded_stream.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/zero_copy_stream.cc
@@ -65,6 +66,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/bytestream.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/common.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/int128.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/stubs/io_win32.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/once.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/status.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/statusor.cc
@@ -89,6 +91,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/extension_set_heavy.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/field_mask.pb.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_reflection.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_table_driven.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/gzip_stream.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/printer.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/strtod.cc
@@ -106,6 +109,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/timestamp.pb.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/type.pb.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/unknown_field_set.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/util/delimited_message_util.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/field_comparator.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/field_mask_util.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/internal/datapiece.cc
@@ -130,21 +134,18 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/wrappers.pb.cc
 )
 
-if(CMAKE_VERSION VERSION_LESS 2.8.9 AND UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 add_library(libprotobuf STATIC ${Protobuf_SRCS})
-ocv_include_directories(${PROTOBUF_ROOT}/src)
-
+target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
     PROPERTIES
     FOLDER "3rdparty"
-    POSITION_INDEPENDENT_CODE 1    # CMake 2.8.9+
     OUTPUT_NAME libprotobuf
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
     )
+
+get_protobuf_version(Protobuf_VERSION "${PROTOBUF_ROOT}/src")
+set(Protobuf_VERSION ${Protobuf_VERSION} CACHE INTERNAL "" FORCE)
 
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(libprotobuf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)

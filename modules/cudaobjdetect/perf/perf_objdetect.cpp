@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////
 // HOG
@@ -171,3 +169,5 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
         SANITY_CHECK(cpu_rects);
     }
 }
+
+}} // namespace

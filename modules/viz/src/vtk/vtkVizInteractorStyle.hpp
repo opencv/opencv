@@ -109,7 +109,7 @@ namespace cv
             vtkSetMacro(MotionAccelerationFactor,double)
             vtkGetMacro(MotionAccelerationFactor,double)
 
-            // Set the basic angular unit for turning : efault 1 degree
+            // Set the basic angular unit for turning : default 1 degree
             vtkSetMacro(AngleStepSize,double)
             vtkGetMacro(AngleStepSize,double)
 
@@ -163,7 +163,7 @@ namespace cv
             double        DeltaYaw;
             double        DeltaPitch;
         };
-    }
-}
+    } // end namespace viz
+} // end namespace cv
 
 #endif

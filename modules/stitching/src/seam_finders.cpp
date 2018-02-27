@@ -1047,7 +1047,16 @@ void DpSeamFinder::updateLabelsUsingSeam(
     for (std::map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
     {
         double len = static_cast<double>(contours_[comp1].size());
-        isAdjComp[itr->first] = itr->second / len > 0.05 && connectOther.find(itr->first)->second / len < 0.1;
+        int res = 0;
+        if (itr->second / len > 0.05)
+        {
+            std::map<int, int>::const_iterator sub = connectOther.find(itr->first);
+            if (sub != connectOther.end() && (sub->second / len < 0.1))
+            {
+                res = 1;
+            }
+        }
+        isAdjComp[itr->first] = res;
     }
 
     // update labels

@@ -40,6 +40,8 @@
 //M*/
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/core/utils/trace.hpp>
 #include "cvconfig.h"
 #include <opencv2/dnn.hpp>

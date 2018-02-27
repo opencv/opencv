@@ -11,7 +11,9 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -22,6 +24,7 @@ class BatchNormLayerImpl : public BatchNormLayer
 {
 public:
     Mat weights_, bias_;
+    UMat umat_weight, umat_bias;
 
     BatchNormLayerImpl(const LayerParams& params)
     {
@@ -30,6 +33,8 @@ public:
 
         hasWeights = params.get<bool>("has_weight", false);
         hasBias = params.get<bool>("has_bias", false);
+        if(params.get<bool>("scale_bias", false))
+            hasWeights = hasBias = true;
         epsilon = params.get<float>("eps", 1E-5);
 
         size_t n = blobs[0].total();
@@ -45,8 +50,8 @@ public:
                 varMeanScale = 1/varMeanScale;
         }
 
-        const int weightsBlobIndex = 2;
-        const int biasBlobIndex = weightsBlobIndex + hasWeights;
+        const int biasBlobIndex = blobs.size() - 1;
+        const int weightsBlobIndex = biasBlobIndex - hasBias;
 
         if( hasWeights )
         {
@@ -99,7 +104,82 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+    }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        CV_Assert(blobs.size() >= 2);
+        CV_Assert(inputs.size() == 1);
+
+        if (umat_weight.empty())
+        {
+            umat_weight = weights_.getUMat(ACCESS_READ);
+            umat_bias = bias_.getUMat(ACCESS_READ);
+        }
+
+        UMat &inpBlob = inputs[0];
+        CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
+        int groups = inpBlob.size[0];
+        int channels = inpBlob.size[1];
+        int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
+        int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
+
+        for (size_t ii = 0; ii < outputs.size(); ii++)
+        {
+            if (inpBlob.dims == 2)
+            {
+                UMat& src = inputs[ii];
+                UMat& dst = outputs[ii];
+                multiply(src, weights_, dst);
+                add(dst, bias_, dst);
+            }
+            else
+            {
+                MatShape s = shape(groups * channels, rows * cols);
+                UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
+                UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
+                int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
+                String buildopt = format("-DNUM=%d", number);
+                String kname = format("batch_norm%d", number);
+                ocl::Kernel kernel(kname.c_str(), ocl::dnn::batchnorm_oclsrc, buildopt);
+                if (kernel.empty())
+                    return false;
+                size_t global[] = { (size_t)s[0], (size_t)(s[1] / number) };
+                kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+                kernel.set(1, (int)s[0]);
+                kernel.set(2, (int)s[1]);
+                kernel.set(3, (int)channels);
+                kernel.set(4, ocl::KernelArg::PtrReadOnly(umat_weight));
+                kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_bias));
+                kernel.set(6, ocl::KernelArg::PtrWriteOnly(dst));
+                bool ret = kernel.run(2, global, NULL, false);
+                if (!ret)
+                    return false;
+            }
+        }
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -111,8 +191,9 @@ public:
         CV_Assert(inputs.size() == 1);
 
         Mat &inpBlob = *inputs[0];
-        int rows = inpBlob.size[2];
-        int cols = inpBlob.size[3];
+        CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
+        int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
+        int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -147,6 +228,19 @@ public:
 #endif  // HAVE_HALIDE
                 break;
             }
+            case DNN_BACKEND_INFERENCE_ENGINE:
+            {
+#ifdef HAVE_INF_ENGINE
+                auto base = node.dynamicCast<InfEngineBackendNode>();
+                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
+                if (conv)
+                {
+                    fuseConvWeights(conv, weights_, bias_);
+                    return base;
+                }
+#endif  // HAVE_INF_ENGINE
+                break;
+            }
         }
         return Ptr<BackendNode>();
     }
@@ -177,6 +271,23 @@ public:
         return top;
     }
 #endif  // HAVE_HALIDE
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
+        ieLayer->_weights = wrapToInfEngineBlob(weights_);
+        ieLayer->_biases = wrapToInfEngineBlob(bias_);
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const

@@ -48,7 +48,6 @@
 #include <map>
 #include <utility>
 #include <algorithm>
-#include <stdint.h>
 #include <string>
 #include <vector>
 #include <iostream>

@@ -42,8 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ECC_BaseTest : public cvtest::BaseTest
 {
@@ -121,7 +120,7 @@ bool CV_ECC_Test_Translation::testTranslation(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -196,7 +195,7 @@ bool CV_ECC_Test_Euclidean::testEuclidean(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -270,7 +269,7 @@ bool CV_ECC_Test_Affine::testAffine(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -346,7 +345,7 @@ bool CV_ECC_Test_Homography::testHomography(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -418,7 +417,7 @@ bool CV_ECC_Test_Mask::testMask(int from)
         return false;
     }
     Mat scaledImage;
-    resize(img, scaledImage, Size(216, 216));
+    resize(img, scaledImage, Size(216, 216), 0, 0, INTER_LINEAR_EXACT );
 
     Mat_<float> testImg;
     scaledImage.convertTo(testImg, testImg.type());
@@ -482,3 +481,5 @@ TEST(Video_ECC_Euclidean, accuracy) { CV_ECC_Test_Euclidean test; test.safe_run(
 TEST(Video_ECC_Affine, accuracy) { CV_ECC_Test_Affine test; test.safe_run(); }
 TEST(Video_ECC_Homography, accuracy) { CV_ECC_Test_Homography test; test.safe_run(); }
 TEST(Video_ECC_Mask, accuracy) { CV_ECC_Test_Mask test; test.safe_run(); }
+
+}} // namespace

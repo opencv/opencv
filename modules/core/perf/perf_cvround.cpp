@@ -1,10 +1,8 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 template <typename T>
 static void CvRoundMat(const cv::Mat & src, cv::Mat & dst)
@@ -43,3 +41,5 @@ PERF_TEST_P(Size_MatType, CvRound_Float,
 
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

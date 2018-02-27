@@ -197,7 +197,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 {
     int x, y;
     const int OFS = 256*4, TABSZ = OFS*2 + 256;
-    uchar tab[TABSZ];
+    uchar tab[TABSZ] = { 0 };
     Size size = src.size();
 
     for( x = 0; x < TABSZ; x++ )
@@ -227,7 +227,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
             v_int16x8 ftz2 = v_setall_s16((short)(ftzero*2));
             v_int16x8 z = v_setzero_s16();
 
-            for(; x <= size.width-8; x += 8 )
+            for(; x <= (size.width - 1) - 8; x += 8 )
             {
                 v_int16x8 s00 = v_reinterpret_as_s16(v_load_expand(srow0 + x + 1));
                 v_int16x8 s01 = v_reinterpret_as_s16(v_load_expand(srow0 + x - 1));
@@ -1108,7 +1108,7 @@ public:
         int FILTERED = (params.minDisparity - 1) << disp_shift;
 
 #ifdef HAVE_OPENCL
-        if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
+        if(ocl::isOpenCLActivated() && disparr.isUMat() && params.textureThreshold == 0)
         {
             UMat left, right;
             if(ocl_prefiltering(leftarr, rightarr, left, right, &params))

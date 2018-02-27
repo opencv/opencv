@@ -28,16 +28,6 @@ public:
     void workBegin();
     void workEnd();
     string workFps() const;
-    string message() const;
-
-
-// This function test if gpu_rst matches cpu_rst.
-// If the two vectors are not equal, it will return the difference in vector size
-// Else if will return
-// (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
-    double checkRectSimilarity(Size sz,
-                               std::vector<Rect>& cpu_rst,
-                               std::vector<Rect>& gpu_rst);
 private:
     App operator=(App&);
 
@@ -201,7 +191,7 @@ void App::run()
             if (abs(scale-1.0)>0.001)
             {
                 Size sz((int)((double)img_aux.cols/resize_scale), (int)((double)img_aux.rows/resize_scale));
-                resize(img_aux, img, sz);
+                resize(img_aux, img, sz, 0, 0, INTER_LINEAR_EXACT);
             }
             else img = img_aux;
             img.copyTo(img_to_show);
@@ -233,7 +223,7 @@ void App::run()
 
             if (output!="" && write_once)
             {
-                if (img_source!="")     // wirte image
+                if (img_source!="")     // write image
                 {
                     write_once = false;
                     imwrite(output, img_to_show);

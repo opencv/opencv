@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -75,12 +76,21 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
     if (explicitMask)
     {
         int maskTotal = total(maskShape);
-        for (int i = srcRange.start + 1; i < srcRange.end; ++i)
+        // Go from the end of mask until we collect required total.
+        bool matched = false;
+        for (int i = srcRange.end - 1; i >= srcRange.start; --i)
         {
-            if (total(srcShape, i, srcRange.end) != maskTotal)
+            if (matched)
             {
-                srcRange.start = i - 1;
-                break;
+                if (i == 0 || total(srcShape, i, srcRange.end) != maskTotal)
+                {
+                    srcRange.start = i + 1;
+                    break;
+                }
+            }
+            else
+            {
+                matched = total(srcShape, i, srcRange.end) == maskTotal;
             }
         }
         CV_Assert(total(srcShape, srcRange.start, srcRange.end) == maskTotal);
@@ -137,13 +147,11 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 class ReshapeLayerImpl : public ReshapeLayer
 {
 public:
-    ReshapeLayerImpl(const LayerParams& params):
-        performReordering(false)
+    ReshapeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
         int axis = params.get<int>("axis", 0);
         int numAxes = params.get<int>("num_axes", -1);
-        enableReordering = params.get<bool>("reorder_dims", false);
         CV_Assert(numAxes >= -1);
         newShapeRange = (numAxes == -1) ? Range(axis, INT_MAX) : Range(axis, axis + numAxes);
 
@@ -156,6 +164,12 @@ public:
             for (i = 0; i < dims; i++)
                 newShapeDesc[i] = paramShape.get<int>(i);
         }
+    }
+
+    virtual bool supportBackend(int backendId)
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -175,23 +189,41 @@ public:
         return true;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        CV_Assert(inputs.size());
-        CV_Assert(outputs.size());
-        Mat srcBlob = *inputs[0];
-        int dims = srcBlob.dims;
-        MatShape inputShape = shape(srcBlob), outShape = shape(outputs[0]);
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
 
-        // input.total() == output.total(). So if reordering is require,
-        // one of the sizes will be are not equal.
-        // Example where reordering is require: from 1x128x4x4 to 1x2048
-        // Example where reordering is NOT require: from 1x1024x1x1 to 1x1024.
-        bool reorderingRequire = false;
-        const int minDims = min(dims, (int)outShape.size());
-        for (int i = 0; !reorderingRequire && i < minDims; ++i)
-            reorderingRequire = inputShape[i] != outShape[i];
-        performReordering = enableReordering && reorderingRequire;
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat srcBlob = inputs[i];
+            void *src_handle = inputs[i].handle(ACCESS_READ);
+            void *dst_handle = outputs[i].handle(ACCESS_WRITE);
+            if (src_handle != dst_handle)
+            {
+                MatShape outShape = shape(outputs[i]);
+                UMat umat = srcBlob.reshape(1, (int)outShape.size(), &outShape[0]);
+                umat.copyTo(outputs[i]);
+            }
+        }
+        outs.assign(outputs);
+
+        return true;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -202,43 +234,24 @@ public:
         for (size_t i = 0; i < inputs.size(); i++)
         {
             Mat srcBlob = *inputs[i];
-            MatShape inputShape = shape(srcBlob), outShape = shape(outputs[i]);
-
-            if (performReordering)
-            {
-                float *dstData = internals[i].ptr<float>();
-                const float *srcData = srcBlob.ptr<float>();
-
-                int num = inputShape[0], channels = inputShape[1], height = inputShape[2], width = inputShape[3];
-                int total = num*channels*height*width;
-                for(int i_n = 0; i_n < num; i_n++) {
-                    for(int i_c = 0; i_c < channels; i_c++) {
-                        for(int i_h = 0; i_h < height; i_h++) {
-                            for(int i_w = 0; i_w < width; i_w++) {
-                                int src_i = channels*height*width*i_n + height*width*i_c + width*i_h + i_w;
-                                int dst_i = channels*height*width*i_n + i_c + channels*width*i_h + channels*i_w;
-
-                                CV_Assert(dst_i < total);
-                                CV_Assert(src_i < total);
-
-                                dstData[dst_i] = srcData[src_i];
-                            }
-                        }
-                    }
-                }
-                internals[i].copyTo(outputs[i]);
-            }
-            else
-            {
-                if (outputs[i].data != srcBlob.data)
-                    srcBlob.reshape(1, outShape).copyTo(outputs[i]);
-            }
+            if (outputs[i].data != srcBlob.data)
+                srcBlob.reshape(1, shape(outputs[i])).copyTo(outputs[i]);
         }
     }
 
-private:
-    std::vector<std::vector<int> > outShapes;
-    bool enableReordering, performReordering;
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Reshape";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ReshapeLayer> ieLayer(new InferenceEngine::ReshapeLayer(lp));
+        ieLayer->shape = newShapeDesc;
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

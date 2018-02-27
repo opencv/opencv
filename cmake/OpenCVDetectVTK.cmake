@@ -1,7 +1,3 @@
-if(NOT WITH_VTK)
-  return()
-endif()
-
 # VTK 6.x components
 find_package(VTK QUIET COMPONENTS vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
 IF(VTK_FOUND)
@@ -23,7 +19,7 @@ if(NOT VTK_FOUND)
   return()
 endif()
 
-# Don't support ealier VTKs
+# Don't support earlier VTKs
 if(${VTK_VERSION} VERSION_LESS "5.8.0")
   message(STATUS "VTK support is disabled. VTK ver. 5.8.0 is minimum required, but found VTK ver. ${VTK_VERSION}")
   return()
@@ -57,4 +53,4 @@ if(HAVE_QT AND ${VTK_VERSION} VERSION_GREATER "6.0.0" AND NOT ${VTK_QT_VERSION} 
 endif()
 
 set(HAVE_VTK ON)
-message(STATUS "Found VTK ver. ${VTK_VERSION} (usefile: ${VTK_USE_FILE})")
+message(STATUS "Found VTK ${VTK_VERSION} (${VTK_USE_FILE})")

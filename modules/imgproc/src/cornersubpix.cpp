@@ -51,7 +51,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     int i, j, k;
     int max_iters = (criteria.type & CV_TERMCRIT_ITER) ? MIN(MAX(criteria.maxCount, 1), MAX_ITERS) : MAX_ITERS;
     double eps = (criteria.type & CV_TERMCRIT_EPS) ? MAX(criteria.epsilon, 0.) : 0;
-    eps *= eps; // use square of error in comparsion operations
+    eps *= eps; // use square of error in comparison operations
 
     cv::Mat src = _image.getMat(), cornersmat = _corners.getMat();
     int count = cornersmat.checkVector(2, CV_32F);

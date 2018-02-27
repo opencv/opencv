@@ -59,7 +59,7 @@ struct CV_EXPORTS CameraParams
 {
     CameraParams();
     CameraParams(const CameraParams& other);
-    const CameraParams& operator =(const CameraParams& other);
+    CameraParams& operator =(const CameraParams& other);
     Mat K() const;
 
     double focal; // Focal length

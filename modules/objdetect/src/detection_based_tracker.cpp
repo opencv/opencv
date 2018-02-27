@@ -44,7 +44,7 @@
 #include "precomp.hpp"
 #include <cassert>
 
-#if (defined(__cplusplus) &&  __cplusplus > 199711L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
+#ifdef CV_CXX11
 #define USE_STD_THREADS
 #endif
 
@@ -56,9 +56,9 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#else
+#else //USE_STD_THREADS
 #include <pthread.h>
-#endif
+#endif //USE_STD_THREADS
 
 #if defined(DEBUG) || defined(_DEBUG)
 #undef DEBUGLOGS
@@ -84,7 +84,7 @@
 #define LOGI0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
 #define LOGW0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
 #define LOGE0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
-#endif
+#endif //__ANDROID__
 
 #if DEBUGLOGS
 #define LOGD(_str, ...) LOGD0(_str , ## __VA_ARGS__)
@@ -96,7 +96,7 @@
 #define LOGI(...)
 #define LOGW(...)
 #define LOGE(...)
-#endif
+#endif //DEBUGLOGS
 
 
 using namespace cv;
@@ -284,23 +284,23 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
 }
 
 #define CATCH_ALL_AND_LOG(_block)                                                           \
-    try {                                                                                   \
+    CV_TRY {                                                                                   \
         _block;                                                                             \
     }                                                                                       \
-    catch(cv::Exception& e) {                                                               \
+    CV_CATCH(cv::Exception, e) {                                                               \
         LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", CV_Func, e.what());      \
-    } catch(std::exception& e) {                                                            \
+    } CV_CATCH(std::exception, e) {                                                            \
         LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", CV_Func, e.what());             \
-    } catch(...) {                                                                          \
+    } CV_CATCH_ALL {                                                                          \
         LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", CV_Func);                       \
     }
 
 void* cv::workcycleObjectDetectorFunction(void* p)
 {
     CATCH_ALL_AND_LOG({ ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
-    try{
+    CV_TRY{
         ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->init();
-    } catch(...) {
+    } CV_CATCH_ALL {
         LOGE0("DetectionBasedTracker: workcycleObjectDetectorFunction: ERROR concerning pointer, received as the function parameter");
     }
     return NULL;
@@ -1035,4 +1035,4 @@ const cv::DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameter
     return parameters;
 }
 
-#endif
+#endif //defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || defined(USE_STD_THREADS)

@@ -41,8 +41,8 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
+
 using cv::ml::SVM;
 using cv::ml::TrainData;
 
@@ -166,3 +166,5 @@ void CV_SVMGetSupportVectorsTest::run(int /*startFrom*/ )
 
 
 TEST(ML_SVM, getSupportVectors) { CV_SVMGetSupportVectorsTest test; test.safe_run(); }
+
+}} // namespace

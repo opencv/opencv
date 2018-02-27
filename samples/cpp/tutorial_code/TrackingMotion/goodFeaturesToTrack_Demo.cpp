@@ -27,10 +27,17 @@ void goodFeaturesToTrack_Demo( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image and convert it to gray
-  src = imread( argv[1], IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | ../data/pic3.png | input image}" );
+  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+  if( src.empty() )
+  {
+    cout << "Could not open or find the image!\n" << endl;
+    cout << "Usage: " << argv[0] << " <Input image>" << endl;
+    return -1;
+  }
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create Window
@@ -59,7 +66,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   vector<Point2f> corners;
   double qualityLevel = 0.01;
   double minDistance = 10;
-  int blockSize = 3;
+  int blockSize = 3, gradiantSize = 3;
   bool useHarrisDetector = false;
   double k = 0.04;
 
@@ -75,6 +82,7 @@ void goodFeaturesToTrack_Demo( int, void* )
                minDistance,
                Mat(),
                blockSize,
+               gradiantSize,
                useHarrisDetector,
                k );
 

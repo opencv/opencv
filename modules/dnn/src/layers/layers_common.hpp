@@ -45,9 +45,15 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 
+#define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 // dispatched AVX/AVX2 optimizations
 #include "layers/layers_common.simd.hpp"
 #include "layers/layers_common.simd_declarations.hpp"
+#undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+#ifdef HAVE_OPENCL
+#include "ocl4dnn.hpp"
+#endif
 
 namespace cv
 {
@@ -62,11 +68,11 @@ void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernel
 
 void getConvPoolOutParams(const Size& inp, const Size &kernel,
                           const Size &stride, const String &padMode,
-                          Size& out);
+                          const Size &dilation, Size& out);
 
 void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
-                         const String &padMode, Size &pad);
+                         const String &padMode, const Size &dilation, Size &pad);
 
 }
 }

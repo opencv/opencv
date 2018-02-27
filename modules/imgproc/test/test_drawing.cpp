@@ -42,10 +42,7 @@
 
 #include "test_precomp.hpp"
 
-namespace {
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 //#define DRAW_TEST_IMAGE
 
@@ -750,5 +747,11 @@ TEST(Drawing, putText_no_garbage)
 }
 
 
+TEST(Drawing, line)
+{
+    Mat mat = Mat::zeros(Size(100,100), CV_8UC1);
 
-} // namespace
+    ASSERT_THROW(line(mat, Point(1,1),Point(99,99),Scalar(255),0), cv::Exception);
+}
+
+}} // namespace

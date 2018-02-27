@@ -3,31 +3,6 @@
 
 /* ************************************************************************* */
 /**
- * @brief This function computes the angle from the vector given by (X Y). From 0 to 2*Pi
- */
-inline float getAngle(float x, float y) {
-
-  if (x >= 0 && y >= 0) {
-    return atanf(y / x);
-  }
-
-  if (x < 0 && y >= 0) {
-    return static_cast<float>(CV_PI)-atanf(-y / x);
-  }
-
-  if (x < 0 && y < 0) {
-    return static_cast<float>(CV_PI)+atanf(y / x);
-  }
-
-  if (x >= 0 && y < 0) {
-    return static_cast<float>(2.0 * CV_PI) - atanf(-y / x);
-  }
-
-  return 0;
-}
-
-/* ************************************************************************* */
-/**
  * @brief This function computes the value of a 2D Gaussian function
  * @param x X Position
  * @param y Y Position
@@ -62,36 +37,6 @@ inline void checkDescriptorLimits(int &x, int &y, int width, int height) {
   if (y > height - 1) {
     y = height - 1;
   }
-}
-
-/* ************************************************************************* */
-/**
- * @brief This funtion rounds float to nearest integer
- * @param flt Input float
- * @return dst Nearest integer
- */
-inline int fRound(float flt) {
-  return (int)(flt + 0.5f);
-}
-
-/* ************************************************************************* */
-/**
- * @brief Exponentiation by squaring
- * @param flt Exponentiation base
- * @return dst Exponentiation value
- */
-inline int fastpow(int base, int exp) {
-    int res = 1;
-    while(exp > 0) {
-        if(exp & 1) {
-            exp--;
-            res *= base;
-        } else {
-            exp /= 2;
-            base *= base;
-        }
-    }
-    return res;
 }
 
 #endif

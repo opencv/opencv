@@ -12,3 +12,9 @@ include(../common.cmake)
 
 unset(MODULE_NAME)
 unset(MODULE_INSTALL_SUBDIR)
+
+if(MSVC)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+else()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wdeprecated-declarations)
+endif()

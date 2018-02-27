@@ -47,10 +47,6 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
-#ifdef _MSC_VER
-#pragma warning( disable: 4127 ) // conditional expression is constant
-#endif
-
 #if CV_SIMD128
 #define CV_MALLOC_SIMD128 16
 #endif
@@ -95,7 +91,7 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
             ippiGetImage(dy_, iwSrcDy);
             ippiGetImage(dst, iwDst);
 
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, &iwSrcDx, &iwSrcDy, &iwDst, norm, low, high);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
         }
         catch (::ipp::IwException ex)
         {
@@ -121,7 +117,7 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
             ippiGetImage(src, iwSrc);
             ippiGetImage(dst, iwDst);
 
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, &iwSrc, &iwDst, ippFilterSobel, kernel, norm, low, high, ippBorderRepl);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, iwSrc, iwDst, low, high, ::ipp::IwiFilterCannyParams(ippFilterSobel, kernel, norm), ippBorderRepl);
         }
         catch (::ipp::IwException)
         {
@@ -161,6 +157,12 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
     if (lSizeY == 0)
     {
         lSizeY = 1;
+    }
+
+    if (aperture_size == 7)
+    {
+        low_thresh = low_thresh / 16.0f;
+        high_thresh = high_thresh / 16.0f;
     }
 
     if (L2gradient)
@@ -216,11 +218,17 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
                 Non maxima suppression
                 Double thresholding
         */
+        double scale = 1.0;
+        if (aperture_size == 7)
+        {
+            scale = 1 / 16.0;
+        }
+
         UMat dx, dy;
         if (!useCustomDeriv)
         {
-            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
+            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
         }
         else
         {
@@ -359,12 +367,17 @@ public:
         int *_mag_p, *_mag_a, *_mag_n;
         short *_dx, *_dy, *_dx_a = NULL, *_dy_a = NULL, *_dx_n = NULL, *_dy_n = NULL;
         uchar *_pmap;
+        double scale = 1.0;
 
         CV_TRACE_REGION("gradient")
         if(needGradient)
         {
-            Sobel(src.rowRange(rowStart, rowEnd), dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-            Sobel(src.rowRange(rowStart, rowEnd), dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+            if (aperture_size == 7)
+            {
+                scale = 1 / 16.0;
+            }
+            Sobel(src.rowRange(rowStart, rowEnd), dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
+            Sobel(src.rowRange(rowStart, rowEnd), dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
         }
         else
         {
@@ -812,8 +825,6 @@ public:
 
     ~finalPass() {}
 
-    finalPass& operator=(const finalPass&) {return *this;}
-
     void operator()(const Range &boundaries) const
     {
         // the final pass, form the final image
@@ -821,77 +832,39 @@ public:
         {
             int j = 0;
             uchar *pdst = dst.ptr<uchar>(i);
-            uchar *pmap;
+            const uchar *pmap = map.ptr<uchar>(i + 1);
 #if CV_SIMD128
             if(haveSIMD)
-                pmap = (uchar*)map.ptr<uchar>(i + 1) + CV_MALLOC_SIMD128;
+                pmap += CV_MALLOC_SIMD128;
             else
 #endif
-                pmap = (uchar*)map.ptr<uchar>(i + 1) + 1;
+                pmap += 1;
 #if CV_SIMD128
             if(haveSIMD) {
-                const v_int8x16 v_zero = v_setzero_s8();
+                const v_uint8x16 v_zero = v_setzero_u8();
+                const v_uint8x16 v_ff = ~v_zero;
+                const v_uint8x16 v_two(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2);
 
-                for(; j <= dst.cols - 32; j += 32) {
-                    v_uint8x16 v_pmap1 = v_load_aligned((const unsigned char*)(pmap + j));
-                    v_uint8x16 v_pmap2 = v_load_aligned((const unsigned char*)(pmap + j + 16));
-
-                    v_uint16x8 v_pmaplo1, v_pmaphi1, v_pmaplo2, v_pmaphi2;
-                    v_expand(v_pmap1, v_pmaplo1, v_pmaphi1);
-                    v_expand(v_pmap2, v_pmaplo2, v_pmaphi2);
-
-                    v_pmaplo1 = v_pmaplo1 >> 1;
-                    v_pmaphi1 = v_pmaphi1 >> 1;
-                    v_pmaplo2 = v_pmaplo2 >> 1;
-                    v_pmaphi2 = v_pmaphi2 >> 1;
-
-                    v_pmap1 = v_pack(v_pmaplo1, v_pmaphi1);
-                    v_pmap2 = v_pack(v_pmaplo2, v_pmaphi2);
-
-                    v_pmap1 = v_reinterpret_as_u8(v_zero - v_reinterpret_as_s8(v_pmap1));
-                    v_pmap2 = v_reinterpret_as_u8(v_zero - v_reinterpret_as_s8(v_pmap2));
-
-                    v_store((pdst + j), v_pmap1);
-                    v_store((pdst + j + 16), v_pmap2);
-                }
-
-                if(j <= dst.cols - 16) {
+                for (; j <= dst.cols - 16; j += 16)
+                {
                     v_uint8x16 v_pmap = v_load_aligned((const unsigned char*)(pmap + j));
-
-                    v_uint16x8 v_pmaplo;
-                    v_uint16x8 v_pmaphi;
-                    v_expand(v_pmap, v_pmaplo, v_pmaphi);
-
-                    v_pmaplo = v_pmaplo >> 1;
-                    v_pmaphi = v_pmaphi >> 1;
-
-                    v_pmap = v_pack(v_pmaplo, v_pmaphi);
-                    v_pmap = v_reinterpret_as_u8(v_zero - v_reinterpret_as_s8(v_pmap));
-
+                    v_pmap = v_select(v_pmap == v_two, v_ff, v_zero);
                     v_store((pdst + j), v_pmap);
-                    j += 16;
                 }
 
-                if(j <= dst.cols - 8) {
-                    v_uint8x16 v_pmap = v_load_halves((const unsigned char*)(pmap + j), (const unsigned char*)(pmap + j));
-
-                    v_uint16x8 v_pmaplo;
-                    v_uint16x8 v_pmaphi;
-                    v_expand(v_pmap, v_pmaplo, v_pmaphi);
-
-                    v_pmaplo = v_pmaplo >> 1;
-                    v_pmaphi = v_pmaphi >> 1;
-
-                    v_pmap = v_pack(v_pmaplo, v_pmaphi);
-                    v_pmap = v_reinterpret_as_u8(v_zero - v_reinterpret_as_s8(v_pmap));
-
+                if (j <= dst.cols - 8)
+                {
+                    v_uint8x16 v_pmap = v_load_low((const unsigned char*)(pmap + j));
+                    v_pmap = v_select(v_pmap == v_two, v_ff, v_zero);
                     v_store_low((pdst + j), v_pmap);
                     j += 8;
                 }
             }
 #endif
             for (; j < dst.cols; j++)
+            {
                 pdst[j] = (uchar)-(pmap[j] >> 1);
+            }
         }
     }
 
@@ -901,6 +874,9 @@ private:
 #if CV_SIMD128
     bool haveSIMD;
 #endif
+
+    finalPass(const finalPass&); // = delete
+    finalPass& operator=(const finalPass&); // = delete
 };
 
 #ifdef HAVE_OPENVX
@@ -987,13 +963,23 @@ void Canny( InputArray _src, OutputArray _dst,
     if ((aperture_size & 1) == 0 || (aperture_size != -1 && (aperture_size < 3 || aperture_size > 7)))
         CV_Error(CV_StsBadFlag, "Aperture size should be odd between 3 and 7");
 
+    if (aperture_size == 7)
+    {
+        low_thresh = low_thresh / 16.0;
+        high_thresh = high_thresh / 16.0;
+    }
+
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
 
     CV_OCL_RUN(_dst.isUMat() && (_src.channels() == 1 || _src.channels() == 3),
                ocl_Canny<false>(_src, UMat(), UMat(), _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, _src.channels(), size))
 
-    Mat src = _src.getMat(), dst = _dst.getMat();
+    Mat src0 = _src.getMat(), dst = _dst.getMat();
+    Mat src(src0.size(), src0.type(), src0.data, src0.step);
+
+    CALL_HAL(canny, cv_hal_canny, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.channels(),
+             low_thresh, high_thresh, aperture_size, L2gradient);
 
     CV_OVX_RUN(
         false && /* disabling due to accuracy issues */

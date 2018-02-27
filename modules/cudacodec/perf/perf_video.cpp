@@ -43,9 +43,7 @@
 #include "perf_precomp.hpp"
 #include "opencv2/highgui/highgui_c.h"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 DEF_PARAM_TEST_1(FileName, string);
 
@@ -88,7 +86,7 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
 //////////////////////////////////////////////////////
 // VideoWriter
 
-#if defined(HAVE_NVCUVID) && defined(WIN32)
+#if defined(HAVE_NVCUVID) && defined(_WIN32)
 
 PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
@@ -147,3 +145,4 @@ PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/19
 }
 
 #endif
+}} // namespace

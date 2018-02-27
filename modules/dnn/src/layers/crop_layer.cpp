@@ -110,27 +110,21 @@ public:
         }
 
         crop_ranges.resize(dims, Range::all());
-        for (int i = 0; i < dims; i++)
+        for (int i = start_axis; i < dims; i++)
         {
-            if( i < start_axis )
-                continue;
+            if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
+                CV_Error(Error::StsBadArg, "invalid crop parameters or blob sizes");
 
-            if (!offset.empty()) //normal case
-            {
-                if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
-                    CV_Error(Error::StsBadArg, "invalid crop parameters");
-
-                crop_ranges[i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
-            }
-            else //detect offset automatically so that cropped image is center of original one
-            {
-                if (inpSzBlob.size[i] > inpBlob.size[i])
-                    CV_Error(Error::StsBadArg, "invalid output blob size");
-
-                int cur_crop = (inpBlob.size[i] - inpSzBlob.size[i]) / 2;
-                crop_ranges[i] = Range(cur_crop, cur_crop + inpSzBlob.size[i]);
-            }
+            crop_ranges[i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
         }
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)

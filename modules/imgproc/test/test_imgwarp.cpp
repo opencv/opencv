@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ImgWarpBaseTest : public cvtest::ArrayTest
 {
@@ -335,6 +334,30 @@ void CV_ResizeTest::prepare_to_validation( int /*test_case_idx*/ )
     cvReleaseMat( &y_idx );
 }
 
+class CV_ResizeExactTest : public CV_ResizeTest
+{
+public:
+    CV_ResizeExactTest();
+
+protected:
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types);
+};
+
+
+CV_ResizeExactTest::CV_ResizeExactTest() : CV_ResizeTest()
+{
+    max_interpolation = 1;
+}
+
+
+void CV_ResizeExactTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
+{
+    CV_ResizeTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
+    interpolation = INTER_LINEAR_EXACT;
+    if (CV_MAT_DEPTH(types[INPUT][0]) == CV_32F ||
+        CV_MAT_DEPTH(types[INPUT][0]) == CV_64F)
+        types[INPUT][0] = types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] = CV_MAKETYPE(CV_8U, CV_MAT_CN(types[INPUT][0]));
+}
 
 /////////////////////////
 
@@ -1395,7 +1418,7 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
         for (int dx = 0; dx < dsize.width && next; ++dx)
             if (fabs(static_cast<double>(aD[dx] - eD[dx])) > tolerance)
             {
-                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(norm(actual, expected, NORM_INF)));
+                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(cvtest::norm(actual, expected, NORM_INF)));
                 cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Error in : (%d, %d)\n", dx, dy);
 
                 const int radius = 3;
@@ -1410,7 +1433,7 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
             }
     }
 
-    ASSERT_EQ(0, norm(one_channel_diff, cv::NORM_INF));
+    ASSERT_EQ(0, cvtest::norm(one_channel_diff, cv::NORM_INF));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1589,6 +1612,7 @@ TEST(Imgproc_resize_area, regression_quarter_round)
 //////////////////////////////////////////////////////////////////////////
 
 TEST(Imgproc_Resize, accuracy) { CV_ResizeTest test; test.safe_run(); }
+TEST(Imgproc_ResizeExact, accuracy) { CV_ResizeExactTest test; test.safe_run(); }
 TEST(Imgproc_WarpAffine, accuracy) { CV_WarpAffineTest test; test.safe_run(); }
 TEST(Imgproc_WarpPerspective, accuracy) { CV_WarpPerspectiveTest test; test.safe_run(); }
 TEST(Imgproc_Remap, accuracy) { CV_RemapTest test; test.safe_run(); }
@@ -1711,11 +1735,11 @@ TEST(Imgproc_Warp, multichannel)
 
         Mat rot = getRotationMatrix2D(Point2f(0.f, 0.f), 1.0, 1.0);
         warpAffine(src, dst, rot, src.size(), inter, border);
-        ASSERT_EQ(0.0, norm(dst, NORM_INF));
+        ASSERT_EQ(0.0, cvtest::norm(dst, NORM_INF));
         Mat rot2 = Mat::eye(3, 3, rot.type());
         rot.copyTo(rot2.rowRange(0, 2));
         warpPerspective(src, dst, rot2, src.size(), inter, border);
-        ASSERT_EQ(0.0, norm(dst, NORM_INF));
+        ASSERT_EQ(0.0, cvtest::norm(dst, NORM_INF));
     }
 }
 
@@ -1730,7 +1754,7 @@ TEST(Imgproc_GetAffineTransform, singularity)
     B_sample[1] = Point2f(15.0113f, 12.8994f);
     B_sample[2] = Point2f(38.9943f, 9.56297f);
     Mat trans = getAffineTransform(A_sample, B_sample);
-    ASSERT_EQ(0.0, norm(trans, NORM_INF));
+    ASSERT_EQ(0.0, cvtest::norm(trans, NORM_INF));
 }
 
 TEST(Imgproc_Remap, DISABLED_memleak)
@@ -1839,4 +1863,5 @@ TEST(Imgproc_logPolar, identity)
 }
 
 
+}} // namespace
 /* End of file. */

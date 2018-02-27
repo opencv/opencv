@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "op_inf_engine.hpp"
 #include <float.h>
 #include <algorithm>
 #include <opencv2/dnn/shape_utils.hpp>
@@ -59,6 +60,12 @@ public:
         _startAxis = params.get<int>("axis", 1);
         _endAxis = params.get<int>("end_axis", -1);
         setParamsFrom(params);
+    }
+
+    virtual bool supportBackend(int backendId)
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -104,6 +111,43 @@ public:
         return true;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        std::vector<UMat> inpvec;
+        std::vector<UMat> outputs;
+
+        inputs_arr.getUMatVector(inpvec);
+        outputs_arr.getUMatVector(outputs);
+
+        std::vector<UMat*> inputs(inpvec.size());
+        for (int i = 0; i < inpvec.size(); i++)
+            inputs[i] = &inpvec[i];
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            MatShape outShape = shape(outputs[i]);
+            UMat& output = outputs_arr.getUMatRef(i);
+            output = inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]);
+        }
+
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   outputs_arr.isUMatVector() &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -114,6 +158,21 @@ public:
             MatShape outShape = shape(outputs[i]);
             outputs[i] = inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]);
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Flatten";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+        ieLayer->params["axis"] = format("%d", _startAxis);
+        ieLayer->params["end_axis"] = format("%d", _endAxis);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 
     int _startAxis;

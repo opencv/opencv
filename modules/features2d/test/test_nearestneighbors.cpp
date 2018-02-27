@@ -43,13 +43,11 @@
 
 #include "test_precomp.hpp"
 
-#include <algorithm>
-#include <vector>
-#include <iostream>
+namespace opencv_test { namespace {
 
-using namespace std;
-using namespace cv;
+#ifdef HAVE_OPENCV_FLANN
 using namespace cv::flann;
+#endif
 
 //--------------------------------------------------------------------------------
 class NearestNeighborTest : public cvtest::BaseTest
@@ -158,6 +156,8 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 }
 
 //--------------------------------------------------------------------------------
+#ifdef HAVE_OPENCV_FLANN
+
 class CV_FlannTest : public NearestNeighborTest
 {
 public:
@@ -331,3 +331,7 @@ TEST(Features2d_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.s
 TEST(Features2d_FLANN_Composite, regression) { CV_FlannCompositeIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
+
+#endif
+
+}} // namespace

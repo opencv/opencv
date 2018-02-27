@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
 '''
-This example illustrates how to use cv2.HoughCircles() function.
+This example illustrates how to use cv.HoughCircles() function.
 '''
 
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import cv2
+import cv2 as cv
 import numpy as np
 import sys
 from numpy import pi, sin, cos
@@ -17,7 +17,6 @@ from tests_common import NewOpenCVTests
 def circleApproximation(circle):
 
     nPoints = 30
-    phi = 0
     dPhi = 2*pi / nPoints
     contour = []
     for i in range(nPoints):
@@ -28,10 +27,10 @@ def circleApproximation(circle):
 
 def convContoursIntersectiponRate(c1, c2):
 
-    s1 = cv2.contourArea(c1)
-    s2 = cv2.contourArea(c2)
+    s1 = cv.contourArea(c1)
+    s2 = cv.contourArea(c2)
 
-    s, _ = cv2.intersectConvexConvex(c1, c2)
+    s, _ = cv.intersectConvexConvex(c1, c2)
 
     return 2*s/(s1+s2)
 
@@ -42,10 +41,10 @@ class houghcircles_test(NewOpenCVTests):
         fn = "samples/data/board.jpg"
 
         src = self.get_sample(fn, 1)
-        img = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
-        img = cv2.medianBlur(img, 5)
+        img = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
+        img = cv.medianBlur(img, 5)
 
-        circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 30)[0]
+        circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 30)[0]
 
         testCircles = [[38, 181, 17.6],
         [99.7, 166, 13.12],
@@ -79,3 +78,7 @@ class houghcircles_test(NewOpenCVTests):
 
         self.assertGreater(float(matches_counter) / len(testCircles), .5)
         self.assertLess(float(len(circles) - matches_counter) / len(circles), .75)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

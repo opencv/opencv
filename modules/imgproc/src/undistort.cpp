@@ -61,6 +61,133 @@ cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
     return newCameraMatrix;
 }
 
+class initUndistortRectifyMapComputer : public cv::ParallelLoopBody
+{
+public:
+    initUndistortRectifyMapComputer(
+        cv::Size _size, cv::Mat &_map1, cv::Mat &_map2, int _m1type,
+        const double* _ir, cv::Matx33d &_matTilt,
+        double _u0, double _v0, double _fx, double _fy,
+        double _k1, double _k2, double _p1, double _p2,
+        double _k3, double _k4, double _k5, double _k6,
+        double _s1, double _s2, double _s3, double _s4)
+      : size(_size),
+        map1(_map1),
+        map2(_map2),
+        m1type(_m1type),
+        ir(_ir),
+        matTilt(_matTilt),
+        u0(_u0),
+        v0(_v0),
+        fx(_fx),
+        fy(_fy),
+        k1(_k1),
+        k2(_k2),
+        p1(_p1),
+        p2(_p2),
+        k3(_k3),
+        k4(_k4),
+        k5(_k5),
+        k6(_k6),
+        s1(_s1),
+        s2(_s2),
+        s3(_s3),
+        s4(_s4) {
+#if CV_TRY_AVX2
+        useAVX2 = cv::checkHardwareSupport(CV_CPU_AVX2);
+#endif
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        const int begin = range.start;
+        const int end = range.end;
+
+        for( int i = begin; i < end; i++ )
+        {
+            float* m1f = map1.ptr<float>(i);
+            float* m2f = map2.empty() ? 0 : map2.ptr<float>(i);
+            short* m1 = (short*)m1f;
+            ushort* m2 = (ushort*)m2f;
+            double _x = i*ir[1] + ir[2], _y = i*ir[4] + ir[5], _w = i*ir[7] + ir[8];
+
+            int j = 0;
+
+            if (m1type == CV_16SC2)
+                CV_Assert(m1 != NULL && m2 != NULL);
+            else if (m1type == CV_32FC1)
+                CV_Assert(m1f != NULL && m2f != NULL);
+            else
+                CV_Assert(m1 != NULL);
+
+    #if CV_TRY_AVX2
+            if( useAVX2 )
+                j = cv::initUndistortRectifyMapLine_AVX(m1f, m2f, m1, m2,
+                                                        matTilt.val, ir, _x, _y, _w, size.width, m1type,
+                                                        k1, k2, k3, k4, k5, k6, p1, p2, s1, s2, s3, s4, u0, v0, fx, fy);
+    #endif
+            for( ; j < size.width; j++, _x += ir[0], _y += ir[3], _w += ir[6] )
+            {
+                double w = 1./_w, x = _x*w, y = _y*w;
+                double x2 = x*x, y2 = y*y;
+                double r2 = x2 + y2, _2xy = 2*x*y;
+                double kr = (1 + ((k3*r2 + k2)*r2 + k1)*r2)/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
+                double xd = (x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+s2*r2*r2);
+                double yd = (y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+s4*r2*r2);
+                cv::Vec3d vecTilt = matTilt*cv::Vec3d(xd, yd, 1);
+                double invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
+                double u = fx*invProj*vecTilt(0) + u0;
+                double v = fy*invProj*vecTilt(1) + v0;
+                if( m1type == CV_16SC2 )
+                {
+                    int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
+                    int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+                    m1[j*2] = (short)(iu >> cv::INTER_BITS);
+                    m1[j*2+1] = (short)(iv >> cv::INTER_BITS);
+                    m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE-1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE-1)));
+                }
+                else if( m1type == CV_32FC1 )
+                {
+                    m1f[j] = (float)u;
+                    m2f[j] = (float)v;
+                }
+                else
+                {
+                    m1f[j*2] = (float)u;
+                    m1f[j*2+1] = (float)v;
+                }
+            }
+        }
+    }
+
+private:
+    cv::Size size;
+    cv::Mat &map1;
+    cv::Mat &map2;
+    int m1type;
+    const double* ir;
+    cv::Matx33d &matTilt;
+    double u0;
+    double v0;
+    double fx;
+    double fy;
+    double k1;
+    double k2;
+    double p1;
+    double p2;
+    double k3;
+    double k4;
+    double k5;
+    double k6;
+    double s1;
+    double s2;
+    double s3;
+    double s4;
+#if CV_TRY_AVX2
+    bool useAVX2;
+#endif
+};
+
 void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
                               InputArray _matR, InputArray _newCameraMatrix,
                               Size size, int m1type, OutputArray _map1, OutputArray _map2 )
@@ -137,64 +264,9 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     cv::Matx33d matTilt = cv::Matx33d::eye();
     cv::detail::computeTiltProjectionMatrix(tauX, tauY, &matTilt);
 
-#if CV_TRY_AVX2
-    bool USE_AVX2 = cv::checkHardwareSupport(CV_CPU_AVX2);
-#endif
-
-    for( int i = 0; i < size.height; i++ )
-    {
-        float* m1f = map1.ptr<float>(i);
-        float* m2f = map2.empty() ? 0 : map2.ptr<float>(i);
-        short* m1 = (short*)m1f;
-        ushort* m2 = (ushort*)m2f;
-        double _x = i*ir[1] + ir[2], _y = i*ir[4] + ir[5], _w = i*ir[7] + ir[8];
-
-        int j = 0;
-
-        if (m1type == CV_16SC2)
-            CV_Assert(m1 != NULL && m2 != NULL);
-        else if (m1type == CV_32FC1)
-            CV_Assert(m1f != NULL && m2f != NULL);
-        else
-            CV_Assert(m1 != NULL);
-
-#if CV_TRY_AVX2
-        if( USE_AVX2 )
-            j = cv::initUndistortRectifyMapLine_AVX(m1f, m2f, m1, m2, matTilt.val, ir, _x, _y, _w, size.width, m1type,
-                                                    k1, k2, k3, k4, k5, k6, p1, p2, s1, s2, s3, s4, u0, v0, fx, fy);
-#endif
-        for( ; j < size.width; j++, _x += ir[0], _y += ir[3], _w += ir[6] )
-        {
-            double w = 1./_w, x = _x*w, y = _y*w;
-            double x2 = x*x, y2 = y*y;
-            double r2 = x2 + y2, _2xy = 2*x*y;
-            double kr = (1 + ((k3*r2 + k2)*r2 + k1)*r2)/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
-            double xd = (x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+s2*r2*r2);
-            double yd = (y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+s4*r2*r2);
-            cv::Vec3d vecTilt = matTilt*cv::Vec3d(xd, yd, 1);
-            double invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
-            double u = fx*invProj*vecTilt(0) + u0;
-            double v = fy*invProj*vecTilt(1) + v0;
-            if( m1type == CV_16SC2 )
-            {
-                int iu = saturate_cast<int>(u*INTER_TAB_SIZE);
-                int iv = saturate_cast<int>(v*INTER_TAB_SIZE);
-                m1[j*2] = (short)(iu >> INTER_BITS);
-                m1[j*2+1] = (short)(iv >> INTER_BITS);
-                m2[j] = (ushort)((iv & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (iu & (INTER_TAB_SIZE-1)));
-            }
-            else if( m1type == CV_32FC1 )
-            {
-                m1f[j] = (float)u;
-                m2f[j] = (float)v;
-            }
-            else
-            {
-                m1f[j*2] = (float)u;
-                m1f[j*2+1] = (float)v;
-            }
-        }
-    }
+    parallel_for_(Range(0, size.height), initUndistortRectifyMapComputer(
+        size, map1, map2, m1type, ir, matTilt, u0, v0,
+        fx, fy, k1, k2, p1, p2, k3, k4, k5, k6, s1, s2, s3, s4));
 }
 
 
@@ -294,15 +366,15 @@ cvInitUndistortRectifyMap( const CvMat* Aarr, const CvMat* dist_coeffs,
     CV_Assert( mapx0.data == mapx.data && mapy0.data == mapy.data );
 }
 
-
-void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
+static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
                    const CvMat* _distCoeffs,
-                   const CvMat* matR, const CvMat* matP )
+                   const CvMat* matR, const CvMat* matP, cv::TermCriteria criteria)
 {
     double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
     CvMat _RR=cvMat(3, 3, CV_64F, RR);
     cv::Matx33d invMatTilt = cv::Matx33d::eye();
+    cv::Matx33d matTilt = cv::Matx33d::eye();
 
     CV_Assert( CV_IS_MAT(_src) && CV_IS_MAT(_dst) &&
         (_src->rows == 1 || _src->cols == 1) &&
@@ -316,7 +388,6 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
 
     cvConvert( _cameraMatrix, &matA );
 
-    int iters = 0;
 
     if( _distCoeffs )
     {
@@ -332,9 +403,11 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
             CV_MAKETYPE(CV_64F,CV_MAT_CN(_distCoeffs->type)), k);
 
         cvConvert( _distCoeffs, &_Dk );
-        iters = 5;
         if (k[12] != 0 || k[13] != 0)
+        {
             cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
+            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
+        }
     }
 
     if( matR )
@@ -373,7 +446,7 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
     int n = _src->rows + _src->cols - 1;
     for( int i = 0; i < n; i++ )
     {
-        double x, y, x0 = 0, y0 = 0;
+        double x, y, x0 = 0, y0 = 0, u, v;
         if( stype == CV_32FC2 )
         {
             x = srcf[i*sstep].x;
@@ -384,27 +457,61 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
             x = srcd[i*sstep].x;
             y = srcd[i*sstep].y;
         }
-
+        u = x; v = y;
         x = (x - cx)*ifx;
         y = (y - cy)*ify;
 
-        if( iters ) {
+        if( _distCoeffs ) {
             // compensate tilt distortion
             cv::Vec3d vecUntilt = invMatTilt * cv::Vec3d(x, y, 1);
             double invProj = vecUntilt(2) ? 1./vecUntilt(2) : 1;
             x0 = x = invProj * vecUntilt(0);
             y0 = y = invProj * vecUntilt(1);
-        }
 
-        // compensate distortion iteratively
-        for( int j = 0; j < iters; j++ )
-        {
-            double r2 = x*x + y*y;
-            double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
-            double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
-            double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
-            x = (x0 - deltaX)*icdist;
-            y = (y0 - deltaY)*icdist;
+            double error = std::numeric_limits<double>::max();
+            // compensate distortion iteratively
+
+            for( int j = 0; ; j++ )
+            {
+                if ((criteria.type & cv::TermCriteria::COUNT) && j >= criteria.maxCount)
+                    break;
+                if ((criteria.type & cv::TermCriteria::EPS) && error < criteria.epsilon)
+                    break;
+                double r2 = x*x + y*y;
+                double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
+                double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
+                double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
+                x = (x0 - deltaX)*icdist;
+                y = (y0 - deltaY)*icdist;
+
+                if(criteria.type & cv::TermCriteria::EPS)
+                {
+                    double r4, r6, a1, a2, a3, cdist, icdist2;
+                    double xd, yd, xd0, yd0;
+                    cv::Vec3d vecTilt;
+
+                    r2 = x*x + y*y;
+                    r4 = r2*r2;
+                    r6 = r4*r2;
+                    a1 = 2*x*y;
+                    a2 = r2 + 2*x*x;
+                    a3 = r2 + 2*y*y;
+                    cdist = 1 + k[0]*r2 + k[1]*r4 + k[4]*r6;
+                    icdist2 = 1./(1 + k[5]*r2 + k[6]*r4 + k[7]*r6);
+                    xd0 = x*cdist*icdist2 + k[2]*a1 + k[3]*a2 + k[8]*r2+k[9]*r4;
+                    yd0 = y*cdist*icdist2 + k[2]*a3 + k[3]*a1 + k[10]*r2+k[11]*r4;
+
+                    vecTilt = matTilt*cv::Vec3d(xd0, yd0, 1);
+                    invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
+                    xd = invProj * vecTilt(0);
+                    yd = invProj * vecTilt(1);
+
+                    double x_proj = xd*fx + cx;
+                    double y_proj = yd*fy + cy;
+
+                    error = sqrt( pow(x_proj - u, 2) + pow(y_proj - v, 2) );
+                }
+            }
         }
 
         double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
@@ -426,12 +533,29 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
     }
 }
 
+void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
+                   const CvMat* _distCoeffs,
+                   const CvMat* matR, const CvMat* matP )
+{
+    cvUndistortPointsInternal(_src, _dst, _cameraMatrix, _distCoeffs, matR, matP,
+                              cv::TermCriteria(cv::TermCriteria::COUNT, 5, 0.01));
+}
 
 void cv::undistortPoints( InputArray _src, OutputArray _dst,
                           InputArray _cameraMatrix,
                           InputArray _distCoeffs,
                           InputArray _Rmat,
                           InputArray _Pmat )
+{
+    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
+}
+
+void cv::undistortPoints( InputArray _src, OutputArray _dst,
+                          InputArray _cameraMatrix,
+                          InputArray _distCoeffs,
+                          InputArray _Rmat,
+                          InputArray _Pmat,
+                          TermCriteria criteria)
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
@@ -450,7 +574,7 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
         pP = &(matP = P);
     if( !distCoeffs.empty() )
         pD = &(_cdistCoeffs = distCoeffs);
-    cvUndistortPoints(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP);
+    cvUndistortPointsInternal(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP, criteria);
 }
 
 namespace cv

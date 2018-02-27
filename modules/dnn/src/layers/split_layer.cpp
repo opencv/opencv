@@ -75,7 +75,15 @@ public:
 
         Layer::getMemoryShapes(inputs, max(1, outputsCount >= 0 ? outputsCount : requiredOutputs),
                                outputs, internals);
-        return true;
+        return false;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -86,8 +94,7 @@ public:
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[0]->total() == outputs[i].total());
-            if (outputs[i].data != inputs[0]->data)
-                inputs[0]->copyTo(outputs[i]);
+            inputs[0]->copyTo(outputs[i]);
         }
     }
 };

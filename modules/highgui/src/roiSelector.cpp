@@ -60,7 +60,7 @@ class ROISelector
                      Scalar(255, 0, 0), 2, 1);
             }
 
-            // show the image bouding box
+            // show the image bounding box
             imshow(windowName, selectorParams.image);
 
             // reset the image
@@ -177,7 +177,7 @@ class ROISelector
         }
     }
 
-    // save the keypressed characted
+    // save the keypressed character
     int key;
     Size imageSize;
 };

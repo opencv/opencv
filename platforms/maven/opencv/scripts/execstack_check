@@ -20,8 +20,10 @@ red=$'\e[1;31m'
 green=$'\e[1;32m'
 end=$'\e[0m'
 echo "${green}[INFO] Checking that the native library executable stack flag is NOT set.${end}"
-execstack -c $1
-execstack -q $1 | grep -o ^-
+BINARY=execstack
+$BINARY --help > /dev/null || BINARY=/usr/sbin/execstack
+$BINARY -c $1
+$BINARY -q $1 | grep -o ^-
 if [ $? -ne 0 ]; then
     echo
     echo "${red}[ERROR] The Executable Flag could not be cleared on the library $1.${end}"

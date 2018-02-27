@@ -430,6 +430,9 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(w_needed) Mat(w).copyTo(_width);
     if(p_needed) Mat(p).copyTo(_prec);
     if(n_needed) Mat(n).copyTo(_nfa);
+
+    // Clear used structures
+    list.clear();
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
@@ -450,7 +453,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
-        resize(gaussian_img, scaled_image, Size(), SCALE, SCALE);
+        resize(gaussian_img, scaled_image, Size(), SCALE, SCALE, INTER_LINEAR_EXACT);
         ll_angle(rho, N_BINS);
     }
     else
@@ -1146,23 +1149,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
     CV_Assert(!_image.empty() && (_image.channels() == 1 || _image.channels() == 3));
 
-    Mat gray;
     if (_image.channels() == 1)
     {
-        gray = _image.getMatRef();
+        cvtColor(_image, _image, COLOR_GRAY2BGR);
     }
-    else if (_image.channels() == 3)
-    {
-        cvtColor(_image, gray, CV_BGR2GRAY);
-    }
-
-    // Create a 3 channel image in order to draw colored lines
-    std::vector<Mat> planes;
-    planes.push_back(gray);
-    planes.push_back(gray);
-    planes.push_back(gray);
-
-    merge(planes, _image);
 
     Mat _lines;
     _lines = lines.getMat();
@@ -1174,7 +1164,7 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
         const Vec4f& v = _lines.at<Vec4f>(i);
         Point2f b(v[0], v[1]);
         Point2f e(v[2], v[3]);
-        line(_image.getMatRef(), b, e, Scalar(0, 0, 255), 1);
+        line(_image, b, e, Scalar(0, 0, 255), 1);
     }
 }
 

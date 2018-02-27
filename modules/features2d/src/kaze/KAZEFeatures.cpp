@@ -68,7 +68,7 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
             aux.Ldet = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
             aux.esigma = options_.soffset*pow((float)2.0f, (float)(j) / (float)(options_.nsublevels)+i);
             aux.etime = 0.5f*(aux.esigma*aux.esigma);
-            aux.sigma_size = fRound(aux.esigma);
+            aux.sigma_size = cvRound(aux.esigma);
             aux.octave = i;
             aux.sublevel = j;
             evolution_.push_back(aux);
@@ -363,10 +363,10 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
 
             if (is_extremum == true) {
                 // Check that the point is under the image limits for the descriptor computation
-                left_x = fRound(kpts_par_[i][j].pt.x - smax*kpts_par_[i][j].size);
-                right_x = fRound(kpts_par_[i][j].pt.x + smax*kpts_par_[i][j].size);
-                up_y = fRound(kpts_par_[i][j].pt.y - smax*kpts_par_[i][j].size);
-                down_y = fRound(kpts_par_[i][j].pt.y + smax*kpts_par_[i][j].size);
+                left_x = cvRound(kpts_par_[i][j].pt.x - smax*kpts_par_[i][j].size);
+                right_x = cvRound(kpts_par_[i][j].pt.x + smax*kpts_par_[i][j].size);
+                up_y = cvRound(kpts_par_[i][j].pt.y - smax*kpts_par_[i][j].size);
+                down_y = cvRound(kpts_par_[i][j].pt.y + smax*kpts_par_[i][j].size);
 
                 if (left_x < 0 || right_x >= evolution_[level].Ldet.cols ||
                     up_y < 0 || down_y >= evolution_[level].Ldet.rows) {
@@ -587,14 +587,14 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
     xf = kpt.pt.x;
     yf = kpt.pt.y;
     level = kpt.class_id;
-    s = fRound(kpt.size / 2.0f);
+    s = cvRound(kpt.size / 2.0f);
 
     // Calculate derivatives responses for points within radius of 6*scale
     for (int i = -6; i <= 6; ++i) {
         for (int j = -6; j <= 6; ++j) {
             if (i*i + j*j < 36) {
-                iy = fRound(yf + j*s);
-                ix = fRound(xf + i*s);
+                iy = cvRound(yf + j*s);
+                ix = cvRound(xf + i*s);
 
                 if (iy >= 0 && iy < options.img_height && ix >= 0 && ix < options.img_width) {
                     gweight = gaussian(iy - yf, ix - xf, 2.5f*s);
@@ -606,7 +606,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
                     resY[idx] = 0.0;
                 }
 
-                Ang[idx] = getAngle(resX[idx], resY[idx]);
+                Ang[idx] = fastAtan2(resX[idx], resY[idx]) * (float)(CV_PI / 180.0f);
                 ++idx;
             }
         }
@@ -638,7 +638,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
         if (sumX*sumX + sumY*sumY > max) {
             // store largest orientation
             max = sumX*sumX + sumY*sumY;
-            kpt.angle = getAngle(sumX, sumY) * 180.f / static_cast<float>(CV_PI);
+            kpt.angle = fastAtan2(sumX, sumY);
         }
     }
 }
@@ -676,7 +676,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
+    scale = cvRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     i = -8;
@@ -804,8 +804,8 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
-    angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+    scale = cvRound(kpt.size / 2.0f);
+    angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
     level = kpt.class_id;
     co = cos(angle);
     si = sin(angle);
@@ -843,13 +843,13 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
 
                     // Get the gaussian weighted x and y responses
                     gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
-                    y1 = fRound(sample_y - 0.5f);
-                    x1 = fRound(sample_x - 0.5f);
+                    y1 = cvFloor(sample_y);
+                    x1 = cvFloor(sample_x);
 
                                         checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
-                    y2 = (int)(sample_y + 0.5f);
-                    x2 = (int)(sample_x + 0.5f);
+                    y2 = y1 + 1;
+                    x2 = x1 + 1;
 
                                         checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 
@@ -935,7 +935,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kp
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
+    scale = cvRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     i = -8;
@@ -1087,8 +1087,8 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
-    angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+    scale = cvRound(kpt.size / 2.0f);
+    angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
     level = kpt.class_id;
     co = cos(angle);
     si = sin(angle);
@@ -1129,13 +1129,13 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
                     // Get the gaussian weighted x and y responses
                     gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-                    y1 = fRound(sample_y - 0.5f);
-                    x1 = fRound(sample_x - 0.5f);
+                    y1 = cvFloor(sample_y);
+                    x1 = cvFloor(sample_x);
 
                                         checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
-                    y2 = (int)(sample_y + 0.5f);
-                    x2 = (int)(sample_x + 0.5f);
+                    y2 = y1 + 1;
+                    x2 = x1 + 1;
 
                                         checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 

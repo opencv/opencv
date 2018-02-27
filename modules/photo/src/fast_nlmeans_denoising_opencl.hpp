@@ -23,11 +23,6 @@ enum
     CTA_SIZE_DEFAULT = 256
 };
 
-static int divUp(int a, int b)
-{
-    return (a + b - 1) / b;
-}
-
 template <typename FT, typename ST, typename WT>
 static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
                                       int searchWindowSize, int templateWindowSize,

@@ -1,12 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <iostream>
-
-using namespace cv;
-using namespace std;
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 TEST(Imgcodecs_Image, read_write_bmp)
 {
@@ -50,7 +47,7 @@ TEST(Imgcodecs_Image, read_write_bmp)
         psnr = cvtest::PSNR(buf_loaded, image);
         EXPECT_GT(psnr, thresDbell);
 
-        remove(dst_name.c_str());
+        EXPECT_EQ(0, remove(dst_name.c_str()));
     }
 }
 
@@ -95,7 +92,7 @@ TEST_P(Imgcodecs_Image, read_write)
     psnr = cvtest::PSNR(buf_loaded, image);
     EXPECT_GT(psnr, thresDbell);
 
-    remove(full_name.c_str());
+    EXPECT_EQ(0, remove(full_name.c_str()));
 }
 
 const string exts[] = {
@@ -120,3 +117,14 @@ const string exts[] = {
 };
 
 INSTANTIATE_TEST_CASE_P(imgcodecs, Imgcodecs_Image, testing::ValuesIn(exts));
+
+TEST(Imgcodecs_Image, regression_9376)
+{
+    String path = findDataFile("readwrite/regression_9376.bmp");
+    Mat m = imread(path);
+    ASSERT_FALSE(m.empty());
+    EXPECT_EQ(32, m.cols);
+    EXPECT_EQ(32, m.rows);
+}
+
+}} // namespace

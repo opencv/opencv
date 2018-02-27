@@ -1,12 +1,14 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/features2d.hpp>
 #include "opencv2/core/opengl.hpp"
-#include "opencv2/cvconfig.h"
 
 #include <vector>
 #include <map>
 #include <iostream>
 #ifdef HAVE_OPENGL
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN 1
 #define NOMINMAX 1
 #include <windows.h>

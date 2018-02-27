@@ -182,13 +182,6 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
-/** @brief Returns a text string formatted using the printf-like expression.
-
-The function acts like sprintf but forms and returns an STL string. It can be used to form an error
-message in the Exception constructor.
-@param fmt printf-compatible formatting specifiers.
- */
-CV_EXPORTS String format( const char* fmt, ... );
 CV_EXPORTS String tempfile( const char* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
@@ -198,12 +191,12 @@ If threads == 0, OpenCV will disable threading optimizations and run all it's fu
 sequentially. Passing threads \< 0 will reset threads number to system default. This function must
 be called outside of parallel region.
 
-OpenCV will try to run it's functions with specified threads number, but some behaviour differs from
+OpenCV will try to run its functions with specified threads number, but some behaviour differs from
 framework:
 -   `TBB` - User-defined parallel constructions will run with the same threads number, if
-    another does not specified. If later on user creates own scheduler, OpenCV will use it.
+    another is not specified. If later on user creates his own scheduler, OpenCV will use it.
 -   `OpenMP` - No special defined behaviour.
--   `Concurrency` - If threads == 1, OpenCV will disable threading optimizations and run it's
+-   `Concurrency` - If threads == 1, OpenCV will disable threading optimizations and run its
     functions sequentially.
 -   `GCD` - Supports only values \<= 0.
 -   `C=` - No special defined behaviour.
@@ -233,7 +226,9 @@ CV_EXPORTS_W int getNumThreads();
 /** @brief Returns the index of the currently executed thread within the current parallel region. Always
 returns 0 if called outside of parallel region.
 
-The exact meaning of return value depends on the threading framework used by OpenCV library:
+@deprecated Current implementation doesn't corresponding to this documentation.
+
+The exact meaning of the return value depends on the threading framework used by OpenCV library:
 - `TBB` - Unsupported with current 4.1 TBB release. Maybe will be supported in future.
 - `OpenMP` - The thread number, within the current team, of the calling thread.
 - `Concurrency` - An ID for the virtual processor that the current context is executing on (0
@@ -284,6 +279,19 @@ tm.start();
 // do something ...
 tm.stop();
 std::cout << tm.getTimeSec();
+@endcode
+
+It is also possible to compute the average time over multiple runs:
+@code
+TickMeter tm;
+for (int i = 0; i < 100; i++)
+{
+    tm.start();
+    // do something ...
+    tm.stop();
+}
+double average_time = tm.getTimeSec() / tm.getCounter();
+std::cout << "Average time in second per iteration is: " << average_time << std::endl;
 @endcode
 @sa getTickCount, getTickFrequency
 */
@@ -414,6 +422,12 @@ in OpenCV.
  */
 CV_EXPORTS_W bool checkHardwareSupport(int feature);
 
+/** @brief Returns feature name by ID
+
+Returns empty string if feature is not defined
+*/
+CV_EXPORTS_W String getHardwareFeatureName(int feature);
+
 /** @brief Returns the number of logical CPUs available for the process.
  */
 CV_EXPORTS_W int getNumberOfCPUs();
@@ -428,12 +442,13 @@ The function returns the aligned pointer of the same type as the input pointer:
  */
 template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp))
 {
+    CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
     return (_Tp*)(((size_t)ptr + n-1) & -n);
 }
 
 /** @brief Aligns a buffer size to the specified number of bytes.
 
-The function returns the minimum number that is greater or equal to sz and is divisible by n :
+The function returns the minimum number that is greater than or equal to sz and is divisible by n :
 \f[\texttt{(sz + n-1) & -n}\f]
 @param sz Buffer size to align.
 @param n Alignment size that must be a power of two.
@@ -442,6 +457,23 @@ static inline size_t alignSize(size_t sz, int n)
 {
     CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
     return (sz + n-1) & -n;
+}
+
+/** @brief Integer division with result round up.
+
+Use this function instead of `ceil((float)a / b)` expressions.
+
+@sa alignSize
+*/
+static inline int divUp(int a, unsigned int b)
+{
+    CV_DbgAssert(a >= 0);
+    return (a + b - 1) / b;
+}
+/** @overload */
+static inline size_t divUp(size_t a, unsigned int b)
+{
+    return (a + b - 1) / b;
 }
 
 /** @brief Enables or disables the optimized code.
@@ -465,7 +497,7 @@ The function returns true if the optimized code is enabled. Otherwise, it return
  */
 CV_EXPORTS_W bool useOptimized();
 
-static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
+static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); }
 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
@@ -509,10 +541,10 @@ template<typename _Tp, typename Functor> inline
 void Mat::forEach_impl(const Functor& operation) {
     if (false) {
         operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(0));
-        // If your compiler fail in this line.
+        // If your compiler fails in this line.
         // Please check that your functor signature is
-        //     (_Tp&, const int*)   <- multidimential
-        //  or (_Tp&, void*)        <- in case of you don't need current idx.
+        //     (_Tp&, const int*)   <- multi-dimensional
+        //  or (_Tp&, void*)        <- in case you don't need current idx.
     }
 
     CV_Assert(this->total() / this->size[this->dims - 1] <= INT_MAX);
@@ -791,7 +823,7 @@ public:
 
     This method returns the path to the executable from the command line (`argv[0]`).
 
-    For example, if the application has been started with such command:
+    For example, if the application has been started with such a command:
     @code{.sh}
     $ ./bin/my-executable
     @endcode
@@ -878,7 +910,7 @@ public:
 
     /** @brief Check for parsing errors
 
-    Returns true if error occurred while accessing the parameters (bad conversion, missing arguments,
+    Returns false if error occurred while accessing the parameters (bad conversion, missing arguments,
     etc.). Call @ref printErrors to print error messages list.
      */
     bool check() const;
@@ -897,7 +929,7 @@ public:
     */
     void printMessage() const;
 
-    /** @brief Print list of errors occured
+    /** @brief Print list of errors occurred
 
     @sa check
     */

@@ -105,10 +105,10 @@ do \
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
 do \
 { \
-    ASSERT_EQ(mat1.type(), mat2.type()); \
-    ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(TestUtils::checkNormRelative(mat1, mat2), eps) \
-        << "Size: " << mat1.size() << std::endl; \
+    ASSERT_EQ((mat1).type(), (mat2).type()); \
+    ASSERT_EQ((mat1).size(), (mat2).size()); \
+    EXPECT_LE(TestUtils::checkNormRelative((mat1), (mat2)), eps) \
+        << "Size: " << (mat1).size() << std::endl; \
 } while ((void)0, 0)
 
 #define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
@@ -192,7 +192,7 @@ using perf::MatType;
 
 #define OCL_RNG_SEED 123456
 
-struct CV_EXPORTS TestUtils
+struct TestUtils
 {
     cv::RNG rng;
 
@@ -319,13 +319,13 @@ do \
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
 
 template <typename T>
-struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
+struct TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
 {
 
 };
 
 #undef PARAM_TEST_CASE
-#define PARAM_TEST_CASE(name, ...) struct name : public ::cvtest::ocl::TSTestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define PARAM_TEST_CASE(name, ...) struct name : public ::cvtest::ocl::TSTestWithParam< testing::tuple< __VA_ARGS__ > >
 
 #ifndef IMPLEMENT_PARAM_CLASS
 #define IMPLEMENT_PARAM_CLASS(name, type) \
@@ -355,7 +355,7 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
 
-CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LINEAR_EXACT)
 CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101)
 
@@ -363,5 +363,10 @@ CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WR
     INSTANTIATE_TEST_CASE_P(OCL_ ## prefix, test_case_name, generator)
 
 } } // namespace cvtest::ocl
+
+namespace opencv_test {
+namespace ocl {
+using namespace cvtest::ocl;
+}} // namespace
 
 #endif // OPENCV_TS_OCL_TEST_HPP

@@ -602,6 +602,16 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
     return v_float32x4(_mm_add_ps(_mm_add_ps(v0, v1), _mm_add_ps(v2, v3)));
 }
 
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& a)
+{
+    __m128 v0 = _mm_mul_ps(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE(0, 0, 0, 0)), m0.val);
+    __m128 v1 = _mm_mul_ps(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE(1, 1, 1, 1)), m1.val);
+    __m128 v2 = _mm_mul_ps(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE(2, 2, 2, 2)), m2.val);
+
+    return v_float32x4(_mm_add_ps(_mm_add_ps(v0, v1), _mm_add_ps(v2, a.val)));
+}
 
 #define OPENCV_HAL_IMPL_SSE_BIN_OP(bin_op, _Tpvec, intrin) \
     inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
@@ -1011,11 +1021,40 @@ OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint16x8, v_int16x8, epi16, _mm_srai_epi16)
 OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint32x4, v_int32x4, epi32, _mm_srai_epi32)
 OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint64x2, v_int64x2, epi64, v_srai_epi64)
 
+template<int imm, typename _Tpvec>
+inline _Tpvec v_rotate_right(const _Tpvec &a)
+{
+    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_srli_si128(a.val, CV_SHIFT));
+}
+template<int imm, typename _Tpvec>
+inline _Tpvec v_rotate_left(const _Tpvec &a)
+{
+    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_slli_si128(a.val, CV_SHIFT));
+}
+template<int imm, typename _Tpvec>
+inline _Tpvec v_rotate_right(const _Tpvec &a, const _Tpvec &b)
+{
+    enum { CV_SHIFT1 = imm*(sizeof(typename _Tpvec::lane_type)) };
+    enum { CV_SHIFT2 = 16 - imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_or_si128(_mm_srli_si128(a.val, CV_SHIFT1), _mm_slli_si128(b.val, CV_SHIFT2)));
+}
+template<int imm, typename _Tpvec>
+inline _Tpvec v_rotate_left(const _Tpvec &a, const _Tpvec &b)
+{
+    enum { CV_SHIFT1 = imm*(sizeof(typename _Tpvec::lane_type)) };
+    enum { CV_SHIFT2 = 16 - imm*(sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(_mm_or_si128(_mm_slli_si128(a.val, CV_SHIFT1), _mm_srli_si128(b.val, CV_SHIFT2)));
+}
+
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INT_OP(_Tpvec, _Tp) \
 inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(_mm_loadu_si128((const __m128i*)ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(_mm_load_si128((const __m128i*)ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(_mm_loadl_epi64((const __m128i*)ptr)); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { \
     return _Tpvec(_mm_unpacklo_epi64(_mm_loadl_epi64((const __m128i*)ptr0), \
@@ -1044,6 +1083,8 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(_mm_loadu_##suffix(ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(_mm_load_##suffix(ptr)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(_mm_castsi128_##suffix(_mm_loadl_epi64((const __m128i*)ptr))); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { \
     return _Tpvec(_mm_castsi128_##suffix( \

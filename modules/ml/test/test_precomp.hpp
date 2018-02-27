@@ -1,19 +1,12 @@
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include <iostream>
-#include <map>
 #include "opencv2/ts.hpp"
 #include "opencv2/ml.hpp"
 #include "opencv2/core/core_c.h"
+
+namespace opencv_test {
+using namespace cv::ml;
 
 #define CV_NBAYES   "nbayes"
 #define CV_KNEAREST "knearest"
@@ -93,5 +86,7 @@ protected:
     std::vector<float> test_resps1, test_resps2; // predicted responses for test data
     std::string fname1, fname2;
 };
+
+} // namespace
 
 #endif

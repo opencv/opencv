@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -114,7 +113,7 @@ bool CV_FeatureDetectorTest::isSimilarKeypoints( const KeyPoint& p1, const KeyPo
     const float maxAngleDif = 2.f;
     const float maxResponseDif = 0.1f;
 
-    float dist = (float)norm( p1.pt - p2.pt );
+    float dist = (float)cv::norm( p1.pt - p2.pt );
     return (dist < maxPtDif &&
             fabs(p1.size - p2.size) < maxSizeDif &&
             abs(p1.angle - p2.angle) < maxAngleDif &&
@@ -147,7 +146,7 @@ void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validK
         for( size_t c = 0; c < calcKeypoints.size(); c++ )
         {
             progress = update_progress( progress, (int)(v*calcKeypoints.size() + c), progressCount, 0 );
-            float curDist = (float)norm( calcKeypoints[c].pt - validKeypoints[v].pt );
+            float curDist = (float)cv::norm( calcKeypoints[c].pt - validKeypoints[v].pt );
             if( curDist < minDist )
             {
                 minDist = curDist;
@@ -308,23 +307,4 @@ TEST( Features2d_Detector_AKAZE_DESCRIPTOR_KAZE, regression )
     test.safe_run();
 }
 
-
-TEST( Features2d_Detector_AKAZE, detect_and_compute_split )
-{
-    Mat testImg(100, 100, CV_8U);
-    RNG rng(101);
-    rng.fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
-
-    Ptr<Feature2D> ext = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, 1, 1, KAZE::DIFF_PM_G2);
-    vector<KeyPoint> detAndCompKps;
-    Mat desc;
-    ext->detectAndCompute(testImg, noArray(), detAndCompKps, desc);
-
-    vector<KeyPoint> detKps;
-    ext->detect(testImg, detKps);
-
-    ASSERT_EQ(detKps.size(), detAndCompKps.size());
-
-    for(size_t i = 0; i < detKps.size(); i++)
-        ASSERT_EQ(detKps[i].hash(), detAndCompKps[i].hash());
-}
+}} // namespace

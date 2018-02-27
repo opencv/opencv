@@ -143,10 +143,11 @@ public:
         if (useFisheye) {
             // the fisheye model has its own enum, so overwrite the flags
             flag = fisheye::CALIB_FIX_SKEW | fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-            if(fixK1)                  flag |= fisheye::CALIB_FIX_K1;
-            if(fixK2)                  flag |= fisheye::CALIB_FIX_K2;
-            if(fixK3)                  flag |= fisheye::CALIB_FIX_K3;
-            if(fixK4)                  flag |= fisheye::CALIB_FIX_K4;
+            if(fixK1)                   flag |= fisheye::CALIB_FIX_K1;
+            if(fixK2)                   flag |= fisheye::CALIB_FIX_K2;
+            if(fixK3)                   flag |= fisheye::CALIB_FIX_K3;
+            if(fixK4)                   flag |= fisheye::CALIB_FIX_K4;
+            if (calibFixPrincipalPoint) flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
         }
 
         calibrationPattern = NOT_EXISTING;
@@ -242,11 +243,6 @@ static inline void read(const FileNode& node, Settings& x, const Settings& defau
         x = default_value;
     else
         x.read(node);
-}
-
-static inline void write(FileStorage& fs, const String&, const Settings& s )
-{
-    s.write(fs);
 }
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };

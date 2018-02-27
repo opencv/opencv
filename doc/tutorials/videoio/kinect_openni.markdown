@@ -98,7 +98,7 @@ get CAP_OPENNI_IMAGE_GENERATOR_PRESENT property.
 @code{.cpp}
 bool isImageGeneratorPresent = capture.get( CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
 @endcode
-Flags specifing the needed generator type must be used in combination with particular generator
+Flags specifying the needed generator type must be used in combination with particular generator
 property. The following properties of cameras available through OpenNI interfaces are supported:
 
 -   For image generator:
@@ -134,5 +134,5 @@ property. The following properties of cameras available through OpenNI interface
     -   CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_REGISTRATION
 
 For more information please refer to the example of usage
-[openni_capture.cpp](https://github.com/opencv/tree/master/samples/cpp/openni_capture.cpp) in
+[openni_capture.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/openni_capture.cpp) in
 opencv/samples/cpp folder.

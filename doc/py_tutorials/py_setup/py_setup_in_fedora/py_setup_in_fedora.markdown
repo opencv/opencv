@@ -29,8 +29,8 @@ $ yum install numpy opencv*
 @endcode
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 @code{.py}
->>> import cv2
->>> print( cv2.__version__ )
+>>> import cv2 as cv
+>>> print( cv.__version__ )
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -41,7 +41,7 @@ version of OpenCV always. For example, at the time of writing this tutorial, yum
 contain much better support. Also, there may be chance of problems with camera support, video
 playback etc depending upon the drivers, ffmpeg, gstreamer packages present etc.
 
-So my personnel preference is next method, i.e. compiling from source. Also at some point of time,
+So my personal preference is next method, i.e. compiling from source. Also at some point in time,
 if you want to contribute to OpenCV, you will need this.
 
 Installing OpenCV from source
@@ -230,7 +230,7 @@ But you will have to do this every time you install OpenCV.
     @code{.sh}
     export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
     @endcode
-Thus OpenCV installation is finished. Open a terminal and try import cv2.
+Thus OpenCV installation is finished. Open a terminal and try 'import cv2 as cv'.
 
 To build the documentation, just enter following commands:
 @code{.sh}

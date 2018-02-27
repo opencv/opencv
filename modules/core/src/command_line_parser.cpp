@@ -69,6 +69,20 @@ static const char* get_type_name(int type)
     return "unknown";
 }
 
+// std::tolower is int->int
+static char char_tolower(char ch)
+{
+    return (char)std::tolower((int)ch);
+}
+static bool parse_bool(std::string str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), char_tolower);
+    std::istringstream is(str);
+    bool b;
+    is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> b;
+    return b;
+}
+
 static void from_str(const String& str, int type, void* dst)
 {
     std::stringstream ss(str.c_str());
@@ -78,7 +92,7 @@ static void from_str(const String& str, int type, void* dst)
     {
         std::string temp;
         ss >> temp;
-        *(bool*) dst = temp == "true";
+        *(bool*) dst = parse_bool(temp);
     }
     else if( type == Param::UNSIGNED_INT )
         ss >> *(unsigned*)dst;
@@ -101,7 +115,7 @@ static void from_str(const String& str, int type, void* dst)
 
 void CommandLineParser::getByName(const String& name, bool space_delete, int type, void* dst) const
 {
-    try
+    CV_TRY
     {
         for (size_t i = 0; i < impl->data.size(); i++)
         {
@@ -113,7 +127,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
                     if (space_delete)
                         v = cat_string(v);
 
-                    // the key was neither specified nor has it a default value
+                    // the key was neither specified nor has a default value
                     if((v.empty() && type != Param::STRING) || v == noneValue) {
                         impl->error = true;
                         impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
@@ -126,20 +140,19 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
             }
         }
     }
-    catch (Exception& e)
+    CV_CATCH (Exception, e)
     {
         impl->error = true;
         impl->error_message = impl->error_message + "Parameter '"+ name + "': " + e.err + "\n";
         return;
     }
-
     CV_Error_(Error::StsBadArg, ("undeclared key '%s' requested", name.c_str()));
 }
 
 
 void CommandLineParser::getByIndex(int index, bool space_delete, int type, void* dst) const
 {
-    try
+    CV_TRY
     {
         for (size_t i = 0; i < impl->data.size(); i++)
         {
@@ -148,7 +161,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
                 String v = impl->data[i].def_value;
                 if (space_delete == true) v = cat_string(v);
 
-                // the key was neither specified nor has it a default value
+                // the key was neither specified nor has a default value
                 if((v.empty() && type != Param::STRING) || v == noneValue) {
                     impl->error = true;
                     impl->error_message = impl->error_message + format("Missing parameter #%d\n", index);
@@ -159,13 +172,12 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
             }
         }
     }
-    catch(Exception& e)
+    CV_CATCH(Exception, e)
     {
         impl->error = true;
         impl->error_message = impl->error_message + format("Parameter #%d: ", index) + e.err + "\n";
         return;
     }
-
     CV_Error_(Error::StsBadArg, ("undeclared position %d requested", index));
 }
 
@@ -440,14 +452,13 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
     std::vector<String> vec;
     String word = "";
     bool begin = false;
-
     while (!str.empty())
     {
         if (str[0] == fs)
         {
             if (begin == true)
             {
-                throw cv::Exception(CV_StsParseError,
+                CV_THROW (cv::Exception(CV_StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -456,7 +467,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
                          + String(1, ss)
                          + String(")"),
                          "", __FILE__, __LINE__
-                         );
+                         ));
             }
             begin = true;
             word = "";
@@ -467,7 +478,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == false)
             {
-                throw cv::Exception(CV_StsParseError,
+                CV_THROW (cv::Exception(CV_StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -476,7 +487,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
                          + String(1, ss)
                          + String(")"),
                          "", __FILE__, __LINE__
-                         );
+                         ));
             }
             begin = false;
             vec.push_back(word);
@@ -491,7 +502,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
 
     if (begin == true)
     {
-        throw cv::Exception(CV_StsParseError,
+        CV_THROW (cv::Exception(CV_StsParseError,
                  String("error in split_range_string(")
                  + str
                  + String(", ")
@@ -500,9 +511,8 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
                  + String(1, ss)
                  + String(")"),
                  "", __FILE__, __LINE__
-                );
+                ));
     }
-
     return vec;
 }
 

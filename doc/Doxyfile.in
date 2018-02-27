@@ -38,7 +38,7 @@ ALIASES               += add_toggle_python="@htmlonly[block] <div class='newInne
 ALIASES               += end_toggle="@htmlonly[block] </div> @endhtmlonly"
 ALIASES               += prev_tutorial{1}="**Prev  Tutorial:** \ref \1 \n"
 ALIASES               += next_tutorial{1}="**Next  Tutorial:** \ref \1 \n"
-ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='my title' width='560' height='349' src='http://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
+ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='Video' width='560' height='349' src='https://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
 TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
@@ -106,8 +106,8 @@ FILE_PATTERNS          =
 RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp *.m
-EXCLUDE_SYMBOLS        = cv::DataType<*> int void
+EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp *.m */opencl/runtime/*
+EXCLUDE_SYMBOLS        = cv::DataType<*> cv::traits::* int void CV__*
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = YES
@@ -174,7 +174,7 @@ FORMULA_FONTSIZE       = 14
 FORMULA_TRANSPARENT    = YES
 USE_MATHJAX            = YES
 MATHJAX_FORMAT         = HTML-CSS
-MATHJAX_RELPATH        = http://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0
+MATHJAX_RELPATH        = @OPENCV_MATHJAX_RELPATH@
 MATHJAX_EXTENSIONS     = TeX/AMSmath TeX/AMSsymbols
 MATHJAX_CODEFILE       = @CMAKE_CURRENT_SOURCE_DIR@/mymath.js
 SEARCHENGINE           = YES
@@ -255,7 +255,7 @@ PREDEFINED             = __cplusplus=1 \
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 TAGFILES               =
-GENERATE_TAGFILE       =
+GENERATE_TAGFILE       = @CMAKE_DOXYGEN_OUTPUT_PATH@/html/opencv.tag
 ALLEXTERNALS           = NO
 EXTERNAL_GROUPS        = YES
 EXTERNAL_PAGES         = YES

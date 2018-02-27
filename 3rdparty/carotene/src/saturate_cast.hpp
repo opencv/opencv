@@ -72,11 +72,11 @@ __declspec(naked) static void vcvtr_s32_f64_imp(f64 d)
 
 # if defined(__VFP_FP__) && !defined(__SOFTFP__) && !(defined _DEBUG || defined DEBUG) && !defined(__CUDACC__)
 #  define CAROTENE_ROUND_FLT(value) {                              \
-    register union { f32 f; s32 i; } result;                    \
+    union { f32 f; s32 i; } result; \
     asm ("ftosis  %0, %1 \n" : "=w" (result.f) : "w" (value) ); \
     return result.i; }
 #  define CAROTENE_ROUND_DBL(value) {                      \
-    register union {f32 f; s32 i;} __tegra_result;      \
+    union {f32 f; s32 i;} __tegra_result; \
     asm (                                               \
         "ftosid  %0, %P1\n"                             \
         : "=w" (__tegra_result.f)                       \

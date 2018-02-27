@@ -8,8 +8,7 @@ if(BUILD_ZLIB)
 else()
   find_package(ZLIB "${MIN_VER_ZLIB}")
   if(ZLIB_FOUND AND ANDROID)
-    if(ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib/libz.so" OR
-        ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib64/libz.so")
+    if(ZLIB_LIBRARIES MATCHES "/usr/(lib|lib32|lib64)/libz.so$")
       set(ZLIB_LIBRARIES z)
     endif()
   endif()
@@ -26,7 +25,28 @@ if(NOT ZLIB_FOUND)
   ocv_parse_header2(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
 endif()
 
-# --- libtiff (optional, should be searched after zlib) ---
+# --- libjpeg (optional) ---
+if(WITH_JPEG)
+  if(BUILD_JPEG)
+    ocv_clear_vars(JPEG_FOUND)
+  else()
+    include(FindJPEG)
+  endif()
+
+  if(NOT JPEG_FOUND)
+    ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
+
+    set(JPEG_LIBRARY libjpeg)
+    set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg")
+    set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}")
+  endif()
+
+  ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
+  set(HAVE_JPEG YES)
+endif()
+
+# --- libtiff (optional, should be searched after zlib and libjpeg) ---
 if(WITH_TIFF)
   if(BUILD_TIFF)
     ocv_clear_vars(TIFF_FOUND)
@@ -68,27 +88,6 @@ if(WITH_TIFF)
   set(HAVE_TIFF YES)
 endif()
 
-# --- libjpeg (optional) ---
-if(WITH_JPEG)
-  if(BUILD_JPEG)
-    ocv_clear_vars(JPEG_FOUND)
-  else()
-    include(FindJPEG)
-  endif()
-
-  if(NOT JPEG_FOUND)
-    ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
-
-    set(JPEG_LIBRARY libjpeg)
-    set(JPEG_LIBRARIES ${JPEG_LIBRARY})
-    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg")
-    set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}")
-  endif()
-
-  ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
-  set(HAVE_JPEG YES)
-endif()
-
 # --- libwebp (optional) ---
 
 if(WITH_WEBP)
@@ -111,7 +110,7 @@ if(WITH_WEBP AND NOT WEBP_FOUND
   set(WEBP_LIBRARIES ${WEBP_LIBRARY})
 
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libwebp")
-  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}")
+  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}/src")
   set(HAVE_WEBP 1)
 endif()
 
@@ -211,8 +210,8 @@ if(WITH_GDAL)
     find_package(GDAL QUIET)
 
     if(NOT GDAL_FOUND)
-        ocv_clear_vars(GDAL_LIBRARY GDAL_INCLUDE_DIR)
         set(HAVE_GDAL NO)
+        ocv_clear_vars(GDAL_VERSION GDAL_LIBRARIES)
     else()
         set(HAVE_GDAL YES)
         ocv_include_directories(${GDAL_INCLUDE_DIR})

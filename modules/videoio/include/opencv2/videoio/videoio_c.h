@@ -185,7 +185,7 @@ enum
     CV_CAP_PROP_MONOCHROME    =19,
     CV_CAP_PROP_SHARPNESS     =20,
     CV_CAP_PROP_AUTO_EXPOSURE =21, // exposure control done by camera,
-                                   // user can adjust refernce level
+                                   // user can adjust reference level
                                    // using this feature
     CV_CAP_PROP_GAMMA         =22,
     CV_CAP_PROP_TEMPERATURE   =23,
@@ -328,7 +328,7 @@ enum
     CV_CAP_PROP_XI_COLOR_FILTER_ARRAY                           = 475, // Returns color filter array type of RAW data.
     CV_CAP_PROP_XI_GAMMAY                                       = 476, // Luminosity gamma
     CV_CAP_PROP_XI_GAMMAC                                       = 477, // Chromaticity gamma
-    CV_CAP_PROP_XI_SHARPNESS                                    = 478, // Sharpness Strenght
+    CV_CAP_PROP_XI_SHARPNESS                                    = 478, // Sharpness Strength
     CV_CAP_PROP_XI_CC_MATRIX_00                                 = 479, // Color Correction Matrix element [0][0]
     CV_CAP_PROP_XI_CC_MATRIX_01                                 = 480, // Color Correction Matrix element [0][1]
     CV_CAP_PROP_XI_CC_MATRIX_02                                 = 481, // Color Correction Matrix element [0][2]

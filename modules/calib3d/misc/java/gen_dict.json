@@ -1,6 +1,7 @@
 {
     "class_ignore_list": [
-        "CirclesGridFinderParameters"
+        "CirclesGridFinderParameters",
+        "CirclesGridFinderParameters2"
     ],
     "missing_consts" : {
         "Calib3d": {

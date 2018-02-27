@@ -41,8 +41,9 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+//#define GENERATE_TESTDATA
+
+namespace opencv_test { namespace {
 
 int str_to_svm_type(String& str)
 {
@@ -79,11 +80,31 @@ int str_to_ann_train_method( String& str )
 {
     if( !str.compare("BACKPROP") )
         return ANN_MLP::BACKPROP;
-    if( !str.compare("RPROP") )
+    if (!str.compare("RPROP"))
         return ANN_MLP::RPROP;
+    if (!str.compare("ANNEAL"))
+        return ANN_MLP::ANNEAL;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
     return -1;
 }
+
+#if 0
+int str_to_ann_activation_function(String& str)
+{
+    if (!str.compare("IDENTITY"))
+        return ANN_MLP::IDENTITY;
+    if (!str.compare("SIGMOID_SYM"))
+        return ANN_MLP::SIGMOID_SYM;
+    if (!str.compare("GAUSSIAN"))
+        return ANN_MLP::GAUSSIAN;
+    if (!str.compare("RELU"))
+        return ANN_MLP::RELU;
+    if (!str.compare("LEAKYRELU"))
+        return ANN_MLP::LEAKYRELU;
+    CV_Error(CV_StsBadArg, "incorrect ann activation function string");
+    return -1;
+}
+#endif
 
 void ann_check_data( Ptr<TrainData> _data )
 {
@@ -177,6 +198,169 @@ float ann_calc_error( Ptr<StatModel> ann, Ptr<TrainData> _data, map<int, int>& c
     return err;
 }
 
+TEST(ML_ANN, ActivationFunction)
+{
+    String folder = string(cvtest::TS::ptr()->get_data_path());
+    String original_path = folder + "waveform.data";
+    String dataname = folder + "waveform";
+
+    Ptr<TrainData> tdata = TrainData::loadFromCSV(original_path, 0);
+
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 1027401484159173092;
+    tdata->setTrainTestSplit(500);
+
+    vector<int> activationType;
+    activationType.push_back(ml::ANN_MLP::IDENTITY);
+    activationType.push_back(ml::ANN_MLP::SIGMOID_SYM);
+    activationType.push_back(ml::ANN_MLP::GAUSSIAN);
+    activationType.push_back(ml::ANN_MLP::RELU);
+    activationType.push_back(ml::ANN_MLP::LEAKYRELU);
+    vector<String> activationName;
+    activationName.push_back("_identity");
+    activationName.push_back("_sigmoid_sym");
+    activationName.push_back("_gaussian");
+    activationName.push_back("_relu");
+    activationName.push_back("_leakyrelu");
+    for (size_t i = 0; i < activationType.size(); i++)
+    {
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
+        Mat_<int> layerSizes(1, 4);
+        layerSizes(0, 0) = tdata->getNVars();
+        layerSizes(0, 1) = 100;
+        layerSizes(0, 2) = 100;
+        layerSizes(0, 3) = tdata->getResponses().cols;
+        x->setLayerSizes(layerSizes);
+        x->setActivationFunction(activationType[i]);
+        x->setTrainMethod(ml::ANN_MLP::RPROP, 0.01, 0.1);
+        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 300, 0.01));
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << activationName[i];
+#ifdef GENERATE_TESTDATA
+        x->save(dataname + activationName[i] + ".yml");
+#else
+        Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(dataname + activationName[i] + ".yml");
+        ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + activationName[i] + ".yml";
+        Mat testSamples = tdata->getTestSamples();
+        Mat rx, ry, dst;
+        x->predict(testSamples, rx);
+        y->predict(testSamples, ry);
+        double n = cvtest::norm(rx, ry, NORM_INF);
+        EXPECT_LT(n,FLT_EPSILON) << "Predict are not equal for " << dataname + activationName[i] + ".yml and " << activationName[i];
+#endif
+    }
+}
+
+CV_ENUM(ANN_MLP_METHOD, ANN_MLP::RPROP, ANN_MLP::ANNEAL)
+
+typedef tuple<ANN_MLP_METHOD, string, int> ML_ANN_METHOD_Params;
+typedef TestWithParam<ML_ANN_METHOD_Params> ML_ANN_METHOD;
+
+TEST_P(ML_ANN_METHOD, Test)
+{
+    int methodType = get<0>(GetParam());
+    string methodName = get<1>(GetParam());
+    int N = get<2>(GetParam());
+
+    String folder = string(cvtest::TS::ptr()->get_data_path());
+    String original_path = folder + "waveform.data";
+    String dataname = folder + "waveform" + '_' + methodName;
+
+    Ptr<TrainData> tdata2 = TrainData::loadFromCSV(original_path, 0);
+    Mat samples = tdata2->getSamples()(Range(0, N), Range::all());
+    Mat responses(N, 3, CV_32FC1, Scalar(0));
+    for (int i = 0; i < N; i++)
+        responses.at<float>(i, static_cast<int>(tdata2->getResponses().at<float>(i, 0))) = 1;
+    Ptr<TrainData> tdata = TrainData::create(samples, ml::ROW_SAMPLE, responses);
+
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << original_path;
+    RNG& rng = theRNG();
+    rng.state = 0;
+    tdata->setTrainTestSplitRatio(0.8);
+
+    Mat testSamples = tdata->getTestSamples();
+
+#ifdef GENERATE_TESTDATA
+    {
+    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP_ANNEAL::create();
+    Mat_<int> layerSizesXX(1, 4);
+    layerSizesXX(0, 0) = tdata->getNVars();
+    layerSizesXX(0, 1) = 30;
+    layerSizesXX(0, 2) = 30;
+    layerSizesXX(0, 3) = tdata->getResponses().cols;
+    xx->setLayerSizes(layerSizesXX);
+    xx->setActivationFunction(ml::ANN_MLP::SIGMOID_SYM);
+    xx->setTrainMethod(ml::ANN_MLP::RPROP);
+    xx->setTermCriteria(TermCriteria(TermCriteria::COUNT, 1, 0.01));
+    xx->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE + ml::ANN_MLP::NO_INPUT_SCALE);
+    FileStorage fs;
+    fs.open(dataname + "_init_weight.yml.gz", FileStorage::WRITE + FileStorage::BASE64);
+    xx->write(fs);
+    fs.release();
+    }
+#endif
+    {
+        FileStorage fs;
+        fs.open(dataname + "_init_weight.yml.gz", FileStorage::READ);
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP_ANNEAL::create();
+        x->read(fs.root());
+        x->setTrainMethod(methodType);
+        if (methodType == ml::ANN_MLP::ANNEAL)
+        {
+            x->setAnnealEnergyRNG(RNG(CV_BIG_INT(0xffffffff)));
+            x->setAnnealInitialT(12);
+            x->setAnnealFinalT(0.15);
+            x->setAnnealCoolingRatio(0.96);
+            x->setAnnealItePerStep(11);
+        }
+        x->setTermCriteria(TermCriteria(TermCriteria::COUNT, 100, 0.01));
+        x->train(tdata, ml::ANN_MLP::NO_OUTPUT_SCALE + ml::ANN_MLP::NO_INPUT_SCALE + ml::ANN_MLP::UPDATE_WEIGHTS);
+        ASSERT_TRUE(x->isTrained()) << "Could not train networks with  " << methodName;
+        string filename = dataname + ".yml.gz";
+        Mat r_gold;
+#ifdef  GENERATE_TESTDATA
+        x->save(filename);
+        x->predict(testSamples, r_gold);
+        {
+            FileStorage fs_response(dataname + "_response.yml.gz", FileStorage::WRITE + FileStorage::BASE64);
+            fs_response << "response" << r_gold;
+        }
+#else
+        {
+            FileStorage fs_response(dataname + "_response.yml.gz", FileStorage::READ);
+            fs_response["response"] >> r_gold;
+        }
+#endif
+        ASSERT_FALSE(r_gold.empty());
+        Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(filename);
+        ASSERT_TRUE(y != NULL) << "Could not load   " << filename;
+        Mat rx, ry;
+        for (int j = 0; j < 4; j++)
+        {
+            rx = x->getWeights(j);
+            ry = y->getWeights(j);
+            double n = cvtest::norm(rx, ry, NORM_INF);
+            EXPECT_LT(n, FLT_EPSILON) << "Weights are not equal for layer: " << j;
+        }
+        x->predict(testSamples, rx);
+        y->predict(testSamples, ry);
+        double n = cvtest::norm(ry, rx, NORM_INF);
+        EXPECT_LT(n, FLT_EPSILON) << "Predict are not equal to result of the saved model";
+        n = cvtest::norm(r_gold, rx, NORM_INF);
+        EXPECT_LT(n, FLT_EPSILON) << "Predict are not equal to 'gold' response";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*none*/, ML_ANN_METHOD,
+    testing::Values(
+        make_tuple<ANN_MLP_METHOD, string, int>(ml::ANN_MLP::RPROP, "rprop", 5000),
+        make_tuple<ANN_MLP_METHOD, string, int>(ml::ANN_MLP::ANNEAL, "anneal", 1000)
+        //make_pair<ANN_MLP_METHOD, string>(ml::ANN_MLP::BACKPROP, "backprop", 5000); -----> NO BACKPROP TEST
+    )
+);
+
+
 // 6. dtree
 // 7. boost
 int str_to_boost_type( String& str )
@@ -214,6 +398,8 @@ int str_to_margin_type( String& str )
         return SVMSGD::HARD_MARGIN;
     CV_Error( CV_StsBadArg, "incorrect svmsgd margin type string" );
     return -1;
+}
+
 }
 // ---------------------------------- MLBaseTest ---------------------------------------------------
 
@@ -542,4 +728,5 @@ void CV_MLBaseTest::load( const char* filename )
         CV_Error( CV_StsNotImplemented, "invalid stat model name");
 }
 
+} // namespace
 /* End of file. */

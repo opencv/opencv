@@ -60,7 +60,7 @@ static void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
     *classId = classNumber.x;
 }
 
-static std::vector<String> readClassNames(const char *filename = "synset_words.txt")
+static std::vector<String> readClassNames(const char *filename )
 {
     std::vector<String> classNames;
 
@@ -83,29 +83,57 @@ static std::vector<String> readClassNames(const char *filename = "synset_words.t
     return classNames;
 }
 
+const char* params
+    = "{ help           | false | Sample app for loading googlenet model }"
+      "{ proto          | bvlc_googlenet.prototxt | model configuration }"
+      "{ model          | bvlc_googlenet.caffemodel | model weights }"
+      "{ label          | synset_words.txt | names of ILSVRC2012 classes }"
+      "{ image          | space_shuttle.jpg | path to image file }"
+      "{ opencl         | false | enable OpenCL }"
+;
+
 int main(int argc, char **argv)
 {
     CV_TRACE_FUNCTION();
 
-    String modelTxt = "bvlc_googlenet.prototxt";
-    String modelBin = "bvlc_googlenet.caffemodel";
-    String imageFile = (argc > 1) ? argv[1] : "space_shuttle.jpg";
+    CommandLineParser parser(argc, argv, params);
 
-    //! [Read and initialize network]
-    Net net = dnn::readNetFromCaffe(modelTxt, modelBin);
-    //! [Read and initialize network]
-
-    //! [Check that network was read successfully]
-    if (net.empty())
+    if (parser.get<bool>("help"))
     {
-        std::cerr << "Can't load network by using the following files: " << std::endl;
-        std::cerr << "prototxt:   " << modelTxt << std::endl;
-        std::cerr << "caffemodel: " << modelBin << std::endl;
-        std::cerr << "bvlc_googlenet.caffemodel can be downloaded here:" << std::endl;
-        std::cerr << "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
-        exit(-1);
+        parser.printMessage();
+        return 0;
     }
-    //! [Check that network was read successfully]
+
+    String modelTxt = parser.get<string>("proto");
+    String modelBin = parser.get<string>("model");
+    String imageFile = parser.get<String>("image");
+    String classNameFile = parser.get<String>("label");
+
+    Net net;
+    try {
+        //! [Read and initialize network]
+        net = dnn::readNetFromCaffe(modelTxt, modelBin);
+        //! [Read and initialize network]
+    }
+    catch (const cv::Exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        //! [Check that network was read successfully]
+        if (net.empty())
+        {
+            std::cerr << "Can't load network by using the following files: " << std::endl;
+            std::cerr << "prototxt:   " << modelTxt << std::endl;
+            std::cerr << "caffemodel: " << modelBin << std::endl;
+            std::cerr << "bvlc_googlenet.caffemodel can be downloaded here:" << std::endl;
+            std::cerr << "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
+            exit(-1);
+        }
+        //! [Check that network was read successfully]
+    }
+
+    if (parser.get<bool>("opencl"))
+    {
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
+    }
 
     //! [Prepare blob]
     Mat img = imread(imageFile);
@@ -115,12 +143,13 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    //GoogLeNet accepts only 224x224 RGB-images
-    Mat inputBlob = blobFromImage(img, 1, Size(224, 224),
-                                  Scalar(104, 117, 123));   //Convert Mat to batch of images
+    //GoogLeNet accepts only 224x224 BGR-images
+    Mat inputBlob = blobFromImage(img, 1.0f, Size(224, 224),
+                                  Scalar(104, 117, 123), false);   //Convert Mat to batch of images
     //! [Prepare blob]
+    net.setInput(inputBlob, "data");        //set the network input
+    Mat prob = net.forward("prob");         //compute output
 
-    Mat prob;
     cv::TickMeter t;
     for (int i = 0; i < 10; i++)
     {
@@ -142,7 +171,7 @@ int main(int argc, char **argv)
     //! [Gather output]
 
     //! [Print results]
-    std::vector<String> classNames = readClassNames();
+    std::vector<String> classNames = readClassNames(classNameFile.c_str());
     std::cout << "Best class: #" << classId << " '" << classNames.at(classId) << "'" << std::endl;
     std::cout << "Probability: " << classProb * 100 << "%" << std::endl;
     //! [Print results]

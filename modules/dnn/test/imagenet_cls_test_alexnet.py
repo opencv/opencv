@@ -9,12 +9,12 @@ try:
     import caffe
 except ImportError:
     raise ImportError('Can\'t find Caffe Python module. If you\'ve built it from sources without installation, '
-                      'configure environemnt variable PYTHONPATH to "git/caffe/python" directory')
+                      'configure environment variable PYTHONPATH to "git/caffe/python" directory')
 try:
     import cv2 as cv
 except ImportError:
     raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
-                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+                      'configure environment variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 
 class DataFetch(object):

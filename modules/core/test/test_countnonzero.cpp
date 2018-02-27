@@ -41,10 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <time.h>
-#include <limits>
-using namespace cv;
-using namespace std;
+
+namespace opencv_test { namespace {
 
 #define CORE_COUNTNONZERO_ERROR_COUNT 1
 
@@ -252,12 +250,12 @@ void CV_CountNonZeroTest::run(int)
 TEST (Core_CountNonZero, accuracy) { CV_CountNonZeroTest test; test.safe_run(); }
 
 
-typedef testing::TestWithParam<std::tr1::tuple<int, int> > CountNonZeroND;
+typedef testing::TestWithParam<tuple<int, int> > CountNonZeroND;
 
 TEST_P (CountNonZeroND, ndim)
 {
-    const int dims = std::tr1::get<0>(GetParam());
-    const int type = std::tr1::get<1>(GetParam());
+    const int dims = get<0>(GetParam());
+    const int type = get<1>(GetParam());
     const int ONE_SIZE = 5;
 
     vector<int> sizes(dims);
@@ -277,3 +275,5 @@ INSTANTIATE_TEST_CASE_P(Core, CountNonZeroND,
         testing::Values(CV_8U, CV_8S, CV_32F)
     )
 );
+
+}} // namespace

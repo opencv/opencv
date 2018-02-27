@@ -47,7 +47,7 @@
 using namespace std;
 using namespace cv;
 using namespace cv::cuda;
-using namespace cvtest;
+using namespace opencv_test;
 using namespace testing;
 
 int main(int argc, char** argv)

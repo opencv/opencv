@@ -1,8 +1,8 @@
 /**
  * @file Drawing_1.cpp
- * @brief Simple sample code
+ * @brief Simple geometric drawing
+ * @author OpenCV team
  */
-
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -83,11 +83,11 @@ int main( void ){
 
 /// Function Declaration
 
-//![myellipse]
 /**
  * @function MyEllipse
  * @brief Draw a fixed-size ellipse with different angles
  */
+//![my_ellipse]
 void MyEllipse( Mat img, double angle )
 {
   int thickness = 2;
@@ -103,13 +103,13 @@ void MyEllipse( Mat img, double angle )
        thickness,
        lineType );
 }
-//![myellipse]
+//![my_ellipse]
 
-//![myfilledcircle]
 /**
  * @function MyFilledCircle
  * @brief Draw a fixed-size filled circle
  */
+//![my_filled_circle]
 void MyFilledCircle( Mat img, Point center )
 {
   circle( img,
@@ -119,13 +119,13 @@ void MyFilledCircle( Mat img, Point center )
       FILLED,
       LINE_8 );
 }
-//![myfilledcircle]
+//![my_filled_circle]
 
-//![mypolygon]
 /**
  * @function MyPolygon
  * @brief Draw a simple concave polygon (rook)
  */
+//![my_polygon]
 void MyPolygon( Mat img )
 {
   int lineType = LINE_8;
@@ -163,17 +163,18 @@ void MyPolygon( Mat img )
         Scalar( 255, 255, 255 ),
         lineType );
 }
-//![mypolygon]
+//![my_polygon]
 
-//![myline]
 /**
  * @function MyLine
  * @brief Draw a simple line
  */
+//![my_line]
 void MyLine( Mat img, Point start, Point end )
 {
   int thickness = 2;
   int lineType = LINE_8;
+
   line( img,
     start,
     end,
@@ -181,4 +182,4 @@ void MyLine( Mat img, Point start, Point end )
     thickness,
     lineType );
 }
-//![myline]
+//![my_line]

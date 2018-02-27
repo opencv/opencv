@@ -521,7 +521,7 @@ int main( int argc, char *argv[] )
     int method = 0;
 
     cv::CommandLineParser parser(argc, argv, "{data|../data/letter-recognition.data|}{save||}{load||}{boost||}"
-            "{mlp||}{knn knearest||}{nbayes||}{svm||}{help h||}");
+            "{mlp||}{knn knearest||}{nbayes||}{svm||}");
     data_filename = parser.get<string>("data");
     if (parser.has("save"))
         filename_to_save = parser.get<string>("save");
@@ -537,11 +537,9 @@ int main( int argc, char *argv[] )
         method = 4;
     else if (parser.has("svm"))
         method = 5;
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
+
+    help();
+
     if( (method == 0 ?
         build_rtrees_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 1 ?
@@ -555,8 +553,6 @@ int main( int argc, char *argv[] )
         method == 5 ?
         build_svm_classifier( data_filename, filename_to_save, filename_to_load ):
         -1) < 0)
-    {
-        help();
-    }
+
     return 0;
 }

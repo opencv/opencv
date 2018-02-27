@@ -61,7 +61,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-#if defined WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     #if !defined _WIN32_WINNT
         #ifdef HAVE_MSMF
             #define _WIN32_WINNT 0x0600 // Windows Vista
@@ -126,6 +126,7 @@ CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
 CvCapture* cvCreateFileCapture_OpenNI2( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
+CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
 CvCapture* cvCreateCameraCapture_Aravis( int index );
 

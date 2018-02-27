@@ -5,15 +5,11 @@
 #include "test_precomp.hpp"
 #include "test_invariance_utils.hpp"
 
-using namespace std;
-using namespace cv;
-using std::tr1::make_tuple;
-using std::tr1::get;
-using namespace testing;
+namespace opencv_test { namespace {
 
-#define SHOW_DEBUG_LOG 0
+#define SHOW_DEBUG_LOG 1
 
-typedef std::tr1::tuple<std::string, Ptr<FeatureDetector>, Ptr<DescriptorExtractor>, float>
+typedef tuple<std::string, Ptr<FeatureDetector>, Ptr<DescriptorExtractor>, float>
     String_FeatureDetector_DescriptorExtractor_Float_t;
 const static std::string IMAGE_TSUKUBA = "features2d/tsukuba.png";
 const static std::string IMAGE_BIKES = "detectors_descriptors_evaluation/images_datasets/bikes/img1.png";
@@ -72,7 +68,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
     vector<KeyPoint> keypoints0;
     Mat descriptors0;
     featureDetector->detect(image0, keypoints0, mask0);
-    std::cout << "Intial keypoints: " << keypoints0.size() << std::endl;
+    std::cout << "Keypoints: " << keypoints0.size() << std::endl;
     EXPECT_GE(keypoints0.size(), 15u);
     descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
@@ -109,7 +105,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
 #if SHOW_DEBUG_LOG
         std::cout
             << "angle = " << angle
-            << ", keypoints = " << keypoints1.size()
+            << ", inliers = " << descInliersCount
             << ", descInliersRatio = " << static_cast<float>(descInliersCount) / keypoints0.size()
             << std::endl;
 #endif
@@ -121,6 +117,7 @@ TEST_P(DescriptorScaleInvariance, scale)
 {
     vector<KeyPoint> keypoints0;
     featureDetector->detect(image0, keypoints0);
+    std::cout << "Keypoints: " << keypoints0.size() << std::endl;
     EXPECT_GE(keypoints0.size(), 15u);
     Mat descriptors0;
     descriptorExtractor->compute(image0, keypoints0, descriptors0);
@@ -131,7 +128,7 @@ TEST_P(DescriptorScaleInvariance, scale)
         float scale = 1.f + scaleIdx * 0.5f;
 
         Mat image1;
-        resize(image0, image1, Size(), 1./scale, 1./scale);
+        resize(image0, image1, Size(), 1./scale, 1./scale, INTER_LINEAR_EXACT);
 
         vector<KeyPoint> keypoints1;
         scaleKeyPoints(keypoints0, keypoints1, 1.0f/scale);
@@ -159,6 +156,7 @@ TEST_P(DescriptorScaleInvariance, scale)
 #if SHOW_DEBUG_LOG
         std::cout
             << "scale = " << scale
+            << ", inliers = " << descInliersCount
             << ", descInliersRatio = " << static_cast<float>(descInliersCount) / keypoints0.size()
             << std::endl;
 #endif
@@ -179,7 +177,7 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorRotationInvariance,
                         Value(IMAGE_TSUKUBA, AKAZE::create(), AKAZE::create(), 0.99f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.002f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.99f));
 
 /*
  * Descriptor's scale invariance check
@@ -189,4 +187,6 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorScaleInvariance,
                         Value(IMAGE_BIKES, AKAZE::create(), AKAZE::create(), 0.6f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorScaleInvariance,
-                        Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.0004f));
+                        Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.55f));
+
+}} // namespace

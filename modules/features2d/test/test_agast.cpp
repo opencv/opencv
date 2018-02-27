@@ -42,8 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_AgastTest : public cvtest::BaseTest
 {
@@ -135,3 +134,5 @@ void CV_AgastTest::run( int )
 }
 
 TEST(Features2d_AGAST, regression) { CV_AgastTest test; test.safe_run(); }
+
+}} // namespace

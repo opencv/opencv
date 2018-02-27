@@ -7,7 +7,7 @@ Goal
 In this chapter, we will learn about
 
 -   Concept of Canny edge detection
--   OpenCV functions for that : **cv2.Canny()**
+-   OpenCV functions for that : **cv.Canny()**
 
 Theory
 ------
@@ -72,19 +72,19 @@ So what we finally get is strong edges in the image.
 Canny Edge Detection in OpenCV
 ------------------------------
 
-OpenCV puts all the above in single function, **cv2.Canny()**. We will see how to use it. First
+OpenCV puts all the above in single function, **cv.Canny()**. We will see how to use it. First
 argument is our input image. Second and third arguments are our minVal and maxVal respectively.
 Third argument is aperture_size. It is the size of Sobel kernel used for find image gradients. By
 default it is 3. Last argument is L2gradient which specifies the equation for finding gradient
 magnitude. If it is True, it uses the equation mentioned above which is more accurate, otherwise it
 uses this function: \f$Edge\_Gradient \; (G) = |G_x| + |G_y|\f$. By default, it is False.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('messi5.jpg',0)
-edges = cv2.Canny(img,100,200)
+img = cv.imread('messi5.jpg',0)
+edges = cv.Canny(img,100,200)
 
 plt.subplot(121),plt.imshow(img,cmap = 'gray')
 plt.title('Original Image'), plt.xticks([]), plt.yticks([])
@@ -101,7 +101,7 @@ Additional Resources
 --------------------
 
 -#  Canny edge detector at [Wikipedia](http://en.wikipedia.org/wiki/Canny_edge_detector)
--#  [Canny Edge Detection Tutorial](http://dasl.mem.drexel.edu/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html) by
+-#  [Canny Edge Detection Tutorial](http://dasl.unlv.edu/daslDrexel/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html) by
     Bill Green, 2002.
 
 Exercises

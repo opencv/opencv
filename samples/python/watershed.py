@@ -26,12 +26,12 @@ Keys
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 from common import Sketcher
 
 class App:
     def __init__(self, fn):
-        self.img = cv2.imread(fn)
+        self.img = cv.imread(fn)
         if self.img is None:
             raise Exception('Failed to load image file: %s' % fn)
 
@@ -49,14 +49,14 @@ class App:
 
     def watershed(self):
         m = self.markers.copy()
-        cv2.watershed(self.img, m)
+        cv.watershed(self.img, m)
         overlay = self.colors[np.maximum(m, 0)]
-        vis = cv2.addWeighted(self.img, 0.5, overlay, 0.5, 0.0, dtype=cv2.CV_8UC3)
-        cv2.imshow('watershed', vis)
+        vis = cv.addWeighted(self.img, 0.5, overlay, 0.5, 0.0, dtype=cv.CV_8UC3)
+        cv.imshow('watershed', vis)
 
     def run(self):
-        while cv2.getWindowProperty('img', 0) != -1 or cv2.getWindowProperty('watershed', 0) != -1:
-            ch = cv2.waitKey(50)
+        while cv.getWindowProperty('img', 0) != -1 or cv.getWindowProperty('watershed', 0) != -1:
+            ch = cv.waitKey(50)
             if ch == 27:
                 break
             if ch >= ord('1') and ch <= ord('7'):
@@ -72,7 +72,7 @@ class App:
                 self.markers[:] = 0
                 self.markers_vis[:] = self.img
                 self.sketch.show()
-        cv2.destroyAllWindows()
+        cv.destroyAllWindows()
 
 
 if __name__ == '__main__':

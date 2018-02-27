@@ -47,7 +47,11 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
-#include <nvcuvid.h>
+#if CUDA_VERSION >= 9000
+    #include <dynlink_nvcuvid.h>
+#else
+    #include <nvcuvid.h>
+#endif
 
 namespace cv { namespace cudacodec { namespace detail
 {
@@ -64,7 +68,7 @@ public:
 
     // Spins until frame becomes available or decoding gets canceled.
     // If the requested frame is available the method returns true.
-    // If decoding was interupted before the requested frame becomes
+    // If decoding was interrupted before the requested frame becomes
     // available, the method returns false.
     bool waitUntilFrameAvailable(int pictureIndex);
 

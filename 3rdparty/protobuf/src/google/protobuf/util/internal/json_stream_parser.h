@@ -154,6 +154,9 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
   // component.
   util::Status ParseNumberHelper(NumberResult* result);
 
+  // Parse a number as double into a NumberResult.
+  util::Status ParseDoubleHelper(const string& number, NumberResult* result);
+
   // Handles a { during parsing of a value.
   util::Status HandleBeginObject();
 
@@ -254,6 +257,9 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
   // Whether allows empty string represented null array value or object entry
   // value.
   bool allow_empty_null_;
+
+  // Whether allows out-of-range floating point numbers or reject them.
+  bool loose_float_number_conversion_;
 
   GOOGLE_DISALLOW_IMPLICIT_CONSTRUCTORS(JsonStreamParser);
 };

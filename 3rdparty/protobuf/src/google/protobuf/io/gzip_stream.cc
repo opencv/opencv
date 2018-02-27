@@ -168,7 +168,7 @@ void GzipInputStream::BackUp(int count) {
 }
 bool GzipInputStream::Skip(int count) {
   const void* data;
-  int size;
+  int size = 0;
   bool ok = Next(&data, &size);
   while (ok && (size < count)) {
     count -= size;

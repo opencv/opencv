@@ -48,7 +48,7 @@
 #include <GigEVisionSDK.h>
 #include <GigEVisionSDK.cpp>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <io.h>
 #else
 #include <stdio.h>
@@ -150,7 +150,7 @@ wrprGetGigEVisionAPI()
   \brief Wrapper to GigEVisionAPI function
   \param api
   \param eventHandler
-  \return true - succsess, else - false
+  \return true - success, else - false
   See \a wrprInitGigEVisionAPI, \a gige::IGigEVisionAPI
 
 */

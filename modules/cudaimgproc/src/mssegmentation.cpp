@@ -330,7 +330,7 @@ void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, 
     std::vector<SegmLink> edges;
     edges.reserve(g.numv);
 
-    // Prepare edges connecting differnet components
+    // Prepare edges connecting different components
     for (int v = 0; v < g.numv; ++v)
     {
         int c1 = comps.find(v);
@@ -342,7 +342,7 @@ void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, 
         }
     }
 
-    // Sort all graph's edges connecting differnet components (in asceding order)
+    // Sort all graph's edges connecting different components (in asceding order)
     std::sort(edges.begin(), edges.end());
 
     // Exclude small components (starting from the nearest couple)

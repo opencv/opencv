@@ -56,7 +56,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 enum
@@ -461,6 +461,14 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
                             Bool(),
                             Values(1, 16)));
 
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpLinearExact, Resize, Combine(
+                            Values(CV_8UC1, CV_8UC4, CV_16UC2),
+                            Values(0.5, 1.5, 2.0, 0.2),
+                            Values(0.5, 1.5, 2.0, 0.2),
+                            Values((Interpolation)INTER_LINEAR_EXACT),
+                            Bool(),
+                            Values(1, 16)));
+
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
                             Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(0.7, 0.4, 0.5),
@@ -496,6 +504,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                                    (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

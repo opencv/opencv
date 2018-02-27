@@ -189,7 +189,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
         float h = 3, float hColor = 3,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
-/** @brief Modification of fastNlMeansDenoising function for images sequence where consequtive images have been
+/** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>
@@ -216,7 +216,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputA
         int imgToDenoiseIndex, int temporalWindowSize,
         float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
 
-/** @brief Modification of fastNlMeansDenoising function for images sequence where consequtive images have been
+/** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>
@@ -730,6 +730,9 @@ CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray co
 //! @addtogroup photo_clone
 //! @{
 
+/** @example cloning_demo.cpp
+An example using seamlessClone function
+*/
 /** @brief Image editing tasks concern either global changes (color/intensity corrections, filters,
 deformations) or local changes concerned to a selection. Here we are interested in achieving local
 changes, ones that are restricted to a region manually selected (ROI), in a seamless and effortless
@@ -833,6 +836,9 @@ CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flag
 CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
         float sigma_r = 0.15f);
 
+/** @example npr_demo.cpp
+An example using non-photorealistic line drawing functions
+*/
 /** @brief Pencil-like non-photorealistic line drawing
 
 @param src Input 8-bit 3-channel image.
