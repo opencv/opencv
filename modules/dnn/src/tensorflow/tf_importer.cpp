@@ -1561,6 +1561,28 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
+        else if (type == "Mean")
+        {
+            Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
+            CV_Assert(indices.type() == CV_32SC1);
+            // There are two attributes, "keepdims" and a deprecated "keep_dims".
+            bool keepDims = false;
+            if (hasLayerAttr(layer, "keepdims"))
+                keepDims = getLayerAttr(layer, "keepdims").b();
+            else if (hasLayerAttr(layer, "keep_dims"))
+                keepDims = getLayerAttr(layer, "keep_dims").b();
+
+            if (!keepDims || indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
+                CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+
+            layerParams.set("pool", "ave");
+            layerParams.set("global_pooling", true);
+
+            int id = dstNet.addLayer(name, "Pooling", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
                  type == "Relu" || type == "Elu" ||
                  type == "Identity" || type == "Relu6")

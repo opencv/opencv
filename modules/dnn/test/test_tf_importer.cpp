@@ -167,6 +167,7 @@ TEST(Test_TensorFlow, pooling)
     runTensorFlowNet("max_pool_odd_valid");
     runTensorFlowNet("max_pool_odd_same");
     runTensorFlowNet("ave_pool_same");
+    runTensorFlowNet("reduce_mean");  // an average pooling over all spatial dimensions.
 }
 
 TEST(Test_TensorFlow, deconvolution)
