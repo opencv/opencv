@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include "../precomp.hpp"
 #include "layers_common.hpp"
 
 namespace cv

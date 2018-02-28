@@ -8,8 +8,6 @@
 #ifndef __OPENCV_DNN_OP_INF_ENGINE_HPP__
 #define __OPENCV_DNN_OP_INF_ENGINE_HPP__
 
-#include "precomp.hpp"
-
 #ifdef HAVE_INF_ENGINE
 #include <inference_engine.hpp>
 #endif  // HAVE_INF_ENGINE
