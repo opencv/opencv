@@ -51,7 +51,6 @@
 #include "common.hpp"
 
 namespace cv { namespace dnn { namespace ocl4dnn {
-#ifdef HAVE_OPENCL
 
 struct OCL4DNNConvConfig
 {
@@ -507,8 +506,7 @@ class OCL4DNNSoftmax
         bool log_softmax_;
         UMat scale_data_;
 };
-#endif // HAVE_OPENCL
-} // namespace ocl4dnn
-} // namespace dnn
-} // namespce cv
+
+}}} // namespace cv::dnn::ocl4dnn
+
 #endif
