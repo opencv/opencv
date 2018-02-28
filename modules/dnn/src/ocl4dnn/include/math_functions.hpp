@@ -42,7 +42,6 @@
 
 #ifndef _OPENCV_GREENTEA_MATH_FUNCTIONS_HPP_
 #define _OPENCV_GREENTEA_MATH_FUNCTIONS_HPP_
-#include "../../precomp.hpp"
 #include "common.hpp"
 
 namespace cv
