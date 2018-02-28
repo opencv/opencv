@@ -46,7 +46,10 @@
 #include <float.h>
 #include <algorithm>
 #include <cmath>
+
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {

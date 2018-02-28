@@ -11,6 +11,14 @@ set(the_description "Deep neural network module. It allows to load models from d
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python matlab java js)
+
+ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL)
+if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
+  add_definitions(-DCV_OCL4DNN=1)
+else()
+  ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
+endif()
+
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninitialized -Wsign-promo
                                      -Wmissing-declarations -Wmissing-prototypes
 )
@@ -63,8 +71,15 @@ else()
   set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/caffe" "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow")
 endif()
 
-ocv_module_include_directories(${fw_inc} ${CMAKE_CURRENT_LIST_DIR}/src/ocl4dnn/include ${OPENCL_INCLUDE_DIRS})
-ocv_glob_module_sources(SOURCES ${fw_srcs})
+set(include_dirs ${fw_inc})
+set(sources_options "")
+if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
+  list(APPEND include_dirs ${OPENCL_INCLUDE_DIRS})
+else()
+  set(sources_options EXCLUDE_OPENCL)
+endif()
+ocv_module_include_directories(${include_dirs})
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
 ocv_create_module(libprotobuf ${LAPACK_LIBRARIES})
 ocv_add_samples()
 ocv_add_accuracy_tests()

@@ -45,12 +45,13 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "op_halide.hpp"
 #include "op_inf_engine.hpp"
-#include "opencl_kernels_dnn.hpp"
 #include <float.h>
 #include <algorithm>
 using std::max;
 using std::min;
+
 #ifdef HAVE_OPENCL
+#include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
 #endif
 
