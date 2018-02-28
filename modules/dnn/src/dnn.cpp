@@ -53,6 +53,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv {
 namespace dnn {
@@ -846,6 +847,13 @@ struct Net::Impl
 
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
+#ifndef HAVE_OPENCL
+            if (preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_OPENCL)
+            {
+                CV_LOG_WARNING(NULL, "DNN: OpenCL target is not available in this OpenCV build, switching to CPU.")
+                preferableTarget = DNN_TARGET_CPU;
+            }
+#endif
             clear();
 
             allocateLayers(blobsToKeep_);
