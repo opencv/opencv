@@ -41,11 +41,10 @@
 //M*/
 
 #include "../../precomp.hpp"
-#include "common.hpp"
-#include "ocl4dnn.hpp"
-#include "math_functions.hpp"
+#include "../include/common.hpp"
+#include "../include/ocl4dnn.hpp"
+#include "../include/math_functions.hpp"
 
-#ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
 OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config)
@@ -102,7 +101,5 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
 }
 
 template class OCL4DNNInnerProduct<float>;
-} // namespace ocl4dnn
-}
-}
-#endif // HAVE_OPENCL
+
+}}} // namespace cv::dnn::ocl4dnn

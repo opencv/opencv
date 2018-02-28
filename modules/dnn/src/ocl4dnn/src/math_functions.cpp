@@ -41,19 +41,13 @@
 //M*/
 
 #include "../../precomp.hpp"
-#include "common.hpp"
-#include "math_functions.hpp"
+#include "../include/common.hpp"
+#include "../include/math_functions.hpp"
 #include <vector>
 #include "opencl_kernels_dnn.hpp"
 
-namespace cv
-{
-namespace dnn
-{
-namespace ocl4dnn
-{
+namespace cv { namespace dnn { namespace ocl4dnn {
 
-#ifdef HAVE_OPENCL
 // Create and copy buffer to image for GEMM's matrix A and B.
 // Will return image to caller if the input image is NULL. Otherwise,
 // will use the image directly. It's caller's responsibility to
@@ -527,8 +521,4 @@ template bool ocl4dnnAXPY<float>(const int32_t N, const float alpha,
                                  const UMat X, const int32_t offX,
                                  UMat Y, const int32_t offY);
 
-#endif  // HAVE_OPENCL
-
-} // namespace ocl4dnn
-} // namespace dnn
-} // namespce cv
+}}} // namespace cv::dnn::ocl4dnn
