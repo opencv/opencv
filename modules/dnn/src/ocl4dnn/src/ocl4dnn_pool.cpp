@@ -42,11 +42,10 @@
 #include "../../precomp.hpp"
 #include <string>
 #include <vector>
-#include "common.hpp"
-#include "ocl4dnn.hpp"
+#include "../include/common.hpp"
+#include "../include/ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
 
-#ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
 template<typename Dtype>
 OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
@@ -208,7 +207,5 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
 }
 
 template class OCL4DNNPool<float>;
-} // namespace ocl4dnn
-}
-}
-#endif // HAVE_OPENCL
+
+}}} // namespace cv::dnn::ocl4dnn

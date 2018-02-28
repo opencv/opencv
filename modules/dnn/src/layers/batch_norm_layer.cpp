@@ -13,7 +13,10 @@ Implementation of Batch Normalization layer.
 #include "op_halide.hpp"
 #include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
