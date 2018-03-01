@@ -428,6 +428,40 @@ inp = tf.placeholder(tf.float32, [None, 2, 3], 'input')
 flatten = tf.contrib.layers.flatten(inp)
 save(inp, flatten, 'unfused_flatten_unknown_batch', optimize=False)
 ################################################################################
+from tensorflow import keras as K
+model = K.models.Sequential()
+model.add(K.layers.Softmax(name='keras_softmax', input_shape=(2, 3, 4)))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_softmax_input:0'),
+     sess.graph.get_tensor_by_name('keras_softmax/truediv:0'), 'keras_softmax', optimize=False)
+################################################################################
+model = K.models.Sequential()
+model.add(K.layers.Conv2D(filters=4, kernel_size=1, data_format='channels_last',
+                          name='keras_mobilenet_head_conv', input_shape=(2, 3, 4)))
+model.add(K.layers.GlobalAveragePooling2D(name='keras_mobilenet_head_pool'))
+model.add(K.layers.Reshape((1, 1, 4), name='keras_mobilenet_head_reshape'))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_mobilenet_head_conv_input:0'),
+     sess.graph.get_tensor_by_name('keras_mobilenet_head_reshape/Reshape:0'),
+     'keras_mobilenet_head', optimize=False)
+################################################################################
+def keras_relu6(x):
+    return K.activations.relu(x, max_value=6)
+
+inp = K.Input(shape=(2, 3, 4), name='keras_relu6_input')
+relu = K.layers.Activation(keras_relu6, name='keras_relu6')(inp)
+model = K.Model(inp, relu)
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_relu6_input:0'),
+     sess.graph.get_tensor_by_name('keras_relu6/clip_by_value:0'), 'keras_relu6', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+reduced = tf.reduce_mean(inp, axis=[1, 2], keepdims=True)
+save(inp, reduced, 'reduce_mean')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
