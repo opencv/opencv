@@ -162,6 +162,7 @@ TEST_P(Test_TensorFlow_layers, pooling)
     runTensorFlowNet("max_pool_odd_valid", targetId);
     runTensorFlowNet("ave_pool_same", targetId);
     runTensorFlowNet("max_pool_odd_same", targetId);
+    runTensorFlowNet("reduce_mean", targetId);  // an average pooling over all spatial dimensions.
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
@@ -335,6 +336,21 @@ TEST(Test_TensorFlow, resize_nearest_neighbor)
 TEST(Test_TensorFlow, slice)
 {
     runTensorFlowNet("slice_4d");
+}
+
+TEST(Test_TensorFlow, softmax)
+{
+    runTensorFlowNet("keras_softmax");
+}
+
+TEST(Test_TensorFlow, relu6)
+{
+    runTensorFlowNet("keras_relu6");
+}
+
+TEST(Test_TensorFlow, keras_mobilenet_head)
+{
+    runTensorFlowNet("keras_mobilenet_head");
 }
 
 TEST(Test_TensorFlow, memory_read)

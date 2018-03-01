@@ -7,7 +7,7 @@
 
 #ifdef HAVE_PROTOBUF
 
-#include "tf_graph_editor.hpp"
+#include "tf_graph_simplifier.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
@@ -28,11 +28,19 @@ public:
         int numInputs = 0;
         for (int i = 0; i < 4; ++i)
         {
-            CV_Assert(nodeInputs[i] < (int)nodes.size());
             numInputs += (int)(nodeInputs[i] != -1);
         }
+        return addNodeToMatch(op, std::vector<int>(&nodeInputs[0], &nodeInputs[0] + numInputs));
+    }
+
+    int addNodeToMatch(const std::string& op, const std::vector<int>& inputs_)
+    {
+        for (int i = 0; i < inputs_.size(); ++i)
+        {
+            CV_Assert(inputs_[i] < (int)nodes.size());
+        }
         nodes.push_back(op);
-        inputs.push_back(std::vector<int>(&nodeInputs[0], &nodeInputs[0] + numInputs));
+        inputs.push_back(inputs_);
         return nodes.size() - 1;
     }
 
@@ -50,13 +58,18 @@ public:
             CV_Assert(nodeInputs[i] < (int)nodes.size());
             numInputs += (int)(nodeInputs[i] != -1);
         }
-        fusedNodeInputs = std::vector<int>(&nodeInputs[0], &nodeInputs[0] + numInputs);
+        setFusedNode(op, std::vector<int>(&nodeInputs[0], &nodeInputs[0] + numInputs));
+    }
 
+    void setFusedNode(const std::string& op, const std::vector<int>& inputs_)
+    {
+        fusedNodeInputs = inputs_;
         fusedNodeOp = op;
         nodesToFuse.clear();
         for (int i = 0; i < nodes.size(); ++i)
         {
-            if (std::find(fusedNodeInputs.begin(), fusedNodeInputs.end(), i) == fusedNodeInputs.end())
+            if (std::find(fusedNodeInputs.begin(), fusedNodeInputs.end(), i) == fusedNodeInputs.end() &&
+                nodes[i] != "Const")
                 nodesToFuse.push_back(i);
         }
     }
@@ -70,26 +83,32 @@ public:
         const int numNodes = net.node_size();
         for (int i = 0; i < numNodes; ++i)
         {
-            const tensorflow::NodeDef& node = net.node(i);
-            if (node.name() == name)
-                return node;
+            if (net.node(i).name() == name)
+                return net.node(i);
         }
         CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
         return net.node(0);  // just return something
     }
 
     // Match TensorFlow subgraph starting from <nodeId> with a set of nodes to be fused.
-    // Returns true if nodes are matched and can be fused.
-    bool match(const tensorflow::GraphDef& net, int nodeId, int* numMatchedNodes)
+    // Const nodes are skipped during matching. Returns true if nodes are matched and can be fused.
+    virtual bool match(const tensorflow::GraphDef& net, int nodeId, std::vector<int>& matchedNodesIds)
     {
-        *numMatchedNodes = 0;
+        matchedNodesIds.clear();
+        matchedNodesIds.reserve(nodesToFuse.size());
+
         int numNodes = net.node_size();
         for (int i = 0; i < nodesToFuse.size(); ++i)
         {
-            if (nodeId + i > numNodes - 1)
+            while (nodeId < numNodes && net.node(nodeId).op() == "Const")
+            {
+                nodeId += 1;
+            }
+            if (nodeId > numNodes - 1)
                 return false;
 
-            const tensorflow::NodeDef &node = net.node(nodeId + i);
+            const tensorflow::NodeDef& node = net.node(nodeId);
+
             if (node.op() != nodes[nodesToFuse[i]])
                 return false;
 
@@ -105,25 +124,24 @@ public:
                     return false;
             }
 
-            *numMatchedNodes += 1;
+            matchedNodesIds.push_back(nodeId);
+            nodeId += 1;
         }
         return true;
     }
 
     // Fuse matched subgraph.
-    void replace(tensorflow::GraphDef& net, int nodeId, int* numReplacedNodes)
+    void replace(tensorflow::GraphDef& net, const std::vector<int>& matchedNodesIds)
     {
-        *numReplacedNodes = 0;
-
         // Extract names of input nodes.
         std::vector<std::string> inputsNames(fusedNodeInputs.size());
         for (int i = 0; i < fusedNodeInputs.size(); ++i)
         {
             std::string inpName;
             // Find input node name looking at inputs of fused nodes.
-            for (int j = 0; j < nodesToFuse.size() && inpName.empty(); ++j)
+            for (int j = 0; j < matchedNodesIds.size() && inpName.empty(); ++j)
             {
-                const tensorflow::NodeDef &node = net.node(nodeId + j);
+                const tensorflow::NodeDef &node = net.node(matchedNodesIds[j]);
                 std::vector<int>& inpIndices = inputs[nodesToFuse[j]];
 
                 CV_Assert(node.input_size() == inpIndices.size());
@@ -140,12 +158,12 @@ public:
             inputsNames[i] = inpName;
         }
 
-        // Remove all nodes except the last one.
-        *numReplacedNodes = nodesToFuse.size() - 1;
-        net.mutable_node()->DeleteSubrange(nodeId, *numReplacedNodes);
+        // Remove matched nodes except the last one. Indices in ascending order are expected.
+        tensorflow::NodeDef* node = net.mutable_node(matchedNodesIds.back());
+        for (int i = matchedNodesIds.size() - 2; i >= 0; --i)
+            net.mutable_node()->DeleteSubrange(matchedNodesIds[i], 1);
 
         // Modify the last node to be a fused one.
-        tensorflow::NodeDef* node = net.mutable_node(nodeId);
         node->set_op(fusedNodeOp);
         node->clear_input();
         for (int i = 0; i < inputsNames.size(); ++i)
@@ -153,16 +171,16 @@ public:
             node->add_input(inputsNames[i]);
         }
 
-        std::vector<tensorflow::NodeDef> inputNodes(inputsNames.size());
+        std::vector<tensorflow::NodeDef*> inputNodes(inputsNames.size());
         for (int i = 0; i < inputsNames.size(); ++i)
         {
-            inputNodes[i] = getInputNode(net, *node, i);
+            inputNodes[i] = (tensorflow::NodeDef*)&getInputNode(net, *node, i);
         }
         finalize(net, node, inputNodes);
     }
 
     virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef*,
-                          const std::vector<tensorflow::NodeDef>&) {}
+                          std::vector<tensorflow::NodeDef*>&) {}
 
 private:
     std::vector<std::string> nodes;         // Nodes to be matched in the origin graph.
@@ -196,9 +214,9 @@ public:
     }
 
     virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
-                          const std::vector<tensorflow::NodeDef>& inputNodes)
+                          std::vector<tensorflow::NodeDef*>& inputNodes)
     {
-        Mat epsMat = getTensorContent(inputNodes.back().attr().at("value").tensor());
+        Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
         CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
 
         fusedNode->mutable_input()->ReleaseLast();
@@ -231,9 +249,9 @@ public:
     }
 
     virtual void finalize(tensorflow::GraphDef& net, tensorflow::NodeDef* fusedNode,
-                          const std::vector<tensorflow::NodeDef>& inputNodes)
+                          std::vector<tensorflow::NodeDef*>& inputNodes)
     {
-        Mat epsMat = getTensorContent(inputNodes.back().attr().at("value").tensor());
+        Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
         CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
 
         fusedNode->mutable_input()->ReleaseLast();
@@ -291,6 +309,97 @@ public:
     }
 };
 
+// K.layers.Softmax
+class SoftMaxKerasSubgraph : public Subgraph
+{
+public:
+    SoftMaxKerasSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int maxReductionIndices = addNodeToMatch("Const");
+        int smMax = addNodeToMatch("Max", input, maxReductionIndices);
+        int smSub = addNodeToMatch("Sub", input, smMax);
+        int smExp = addNodeToMatch("Exp", smSub);
+        int sumReductionIndices = addNodeToMatch("Const");
+        int smSum = addNodeToMatch("Sum", smExp, sumReductionIndices);
+        addNodeToMatch("RealDiv", smExp, smSum);
+
+        setFusedNode("Softmax", input);
+    }
+};
+
+class ReLU6KerasSubgraph : public Subgraph
+{
+public:
+    ReLU6KerasSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int relu = addNodeToMatch("Relu", input);
+        int maxValue = addNodeToMatch("Const");
+        int clipValue = addNodeToMatch("Const");
+        int minimum = addNodeToMatch("Minimum", relu, maxValue);
+        addNodeToMatch("Maximum", minimum, clipValue);
+
+        setFusedNode("Relu6", input);
+    }
+
+    virtual bool match(const tensorflow::GraphDef& net, int nodeId, std::vector<int>& matchedNodesIds)
+    {
+        if (!Subgraph::match(net, nodeId, matchedNodesIds))
+            return false;
+        Mat maxValue = getTensorContent(net.node(nodeId + 1).attr().at("value").tensor());
+        return maxValue.type() == CV_32FC1 && maxValue.total() == 1 && maxValue.at<float>(0) == 6;
+    }
+};
+
+// Keras' reshape stores output shape in separate Const nodes by one value.
+// Need to merge them into a single Const node.
+class ReshapeKerasSubgraph : public Subgraph
+{
+public:
+    ReshapeKerasSubgraph(int _numOutDims) : numOutDims(_numOutDims)
+    {
+        int input = addNodeToMatch("");
+        int shape = addNodeToMatch("Shape", input);
+        int stack = addNodeToMatch("Const");
+        int stack_1 = addNodeToMatch("Const");
+        int stack_2 = addNodeToMatch("Const");
+        int strided_slice = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        std::vector<int> ids(1 + numOutDims);
+        ids[0] = strided_slice;
+        for (int i = 0; i < numOutDims; ++i)
+            ids[1 + i] = addNodeToMatch("Const");
+        int pack = addNodeToMatch("Pack", ids);
+        addNodeToMatch("Reshape", input, pack);
+
+        ids[0] = input;
+        setFusedNode("Reshape", ids);
+    }
+
+    virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
+                          std::vector<tensorflow::NodeDef*>& inputNodes)
+    {
+        std::vector<int> shape(numOutDims + 1);  // batch size in Keras is implicit.
+        shape[0] = -1;
+        for (int i = 0; i < numOutDims; ++i)
+        {
+            shape[1 + i] = inputNodes[1 + i]->attr().at("value").tensor().int_val(0);
+        }
+        tensorflow::TensorProto* shapeTensor = inputNodes[1]->mutable_attr()->at("value").mutable_tensor();
+        fusedNode->mutable_input()->DeleteSubrange(2, numOutDims - 1);
+
+        shapeTensor->clear_int_val();
+        for (int i = 0; i < shape.size(); ++i)
+        {
+            shapeTensor->add_int_val(shape[i]);
+        }
+    }
+
+private:
+    int numOutDims;
+};
+
 void simplifySubgraphs(tensorflow::GraphDef& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -298,17 +407,20 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new BatchNormNoGammaSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new FlattenSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new FlattenShapeSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new SoftMaxKerasSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new ReLU6KerasSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new ReshapeKerasSubgraph(3)));
 
     int numNodes = net.node_size();
-    int numMatchedNodes, numReplacedNodes;
+    std::vector<int> matchedNodesIds;
     for (int i = 0; i < numNodes; ++i)
     {
         for (int j = 0; j < subgraphs.size(); ++j)
         {
-            if (subgraphs[j]->match(net, i, &numMatchedNodes))
+            if (subgraphs[j]->match(net, i, matchedNodesIds))
             {
-                subgraphs[j]->replace(net, i, &numReplacedNodes);
-                numNodes -= numReplacedNodes;
+                subgraphs[j]->replace(net, matchedNodesIds);
+                numNodes -= matchedNodesIds.size() - 1;  // #matchedNodes removed and one added.
                 break;
             }
         }
