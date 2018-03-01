@@ -22,7 +22,7 @@ Implementation of Tensorflow models parser
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "tf_io.hpp"
-#include "tf_graph_editor.hpp"
+#include "tf_graph_simplifier.hpp"
 #endif
 
 namespace cv {
@@ -715,9 +715,9 @@ void TFImporter::populateNet(Net dstNet)
             if (hasLayerAttr(layer, "data_format"))
             {
                 std::string format = getLayerAttr(layer, "data_format").s();
-                if (format == "NHWC")
+                if (format == "NHWC" || format == "channels_last")
                     data_layouts[name] = DATA_LAYOUT_NHWC;
-                else if (format == "NCHW")
+                else if (format == "NCHW" || format == "channels_first")
                     data_layouts[name] = DATA_LAYOUT_NCHW;
                 else
                     CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
@@ -804,9 +804,9 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Reshape")
         {
             Pin inpId = parsePin(layer.input(0));
-            DictValue newShape = parseDims(getConstBlob(layer, value_id, 1));
+            Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
 
-            if (newShape.size() != 4 && data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
+            if (newShape.total() != 4 && data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
             {
                 LayerParams permLP;
                 int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
@@ -819,14 +819,19 @@ void TFImporter::populateNet(Net dstNet)
                 connect(layer_id, dstNet, inpId, permId, 0);
                 inpId = Pin(permName);
             }
-            layerParams.set("dim", newShape);
+            else if (newShape.total() == 4 && data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
+            {
+                // NHWC->NCHW
+                std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+            }
+            layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
 
             int id = dstNet.addLayer(name, "Reshape", layerParams);
             layer_id[name] = id;
 
             // one input only
             connect(layer_id, dstNet, inpId, id, 0);
-            data_layouts[name] = DATA_LAYOUT_UNKNOWN;
         }
         else if (type == "Flatten" || type == "Squeeze")
         {
@@ -1487,6 +1492,39 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Softmax", layerParams);
             layer_id[name] = id;
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+        }
+        else if (type == "Mean")
+        {
+            Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
+            CV_Assert(indices.type() == CV_32SC1);
+
+            if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
+                CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+
+            layerParams.set("pool", "ave");
+            layerParams.set("global_pooling", true);
+
+            int id = dstNet.addLayer(name, "Pooling", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+            // There are two attributes, "keepdims" and a deprecated "keep_dims".
+            bool keepDims = false;
+            if (hasLayerAttr(layer, "keepdims"))
+                keepDims = getLayerAttr(layer, "keepdims").b();
+            else if (hasLayerAttr(layer, "keep_dims"))
+                keepDims = getLayerAttr(layer, "keep_dims").b();
+
+            if (!keepDims)
+            {
+                LayerParams flattenLp;
+                std::string flattenName = name + "/flatten";
+                CV_Assert(layer_id.find(flattenName) == layer_id.end());
+                int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
+                layer_id[flattenName] = flattenId;
+                connect(layer_id, dstNet, Pin(name), flattenId, 0);
+            }
         }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
                  type == "Relu" || type == "Elu" ||
