@@ -136,7 +136,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
                 continue;
             }
 
-            eq = std::abs(cpuErr[i] - err[i]) < 0.01;
+            eq = std::abs(cpuErr[i] - err[i]) <= (0.01 * std::max(1.0f, cpuErr[i]));
             if(!eq)
                 ++errmatch;
         }
