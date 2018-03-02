@@ -1018,7 +1018,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         self.save(list_file, '\n'.join(['#include "%s"' % f for f in self.cpp_files]))
 
 
-def copy_java_files(java_files_dir, java_base_path):
+def copy_java_files(java_files_dir, java_base_path, default_package_path='org/opencv/'):
     global total_files, updated_files
     java_files = []
     re_filter = re.compile(r'^.+\.(java|aidl)(.in)?$')
@@ -1026,7 +1026,7 @@ def copy_java_files(java_files_dir, java_base_path):
        java_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
     java_files = [f.replace('\\', '/') for f in java_files]
 
-    re_package = re.compile(r'^package +(.+);$')
+    re_package = re.compile(r'^package +(.+);')
     re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|aidl)(.in)?$')
     for java_file in java_files:
         src = checkFileRemap(java_file)
@@ -1039,7 +1039,7 @@ def copy_java_files(java_files_dir, java_base_path):
             package = m.group(1)
             package_path = package.replace('.', '/')
         else:
-            package_path = 'org/opencv/' + module
+            package_path = default_package_path
         #print(java_file, package_path, target_fname)
         dest = os.path.join(java_base_path, os.path.join(package_path, target_fname))
         assert dest[-3:] != '.in', dest + ' | ' + target_fname
@@ -1154,11 +1154,11 @@ if __name__ == "__main__":
 
         java_files_dir = os.path.join(misc_location, 'src/java')
         if os.path.exists(java_files_dir):
-            copy_java_files(java_files_dir, java_base_path)
+            copy_java_files(java_files_dir, java_base_path, 'org/opencv/' + module)
 
         java_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(java_test_files_dir):
-            copy_java_files(java_test_files_dir, java_test_base_path)
+            copy_java_files(java_test_files_dir, java_test_base_path, 'org/opencv/test/' + module)
 
         if len(srcfiles) > 0:
             generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers)
