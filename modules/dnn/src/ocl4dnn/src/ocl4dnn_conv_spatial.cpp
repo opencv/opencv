@@ -103,6 +103,12 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     output_w_ = config.out_shape[dims - spatial_dims + 1];
     bottom_dim_ = channels_ * width_ * height_;
     top_dim_ = num_output_ * output_w_ * output_h_;
+    int Ph = (output_h_ - 1) * stride_h_ + (dilation_h_ * (kernel_h_ - 1) + 1) - height_;
+    int Pw = (output_w_ - 1) * stride_w_ + (dilation_w_ * (kernel_w_ - 1) + 1) - width_;
+    Ph = (Ph > 0) ? Ph : 0;
+    Pw = (Pw > 0) ? Pw : 0;
+    pad_right_  = (Pw + 1) / 2;
+    pad_bottom_ = (Ph + 1) / 2;
 
     cache_path_ = utils::getConfigurationParameterString("OPENCV_OCL4DNN_CONFIG_PATH", "");
     dwconv_ = (num_output_ == channels_ && channels_ == group_);
@@ -379,6 +385,8 @@ void OCL4DNNConvSpatial<Dtype>::setupKernel()
     {
         addDef("INPUT_PAD_W", pad_w_);
         addDef("INPUT_PAD_H", pad_h_);
+        addDef("INPUT_PAD_RIGHT", pad_right_);
+        addDef("INPUT_PAD_BOTTOM", pad_bottom_);
     }
 
     setupKernelDetails(kernelType_, blockM_, blockK_, blockN_);

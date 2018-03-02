@@ -238,7 +238,7 @@ convolve_simd(
   int curr_local_x = ( lid % ( TILE_X / 4 ) ) * 4;
   int curr_y = or * STRIDE_Y + curr_local_y;
   int curr_x = oc * STRIDE_X + curr_local_x;
-#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0
+#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
   int saved_y = curr_y;
 #endif
   in_addr = input_batch_offset
@@ -256,19 +256,22 @@ convolve_simd(
     LOOP(INVEC_SIZE, reg,
       {
         if (curr_local_y + reg * TILE_Y_STRIDE < TILE_Y || INVEC_SIZE * TILE_Y_STRIDE <= (TILE_Y + 2) || reg < INVEC_SIZE - 1) {
-#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0
+#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         if (curr_y >= INPUT_PAD_H && curr_y < input_height + INPUT_PAD_H && curr_x + 3 >= INPUT_PAD_W && curr_x < input_width + INPUT_PAD_W) {
           if (curr_x < INPUT_PAD_W) {
             in_buf.in_vec[reg].s0 = 0;
-            if (curr_x + 1 >= INPUT_PAD_W)
+            if (curr_x + 1 >= INPUT_PAD_W && curr_x + 1 < input_width + INPUT_PAD_W)
               in_buf.in_vec[reg].s1 = *(inputs + in_offset + 1);
             else
               in_buf.in_vec[reg].s1 = 0;
-            if (curr_x + 2 >= INPUT_PAD_W)
+            if (curr_x + 2 >= INPUT_PAD_W && curr_x + 2 < input_width + INPUT_PAD_W)
               in_buf.in_vec[reg].s2 = *(inputs + in_offset + 2);
             else
               in_buf.in_vec[reg].s2 = 0;
-            in_buf.in_vec[reg].s3 = *(inputs + in_offset + 3);
+            if (curr_x + 3 < input_width + INPUT_PAD_W)
+              in_buf.in_vec[reg].s3 = *(inputs + in_offset + 3);
+            else
+              in_buf.in_vec[reg].s3 = 0;
           } else {
             VLOAD4(in_buf.in_vec[reg], inputs + in_offset);
             if (curr_x + 1 >= input_width + INPUT_PAD_W)
@@ -289,7 +292,7 @@ convolve_simd(
         in_offset += input_width * TILE_Y_STRIDE;
       });
     in_addr += input_height * input_width;
-#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0
+#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
     curr_y = saved_y;
 #endif
 
@@ -492,7 +495,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         // atile is M rows x K columns.
         int curr_x = ( global_y % output_width ) * STRIDE_X;
         int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         int saved_y = curr_y;
 #endif
         const __global Dtype *src0_read = src0
@@ -512,7 +515,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         do
         {
             int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
             curr_y = saved_y;
 #endif
 
@@ -530,7 +533,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
                 // ...
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
 
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1
+#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
 #else
@@ -646,7 +649,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         // atile is M rows x K columns.
         int curr_x = ( global_y % output_width ) * STRIDE_X;
         int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         int saved_y = curr_y;
 #endif
         const __global Dtype *src0_read = src0
@@ -666,14 +669,14 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         do
         {
             int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
             curr_y = saved_y;
 #endif
             do
             {
                 // Load atile and interleaved btile.
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1
+#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
 #else
@@ -873,7 +876,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         int curr_x1 = ( ( global_y * TILE_M + 1 ) % output_width ) * STRIDE_X;
         int curr_y0 = ( ( global_y * TILE_M + 0 ) / output_width ) * STRIDE_Y;
         int curr_y1 = ( ( global_y * TILE_M + 1 ) / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         int saved_y0 = curr_y0;
         int saved_y1 = curr_y1;
 #endif
@@ -911,7 +914,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
                 // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
                 // ...
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
-#if INPUT_PAD_H == 0 && INPUT_PAD_W == 0 && DILATION_X == 1 && DILATION_Y == 1
+#if INPUT_PAD_H == 0 && INPUT_PAD_W == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read0 )[  0  ]; src0_read0 += ROW_PITCH;
                 Dtype_t blockA01 = ( (const __global Dtype_t*)src0_read1 )[  0  ]; src0_read1 += ROW_PITCH;
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
@@ -997,7 +1000,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 
             //while( ++patch_row < 1 ); //debug
             while( ++patch_row < KERNEL_HEIGHT );
-#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
             curr_y0 = saved_y0;
             curr_y1 = saved_y1;
 #endif
@@ -1073,7 +1076,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         int curr_x1 = ( ( global_y * TILE_M + 1 ) % output_width ) * STRIDE_X;
         int curr_y0 = ( ( global_y * TILE_M + 0 ) / output_width ) * STRIDE_Y;
         int curr_y1 = ( ( global_y * TILE_M + 1 ) / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         int saved_y0 = curr_y0;
         int saved_y1 = curr_y1;
 #endif
@@ -1102,7 +1105,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
             {
                 // Load atile and interleaved btile.
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
-#if INPUT_PAD_H == 0 && INPUT_PAD_W == 0 && DILATION_X == 1 && DILATION_Y == 1
+#if INPUT_PAD_H == 0 && INPUT_PAD_W == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read0 )[  0  ]; src0_read0 += ROW_PITCH;
                 Dtype_t blockA01 = ( (const __global Dtype_t*)src0_read1 )[  0  ]; src0_read1 += ROW_PITCH;
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
@@ -1210,7 +1213,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 
             //while( ++patch_row < 1 ); //debug
             while( ++patch_row < KERNEL_HEIGHT );
-#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
             curr_y0 = saved_y0;
             curr_y1 = saved_y1;
 #endif
@@ -1377,7 +1380,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     // atile is M rows x K columns.
     int curr_x = ( global_y % output_width ) * STRIDE_X;
     int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
     int saved_y = curr_y;
 #endif
     const __global Dtype *src0_read = src0
@@ -1419,7 +1422,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     do
     {
         int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         curr_y = saved_y;
 #endif
         __attribute__((opencl_unroll_hint(1)))
@@ -1437,7 +1440,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
             // ...
             const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
 
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1
+#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
             Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
             Dtype*  pblockA00 = (Dtype*)(&blockA00);
 #else
@@ -1580,7 +1583,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         int curr_x1 = ( ( global_y * TILE_M + 1 ) % output_width ) * STRIDE_X;
         int curr_y0 = ( ( global_y * TILE_M + 0 ) / output_width ) * STRIDE_Y;
         int curr_y1 = ( ( global_y * TILE_M + 1 ) / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
         int saved_y0 = curr_y0;
         int saved_y1 = curr_y1;
 #endif
@@ -1618,7 +1621,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
                 // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
                 // ...
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
-#if INPUT_PAD_H == 0 && INPUT_PAD_W == 0 && DILATION_X == 1 && DILATION_Y == 1
+#if INPUT_PAD_H == 0 && INPUT_PAD_W == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read0 )[  0  ]; src0_read0 += ROW_PITCH;
                 Dtype_t blockA01 = ( (const __global Dtype_t*)src0_read1 )[  0  ]; src0_read1 += ROW_PITCH;
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
@@ -1692,7 +1695,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 
             //while( ++patch_row < 1 ); //debug
             while( ++patch_row < KERNEL_HEIGHT );
-#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || DILATION_X != 1 || DILATION_Y != 1
+#if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
             curr_y0 = saved_y0;
             curr_y1 = saved_y1;
 #endif

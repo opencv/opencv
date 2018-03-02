@@ -824,9 +824,6 @@ public:
         for (int i = 0; i < inputs.size(); ++i)
             CV_Assert(inputs[i].u != outputs[0].u);
 
-        if (padMode == "SAME")
-            return false;
-
         if (convolutionOp.empty())
         {
             OCL4DNNConvConfig config;
