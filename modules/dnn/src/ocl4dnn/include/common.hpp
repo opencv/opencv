@@ -41,7 +41,6 @@
 
 #ifndef _OPENCV_LIBDNN_COMMON_HPP_
 #define _OPENCV_LIBDNN_COMMON_HPP_
-#include "../../precomp.hpp"
 #include "../../caffe/glog_emulator.hpp"
 #include <opencv2/core/opencl/runtime/opencl_core.hpp>
 
