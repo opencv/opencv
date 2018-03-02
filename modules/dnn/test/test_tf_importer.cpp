@@ -321,7 +321,7 @@ OCL_TEST(Test_TensorFlow, MobileNet_SSD)
     std::vector<Mat> output;
     net.forward(output, outNames);
 
-    normAssert(target[0].reshape(1, 1), output[0].reshape(1, 1));
+    normAssert(target[0].reshape(1, 1), output[0].reshape(1, 1), "", 1e-5, 1.5e-4);
     normAssert(target[1].reshape(1, 1), output[1].reshape(1, 1), "", 1e-5, 3e-4);
     normAssert(target[2].reshape(1, 1), output[2].reshape(1, 1), "", 4e-5, 1e-2);
 }

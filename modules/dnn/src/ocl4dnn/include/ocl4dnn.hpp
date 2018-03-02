@@ -285,6 +285,8 @@ class OCL4DNNConvSpatial
         int32_t width_;
         int32_t pad_h_;
         int32_t pad_w_;
+        int32_t pad_bottom_;
+        int32_t pad_right_;
         int32_t stride_h_;
         int32_t stride_w_;
         int32_t dilation_h_;
