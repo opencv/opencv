@@ -223,7 +223,7 @@ if(X86 OR X86_64)
     ocv_update(CPU_SSSE3_FLAGS_ON "-mssse3")
     ocv_update(CPU_SSE2_FLAGS_ON "-msse2")
     ocv_update(CPU_SSE_FLAGS_ON "-msse")
-    if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
+    if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0"))  # GCC >= 5.0
       # -mavx512f -mavx512pf -mavx512er -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx512ifma -mavx512vbmi
       ocv_update(CPU_AVX_512F_FLAGS_ON "-mavx512f")
       ocv_update(CPU_AVX512_SKX_FLAGS_ON "-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq")
