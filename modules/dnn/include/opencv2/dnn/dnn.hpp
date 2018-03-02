@@ -222,7 +222,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         /** @brief Returns index of output blob in output array.
          *  @see inputNameToIndex()
          */
-        virtual int outputNameToIndex(String outputName);
+        CV_WRAP virtual int outputNameToIndex(String outputName);
 
         /**
          * @brief Ask layer if it support specific backend for doing computations.
