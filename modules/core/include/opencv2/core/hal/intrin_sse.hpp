@@ -1860,11 +1860,6 @@ OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int16x8, short, s16, v_uint16x8, usho
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int32x4, int, s32, v_uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_float32x4, float, f32, v_uint32x4, unsigned, u32)
 
-inline v_int32x4 v_cvt_s32(const v_float64x2& a)
-{
-    return v_int32x4(_mm_cvtpd_epi32(a.val));
-}
-
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
     return v_float32x4(_mm_cvtepi32_ps(a.val));

@@ -770,8 +770,8 @@ struct Cvt_SIMD<double, int>
             int cWidth = v_float64x2::nlanes;
             for (; x <= width - cWidth * 2; x += cWidth * 2)
             {
-                v_int32x4 v_src0 = v_cvt_s32(v_load(src + x));
-                v_int32x4 v_src1 = v_cvt_s32(v_load(src + x + cWidth));
+                v_int32x4 v_src0 = v_round(v_load(src + x));
+                v_int32x4 v_src1 = v_round(v_load(src + x + cWidth));
 
                 v_store(dst + x, v_combine_low(v_src0, v_src1));
             }
