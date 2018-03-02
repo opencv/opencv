@@ -7,6 +7,9 @@ void test()
     __m256i b = _mm256_abs_epi64(a); // VL
     __m512i c = _mm512_abs_epi8(zmm); // BW
     __m512i d = _mm512_broadcast_i32x8(b); // DQ
+#if defined __GNUC__ && defined __x86_64__
+    asm volatile ("" : : : "zmm16", "zmm17", "zmm18", "zmm19");
+#endif
 }
 #else
 #error "AVX512-SKX is not supported"
