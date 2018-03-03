@@ -2,8 +2,9 @@
 #include <iostream>
 #include <sstream>
 
-#include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 const char* keys =
     "{ help  h     | | Print help message. }"
@@ -34,8 +35,6 @@ using namespace dnn;
 
 float confThreshold;
 std::vector<std::string> classes;
-
-Net readNet(const std::string& model, const std::string& config = "", const std::string& framework = "");
 
 void postprocess(Mat& frame, const Mat& out, Net& net);
 
@@ -95,7 +94,7 @@ int main(int argc, char** argv)
     // Create a window
     static const std::string kWinName = "Deep learning object detection in OpenCV";
     namedWindow(kWinName, WINDOW_NORMAL);
-    int initialConf = confThreshold * 100;
+    int initialConf = (int)(confThreshold * 100);
     createTrackbar("Confidence threshold, %", kWinName, &initialConf, 99, callback);
 
     // Open a video file or an image file or a camera stream.
@@ -135,8 +134,9 @@ int main(int argc, char** argv)
 
         // Put efficiency information.
         std::vector<double> layersTimes;
-        double t = net.getPerfProfile(layersTimes);
-        std::string label = format("Inference time: %.2f", t * 1000 / getTickFrequency());
+        double freq = getTickFrequency() / 1000;
+        double t = net.getPerfProfile(layersTimes) / freq;
+        std::string label = format("Inference time: %.2f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         imshow(kWinName, frame);
@@ -160,10 +160,10 @@ void postprocess(Mat& frame, const Mat& out, Net& net)
             float confidence = data[i + 2];
             if (confidence > confThreshold)
             {
-                int left = data[i + 3];
-                int top = data[i + 4];
-                int right = data[i + 5];
-                int bottom = data[i + 6];
+                int left = (int)data[i + 3];
+                int top = (int)data[i + 4];
+                int right = (int)data[i + 5];
+                int bottom = (int)data[i + 6];
                 int classId = (int)(data[i + 1]) - 1;  // Skip 0th background class id.
                 drawPred(classId, confidence, left, top, right, bottom, frame);
             }
@@ -208,7 +208,7 @@ void postprocess(Mat& frame, const Mat& out, Net& net)
                 int height = (int)(data[3] * frame.rows);
                 int left = centerX - width / 2;
                 int top = centerY - height / 2;
-                drawPred(classId, confidence, left, top, left + width, top + height, frame);
+                drawPred(classId, (float)confidence, left, top, left + width, top + height, frame);
             }
         }
     }
@@ -238,21 +238,5 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 
 void callback(int pos, void*)
 {
-    confThreshold = pos * 0.01;
-}
-
-Net readNet(const std::string& model, const std::string& config, const std::string& framework)
-{
-    std::string modelExt = model.substr(model.rfind('.'));
-    if (framework == "caffe" || modelExt == ".caffemodel")
-        return readNetFromCaffe(config, model);
-    else if (framework == "tensorflow" || modelExt == ".pb")
-        return readNetFromTensorflow(model, config);
-    else if (framework == "torch" || modelExt == ".t7" || modelExt == ".net")
-        return readNetFromTorch(model);
-    else if (framework == "darknet" || modelExt == ".weights")
-        return readNetFromDarknet(config, model);
-    else
-        CV_Error(Error::StsError, "Cannot determine an origin framework of model from file " + model);
-    return Net();
+    confThreshold = pos * 0.01f;
 }

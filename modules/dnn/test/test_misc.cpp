@@ -57,4 +57,22 @@ TEST(imagesFromBlob, Regression)
     }
 }
 
+TEST(readNet, Regression)
+{
+    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
+                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/opencv_face_detector.caffemodel", false),
+                  findDataFile("dnn/opencv_face_detector.prototxt", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/openface_nn4.small2.v1.t7", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg", false),
+                  findDataFile("dnn/tiny-yolo-voc.weights", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false),
+                  findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
+    EXPECT_FALSE(net.empty());
+}
+
 }} // namespace

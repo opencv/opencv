@@ -683,6 +683,29 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
      CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true);
 
+     /**
+      * @brief Read deep learning network represented in one of the supported formats.
+      * @param[in] model Binary file contains trained weights. The following file
+      *                  extensions are expected for models from different frameworks:
+      *                  * `*.caffemodel` (Caffe, http://caffe.berkeleyvision.org/)
+      *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
+      *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
+      *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
+      * @param[in] config Text file contains network configuration. It could be a
+      *                   file with the following extensions:
+      *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
+      *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
+      *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
+      * @param[in] framework Explicit framework name tag to determine a format.
+      * @returns Net object.
+      *
+      * This function automatically detects an origin framework of trained model
+      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow,
+      * @ref readNetFromTorch or @ref readNetFromDarknet. An order of @p model and @p config
+      * arguments does not matter.
+      */
+     CV_EXPORTS_W Net readNet(String model, String config = "", String framework = "");
+
     /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
      *  @warning This function has the same limitations as readNetFromTorch().
      */
