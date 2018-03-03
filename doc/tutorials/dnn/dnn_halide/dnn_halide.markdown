@@ -74,46 +74,7 @@ When you build OpenCV add the following configuration flags:
 
 - `HALIDE_ROOT_DIR` - path to Halide build directory
 
-## Sample
-
-@include dnn/squeezenet_halide.cpp
-
-## Explanation
-Download Caffe model from SqueezeNet repository: [train_val.prototxt](https://github.com/DeepScale/SqueezeNet/blob/master/SqueezeNet_v1.1/train_val.prototxt) and [squeezenet_v1.1.caffemodel](https://github.com/DeepScale/SqueezeNet/blob/master/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel).
-
-Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:
-[synset_words.txt](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/synset_words.txt).
-
-Put these files into working dir of this program example.
-
--# Read and initialize network using path to .prototxt and .caffemodel files
-@snippet dnn/squeezenet_halide.cpp Read and initialize network
-
--# Check that network was read successfully
-@snippet dnn/squeezenet_halide.cpp Check that network was read successfully
-
--# Read input image and convert to the 4-dimensional blob, acceptable by SqueezeNet v1.1
-@snippet dnn/squeezenet_halide.cpp Prepare blob
-
--# Pass the blob to the network
-@snippet dnn/squeezenet_halide.cpp Set input blob
-
--# Enable Halide backend for layers where it is implemented
-@snippet dnn/squeezenet_halide.cpp Enable Halide backend
-
--# Make forward pass
-@snippet dnn/squeezenet_halide.cpp Make forward pass
-Remember that the first forward pass after initialization require quite more
-time that the next ones. It's because of runtime compilation of Halide pipelines
-at the first invocation.
-
--# Determine the best class
-@snippet dnn/squeezenet_halide.cpp Determine the best class
-
--# Print results
-@snippet dnn/squeezenet_halide.cpp Print results
-For our image we get:
-
-> Best class: #812 'space shuttle'
->
-> Probability: 97.9812%
+## Set Halide as a preferable backend
+@code
+net.setPreferableBackend(DNN_BACKEND_HALIDE);
+@endcode

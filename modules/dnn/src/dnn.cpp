@@ -2805,5 +2805,41 @@ BackendWrapper::BackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& 
 
 BackendWrapper::~BackendWrapper() {}
 
+Net readNet(String model, String config, String framework)
+{
+    framework = framework.toLowerCase();
+    const std::string modelExt = model.substr(model.rfind('.') + 1);
+    const std::string configExt = config.substr(config.rfind('.') + 1);
+    if (framework == "caffe" || modelExt == "caffemodel" || configExt == "caffemodel" ||
+                                modelExt == "prototxt" || configExt == "prototxt")
+    {
+        if (modelExt == "prototxt" || configExt == "caffemodel")
+            std::swap(model, config);
+        return readNetFromCaffe(config, model);
+    }
+    if (framework == "tensorflow" || modelExt == "pb" || configExt == "pb" ||
+                                     modelExt == "pbtxt" || configExt == "pbtxt")
+    {
+        if (modelExt == "pbtxt" || configExt == "pb")
+            std::swap(model, config);
+        return readNetFromTensorflow(model, config);
+    }
+    if (framework == "torch" || modelExt == "t7" || modelExt == "net" ||
+                                configExt == "t7" || configExt == "net")
+    {
+        return readNetFromTorch(model.empty() ? config : model);
+    }
+    if (framework == "darknet" || modelExt == "weights" || configExt == "weights" ||
+                                  modelExt == "cfg" || configExt == "cfg")
+    {
+        if (modelExt == "cfg" || configExt == "weights")
+            std::swap(model, config);
+        return readNetFromDarknet(config, model);
+    }
+    CV_Error(Error::StsError, "Cannot determine an origin framework of files: " +
+                              model + (config.empty() ? "" : ", " + config));
+    return Net();
+}
+
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace

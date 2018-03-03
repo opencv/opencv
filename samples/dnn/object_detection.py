@@ -49,19 +49,7 @@ if args.classes:
         classes = f.read().rstrip('\n').split('\n')
 
 # Load a network
-modelExt = args.model[args.model.rfind('.'):]
-if args.framework == 'caffe' or modelExt == '.caffemodel':
-    net = cv.dnn.readNetFromCaffe(args.config, args.model)
-elif args.framework == 'tensorflow' or modelExt == '.pb':
-    net = cv.dnn.readNetFromTensorflow(args.model, args.config)
-elif args.framework == 'torch' or modelExt in ['.t7', '.net']:
-    net = cv.dnn.readNetFromTorch(args.model)
-elif args.framework == 'darknet' or modelExt == '.weights':
-    net = cv.dnn.readNetFromDarknet(args.config, args.model)
-else:
-    print('Cannot determine an origin framework of model from file %s' % args.model)
-    sys.exit(0)
-
+net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
