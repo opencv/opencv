@@ -1,7 +1,9 @@
-#include <opencv2/opencv.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 
 const char* keys =
     "{ help  h     | | Print help message. }"
@@ -19,15 +21,19 @@ const char* keys =
     "{ height      | -1 | Preprocess input image by resizing to a specific height. }"
     "{ rgb         |    | Indicate that model works with RGB input images instead BGR ones. }"
     "{ thr         | .5 | Confidence threshold. }"
-    "{ opencl      |    | Enable OpenCL }";
+    "{ backend     |  0 | Choose one of computation backends: "
+                         "0: default C++ backend, "
+                         "1: Halide language (http://halide-lang.org/), "
+                         "2: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)}"
+    "{ target      |  0 | Choose one of target computation devices: "
+                         "0: CPU target (by default),"
+                         "1: OpenCL }";
 
 using namespace cv;
 using namespace dnn;
 
 float confThreshold;
 std::vector<std::string> classes;
-
-void loadClasses(const std::string& file);
 
 Net readNet(const std::string& model, const std::string& config = "", const std::string& framework = "");
 
@@ -74,7 +80,7 @@ int main(int argc, char** argv)
         if (!ifs.is_open())
             CV_Error(Error::StsError, "File " + file + " not found");
         std::string line;
-        while (ifs >> line)
+        while (std::getline(ifs, line))
         {
             classes.push_back(line);
         }
@@ -83,17 +89,14 @@ int main(int argc, char** argv)
     // Load a model.
     CV_Assert(parser.has("model"));
     Net net = readNet(parser.get<String>("model"), parser.get<String>("config"), parser.get<String>("framework"));
-
-    if (parser.get<bool>("opencl"))
-    {
-        net.setPreferableTarget(DNN_TARGET_OPENCL);
-    }
+    net.setPreferableBackend(parser.get<int>("backend"));
+    net.setPreferableTarget(parser.get<int>("target"));
 
     // Create a window
     static const std::string kWinName = "Deep learning object detection in OpenCV";
     namedWindow(kWinName, WINDOW_NORMAL);
     int initialConf = confThreshold * 100;
-    createTrackbar("Confidence threshold", kWinName, &initialConf, 99, callback);
+    createTrackbar("Confidence threshold, %", kWinName, &initialConf, 99, callback);
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
@@ -134,7 +137,7 @@ int main(int argc, char** argv)
         std::vector<double> layersTimes;
         double t = net.getPerfProfile(layersTimes);
         std::string label = format("Inference time: %.2f", t * 1000 / getTickFrequency());
-        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
+        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         imshow(kWinName, frame);
     }
@@ -240,7 +243,7 @@ void callback(int pos, void*)
 
 Net readNet(const std::string& model, const std::string& config, const std::string& framework)
 {
-    std::string modelExt = model.substr(model.find('.'));
+    std::string modelExt = model.substr(model.rfind('.'));
     if (framework == "caffe" || modelExt == ".caffemodel")
         return readNetFromCaffe(config, model);
     else if (framework == "tensorflow" || modelExt == ".pb")

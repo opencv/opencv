@@ -14,6 +14,14 @@
 | [Faster-RCNN](https://github.com/rbgirshick/py-faster-rcnn) | `1.0` | `800x600` | `102.9801, 115.9465, 122.7717` | BGR |
 | [R-FCN](https://github.com/YuwenXiong/py-R-FCN) | `1.0` | `800x600` | `102.9801 115.9465 122.7717` | BGR |
 
+
+### Classification
+|    Model | Scale |   Size WxH|   Mean subtraction | Channels order |
+|---------------|-------|-----------|--------------------|-------|
+| GoogLeNet | `1.0` | `224x224` | `104 117 123` | BGR |
+| [SqueezeNet](https://github.com/DeepScale/SqueezeNet) | `1.0` | `227x227` | `0 0 0` | BGR |
+
+
 ## References
 * [Models downloading script](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
