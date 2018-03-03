@@ -3,6 +3,9 @@ import argparse
 import sys
 import numpy as np
 
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL)
+
 parser = argparse.ArgumentParser(description='Use this script to run object detection deep learning networks using OpenCV.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', required=True,
@@ -28,6 +31,15 @@ parser.add_argument('--height', type=int,
 parser.add_argument('--rgb', action='store_true',
                     help='Indicate that model works with RGB input images instead BGR ones.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
+parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
+                    help="Choose one of computation backends: "
+                         "%d: default C++ backend, "
+                         "%d: Halide language (http://halide-lang.org/), "
+                         "%d: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)" % backends)
+parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
+                    help='Choose one of target computation devices: '
+                         '%d: CPU target (by default), '
+                         '%d: OpenCL' % targets)
 args = parser.parse_args()
 
 # Load names of classes
@@ -37,7 +49,7 @@ if args.classes:
         classes = f.read().rstrip('\n').split('\n')
 
 # Load a network
-modelExt = args.model[args.model.find('.'):]
+modelExt = args.model[args.model.rfind('.'):]
 if args.framework == 'caffe' or modelExt == '.caffemodel':
     net = cv.dnn.readNetFromCaffe(args.config, args.model)
 elif args.framework == 'tensorflow' or modelExt == '.pb':
@@ -49,6 +61,9 @@ elif args.framework == 'darknet' or modelExt == '.weights':
 else:
     print('Cannot determine an origin framework of model from file %s' % args.model)
     sys.exit(0)
+
+net.setPreferableBackend(args.backend)
+net.setPreferableTarget(args.target)
 
 confThreshold = args.thr
 
@@ -156,6 +171,6 @@ while cv.waitKey(1) < 0:
     # Put efficiency information.
     t, _ = net.getPerfProfile()
     label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-    cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+    cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
     cv.imshow(winName, frame)
