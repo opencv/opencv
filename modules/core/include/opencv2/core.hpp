@@ -1063,19 +1063,19 @@ around both axes.
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 enum RotateFlags {
-    ROTATE_90_CLOCKWISE = 0, //Rotate 90 degrees clockwise
-    ROTATE_180 = 1, //Rotate 180 degrees clockwise
-    ROTATE_90_COUNTERCLOCKWISE = 2, //Rotate 270 degrees clockwise
+    ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
+    ROTATE_180 = 1, //!<Rotate 180 degrees clockwise
+    ROTATE_90_COUNTERCLOCKWISE = 2, //!<Rotate 270 degrees clockwise
 };
 /** @brief Rotates a 2D array in multiples of 90 degrees.
-The function rotate rotates the array in one of three different ways:
-*   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90).
+The function cv::rotate rotates the array in one of three different ways:
+*   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90_CLOCKWISE).
 *   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180).
-*   Rotate by 270 degrees clockwise (rotateCode = ROTATE_270).
+*   Rotate by 270 degrees clockwise (rotateCode = ROTATE_90_COUNTERCLOCKWISE).
 @param src input array.
 @param dst output array of the same type as src.  The size is the same with ROTATE_180,
-and the rows and cols are switched for ROTATE_90 and ROTATE_270.
-@param rotateCode an enum to specify how to rotate the array; see the enum RotateFlags
+and the rows and cols are switched for ROTATE_90_CLOCKWISE and ROTATE_90_COUNTERCLOCKWISE.
+@param rotateCode an enum to specify how to rotate the array; see the enum #RotateFlags
 @sa transpose , repeat , completeSymm, flip, RotateFlags
 */
 CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, int rotateCode);
