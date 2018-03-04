@@ -2449,17 +2449,18 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
                           double scale )
 {
     CV_INSTRUMENT_REGION()
-
+    if (hist.dims() <= 2)
+    {
 #ifdef HAVE_OPENCL
-    Size histSize = hist.size();
-    bool _1D = histSize.height == 1 || histSize.width == 1;
-    size_t histdims = _1D ? 1 : hist.dims();
+        Size histSize = hist.size();
+        bool _1D = histSize.height == 1 || histSize.width == 1;
+        size_t histdims = _1D ? 1 : hist.dims();
 #endif
 
-    CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
-               histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
-               ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
-
+        CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
+            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
+            ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
+    }
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
 

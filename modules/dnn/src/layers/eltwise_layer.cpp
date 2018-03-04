@@ -43,6 +43,8 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -92,7 +94,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -271,22 +274,47 @@ public:
         switch (op)
         {
             case SUM:
-                if (coeffs.empty())
                 {
-                    add(inputs[0], inputs[1], outputs[0]);
-                    for (int i = 2; i < inputs.size(); ++i)
-                        add(outputs[0], inputs[i], outputs[0]);
-                }
-                else
-                {
-                    UMat mul0, mul1;
-                    multiply(coeffs[0], inputs[0], mul0);
-                    multiply(coeffs[1], inputs[1], mul1);
-                    add(mul0, mul1, outputs[0]);
-                    for (int i = 2; i < inputs.size(); ++i)
+                    int channels = total(shape(outputs[0]), 0, 2);
+                    int plane_size = total(shape(outputs[0]), 2);
+                    if (channels % 4 == 0 && plane_size % 4 == 0)
                     {
-                        multiply(coeffs[i], inputs[i], mul0);
-                        add(mul0, outputs[0], outputs[0]);
+                        size_t localsize[] = { 128 };
+                        size_t globalsize[] = { (size_t)channels / 4 * localsize[0] };
+
+                        for (int i = 0; i < (inputs.size() - 1); ++i)
+                        {
+                            String buildopt = format("-DLOOP=%d", i);
+                            ocl::Kernel kernel("op_sum4", ocl::dnn::eltwise_oclsrc, buildopt);
+                            int idx = 0;
+                            UMat inpMat = (i == 0) ? inputs[0] : UMat();
+                            float coeff1 = (coeffs.empty() || i > 0) ? 1.0f : coeffs[i];
+                            float coeff2 = coeffs.empty() ? 1.0f : coeffs[i + 1];
+                            kernel.set(idx++, ocl::KernelArg::PtrReadOnly(inputs[0]));
+                            kernel.set(idx++, ocl::KernelArg::PtrReadOnly(inputs[1]));
+                            kernel.set(idx++, (int)plane_size);
+                            kernel.set(idx++, (float)coeff1);
+                            kernel.set(idx++, (float)coeff2);
+                            kernel.set(idx++, ocl::KernelArg::PtrReadWrite(outputs[0]));
+                            bool ret = kernel.run(1, globalsize, localsize, false);
+                            if (!ret)
+                                return false;
+                        }
+                    }
+                    else
+                    {
+                        float coeff1 = coeffs.empty() ? 1.f : coeffs[0];
+                        float coeff2 = coeffs.empty() ? 1.f : coeffs[1];
+                        UMat mul0, mul1;
+                        multiply(coeff1, inputs[0], mul0);
+                        multiply(coeff2, inputs[1], mul1);
+                        add(mul0, mul1, outputs[0]);
+                        for (int i = 2; i < inputs.size(); ++i)
+                        {
+                            float coeff = coeffs.empty() ? 1.f : coeffs[i];
+                            multiply(coeff, inputs[i], mul0);
+                            add(mul0, outputs[0], outputs[0]);
+                        }
                     }
                 }
                 break;
@@ -373,6 +401,27 @@ public:
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Eltwise";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::EltwiseLayer> ieLayer(new InferenceEngine::EltwiseLayer(lp));
+        if (op == SUM)
+            ieLayer->_operation = InferenceEngine::EltwiseLayer::Sum;
+        else if (op == PROD)
+            ieLayer->_operation = InferenceEngine::EltwiseLayer::Prod;
+        else if (op == MAX)
+            ieLayer->_operation = InferenceEngine::EltwiseLayer::Max;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 

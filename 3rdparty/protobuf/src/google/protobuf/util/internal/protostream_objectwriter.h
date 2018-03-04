@@ -76,11 +76,14 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
  public:
   // Options that control ProtoStreamObjectWriter class's behavior.
   struct Options {
-    // Treats integer inputs in google.protobuf.Struct as strings. Normally,
-    // integer values are returned in double field "number_value" of
+    // Treats numeric inputs in google.protobuf.Struct as strings. Normally,
+    // numeric values are returned in double field "number_value" of
     // google.protobuf.Struct. However, this can cause precision loss for
-    // int64/uint64 inputs. This option is provided for cases that want to
-    // preserve integer precision.
+    // int64/uint64/double inputs. This option is provided for cases that want
+    // to preserve number precision.
+    //
+    // TODO(skarvaje): Rename to struct_numbers_as_strings as it covers double
+    // as well.
     bool struct_integers_as_strings;
 
     // Not treat unknown fields as an error. If there is an unknown fields,

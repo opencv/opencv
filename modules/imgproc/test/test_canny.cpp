@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_CannyTest : public cvtest::ArrayTest
 {
@@ -211,15 +210,15 @@ test_Canny( const Mat& src, Mat& dst,
     Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
     Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
     Mat dx, dy, mag(height, width, CV_32F);
-    cvtest::filter2D(src, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
-    cvtest::filter2D(src, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, dx, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, dy, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
 
     // calc gradient magnitude
     for( y = 0; y < height; y++ )
     {
         for( x = 0; x < width; x++ )
         {
-            int dxval = dx.at<short>(y, x), dyval = dy.at<short>(y, x);
+            int dxval = dx.at<int>(y, x), dyval = dy.at<int>(y, x);
             mag.at<float>(y, x) = use_true_gradient ?
                 (float)sqrt((double)(dxval*dxval + dyval*dyval)) :
                 (float)(fabs((double)dxval) + fabs((double)dyval));
@@ -238,8 +237,8 @@ test_Canny( const Mat& src, Mat& dst,
             if( a <= lowThreshold )
                 continue;
 
-            int dxval = dx.at<short>(y, x);
-            int dyval = dy.at<short>(y, x);
+            int dxval = dx.at<int>(y, x);
+            int dyval = dy.at<int>(y, x);
 
             double tg = dxval ? (double)dyval/dxval : DBL_MAX*CV_SIGN(dyval);
 
@@ -426,4 +425,5 @@ TEST_P(CannyVX, Accuracy)
                 )
     );
 
+}} // namespace
 /* End of file. */

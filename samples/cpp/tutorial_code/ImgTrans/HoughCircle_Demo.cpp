@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     char key = 0;
     while(key != 'q' && key != 'Q')
     {
-        // those paramaters cannot be =0
+        // those parameters cannot be =0
         // so we must check here
         cannyThreshold = std::max(cannyThreshold, 1);
         accumulatorThreshold = std::max(accumulatorThreshold, 1);

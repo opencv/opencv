@@ -5,15 +5,12 @@
 #include "test_precomp.hpp"
 #include "test_invariance_utils.hpp"
 
-using namespace std;
-using namespace cv;
-using std::tr1::make_tuple;
-using std::tr1::get;
-using namespace testing;
+namespace opencv_test { namespace {
+using namespace perf;
 
 #define SHOW_DEBUG_LOG 1
 
-typedef std::tr1::tuple<std::string, Ptr<FeatureDetector>, float, float> String_FeatureDetector_Float_Float_t;
+typedef tuple<std::string, Ptr<FeatureDetector>, float, float> String_FeatureDetector_Float_Float_t;
 const static std::string IMAGE_TSUKUBA = "features2d/tsukuba.png";
 const static std::string IMAGE_BIKES = "detectors_descriptors_evaluation/images_datasets/bikes/img1.png";
 #define Value(...) Values(String_FeatureDetector_Float_Float_t(__VA_ARGS__))
@@ -253,3 +250,5 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DetectorScaleInvariance,
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DetectorScaleInvariance,
                         Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.08f, 0.49f));
+
+}} // namespace

@@ -1,4 +1,7 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/features2d.hpp>
 #include <vector>
 #include <map>
 #include <iostream>
@@ -118,7 +121,7 @@ int main(int argc, char *argv[])
     help();
 
 
-    // This descriptor are going to be detect and compute BLOBS with 6 differents params
+    // These descriptors are going to be detecting and computing BLOBS with 6 different params
     // Param for first BLOB detector we want all
     typeDesc.push_back("BLOB");    // see http://docs.opencv.org/trunk/d0/d7a/classcv_1_1SimpleBlobDetector.html
     pBLOB.push_back(pDefaultBLOB);

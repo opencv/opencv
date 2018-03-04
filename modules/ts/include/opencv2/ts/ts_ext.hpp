@@ -14,7 +14,15 @@ extern bool skipUnstableTests;
 extern int testThreads;
 }
 
+// check for required "opencv_test" namespace
+#if !defined(CV_TEST_SKIP_NAMESPACE_CHECK) && defined(__OPENCV_BUILD)
+#define CV__TEST_NAMESPACE_CHECK required_opencv_test_namespace = true;
+#else
+#define CV__TEST_NAMESPACE_CHECK  // nothing
+#endif
+
 #define CV__TEST_INIT \
+    CV__TEST_NAMESPACE_CHECK \
     cv::ipp::setIppStatus(0); \
     cv::theRNG().state = cvtest::param_seed; \
     cv::setNumThreads(cvtest::testThreads);

@@ -114,11 +114,20 @@ __kernel void TEMPLATE(ave_pool_forward, Dtype)(
       int wstart = pw * STRIDE_W - PAD_W;
       int hend = min(hstart + KERNEL_H, height + PAD_H);
       int wend = min(wstart + KERNEL_W, width + PAD_W);
-      const int pool_size = (hend - hstart) * (wend - wstart);
+      int pool_size;
+#ifdef AVE_POOL_PADDING_AREA
+      pool_size = (hend - hstart) * (wend - wstart);
       hstart = max(hstart, (int)0);
       wstart = max(wstart, (int)0);
       hend = min(hend, height);
       wend = min(wend, width);
+#else
+      hstart = max(hstart, (int)0);
+      wstart = max(wstart, (int)0);
+      hend = min(hend, height);
+      wend = min(wend, width);
+      pool_size = (hend - hstart) * (wend - wstart);
+#endif
       Dtype aveval = 0;
       __global const Dtype* bottom_slice = bottom_data
           + (n * channels + c) * height * width;

@@ -42,14 +42,14 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 #define ARITHM_MAT_DEPTH Values(CV_8U, CV_16U, CV_32F, CV_64F)
 
 //////////////////////////////////////////////////////////////////////
 // AddMat
+
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 
 PERF_TEST_P(Sz_Depth, AddMat,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -776,6 +776,8 @@ PERF_TEST_P(Sz_Depth, BitwiseAndMat,
 //////////////////////////////////////////////////////////////////////
 // BitwiseAndScalar
 
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
+
 PERF_TEST_P(Sz_Depth_Cn, BitwiseAndScalar,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
@@ -1495,3 +1497,5 @@ PERF_TEST_P(Sz_Depth_Op, Threshold,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

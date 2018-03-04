@@ -49,22 +49,27 @@ namespace protobuf {
 namespace util {
 
 namespace internal {
+ZeroCopyStreamByteSink::~ZeroCopyStreamByteSink() {
+  stream_->BackUp(buffer_size_);
+}
+
 void ZeroCopyStreamByteSink::Append(const char* bytes, size_t len) {
-  while (len > 0) {
-    void* buffer;
-    int length;
-    if (!stream_->Next(&buffer, &length)) {
-      // There isn't a way for ByteSink to report errors.
+  while (true) {
+    if (len <= buffer_size_) {
+      memcpy(buffer_, bytes, len);
+      buffer_ = static_cast<char*>(buffer_) + len;
+      buffer_size_ -= len;
       return;
     }
-    if (len < length) {
-      memcpy(buffer, bytes, len);
-      stream_->BackUp(length - len);
-      break;
-    } else {
-      memcpy(buffer, bytes, length);
-      bytes += length;
-      len -= length;
+    if (buffer_size_ > 0) {
+      memcpy(buffer_, bytes, buffer_size_);
+      bytes += buffer_size_;
+      len -= buffer_size_;
+    }
+    if (!stream_->Next(&buffer_, &buffer_size_)) {
+      // There isn't a way for ByteSink to report errors.
+      buffer_size_ = 0;
+      return;
     }
   }
 }
@@ -79,12 +84,17 @@ util::Status BinaryToJsonStream(TypeResolver* resolver,
   google::protobuf::Type type;
   RETURN_IF_ERROR(resolver->ResolveMessageType(type_url, &type));
   converter::ProtoStreamObjectSource proto_source(&in_stream, resolver, type);
+  proto_source.set_use_ints_for_enums(options.always_print_enums_as_ints);
+  proto_source.set_preserve_proto_field_names(
+      options.preserve_proto_field_names);
   io::CodedOutputStream out_stream(json_output);
   converter::JsonObjectWriter json_writer(options.add_whitespace ? " " : "",
                                           &out_stream);
   if (options.always_print_primitive_fields) {
     converter::DefaultValueObjectWriter default_value_writer(
         resolver, type, &json_writer);
+    default_value_writer.set_preserve_proto_field_names(
+        options.preserve_proto_field_names);
     return proto_source.WriteTo(&default_value_writer);
   } else {
     return proto_source.WriteTo(&json_writer);
@@ -105,7 +115,7 @@ util::Status BinaryToJsonString(TypeResolver* resolver,
 namespace {
 class StatusErrorListener : public converter::ErrorListener {
  public:
-  StatusErrorListener() : status_(util::Status::OK) {}
+  StatusErrorListener() {}
   virtual ~StatusErrorListener() {}
 
   util::Status GetStatus() { return status_; }

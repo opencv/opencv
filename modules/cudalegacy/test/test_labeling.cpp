@@ -44,6 +44,8 @@
 
 #ifdef HAVE_CUDA
 
+namespace opencv_test { namespace {
+
 namespace
 {
     struct GreedyLabeling
@@ -194,4 +196,5 @@ CUDA_TEST_P(Labeling, DISABLED_ConnectedComponents)
 
 INSTANTIATE_TEST_CASE_P(CUDA_ConnectedComponents, Labeling, ALL_DEVICES);
 
+}} // namespace
 #endif // HAVE_CUDA

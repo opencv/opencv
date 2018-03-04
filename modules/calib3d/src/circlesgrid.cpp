@@ -117,6 +117,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
         Mat tmpRow = dists.row(minIdx);
         Mat tmpCol = dists.col(minIdx);
         cv::min(dists.row(minLoc.x), dists.row(minLoc.y), tmpRow);
+        tmpRow = tmpRow.t();
         tmpRow.copyTo(tmpCol);
 
         clusters[minIdx].splice(clusters[minIdx].end(), clusters[maxIdx]);
@@ -619,7 +620,7 @@ bool CirclesGridFinder::findHoles()
     }
 
     default:
-      CV_Error(Error::StsBadArg, "Unkown pattern type");
+      CV_Error(Error::StsBadArg, "Unknown pattern type");
   }
   return (isDetectionCorrect());
   //CV_Error( 0, "Detection is not correct" );

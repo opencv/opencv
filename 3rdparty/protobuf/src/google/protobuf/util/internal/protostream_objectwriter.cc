@@ -173,7 +173,7 @@ Status GetNanosFromStringPiece(StringPiece s_nanos,
     *nanos = i_nanos * conversion;
   }
 
-  return Status::OK;
+  return Status();
 }
 
 }  // namespace
@@ -409,7 +409,7 @@ void ProtoStreamObjectWriter::AnyWriter::Event::DeepCopy() {
   // string value stays valid, we make a copy of the string value and update
   // DataPiece to reference our own copy.
   if (value_.type() == DataPiece::TYPE_STRING) {
-    value_.str().AppendToString(&value_storage_);
+    StrAppend(&value_storage_, value_.str());
     value_ = DataPiece(value_storage_, value_.use_strict_base64_decoding());
   } else if (value_.type() == DataPiece::TYPE_BYTES) {
     value_storage_ = value_.ToBytes().ValueOrDie();
@@ -862,7 +862,7 @@ Status ProtoStreamObjectWriter::RenderStructValue(ProtoStreamObjectWriter* ow,
           ow->ProtoWriter::RenderDataPiece(
               "string_value",
               DataPiece(SimpleItoa(int_value.ValueOrDie()), true));
-          return Status::OK;
+          return Status();
         }
       }
       struct_field_name = "number_value";
@@ -877,13 +877,22 @@ Status ProtoStreamObjectWriter::RenderStructValue(ProtoStreamObjectWriter* ow,
           ow->ProtoWriter::RenderDataPiece(
               "string_value",
               DataPiece(SimpleItoa(int_value.ValueOrDie()), true));
-          return Status::OK;
+          return Status();
         }
       }
       struct_field_name = "number_value";
       break;
     }
     case DataPiece::TYPE_DOUBLE: {
+      if (ow->options_.struct_integers_as_strings) {
+        StatusOr<double> double_value = data.ToDouble();
+        if (double_value.ok()) {
+          ow->ProtoWriter::RenderDataPiece(
+              "string_value",
+              DataPiece(SimpleDtoa(double_value.ValueOrDie()), true));
+          return Status();
+        }
+      }
       struct_field_name = "number_value";
       break;
     }
@@ -906,12 +915,12 @@ Status ProtoStreamObjectWriter::RenderStructValue(ProtoStreamObjectWriter* ow,
     }
   }
   ow->ProtoWriter::RenderDataPiece(struct_field_name, data);
-  return Status::OK;
+  return Status();
 }
 
 Status ProtoStreamObjectWriter::RenderTimestamp(ProtoStreamObjectWriter* ow,
                                                 const DataPiece& data) {
-  if (data.type() == DataPiece::TYPE_NULL) return Status::OK;
+  if (data.type() == DataPiece::TYPE_NULL) return Status();
   if (data.type() != DataPiece::TYPE_STRING) {
     return Status(INVALID_ARGUMENT,
                   StrCat("Invalid data type for timestamp, value is ",
@@ -930,19 +939,19 @@ Status ProtoStreamObjectWriter::RenderTimestamp(ProtoStreamObjectWriter* ow,
 
   ow->ProtoWriter::RenderDataPiece("seconds", DataPiece(seconds));
   ow->ProtoWriter::RenderDataPiece("nanos", DataPiece(nanos));
-  return Status::OK;
+  return Status();
 }
 
 static inline util::Status RenderOneFieldPath(ProtoStreamObjectWriter* ow,
                                                 StringPiece path) {
   ow->ProtoWriter::RenderDataPiece(
       "paths", DataPiece(ConvertFieldMaskPath(path, &ToSnakeCase), true));
-  return Status::OK;
+  return Status();
 }
 
 Status ProtoStreamObjectWriter::RenderFieldMask(ProtoStreamObjectWriter* ow,
                                                 const DataPiece& data) {
-  if (data.type() == DataPiece::TYPE_NULL) return Status::OK;
+  if (data.type() == DataPiece::TYPE_NULL) return Status();
   if (data.type() != DataPiece::TYPE_STRING) {
     return Status(INVALID_ARGUMENT,
                   StrCat("Invalid data type for field mask, value is ",
@@ -953,13 +962,13 @@ Status ProtoStreamObjectWriter::RenderFieldMask(ProtoStreamObjectWriter* ow,
 // conversions as much as possible. Because ToSnakeCase sometimes returns the
 // wrong value.
   google::protobuf::scoped_ptr<ResultCallback1<util::Status, StringPiece> > callback(
-      NewPermanentCallback(&RenderOneFieldPath, ow));
+      ::google::protobuf::NewPermanentCallback(&RenderOneFieldPath, ow));
   return DecodeCompactFieldMaskPaths(data.str(), callback.get());
 }
 
 Status ProtoStreamObjectWriter::RenderDuration(ProtoStreamObjectWriter* ow,
                                                const DataPiece& data) {
-  if (data.type() == DataPiece::TYPE_NULL) return Status::OK;
+  if (data.type() == DataPiece::TYPE_NULL) return Status();
   if (data.type() != DataPiece::TYPE_STRING) {
     return Status(INVALID_ARGUMENT,
                   StrCat("Invalid data type for duration, value is ",
@@ -1004,14 +1013,14 @@ Status ProtoStreamObjectWriter::RenderDuration(ProtoStreamObjectWriter* ow,
 
   ow->ProtoWriter::RenderDataPiece("seconds", DataPiece(seconds));
   ow->ProtoWriter::RenderDataPiece("nanos", DataPiece(nanos));
-  return Status::OK;
+  return Status();
 }
 
 Status ProtoStreamObjectWriter::RenderWrapperType(ProtoStreamObjectWriter* ow,
                                                   const DataPiece& data) {
-  if (data.type() == DataPiece::TYPE_NULL) return Status::OK;
+  if (data.type() == DataPiece::TYPE_NULL) return Status();
   ow->ProtoWriter::RenderDataPiece("value", data);
-  return Status::OK;
+  return Status();
 }
 
 ProtoStreamObjectWriter* ProtoStreamObjectWriter::RenderDataPiece(
@@ -1238,10 +1247,7 @@ bool ProtoStreamObjectWriter::IsMap(const google::protobuf::Field& field) {
   const google::protobuf::Type* field_type =
       typeinfo()->GetTypeByTypeUrl(field.type_url());
 
-  // TODO(xiaofeng): Unify option names.
-  return GetBoolOptionOrDefault(field_type->options(),
-                                "google.protobuf.MessageOptions.map_entry", false) ||
-         GetBoolOptionOrDefault(field_type->options(), "map_entry", false);
+  return google::protobuf::util::converter::IsMap(field, *field_type);
 }
 
 bool ProtoStreamObjectWriter::IsAny(const google::protobuf::Field& field) {

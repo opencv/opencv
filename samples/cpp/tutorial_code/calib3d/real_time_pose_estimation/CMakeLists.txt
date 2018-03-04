@@ -1,5 +1,5 @@
 set(sample_dir ${CMAKE_CURRENT_SOURCE_DIR}/tutorial_code/calib3d/real_time_pose_estimation/src/)
-set(target cpp-tutorial-)
+set(target example_tutorial_)
 
 set(sample_pnplib
         ${sample_dir}CsvReader.cpp
@@ -11,6 +11,8 @@ set(sample_pnplib
         ${sample_dir}Utils.cpp
         ${sample_dir}RobustMatcher.cpp
 )
+
+ocv_include_modules_recurse(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
 add_executable( ${target}pnp_registration ${sample_dir}main_registration.cpp ${sample_pnplib} )
 add_executable( ${target}pnp_detection ${sample_dir}main_detection.cpp ${sample_pnplib} )

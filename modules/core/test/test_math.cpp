@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 //////////////////////////////////////////////////////////////////////////////////////////
 /////////////////// tests for matrix operations and math functions ///////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -7,8 +11,7 @@
 #include <math.h>
 #include "opencv2/core/softfloat.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 /// !!! NOTE !!! These tests happily avoid overflow cases & out-of-range arguments
 /// so that output arrays contain neigher Inf's nor Nan's.
@@ -3078,7 +3081,7 @@ TEST(Core_Cholesky, accuracy64f)
    for (int i = 0; i < A.rows; i++)
        for (int j = i + 1; j < A.cols; j++)
            A.at<double>(i, j) = 0.0;
-   EXPECT_LE(norm(refA, A*A.t(), CV_RELATIVE_L2), FLT_EPSILON);
+   EXPECT_LE(cvtest::norm(refA, A*A.t(), CV_RELATIVE_L2), FLT_EPSILON);
 }
 
 TEST(Core_QR_Solver, accuracy64f)
@@ -3098,7 +3101,7 @@ TEST(Core_QR_Solver, accuracy64f)
 
     //solve system with square matrix
     solve(A, B, solutionQR, DECOMP_QR);
-    EXPECT_LE(norm(A*solutionQR, B, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(A*solutionQR, B, CV_RELATIVE_L2), FLT_EPSILON);
 
     A = Mat(m, n, CV_64F);
     B = Mat(m, n, CV_64F);
@@ -3107,13 +3110,13 @@ TEST(Core_QR_Solver, accuracy64f)
 
     //solve normal system
     solve(A, B, solutionQR, DECOMP_QR | DECOMP_NORMAL);
-    EXPECT_LE(norm(A.t()*(A*solutionQR), A.t()*B, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(A.t()*(A*solutionQR), A.t()*B, CV_RELATIVE_L2), FLT_EPSILON);
 
     //solve overdeterminated system as a least squares problem
     Mat solutionSVD;
     solve(A, B, solutionQR, DECOMP_QR);
     solve(A, B, solutionSVD, DECOMP_SVD);
-    EXPECT_LE(norm(solutionQR, solutionSVD, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(solutionQR, solutionSVD, CV_RELATIVE_L2), FLT_EPSILON);
 
     //solve system with singular matrix
     A = Mat(10, 10, CV_64F);
@@ -3717,7 +3720,7 @@ TEST(Core_SoftFloat, sincos64)
         softdouble x = inputs[i];
 
         int xexp = x.getExp();
-        softdouble randEps = eps.setExp(max(xexp-52, -46));
+        softdouble randEps = eps.setExp(std::max(xexp-52, -46));
         softdouble sx = sin(x);
         softdouble cx = cos(x);
         ASSERT_FALSE(sx.isInf()); ASSERT_FALSE(cx.isInf());
@@ -3861,4 +3864,5 @@ TEST(Core_SoftFloat, CvRound)
     }
 }
 
+}} // namespace
 /* End of file. */

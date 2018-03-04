@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from __future__ import print_function
 import xml.etree.ElementTree as ET
 from glob import glob
@@ -7,14 +6,14 @@ from pprint import PrettyPrinter as PP
 
 LONG_TESTS_DEBUG_VALGRIND = [
     ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
-    ('dnn', 'Reproducibility*', 1000), # large DNN models
+    ('dnn', 'Reproducibility*', 1000),  # large DNN models
     ('features2d', 'Features2d/DescriptorImage.no_crash/3', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/4', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/5', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/6', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/7', 1000),
-    ('imgcodecs', 'Imgcodecs_Png.write_big', 1000), # memory limit
-    ('imgcodecs', 'Imgcodecs_Tiff.decode_tile16384x16384', 1000), # memory limit
+    ('imgcodecs', 'Imgcodecs_Png.write_big', 1000),  # memory limit
+    ('imgcodecs', 'Imgcodecs_Tiff.decode_tile16384x16384', 1000),  # memory limit
     ('ml', 'ML_RTrees.regression', 1423.47),
     ('optflow', 'DenseOpticalFlow_DeepFlow.ReferenceAccuracy', 1360.95),
     ('optflow', 'DenseOpticalFlow_DeepFlow_perf.perf/0', 1881.59),
@@ -51,7 +50,7 @@ LONG_TESTS_DEBUG_VALGRIND = [
 ]
 
 
-def longTestFilter(data, module = None):
+def longTestFilter(data, module=None):
     res = ['*', '-'] + [v for _, v, m in data if module is None or m == module]
     return '--gtest_filter={}'.format(':'.join(res))
 

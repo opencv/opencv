@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////////////
 // GEMM
@@ -255,7 +253,7 @@ CUDA_TEST_P(Dft, Algorithm)
     int cols = randomInt(2, 100);
     int rows = randomInt(2, 100);
 
-    int flags = 0;
+    int flags = 0 | DFT_COMPLEX_INPUT;
     cv::Ptr<cv::cuda::DFT> dft = cv::cuda::createDFT(cv::Size(cols, rows), flags);
 
     for (int i = 0; i < 5; ++i)
@@ -430,6 +428,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Convolve, testing::Combine(
 
 #endif // HAVE_CUBLAS
 
-} // namespace
+}} // namespace
 
 #endif // HAVE_CUDA

@@ -5,12 +5,8 @@
 // Copyright (C) 2016, Itseez, Inc, all rights reserved.
 
 #include "test_precomp.hpp"
-#include <vector>
-#include <cmath>
 
-using namespace cv;
-using namespace std;
-
+namespace opencv_test { namespace {
 
 TEST(Imgproc_FitEllipseDirect_Issue_1, accuracy) {
     vector<Point2f>pts;
@@ -440,3 +436,5 @@ TEST(Imgproc_FitEllipseDirect_Issue_7, accuracy) {
 
     EXPECT_TRUE(directGoodQ);
 }
+
+}} // namespace

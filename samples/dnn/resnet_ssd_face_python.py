@@ -5,20 +5,20 @@ try:
     import cv2 as cv
 except ImportError:
     raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
-                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+                      'configure environment variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 from cv2 import dnn
 
-inWidth = 300
-inHeight = 300
-confThreshold = 0.5
+inWidth = 1280
+inHeight = 720
+confThreshold = 0.2
 
 prototxt = 'face_detector/deploy.prototxt'
 caffemodel = 'face_detector/res10_300x300_ssd_iter_140000.caffemodel'
 
 if __name__ == '__main__':
     net = dnn.readNetFromCaffe(prototxt, caffemodel)
-    cap = cv.VideoCapture(0)
+    cap = cv.VideoCapture("/home/bfomitchev/Videos/beatles.mp4")
     while True:
         ret, frame = cap.read()
         cols = frame.shape[1]

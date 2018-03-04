@@ -41,26 +41,19 @@
 
 #include "test_precomp.hpp"
 
-#include <cmath>
-#include <vector>
-#include <iostream>
+namespace opencv_test { namespace {
 
-using namespace cv;
-
-namespace
+void __wrap_printf_func(const char* fmt, ...)
 {
-    void __wrap_printf_func(const char* fmt, ...)
-    {
-        va_list args;
-        va_start(args, fmt);
-        char buffer[256];
-        vsprintf (buffer, fmt, args);
-        cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
-        va_end(args);
-    }
-
-    #define PRINT_TO_LOG __wrap_printf_func
+    va_list args;
+    va_start(args, fmt);
+    char buffer[256];
+    vsprintf (buffer, fmt, args);
+    cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
+    va_end(args);
 }
+
+#define PRINT_TO_LOG __wrap_printf_func
 
 #define SHOW_IMAGE
 #undef SHOW_IMAGE
@@ -133,7 +126,7 @@ String CV_ImageWarpBaseTest::interpolation_to_string(int inter) const
     if (inverse)
         str += " | WARP_INVERSE_MAP";
 
-    return str.empty() ? "Unsupported/Unkown interpolation type" : str;
+    return str.empty() ? "Unsupported/Unknown interpolation type" : str;
 }
 
 Size CV_ImageWarpBaseTest::randSize(RNG& rng) const
@@ -674,12 +667,15 @@ void CV_Resize_Test::resize_generic()
     for (int dy = 0; dy < tmp.rows; ++dy)
         resize_1d(src, tmp, dy, dims[0]);
 
-    transpose(tmp, tmp);
-    transpose(reference_dst, reference_dst);
+    cv::Mat tmp_t(tmp.cols, tmp.rows, tmp.type());
+    cvtest::transpose(tmp, tmp_t);
+    cv::Mat reference_dst_t(reference_dst.cols, reference_dst.rows, reference_dst.type());
+    cvtest::transpose(reference_dst, reference_dst_t);
 
-    for (int dy = 0; dy < tmp.rows; ++dy)
-        resize_1d(tmp, reference_dst, dy, dims[1]);
-    transpose(reference_dst, reference_dst);
+    for (int dy = 0; dy < tmp_t.rows; ++dy)
+        resize_1d(tmp_t, reference_dst_t, dy, dims[1]);
+
+    cvtest::transpose(reference_dst_t, reference_dst);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -855,7 +851,7 @@ const char* CV_Remap_Test::borderType_to_string() const
         return "BORDER_WRAP";
     if (borderType == BORDER_REFLECT_101)
         return "BORDER_REFLECT_101";
-    return "Unsupported/Unkown border type";
+    return "Unsupported/Unknown border type";
 }
 
 void CV_Remap_Test::prepare_test_data_for_reference_func()
@@ -1318,3 +1314,5 @@ TEST_P(Imgproc_Resize, BigSize)
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Resize, Interpolation::all());
 
 #endif
+
+}} // namespace

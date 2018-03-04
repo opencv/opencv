@@ -876,7 +876,7 @@ public class CoreTest extends OpenCVTestCase {
         Point point1 = new Point(0, 0);
         Point point2 = new Point(nPoints, nPoints);
 
-        Imgproc.line(gray0, point1, point2, colorWhite, 0);
+        Imgproc.line(gray0, point1, point2, colorWhite, 1);
 
         assertTrue(nPoints == Core.countNonZero(gray0));
     }

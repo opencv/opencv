@@ -1269,7 +1269,7 @@ public:
     results for each of the sample cases. If the model is a classifier, it will return
     a Mat with samples + 1 rows, where the first row gives the class number and the
     following rows return the votes each class had for each sample.
-        @param samples Array containg the samples for which votes will be calculated.
+        @param samples Array containing the samples for which votes will be calculated.
         @param results Array where the result of the calculation will be written.
         @param flags Flags for defining the type of RTrees.
     */
@@ -1658,9 +1658,9 @@ public:
      */
     CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
 
-    /** @brief This function returns the trained paramters arranged across rows.
+    /** @brief This function returns the trained parameters arranged across rows.
 
-    For a two class classifcation problem, it returns a row matrix. It returns learnt paramters of
+    For a two class classifcation problem, it returns a row matrix. It returns learnt parameters of
     the Logistic Regression as a matrix of type CV_32F.
      */
     CV_WRAP virtual Mat get_learnt_thetas() const = 0;
@@ -1854,7 +1854,7 @@ public:
 
 
 /****************************************************************************************\
-*                           Auxilary functions declarations                              *
+*                           Auxiliary functions declarations                              *
 \****************************************************************************************/
 
 /** @brief Generates _sample_ from multivariate normal distribution
@@ -1921,7 +1921,7 @@ struct SimulatedAnnealingSolverSystem
 {
     /** Give energy value for a state of system.*/
     double energy() const;
-    /** Function which change the state of system (random pertubation).*/
+    /** Function which change the state of system (random perturbation).*/
     void changeState();
     /** Function to reverse to the previous state. Can be called once only after changeState(). */
     void reverseState();

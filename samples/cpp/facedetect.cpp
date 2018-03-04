@@ -174,7 +174,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
     cvtColor( img, gray, COLOR_BGR2GRAY );
     double fx = 1 / scale;
-    resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR_EXACT );
+    resize( gray, smallImg, Size(), fx, fx );
     equalizeHist( smallImg, smallImg );
 
     t = (double)getTickCount();

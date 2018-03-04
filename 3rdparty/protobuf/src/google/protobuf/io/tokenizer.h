@@ -191,7 +191,7 @@ class LIBPROTOBUF_EXPORT Tokenizer {
   //    * grault. */
   //   optional int32 grault = 6;
   bool NextWithComments(string* prev_trailing_comments,
-                        vector<string>* detached_comments,
+                        std::vector<string>* detached_comments,
                         string* next_leading_comments);
 
   // Parse helpers ---------------------------------------------------

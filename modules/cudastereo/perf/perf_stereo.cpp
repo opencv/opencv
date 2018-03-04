@@ -42,14 +42,12 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // StereoBM
 
-typedef std::tr1::tuple<string, string> pair_string;
+typedef tuple<string, string> pair_string;
 DEF_PARAM_TEST_1(ImagePair, pair_string);
 
 PERF_TEST_P(ImagePair, StereoBM,
@@ -192,6 +190,8 @@ PERF_TEST_P(ImagePair, DisparityBilateralFilter,
 //////////////////////////////////////////////////////////////////////
 // ReprojectImageTo3D
 
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
+
 PERF_TEST_P(Sz_Depth, ReprojectImageTo3D,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S)))
@@ -251,3 +251,5 @@ PERF_TEST_P(Sz_Depth, DrawColorDisp,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace

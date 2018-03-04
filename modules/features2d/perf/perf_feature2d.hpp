@@ -3,13 +3,11 @@
 
 #include "perf_precomp.hpp"
 
+namespace opencv_test
+{
+
 /* cofiguration for tests of detectors/descriptors. shared between ocl and cpu tests. */
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 // detectors/descriptors configurations to test
 #define DETECTORS_ONLY                                                                  \
     FAST_DEFAULT, FAST_20_TRUE_TYPE5_8, FAST_20_TRUE_TYPE7_12, FAST_20_TRUE_TYPE9_16,   \
@@ -30,7 +28,7 @@ using std::tr1::get;
 enum Feature2DVals { DETECTORS_ONLY, DETECTORS_EXTRACTORS };
 CV_ENUM_EXPAND(Feature2DType, DETECTORS_ONLY, DETECTORS_EXTRACTORS)
 
-typedef std::tr1::tuple<Feature2DType, string> Feature2DType_String_t;
+typedef tuple<Feature2DType, string> Feature2DType_String_t;
 typedef perf::TestBaseWithParam<Feature2DType_String_t> feature2d;
 
 #define TEST_IMAGES testing::Values(\
@@ -83,5 +81,7 @@ static inline Ptr<Feature2D> getFeature2D(Feature2DType type)
         return Ptr<Feature2D>();
     }
 }
+
+} // namespace
 
 #endif // __OPENCV_PERF_FEATURE2D_HPP__

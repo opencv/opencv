@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
@@ -84,3 +82,5 @@ PERF_TEST_P(Image_MinDistance, GoodFeaturesToTrack,
         CPU_SANITY_CHECK(pts);
     }
 }
+
+}} // namespace

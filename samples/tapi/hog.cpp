@@ -223,7 +223,7 @@ void App::run()
 
             if (output!="" && write_once)
             {
-                if (img_source!="")     // wirte image
+                if (img_source!="")     // write image
                 {
                     write_once = false;
                     imwrite(output, img_to_show);

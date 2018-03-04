@@ -44,12 +44,11 @@
 //M*/
 
 #include "../test_precomp.hpp"
-#include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
@@ -82,7 +81,7 @@ PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
 
         Border maskBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC1, -MAX_VALUE, MAX_VALUE);
-        threshold(mask, mask, 80, 255, THRESH_BINARY);
+        cvtest::threshold(mask, mask, 80, 255, THRESH_BINARY);
 
         Border src2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src2, src2_roi, roiSize, src2Border, stype, -MAX_VALUE, MAX_VALUE);
@@ -235,6 +234,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgProc, AccumulateSquare, Combine(OCL_DEPTH_ALL_COM
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, AccumulateProduct, Combine(OCL_DEPTH_ALL_COMBINATIONS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, AccumulateWeighted, Combine(OCL_DEPTH_ALL_COMBINATIONS, OCL_ALL_CHANNELS, Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

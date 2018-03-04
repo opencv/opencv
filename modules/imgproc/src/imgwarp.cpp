@@ -1602,7 +1602,7 @@ static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation
                 ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standart says nothing about thread-safety for now
+        //since OpenVX standard says nothing about thread-safety for now
         ivx::border_t prevBorder = ctx.immediateBorder();
         ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)(borderValue[0]));
 

@@ -47,7 +47,6 @@
 #include <google/protobuf/stubs/logging.h>
 #include <google/protobuf/stubs/common.h>
 #include <google/protobuf/stubs/stl_util.h>
-#include <google/protobuf/stubs/port.h>
 
 
 namespace google {
@@ -76,10 +75,6 @@ inline bool NextNonEmpty(ZeroCopyInputStream* input,
 CodedInputStream::~CodedInputStream() {
   if (input_ != NULL) {
     BackUpInputToCurrentPosition();
-  }
-
-  if (total_bytes_warning_threshold_ == -2) {
-    GOOGLE_LOG(WARNING) << "The total number of bytes read was " << total_bytes_read_;
   }
 }
 
@@ -124,21 +119,15 @@ CodedInputStream::Limit CodedInputStream::PushLimit(int byte_limit) {
   Limit old_limit = current_limit_;
 
   // security: byte_limit is possibly evil, so check for negative values
-  // and overflow.
-  if (byte_limit >= 0 &&
-      byte_limit <= INT_MAX - current_position) {
+  // and overflow. Also check that the new requested limit is before the
+  // previous limit; otherwise we continue to enforce the previous limit.
+  if GOOGLE_PREDICT_TRUE(byte_limit >= 0 &&
+                  byte_limit <= INT_MAX - current_position &&
+                  byte_limit < current_limit_ - current_position) {
     current_limit_ = current_position + byte_limit;
-  } else {
-    // Negative or overflow.
-    current_limit_ = INT_MAX;
+    RecomputeBufferLimits();
   }
 
-  // We need to enforce all limits, not just the new one, so if the previous
-  // limit was before the new requested limit, we continue to enforce the
-  // previous limit.
-  current_limit_ = std::min(current_limit_, old_limit);
-
-  RecomputeBufferLimits();
   return old_limit;
 }
 
@@ -186,16 +175,12 @@ int CodedInputStream::BytesUntilLimit() const {
 
 void CodedInputStream::SetTotalBytesLimit(
     int total_bytes_limit, int warning_threshold) {
+  (void) warning_threshold;
+
   // Make sure the limit isn't already past, since this could confuse other
   // code.
   int current_position = CurrentPosition();
   total_bytes_limit_ = std::max(current_position, total_bytes_limit);
-  if (warning_threshold >= 0) {
-    total_bytes_warning_threshold_ = warning_threshold;
-  } else {
-    // warning_threshold is negative
-    total_bytes_warning_threshold_ = -1;
-  }
   RecomputeBufferLimits();
 }
 
@@ -212,17 +197,7 @@ void CodedInputStream::PrintTotalBytesLimitError() {
                 "in google/protobuf/io/coded_stream.h.";
 }
 
-bool CodedInputStream::Skip(int count) {
-  if (count < 0) return false;  // security: count is often user-supplied
-
-  const int original_buffer_size = BufferSize();
-
-  if (count <= original_buffer_size) {
-    // Just skipping within the current buffer.  Easy.
-    Advance(count);
-    return true;
-  }
-
+bool CodedInputStream::SkipFallback(int count, int original_buffer_size) {
   if (buffer_size_after_limit_ > 0) {
     // We hit a limit inside this buffer.  Advance to the limit and fail.
     Advance(original_buffer_size);
@@ -340,7 +315,8 @@ namespace {
 // The first part of the pair is true iff the read was successful.  The second
 // part is buffer + (number of bytes read).  This function is always inlined,
 // so returning a pair is costless.
-GOOGLE_ATTRIBUTE_ALWAYS_INLINE ::std::pair<bool, const uint8*> ReadVarint32FromArray(
+GOOGLE_PROTOBUF_ATTRIBUTE_ALWAYS_INLINE
+::std::pair<bool, const uint8*> ReadVarint32FromArray(
     uint32 first_byte, const uint8* buffer,
     uint32* value);
 inline ::std::pair<bool, const uint8*> ReadVarint32FromArray(
@@ -377,8 +353,8 @@ inline ::std::pair<bool, const uint8*> ReadVarint32FromArray(
   return std::make_pair(true, ptr);
 }
 
-GOOGLE_ATTRIBUTE_ALWAYS_INLINE::std::pair<bool, const uint8*> ReadVarint64FromArray(
-    const uint8* buffer, uint64* value);
+GOOGLE_PROTOBUF_ATTRIBUTE_ALWAYS_INLINE::std::pair<bool, const uint8*>
+ReadVarint64FromArray(const uint8* buffer, uint64* value);
 inline ::std::pair<bool, const uint8*> ReadVarint64FromArray(
     const uint8* buffer, uint64* value) {
   const uint8* ptr = buffer;
@@ -550,9 +526,15 @@ bool CodedInputStream::ReadVarint64Slow(uint64* value) {
   uint32 b;
 
   do {
-    if (count == kMaxVarintBytes) return false;
+    if (count == kMaxVarintBytes) {
+      *value = 0;
+      return false;
+    }
     while (buffer_ == buffer_end_) {
-      if (!Refresh()) return false;
+      if (!Refresh()) {
+        *value = 0;
+        return false;
+      }
     }
     b = *buffer_;
     result |= static_cast<uint64>(b & 0x7F) << (7 * count);
@@ -577,7 +559,7 @@ std::pair<uint64, bool> CodedInputStream::ReadVarint64Fallback() {
     buffer_ = p.second;
     return std::make_pair(temp, true);
   } else {
-    uint64 temp = 0;
+    uint64 temp;
     bool success = ReadVarint64Slow(&temp);
     return std::make_pair(temp, success);
   }
@@ -598,20 +580,6 @@ bool CodedInputStream::Refresh() {
     }
 
     return false;
-  }
-
-  if (total_bytes_warning_threshold_ >= 0 &&
-      total_bytes_read_ >= total_bytes_warning_threshold_) {
-      GOOGLE_LOG(WARNING) << "Reading dangerously large protocol message.  If the "
-                      "message turns out to be larger than "
-                   << total_bytes_limit_ << " bytes, parsing will be halted "
-                      "for security reasons.  To increase the limit (or to "
-                      "disable these warnings), see "
-                      "CodedInputStream::SetTotalBytesLimit() in "
-                      "google/protobuf/io/coded_stream.h.";
-
-    // Don't warn again for this stream, and print total size at the end.
-    total_bytes_warning_threshold_ = -2;
   }
 
   const void* void_buffer;
@@ -650,7 +618,7 @@ bool CodedInputStream::Refresh() {
 
 // CodedOutputStream =================================================
 
-bool CodedOutputStream::default_serialization_deterministic_ = false;
+google::protobuf::internal::AtomicWord CodedOutputStream::default_serialization_deterministic_ = 0;
 
 CodedOutputStream::CodedOutputStream(ZeroCopyOutputStream* output)
   : output_(output),
@@ -789,104 +757,12 @@ void CodedOutputStream::WriteVarint32SlowPath(uint32 value) {
   WriteRaw(bytes, size);
 }
 
-inline uint8* CodedOutputStream::WriteVarint64ToArrayInline(
-    uint64 value, uint8* target) {
-  // Splitting into 32-bit pieces gives better performance on 32-bit
-  // processors.
-  uint32 part0 = static_cast<uint32>(value      );
-  uint32 part1 = static_cast<uint32>(value >> 28);
-  uint32 part2 = static_cast<uint32>(value >> 56);
-
-  int size;
-
-  // Here we can't really optimize for small numbers, since the value is
-  // split into three parts.  Cheking for numbers < 128, for instance,
-  // would require three comparisons, since you'd have to make sure part1
-  // and part2 are zero.  However, if the caller is using 64-bit integers,
-  // it is likely that they expect the numbers to often be very large, so
-  // we probably don't want to optimize for small numbers anyway.  Thus,
-  // we end up with a hardcoded binary search tree...
-  if (part2 == 0) {
-    if (part1 == 0) {
-      if (part0 < (1 << 14)) {
-        if (part0 < (1 << 7)) {
-          size = 1; goto size1;
-        } else {
-          size = 2; goto size2;
-        }
-      } else {
-        if (part0 < (1 << 21)) {
-          size = 3; goto size3;
-        } else {
-          size = 4; goto size4;
-        }
-      }
-    } else {
-      if (part1 < (1 << 14)) {
-        if (part1 < (1 << 7)) {
-          size = 5; goto size5;
-        } else {
-          size = 6; goto size6;
-        }
-      } else {
-        if (part1 < (1 << 21)) {
-          size = 7; goto size7;
-        } else {
-          size = 8; goto size8;
-        }
-      }
-    }
-  } else {
-    if (part2 < (1 << 7)) {
-      size = 9; goto size9;
-    } else {
-      size = 10; goto size10;
-    }
-  }
-
-  GOOGLE_LOG(FATAL) << "Can't get here.";
-
-  size10: target[9] = static_cast<uint8>((part2 >>  7) | 0x80);
-  size9 : target[8] = static_cast<uint8>((part2      ) | 0x80);
-  size8 : target[7] = static_cast<uint8>((part1 >> 21) | 0x80);
-  size7 : target[6] = static_cast<uint8>((part1 >> 14) | 0x80);
-  size6 : target[5] = static_cast<uint8>((part1 >>  7) | 0x80);
-  size5 : target[4] = static_cast<uint8>((part1      ) | 0x80);
-  size4 : target[3] = static_cast<uint8>((part0 >> 21) | 0x80);
-  size3 : target[2] = static_cast<uint8>((part0 >> 14) | 0x80);
-  size2 : target[1] = static_cast<uint8>((part0 >>  7) | 0x80);
-  size1 : target[0] = static_cast<uint8>((part0      ) | 0x80);
-
-  target[size-1] &= 0x7F;
-  return target + size;
-}
-
-void CodedOutputStream::WriteVarint64(uint64 value) {
-  if (buffer_size_ >= kMaxVarintBytes) {
-    // Fast path:  We have enough bytes left in the buffer to guarantee that
-    // this write won't cross the end, so we can skip the checks.
-    uint8* target = buffer_;
-
-    uint8* end = WriteVarint64ToArrayInline(value, target);
-    int size = end - target;
-    Advance(size);
-  } else {
-    // Slow path:  This write might cross the end of the buffer, so we
-    // compose the bytes first then use WriteRaw().
-    uint8 bytes[kMaxVarintBytes];
-    int size = 0;
-    while (value > 0x7F) {
-      bytes[size++] = (static_cast<uint8>(value) & 0x7F) | 0x80;
-      value >>= 7;
-    }
-    bytes[size++] = static_cast<uint8>(value) & 0x7F;
-    WriteRaw(bytes, size);
-  }
-}
-
-uint8* CodedOutputStream::WriteVarint64ToArray(
-    uint64 value, uint8* target) {
-  return WriteVarint64ToArrayInline(value, target);
+void CodedOutputStream::WriteVarint64SlowPath(uint64 value) {
+  uint8 bytes[kMaxVarintBytes];
+  uint8* target = &bytes[0];
+  uint8* end = WriteVarint64ToArray(value, target);
+  int size = end - target;
+  WriteRaw(bytes, size);
 }
 
 bool CodedOutputStream::Refresh() {
@@ -901,20 +777,6 @@ bool CodedOutputStream::Refresh() {
     had_error_ = true;
     return false;
   }
-}
-
-size_t CodedOutputStream::VarintSize32Fallback(uint32 value) {
-  GOOGLE_DCHECK_NE(0, value);  // This is enforced by our caller.
-
-  return 1 + Bits::Log2FloorNonZero(value) / 7;
-}
-
-size_t CodedOutputStream::VarintSize64(uint64 value) {
-  if (value < (1 << 7)) {
-    return 1;
-  }
-
-  return 1 + Bits::Log2FloorNonZero64(value) / 7;
 }
 
 uint8* CodedOutputStream::WriteStringWithSizeToArray(const string& str,

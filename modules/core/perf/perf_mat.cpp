@@ -1,10 +1,8 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 PERF_TEST_P(Size_MatType, Mat_Eye,
             testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
@@ -57,7 +55,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone,
     Size size = get<0>(GetParam());
     int type = get<1>(GetParam());
     Mat source(size.height, size.width, type);
-    Mat destination(size.height, size.width, type);;
+    Mat destination(size.height, size.width, type);
 
     declare.in(source, WARMUP_RNG).out(destination);
 
@@ -97,6 +95,47 @@ PERF_TEST_P(Size_MatType, Mat_Clone_Roi,
     SANITY_CHECK(destination, 1);
 }
 
+PERF_TEST_P(Size_MatType, Mat_CopyToWithMask,
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
+                             testing::Values(CV_8UC1, CV_8UC2))
+            )
+{
+    const Size_MatType_t params = GetParam();
+    const Size size = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src(size, type), dst(size, type), mask(size, CV_8UC1);
+    declare.in(src, mask, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE()
+    {
+        src.copyTo(dst, mask);
+    }
+
+    SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
+                             testing::Values(CV_8UC1, CV_8UC2))
+            )
+{
+    const Size_MatType_t params = GetParam();
+    const Size size = get<0>(params);
+    const int type = get<1>(params);
+    const Scalar sc = Scalar::all(27);
+
+    Mat src(size, type), mask(size, CV_8UC1);
+    declare.in(src, mask, WARMUP_RNG).out(src);
+
+    TEST_CYCLE()
+    {
+        src.setTo(sc, mask);
+    }
+
+    SANITY_CHECK(src);
+}
+
 ///////////// Transform ////////////////////////
 
 PERF_TEST_P(Size_MatType, Mat_Transform,
@@ -124,3 +163,5 @@ PERF_TEST_P(Size_MatType, Mat_Transform,
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
+
+} // namespace

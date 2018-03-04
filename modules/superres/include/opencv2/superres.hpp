@@ -50,7 +50,7 @@
   @defgroup superres Super Resolution
 
 The Super Resolution module contains a set of functions and classes that can be used to solve the
-problem of resolution enhancement. There are a few methods implemented, most of them are descibed in
+problem of resolution enhancement. There are a few methods implemented, most of them are described in
 the papers @cite Farsiu03 and @cite Mitzel09 .
 
  */

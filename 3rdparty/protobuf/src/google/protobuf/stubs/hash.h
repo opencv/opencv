@@ -41,15 +41,10 @@
 #define GOOGLE_PROTOBUF_HAVE_HASH_MAP 1
 #define GOOGLE_PROTOBUF_HAVE_HASH_SET 1
 
-// Android
-#if defined(__ANDROID__)
-# undef GOOGLE_PROTOBUF_HAVE_HASH_MAP
-# undef GOOGLE_PROTOBUF_HAVE_HASH_MAP
-
 // Use C++11 unordered_{map|set} if available.
-#elif ((_LIBCPP_STD_VER >= 11) || \
-      (((__cplusplus >= 201103L) || defined(__GXX_EXPERIMENTAL_CXX0X)) && \
-      (__GLIBCXX__ > 20090421)))
+#if ((defined(_LIBCPP_STD_VER) && _LIBCPP_STD_VER >= 11) || \
+    (((__cplusplus >= 201103L) || defined(__GXX_EXPERIMENTAL_CXX0X)) && \
+    (__GLIBCXX__ > 20090421)))
 # define GOOGLE_PROTOBUF_HAS_CXX11_HASH
 
 // For XCode >= 4.6:  the compiler is clang with libc++.
@@ -95,6 +90,13 @@
 #  define GOOGLE_PROTOBUF_HASH_MAP_CLASS hash_map
 #  include <hash_set>
 #  define GOOGLE_PROTOBUF_HASH_SET_CLASS hash_set
+# endif
+
+// GCC <= 4.1 does not define std::tr1::hash for `long long int` or `long long unsigned int`
+# if __GNUC__ == 4 && defined(__GNUC__MINOR__) && __GNUC__MINOR__ <= 1
+#  undef GOOGLE_PROTOBUF_HAS_TR1
+#  undef GOOGLE_PROTOBUF_HAVE_HASH_MAP
+#  undef GOOGLE_PROTOBUF_HAVE_HASH_SET
 # endif
 
 // Version checks for MSC.
@@ -348,7 +350,7 @@ struct hash<const char*> {
   inline size_t operator()(const char* str) const {
     size_t result = 0;
     for (; *str != '\0'; str++) {
-      result = 5 * result + *str;
+      result = 5 * result + static_cast<size_t>(*str);
     }
     return result;
   }

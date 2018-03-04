@@ -1112,9 +1112,9 @@ static void advance(unsigned int &index, unsigned int nrOfPoints) {
     index = successor(index, nrOfPoints);
 }
 
-//! Return the succesor of the provided point index
+//! Return the successor of the provided point index
 /*!
-* The succesor of the last polygon point is the first polygon point
+* The successor of the last polygon point is the first polygon point
 * (circular referencing)
 *
 * @param index          Index of the point

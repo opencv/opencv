@@ -49,10 +49,8 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
-
-using std::tr1::make_tuple;
 
 ///////////// cvtColor////////////////////////
 
@@ -110,6 +108,6 @@ OCL_PERF_TEST_P(CvtColorFixture, CvtColor, testing::Combine(
     SANITY_CHECK(dst, 1);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

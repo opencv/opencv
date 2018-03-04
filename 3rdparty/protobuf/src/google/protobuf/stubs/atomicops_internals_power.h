@@ -93,7 +93,7 @@ inline Atomic32 NoBarrier_AtomicIncrement(volatile Atomic32* ptr,
   return result;
 }
 
-inline void MemoryBarrier(void) {
+inline void MemoryBarrierInternal(void) {
   asm volatile (
       "       lwsync                          \n\t"
       "       isync                           \n\t"

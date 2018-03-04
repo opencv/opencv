@@ -10,8 +10,7 @@
 
 #include "test_precomp.hpp"
 
-namespace cvtest
-{
+namespace opencv_test { namespace {
 
 #ifdef HAVE_HALIDE
 using namespace cv;
@@ -712,4 +711,4 @@ TEST(MixedBackends_Halide_Default_Halide, Accuracy)
 }
 #endif  // HAVE_HALIDE
 
-}  // namespace cvtest
+}} // namespace

@@ -42,10 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-#include <limits>
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 #if 0
 class CV_ProjectPointsTest : public cvtest::ArrayTest
@@ -861,7 +858,7 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
     for( int i = 0; i < imageCount; ++rvecsIt, ++tvecsIt, i++, rm+=9, tm+=3 )
     {
         Mat r9( 3, 3, CV_64FC1 );
-        Rodrigues( *rvecsIt, r9 );
+        cvtest::Rodrigues( *rvecsIt, r9 );
         memcpy( rm, r9.ptr(), 9*sizeof(double) );
         memcpy( tm, tvecsIt->ptr(), 3*sizeof(double) );
     }
@@ -878,7 +875,7 @@ void CV_CameraCalibrationTest_CPP::project( int pointCount, CvPoint3D64f* _objec
     Mat cameraMatrix( 3, 3, CV_64FC1, _cameraMatrix );
     Mat distCoeffs( 1, 4, CV_64FC1, distortion );
     vector<Point2f> imagePoints;
-    Rodrigues( rmat, rvec );
+    cvtest::Rodrigues( rmat, rvec );
 
     objectPoints.convertTo( objectPoints, CV_32FC1 );
     projectPoints( objectPoints, rvec, tvec,
@@ -982,7 +979,7 @@ void CV_CalibrationMatrixValuesTest::run(int)
         code = cvtest::TS::FAIL_BAD_ACCURACY;
         goto _exit_;
     }
-    if( norm( principalPoint - goodPrincipalPoint ) > FLT_EPSILON )
+    if( cv::norm(principalPoint - goodPrincipalPoint) > FLT_EPSILON ) // Point2d
     {
         ts->printf( cvtest::TS::LOG, "bad principalPoint\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1117,7 +1114,8 @@ void CV_ProjectPointsTest::run(int)
     rvec(0,0) = rng.uniform( rMinVal, rMaxVal );
     rvec(0,1) = rng.uniform( rMinVal, rMaxVal );
     rvec(0,2) = rng.uniform( rMinVal, rMaxVal );
-    Rodrigues( rvec, rmat );
+    rmat = cv::Mat_<float>::zeros(3, 3);
+    cvtest::Rodrigues( rvec, rmat );
 
     tvec(0,0) = rng.uniform( tMinVal, tMaxVal );
     tvec(0,1) = rng.uniform( tMinVal, tMaxVal );
@@ -2076,6 +2074,86 @@ TEST(Calib3d_StereoCalibrate_C, regression) { CV_StereoCalibrationTest_C test; t
 TEST(Calib3d_StereoCalibrate_CPP, regression) { CV_StereoCalibrationTest_CPP test; test.safe_run(); }
 TEST(Calib3d_StereoCalibrateCorner, regression) { CV_StereoCalibrationCornerTest test; test.safe_run(); }
 
+TEST(Calib3d_StereoCalibrate_CPP, extended)
+{
+    cvtest::TS* ts = cvtest::TS::ptr();
+    String filepath = cv::format("%scv/stereo/case%d/", ts->get_data_path().c_str(), 1 );
+
+    Mat left = imread(filepath+"left01.png");
+    Mat right = imread(filepath+"right01.png");
+    if(left.empty() || right.empty())
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
+        return;
+    }
+
+    vector<vector<Point2f> > imgpt1(1), imgpt2(1);
+    vector<vector<Point3f> > objpt(1);
+    Size patternSize(9, 6), imageSize(640, 480);
+    bool found1 = findChessboardCorners(left, patternSize, imgpt1[0]);
+    bool found2 = findChessboardCorners(right, patternSize, imgpt2[0]);
+
+    if(!found1 || !found2)
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+        return;
+    }
+
+    for( int j = 0; j < patternSize.width*patternSize.height; j++ )
+        objpt[0].push_back(Point3f((float)(j%patternSize.width), (float)(j/patternSize.width), 0.f));
+
+    Mat K1, K2, c1, c2, R, T, E, F, err;
+    int flags = 0;
+    double res0 = stereoCalibrate( objpt, imgpt1, imgpt2,
+                    K1, c1, K2, c2,
+                    imageSize, R, T, E, F, err, flags);
+
+    flags = CALIB_USE_EXTRINSIC_GUESS;
+    double res1 = stereoCalibrate( objpt, imgpt1, imgpt2,
+                    K1, c1, K2, c2,
+                    imageSize, R, T, E, F, err, flags);
+    EXPECT_LE(res1, res0);
+    EXPECT_TRUE(err.total() == 2);
+}
+
+TEST(Calib3d_StereoCalibrate, regression_10791)
+{
+    const Matx33d M1(
+        853.1387981631528, 0, 704.154907802121,
+        0, 853.6445089162528, 520.3600712930319,
+        0, 0, 1
+    );
+    const Matx33d M2(
+        848.6090216909176, 0, 701.6162856852185,
+        0, 849.7040162357157, 509.1864036137,
+        0, 0, 1
+    );
+    const Matx<double, 14, 1> D1(-6.463598629567206, 79.00104930508179, -0.0001006144444464403, -0.0005437499822299972,
+        12.56900616588467, -6.056719942752855, 76.3842481414836, 45.57460250612659,
+        0, 0, 0, 0, 0, 0);
+    const Matx<double, 14, 1> D2(0.6123436439798265, -0.4671756923224087, -0.0001261947899033442, -0.000597334584036978,
+        -0.05660119809538371, 1.037075740629769, -0.3076042835831711, -0.2502169324283623,
+        0, 0, 0, 0, 0, 0);
+
+    const Matx33d R(
+        0.9999926627018476, -0.0001095586963765905, 0.003829169539302921,
+        0.0001021735876758584, 0.9999981346680941, 0.0019287874145156,
+        -0.003829373712065528, -0.001928382022437616, 0.9999908085776333
+    );
+    const Matx31d T(-58.9161771697128, -0.01581306249996402, -0.8492960216760961);
+
+    const Size imageSize(1280, 960);
+
+    Mat R1, R2, P1, P2, Q;
+    Rect roi1, roi2;
+    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
+                  R1, R2, P1, P2, Q,
+                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
+
+    EXPECT_GE(roi1.area(), 400*300) << roi1;
+    EXPECT_GE(roi2.area(), 400*300) << roi2;
+}
+
 TEST(Calib3d_Triangulate, accuracy)
 {
     // the testcase from http://code.opencv.org/issues/4334
@@ -2093,7 +2171,7 @@ TEST(Calib3d_Triangulate, accuracy)
     Mat res_, res;
 
     triangulatePoints(P1, P2, x1, x2, res_);
-    transpose(res_, res_);
+    cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
     convertPointsFromHomogeneous(res_, res);
     res = res.reshape(1, 1);
 
@@ -2101,7 +2179,7 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres0: " << res0 << endl;
     cout << "\tres: " << res << endl;
 
-    ASSERT_LE(norm(res, res0, NORM_INF), 1e-1);
+    ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 1e-1);
     }
 
     // another testcase http://code.opencv.org/issues/3461
@@ -2133,7 +2211,7 @@ TEST(Calib3d_Triangulate, accuracy)
     Mat res_, res;
 
     triangulatePoints(P1, P2, x1, x2, res_);
-    transpose(res_, res_);
+    cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
     convertPointsFromHomogeneous(res_, res);
     res = res.reshape(1, 1);
 
@@ -2141,6 +2219,8 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres0: " << res0 << endl;
     cout << "\tres: " << res << endl;
 
-    ASSERT_LE(norm(res, res0, NORM_INF), 2);
+    ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 2);
     }
 }
+
+}} // namespace

@@ -58,12 +58,13 @@ namespace cv
 //! @addtogroup viz
 //! @{
 
-        /** @brief This class a represents BGR color.
+        /** @brief This class represents color in BGR order.
         */
         class Color : public Scalar
         {
         public:
             Color();
+            //! The three channels will have the same value equal to gray.
             Color(double gray);
             Color(double blue, double green, double red);
 
@@ -125,13 +126,16 @@ namespace cv
                 LOAD_OBJ = 2
             };
 
-            Mat cloud, colors, normals;
+            Mat cloud; //!< point coordinates of type CV_32FC3 or CV_64FC3 with only 1 row
+            Mat colors; //!< point color of type CV_8UC3 or CV_8UC4 with only 1 row
+            Mat normals; //!< point normals of type CV_32FC3, CV_32FC4, CV_64FC3 or CV_64FC4 with only 1 row
 
             //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
-            //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
-            Mat polygons;
+            //! where n is the number of points in the polygon, and id is a zero-offset index into an associated cloud.
+            Mat polygons; //!< CV_32SC1 with only 1 row
 
-            Mat texture, tcoords;
+            Mat texture;
+            Mat tcoords; //!< CV_32FC2 or CV_64FC2 with only 1 row
 
             /** @brief Loads a mesh from a ply or a obj file.
 
@@ -165,20 +169,39 @@ namespace cv
             point determines the field of view.
              */
             Camera(double fx, double fy, double cx, double cy, const Size &window_size);
+
             /** @overload
             @param fov Field of view (horizontal, vertical)
             @param window_size Size of the window. Principal point is at the center of the window
             by default.
             */
-            explicit Camera(const Vec2d &fov, const Size &window_size);
+            Camera(const Vec2d &fov, const Size &window_size);
+
             /** @overload
-            @param K Intrinsic matrix of the camera.
+            @param K Intrinsic matrix of the camera with the following form
+            \f[
+              \begin{bmatrix}
+              f_x &   0 & c_x\\
+                0 & f_y & c_y\\
+                0 &   0 &   1\\
+              \end{bmatrix}
+            \f]
             @param window_size Size of the window. This together with intrinsic matrix determines
             the field of view.
             */
-            explicit Camera(const Matx33d &K, const Size &window_size);
+            Camera(const Matx33d &K, const Size &window_size);
+
             /** @overload
-            @param proj Projection matrix of the camera.
+            @param proj Projection matrix of the camera with the following form
+            \f[
+              \begin{bmatrix}
+              \frac{2n}{r-l} &        0       & \frac{r+l}{r-l}  & 0\\
+                    0        & \frac{2n}{t-b} & \frac{t+b}{t-b}  & 0\\
+                    0        &        0       & -\frac{f+n}{f-n} & -\frac{2fn}{f-n}\\
+                    0        &        0       & -1               & 0\\
+              \end{bmatrix}
+            \f]
+
             @param window_size Size of the window. This together with projection matrix determines
             the field of view.
             */
@@ -198,11 +221,23 @@ namespace cv
 
             /** @brief Computes projection matrix using intrinsic parameters of the camera.
 
-            @param proj Output projection matrix.
+
+            @param proj Output projection matrix with the following form
+            \f[
+              \begin{bmatrix}
+              \frac{2n}{r-l} &        0       & \frac{r+l}{r-l}  & 0\\
+                    0        & \frac{2n}{t-b} & \frac{t+b}{t-b}  & 0\\
+                    0        &        0       & -\frac{f+n}{f-n} & -\frac{2fn}{f-n}\\
+                    0        &        0       & -1               & 0\\
+              \end{bmatrix}
+            \f]
              */
             void computeProjectionMatrix(Matx44d &proj) const;
 
-            /** @brief Creates a Kinect Camera.
+            /** @brief Creates a Kinect Camera with
+              - fx = fy = 525
+              - cx = 320
+              - cy = 240
 
             @param window_size Size of the window. This together with intrinsic matrix of a Kinect Camera
             determines the field of view.
@@ -212,10 +247,33 @@ namespace cv
         private:
             void init(double fx, double fy, double cx, double cy, const Size &window_size);
 
+            /** The near plane and the far plane.
+             *  - clip_[0]: the near plane; default value is 0.01
+             *  - clip_[1]: the far plane; default value is 1000.01
+             */
             Vec2d clip_;
+
+            /**
+             * Field of view.
+             *  - fov_[0]: horizontal(x-axis) field of view in radians
+             *  - fov_[1]: vertical(y-axis) field of view in radians
+             */
             Vec2d fov_;
+
+            /** Window size.*/
             Size window_size_;
+
+            /**
+             * Principal point.
+             *  - principal_point_[0]: cx
+             *  - principal_point_[1]: cy
+             */
             Vec2d principal_point_;
+            /**
+             * Focal length.
+             *  - focal_[0]: fx
+             *  - focal_[1]: fy
+             */
             Vec2d focal_;
         };
 
@@ -304,7 +362,7 @@ inline cv::viz::Color cv::viz::Color::rose()       { return Color(128,   0, 255)
 inline cv::viz::Color cv::viz::Color::azure()      { return Color(255, 128,   0); }
 inline cv::viz::Color cv::viz::Color::lime()       { return Color(0,   255, 191); }
 inline cv::viz::Color cv::viz::Color::gold()       { return Color(0,   215, 255); }
-inline cv::viz::Color cv::viz::Color::brown()      { return Color(0,    75, 150); }
+inline cv::viz::Color cv::viz::Color::brown()      { return Color(42,    42, 165); }
 inline cv::viz::Color cv::viz::Color::orange()     { return Color(0,   165, 255); }
 inline cv::viz::Color cv::viz::Color::chartreuse() { return Color(0,   255, 128); }
 inline cv::viz::Color cv::viz::Color::orange_red() { return Color(0,    69, 255); }

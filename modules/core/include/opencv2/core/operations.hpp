@@ -365,6 +365,12 @@ template<typename _Tp> static inline _Tp randu()
 
 ///////////////////////////////// Formatted string generation /////////////////////////////////
 
+/** @brief Returns a text string formatted using the printf-like expression.
+
+The function acts like sprintf but forms and returns an STL string. It can be used to form an error
+message in the Exception constructor.
+@param fmt printf-compatible formatting specifiers.
+ */
 CV_EXPORTS String format( const char* fmt, ... );
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////

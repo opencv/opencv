@@ -48,9 +48,7 @@
 
 #ifdef HAVE_OPENCL
 
-
-namespace cvtest {
-namespace ocl {
+namespace opencv_test { namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // PyrLKOpticalFlow
@@ -138,7 +136,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
                 continue;
             }
 
-            eq = std::abs(cpuErr[i] - err[i]) < 0.01;
+            eq = std::abs(cpuErr[i] - err[i]) <= (0.01 * std::max(1.0f, cpuErr[i]));
             if(!eq)
                 ++errmatch;
         }
@@ -158,7 +156,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlow,
                                 )
                            );
 
-} } // namespace cvtest::ocl
 
-
+}} // namespace
 #endif // HAVE_OPENCL

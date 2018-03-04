@@ -1015,6 +1015,21 @@ public class Mat {
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
 
+    // javadoc:Mat::put(row,col,data,offset,length)
+    public int put(int row, int col, byte[] data, int offset, int length) {
+        int t = type();
+        if (data == null || length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
+            return nPutBwOffset(nativeObj, row, col, length, offset, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
     // javadoc:Mat::get(row,col,data)
     public int get(int row, int col, byte[] data) {
         int t = type();
@@ -1317,6 +1332,8 @@ public class Mat {
     private static native int nPutS(long self, int row, int col, int count, short[] data);
 
     private static native int nPutB(long self, int row, int col, int count, byte[] data);
+
+    private static native int nPutBwOffset(long self, int row, int col, int count, int offset, byte[] data);
 
     private static native int nGetB(long self, int row, int col, int count, byte[] vals);
 

@@ -754,7 +754,7 @@ cvApproxPoly( const void* array, int header_size,
         }
         else
         {
-            CV_Error( CV_StsBadArg, "Input curves have uknown type" );
+            CV_Error( CV_StsBadArg, "Input curves have unknown type" );
         }
     }
 

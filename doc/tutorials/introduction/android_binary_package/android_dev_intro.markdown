@@ -28,7 +28,7 @@ key topis:
 -#  [Android
     Activity](http://developer.android.com/training/basics/activity-lifecycle/starting.html) and its
     lifecycle, that is an essential Android API class.
--#  OpenCV development will certainly require some knowlege of the [Android
+-#  OpenCV development will certainly require some knowledge of the [Android
     Camera](http://developer.android.com/guide/topics/media/camera.html) specifics.
 
 Quick environment setup for Android development
@@ -261,7 +261,7 @@ Here is the standard way to compile C++ part of an Android application:
 
 **warning**
 
-We strongly reccomend using cmd.exe (standard Windows console) instead of Cygwin on
+We strongly recommend using cmd.exe (standard Windows console) instead of Cygwin on
    **Windows**. Use the latter if only you're absolutely sure about, what you're doing. Cygwin is
     not really supported and we are unlikely to help you in case you encounter some problems with
     it. So, use it only if you're capable of handling the consequences yourself.
@@ -397,7 +397,7 @@ application, but sure the most uncomplicated one to configure.
 
     ![](images/AVD_create.png)
 
--#  When you click the Create AVD button, your new AVD will be availible in AVD Manager.
+-#  When you click the Create AVD button, your new AVD will be available in AVD Manager.
 -#  Press Start to launch the device. Be aware that any AVD (a.k.a. Emulator) is usually much slower
     than a hardware Android device, so it may take up to several minutes to start.
 -#  Go Run -\> Run/Debug in Eclipse IDE to run your application in regular or debugging mode.

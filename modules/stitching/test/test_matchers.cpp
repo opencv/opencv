@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 
@@ -99,3 +98,5 @@ TEST(ParallelFeaturesFinder, IsSameWithSerial)
         ASSERT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
     }
 }
+
+}} // namespace

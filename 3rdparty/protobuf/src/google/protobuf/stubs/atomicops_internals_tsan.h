@@ -206,7 +206,7 @@ inline Atomic64 Release_CompareAndSwap(volatile Atomic64 *ptr,
   return cmp;
 }
 
-inline void MemoryBarrier() {
+inline void MemoryBarrierInternal() {
   __tsan_atomic_thread_fence(__tsan_memory_order_seq_cst);
 }
 

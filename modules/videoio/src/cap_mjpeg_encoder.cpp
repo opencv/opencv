@@ -40,8 +40,12 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/videoio/container_avi.private.hpp"
+
 #include <vector>
 #include <deque>
+#include <iostream>
+#include <cstdlib>
 
 #if CV_NEON
 #define WITH_NEON
@@ -49,22 +53,6 @@
 
 namespace cv
 {
-namespace mjpeg
-{
-
-enum { COLORSPACE_GRAY=0, COLORSPACE_RGBA=1, COLORSPACE_BGR=2, COLORSPACE_YUV444P=3 };
-
-#define fourCC(a,b,c,d)   ((int)((uchar(d)<<24) | (uchar(c)<<16) | (uchar(b)<<8) | uchar(a)))
-
-static const int AVIH_STRH_SIZE = 56;
-static const int STRF_SIZE = 40;
-static const int AVI_DWFLAG = 0x00000910;
-static const int AVI_DWSCALE = 1;
-static const int AVI_DWQUALITY = -1;
-static const int JUNK_SEEK = 4096;
-static const int AVIIF_KEYFRAME = 0x10;
-static const int MAX_BYTES_PER_SEC = 99999999;
-static const int SUG_BUFFER_SIZE = 1048576;
 
 static const unsigned bit_mask[] =
 {
@@ -79,279 +67,84 @@ static const unsigned bit_mask[] =
     0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF
 };
 
-class BitStream
+static const uchar huff_val_shift = 20;
+static const int huff_code_mask = (1 << huff_val_shift) - 1;
+
+static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_size )
 {
-public:
-    enum
-    {
-        DEFAULT_BLOCK_SIZE = (1 << 15),
-        huff_val_shift = 20,
-        huff_code_mask = (1 << huff_val_shift) - 1
-    };
+    int  i, k;
+    int  min_val = INT_MAX, max_val = INT_MIN;
+    int  size;
 
-    BitStream()
+    /* calc min and max values in the table */
+    for( i = 1, k = 1; src[k] >= 0; i++ )
     {
-        m_buf.resize(DEFAULT_BLOCK_SIZE + 1024);
-        m_start = &m_buf[0];
-        m_end = m_start + DEFAULT_BLOCK_SIZE;
-        m_is_opened = false;
-        m_f = 0;
-        m_current = 0;
-        m_pos = 0;
-    }
+        int code_count = src[k++];
 
-    ~BitStream()
-    {
-        close();
-    }
-
-    bool open(const String& filename)
-    {
-        close();
-        m_f = fopen(filename.c_str(), "wb");
-        if( !m_f )
-            return false;
-        m_current = m_start;
-        m_pos = 0;
-        return true;
-    }
-
-    bool isOpened() const { return m_f != 0; }
-
-    void close()
-    {
-        writeBlock();
-        if( m_f )
-            fclose(m_f);
-        m_f = 0;
-    }
-
-    void writeBlock()
-    {
-        size_t wsz0 = m_current - m_start;
-        if( wsz0 > 0 && m_f )
+        for( code_count += k; k < code_count; k++ )
         {
-            size_t wsz = fwrite(m_start, 1, wsz0, m_f);
-            CV_Assert( wsz == wsz0 );
-        }
-        m_pos += wsz0;
-        m_current = m_start;
-    }
-
-    size_t getPos() const
-    {
-        return (size_t)(m_current - m_start) + m_pos;
-    }
-
-    void putByte(int val)
-    {
-        *m_current++ = (uchar)val;
-        if( m_current >= m_end )
-            writeBlock();
-    }
-
-    void putBytes(const uchar* buf, int count)
-    {
-        uchar* data = (uchar*)buf;
-        CV_Assert(m_f && data && m_current && count >= 0);
-        if( m_current >= m_end )
-            writeBlock();
-
-        while( count )
-        {
-            int l = (int)(m_end - m_current);
-
-            if (l > count)
-                l = count;
-
-            if( l > 0 )
-            {
-                memcpy(m_current, data, l);
-                m_current += l;
-                data += l;
-                count -= l;
-            }
-            if( m_current >= m_end )
-                writeBlock();
+            int  val = src[k] >> huff_val_shift;
+            if( val < min_val )
+                min_val = val;
+            if( val > max_val )
+                max_val = val;
         }
     }
 
-    void putShort(int val)
+    size = max_val - min_val + 3;
+
+    if( size > max_size )
     {
-        m_current[0] = (uchar)val;
-        m_current[1] = (uchar)(val >> 8);
-        m_current += 2;
-        if( m_current >= m_end )
-            writeBlock();
+        CV_Error(CV_StsOutOfRange, "too big maximum Huffman code size");
+        return false;
     }
 
-    void putInt(int val)
-    {
-        m_current[0] = (uchar)val;
-        m_current[1] = (uchar)(val >> 8);
-        m_current[2] = (uchar)(val >> 16);
-        m_current[3] = (uchar)(val >> 24);
-        m_current += 4;
-        if( m_current >= m_end )
-            writeBlock();
-    }
+    memset( table, 0, size*sizeof(table[0]));
 
-    void jputShort(int val)
-    {
-        m_current[0] = (uchar)(val >> 8);
-        m_current[1] = (uchar)val;
-        m_current += 2;
-        if( m_current >= m_end )
-            writeBlock();
-    }
+    table[0] = min_val;
+    table[1] = size - 2;
 
-    void patchInt(int val, size_t pos)
+    for( i = 1, k = 1; src[k] >= 0; i++ )
     {
-        if( pos >= m_pos )
+        int code_count = src[k++];
+
+        for( code_count += k; k < code_count; k++ )
         {
-            ptrdiff_t delta = pos - m_pos;
-            CV_Assert( delta < m_current - m_start );
-            m_start[delta] = (uchar)val;
-            m_start[delta+1] = (uchar)(val >> 8);
-            m_start[delta+2] = (uchar)(val >> 16);
-            m_start[delta+3] = (uchar)(val >> 24);
-        }
-        else
-        {
-            long fpos = ftell(m_f);
-            fseek(m_f, (long)pos, SEEK_SET);
-            uchar buf[] = { (uchar)val, (uchar)(val >> 8), (uchar)(val >> 16), (uchar)(val >> 24) };
-            fwrite(buf, 1, 4, m_f);
-            fseek(m_f, fpos, SEEK_SET);
+            int  val = src[k] >> huff_val_shift;
+            int  code = src[k] & huff_code_mask;
+
+            table[val - min_val + 2] = (code << 8) | i;
         }
     }
+    return true;
+}
 
-    void jput(unsigned currval)
-    {
-        uchar v;
-        uchar* ptr = m_current;
-        v = (uchar)(currval >> 24);
-        *ptr++ = v;
-        if( v == 255 )
-            *ptr++ = 0;
-        v = (uchar)(currval >> 16);
-        *ptr++ = v;
-        if( v == 255 )
-            *ptr++ = 0;
-        v = (uchar)(currval >> 8);
-        *ptr++ = v;
-        if( v == 255 )
-            *ptr++ = 0;
-        v = (uchar)currval;
-        *ptr++ = v;
-        if( v == 255 )
-            *ptr++ = 0;
-        m_current = ptr;
-        if( m_current >= m_end )
-            writeBlock();
-    }
-
-    void jflush(unsigned currval, int bitIdx)
-    {
-        uchar v;
-        uchar* ptr = m_current;
-        currval |= (1 << bitIdx)-1;
-        while( bitIdx < 32 )
-        {
-            v = (uchar)(currval >> 24);
-            *ptr++ = v;
-            if( v == 255 )
-                *ptr++ = 0;
-            currval <<= 8;
-            bitIdx += 8;
-        }
-        m_current = ptr;
-        if( m_current >= m_end )
-            writeBlock();
-    }
-
-    static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_size )
-    {
-        int  i, k;
-        int  min_val = INT_MAX, max_val = INT_MIN;
-        int  size;
-
-        /* calc min and max values in the table */
-        for( i = 1, k = 1; src[k] >= 0; i++ )
-        {
-            int code_count = src[k++];
-
-            for( code_count += k; k < code_count; k++ )
-            {
-                int  val = src[k] >> huff_val_shift;
-                if( val < min_val )
-                    min_val = val;
-                if( val > max_val )
-                    max_val = val;
-            }
-        }
-
-        size = max_val - min_val + 3;
-
-        if( size > max_size )
-        {
-            CV_Error(CV_StsOutOfRange, "too big maximum Huffman code size");
-            return false;
-        }
-
-        memset( table, 0, size*sizeof(table[0]));
-
-        table[0] = min_val;
-        table[1] = size - 2;
-
-        for( i = 1, k = 1; src[k] >= 0; i++ )
-        {
-            int code_count = src[k++];
-
-            for( code_count += k; k < code_count; k++ )
-            {
-                int  val = src[k] >> huff_val_shift;
-                int  code = src[k] & huff_code_mask;
-
-                table[val - min_val + 2] = (code << 8) | i;
-            }
-        }
-        return true;
-    }
-
-    static int* createSourceHuffmanTable(const uchar* src, int* dst,
+static int* createSourceHuffmanTable(const uchar* src, int* dst,
                                          int max_bits, int first_bits)
+{
+    int   i, val_idx, code = 0;
+    int*  table = dst;
+    *dst++ = first_bits;
+    for (i = 1, val_idx = max_bits; i <= max_bits; i++)
     {
-        int   i, val_idx, code = 0;
-        int*  table = dst;
-        *dst++ = first_bits;
-        for (i = 1, val_idx = max_bits; i <= max_bits; i++)
+        int code_count = src[i - 1];
+        dst[0] = code_count;
+        code <<= 1;
+        for (int k = 0; k < code_count; k++)
         {
-            int code_count = src[i - 1];
-            dst[0] = code_count;
-            code <<= 1;
-            for (int k = 0; k < code_count; k++)
-            {
-                dst[k + 1] = (src[val_idx + k] << huff_val_shift) | (code + k);
-            }
-            code += code_count;
-            dst += code_count + 1;
-            val_idx += code_count;
+            dst[k + 1] = (src[val_idx + k] << huff_val_shift) | (code + k);
         }
-        dst[0] = -1;
-        return  table;
+        code += code_count;
+        dst += code_count + 1;
+        val_idx += code_count;
     }
+    dst[0] = -1;
+    return  table;
+}
 
-protected:
-    std::vector<uchar> m_buf;
-    uchar*  m_start;
-    uchar*  m_end;
-    uchar*  m_current;
-    size_t  m_pos;
-    bool    m_is_opened;
-    FILE*   m_f;
-};
 
+namespace mjpeg
+{
 
 class mjpeg_buffer
 {
@@ -593,11 +386,6 @@ public:
     {
         rawstream = false;
         nstripes = -1;
-        height = 0;
-        width = 0;
-        moviPointer = 0;
-        channels = 0;
-        outfps = 0;
         quality = 0;
     }
 
@@ -611,20 +399,15 @@ public:
 
     void close()
     {
-        if( !strm.isOpened() )
+        if( !container.isOpenedStream() )
             return;
 
-        if( !frameOffset.empty() && !rawstream )
+        if( !container.isEmptyFrameOffset() && !rawstream )
         {
-            endWriteChunk(); // end LIST 'movi'
-            writeIndex();
-            finishWriteAVI();
+            container.endWriteChunk(); // end LIST 'movi'
+            container.writeIndex(0, dc);
+            container.finishWriteAVI();
         }
-        strm.close();
-        frameOffset.clear();
-        frameSize.clear();
-        AVIChunkSizeIndex.clear();
-        frameNumIndexes.clear();
     }
 
     bool open(const String& filename, double fps, Size size, bool iscolor)
@@ -639,222 +422,74 @@ public:
         if( strcmp(ext, ".avi") != 0 && strcmp(ext, ".AVI") != 0 && strcmp(ext, ".Avi") != 0 )
             return false;
 
-        bool ok = strm.open(filename);
-        if( !ok )
+        if( !container.initContainer(filename, fps, size, iscolor) )
             return false;
 
         CV_Assert(fps >= 1);
-        outfps = cvRound(fps);
-        width = size.width;
-        height = size.height;
         quality = 75;
         rawstream = false;
-        channels = iscolor ? 3 : 1;
 
         if( !rawstream )
         {
-            startWriteAVI();
-            writeStreamHeader();
+            container.startWriteAVI(1); // count stream
+            container.writeStreamHeader(MJPEG);
         }
         //printf("motion jpeg stream %s has been successfully opened\n", filename.c_str());
         return true;
     }
 
-    bool isOpened() const { return strm.isOpened(); }
-
-    void startWriteAVI()
-    {
-        startWriteChunk(fourCC('R', 'I', 'F', 'F'));
-
-        strm.putInt(fourCC('A', 'V', 'I', ' '));
-
-        startWriteChunk(fourCC('L', 'I', 'S', 'T'));
-
-        strm.putInt(fourCC('h', 'd', 'r', 'l'));
-        strm.putInt(fourCC('a', 'v', 'i', 'h'));
-        strm.putInt(AVIH_STRH_SIZE);
-        strm.putInt(cvRound(1e6 / outfps));
-        strm.putInt(MAX_BYTES_PER_SEC);
-        strm.putInt(0);
-        strm.putInt(AVI_DWFLAG);
-
-        frameNumIndexes.push_back(strm.getPos());
-
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(1); // number of streams
-        strm.putInt(SUG_BUFFER_SIZE);
-        strm.putInt(width);
-        strm.putInt(height);
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(0);
-    }
-
-    void writeStreamHeader()
-    {
-        // strh
-        startWriteChunk(fourCC('L', 'I', 'S', 'T'));
-
-        strm.putInt(fourCC('s', 't', 'r', 'l'));
-        strm.putInt(fourCC('s', 't', 'r', 'h'));
-        strm.putInt(AVIH_STRH_SIZE);
-        strm.putInt(fourCC('v', 'i', 'd', 's'));
-        strm.putInt(fourCC('M', 'J', 'P', 'G'));
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(AVI_DWSCALE);
-        strm.putInt(outfps);
-        strm.putInt(0);
-
-        frameNumIndexes.push_back(strm.getPos());
-
-        strm.putInt(0);
-        strm.putInt(SUG_BUFFER_SIZE);
-        strm.putInt(AVI_DWQUALITY);
-        strm.putInt(0);
-        strm.putShort(0);
-        strm.putShort(0);
-        strm.putShort(width);
-        strm.putShort(height);
-
-        // strf (use the BITMAPINFOHEADER for video)
-        startWriteChunk(fourCC('s', 't', 'r', 'f'));
-
-        strm.putInt(STRF_SIZE);
-        strm.putInt(width);
-        strm.putInt(height);
-        strm.putShort(1); // planes (1 means interleaved data (after decompression))
-
-        strm.putShort(8 * channels); // bits per pixel
-        strm.putInt(fourCC('M', 'J', 'P', 'G'));
-        strm.putInt(width * height * channels);
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(0);
-        strm.putInt(0);
-        // Must be indx chunk
-        endWriteChunk(); // end strf
-        endWriteChunk(); // end strl
-
-        // odml
-        startWriteChunk(fourCC('L', 'I', 'S', 'T'));
-        strm.putInt(fourCC('o', 'd', 'm', 'l'));
-        startWriteChunk(fourCC('d', 'm', 'l', 'h'));
-
-        frameNumIndexes.push_back(strm.getPos());
-
-        strm.putInt(0);
-        strm.putInt(0);
-
-        endWriteChunk(); // end dmlh
-        endWriteChunk(); // end odml
-
-        endWriteChunk(); // end hdrl
-
-        // JUNK
-        startWriteChunk(fourCC('J', 'U', 'N', 'K'));
-        size_t pos = strm.getPos();
-        for( ; pos < (size_t)JUNK_SEEK; pos += 4 )
-            strm.putInt(0);
-        endWriteChunk(); // end JUNK
-        // movi
-        startWriteChunk(fourCC('L', 'I', 'S', 'T'));
-        moviPointer = strm.getPos();
-        strm.putInt(fourCC('m', 'o', 'v', 'i'));
-    }
-
-    void startWriteChunk(int fourcc)
-    {
-        CV_Assert(fourcc != 0);
-        strm.putInt(fourcc);
-
-        AVIChunkSizeIndex.push_back(strm.getPos());
-        strm.putInt(0);
-    }
-
-    void endWriteChunk()
-    {
-        if( !AVIChunkSizeIndex.empty() )
-        {
-            size_t currpos = strm.getPos();
-            size_t pospos = AVIChunkSizeIndex.back();
-            AVIChunkSizeIndex.pop_back();
-            int chunksz = (int)(currpos - (pospos + 4));
-            strm.patchInt(chunksz, pospos);
-        }
-    }
-
-    void writeIndex()
-    {
-        // old style AVI index. Must be Open-DML index
-        startWriteChunk(fourCC('i', 'd', 'x', '1'));
-        int nframes = (int)frameOffset.size();
-        for( int i = 0; i < nframes; i++ )
-        {
-            strm.putInt(fourCC('0', '0', 'd', 'c'));
-            strm.putInt(AVIIF_KEYFRAME);
-            strm.putInt((int)frameOffset[i]);
-            strm.putInt((int)frameSize[i]);
-        }
-        endWriteChunk(); // End idx1
-    }
-
-    void finishWriteAVI()
-    {
-        int nframes = (int)frameOffset.size();
-        // Record frames numbers to AVI Header
-        while (!frameNumIndexes.empty())
-        {
-            size_t ppos = frameNumIndexes.back();
-            frameNumIndexes.pop_back();
-            strm.patchInt(nframes, ppos);
-        }
-        endWriteChunk(); // end RIFF
-    }
+    bool isOpened() const { return container.isOpenedStream(); }
 
     void write(InputArray _img)
     {
         Mat img = _img.getMat();
-        size_t chunkPointer = strm.getPos();
+        size_t chunkPointer = container.getStreamPos();
         int input_channels = img.channels();
         int colorspace = -1;
+        int imgWidth = img.cols;
+        int frameWidth = container.getWidth();
+        int imgHeight = img.rows;
+        int frameHeight = container.getHeight();
+        int channels = container.getChannels();
+
 
         if( input_channels == 1 && channels == 1 )
         {
-            CV_Assert( img.cols == width && img.rows == height );
+            CV_Assert( imgWidth == frameWidth && imgHeight == frameHeight );
             colorspace = COLORSPACE_GRAY;
         }
         else if( input_channels == 4 )
         {
-            CV_Assert( img.cols == width && img.rows == height && channels == 3 );
+            CV_Assert( imgWidth == frameWidth && imgHeight == frameHeight && channels == 3 );
             colorspace = COLORSPACE_RGBA;
         }
         else if( input_channels == 3 )
         {
-            CV_Assert( img.cols == width && img.rows == height && channels == 3 );
+            CV_Assert( imgWidth == frameWidth && imgHeight == frameHeight && channels == 3 );
             colorspace = COLORSPACE_BGR;
         }
         else if( input_channels == 1 && channels == 3 )
         {
-            CV_Assert( img.cols == width && img.rows == height*3 );
+            CV_Assert( imgWidth == frameWidth && imgHeight == frameHeight*3 );
             colorspace = COLORSPACE_YUV444P;
         }
         else
             CV_Error(CV_StsBadArg, "Invalid combination of specified video colorspace and the input image colorspace");
 
-        if( !rawstream )
-            startWriteChunk(fourCC('0', '0', 'd', 'c'));
+        if( !rawstream ) {
+            int avi_index = container.getAVIIndex(0, dc);
+            container.startWriteChunk(avi_index);
+        }
 
         writeFrameData(img.data, (int)img.step, colorspace, input_channels);
 
         if( !rawstream )
         {
-            frameOffset.push_back(chunkPointer - moviPointer);
-            frameSize.push_back(strm.getPos() - chunkPointer - 8);       // Size excludes '00dc' and size field
-            endWriteChunk(); // end '00dc'
+            size_t tempChunkPointer = container.getStreamPos();
+            size_t moviPointer = container.getMoviPointer();
+            container.pushFrameOffset(chunkPointer - moviPointer);
+            container.pushFrameSize(tempChunkPointer - chunkPointer - 8);       // Size excludes '00dc' and size field
+            container.endWriteChunk(); // end '00dc'
         }
     }
 
@@ -863,7 +498,10 @@ public:
         if( propId == VIDEOWRITER_PROP_QUALITY )
             return quality;
         if( propId == VIDEOWRITER_PROP_FRAMEBYTES )
-            return frameSize.empty() ? 0. : (double)frameSize.back();
+        {
+            bool isEmpty = container.isEmptyFrameSize();
+            return isEmpty ? 0. : container.atFrameSize(container.countFrameSize() - 1);
+        }
         if( propId == VIDEOWRITER_PROP_NSTRIPES )
             return nstripes;
         return 0.;
@@ -889,16 +527,12 @@ public:
     void writeFrameData( const uchar* data, int step, int colorspace, int input_channels );
 
 protected:
-    int outfps;
-    int width, height, channels;
     double quality;
-    size_t moviPointer;
-    std::vector<size_t> frameOffset, frameSize, AVIChunkSizeIndex, frameNumIndexes;
     bool rawstream;
     mjpeg_buffer_keeper buffers_list;
     double nstripes;
 
-    BitStream strm;
+    AVIWriteContainer container;
 };
 
 #define DCT_DESCALE(x, n) (((x) + (((int)1) << ((n) - 1))) >> (n))
@@ -1047,7 +681,7 @@ static const int idct_prescale[] =
 
 static const char jpegHeader[] =
 "\xFF\xD8"  // SOI  - start of image
-"\xFF\xE0"  // APP0 - jfif extention
+"\xFF\xE0"  // APP0 - jfif extension
 "\x00\x10"  // 2 bytes: length of APP0 segment
 "JFIF\x00"  // JFIF signature
 "\x01\x02"  // version of JFIF
@@ -1758,6 +1392,10 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     }
 
     //double total_dct = 0, total_cvt = 0;
+    int width = container.getWidth();
+    int height = container.getHeight();
+    int channels = container.getChannels();
+
     CV_Assert( data && width > 0 && height > 0 );
 
     // encode the header and tables
@@ -1784,7 +1422,7 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     double inv_quality = 1./_quality;
 
     // Encode header
-    strm.putBytes( (const uchar*)jpegHeader, sizeof(jpegHeader) - 1 );
+    container.putStreamBytes( (const uchar*)jpegHeader, sizeof(jpegHeader) - 1 );
 
     // Encode quantization tables
     for( i = 0; i < (channels > 1 ? 2 : 1); i++ )
@@ -1792,9 +1430,9 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
         const uchar* qtable = i == 0 ? jpegTableK1_T : jpegTableK2_T;
         int chroma_scale = i > 0 ? luma_count : 1;
 
-        strm.jputShort( 0xffdb );   // DQT marker
-        strm.jputShort( 2 + 65*1 ); // put single qtable
-        strm.putByte( 0*16 + i );   // 8-bit table
+        container.jputStreamShort( 0xffdb );   // DQT marker
+        container.jputStreamShort( 2 + 65*1 ); // put single qtable
+        container.putStreamByte( 0*16 + i );   // 8-bit table
 
         // put coefficients
         for( j = 0; j < 64; j++ )
@@ -1807,7 +1445,7 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
                 qval = 255;
             fdct_qtab[i][idx] = (short)(cvRound((1 << (postshift + 11)))/
                                 (qval*chroma_scale*idct_prescale[idx]));
-            strm.putByte( qval );
+            container.putStreamByte( qval );
         }
     }
 
@@ -1820,49 +1458,49 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
         int idx = i >= 2;
         int tableSize = 16 + (is_ac_tab ? 162 : 12);
 
-        strm.jputShort( 0xFFC4 );      // DHT marker
-        strm.jputShort( 3 + tableSize ); // define one huffman table
-        strm.putByte( is_ac_tab*16 + idx ); // put DC/AC flag and table index
-        strm.putBytes( htable, tableSize ); // put table
+        container.jputStreamShort( 0xFFC4 );      // DHT marker
+        container.jputStreamShort( 3 + tableSize ); // define one huffman table
+        container.putStreamByte( is_ac_tab*16 + idx ); // put DC/AC flag and table index
+        container.putStreamBytes( htable, tableSize ); // put table
 
-        BitStream::createEncodeHuffmanTable( BitStream::createSourceHuffmanTable(
-                                            htable, hbuffer, 16, 9 ), is_ac_tab ? huff_ac_tab[idx] :
-                                            huff_dc_tab[idx], is_ac_tab ? 256 : 16 );
+        createEncodeHuffmanTable(createSourceHuffmanTable( htable, hbuffer, 16, 9 ),
+                                 is_ac_tab ? huff_ac_tab[idx] : huff_dc_tab[idx],
+                                 is_ac_tab ? 256 : 16 );
     }
 
     // put frame header
-    strm.jputShort( 0xFFC0 );          // SOF0 marker
-    strm.jputShort( 8 + 3*channels );  // length of frame header
-    strm.putByte( 8 );               // sample precision
-    strm.jputShort( height );
-    strm.jputShort( width );
-    strm.putByte( channels );        // number of components
+    container.jputStreamShort( 0xFFC0 );          // SOF0 marker
+    container.jputStreamShort( 8 + 3*channels );  // length of frame header
+    container.putStreamByte( 8 );               // sample precision
+    container.jputStreamShort( height );
+    container.jputStreamShort( width );
+    container.putStreamByte( channels );        // number of components
 
     for( i = 0; i < channels; i++ )
     {
-        strm.putByte( i + 1 );  // (i+1)-th component id (Y,U or V)
+        container.putStreamByte( i + 1 );  // (i+1)-th component id (Y,U or V)
         if( i == 0 )
-            strm.putByte(x_scale*16 + y_scale); // chroma scale factors
+            container.putStreamByte(x_scale*16 + y_scale); // chroma scale factors
         else
-            strm.putByte(1*16 + 1);
-        strm.putByte( i > 0 ); // quantization table idx
+            container.putStreamByte(1*16 + 1);
+        container.putStreamByte( i > 0 ); // quantization table idx
     }
 
     // put scan header
-    strm.jputShort( 0xFFDA );          // SOS marker
-    strm.jputShort( 6 + 2*channels );  // length of scan header
-    strm.putByte( channels );          // number of components in the scan
+    container.jputStreamShort( 0xFFDA );          // SOS marker
+    container.jputStreamShort( 6 + 2*channels );  // length of scan header
+    container.putStreamByte( channels );          // number of components in the scan
 
     for( i = 0; i < channels; i++ )
     {
-        strm.putByte( i+1 );             // component id
-        strm.putByte( (i>0)*16 + (i>0) );// selection of DC & AC tables
+        container.putStreamByte( i+1 );             // component id
+        container.putStreamByte( (i>0)*16 + (i>0) );// selection of DC & AC tables
     }
 
-    strm.jputShort(0*256 + 63); // start and end of spectral selection - for
+    container.jputStreamShort(0*256 + 63); // start and end of spectral selection - for
     // sequential DCT start is 0 and end is 63
 
-    strm.putByte( 0 );  // successive approximation bit position
+    container.putStreamByte( 0 );  // successive approximation bit position
     // high & low - (0,0) for sequential DCT
 
     buffers_list.reset();
@@ -1877,18 +1515,18 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 
     for(unsigned k = 0; k < last_data_elem; ++k)
     {
-        strm.jput(v[k]);
+        container.jputStream(v[k]);
     }
-    strm.jflush(v[last_data_elem], 32 - buffers_list.get_last_bit_len());
-    strm.jputShort( 0xFFD9 ); // EOI marker
+    container.jflushStream(v[last_data_elem], 32 - buffers_list.get_last_bit_len());
+    container.jputStreamShort( 0xFFD9 ); // EOI marker
     /*printf("total dct = %.1fms, total cvt = %.1fms\n",
      total_dct*1000./cv::getTickFrequency(),
      total_cvt*1000./cv::getTickFrequency());*/
 
-    size_t pos = strm.getPos();
+    size_t pos = container.getStreamPos();
     size_t pos1 = (pos + 3) & ~3;
     for( ; pos < pos1; pos++ )
-        strm.putByte(0);
+        container.putStreamByte(0);
 }
 
 }

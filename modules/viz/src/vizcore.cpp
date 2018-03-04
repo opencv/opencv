@@ -169,26 +169,26 @@ cv::viz::Viz3d cv::viz::imshow(const String& window_name, InputArray image, cons
 
 void cv::viz::writeCloud(const String& file, InputArray cloud, InputArray colors, InputArray normals, bool binary)
 {
-    CV_Assert(file.size() > 4 && "Extention is required");
-    String extention = file.substr(file.size()-4);
+    CV_Assert(file.size() > 4 && "Extension is required");
+    String extension = file.substr(file.size()-4);
 
     vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
     source->SetColorCloudNormals(cloud, colors, normals);
 
     vtkSmartPointer<vtkWriter> writer;
-    if (extention == ".xyz")
+    if (extension == ".xyz")
     {
         writer = vtkSmartPointer<vtkXYZWriter>::New();
         vtkXYZWriter::SafeDownCast(writer)->SetFileName(file.c_str());
     }
-    else if (extention == ".ply")
+    else if (extension == ".ply")
     {
         writer = vtkSmartPointer<vtkPLYWriter>::New();
         vtkPLYWriter::SafeDownCast(writer)->SetFileName(file.c_str());
         vtkPLYWriter::SafeDownCast(writer)->SetFileType(binary ? VTK_BINARY : VTK_ASCII);
         vtkPLYWriter::SafeDownCast(writer)->SetArrayName("Colors");
     }
-    else if (extention == ".obj")
+    else if (extension == ".obj")
     {
         writer = vtkSmartPointer<vtkOBJWriter>::New();
         vtkOBJWriter::SafeDownCast(writer)->SetFileName(file.c_str());
@@ -202,27 +202,27 @@ void cv::viz::writeCloud(const String& file, InputArray cloud, InputArray colors
 
 cv::Mat cv::viz::readCloud(const String& file, OutputArray colors, OutputArray normals)
 {
-    CV_Assert(file.size() > 4 && "Extention is required");
-    String extention = file.substr(file.size()-4);
+    CV_Assert(file.size() > 4 && "Extension is required");
+    String extension = file.substr(file.size()-4);
 
     vtkSmartPointer<vtkPolyDataAlgorithm> reader;
-    if (extention == ".xyz")
+    if (extension == ".xyz")
     {
         reader = vtkSmartPointer<vtkXYZReader>::New();
         vtkXYZReader::SafeDownCast(reader)->SetFileName(file.c_str());
     }
-    else if (extention == ".ply")
+    else if (extension == ".ply")
     {
         reader = vtkSmartPointer<vtkPLYReader>::New();
         CV_Assert(vtkPLYReader::CanReadFile(file.c_str()));
         vtkPLYReader::SafeDownCast(reader)->SetFileName(file.c_str());
     }
-    else if (extention == ".obj")
+    else if (extension == ".obj")
     {
         reader = vtkSmartPointer<vtkOBJReader>::New();
         vtkOBJReader::SafeDownCast(reader)->SetFileName(file.c_str());
     }
-    else if (extention == ".stl")
+    else if (extension == ".stl")
     {
         reader = vtkSmartPointer<vtkSTLReader>::New();
         vtkSTLReader::SafeDownCast(reader)->SetFileName(file.c_str());

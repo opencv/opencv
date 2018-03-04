@@ -44,7 +44,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
+namespace opencv_test
 {
 
 using namespace std;
@@ -163,6 +163,11 @@ OCL_TEST(Torch_Importer, run_concat)
 TEST(Torch_Importer, run_deconv)
 {
     runTorchNet("net_deconv");
+}
+
+OCL_TEST(Torch_Importer, run_deconv)
+{
+    runTorchNet("net_deconv", DNN_TARGET_OPENCL);
 }
 
 TEST(Torch_Importer, run_batch_norm)

@@ -1,4 +1,7 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/ml.hpp>
 
 using namespace cv;
 
@@ -16,9 +19,9 @@ public:
     {
         rng = theRNG();
     }
-    /** Give energy value for  a state of system.*/
+    /** Give energy value for a state of system.*/
     double energy() const;
-    /** Function which change the state of system (random pertubation).*/
+    /** Function which change the state of system (random perturbation).*/
     void changeState();
     /** Function to reverse to the previous state.*/
     void reverseState();

@@ -354,7 +354,7 @@ ProtoWriter::ProtoElement* ProtoWriter::ProtoElement::pop() {
   if (!proto3_) {
     // Calls the registered error listener for any required field(s) not yet
     // seen.
-    for (set<const google::protobuf::Field*>::iterator it =
+    for (std::set<const google::protobuf::Field*>::iterator it =
              required_fields_.begin();
          it != required_fields_.end(); ++it) {
       ow_->MissingField((*it)->name());

@@ -51,13 +51,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 /** @defgroup dnnLayerList Partial List of Implemented Layers
   @{
-  This subsection of dnn module contains information about bult-in layers and their descriptions.
+  This subsection of dnn module contains information about built-in layers and their descriptions.
 
-  Classes listed here, in fact, provides C++ API for creating intances of bult-in layers.
+  Classes listed here, in fact, provides C++ API for creating instances of built-in layers.
   In addition to this way of layers instantiation, there is a more common factory API (see @ref dnnLayerFactory), it allows to create layers dynamically (by name) and register new ones.
-  You can use both API, but factory API is less convinient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTorch(), @ref readNetFromTensorflow()).
+  You can use both API, but factory API is less convenient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTorch(), @ref readNetFromTensorflow()).
 
-  Bult-in layers partially reproduce functionality of corresponding Caffe and Torch7 layers.
+  Built-in layers partially reproduce functionality of corresponding Caffe and Torch7 layers.
   In partuclar, the following layers and Caffe importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
   - Convolution
   - Deconvolution
@@ -125,12 +125,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual void setOutShape(const MatShape &outTailShape = MatShape()) = 0;
 
         /** @deprecated Use flag `produce_cell_output` in LayerParams.
-          * @brief Specifies either interpet first dimension of input blob as timestamp dimenion either as sample.
+          * @brief Specifies either interpret first dimension of input blob as timestamp dimenion either as sample.
           *
-          * If flag is set to true then shape of input blob will be interpeted as [`T`, `N`, `[data dims]`] where `T` specifies number of timpestamps, `N` is number of independent streams.
+          * If flag is set to true then shape of input blob will be interpreted as [`T`, `N`, `[data dims]`] where `T` specifies number of timestamps, `N` is number of independent streams.
           * In this case each forward() call will iterate through `T` timestamps and update layer's state `T` times.
           *
-          * If flag is set to false then shape of input blob will be interpeted as [`N`, `[data dims]`].
+          * If flag is set to false then shape of input blob will be interpreted as [`N`, `[data dims]`].
           * In this case each forward() call will make one iteration and produce one timestamp with shape [`N`, `[out dims]`].
           */
         CV_DEPRECATED virtual void setUseTimstampsDim(bool use = true) = 0;
@@ -146,7 +146,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * @param output contains computed outputs: @f$h_t@f$ (and @f$c_t@f$ if setProduceCellOutput() flag was set to true).
          *
          * If setUseTimstampsDim() is set to true then @p input[0] should has at least two dimensions with the following shape: [`T`, `N`, `[data dims]`],
-         * where `T` specifies number of timpestamps, `N` is number of independent streams (i.e. @f$ x_{t_0 + t}^{stream} @f$ is stored inside @p input[0][t, stream, ...]).
+         * where `T` specifies number of timestamps, `N` is number of independent streams (i.e. @f$ x_{t_0 + t}^{stream} @f$ is stored inside @p input[0][t, stream, ...]).
          *
          * If setUseTimstampsDim() is set to fase then @p input[0] should contain single timestamp, its shape should has form [`N`, `[data dims]`] with at least one dimension.
          * (i.e. @f$ x_{t}^{stream} @f$ is stored inside @p input[0][stream, ...]).
@@ -239,6 +239,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool computeMaxIdx;
         String padMode;
         bool ceilMode;
+        // If true for average pooling with padding, divide an every output region
+        // by a whole kernel area. Otherwise exclude zero padded values and divide
+        // by number of real values.
+        bool avePoolPaddedArea;
         // ROIPooling parameters.
         Size pooledSize;
         float spatialScale;
@@ -328,7 +332,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * @param begin Vector of start indices
      * @param size Vector of sizes
      *
-     * More convinient numpy-like slice. One and only output blob
+     * More convenient numpy-like slice. One and only output blob
      * is a slice `input[begin[0]:begin[0]+size[0], begin[1]:begin[1]+size[1], ...]`
      *
      * 3. Torch mode
@@ -402,6 +406,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ReLU6Layer : public ActivationLayer
     {
     public:
+        float minValue, maxValue;
+
         static Ptr<ReLU6Layer> create(const LayerParams &params);
     };
 
@@ -472,7 +478,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         bool hasWeights, hasBias;
         float epsilon;
 
-        virtual void getScaleShift(Mat& scale, Mat& shift) const = 0;
         static Ptr<BatchNormLayer> create(const LayerParams &params);
     };
 
@@ -490,6 +495,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         bool hasBias;
+        int axis;
 
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };

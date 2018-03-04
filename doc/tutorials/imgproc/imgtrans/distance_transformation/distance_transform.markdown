@@ -27,20 +27,20 @@ Explanation / Result
     @snippet samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp load_image
     ![](images/source.jpeg)
 
--#  Then if we have an image with white background, it is good to tranform it black. This will help us to desciminate the foreground objects easier when we will apply the Distance Transform:
+-#  Then if we have an image with a white background, it is good to transform it to black. This will help us to discriminate the foreground objects easier when we will apply the Distance Transform:
     @snippet samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp black_bg
     ![](images/black_bg.jpeg)
 
--#  Afterwards we will sharp our image in order to acute the edges of the foreground objects. We will apply a laplacian filter with a quite strong filter (an approximation of second derivative):
+-#  Afterwards we will sharpen our image in order to acute the edges of the foreground objects. We will apply a laplacian filter with a quite strong filter (an approximation of second derivative):
     @snippet samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp sharp
     ![](images/laplace.jpeg)
     ![](images/sharp.jpeg)
 
--#  Now we tranfrom our new sharped source image to a grayscale and a binary one, respectively:
+-#  Now we transform our new sharpened source image to a grayscale and a binary one, respectively:
     @snippet samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp bin
     ![](images/bin.jpeg)
 
--#  We are ready now to apply the Distance Tranform on the binary image. Moreover, we normalize the output image in order to be able visualize and threshold the result:
+-#  We are ready now to apply the Distance Transform on the binary image. Moreover, we normalize the output image in order to be able visualize and threshold the result:
     @snippet samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp dist
     ![](images/dist_transf.jpeg)
 

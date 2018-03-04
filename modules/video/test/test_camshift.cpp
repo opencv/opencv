@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_TrackBaseTest : public cvtest::BaseTest
 {
@@ -509,4 +508,5 @@ _exit_:
 TEST(Video_CAMShift, accuracy) { CV_CamShiftTest test; test.safe_run(); }
 TEST(Video_MeanShift, accuracy) { CV_MeanShiftTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

@@ -65,6 +65,7 @@ DefaultValueObjectWriter::DefaultValueObjectWriter(
       current_(NULL),
       root_(NULL),
       suppress_empty_list_(false),
+      preserve_proto_field_names_(false),
       field_scrub_callback_(NULL),
       ow_(ow) {}
 
@@ -188,9 +189,27 @@ void DefaultValueObjectWriter::RegisterFieldScrubCallBack(
   field_scrub_callback_.reset(field_scrub_callback.release());
 }
 
+DefaultValueObjectWriter::Node* DefaultValueObjectWriter::CreateNewNode(
+    const string& name, const google::protobuf::Type* type, NodeKind kind,
+    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
+    bool suppress_empty_list, FieldScrubCallBack* field_scrub_callback) {
+  return new Node(name, type, kind, data, is_placeholder, path,
+                  suppress_empty_list, field_scrub_callback);
+}
+
+DefaultValueObjectWriter::Node* DefaultValueObjectWriter::CreateNewNode(
+    const string& name, const google::protobuf::Type* type, NodeKind kind,
+    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
+    bool suppress_empty_list, bool preserve_proto_field_names,
+    FieldScrubCallBack* field_scrub_callback) {
+  return new Node(name, type, kind, data, is_placeholder, path,
+                  suppress_empty_list, preserve_proto_field_names,
+                  field_scrub_callback);
+}
+
 DefaultValueObjectWriter::Node::Node(
     const string& name, const google::protobuf::Type* type, NodeKind kind,
-    const DataPiece& data, bool is_placeholder, const vector<string>& path,
+    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
     bool suppress_empty_list, FieldScrubCallBack* field_scrub_callback)
     : name_(name),
       type_(type),
@@ -200,6 +219,23 @@ DefaultValueObjectWriter::Node::Node(
       is_placeholder_(is_placeholder),
       path_(path),
       suppress_empty_list_(suppress_empty_list),
+      preserve_proto_field_names_(false),
+      field_scrub_callback_(field_scrub_callback) {}
+
+DefaultValueObjectWriter::Node::Node(
+    const string& name, const google::protobuf::Type* type, NodeKind kind,
+    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
+    bool suppress_empty_list, bool preserve_proto_field_names,
+    FieldScrubCallBack* field_scrub_callback)
+    : name_(name),
+      type_(type),
+      kind_(kind),
+      is_any_(false),
+      data_(data),
+      is_placeholder_(is_placeholder),
+      path_(path),
+      suppress_empty_list_(suppress_empty_list),
+      preserve_proto_field_names_(preserve_proto_field_names),
       field_scrub_callback_(field_scrub_callback) {}
 
 DefaultValueObjectWriter::Node* DefaultValueObjectWriter::Node::FindChild(
@@ -310,7 +346,7 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
 
     // This code is checking if the field to be added to the tree should be
     // scrubbed or not by calling the field_scrub_callback_ callback function.
-    vector<string> path;
+    std::vector<string> path;
     if (!path_.empty()) {
       path.insert(path.begin(), path_.begin(), path_.end());
     }
@@ -363,16 +399,19 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
     }
 
     // If oneof_index() != 0, the child field is part of a "oneof", which means
-    // the child field is optional and we shouldn't populate its default value.
-    if (field.oneof_index() != 0) continue;
+    // the child field is optional and we shouldn't populate its default
+    // primitive value.
+    if (field.oneof_index() != 0 && kind == PRIMITIVE) continue;
 
     // If the child field is of primitive type, sets its data to the default
     // value of its type.
     google::protobuf::scoped_ptr<Node> child(new Node(
-        field.json_name(), field_type, kind,
+        preserve_proto_field_names_ ? field.name() : field.json_name(),
+        field_type, kind,
         kind == PRIMITIVE ? CreateDefaultDataPieceForField(field, typeinfo)
                           : DataPiece::NullData(),
-        true, path, suppress_empty_list_, field_scrub_callback_));
+        true, path, suppress_empty_list_, preserve_proto_field_names_,
+        field_scrub_callback_));
     new_children.push_back(child.release());
   }
   // Adds all leftover nodes in children_ to the beginning of new_child.
@@ -466,10 +505,11 @@ DataPiece DefaultValueObjectWriter::CreateDefaultDataPieceForField(
 DefaultValueObjectWriter* DefaultValueObjectWriter::StartObject(
     StringPiece name) {
   if (current_ == NULL) {
-    vector<string> path;
-    root_.reset(new Node(name.ToString(), &type_, OBJECT, DataPiece::NullData(),
-                         false, path, suppress_empty_list_,
-                         field_scrub_callback_.get()));
+    std::vector<string> path;
+    root_.reset(CreateNewNode(string(name), &type_, OBJECT,
+                              DataPiece::NullData(), false, path,
+                              suppress_empty_list_, preserve_proto_field_names_,
+                              field_scrub_callback_.get()));
     root_->PopulateChildren(typeinfo_);
     current_ = root_.get();
     return this;
@@ -479,13 +519,15 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::StartObject(
   if (current_->kind() == LIST || current_->kind() == MAP || child == NULL) {
     // If current_ is a list or a map node, we should create a new child and use
     // the type of current_ as the type of the new child.
-    google::protobuf::scoped_ptr<Node> node(new Node(
-        name.ToString(), ((current_->kind() == LIST || current_->kind() == MAP)
-                              ? current_->type()
-                              : NULL),
-        OBJECT, DataPiece::NullData(), false,
-        child == NULL ? current_->path() : child->path(),
-        suppress_empty_list_, field_scrub_callback_.get()));
+    google::protobuf::scoped_ptr<Node> node(
+        CreateNewNode(string(name),
+                      ((current_->kind() == LIST || current_->kind() == MAP)
+                           ? current_->type()
+                           : NULL),
+                      OBJECT, DataPiece::NullData(), false,
+                      child == NULL ? current_->path() : child->path(),
+                      suppress_empty_list_, preserve_proto_field_names_,
+                      field_scrub_callback_.get()));
     child = node.get();
     current_->AddChild(node.release());
   }
@@ -514,10 +556,11 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::EndObject() {
 DefaultValueObjectWriter* DefaultValueObjectWriter::StartList(
     StringPiece name) {
   if (current_ == NULL) {
-    vector<string> path;
-    root_.reset(new Node(name.ToString(), &type_, LIST, DataPiece::NullData(),
-                         false, path, suppress_empty_list_,
-                         field_scrub_callback_.get()));
+    std::vector<string> path;
+    root_.reset(CreateNewNode(string(name), &type_, LIST, DataPiece::NullData(),
+                              false, path, suppress_empty_list_,
+                              preserve_proto_field_names_,
+                              field_scrub_callback_.get()));
     current_ = root_.get();
     return this;
   }
@@ -525,9 +568,10 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::StartList(
   Node* child = current_->FindChild(name);
   if (child == NULL || child->kind() != LIST) {
     google::protobuf::scoped_ptr<Node> node(
-        new Node(name.ToString(), NULL, LIST, DataPiece::NullData(), false,
-                 child == NULL ? current_->path() : child->path(),
-                 suppress_empty_list_, field_scrub_callback_.get()));
+        CreateNewNode(string(name), NULL, LIST, DataPiece::NullData(), false,
+                      child == NULL ? current_->path() : child->path(),
+                      suppress_empty_list_, preserve_proto_field_names_,
+                      field_scrub_callback_.get()));
     child = node.get();
     current_->AddChild(node.release());
   }
@@ -586,13 +630,14 @@ void DefaultValueObjectWriter::RenderDataPiece(StringPiece name,
   if (child == NULL || child->kind() != PRIMITIVE) {
     // No children are found, creates a new child.
     google::protobuf::scoped_ptr<Node> node(
-        new Node(name.ToString(), NULL, PRIMITIVE, data, false,
-                 child == NULL ? current_->path() : child->path(),
-                 suppress_empty_list_, field_scrub_callback_.get()));
-    child = node.get();
+        CreateNewNode(string(name), NULL, PRIMITIVE, data, false,
+                      child == NULL ? current_->path() : child->path(),
+                      suppress_empty_list_, preserve_proto_field_names_,
+                      field_scrub_callback_.get()));
     current_->AddChild(node.release());
   } else {
     child->set_data(data);
+    child->set_is_placeholder(false);
   }
 }
 

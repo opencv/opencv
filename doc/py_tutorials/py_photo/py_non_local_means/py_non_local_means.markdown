@@ -33,7 +33,7 @@ one noisy image available.
 
 So idea is simple, we need a set of similar images to average out the noise. Consider a small window
 (say 5x5 window) in the image. Chance is large that the same patch may be somewhere else in the
-image. Sometimes in a small neigbourhood around it. What about using these similar patches together
+image. Sometimes in a small neighbourhood around it. What about using these similar patches together
 and find their average? For that particular window, that is fine. See an example image below:
 
 ![image](images/nlm_patch.jpg)

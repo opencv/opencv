@@ -124,7 +124,7 @@ bool  SunRasterDecoder::readHeader()
                     m_type = IsColorPalette( m_palette, m_bpp ) ? CV_8UC3 : CV_8UC1;
                     m_offset = m_strm.getPos();
 
-                    assert( m_offset == 32 + m_maplength );
+                    CV_Assert(m_offset == 32 + m_maplength);
                     result = true;
                 }
             }
@@ -137,7 +137,7 @@ bool  SunRasterDecoder::readHeader()
 
                 m_offset = m_strm.getPos();
 
-                assert( m_offset == 32 + m_maplength );
+                CV_Assert(m_offset == 32 + m_maplength);
                 result = true;
             }
         }
@@ -230,7 +230,7 @@ bool  SunRasterDecoder::readData( Mat& img )
                         code = m_strm.getByte();
                         if( len > line_end - tsrc )
                         {
-                            assert(0);
+                            CV_Error(Error::StsInternal, "");
                             goto bad_decoding_1bpp;
                         }
 
@@ -371,7 +371,7 @@ bad_decoding_end:
             result = true;
             break;
         default:
-            assert(0);
+            CV_Error(Error::StsInternal, "");
         }
     }
     CV_CATCH_ALL

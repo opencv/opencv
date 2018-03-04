@@ -44,7 +44,7 @@
    Media Foundation-based Video Capturing module is based on
    videoInput library by Evgeny Pereguda:
    http://www.codeproject.com/Articles/559437/Capturing-of-video-from-web-camera-on-Windows-7-an
-   Originaly licensed under The Code Project Open License (CPOL) 1.02:
+   Originally licensed under The Code Project Open License (CPOL) 1.02:
    http://www.codeproject.com/info/cpol10.aspx
 */
 //require Windows 8 for some of the formats defined otherwise could baseline on lower version
@@ -1666,7 +1666,7 @@ void ImageGrabberThread::setEmergencyStopEvent(void *userData, void(*func)(int, 
 
 ImageGrabberThread::~ImageGrabberThread(void)
 {
-    DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroing ImageGrabberThread\n", igt_DeviceID);
+    DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroying ImageGrabberThread\n", igt_DeviceID);
     if (igt_Handle)
         WaitForSingleObject(igt_Handle, INFINITE);
     delete igt_pImageGrabber;

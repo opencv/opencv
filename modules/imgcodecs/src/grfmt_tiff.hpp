@@ -128,6 +128,9 @@ public:
     bool isFormatSupported( int depth ) const;
 
     bool  write( const Mat& img, const std::vector<int>& params );
+
+    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+
     ImageEncoder newEncoder() const;
 
 protected:
@@ -135,7 +138,7 @@ protected:
                     TiffFieldType fieldType,
                     int count, int value );
 
-    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
+    bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
     bool write_32FC3( const Mat& img );
     bool write_32FC1( const Mat& img );
 

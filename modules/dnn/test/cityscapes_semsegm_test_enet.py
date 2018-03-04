@@ -8,11 +8,11 @@ try:
     import cv2 as cv
 except ImportError:
     raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
-                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+                      'configure environment variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 try:
     import torch
 except ImportError:
-    raise ImportError('Can\'t find pytorch. Please intall it by following instructions on the official site')
+    raise ImportError('Can\'t find pytorch. Please install it by following instructions on the official site')
 
 from torch.utils.serialization import load_lua
 from pascal_semsegm_test_fcn import eval_segm_result, get_conf_mat, get_metrics, DatasetImageFetch, SemSegmEvaluation
