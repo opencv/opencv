@@ -4391,7 +4391,7 @@ bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                 imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
                 (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
                 anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
-                (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),
+                OCL_PERFORMANCE_CHECK(d.isIntel()),  // TODO FIXIT
                 ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, delta,
                                            borderType & ~BORDER_ISOLATED, ddepth, bdepth, int_arithm), true)
 

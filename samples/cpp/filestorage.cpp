@@ -18,8 +18,8 @@ static void help(char** av)
   cout << "\nfilestorage_sample demonstrate the usage of the opencv serialization functionality.\n"
       << "usage:\n"
       <<  av[0] << " outputfile.yml.gz\n"
-      << "\n   outputfile above can have many different extenstions, see below."
-      << "\nThis program demonstrates the use of FileStorage for serialization, that is use << and >>  in OpenCV\n"
+      << "\n   outputfile above can have many different extensions, see below."
+      << "\nThis program demonstrates the use of FileStorage for serialization, that is in use << and >>  in OpenCV\n"
       << "For example, how to create a class and have it serialize, but also how to use it to read and write matrices.\n"
       << "FileStorage allows you to serialize to various formats specified by the file end type."
           << "\nYou should try using different file extensions.(e.g. yaml yml xml xml.gz yaml.gz etc...)\n" << endl;

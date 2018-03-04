@@ -1,10 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-#include <map>
-
-using namespace cv;
-using namespace std;
-
+namespace opencv_test { namespace {
 
 class Core_ReduceTest : public cvtest::BaseTest
 {
@@ -770,8 +769,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         SparseMat M( dims, size, depth );
         map<string, double> M0;
 
-        int nz0 = (unsigned)rng % max(p/5,10);
-        nz0 = min(max(nz0, 1), p);
+        int nz0 = (unsigned)rng % std::max(p/5,10);
+        nz0 = std::min(std::max(nz0, 1), p);
         all_vals.resize(nz0);
         all_vals2.resize(nz0);
         Mat_<double> _all_vals(all_vals), _all_vals2(all_vals2);
@@ -791,9 +790,9 @@ void Core_ArrayOpTest::run( int /* start_from */)
         }
 
         minMaxLoc(_all_vals, &min_val, &max_val);
-        double _norm0 = cvtest::norm(_all_vals, CV_C);
-        double _norm1 = cvtest::norm(_all_vals, CV_L1);
-        double _norm2 = cvtest::norm(_all_vals, CV_L2);
+        double _norm0 = cv/*test*/::norm(_all_vals, CV_C);
+        double _norm1 = cv/*test*/::norm(_all_vals, CV_L1);
+        double _norm2 = cv/*test*/::norm(_all_vals, CV_L2);
 
         for( i = 0; i < nz0; i++ )
         {
@@ -828,9 +827,9 @@ void Core_ArrayOpTest::run( int /* start_from */)
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
 
         int nz1 = (int)M.nzcount(), nz2 = (int)M3.nzcount();
-        double norm0 = norm(M, CV_C);
-        double norm1 = norm(M, CV_L1);
-        double norm2 = norm(M, CV_L2);
+        double norm0 = cv/*test*/::norm(M, CV_C);
+        double norm1 = cv/*test*/::norm(M, CV_L1);
+        double norm2 = cv/*test*/::norm(M, CV_L2);
         double eps = depth == CV_32F ? FLT_EPSILON*100 : DBL_EPSILON*1000;
 
         if( nz1 != nz0 || nz2 != nz0)
@@ -851,8 +850,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
             break;
         }
 
-        int n = (unsigned)rng % max(p/5,10);
-        n = min(max(n, 1), p) + nz0;
+        int n = (unsigned)rng % std::max(p/5,10);
+        n = std::min(std::max(n, 1), p) + nz0;
 
         for( i = 0; i < n; i++ )
         {
@@ -919,7 +918,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         int idx1[MAX_DIM], idx2[MAX_DIM];
         double val1 = 0, val2 = 0;
         M3 = SparseMat(Md);
-        minMaxLoc(M3, &val1, &val2, idx1, idx2);
+        cv::minMaxLoc(M3, &val1, &val2, idx1, idx2);
         string s1 = idx2string(idx1, dims), s2 = idx2string(idx2, dims);
         if( val1 != min_val || val2 != max_val || s1 != min_sidx || s2 != max_sidx )
         {
@@ -930,7 +929,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             break;
         }
 
-        minMaxIdx(Md, &val1, &val2, idx1, idx2);
+        cv::minMaxIdx(Md, &val1, &val2, idx1, idx2);
         s1 = idx2string(idx1, dims), s2 = idx2string(idx2, dims);
         if( (min_val < 0 && (val1 != min_val || s1 != min_sidx)) ||
            (max_val > 0 && (val2 != max_val || s2 != max_sidx)) )
@@ -1066,7 +1065,7 @@ protected:
         merge(src, dst);
 
         // check result
-        stringstream commonLog;
+        std::stringstream commonLog;
         commonLog << "Depth " << depth << " :";
         if(dst.depth() != depth)
         {
@@ -1115,7 +1114,7 @@ protected:
         split(src, dst);
 
         // check result
-        stringstream commonLog;
+        std::stringstream commonLog;
         commonLog << "Depth " << depth << " :";
         if(dst.size() != channels)
         {
@@ -1391,7 +1390,7 @@ TEST(Core_SVD, orthogonality)
         Mat mat_U, mat_W;
         SVD::compute(mat_D, mat_W, mat_U, noArray(), SVD::FULL_UV);
         mat_U *= mat_U.t();
-        ASSERT_LT(norm(mat_U, Mat::eye(2, 2, type), NORM_INF), 1e-5);
+        ASSERT_LT(cvtest::norm(mat_U, Mat::eye(2, 2, type), NORM_INF), 1e-5);
     }
 }
 
@@ -1673,9 +1672,9 @@ TEST(Core_Mat_array, copyTo_roi_row)
 TEST(Core_Mat_array, SplitMerge)
 {
     std::array<cv::Mat, 3> src;
-    for(size_t i=0; i<src.size(); ++i) {
-        src[i].create(10, 10, CV_8U);
-        src[i] = 127 * i;
+    for (size_t i = 0; i < src.size(); ++i)
+    {
+        src[i] = Mat(10, 10, CV_8U, Scalar((double)(16 * (i + 1))));
     }
 
     Mat merged;
@@ -1684,10 +1683,9 @@ TEST(Core_Mat_array, SplitMerge)
     std::array<cv::Mat, 3> dst;
     split(merged, dst);
 
-    Mat diff;
-    for(size_t i=0; i<dst.size(); ++i) {
-        absdiff(src[i], dst[i], diff);
-        EXPECT_EQ(0, countNonZero(diff));
+    for (size_t i = 0; i < dst.size(); ++i)
+    {
+        EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
 #endif
@@ -1713,24 +1711,30 @@ TEST(Mat_, range_based_for)
 
     Mat_<uchar> ref(3, 3);
     ref.setTo(Scalar(1));
-    ASSERT_DOUBLE_EQ(norm(img, ref), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(img, ref, NORM_INF), 0.);
 }
 
 TEST(Mat, from_initializer_list)
 {
     Mat A({1.f, 2.f, 3.f});
     Mat_<float> B(3, 1); B << 1, 2, 3;
+    Mat_<float> C({3}, {1,2,3});
 
     ASSERT_EQ(A.type(), CV_32F);
-    ASSERT_DOUBLE_EQ(norm(A, B, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);
 }
 
 TEST(Mat_, from_initializer_list)
 {
     Mat_<float> A = {1, 2, 3};
     Mat_<float> B(3, 1); B << 1, 2, 3;
+    Mat_<float> C({3}, {1,2,3});
 
-    ASSERT_DOUBLE_EQ(norm(A, B, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
+    ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);
 }
 
 
@@ -1754,3 +1758,5 @@ TEST(Mat_, template_based_ptr)
 }
 
 #endif
+
+}} // namespace

@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////
 // Gold implementation
@@ -177,4 +177,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Warping, Remap, testing::Combine(
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT), BorderType(cv::BORDER_WRAP)),
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

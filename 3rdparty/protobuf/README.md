@@ -1,3 +1,3 @@
 Project: Protocol Buffers - Google's data interchange format
 Source code: https://github.com/google/protobuf
-Version: 3.1.0
+Version: 3.5.1

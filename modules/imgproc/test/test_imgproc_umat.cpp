@@ -41,10 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ImgprocUMatTest : public cvtest::BaseTest
 {
@@ -82,3 +80,5 @@ protected:
 };
 
 TEST(Imgproc_UMat, regression) { CV_ImgprocUMatTest test; test.safe_run(); }
+
+}} // namespace

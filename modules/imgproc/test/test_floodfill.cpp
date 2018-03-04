@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_FloodFillTest : public cvtest::ArrayTest
 {
@@ -539,7 +538,8 @@ TEST(Imgproc_FloodFill, maskValue)
     int flags = 4 + CV_FLOODFILL_MASK_ONLY;
     floodFill(img, mask, Point(n/2 + 13, n/2), Scalar(100), NULL, Scalar(),  Scalar(), flags);
 
-    ASSERT_TRUE(norm(mask.rowRange(1, n-1).colRange(1, n-1), NORM_INF) == 1.);
+    ASSERT_EQ(1, cvtest::norm(mask.rowRange(1, n-1).colRange(1, n-1), NORM_INF));
 }
 
+}} // namespace
 /* End of file. */

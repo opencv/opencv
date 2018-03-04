@@ -45,11 +45,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -87,10 +83,10 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
-typedef testing::TestWithParam<tuple<bool> > Reproducibility_AlexNet;
+typedef testing::TestWithParam<bool> Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
-    bool readFromMemory = get<0>(GetParam());
+    bool readFromMemory = GetParam();
     Net net;
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
@@ -119,12 +115,12 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     normAssert(ref, out);
 }
 
-INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_AlexNet, testing::Values(true, false));
+INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_AlexNet, testing::Bool());
 
-typedef testing::TestWithParam<tuple<bool> > Reproducibility_OCL_AlexNet;
+typedef testing::TestWithParam<bool> Reproducibility_OCL_AlexNet;
 OCL_TEST_P(Reproducibility_OCL_AlexNet, Accuracy)
 {
-    bool readFromMemory = get<0>(GetParam());
+    bool readFromMemory = GetParam();
     Net net;
     {
         const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
@@ -156,7 +152,7 @@ OCL_TEST_P(Reproducibility_OCL_AlexNet, Accuracy)
     normAssert(ref, out);
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_OCL_AlexNet, testing::Values(true, false));
+OCL_INSTANTIATE_TEST_CASE_P(Test_Caffe, Reproducibility_OCL_AlexNet, testing::Bool());
 
 #if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
@@ -303,6 +299,14 @@ OCL_TEST(Reproducibility_ResNet50, Accuracy)
 
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
     normAssert(ref, out);
+
+    UMat out_umat;
+    net.forward(out_umat);
+    normAssert(ref, out_umat, "out_umat");
+
+    std::vector<UMat> out_umats;
+    net.forward(out_umats);
+    normAssert(ref, out_umats[0], "out_umat_vector");
 }
 
 TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
@@ -331,8 +335,13 @@ OCL_TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
     ASSERT_TRUE(!input.empty());
 
-    net.setInput(input);
+    // Firstly set a wrong input blob and run the model to receive a wrong output.
+    net.setInput(input * 2.0f);
     Mat out = net.forward();
+
+    // Then set a correct input blob to check CPU->GPU synchronization is working well.
+    net.setInput(input);
+    out = net.forward();
 
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
@@ -383,7 +392,7 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 // https://github.com/richzhang/colorization
 TEST(Reproducibility_Colorization, Accuracy)
 {
-    const float l1 = 1e-5;
+    const float l1 = 3e-5;
     const float lInf = 3e-3;
 
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
@@ -447,4 +456,82 @@ TEST(Test_Caffe, multiple_inputs)
     normAssert(out, first_image + second_image);
 }
 
+CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+typedef testing::TestWithParam<tuple<std::string, DNNTarget> > opencv_face_detector;
+TEST_P(opencv_face_detector, Accuracy)
+{
+    std::string proto = findDataFile("dnn/opencv_face_detector.prototxt", false);
+    std::string model = findDataFile(get<0>(GetParam()), false);
+    dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
+
+    Net net = readNetFromCaffe(proto, model);
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+    Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
+
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableTarget(targetId);
+
+    net.setInput(blob);
+    // Output has shape 1x1xNx7 where N - number of detections.
+    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+    Mat out = net.forward();
+
+    Mat ref = (Mat_<float>(6, 5) << 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
+                                    0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
+                                    0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
+                                    0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
+                                    0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
+                                    0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
+    normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref);
 }
+INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
+    Combine(
+        Values("dnn/opencv_face_detector.caffemodel",
+               "dnn/opencv_face_detector_fp16.caffemodel"),
+        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+    )
+);
+
+TEST(Test_Caffe, FasterRCNN_and_RFCN)
+{
+    std::string models[] = {"VGG16_faster_rcnn_final.caffemodel", "ZF_faster_rcnn_final.caffemodel",
+                            "resnet50_rfcn_final.caffemodel"};
+    std::string protos[] = {"faster_rcnn_vgg16.prototxt", "faster_rcnn_zf.prototxt",
+                            "rfcn_pascal_voc_resnet50.prototxt"};
+    Mat refs[] = {(Mat_<float>(3, 6) << 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
+                                        7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
+                                        12, 0.993028, 133.221, 189.377, 350.994, 563.166),
+                  (Mat_<float>(3, 6) << 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
+                                        7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
+                                        12, 0.967198, 138.588, 206.843, 329.766, 553.176),
+                  (Mat_<float>(2, 6) << 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
+                                        12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
+    for (int i = 0; i < 3; ++i)
+    {
+        std::string proto = findDataFile("dnn/" + protos[i], false);
+        std::string model = findDataFile("dnn/" + models[i], false);
+
+        Net net = readNetFromCaffe(proto, model);
+        Mat img = imread(findDataFile("dnn/dog416.png", false));
+        resize(img, img, Size(800, 600));
+        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
+        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
+
+        net.setInput(blob, "data");
+        net.setInput(imInfo, "im_info");
+        // Output has shape 1x1xNx7 where N - number of detections.
+        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+        Mat out = net.forward();
+        out = out.reshape(1, out.total() / 7);
+
+        Mat detections;
+        for (int j = 0; j < out.rows; ++j)
+        {
+            if (out.at<float>(j, 2) > 0.8)
+              detections.push_back(out.row(j).colRange(1, 7));
+        }
+        normAssert(detections, refs[i], ("model name: " + models[i]).c_str(), 2e-4, 6e-4);
+    }
+}
+
+}} // namespace

@@ -460,7 +460,7 @@ Ptr<Filter> cv::cuda::createDerivFilter(int srcType, int dstType, int dx, int dy
     if (scale != 1)
     {
         // usually the smoothing part is the slowest to compute,
-        // so try to scale it instead of the faster differenciating part
+        // so try to scale it instead of the faster differentiating part
         if (dx == 0)
             kx *= scale;
         else

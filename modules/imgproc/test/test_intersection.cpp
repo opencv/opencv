@@ -45,8 +45,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #define ACCURACY 0.00001
 
@@ -497,3 +496,5 @@ void CV_RotatedRectangleIntersectionTest::test9()
 }
 
 TEST (Imgproc_RotatedRectangleIntersection, accuracy) { CV_RotatedRectangleIntersectionTest test; test.safe_run(); }
+
+}} // namespace

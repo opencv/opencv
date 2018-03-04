@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include <float.h>
 #include <algorithm>
@@ -105,6 +106,7 @@ public:
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
         spatialScale = params.get<float>("spatial_scale", 1);
+        avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
 
 #ifdef HAVE_OPENCL
@@ -130,7 +132,8 @@ public:
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == MAX || type == AVE && !pad.width && !pad.height);
+               (type == MAX || type == AVE && !pad.width && !pad.height) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (type == MAX || type == AVE);
     }
 
 #ifdef HAVE_OPENCL
@@ -155,6 +158,7 @@ public:
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
                                                LIBDNN_POOLING_METHOD_STO);
+            config.avePoolPaddedArea = avePoolPaddedArea;
             poolOp = Ptr<OCL4DNNPool<float> >(new OCL4DNNPool<float>(config));
         }
 
@@ -222,23 +226,53 @@ public:
             return Ptr<BackendNode>();
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Pooling";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::PoolingLayer> ieLayer(new InferenceEngine::PoolingLayer(lp));
+
+        ieLayer->_kernel_x = kernel.width;
+        ieLayer->_kernel_y = kernel.height;
+        ieLayer->_stride_x = stride.width;
+        ieLayer->_stride_y = stride.height;
+        ieLayer->_padding_x = pad.width;
+        ieLayer->_padding_y = pad.height;
+        ieLayer->_exclude_pad = type == AVE && padMode == "SAME";
+        ieLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
+        if (type == MAX)
+            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
+        else if (type == AVE)
+            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::AVG;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
     class PoolingInvoker : public ParallelLoopBody
     {
     public:
         const Mat* src, *rois;
         Mat *dst, *mask;
         Size kernel, stride, pad;
+        bool avePoolPaddedArea;
         int nstripes;
         bool computeMaxIdx;
         std::vector<int> ofsbuf;
         int poolingType;
         float spatialScale;
 
-        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), nstripes(0),
+        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), avePoolPaddedArea(false), nstripes(0),
                            computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask, Size kernel,
-                        Size stride, Size pad, int poolingType, float spatialScale,
+                        Size stride, Size pad, bool avePoolPaddedArea, int poolingType, float spatialScale,
                         bool computeMaxIdx, int nstripes)
         {
             CV_Assert(src.isContinuous(), dst.isContinuous(),
@@ -257,6 +291,7 @@ public:
             p.kernel = kernel;
             p.stride = stride;
             p.pad = pad;
+            p.avePoolPaddedArea = avePoolPaddedArea;
             p.nstripes = nstripes;
             p.computeMaxIdx = computeMaxIdx;
             p.poolingType = poolingType;
@@ -287,7 +322,9 @@ public:
             bool compMaxIdx = computeMaxIdx;
 
 #if CV_SIMD128
-            const int* ofsptr = &ofsbuf[0];
+            const int* ofsptr = ofsbuf.empty() ? 0 : (const int*)&ofsbuf[0];
+            if (poolingType == MAX && !compMaxIdx && !ofsptr)
+                CV_Error(Error::StsBadArg, "ofsbuf should be initialized in this mode");
             v_float32x4 idx00(0.f, (float)stride_w, (float)(stride_w*2), (float)(stride_w*3));
             v_float32x4 ones = v_setall_f32(1.f);
             v_float32x4 idx_delta = v_setall_f32((float)(inp_width - kernel_w));
@@ -507,8 +544,8 @@ public:
                         int xdelta = xend - xstart;
                         xstart = max(xstart, 0);
                         xend = min(xend, inp_width);
-                        float inv_kernel_area = 1.f/(ydelta*xdelta);
-
+                        float inv_kernel_area = avePoolPaddedArea ? xdelta * ydelta : ((yend - ystart) * (xend - xstart));
+                        inv_kernel_area = 1.0 / inv_kernel_area;
 #if CV_SIMD128
                         if( xstart > 0 && x0 + 7 < x1 && (x0 + 7) * stride_w - pad_w + kernel_w < inp_width )
                         {
@@ -619,21 +656,21 @@ public:
     {
         const int nstripes = getNumThreads();
         Mat rois;
-        PoolingInvoker::run(src, rois, dst, mask, kernel, stride, pad, type, spatialScale, computeMaxIdx, nstripes);
+        PoolingInvoker::run(src, rois, dst, mask, kernel, stride, pad, avePoolPaddedArea, type, spatialScale, computeMaxIdx, nstripes);
     }
 
     void avePooling(Mat &src, Mat &dst)
     {
         const int nstripes = getNumThreads();
         Mat rois, mask;
-        PoolingInvoker::run(src, rois, dst, mask, kernel, stride, pad, type, spatialScale, computeMaxIdx, nstripes);
+        PoolingInvoker::run(src, rois, dst, mask, kernel, stride, pad, avePoolPaddedArea, type, spatialScale, computeMaxIdx, nstripes);
     }
 
     void roiPooling(const Mat &src, const Mat &rois, Mat &dst)
     {
         const int nstripes = getNumThreads();
         Mat mask;
-        PoolingInvoker::run(src, rois, dst, mask, kernel, stride, pad, type, spatialScale, computeMaxIdx, nstripes);
+        PoolingInvoker::run(src, rois, dst, mask, kernel, stride, pad, avePoolPaddedArea, type, spatialScale, computeMaxIdx, nstripes);
     }
 
     virtual Ptr<BackendNode> initMaxPoolingHalide(const std::vector<Ptr<BackendWrapper> > &inputs)

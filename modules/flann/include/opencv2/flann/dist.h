@@ -843,7 +843,7 @@ typename Distance::ResultType ensureSquareDistance( typename Distance::ResultTyp
 
 /*
  * ...and a template to ensure the user that he will process the normal distance,
- * and not squared distance, without loosing processing time calling sqrt(ensureSquareDistance)
+ * and not squared distance, without losing processing time calling sqrt(ensureSquareDistance)
  * that will result in doing actually sqrt(dist*dist) for L1 distance for instance.
  */
 template <typename Distance, typename ElementType>

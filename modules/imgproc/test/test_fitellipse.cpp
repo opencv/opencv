@@ -5,11 +5,8 @@
 // Copyright (C) 2016, Itseez, Inc, all rights reserved.
 
 #include "test_precomp.hpp"
-#include <vector>
-#include <cmath>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 // return true if point lies inside ellipse
 static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
@@ -19,7 +16,7 @@ static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
     double x_dist = 0.5 * el.size.width * cos(pt_angle + el_angle);
     double y_dist = 0.5 * el.size.height * sin(pt_angle + el_angle);
     double el_dist = sqrt(x_dist * x_dist + y_dist * y_dist);
-    return norm(to_pt) < el_dist;
+    return cv::norm(to_pt) < el_dist;
 }
 
 // Return true if mass center of fitted points lies inside ellipse
@@ -68,3 +65,5 @@ TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
 
     EXPECT_TRUE(fit_and_check_ellipse(pts));
 }
+
+}} // namespace

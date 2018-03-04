@@ -39,6 +39,10 @@
 //
 //M*/
 
+#include "test_precomp.hpp"
+
+namespace opencv_test { namespace {
+
 #define OUTPUT_SAVING 0
 #if OUTPUT_SAVING
 #define SAVE(x) std::vector<int> params;\
@@ -48,13 +52,6 @@
 #else
 #define SAVE(x)
 #endif
-
-#include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
-
-using namespace cv;
-using namespace std;
 
 static const double numerical_precision = 1000.;
 
@@ -228,3 +225,5 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     EXPECT_LE(error, numerical_precision);
 
 }
+
+}} // namespace

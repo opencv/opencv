@@ -42,12 +42,9 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/videoio/videoio_c.h"
-#include "opencv2/highgui.hpp"
-#include <cstdio>
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
+namespace opencv_test
+{
 
 class Videoio_Test_Base
 {
@@ -154,13 +151,13 @@ typedef tuple<string, int> Backend_Type_Params;
 
 class Videoio_Bunny : public Videoio_Test_Base, public testing::TestWithParam<Backend_Type_Params>
 {
+    BunnyParameters bunny_param;
 public:
     Videoio_Bunny()
     {
         ext = get<0>(GetParam());
         apiPref = get<1>(GetParam());
-
-        video_file = cvtest::TS::ptr()->get_data_path() + "video/big_buck_bunny." + ext;
+        video_file = BunnyParameters::getFilename(String(".") + ext);
     }
     void doFrameCountTest()
     {
@@ -184,18 +181,12 @@ public:
             return;
         }
 
-        const int width_gt = 672;
-        const int height_gt = 384;
-        const int fps_gt = 24;
-        const double time_gt = 5.21;
-        const int count_gt = cvRound(fps_gt * time_gt); // 5.21 sec * 24 fps
-
-        EXPECT_EQ(width_gt, cap.get(CAP_PROP_FRAME_WIDTH));
-        EXPECT_EQ(height_gt, cap.get(CAP_PROP_FRAME_HEIGHT));
+        EXPECT_EQ(bunny_param.getWidth() , cap.get(CAP_PROP_FRAME_WIDTH));
+        EXPECT_EQ(bunny_param.getHeight(), cap.get(CAP_PROP_FRAME_HEIGHT));
 
         double fps_prop = cap.get(CAP_PROP_FPS);
         if (fps_prop > 0)
-            EXPECT_NEAR(fps_prop, fps_gt, 1);
+            EXPECT_NEAR(fps_prop, bunny_param.getFps(), 1);
         else
             std::cout << "FPS is not available. SKIP check." << std::endl;
 
@@ -207,7 +198,7 @@ public:
         {
             if (count_prop > 0)
             {
-                EXPECT_EQ(count_gt, count_prop);
+                EXPECT_EQ(bunny_param.getCount(), count_prop);
             }
         }
 
@@ -218,13 +209,13 @@ public:
             cap >> frame;
             if (frame.empty())
                 break;
-            EXPECT_EQ(width_gt, frame.cols);
-            EXPECT_EQ(height_gt, frame.rows);
+            EXPECT_EQ(bunny_param.getWidth(), frame.cols);
+            EXPECT_EQ(bunny_param.getHeight(), frame.rows);
             count_actual += 1;
         }
         if (count_prop > 0)
         {
-            EXPECT_NEAR(count_gt, count_actual, 1);
+            EXPECT_NEAR(bunny_param.getCount(), count_actual, 1);
         }
         else
             std::cout << "Frames counter is not available. Actual frames: " << count_actual << ". SKIP check." << std::endl;
@@ -454,3 +445,5 @@ INSTANTIATE_TEST_CASE_P(videoio, Videoio_Synthetic,
                         testing::Combine(
                             testing::ValuesIn(all_sizes),
                             testing::ValuesIn(synthetic_params)));
+
+} // namespace

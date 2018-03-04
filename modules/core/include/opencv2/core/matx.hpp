@@ -92,7 +92,7 @@ Except of the plain constructor which takes a list of elements, Matx can be init
     float values[] = { 1, 2, 3};
     Matx31f m(values);
 @endcode
-In case if C++11 features are avaliable, std::initializer_list can be also used to initizlize Matx:
+In case if C++11 features are available, std::initializer_list can be also used to initialize Matx:
 @code{.cpp}
     Matx31f m = { 1, 2, 3};
 @endcode

@@ -40,14 +40,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
-using namespace cv;
-using namespace cv::ml;
+namespace opencv_test { namespace {
+
 using cv::ml::SVMSGD;
 using cv::ml::TrainData;
-
-
 
 class CV_SVMSGDTrainTest : public cvtest::BaseTest
 {
@@ -300,7 +297,7 @@ TEST(ML_SVMSGD, twoPoints)
 
     float realShift = -500000.5;
 
-    float normRealWeights = static_cast<float>(norm(realWeights));
+    float normRealWeights = static_cast<float>(cv::norm(realWeights)); // TODO cvtest
     realWeights /= normRealWeights;
     realShift /= normRealWeights;
 
@@ -311,8 +308,11 @@ TEST(ML_SVMSGD, twoPoints)
     Mat foundWeights = svmsgd->getWeights();
     float foundShift = svmsgd->getShift();
 
-    float normFoundWeights = static_cast<float>(norm(foundWeights));
+    float normFoundWeights = static_cast<float>(cv::norm(foundWeights)); // TODO cvtest
     foundWeights /= normFoundWeights;
     foundShift /= normFoundWeights;
-    CV_Assert((norm(foundWeights - realWeights) < 0.001) && (abs((foundShift - realShift) / realShift) < 0.05));
+    EXPECT_LE(cv::norm(Mat(foundWeights - realWeights)), 0.001); // TODO cvtest
+    EXPECT_LE(std::abs((foundShift - realShift) / realShift), 0.05);
 }
+
+}} // namespace

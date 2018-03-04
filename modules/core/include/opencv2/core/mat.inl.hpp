@@ -584,6 +584,18 @@ Mat::Mat(const std::initializer_list<_Tp> list)
         return;
     Mat((int)list.size(), 1, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
+
+template<typename _Tp> inline
+Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list)
+    : Mat()
+{
+    size_t size_total = 1;
+    int *sz = (int*)sizes.begin();
+    for(auto s : sizes)
+        size_total *= s;
+    CV_Assert(list.size() != 0 || size_total == list.size());
+    Mat((int)sizes.size(), sz, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
+}
 #endif
 
 #ifdef CV_CXX_STD_ARRAY
@@ -1628,6 +1640,11 @@ Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(std::initializer_list<_Tp> list)
     : Mat(list)
+{}
+
+template<typename _Tp> inline
+Mat_<_Tp>::Mat_(const std::initializer_list<int> sizes, std::initializer_list<_Tp> list)
+    : Mat(sizes, list)
 {}
 #endif
 
@@ -3910,9 +3927,6 @@ inline void UMatData::markDeviceCopyObsolete(bool flag)
     else
         flags &= ~DEVICE_COPY_OBSOLETE;
 }
-
-inline UMatDataAutoLock::UMatDataAutoLock(UMatData* _u) : u(_u) { u->lock(); }
-inline UMatDataAutoLock::~UMatDataAutoLock() { u->unlock(); }
 
 //! @endcond
 

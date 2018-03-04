@@ -526,6 +526,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 
 #define CV__PERF_TEST_BODY_IMPL(name) \
     { \
+       CV__TEST_NAMESPACE_CHECK \
        CV__TRACE_APP_FUNCTION_NAME("PERF_TEST: " name); \
        RunPerfTestBody(); \
     }
@@ -706,8 +707,11 @@ namespace comparators
 {
 
 template<typename T>
-struct RectLess_ :
-        public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
+#ifdef CV_CXX11
+struct RectLess_
+#else
+struct RectLess_ : public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
+#endif
 {
   bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
   {
@@ -720,8 +724,11 @@ struct RectLess_ :
 
 typedef RectLess_<int> RectLess;
 
-struct KeypointGreater :
-        public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#ifdef CV_CXX11
+struct KeypointGreater
+#else
+struct KeypointGreater : public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#endif
 {
     bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
     {

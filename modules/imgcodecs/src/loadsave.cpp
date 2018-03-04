@@ -144,7 +144,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<SunRasterDecoder>() );
         encoders.push_back( makePtr<SunRasterEncoder>() );
         decoders.push_back( makePtr<PxMDecoder>() );
-        encoders.push_back( makePtr<PxMEncoder>() );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_AUTO) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PBM) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PGM) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PPM) );
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );
@@ -664,33 +667,45 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     return imreadmulti_(filename, flags, mats);
 }
 
-static bool imwrite_( const String& filename, const Mat& image,
+static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& params, bool flipv )
 {
-    Mat temp;
-    const Mat* pimage = &image;
-
-    CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+    bool isMultiImg = img_vec.size() > 1;
+    std::vector<Mat> write_vec;
 
     ImageEncoder encoder = findEncoder( filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
-    if( !encoder->isFormatSupported(image.depth()) )
-    {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
-        image.convertTo( temp, CV_8U );
-        pimage = &temp;
-    }
 
-    if( flipv )
+    for (size_t page = 0; page < img_vec.size(); page++)
     {
-        flip(*pimage, temp, 0);
-        pimage = &temp;
+        Mat image = img_vec[page];
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+
+        Mat temp;
+        if( !encoder->isFormatSupported(image.depth()) )
+        {
+            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            image.convertTo( temp, CV_8U );
+            image = temp;
+        }
+
+        if( flipv )
+        {
+            flip(image, temp, 0);
+            image = temp;
+        }
+
+        write_vec.push_back(image);
     }
 
     encoder->setDestination( filename );
     CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
-    bool code = encoder->write( *pimage, params );
+    bool code;
+    if (!isMultiImg)
+        code = encoder->write( write_vec[0], params );
+    else
+        code = encoder->writemulti( write_vec, params ); //to be implemented
 
     //    CV_Assert( code );
     return code;
@@ -700,9 +715,14 @@ bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
+    std::vector<Mat> img_vec;
+    //Did we get a Mat or a vector of Mats?
+    if (_img.isMat())
+        img_vec.push_back(_img.getMat());
+    else if (_img.isMatVector())
+        _img.getMatVector(img_vec);
 
-    Mat img = _img.getMat();
-    return imwrite_(filename, img, params, false);
+    return imwrite_(filename, img_vec, params, false);
 }
 
 static void*

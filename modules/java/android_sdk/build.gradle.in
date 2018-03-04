@@ -1,0 +1,127 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+//
+// Notes about integration OpenCV into existed Android Studio application project are below (application 'app' module should exist).
+//
+// This file is located in <OpenCV-android-sdk>/sdk directory (near 'etc', 'java', 'native' subdirectories)
+//
+// Add module into Android Studio application project:
+//
+// - Android Studio way:
+//   (will copy almost all OpenCV Android SDK into your project, ~200Mb)
+//
+//   Import module: Menu -> "File" -> "New" -> "Module" -> "Import Gradle project":
+//   Source directory: select this "sdk" directory
+//   Module name: ":opencv"
+//
+// - or attach library module from OpenCV Android SDK
+//   (without copying into application project directory, allow to share the same module between projects)
+//
+//   Edit "settings.gradle" and add these lines:
+//
+//   def opencvsdk='<path_to_opencv_android_sdk_rootdir>'
+//   // You can put declaration above into gradle.properties file instead (including file in HOME directory),
+//   // but without 'def' and apostrophe symbols ('): opencvsdk=<path_to_opencv_android_sdk_rootdir>
+//   include ':opencv'
+//   project(':opencv').projectDir = new File(opencvsdk + '/sdk')
+//
+//
+//
+// Add dependency into application module:
+//
+// - Android Studio way:
+//   "Open Module Settings" (F4) -> "Dependencies" tab
+//
+// - or add "project(':opencv')" dependency into app/build.gradle:
+//
+//   dependencies {
+//       implementation fileTree(dir: 'libs', include: ['*.jar'])
+//       ...
+//       implementation project(':opencv')
+//   }
+//
+//
+//
+// Load OpenCV native library before using:
+//
+// - avoid using of "OpenCVLoader.initAsync()" approach - it is deprecated
+//   It may load library with different version (from OpenCV Android Manager, which is installed separatelly on device)
+//
+// - use "System.loadLibrary("opencv_java3")" or "OpenCVLoader.initDebug()"
+//   TODO: Add accurate API to load OpenCV native library
+//
+//
+//
+// Native C++ support (necessary to use OpenCV in native code of application only):
+//
+// - Use find_package() in app/CMakeLists.txt:
+//
+//   find_package(OpenCV 3.4 REQUIRED java)
+//   ...
+//   target_link_libraries(native-lib ${OpenCV_LIBRARIES})
+//
+// - Add "OpenCV_DIR" and enable C++ exceptions/RTTI support via app/build.gradle
+//   Documentation about CMake options: https://developer.android.com/ndk/guides/cmake.html
+//
+//   defaultConfig {
+//       ...
+//       externalNativeBuild {
+//           cmake {
+//               cppFlags "-std=c++11 -frtti -fexceptions"
+//               arguments "-DOpenCV_DIR=" + opencvsdk + "/sdk/native/jni" // , "-DANDROID_ARM_NEON=TRUE"
+//           }
+//       }
+//   }
+//
+// - (optional) Limit/filter ABIs to build ('android' scope of 'app/build.gradle'):
+//   Useful information: https://developer.android.com/studio/build/gradle-tips.html (Configure separate APKs per ABI)
+//
+//   splits {
+//       abi {
+//           enable true
+//           reset()
+//           include 'armeabi-v7a' // , 'x86', 'x86_64', 'arm64-v8a'
+//           universalApk false
+//       }
+//   }
+//
+
+apply plugin: 'com.android.library'
+
+println "OpenCV: " + project.buildscript.sourceFile
+
+android {
+    compileSdkVersion 27
+    //buildToolsVersion "27.0.3" // not needed since com.android.tools.build:gradle:3.0.0
+
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 21
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_6
+        targetCompatibility JavaVersion.VERSION_1_6
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['native/libs']
+            java.srcDirs = ['java/src']
+            aidl.srcDirs = ['java/src']
+            res.srcDirs = ['java/res']
+            manifest.srcFile 'java/AndroidManifest.xml'
+        }
+    }
+}
+
+dependencies {
+}

@@ -115,7 +115,7 @@ public:
     always sensible) will be used.
 
     @param x The initial point, that will become a centroid of an initial simplex. After the algorithm
-    will terminate, it will be setted to the point where the algorithm stops, the point of possible
+    will terminate, it will be set to the point where the algorithm stops, the point of possible
     minimum.
     @return The value of a function at the point found.
      */
@@ -288,7 +288,7 @@ Bland's rule <http://en.wikipedia.org/wiki/Bland%27s_rule> is used to prevent cy
 contain 32- or 64-bit floating point numbers. As a convenience, column-vector may be also submitted,
 in the latter case it is understood to correspond to \f$c^T\f$.
 @param Constr `m`-by-`n+1` matrix, whose rightmost column corresponds to \f$b\f$ in formulation above
-and the remaining to \f$A\f$. It should containt 32- or 64-bit floating point numbers.
+and the remaining to \f$A\f$. It should contain 32- or 64-bit floating point numbers.
 @param z The solution will be returned here as a column-vector - it corresponds to \f$c\f$ in the
 formulation above. It will contain 64-bit floating point numbers.
 @return One of cv::SolveLPResult

@@ -41,13 +41,12 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
+
 using cv::ml::TrainData;
 using cv::ml::EM;
 using cv::ml::KNearest;
 
-static
 void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 {
     CV_TRACE_FUNCTION();
@@ -74,7 +73,6 @@ void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 }
 
 // generate points sets by normal distributions
-static
 void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, int labelType )
 {
     CV_TRACE_FUNCTION();
@@ -117,7 +115,6 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
     }
 }
 
-static
 int maxIdx( const vector<int>& count )
 {
     int idx = -1;
@@ -135,7 +132,6 @@ int maxIdx( const vector<int>& count )
     return idx;
 }
 
-static
 bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& labelsMap, bool checkClusterUniq=true )
 {
     size_t total = 0, nclusters = sizes.size();
@@ -182,7 +178,6 @@ bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& lab
     return true;
 }
 
-static
 bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes, float& err, bool labelsEquivalent = true, bool checkClusterUniq=true )
 {
     err = 0;
@@ -595,7 +590,7 @@ protected:
 
         if( errCaseCount > 0 )
         {
-            ts->printf( cvtest::TS::LOG, "Different prediction results before writeing and after reading (errCaseCount=%d).\n", errCaseCount );
+            ts->printf( cvtest::TS::LOG, "Different prediction results before writing and after reading (errCaseCount=%d).\n", errCaseCount );
             code = cvtest::TS::FAIL_BAD_ACCURACY;
         }
 
@@ -706,3 +701,5 @@ TEST(ML_KNearest, accuracy) { CV_KNearestTest test; test.safe_run(); }
 TEST(ML_EM, accuracy) { CV_EMTest test; test.safe_run(); }
 TEST(ML_EM, save_load) { CV_EMTest_SaveLoad test; test.safe_run(); }
 TEST(ML_EM, classification) { CV_EMTest_Classification test; test.safe_run(); }
+
+}} // namespace

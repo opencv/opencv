@@ -1,12 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef tr1::tuple<MatType, Size, Size> MatInfo_Size_Size_t;
+typedef tuple<MatType, Size, Size> MatInfo_Size_Size_t;
 typedef TestBaseWithParam<MatInfo_Size_Size_t> MatInfo_Size_Size;
 
 PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
@@ -82,7 +81,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
 }
 
 
-typedef tr1::tuple<MatType, Size, int> MatInfo_Size_Scale_t;
+typedef tuple<MatType, Size, int> MatInfo_Size_Scale_t;
 typedef TestBaseWithParam<MatInfo_Size_Scale_t> MatInfo_Size_Scale;
 
 PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
@@ -113,7 +112,7 @@ PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
 }
 
 
-typedef TestBaseWithParam<tr1::tuple<MatType, Size, double> > MatInfo_Size_Scale_Area;
+typedef TestBaseWithParam<tuple<MatType, Size, double> > MatInfo_Size_Scale_Area;
 
 PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
             testing::Combine(
@@ -168,3 +167,5 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNN,
     EXPECT_GT(countNonZero(dst.reshape(1)), 0);
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

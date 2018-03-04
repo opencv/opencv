@@ -42,12 +42,7 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
-#endif
-
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_solvePnPRansac_Test : public cvtest::BaseTest
 {
@@ -69,7 +64,7 @@ protected:
         Point3f pmin = Point3f(-1, -1, 5),
         Point3f pmax = Point3f(1, 1, 10))
     {
-        RNG rng = ::theRNG(); // fix the seed to use "fixed" input 3D points
+        RNG rng = cv::theRNG(); // fix the seed to use "fixed" input 3D points
 
         for (size_t i = 0; i < points.size(); i++)
         {
@@ -142,7 +137,7 @@ protected:
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
-        double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
+        double rvecDiff = cvtest::norm(rvec, trueRvec, NORM_L2), tvecDiff = cvtest::norm(tvec, trueTvec, NORM_L2);
         isTestSuccess = isTestSuccess && rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
         double error = rvecDiff > tvecDiff ? rvecDiff : tvecDiff;
         //cout << error << " " << inliers.size() << " " << eps[method] << endl;
@@ -254,7 +249,7 @@ protected:
             return isEstimateSuccess;
         }
 
-        double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
+        double rvecDiff = cvtest::norm(rvec, trueRvec, NORM_L2), tvecDiff = cvtest::norm(tvec, trueTvec, NORM_L2);
         bool isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
 
         double error = rvecDiff > tvecDiff ? rvecDiff : tvecDiff;
@@ -305,8 +300,8 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
     bool isTestSuccess = false;
     double error = DBL_MAX;
     for (unsigned int i = 0; i < rvecs.size() && !isTestSuccess; ++i) {
-      double rvecDiff = norm(rvecs[i]-trueRvec);
-      double tvecDiff = norm(tvecs[i]-trueTvec);
+      double rvecDiff = cvtest::norm(rvecs[i], trueRvec, NORM_L2);
+      double tvecDiff = cvtest::norm(tvecs[i], trueTvec, NORM_L2);
       isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
       error = std::min(error, std::max(rvecDiff, tvecDiff));
     }
@@ -450,12 +445,12 @@ TEST(Calib3d_SolvePnPRansac, input_type)
     points2dMat = points2dMat.reshape(1, numPoints);
     EXPECT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R4, t4));
 
-    EXPECT_LE(norm(R1, R2, NORM_INF), 1e-6);
-    EXPECT_LE(norm(t1, t2, NORM_INF), 1e-6);
-    EXPECT_LE(norm(R1, R3, NORM_INF), 1e-6);
-    EXPECT_LE(norm(t1, t3, NORM_INF), 1e-6);
-    EXPECT_LE(norm(R1, R4, NORM_INF), 1e-6);
-    EXPECT_LE(norm(t1, t4, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(R1, R2, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(t1, t2, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(R1, R3, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(t1, t3, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(R1, R4, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(t1, t4, NORM_INF), 1e-6);
 }
 
 TEST(Calib3d_SolvePnP, double_support)
@@ -483,8 +478,8 @@ TEST(Calib3d_SolvePnP, double_support)
     solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
     solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
 
-    EXPECT_LE(norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
-    EXPECT_LE(norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
+    EXPECT_LE(cvtest::norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
+    EXPECT_LE(cvtest::norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
 }
 
 TEST(Calib3d_SolvePnP, translation)
@@ -556,8 +551,8 @@ TEST(Calib3d_SolvePnP, iterativeInitialGuess3pts)
         std::cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
         std::cout << "tvec_est: " << tvec_est.t() << std::endl;
 
-        EXPECT_LE(norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-        EXPECT_LE(norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
     }
 
     {
@@ -587,7 +582,9 @@ TEST(Calib3d_SolvePnP, iterativeInitialGuess3pts)
         std::cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
         std::cout << "tvec_est: " << tvec_est.t() << std::endl;
 
-        EXPECT_LE(norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-        EXPECT_LE(norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
     }
 }
+
+}} // namespace

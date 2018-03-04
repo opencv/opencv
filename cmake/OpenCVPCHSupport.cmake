@@ -56,6 +56,15 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
           endforeach()
         endif()
 
+        GET_TARGET_PROPERTY(_cxx_standard ${_PCH_current_target} CXX_STANDARD)
+        if (_cxx_standard)
+            GET_TARGET_PROPERTY(_cxx_extensions ${_PCH_current_target} CXX_EXTENSIONS)
+            if (_cxx_extensions)
+                LIST(APPEND ${_out_compile_flags} "${CMAKE_CXX${_cxx_standard}_EXTENSION_COMPILE_OPTION}")
+            else()
+                LIST(APPEND ${_out_compile_flags} "${CMAKE_CXX${_cxx_standard}_STANDARD_COMPILE_OPTION}")
+            endif()
+        endif()
     ELSE()
         ## TODO ... ? or does it work out of the box
     ENDIF()
@@ -202,7 +211,7 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
     FOREACH(src ${_sources})
-      if(NOT "${src}" MATCHES "\\.mm$")
+      if(NOT "${src}" MATCHES "\\.mm$" AND NOT "${src}" MATCHES "\\.rc$")
         get_source_file_property(_flags "${src}" COMPILE_FLAGS)
         get_source_file_property(_flags2 "${src}" COMPILE_DEFINITIONS)
         if(NOT _flags AND NOT _flags2)
@@ -310,7 +319,7 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 
 # Generates the use of precompiled in a target,
-# without using depency targets (2 extra for each target)
+# without using dependency targets (2 extra for each target)
 # Using Visual, must also add ${_targetName}_pch to sources
 # Not needed by Xcode
 
@@ -337,7 +346,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
         # Auto include the precompile (useful for moc processing, since the use of
         # precompiled is specified at the target level
-        # and I don't want to specifiy /F- for each moc/res/ui generated files (using Qt)
+        # and I don't want to specify /F- for each moc/res/ui generated files (using Qt)
 
         get_target_property(_sources ${_targetName} SOURCES)
         foreach(src ${_sources})
@@ -383,7 +392,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
     else()
 
-        #Fallback to the "old" precompiled suppport
+        #Fallback to the "old" precompiled support
         #ADD_PRECOMPILED_HEADER(${_targetName} ${_input} ${_dowarn})
 
     endif()

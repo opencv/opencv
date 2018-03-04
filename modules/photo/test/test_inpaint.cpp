@@ -41,10 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <string>
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_InpaintTest : public cvtest::BaseTest
 {
@@ -118,11 +116,11 @@ void CV_InpaintTest::run( int )
 
 TEST(Photo_Inpaint, regression) { CV_InpaintTest test; test.safe_run(); }
 
-typedef testing::TestWithParam<std::tr1::tuple<int> > formats;
+typedef testing::TestWithParam<tuple<int> > formats;
 
 TEST_P(formats, 1c)
 {
-    const int type = std::tr1::get<0>(GetParam());
+    const int type = get<0>(GetParam());
     Mat src(100, 100, type);
     src.setTo(Scalar::all(128));
     Mat ref = src.clone();
@@ -140,3 +138,5 @@ TEST_P(formats, 1c)
 }
 
 INSTANTIATE_TEST_CASE_P(Photo_Inpaint, formats, testing::Values(CV_32F, CV_16U, CV_8U));
+
+}} // namespace

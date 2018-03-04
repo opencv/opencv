@@ -42,6 +42,9 @@
 //M*/
 
 #include "precomp.hpp"
+
+#include <vector>
+
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
@@ -49,6 +52,7 @@
 
 #include "filter.hpp"
 
+#include "fixedpoint.inl.hpp"
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -1454,7 +1458,7 @@ namespace cv
                                                   ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standart says nothing about thread-safety for now
+            //since OpenVX standard says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(border, (vx_uint8)(0));
             ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
@@ -1763,7 +1767,1409 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 
 namespace cv {
 
-static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size ksize,
+template <typename T>
+static std::vector<T> getFixedpointGaussianKernel( int n, double sigma )
+{
+    if (sigma <= 0)
+    {
+        if(n == 1)
+            return std::vector<T>(1, softdouble(1.0));
+        else if(n == 3)
+        {
+            T v3[] = { softdouble(0.25), softdouble(0.5), softdouble(0.25) };
+            return std::vector<T>(v3, v3 + 3);
+        }
+        else if(n == 5)
+        {
+            T v5[] = { softdouble(0.0625), softdouble(0.25), softdouble(0.375), softdouble(0.25), softdouble(0.0625) };
+            return std::vector<T>(v5, v5 + 5);
+        }
+        else if(n == 7)
+        {
+            T v7[] = { softdouble(0.03125), softdouble(0.109375), softdouble(0.21875), softdouble(0.28125), softdouble(0.21875), softdouble(0.109375), softdouble(0.03125) };
+            return std::vector<T>(v7, v7 + 7);
+        }
+    }
+
+
+    softdouble sigmaX = sigma > 0 ? softdouble(sigma) : mulAdd(softdouble(n),softdouble(0.15),softdouble(0.35));// softdouble(((n-1)*0.5 - 1)*0.3 + 0.8)
+    softdouble scale2X = softdouble(-0.5*0.25)/(sigmaX*sigmaX);
+    std::vector<softdouble> values(n);
+    softdouble sum(0.);
+    for(int i = 0, x = 1 - n; i < n; i++, x+=2 )
+    {
+        // x = i - (n - 1)*0.5
+        // t = std::exp(scale2X*x*x)
+        values[i] = exp(softdouble(x*x)*scale2X);
+        sum += values[i];
+    }
+    sum = softdouble::one()/sum;
+
+    std::vector<T> kernel(n);
+    for(int i = 0; i < n; i++ )
+    {
+        kernel[i] = values[i] * sum;
+    }
+
+    return kernel;
+};
+
+template <typename ET, typename FT>
+void hlineSmooth1N(const ET* src, int cn, const FT* m, int, FT* dst, int len, int)
+{
+    for (int i = 0; i < len*cn; i++, src++, dst++)
+        *dst = (*m) * (*src);
+}
+template <>
+void hlineSmooth1N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* m, int, ufixedpoint16* dst, int len, int)
+{
+    int lencn = len*cn;
+    v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
+    int i = 0;
+    for (; i < lencn - 15; i += 16)
+    {
+        v_uint8x16 v_src = v_load(src + i);
+        v_uint16x8 v_tmp0, v_tmp1;
+        v_expand(v_src, v_tmp0, v_tmp1);
+        v_store((uint16_t*)dst + i, v_mul*v_tmp0);
+        v_store((uint16_t*)dst + i + 8, v_mul*v_tmp1);
+    }
+    if (i < lencn - 7)
+    {
+        v_uint16x8 v_src = v_load_expand(src + i);
+        v_store((uint16_t*)dst + i, v_mul*v_src);
+        i += 8;
+    }
+    for (; i < lencn; i++)
+        dst[i] = m[0] * src[i];
+}
+template <typename ET, typename FT>
+void hlineSmooth1N1(const ET* src, int cn, const FT*, int, FT* dst, int len, int)
+{
+    for (int i = 0; i < len*cn; i++, src++, dst++)
+        *dst = *src;
+}
+template <>
+void hlineSmooth1N1<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16*, int, ufixedpoint16* dst, int len, int)
+{
+    int lencn = len*cn;
+    int i = 0;
+    for (; i < lencn - 15; i += 16)
+    {
+        v_uint8x16 v_src = v_load(src + i);
+        v_uint16x8 v_tmp0, v_tmp1;
+        v_expand(v_src, v_tmp0, v_tmp1);
+        v_store((uint16_t*)dst + i, v_shl<8>(v_tmp0));
+        v_store((uint16_t*)dst + i + 8, v_shl<8>(v_tmp1));
+    }
+    if (i < lencn - 7)
+    {
+        v_uint16x8 v_src = v_load_expand(src + i);
+        v_store((uint16_t*)dst + i, v_shl<8>(v_src));
+        i += 8;
+    }
+    for (; i < lencn; i++)
+        dst[i] = src[i];
+}
+template <typename ET, typename FT>
+void hlineSmooth3N(const ET* src, int cn, const FT* m, int, FT* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        FT msum = borderType != BORDER_CONSTANT ? m[0] + m[1] + m[2] : m[1];
+        for (int k = 0; k < cn; k++)
+            dst[k] = msum * src[k];
+    }
+    else
+    {
+        // Point that fall left from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[1] * src[k] + m[2] * src[cn + k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = borderInterpolate(-1, len, borderType);
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[0] * src[src_idx*cn + k];
+        }
+
+        src += cn; dst += cn;
+        for (int i = cn; i < (len - 1)*cn; i++, src++, dst++)
+            *dst = m[0] * src[-cn] + m[1] * src[0] + m[2] * src[cn];
+
+        // Point that fall right from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k - cn] + m[1] * src[k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[2] * src[src_idx + k];
+        }
+    }
+}
+template <>
+void hlineSmooth3N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* m, int, ufixedpoint16* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        ufixedpoint16 msum = borderType != BORDER_CONSTANT ? m[0] + m[1] + m[2] : m[1];
+        for (int k = 0; k < cn; k++)
+            dst[k] = msum * src[k];
+    }
+    else
+    {
+        // Point that fall left from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[1] * src[k] + m[2] * src[cn + k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = borderInterpolate(-1, len, borderType);
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[0] * src[src_idx*cn + k];
+        }
+
+        src += cn; dst += cn;
+        int i = cn, lencn = (len - 1)*cn;
+        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+        v_int16x8 v_mul2 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 2))));
+        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        {
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11;
+            v_int16x8 v_tmp0, v_tmp1;
+
+            v_expand(v_load(src - cn), v_src00, v_src01);
+            v_expand(v_load(src), v_src10, v_src11);
+            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
+            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
+            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul01);
+            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul01);
+
+            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
+            v_expand(v_load(src + cn), v_src00, v_src01);
+            v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul2, v_resj0, v_resj1);
+            v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul2, v_resj2, v_resj3);
+            v_res0 += v_resj0;
+            v_res1 += v_resj1;
+            v_res2 += v_resj2;
+            v_res3 += v_resj3;
+
+            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
+            v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+        }
+        for (; i < lencn; i++, src++, dst++)
+            *dst = m[0] * src[-cn] + m[1] * src[0] + m[2] * src[cn];
+
+        // Point that fall right from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k - cn] + m[1] * src[k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[2] * src[src_idx + k];
+        }
+    }
+}
+template <typename ET, typename FT>
+void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        if(borderType != BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+                dst[k] = FT(src[k]);
+        else
+            for (int k = 0; k < cn; k++)
+                dst[k] = FT(src[k])>>1;
+    }
+    else
+    {
+        // Point that fall left from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = (FT(src[k])>>1) + (FT(src[cn + k])>>2);
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = borderInterpolate(-1, len, borderType);
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + (FT(src[src_idx*cn + k])>>2);
+        }
+
+        src += cn; dst += cn;
+        for (int i = cn; i < (len - 1)*cn; i++, src++, dst++)
+            *dst = ((FT(src[-cn]) + FT(src[cn]))>>2) + (FT(src[0])>>1);
+
+        // Point that fall right from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = (FT(src[k - cn])>>2) + (FT(src[k])>>1);
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + (FT(src[src_idx + k])>>2);
+        }
+    }
+}
+template <>
+void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16*, int, ufixedpoint16* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        if (borderType != BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+                dst[k] = ufixedpoint16(src[k]);
+        else
+            for (int k = 0; k < cn; k++)
+                dst[k] = ufixedpoint16(src[k]) >> 1;
+    }
+    else
+    {
+        // Point that fall left from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = (ufixedpoint16(src[k])>>1) + (ufixedpoint16(src[cn + k])>>2);
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = borderInterpolate(-1, len, borderType);
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + (ufixedpoint16(src[src_idx*cn + k])>>2);
+        }
+
+        src += cn; dst += cn;
+        int i = cn, lencn = (len - 1)*cn;
+        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        {
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
+            v_expand(v_load(src - cn), v_src00, v_src01);
+            v_expand(v_load(src), v_src10, v_src11);
+            v_expand(v_load(src + cn), v_src20, v_src21);
+            v_store((uint16_t*)dst, (v_src00 + v_src20 + (v_src10 << 1)) << 6);
+            v_store((uint16_t*)dst + 8, (v_src01 + v_src21 + (v_src11 << 1)) << 6);
+        }
+        for (; i < lencn; i++, src++, dst++)
+            *((uint16_t*)dst) = (uint16_t(src[-cn]) + uint16_t(src[cn]) + (uint16_t(src[0]) << 1)) << 6;
+
+        // Point that fall right from border
+        for (int k = 0; k < cn; k++)
+            dst[k] = (ufixedpoint16(src[k - cn])>>2) + (ufixedpoint16(src[k])>>1);
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + (ufixedpoint16(src[src_idx + k])>>2);
+        }
+    }
+}
+template <typename ET, typename FT>
+void hlineSmooth5N(const ET* src, int cn, const FT* m, int, FT* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        ufixedpoint16 msum = borderType != BORDER_CONSTANT ? m[0] + m[1] + m[2] + m[3] + m[4] : m[2];
+        for (int k = 0; k < cn; k++)
+            dst[k] = msum * src[k];
+    }
+    else if (len == 2)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k   ] = m[2] * src[k] + m[3] * src[k+cn];
+                dst[k+cn] = m[1] * src[k] + m[2] * src[k+cn];
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(2, len, borderType)*cn;
+            int idxp2 = borderInterpolate(3, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k     ] = m[1] * src[k + idxm1] + m[2] * src[k] + m[3] * src[k + cn] + m[4] * src[k + idxp1] + m[0] * src[k + idxm2];
+                dst[k + cn] = m[0] * src[k + idxm1] + m[1] * src[k] + m[2] * src[k + cn] + m[3] * src[k + idxp1] + m[4] * src[k + idxp2];
+            }
+        }
+    }
+    else if (len == 3)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k       ] = m[2] * src[k] + m[3] * src[k + cn] + m[4] * src[k + 2*cn];
+                dst[k +   cn] = m[1] * src[k] + m[2] * src[k + cn] + m[3] * src[k + 2*cn];
+                dst[k + 2*cn] = m[0] * src[k] + m[1] * src[k + cn] + m[2] * src[k + 2*cn];
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(3, len, borderType)*cn;
+            int idxp2 = borderInterpolate(4, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k       ] = m[2] * src[k] + m[3] * src[k + cn] + m[4] * src[k + 2*cn] + m[0] * src[k + idxm2] + m[1] * src[k + idxm1];
+                dst[k +   cn] = m[1] * src[k] + m[2] * src[k + cn] + m[3] * src[k + 2*cn] + m[0] * src[k + idxm1] + m[4] * src[k + idxp1];
+                dst[k + 2*cn] = m[0] * src[k] + m[1] * src[k + cn] + m[2] * src[k + 2*cn] + m[3] * src[k + idxp1] + m[4] * src[k + idxp2];
+            }
+        }
+    }
+    else
+    {
+        // Points that fall left from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = m[2] * src[k] + m[3] * src[cn + k] + m[4] * src[2*cn + k];
+            dst[k + cn] = m[1] * src[k] + m[2] * src[cn + k] + m[3] * src[2*cn + k] + m[4] * src[3*cn + k];
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + m[0] * src[idxm2 + k] + m[1] * src[idxm1 + k];
+                dst[k + cn] = dst[k + cn] + m[0] * src[idxm1 + k];
+            }
+        }
+
+        src += 2*cn; dst += 2*cn;
+        for (int i = 2*cn; i < (len - 2)*cn; i++, src++, dst++)
+            *dst = m[0] * src[-2*cn] + m[1] * src[-cn] + m[2] * src[0] + m[3] * src[cn] + m[4] * src[2*cn];
+
+        // Points that fall right from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = m[0] * src[k - 2*cn] + m[1] * src[k - cn] + m[2] * src[k] + m[3] * src[k + cn];
+            dst[k + cn] = m[0] * src[k - cn] + m[1] * src[k] + m[2] * src[k + cn];
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxp1 = (borderInterpolate(len, len, borderType) - (len - 2))*cn;
+            int idxp2 = (borderInterpolate(len+1, len, borderType) - (len - 2))*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + m[4] * src[idxp1 + k];
+                dst[k + cn] = dst[k + cn] + m[3] * src[idxp1 + k] + m[4] * src[idxp2 + k];
+            }
+        }
+    }
+}
+template <>
+void hlineSmooth5N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* m, int, ufixedpoint16* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        ufixedpoint16 msum = borderType != BORDER_CONSTANT ? m[0] + m[1] + m[2] + m[3] + m[4] : m[2];
+        for (int k = 0; k < cn; k++)
+            dst[k] = msum * src[k];
+    }
+    else if (len == 2)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = m[2] * src[k] + m[3] * src[k + cn];
+                dst[k + cn] = m[1] * src[k] + m[2] * src[k + cn];
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(2, len, borderType)*cn;
+            int idxp2 = borderInterpolate(3, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = m[1] * src[k + idxm1] + m[2] * src[k] + m[3] * src[k + cn] + m[4] * src[k + idxp1] + m[0] * src[k + idxm2];
+                dst[k + cn] = m[0] * src[k + idxm1] + m[1] * src[k] + m[2] * src[k + cn] + m[3] * src[k + idxp1] + m[4] * src[k + idxp2];
+            }
+        }
+    }
+    else if (len == 3)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = m[2] * src[k] + m[3] * src[k + cn] + m[4] * src[k + 2 * cn];
+                dst[k + cn] = m[1] * src[k] + m[2] * src[k + cn] + m[3] * src[k + 2 * cn];
+                dst[k + 2 * cn] = m[0] * src[k] + m[1] * src[k + cn] + m[2] * src[k + 2 * cn];
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(3, len, borderType)*cn;
+            int idxp2 = borderInterpolate(4, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = m[2] * src[k] + m[3] * src[k + cn] + m[4] * src[k + 2 * cn] + m[0] * src[k + idxm2] + m[1] * src[k + idxm1];
+                dst[k + cn] = m[1] * src[k] + m[2] * src[k + cn] + m[3] * src[k + 2 * cn] + m[0] * src[k + idxm1] + m[4] * src[k + idxp1];
+                dst[k + 2 * cn] = m[0] * src[k] + m[1] * src[k + cn] + m[2] * src[k + 2 * cn] + m[3] * src[k + idxp1] + m[4] * src[k + idxp2];
+            }
+        }
+    }
+    else
+    {
+        // Points that fall left from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = m[2] * src[k] + m[3] * src[cn + k] + m[4] * src[2 * cn + k];
+            dst[k + cn] = m[1] * src[k] + m[2] * src[cn + k] + m[3] * src[2 * cn + k] + m[4] * src[3 * cn + k];
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + m[0] * src[idxm2 + k] + m[1] * src[idxm1 + k];
+                dst[k + cn] = dst[k + cn] + m[0] * src[idxm1 + k];
+            }
+        }
+
+        src += 2 * cn; dst += 2 * cn;
+        int i = 2*cn, lencn = (len - 2)*cn;
+        v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+        v_int16x8 v_mul23 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + 2))));
+        v_int16x8 v_mul4 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 4))));
+        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        {
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11;
+            v_int16x8 v_tmp0, v_tmp1;
+
+            v_expand(v_load(src - 2*cn), v_src00, v_src01);
+            v_expand(v_load(src - cn), v_src10, v_src11);
+            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+            v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
+            v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
+            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+            v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul01);
+            v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul01);
+
+
+            v_expand(v_load(src), v_src00, v_src01);
+            v_expand(v_load(src + cn), v_src10, v_src11);
+            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+            v_res0 += v_dotprod(v_tmp0, v_mul23);
+            v_res1 += v_dotprod(v_tmp1, v_mul23);
+            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+            v_res2 += v_dotprod(v_tmp0, v_mul23);
+            v_res3 += v_dotprod(v_tmp1, v_mul23);
+
+            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
+            v_expand(v_load(src + 2*cn), v_src00, v_src01);
+            v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul4, v_resj0, v_resj1);
+            v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul4, v_resj2, v_resj3);
+            v_res0 += v_resj0;
+            v_res1 += v_resj1;
+            v_res2 += v_resj2;
+            v_res3 += v_resj3;
+
+            v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
+            v_store((uint16_t*)dst + 8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+        }
+        for (; i < lencn; i++, src++, dst++)
+            *dst = m[0] * src[-2*cn] + m[1] * src[-cn] + m[2] * src[0] + m[3] * src[cn] + m[4] * src[2*cn];
+
+        // Points that fall right from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = m[0] * src[k - 2 * cn] + m[1] * src[k - cn] + m[2] * src[k] + m[3] * src[k + cn];
+            dst[k + cn] = m[0] * src[k - cn] + m[1] * src[k] + m[2] * src[k + cn];
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxp1 = (borderInterpolate(len, len, borderType) - (len - 2))*cn;
+            int idxp2 = (borderInterpolate(len + 1, len, borderType) - (len - 2))*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + m[4] * src[idxp1 + k];
+                dst[k + cn] = dst[k + cn] + m[3] * src[idxp1 + k] + m[4] * src[idxp2 + k];
+            }
+        }
+    }
+}
+template <typename ET, typename FT>
+void hlineSmooth5N14641(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+                dst[k] = (FT(src[k])>>3)*3;
+        else
+            for (int k = 0; k < cn; k++)
+                dst[k] = src[k];
+    }
+    else if (len == 2)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + cn])>>2);
+                dst[k + cn] = (FT(src[k]) >> 2) + (FT(src[k + cn])>>4)*6;
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(2, len, borderType)*cn;
+            int idxp2 = borderInterpolate(3, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + idxm1])>>2) + (FT(src[k + cn])>>2) + (FT(src[k + idxp1])>>4) + (FT(src[k + idxm2])>>4);
+                dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k + idxp1])>>2) + (FT(src[k + idxm1])>>4) + (FT(src[k + idxp2])>>4);
+            }
+        }
+    }
+    else if (len == 3)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k + 2 * cn])>>4);
+                dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k + 2 * cn])>>2);
+                dst[k + 2 * cn] = (FT(src[k + 2 * cn])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k])>>4);
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(3, len, borderType)*cn;
+            int idxp2 = borderInterpolate(4, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (FT(src[k])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k + idxm1])>>2) + (FT(src[k + 2 * cn])>>4) + (FT(src[k + idxm2])>>4);
+                dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k + 2 * cn])>>2) + (FT(src[k + idxm1])>>4) + (FT(src[k + idxp1])>>4);
+                dst[k + 2 * cn] = (FT(src[k + 2 * cn])>>4)*6 + (FT(src[k + cn])>>2) + (FT(src[k + idxp1])>>2) + (FT(src[k])>>4) + (FT(src[k + idxp2])>>4);
+            }
+        }
+    }
+    else
+    {
+        // Points that fall left from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = (FT(src[k])>>4)*6 + (FT(src[cn + k])>>2) + (FT(src[2 * cn + k])>>4);
+            dst[k + cn] = (FT(src[cn + k])>>4)*6 + (FT(src[k])>>2) + (FT(src[2 * cn + k])>>2) + (FT(src[3 * cn + k])>>4);
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + (FT(src[idxm2 + k])>>4) + (FT(src[idxm1 + k])>>2);
+                dst[k + cn] = dst[k + cn] + (FT(src[idxm1 + k])>>4);
+            }
+        }
+
+        src += 2 * cn; dst += 2 * cn;
+        for (int i = 2 * cn; i < (len - 2)*cn; i++, src++, dst++)
+            *dst = (FT(src[0])>>4)*6 + (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[-2 * cn])>>4) + (FT(src[2 * cn])>>4);
+
+        // Points that fall right from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = (FT(src[k])>>4)*6 + (FT(src[k - cn])>>2) + (FT(src[k + cn])>>2) + (FT(src[k - 2 * cn])>>4);
+            dst[k + cn] = (FT(src[k + cn])>>4)*6 + (FT(src[k])>>2) + (FT(src[k - cn])>>4);
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxp1 = (borderInterpolate(len, len, borderType) - (len - 2))*cn;
+            int idxp2 = (borderInterpolate(len + 1, len, borderType) - (len - 2))*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + (FT(src[idxp1 + k])>>4);
+                dst[k + cn] = dst[k + cn] + (FT(src[idxp1 + k])>>2) + (FT(src[idxp2 + k])>>4);
+            }
+        }
+    }
+}
+template <>
+void hlineSmooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16*, int, ufixedpoint16* dst, int len, int borderType)
+{
+    if (len == 1)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+                dst[k] = (ufixedpoint16(src[k])>>3) * 3;
+        else
+        {
+            for (int k = 0; k < cn; k++)
+                dst[k] = src[k];
+        }
+    }
+    else if (len == 2)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2);
+                dst[k + cn] = (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + cn]) >> 4) * 6;
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(2, len, borderType)*cn;
+            int idxp2 = borderInterpolate(3, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + idxm1]) >> 2) + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 4) + (ufixedpoint16(src[k + idxm2]) >> 4);
+                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 4) + (ufixedpoint16(src[k + idxp2]) >> 4);
+            }
+        }
+    }
+    else if (len == 3)
+    {
+        if (borderType == BORDER_CONSTANT)
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 4);
+                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 2);
+                dst[k + 2 * cn] = (ufixedpoint16(src[k + 2 * cn]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k]) >> 4);
+            }
+        else
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            int idxp1 = borderInterpolate(3, len, borderType)*cn;
+            int idxp2 = borderInterpolate(4, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 4) + (ufixedpoint16(src[k + idxm2]) >> 4);
+                dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k + 2 * cn]) >> 2) + (ufixedpoint16(src[k + idxm1]) >> 4) + (ufixedpoint16(src[k + idxp1]) >> 4);
+                dst[k + 2 * cn] = (ufixedpoint16(src[k + 2 * cn]) >> 4) * 6 + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k + idxp1]) >> 2) + (ufixedpoint16(src[k]) >> 4) + (ufixedpoint16(src[k + idxp2]) >> 4);
+            }
+        }
+    }
+    else
+    {
+        // Points that fall left from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[cn + k]) >> 2) + (ufixedpoint16(src[2 * cn + k]) >> 4);
+            dst[k + cn] = (ufixedpoint16(src[cn + k]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[2 * cn + k]) >> 2) + (ufixedpoint16(src[3 * cn + k]) >> 4);
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxm2 = borderInterpolate(-2, len, borderType)*cn;
+            int idxm1 = borderInterpolate(-1, len, borderType)*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + (ufixedpoint16(src[idxm2 + k]) >> 4) + (ufixedpoint16(src[idxm1 + k]) >> 2);
+                dst[k + cn] = dst[k + cn] + (ufixedpoint16(src[idxm1 + k]) >> 4);
+            }
+        }
+
+        src += 2 * cn; dst += 2 * cn;
+        int i = 2 * cn, lencn = (len - 2)*cn;
+        v_uint16x8 v_6 = v_setall_u16(6);
+        for (; i < lencn - 15; i += 16, src += 16, dst += 16)
+        {
+            v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
+            v_expand(v_load(src - 2*cn), v_src00, v_src01);
+            v_expand(v_load(src - cn), v_src10, v_src11);
+            v_expand(v_load(src), v_src20, v_src21);
+            v_expand(v_load(src + cn), v_src30, v_src31);
+            v_expand(v_load(src + 2*cn), v_src40, v_src41);
+            v_store((uint16_t*)dst, (v_src20 * v_6 + ((v_src10 + v_src30) << 2) + v_src00 + v_src40) << 4);
+            v_store((uint16_t*)dst + 8, (v_src21 * v_6 + ((v_src11 + v_src31) << 2) + v_src01 + v_src41) << 4);
+        }
+        for (; i < lencn; i++, src++, dst++)
+            *((uint16_t*)dst) = (uint16_t(src[0]) * 6 + ((uint16_t(src[-cn]) + uint16_t(src[cn])) << 2) + uint16_t(src[-2 * cn]) + uint16_t(src[2 * cn])) << 4;
+
+        // Points that fall right from border
+        for (int k = 0; k < cn; k++)
+        {
+            dst[k] = (ufixedpoint16(src[k]) >> 4) * 6 + (ufixedpoint16(src[k - cn]) >> 2) + (ufixedpoint16(src[k + cn]) >> 2) + (ufixedpoint16(src[k - 2 * cn]) >> 4);
+            dst[k + cn] = (ufixedpoint16(src[k + cn]) >> 4) * 6 + (ufixedpoint16(src[k]) >> 2) + (ufixedpoint16(src[k - cn]) >> 4);
+        }
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int idxp1 = (borderInterpolate(len, len, borderType) - (len - 2))*cn;
+            int idxp2 = (borderInterpolate(len + 1, len, borderType) - (len - 2))*cn;
+            for (int k = 0; k < cn; k++)
+            {
+                dst[k] = dst[k] + (ufixedpoint16(src[idxp1 + k]) >> 4);
+                dst[k + cn] = dst[k + cn] + (ufixedpoint16(src[idxp1 + k]) >> 2) + (ufixedpoint16(src[idxp2 + k]) >> 4);
+            }
+        }
+    }
+}
+template <typename ET, typename FT>
+void hlineSmooth(const ET* src, int cn, const FT* m, int n, FT* dst, int len, int borderType)
+{
+    int pre_shift = n / 2;
+    int post_shift = n - pre_shift;
+    int i = 0;
+    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[pre_shift-i] * src[k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (int j = i - pre_shift, mid = 0; j < 0; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+        int j, mid;
+        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[mid] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)
+            for (; j < i + post_shift; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+    }
+    i *= cn;
+    for (; i < (len - post_shift + 1)*cn; i++, src++, dst++)
+    {
+        *dst = m[0] * src[0];
+        for (int j = 1; j < n; j++)
+            *dst = *dst + m[j] * src[j*cn];
+    }
+    i /= cn;
+    for (i -= pre_shift; i < len - pre_shift; i++, src += cn, dst += cn) // Points that fall right from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k];
+        int j = 1;
+        for (; j < len - i; j++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[j] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (; j < n; j++)
+            {
+                int src_idx = borderInterpolate(i + j, len, borderType) - i;
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[j] * src[src_idx*cn + k];
+            }
+    }
+}
+template <>
+void hlineSmooth<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* m, int n, ufixedpoint16* dst, int len, int borderType)
+{
+    int pre_shift = n / 2;
+    int post_shift = n - pre_shift;
+    int i = 0;
+    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[pre_shift - i] * src[k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (int j = i - pre_shift, mid = 0; j < 0; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+        int j, mid;
+        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[mid] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)
+            for (; j < i + post_shift; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+    }
+    i *= cn;
+    int lencn = (len - post_shift + 1)*cn;
+    for (; i < lencn - 15; i+=16, src+=16, dst+=16)
+    {
+        v_uint16x8 v_src00, v_src01, v_src10, v_src11;
+        v_int16x8 v_tmp0, v_tmp1;
+
+        v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+
+        v_expand(v_load(src), v_src00, v_src01);
+        v_expand(v_load(src+cn), v_src10, v_src11);
+        v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
+        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
+        v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+        v_int32x4 v_res2 = v_dotprod(v_tmp0, v_mul);
+        v_int32x4 v_res3 = v_dotprod(v_tmp1, v_mul);
+
+        int j = 2;
+        for (; j < n - 1; j += 2)
+        {
+            v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + j))));
+
+            v_expand(v_load(src + j * cn), v_src00, v_src01);
+            v_expand(v_load(src + (j + 1) * cn), v_src10, v_src11);
+            v_zip(v_reinterpret_as_s16(v_src00), v_reinterpret_as_s16(v_src10), v_tmp0, v_tmp1);
+            v_res0 += v_dotprod(v_tmp0, v_mul);
+            v_res1 += v_dotprod(v_tmp1, v_mul);
+            v_zip(v_reinterpret_as_s16(v_src01), v_reinterpret_as_s16(v_src11), v_tmp0, v_tmp1);
+            v_res2 += v_dotprod(v_tmp0, v_mul);
+            v_res3 += v_dotprod(v_tmp1, v_mul);
+        }
+        if (j < n)
+        {
+            v_int32x4 v_resj0, v_resj1, v_resj2, v_resj3;
+            v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
+            v_expand(v_load(src + j * cn), v_src00, v_src01);
+            v_mul_expand(v_reinterpret_as_s16(v_src00), v_mul, v_resj0, v_resj1);
+            v_mul_expand(v_reinterpret_as_s16(v_src01), v_mul, v_resj2, v_resj3);
+            v_res0 += v_resj0;
+            v_res1 += v_resj1;
+            v_res2 += v_resj2;
+            v_res3 += v_resj3;
+        }
+
+        v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_res0), v_reinterpret_as_u32(v_res1)));
+        v_store((uint16_t*)dst+8, v_pack(v_reinterpret_as_u32(v_res2), v_reinterpret_as_u32(v_res3)));
+    }
+    for (; i < lencn; i++, src++, dst++)
+    {
+            *dst = m[0] * src[0];
+            for (int j = 1; j < n; j++)
+                *dst = *dst + m[j] * src[j*cn];
+    }
+    i /= cn;
+    for (i -= pre_shift; i < len - pre_shift; i++, src += cn, dst += cn) // Points that fall right from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k];
+        int j = 1;
+        for (; j < len - i; j++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[j] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (; j < n; j++)
+            {
+                int src_idx = borderInterpolate(i + j, len, borderType) - i;
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[j] * src[src_idx*cn + k];
+            }
+    }
+}
+template <typename ET, typename FT>
+void vlineSmooth1N(const FT* const * src, const FT* m, int, ET* dst, int len)
+{
+    const FT* src0 = src[0];
+    for (int i = 0; i < len; i++)
+        dst[i] = m * src0[i];
+}
+template <>
+void vlineSmooth1N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len)
+{
+    const ufixedpoint16* src0 = src[0];
+    v_uint16x8 v_mul = v_setall_u16(*((uint16_t*)m));
+    int i = 0;
+    for (; i < len - 7; i += 8)
+    {
+        v_uint16x8 v_src0 = v_load((uint16_t*)src0 + i);
+        v_uint32x4 v_res0, v_res1;
+        v_mul_expand(v_src0, v_mul, v_res0, v_res1);
+        v_pack_store(dst + i, v_rshr_pack<16>(v_res0, v_res1));
+    }
+    for (; i < len; i++)
+        dst[i] = m[0] * src0[i];
+}
+template <typename ET, typename FT>
+void vlineSmooth1N1(const FT* const * src, const FT*, int, ET* dst, int len)
+{
+    const FT* src0 = src[0];
+    for (int i = 0; i < len; i++)
+        dst[i] = src0[i];
+}
+template <>
+void vlineSmooth1N1<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
+{
+    const ufixedpoint16* src0 = src[0];
+    int i = 0;
+    for (; i < len - 7; i += 8)
+        v_rshr_pack_store<8>(dst + i, v_load((uint16_t*)(src0 + i)));
+    for (; i < len; i++)
+        dst[i] = src0[i];
+}
+template <typename ET, typename FT>
+void vlineSmooth3N(const FT* const * src, const FT* m, int, ET* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+        dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
+}
+template <>
+void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len)
+{
+    static const v_int16x8 v_128 = v_reinterpret_as_s16(v_setall_u16((uint16_t)1 << 15));
+
+    v_int32x4 v_128_4 = v_setall_s32(128 << 16);
+    if (len > 7)
+    {
+        ufixedpoint32 val[] = { (m[0] + m[1] + m[2]) * ufixedpoint16((uint8_t)128) };
+        v_128_4 = v_setall_s32(*((int32_t*)val));
+    }
+
+    int i = 0;
+    v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+    v_int16x8 v_mul2 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 2))));
+    for (; i < len - 7; i += 8)
+    {
+        v_int16x8 v_src0, v_src1;
+        v_int16x8 v_tmp0, v_tmp1;
+
+        v_src0 = v_load((int16_t*)(src[0]) + i);
+        v_src1 = v_load((int16_t*)(src[1]) + i);
+        v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
+        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
+
+        v_int32x4 v_resj0, v_resj1;
+        v_src0 = v_load((int16_t*)(src[2]) + i);
+        v_mul_expand(v_add_wrap(v_src0, v_128), v_mul2, v_resj0, v_resj1);
+        v_res0 += v_resj0;
+        v_res1 += v_resj1;
+
+        v_res0 += v_128_4;
+        v_res1 += v_128_4;
+
+        v_uint16x8 v_res = v_reinterpret_as_u16(v_rshr_pack<16>(v_res0, v_res1));
+        v_pack_store(dst + i, v_res);
+    }
+    for (; i < len; i++)
+        dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
+}
+template <typename ET, typename FT>
+void vlineSmooth3N121(const FT* const * src, const FT*, int, ET* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+        dst[i] = ((FT::WT(src[0][i]) + FT::WT(src[2][i])) >> 2) + (FT::WT(src[1][i]) >> 1);
+}
+template <>
+void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
+{
+    int i = 0;
+    for (; i < len - 7; i += 8)
+    {
+        v_uint32x4 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
+        v_expand(v_load((uint16_t*)(src[0]) + i), v_src00, v_src01);
+        v_expand(v_load((uint16_t*)(src[1]) + i), v_src10, v_src11);
+        v_expand(v_load((uint16_t*)(src[2]) + i), v_src20, v_src21);
+        v_uint16x8 v_res = v_rshr_pack<10>(v_src00 + v_src20 + (v_src10 << 1), v_src01 + v_src21 + (v_src11 << 1));
+        v_pack_store(dst + i, v_res);
+    }
+    for (; i < len; i++)
+        dst[i] = (((uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[2]))[i]) + ((uint32_t)(((uint16_t*)(src[1]))[i]) << 1)) + (1 << 9)) >> 10;
+}
+template <typename ET, typename FT>
+void vlineSmooth5N(const FT* const * src, const FT* m, int, ET* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+        dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i] + m[3] * src[3][i] + m[4] * src[4][i];
+}
+template <>
+void vlineSmooth5N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len)
+{
+    static const v_int16x8 v_128 = v_reinterpret_as_s16(v_setall_u16((uint16_t)1 << 15));
+
+    v_int32x4 v_128_4 = v_setall_s32(128 << 16);
+    if (len > 7)
+    {
+        ufixedpoint32 val[] = { (m[0] + m[1] + m[2] + m[3] + m[4]) * ufixedpoint16((uint8_t)128) };
+        v_128_4 = v_setall_s32(*((int32_t*)val));
+    }
+
+    int i = 0;
+    v_int16x8 v_mul01 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+    v_int16x8 v_mul23 = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m + 2))));
+    v_int16x8 v_mul4 = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + 4))));
+    for (; i < len - 7; i += 8)
+    {
+        v_int16x8 v_src0, v_src1;
+        v_int16x8 v_tmp0, v_tmp1;
+
+        v_src0 = v_load((int16_t*)(src[0]) + i);
+        v_src1 = v_load((int16_t*)(src[1]) + i);
+        v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul01);
+        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul01);
+
+        v_src0 = v_load((int16_t*)(src[2]) + i);
+        v_src1 = v_load((int16_t*)(src[3]) + i);
+        v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+        v_res0 += v_dotprod(v_tmp0, v_mul23);
+        v_res1 += v_dotprod(v_tmp1, v_mul23);
+
+        v_int32x4 v_resj0, v_resj1;
+        v_src0 = v_load((int16_t*)(src[4]) + i);
+        v_mul_expand(v_add_wrap(v_src0, v_128), v_mul4, v_resj0, v_resj1);
+        v_res0 += v_resj0;
+        v_res1 += v_resj1;
+
+        v_res0 += v_128_4;
+        v_res1 += v_128_4;
+
+        v_uint16x8 v_res = v_reinterpret_as_u16(v_rshr_pack<16>(v_res0, v_res1));
+        v_pack_store(dst + i, v_res);
+    }
+    for (; i < len; i++)
+        dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i] + m[3] * src[3][i] + m[4] * src[4][i];
+}
+template <typename ET, typename FT>
+void vlineSmooth5N14641(const FT* const * src, const FT*, int, ET* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+        dst[i] = (FT::WT(src[2][i])*6 + ((FT::WT(src[1][i]) + FT::WT(src[3][i]))<<2) + FT::WT(src[0][i]) + FT::WT(src[4][i])) >> 4;
+}
+template <>
+void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len)
+{
+    int i = 0;
+    v_uint32x4 v_6 = v_setall_u32(6);
+    for (; i < len - 7; i += 8)
+    {
+        v_uint32x4 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21, v_src30, v_src31, v_src40, v_src41;
+        v_expand(v_load((uint16_t*)(src[0]) + i), v_src00, v_src01);
+        v_expand(v_load((uint16_t*)(src[1]) + i), v_src10, v_src11);
+        v_expand(v_load((uint16_t*)(src[2]) + i), v_src20, v_src21);
+        v_expand(v_load((uint16_t*)(src[3]) + i), v_src30, v_src31);
+        v_expand(v_load((uint16_t*)(src[4]) + i), v_src40, v_src41);
+        v_uint16x8 v_res = v_rshr_pack<12>(v_src20*v_6 + ((v_src10 + v_src30) << 2) + v_src00 + v_src40,
+                                           v_src21*v_6 + ((v_src11 + v_src31) << 2) + v_src01 + v_src41);
+        v_pack_store(dst + i, v_res);
+    }
+    for (; i < len; i++)
+        dst[i] = ((uint32_t)(((uint16_t*)(src[2]))[i]) * 6 +
+                  (((uint32_t)(((uint16_t*)(src[1]))[i]) + (uint32_t)(((uint16_t*)(src[3]))[i])) << 2) +
+                  (uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[4]))[i]) + (1 << 11)) >> 12;
+}
+template <typename ET, typename FT>
+void vlineSmooth(const FT* const * src, const FT* m, int n, ET* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        typename FT::WT val = m[0] * src[0][i];
+        for (int j = 1; j < n; j++)
+            val = val + m[j] * src[j][i];
+        dst[i] = val;
+    }
+}
+template <>
+void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int n, uint8_t* dst, int len)
+{
+    static const v_int16x8 v_128 = v_reinterpret_as_s16(v_setall_u16((uint16_t)1 << 15));
+
+    v_int32x4 v_128_4 = v_setall_s32(128 << 16);
+    if (len > 7)
+    {
+        ufixedpoint16 msum = m[0] + m[1];
+        for (int j = 2; j < n; j++)
+            msum = msum + m[j];
+        ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
+        v_128_4 = v_setall_s32(*((int32_t*)val));
+    }
+
+    int i = 0;
+    for (; i < len - 7; i += 8)
+    {
+        v_int16x8 v_src0, v_src1;
+        v_int16x8 v_tmp0, v_tmp1;
+
+        v_int16x8 v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)m)));
+
+        v_src0 = v_load((int16_t*)(src[0]) + i);
+        v_src1 = v_load((int16_t*)(src[1]) + i);
+        v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+        v_int32x4 v_res0 = v_dotprod(v_tmp0, v_mul);
+        v_int32x4 v_res1 = v_dotprod(v_tmp1, v_mul);
+
+        int j = 2;
+        for (; j < n - 1; j+=2)
+        {
+            v_mul = v_reinterpret_as_s16(v_setall_u32(*((uint32_t*)(m+j))));
+
+            v_src0 = v_load((int16_t*)(src[j]) + i);
+            v_src1 = v_load((int16_t*)(src[j+1]) + i);
+            v_zip(v_add_wrap(v_src0, v_128), v_add_wrap(v_src1, v_128), v_tmp0, v_tmp1);
+            v_res0 += v_dotprod(v_tmp0, v_mul);
+            v_res1 += v_dotprod(v_tmp1, v_mul);
+        }
+        if(j < n)
+        {
+            v_int32x4 v_resj0, v_resj1;
+            v_mul = v_reinterpret_as_s16(v_setall_u16(*((uint16_t*)(m + j))));
+            v_src0 = v_load((int16_t*)(src[j]) + i);
+            v_mul_expand(v_add_wrap(v_src0, v_128), v_mul, v_resj0, v_resj1);
+            v_res0 += v_resj0;
+            v_res1 += v_resj1;
+        }
+        v_res0 += v_128_4;
+        v_res1 += v_128_4;
+
+        v_uint16x8 v_res = v_reinterpret_as_u16(v_rshr_pack<16>(v_res0, v_res1));
+        v_pack_store(dst + i, v_res);
+    }
+    for (; i < len; i++)
+    {
+        ufixedpoint32 val = m[0] * src[0][i];
+        for (int j = 1; j < n; j++)
+        {
+            val = val + m[j] * src[j][i];
+        }
+        dst[i] = val;
+    }
+}
+template <typename ET, typename FT>
+class fixedSmoothInvoker : public ParallelLoopBody
+{
+public:
+    fixedSmoothInvoker(const ET* _src, size_t _src_stride, ET* _dst, size_t _dst_stride,
+                       int _width, int _height, int _cn, const FT* _kx, int _kxlen, const FT* _ky, int _kylen, int _borderType) : ParallelLoopBody(),
+                       src(_src), dst(_dst), src_stride(_src_stride), dst_stride(_dst_stride),
+                       width(_width), height(_height), cn(_cn), kx(_kx), ky(_ky), kxlen(_kxlen), kylen(_kylen), borderType(_borderType)
+    {
+        if (kxlen == 1)
+        {
+            if ((kx[0] - FT::one()).isZero())
+                hlineSmoothFunc = hlineSmooth1N1;
+            else
+                hlineSmoothFunc = hlineSmooth1N;
+        }
+        else if (kxlen == 3)
+        {
+            if ((kx[0] - (FT::one()>>2)).isZero()&&(kx[1] - (FT::one()>>1)).isZero()&&(kx[2] - (FT::one()>>2)).isZero())
+                hlineSmoothFunc = hlineSmooth3N121;
+            else
+                hlineSmoothFunc = hlineSmooth3N;
+        }
+        else if (kxlen == 5)
+        {
+            if ((kx[2] - (FT::one()*3>>3)).isZero()&&
+                (kx[1] - (FT::one()>>2)).isZero()&&(kx[3] - (FT::one()>>2)).isZero()&&
+                (kx[0] - (FT::one()>>4)).isZero()&&(kx[4] - (FT::one()>>4)).isZero())
+                hlineSmoothFunc = hlineSmooth5N14641;
+            else
+                hlineSmoothFunc = hlineSmooth5N;
+        }
+        else
+            hlineSmoothFunc = hlineSmooth;
+        if (kylen == 1)
+        {
+            if ((ky[0] - FT::one()).isZero())
+                vlineSmoothFunc = vlineSmooth1N1;
+            else
+                vlineSmoothFunc = vlineSmooth1N;
+        }
+        else if (kylen == 3)
+        {
+            if ((ky[0] - (FT::one() >> 2)).isZero() && (ky[1] - (FT::one() >> 1)).isZero() && (ky[2] - (FT::one() >> 2)).isZero())
+                vlineSmoothFunc = vlineSmooth3N121;
+            else
+                vlineSmoothFunc = vlineSmooth3N;
+        }
+        else if (kylen == 5)
+        {
+            if ((ky[2] - (FT::one() * 3 >> 3)).isZero() &&
+                (ky[1] - (FT::one() >> 2)).isZero() && (ky[3] - (FT::one() >> 2)).isZero() &&
+                (ky[0] - (FT::one() >> 4)).isZero() && (ky[4] - (FT::one() >> 4)).isZero())
+                vlineSmoothFunc = vlineSmooth5N14641;
+            else
+                vlineSmoothFunc = vlineSmooth5N;
+        }
+        else
+            vlineSmoothFunc = vlineSmooth;
+    }
+    virtual void operator() (const Range& range) const
+    {
+        AutoBuffer<FT> _buf(width*cn*kylen);
+        FT* buf = _buf;
+        AutoBuffer<FT*> _ptrs(kylen*2);
+        FT** ptrs = _ptrs;
+
+        if (kylen == 1)
+        {
+            ptrs[0] = buf;
+            for (int i = range.start; i < range.end; i++)
+            {
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[0], width, borderType);
+                vlineSmoothFunc(ptrs, ky, kylen, dst + i * dst_stride, width*cn);
+            }
+        }
+        else if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+        {
+            int pre_shift = kylen / 2;
+            int post_shift = kylen - pre_shift - 1;
+            // First line evaluation
+            int idst = range.start;
+            int ifrom = max(0, idst - pre_shift);
+            int ito = idst + post_shift + 1;
+            int i = ifrom;
+            int bufline = 0;
+            for (; i < min(ito, height); i++, bufline++)
+            {
+                ptrs[bufline+kylen] = ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+            }
+            for (; i < ito; i++, bufline++)
+            {
+                int src_idx = borderInterpolate(i, height, borderType);
+                if (src_idx < ifrom)
+                {
+                    ptrs[bufline + kylen] = ptrs[bufline] = buf + bufline * width*cn;
+                    hlineSmoothFunc(src + src_idx * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                }
+                else
+                {
+                    ptrs[bufline + kylen] = ptrs[bufline] = ptrs[src_idx - ifrom];
+                }
+            }
+            for (int j = idst - pre_shift; j < 0; j++)
+            {
+                int src_idx = borderInterpolate(j, height, borderType);
+                if (src_idx >= ito)
+                {
+                    ptrs[2*kylen + j] = ptrs[kylen + j] = buf + (kylen + j) * width*cn;
+                    hlineSmoothFunc(src + src_idx * src_stride, cn, kx, kxlen, ptrs[kylen + j], width, borderType);
+                }
+                else
+                {
+                    ptrs[2*kylen + j] = ptrs[kylen + j] = ptrs[src_idx];
+                }
+            }
+            vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn); idst++;
+
+            // border mode dependent part evaluation
+            // i points to last src row to evaluate in convolution
+            bufline %= kylen; ito = min(height, range.end + post_shift);
+            for (; i < min(kylen, ito); i++, idst++)
+            {
+                ptrs[bufline + kylen] = ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                bufline = (bufline + 1) % kylen;
+                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn);
+            }
+            // Points inside the border
+            for (; i < ito; i++, idst++)
+            {
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                bufline = (bufline + 1) % kylen;
+                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn);
+            }
+            // Points that could fall below border
+            for (; i < range.end + post_shift; i++, idst++)
+            {
+                int src_idx = borderInterpolate(i, height, borderType);
+                if ((i - src_idx) > kylen)
+                    hlineSmoothFunc(src + src_idx * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                else
+                    ptrs[bufline + kylen] = ptrs[bufline] = ptrs[(bufline + kylen - (i - src_idx)) % kylen];
+                bufline = (bufline + 1) % kylen;
+                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn);
+            }
+        }
+        else
+        {
+            int pre_shift = kylen / 2;
+            int post_shift = kylen - pre_shift - 1;
+            // First line evaluation
+            int idst = range.start;
+            int ifrom = idst - pre_shift;
+            int ito = min(idst + post_shift + 1, height);
+            int i = max(0, ifrom);
+            int bufline = 0;
+            for (; i < ito; i++, bufline++)
+            {
+                ptrs[bufline + kylen] = ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+            }
+
+            if (bufline == 1)
+                vlineSmooth1N(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn);
+            else if (bufline == 3)
+                vlineSmooth3N(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn);
+            else if (bufline == 5)
+                vlineSmooth5N(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn);
+            else
+                vlineSmooth(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn);
+            idst++;
+
+            // border mode dependent part evaluation
+            // i points to last src row to evaluate in convolution
+            bufline %= kylen; ito = min(height, range.end + post_shift);
+            for (; i < min(kylen, ito); i++, idst++)
+            {
+                ptrs[bufline + kylen] = ptrs[bufline] = buf + bufline * width*cn;
+                hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                bufline++;
+                if (bufline == 3)
+                    vlineSmooth3N(ptrs, ky + kylen - bufline, i + 1, dst + idst*dst_stride, width*cn);
+                else if (bufline == 5)
+                    vlineSmooth5N(ptrs, ky + kylen - bufline, i + 1, dst + idst*dst_stride, width*cn);
+                else
+                    vlineSmooth(ptrs, ky + kylen - bufline, i + 1, dst + idst*dst_stride, width*cn);
+                bufline %= kylen;
+            }
+            // Points inside the border
+            if (i - max(0, ifrom) >= kylen)
+            {
+                for (; i < ito; i++, idst++)
+                {
+                    hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType);
+                    bufline = (bufline + 1) % kylen;
+                    vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn);
+                }
+
+                // Points that could fall below border
+                // i points to first src row to evaluate in convolution
+                bufline = (bufline + 1) % kylen;
+                for (i = idst - pre_shift; i < range.end - pre_shift; i++, idst++, bufline++)
+                    if (height - i == 3)
+                        vlineSmooth3N(ptrs + bufline, ky, height - i, dst + idst*dst_stride, width*cn);
+                    else if (height - i == 5)
+                        vlineSmooth5N(ptrs + bufline, ky, height - i, dst + idst*dst_stride, width*cn);
+                    else
+                        vlineSmooth(ptrs + bufline, ky, height - i, dst + idst*dst_stride, width*cn);
+            }
+            else
+            {
+                // i points to first src row to evaluate in convolution
+                for (i = idst - pre_shift; i < min(range.end - pre_shift, 0); i++, idst++)
+                    if (height == 3)
+                        vlineSmooth3N(ptrs, ky - i, height, dst + idst*dst_stride, width*cn);
+                    else if (height == 5)
+                        vlineSmooth5N(ptrs, ky - i, height, dst + idst*dst_stride, width*cn);
+                    else
+                        vlineSmooth(ptrs, ky - i, height, dst + idst*dst_stride, width*cn);
+                for (; i < range.end - pre_shift; i++, idst++)
+                    if (height - i == 3)
+                        vlineSmooth3N(ptrs + i - max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn);
+                    else if (height - i == 5)
+                        vlineSmooth5N(ptrs + i - max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn);
+                    else
+                        vlineSmooth(ptrs + i - max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn);
+            }
+        }
+    }
+private:
+    const ET* src;
+    ET* dst;
+    size_t src_stride, dst_stride;
+    int width, height, cn;
+    const FT *kx, *ky;
+    int kxlen, kylen;
+    int borderType;
+    void(*hlineSmoothFunc)(const ET* src, int cn, const FT* m, int n, FT* dst, int len, int borderType);
+    void(*vlineSmoothFunc)(const FT* const * src, const FT* m, int n, ET* dst, int len);
+
+    fixedSmoothInvoker(const fixedSmoothInvoker&);
+    fixedSmoothInvoker& operator=(const fixedSmoothInvoker&);
+};
+
+static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
+template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res) { res = getFixedpointGaussianKernel<T>(n, sigma); }
+
+template <typename T>
+static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
                                    double sigma1, double sigma2 )
 {
     int depth = CV_MAT_DEPTH(type);
@@ -1782,11 +3188,11 @@ static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size ksize,
     sigma1 = std::max( sigma1, 0. );
     sigma2 = std::max( sigma2, 0. );
 
-    kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
+    getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F), kx );
     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
         ky = kx;
     else
-        ky = getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F) );
+        getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F), ky );
 }
 
 }
@@ -1939,7 +3345,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standart says nothing about thread-safety for now
+        //since OpenVX standard says nothing about thread-safety for now
         ivx::border_t prevBorder = ctx.immediateBorder();
         ctx.setImmediateBorder(border, (vx_uint8)(0));
         ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
@@ -2082,7 +3488,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     Size size = _src.size();
     _dst.create( size, type );
 
-    if( borderType != BORDER_CONSTANT && (borderType & BORDER_ISOLATED) != 0 )
+    if( (borderType & ~BORDER_ISOLATED) != BORDER_CONSTANT &&
+        ((borderType & BORDER_ISOLATED) != 0 || !_src.getMat().isSubmatrix()) )
     {
         if( size.height == 1 )
             ksize.height = 1;
@@ -2103,6 +3510,20 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     (void)useOpenCL;
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
+    {
+        std::vector<ufixedpoint16> fkx, fky;
+        createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+        if (src.data == dst.data)
+            src = src.clone();
+        fixedSmoothInvoker<uint8_t, ufixedpoint16> invoker(src.ptr<uint8_t>(), src.step1(), dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(), &fkx[0], (int)fkx.size(), &fky[0], (int)fky.size(), borderType & ~BORDER_ISOLATED);
+        parallel_for_(Range(0, dst.rows), invoker, dst.total() * cn / (double)(1 << 13));
+        return;
+    }
+
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
@@ -2995,7 +4416,7 @@ namespace cv
                     ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standart says nothing about thread-safety for now
+            //since OpenVX standard says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(VX_BORDER_REPLICATE);
 #ifdef VX_VERSION_1_1

@@ -42,9 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
+namespace opencv_test { namespace {
 
 typedef tuple<string, int> File_Mode;
 typedef testing::TestWithParam<File_Mode> Imgcodecs_FileMode;
@@ -119,8 +117,8 @@ struct notForGDAL {
 inline vector<string> gdal_images()
 {
     vector<string> res;
-    back_insert_iterator< vector<string> > it(res);
-    remove_copy_if(all_images, all_images + sizeof(all_images)/sizeof(all_images[0]), it, notForGDAL());
+    std::back_insert_iterator< vector<string> > it(res);
+    std::remove_copy_if(all_images, all_images + sizeof(all_images)/sizeof(all_images[0]), it, notForGDAL());
     return res;
 }
 
@@ -144,16 +142,27 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
     for (int cn = 1; cn <= 4; cn++)
     {
         SCOPED_TRACE(format("channels %d", cn));
+        std::vector<int> parameters;
         if (cn == 2)
             continue;
         if (cn == 4 && ext != ".tiff")
+            continue;
+        if (cn > 1 && (ext == ".pbm" || ext == ".pgm"))
+            continue;
+        if (cn != 3 && ext == ".ppm")
             continue;
         string filename = cv::tempfile(format("%d%s", cn, ext.c_str()).c_str());
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
         circle(img_gt, center, radius, Scalar::all(255));
-        ASSERT_TRUE(imwrite(filename, img_gt));
-
+#if 1
+        if (ext == ".pbm" || ext == ".pgm" || ext == ".ppm")
+        {
+            parameters.push_back(IMWRITE_PXM_BINARY);
+            parameters.push_back(0);
+        }
+#endif
+        ASSERT_TRUE(imwrite(filename, img_gt, parameters));
         Mat img = imread(filename, IMREAD_UNCHANGED);
         ASSERT_FALSE(img.empty());
         EXPECT_EQ(img.size(), img.size());
@@ -175,7 +184,13 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
+#if 0
+        std::cout << filename << std::endl;
+        imshow("loaded", img);
+        waitKey(0);
+#else
         EXPECT_EQ(0, remove(filename.c_str()));
+#endif
     }
 }
 
@@ -191,8 +206,11 @@ const string all_exts[] =
     ".jpg",
 #endif
     ".bmp",
+    ".pam",
+    ".ppm",
     ".pgm",
-    ".pam"
+    ".pbm",
+    ".pnm"
 };
 
 vector<Size> all_sizes()
@@ -207,6 +225,40 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_ExtSize,
                         testing::Combine(
                             testing::ValuesIn(all_exts),
                             testing::ValuesIn(all_sizes())));
+
+typedef testing::TestWithParam<bool> Imgcodecs_pbm;
+TEST_P(Imgcodecs_pbm, write_read)
+{
+    bool binary = GetParam();
+    const String ext = "pbm";
+    const string full_name = cv::tempfile(ext.c_str());
+
+    Size size(640, 480);
+    const Point2i center = Point2i(size.width / 2, size.height / 2);
+    const int radius = std::min(size.height, size.width / 4);
+    Mat image(size, CV_8UC1, Scalar::all(0));
+    circle(image, center, radius, Scalar::all(255));
+
+    vector<int> pbm_params;
+    pbm_params.push_back(IMWRITE_PXM_BINARY);
+    pbm_params.push_back(binary);
+
+    imwrite( full_name, image, pbm_params );
+    Mat loaded = imread(full_name, IMREAD_UNCHANGED);
+    ASSERT_FALSE(loaded.empty());
+
+    EXPECT_EQ(0, cvtest::norm(loaded, image, NORM_INF));
+
+    FILE *f = fopen(full_name.c_str(), "rb");
+    ASSERT_TRUE(f != NULL);
+    ASSERT_EQ('P', getc(f));
+    ASSERT_EQ('1' + (binary ? 3 : 0), getc(f));
+    fclose(f);
+    EXPECT_EQ(0, remove(full_name.c_str()));
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_pbm, testing::Bool());
+
 
 //==================================================================================================
 
@@ -273,3 +325,5 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
 }
+
+}} // namespace

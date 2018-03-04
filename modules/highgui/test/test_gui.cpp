@@ -41,12 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+
+namespace opencv_test { namespace {
 
 #if defined HAVE_GTK || defined HAVE_QT || defined HAVE_WIN32UI || defined HAVE_CARBON || defined HAVE_COCOA
-
-using namespace cv;
-using namespace std;
 
 class CV_HighGuiOnlyGuiTest : public cvtest::BaseTest
 {
@@ -54,7 +52,7 @@ protected:
     void run(int);
 };
 
-void Foo(int /*k*/, void* /*z*/) {}
+static void Foo(int /*k*/, void* /*z*/) {}
 
 void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
 {
@@ -84,6 +82,10 @@ void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
     waitKey(500);
 
     ts->printf(ts->LOG, "GUI 8\n");
+    Rect rc = getWindowImageRect("Win");
+    std::cout << "window image rect: " << rc << std::endl;
+
+    ts->printf(ts->LOG, "GUI 9\n");
     destroyAllWindows();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
@@ -91,3 +93,5 @@ void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
 TEST(Highgui_GUI,    regression) { CV_HighGuiOnlyGuiTest test; test.safe_run(); }
 
 #endif
+
+}} // namespace

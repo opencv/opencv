@@ -131,7 +131,7 @@ message PriorBoxParameter {
   // Variance for adjusting the prior bboxes.
   repeated float variance = 6;
   // By default, we calculate img_height, img_width, step_x, step_y based on
-  // bottom[0] (feat) and bottom[1] (img). Unless these values are explicitely
+  // bottom[0] (feat) and bottom[1] (img). Unless these values are explicitly
   // provided.
   // Explicitly provide the img_size.
   optional uint32 img_size = 7;
@@ -550,7 +550,7 @@ message LayerParameter {
   optional PReLUParameter prelu_param = 131;
   optional PriorBoxParameter prior_box_param = 150;
   optional ProposalParameter proposal_param = 201;
-  optional PSROIPoolingParameter psroi_pooling_param = 10001;  // https://github.com/daijifeng001/caffe-rfcn
+  optional PSROIPoolingParameter psroi_pooling_param = 10002;  // https://github.com/daijifeng001/caffe-rfcn
   optional PythonParameter python_param = 130;
   optional RecurrentParameter recurrent_param = 146;
   optional ReductionParameter reduction_param = 136;
@@ -672,6 +672,8 @@ message BatchNormParameter {
   // Small value to add to the variance estimate so that we don't divide by
   // zero.
   optional float eps = 3 [default = 1e-5];
+  // It true, scale and add biases. Source: https://github.com/NVIDIA/caffe/
+  optional bool scale_bias = 7 [default = false];
 }
 
 message BiasParameter {

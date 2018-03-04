@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -134,6 +134,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D,
                            );
 
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

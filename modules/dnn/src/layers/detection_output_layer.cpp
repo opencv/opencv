@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "op_inf_engine.hpp"
 #include <float.h>
 #include <string>
 #include "../nms.inl.hpp"
@@ -189,6 +190,12 @@ public:
         setParamsFrom(params);
     }
 
+    virtual bool supportBackend(int backendId)
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !_locPredTransposed;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -203,10 +210,10 @@ public:
 
         // num() and channels() are 1.
         // Since the number of bboxes to be kept is unknown before nms, we manually
-        // set it to (fake) 1.
+        // set it to maximal number of detections, [keep_top_k] parameter.
         // Each row is a 7 dimension std::vector, which stores
         // [image_id, label, confidence, xmin, ymin, xmax, ymax]
-        outputs.resize(1, shape(1, 1, 1, 7));
+        outputs.resize(1, shape(1, 1, _keepTopK, 7));
 
         return false;
     }
@@ -242,7 +249,8 @@ public:
             kernel.set(6, (int)num_loc_classes);
             kernel.set(7, (int)background_label_id);
             kernel.set(8, (int)clip);
-            kernel.set(9, ocl::KernelArg::PtrWriteOnly(outmat));
+            kernel.set(9, (int)_locPredTransposed);
+            kernel.set(10, ocl::KernelArg::PtrWriteOnly(outmat));
 
             if (!kernel.run(1, &nthreads, NULL, false))
                 return false;
@@ -849,6 +857,29 @@ public:
         {
             return 0.;
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "DetectionOutput";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        ieLayer->params["num_classes"] = format("%d", _numClasses);
+        ieLayer->params["share_location"] = _shareLocation ? "1" : "0";
+        ieLayer->params["background_label_id"] = format("%d", _backgroundLabelId);
+        ieLayer->params["nms_threshold"] = format("%f", _nmsThreshold);
+        ieLayer->params["top_k"] = format("%d", _topK);
+        ieLayer->params["keep_top_k"] = format("%d", _keepTopK);
+        ieLayer->params["confidence_threshold"] = format("%f", _confidenceThreshold);
+        ieLayer->params["variance_encoded_in_target"] = _varianceEncodedInTarget ? "1" : "0";
+        ieLayer->params["code_type"] = "caffe.PriorBoxParameter." + _codeType;
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 };
 

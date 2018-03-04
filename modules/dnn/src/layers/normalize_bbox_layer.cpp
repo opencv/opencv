@@ -69,10 +69,85 @@ public:
         return true;
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+        std::vector<UMat> internals;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        internals_.getUMatVector(internals);
+
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+        CV_Assert(inputs[0].total() == outputs[0].total());
+
+        const UMat& inp0 = inputs[0];
+        UMat& buffer = internals[0];
+        size_t num = inp0.size[0];
+        size_t channels = inp0.size[1];
+        size_t channelSize = inp0.total() / (num * channels);
+        for (size_t i = 0; i < num; ++i)
+        {
+            MatShape s = shape(channels, channelSize);
+            UMat src = inputs[i].reshape(1, s.size(), &s[0]);
+            UMat dst = outputs[i].reshape(1, s.size(), &s[0]);
+
+            UMat abs_mat;
+            absdiff(src, cv::Scalar::all(0), abs_mat);
+            pow(abs_mat, pnorm, buffer);
+
+            if (acrossSpatial)
+            {
+                // add eps to avoid overflow
+                float absSum = sum(buffer)[0] + epsilon;
+                float norm = pow(absSum, 1.0f / pnorm);
+                multiply(src, 1.0f / norm, dst);
+            }
+            else
+            {
+                Mat norm;
+                reduce(buffer, norm, 0, REDUCE_SUM);
+                norm += epsilon;
+
+                // compute inverted norm to call multiply instead divide
+                cv::pow(norm, -1.0f / pnorm, norm);
+
+                repeat(norm, channels, 1, buffer);
+                multiply(src, buffer, dst);
+            }
+
+            if (!blobs.empty())
+            {
+                // scale the output
+                Mat scale = blobs[0];
+                if (scale.total() == 1)
+                {
+                    // _scale: 1 x 1
+                    multiply(dst, scale.at<float>(0, 0), dst);
+                }
+                else
+                {
+                    // _scale: _channels x 1
+                    CV_Assert(scale.total() == channels);
+                    repeat(scale, 1, dst.cols, buffer);
+                    multiply(dst, buffer, dst);
+                }
+            }
+        }
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }

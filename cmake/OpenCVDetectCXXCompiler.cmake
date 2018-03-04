@@ -13,7 +13,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_COMPILER_IS_GNUCC 1)
   set(CMAKE_COMPILER_IS_CLANGCC 1)
 endif()
-if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER}" MATCHES "ccache")
+if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
   set(CMAKE_COMPILER_IS_CCACHE 1)
 endif()
 
@@ -96,7 +96,7 @@ if(NOT DEFINED OpenCV_STATIC)
 endif()
 
 if(DEFINED OpenCV_ARCH AND DEFINED OpenCV_RUNTIME)
-  # custom overrided values
+  # custom overridden values
 elseif(MSVC)
   if(CMAKE_CL_64)
     set(OpenCV_ARCH x64)

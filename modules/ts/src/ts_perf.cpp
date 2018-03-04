@@ -39,7 +39,6 @@ static double       param_max_deviation;
 static unsigned int param_min_samples;
 static unsigned int param_force_samples;
 static double       param_time_limit;
-static int          param_threads;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
 #ifdef CV_COLLECT_IMPL_DATA
@@ -1042,7 +1041,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #ifdef HAVE_IPP
     test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
 #endif
-    param_threads       = args.get<int>("perf_threads");
+    testThreads         = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
     param_collect_impl  = args.get<bool>("perf_collect_impl");
 #endif
@@ -1160,7 +1159,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 void TestBase::RecordRunParameters()
 {
     ::testing::Test::RecordProperty("cv_implementation", param_impl);
-    ::testing::Test::RecordProperty("cv_num_threads", param_threads);
+    ::testing::Test::RecordProperty("cv_num_threads", testThreads);
 
 #ifdef HAVE_CUDA
     if (param_impl == "cuda")
@@ -1694,9 +1693,10 @@ void TestBase::validateMetrics()
     {
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double median = metrics.median * 1000.0f / metrics.frequency;
+        double min_value = metrics.min * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, median = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, median, stddev, percents);
+        printf("[ PERFSTAT ]    (samples=%d   mean=%.2f   median=%.2f   min=%.2f   stddev=%.2f (%.1f%%))\n", (int)metrics.samples, mean, median, min_value, stddev, percents);
     }
     else
     {
@@ -1851,8 +1851,8 @@ void TestBase::SetUp()
 {
     cv::theRNG().state = param_seed; // this rng should generate same numbers for each run
 
-    if (param_threads >= 0)
-        cv::setNumThreads(param_threads);
+    if (testThreads >= 0)
+        cv::setNumThreads(testThreads);
     else
         cv::setNumThreads(-1);
 

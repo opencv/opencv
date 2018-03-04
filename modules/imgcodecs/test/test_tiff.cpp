@@ -1,8 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_TIFF
 
@@ -146,6 +147,23 @@ TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
     EXPECT_EQ(0, remove(filename.c_str()));
 }
 
+TEST(Imgcodecs_Tiff, readWrite_32FC1)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC1.tiff";
+    const string filenameOutput = cv::tempfile(".tiff");
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1,img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(),img.type());
+    ASSERT_EQ(img2.size(),img.size());
+    EXPECT_GE(1e-3, cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE));
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
 //==================================================================================================
 
 typedef testing::TestWithParam<int> Imgcodecs_Tiff_Modes;
@@ -188,6 +206,40 @@ INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_mo
 
 //==================================================================================================
 
+TEST(Imgcodecs_Tiff_Modes, write_multipage)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> pages;
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i]);
+        pages.push_back(page);
+    }
+
+    string tmp_filename = cv::tempfile(".tiff");
+    bool res = imwrite(tmp_filename, pages);
+    ASSERT_TRUE(res);
+
+    vector<Mat> read_pages;
+    imreadmulti(tmp_filename, read_pages);
+    for (size_t i = 0; i < page_count; i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
+    }
+}
+
+//==================================================================================================
+
 TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -200,3 +252,5 @@ TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
 }
 
 #endif
+
+}} // namespace

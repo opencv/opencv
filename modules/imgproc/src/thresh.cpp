@@ -1483,14 +1483,14 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         imaxval = saturate_cast<ushort>(imaxval);
 
         int ushrt_min = 0;
-        if (ithresh < ushrt_min || ithresh >= USHRT_MAX)
+        if (ithresh < ushrt_min || ithresh >= (int)USHRT_MAX)
         {
             if (type == THRESH_BINARY || type == THRESH_BINARY_INV ||
                ((type == THRESH_TRUNC || type == THRESH_TOZERO_INV) && ithresh < ushrt_min) ||
-               (type == THRESH_TOZERO && ithresh >= USHRT_MAX))
+               (type == THRESH_TOZERO && ithresh >= (int)USHRT_MAX))
             {
-                int v = type == THRESH_BINARY ? (ithresh >= USHRT_MAX ? 0 : imaxval) :
-                        type == THRESH_BINARY_INV ? (ithresh >= USHRT_MAX ? imaxval : 0) :
+                int v = type == THRESH_BINARY ? (ithresh >= (int)USHRT_MAX ? 0 : imaxval) :
+                        type == THRESH_BINARY_INV ? (ithresh >= (int)USHRT_MAX ? imaxval : 0) :
                   /*type == THRESH_TRUNC ? imaxval :*/ 0;
                 dst.setTo(v);
             }

@@ -47,6 +47,10 @@
 
 #include "opencv2/core/cvdef.h"
 
+#ifndef SKIP_INCLUDES
+#   include <assert.h>
+#endif
+
 //! @addtogroup core_utils_vsx
 //! @{
 #if CV_VSX
@@ -520,6 +524,27 @@ VSX_IMPL_CONV_EVEN_2_4(vec_float4, vec_udword2, vec_ctf, vec_ctfo)
 VSX_IMPL_CONV_EVEN_2_4(vec_int4,   vec_double2, vec_cts, vec_ctso)
 VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
 
+// Only for Eigen!
+/*
+ * changing behavior of conversion intrinsics for gcc has effect on Eigen
+ * so we redfine old behavior again only on gcc, clang
+*/
+#if !defined(__clang__) || __clang_major__ > 4
+    // ignoring second arg since Eigen only truncates toward zero
+#   define VSX_IMPL_CONV_2VARIANT(rt, rg, fnm, fn2)     \
+    VSX_FINLINE(rt) fnm(const rg& a, int only_truncate) \
+    {                                                   \
+        assert(only_truncate == 0);                     \
+        (void)only_truncate;                            \
+        return fn2(a);                                  \
+    }
+    VSX_IMPL_CONV_2VARIANT(vec_int4,   vec_float4,  vec_cts, vec_cts)
+    VSX_IMPL_CONV_2VARIANT(vec_float4, vec_int4,    vec_ctf, vec_ctf)
+    // define vec_cts for converting double precision to signed doubleword
+    // which isn't combitable with xlc but its okay since Eigen only use it for gcc
+    VSX_IMPL_CONV_2VARIANT(vec_dword2, vec_double2, vec_cts, vec_ctsl)
+#endif // Eigen
+
 #endif // Common GCC, CLANG compatibility
 
 /*
@@ -530,7 +555,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
 // vector population count
 #define vec_popcntu vec_popcnt
 
-// overload and redirect wih setting second arg to zero
+// overload and redirect with setting second arg to zero
 // since we only support conversions without the second arg
 #define VSX_IMPL_OVERLOAD_Z2(rt, rg, fnm) \
 VSX_FINLINE(rt) fnm(const rg& a) { return fnm(a, 0); }
@@ -585,7 +610,7 @@ VSX_IMPL_CONV_ODD_2_4(vec_uint4,  vec_double2, vec_ctuo, vec_ctu)
 
 #endif // XLC VSX compatibility
 
-// ignore GCC warning that casued by -Wunused-but-set-variable in rare cases
+// ignore GCC warning that caused by -Wunused-but-set-variable in rare cases
 #if defined(__GNUG__) && !defined(__clang__)
 #   define VSX_UNUSED(Tvec) Tvec __attribute__((__unused__))
 #else // CLANG, XLC
@@ -711,7 +736,7 @@ VSX_IMPL_LOAD_L8(vec_double2, double)
 #   define vec_cmpne(a, b) vec_not(vec_cmpeq(a, b))
 #endif
 
-// absoulte difference
+// absolute difference
 #ifndef vec_absd
 #   define vec_absd(a, b) vec_sub(vec_max(a, b), vec_min(a, b))
 #endif

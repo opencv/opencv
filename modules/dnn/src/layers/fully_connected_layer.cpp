@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
 #include "opencl_kernels_dnn.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -127,7 +128,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1;
+               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && axis == 1;
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer)
@@ -139,7 +141,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false) {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)
@@ -161,6 +163,7 @@ public:
             p.activ = activ;
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
+            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -195,6 +198,11 @@ public:
 
                 memcpy(sptr, sptr_, vecsize*sizeof(sptr[0]));
 
+            #if CV_TRY_AVX512_SKX
+                if( useAVX512 )
+                    opt_AVX512_SKX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
+                else
+            #endif
             #if CV_TRY_AVX2
                 if( useAVX2 )
                     opt_AVX2::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
@@ -255,6 +263,7 @@ public:
         int nstripes;
         bool useAVX;
         bool useAVX2;
+        bool useAVX512;
     };
 
 #ifdef HAVE_OPENCL
@@ -385,6 +394,24 @@ public:
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "FullyConnected";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::FullyConnectedLayer> ieLayer(new InferenceEngine::FullyConnectedLayer(lp));
+
+        ieLayer->_out_num = blobs[0].size[0];
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0]);
+        if (blobs.size() > 1)
+            ieLayer->_biases = wrapToInfEngineBlob(blobs[1]);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 

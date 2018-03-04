@@ -3577,7 +3577,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
 
     IppDataType           ippDataType = ippiGetDataType(depth);
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
-    if(ippInter < 0)
+    if((int)ippInter < 0)
         return false;
 
     // Resize which doesn't match OpenCV exactly
@@ -3847,7 +3847,7 @@ void resize(int src_type,
         if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
             interpolation = INTER_AREA;
 
-        // true "area" interpolation is only implemented for the case (scale_x <= 1 && scale_y <= 1).
+        // true "area" interpolation is only implemented for the case (scale_x >= 1 && scale_y >= 1).
         // In other cases it is emulated using some variant of bilinear interpolation
         if( interpolation == INTER_AREA && scale_x >= 1 && scale_y >= 1 )
         {

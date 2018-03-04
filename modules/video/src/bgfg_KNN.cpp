@@ -42,6 +42,7 @@
 //#include <math.h>
 
 #include "precomp.hpp"
+#include "opencl_kernels_video.hpp"
 
 namespace cv
 {
@@ -92,6 +93,9 @@ public:
     nLongCounter = 0;
     nMidCounter = 0;
     nShortCounter = 0;
+#ifdef HAVE_OPENCL
+    opencl_ON = true;
+#endif
     }
     //! the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -119,6 +123,9 @@ public:
     nLongCounter = 0;
     nMidCounter = 0;
     nShortCounter = 0;
+#ifdef HAVE_OPENCL
+    opencl_ON = true;
+#endif
     }
     //! the destructor
     ~BackgroundSubtractorKNNImpl() {}
@@ -131,40 +138,80 @@ public:
     //! re-initialization method
     void initialize(Size _frameSize, int _frameType)
     {
-    frameSize = _frameSize;
-    frameType = _frameType;
-    nframes = 0;
+        frameSize = _frameSize;
+        frameType = _frameType;
+        nframes = 0;
 
-    int nchannels = CV_MAT_CN(frameType);
-    CV_Assert( nchannels <= CV_CN_MAX );
+        int nchannels = CV_MAT_CN(frameType);
+        CV_Assert( nchannels <= CV_CN_MAX );
 
-    // Reserve memory for the model
-    int size=frameSize.height*frameSize.width;
-    // for each sample of 3 speed pixel models each pixel bg model we store ...
-    // values + flag (nchannels+1 values)
-    bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8U);
-    bgmodel = Scalar::all(0);
+        // Reserve memory for the model
+        int size=frameSize.height*frameSize.width;
+        //Reset counters
+        nShortCounter = 0;
+        nMidCounter = 0;
+        nLongCounter = 0;
 
-    //index through the three circular lists
-    aModelIndexShort.create(1,size,CV_8U);
-    aModelIndexMid.create(1,size,CV_8U);
-    aModelIndexLong.create(1,size,CV_8U);
-    //when to update next
-    nNextShortUpdate.create(1,size,CV_8U);
-    nNextMidUpdate.create(1,size,CV_8U);
-    nNextLongUpdate.create(1,size,CV_8U);
+#ifdef HAVE_OPENCL
+        if (ocl::isOpenCLActivated() && opencl_ON)
+        {
+            create_ocl_apply_kernel();
 
-    //Reset counters
-    nShortCounter = 0;
-    nMidCounter = 0;
-    nLongCounter = 0;
+            kernel_getBg.create("getBackgroundImage2_kernel", ocl::video::bgfg_knn_oclsrc, format( "-D CN=%d -D NSAMPLES=%d", nchannels, nN));
 
-    aModelIndexShort = Scalar::all(0);//random? //((m_nN)*rand())/(RAND_MAX+1);//0...m_nN-1
-    aModelIndexMid = Scalar::all(0);
-    aModelIndexLong = Scalar::all(0);
-    nNextShortUpdate = Scalar::all(0);
-    nNextMidUpdate = Scalar::all(0);
-    nNextLongUpdate = Scalar::all(0);
+            if (kernel_apply.empty() || kernel_getBg.empty())
+                opencl_ON = false;
+        }
+        else opencl_ON = false;
+
+        if (opencl_ON)
+        {
+            u_flag.create(frameSize.height * nN * 3, frameSize.width, CV_8UC1);
+            u_flag.setTo(Scalar::all(0));
+
+            if (nchannels==3)
+                nchannels=4;
+            u_sample.create(frameSize.height * nN * 3, frameSize.width, CV_32FC(nchannels));
+            u_sample.setTo(Scalar::all(0));
+
+            u_aModelIndexShort.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_aModelIndexShort.setTo(Scalar::all(0));
+            u_aModelIndexMid.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_aModelIndexMid.setTo(Scalar::all(0));
+            u_aModelIndexLong.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_aModelIndexLong.setTo(Scalar::all(0));
+
+            u_nNextShortUpdate.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_nNextShortUpdate.setTo(Scalar::all(0));
+            u_nNextMidUpdate.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_nNextMidUpdate.setTo(Scalar::all(0));
+            u_nNextLongUpdate.create(frameSize.height, frameSize.width, CV_8UC1);
+            u_nNextLongUpdate.setTo(Scalar::all(0));
+        }
+        else
+#endif
+        {
+            // for each sample of 3 speed pixel models each pixel bg model we store ...
+            // values + flag (nchannels+1 values)
+            bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8U);
+            bgmodel = Scalar::all(0);
+
+            //index through the three circular lists
+            aModelIndexShort.create(1,size,CV_8U);
+            aModelIndexMid.create(1,size,CV_8U);
+            aModelIndexLong.create(1,size,CV_8U);
+            //when to update next
+            nNextShortUpdate.create(1,size,CV_8U);
+            nNextMidUpdate.create(1,size,CV_8U);
+            nNextLongUpdate.create(1,size,CV_8U);
+
+            aModelIndexShort = Scalar::all(0);//random? //((m_nN)*rand())/(RAND_MAX+1);//0...m_nN-1
+            aModelIndexMid = Scalar::all(0);
+            aModelIndexLong = Scalar::all(0);
+            nNextShortUpdate = Scalar::all(0);
+            nNextMidUpdate = Scalar::all(0);
+            nNextLongUpdate = Scalar::all(0);
+        }
     }
 
     virtual int getHistory() const { return history; }
@@ -180,7 +227,19 @@ public:
     virtual void setDist2Threshold(double _dist2Threshold) { fTb = (float)_dist2Threshold; }
 
     virtual bool getDetectShadows() const { return bShadowDetection; }
-    virtual void setDetectShadows(bool detectshadows) { bShadowDetection = detectshadows; }
+    virtual void setDetectShadows(bool detectshadows)
+    {
+        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+            return;
+        bShadowDetection = detectshadows;
+#ifdef HAVE_OPENCL
+        if (!kernel_apply.empty())
+        {
+            create_ocl_apply_kernel();
+            CV_Assert( !kernel_apply.empty() );
+        }
+#endif
+    }
 
     virtual int getShadowValue() const { return nShadowDetection; }
     virtual void setShadowValue(int value) { nShadowDetection = (uchar)value; }
@@ -222,7 +281,7 @@ protected:
     ////////////////////////
     int history;
     //alpha=1/history - speed of update - if the time interval you want to average over is T
-    //set alpha=1/history. It is also usefull at start to make T slowly increase
+    //set alpha=1/history. It is also useful at start to make T slowly increase
     //from 1 until the desired T
     float fTb;
     //Tb - threshold on the squared distance from the sample used to decide if it is well described
@@ -230,7 +289,7 @@ protected:
     //and that is Tb=2*2*10*10 =400; where we take typical pixel level sigma=10
 
     /////////////////////////
-    //less important parameters - things you might change but be carefull
+    //less important parameters - things you might change but be careful
     ////////////////////////
     int nN;//totlal number of samples
     int nkNN;//number on NN for detcting background - default K=[0.1*nN]
@@ -256,13 +315,33 @@ protected:
     Mat nNextMidUpdate;
     Mat nNextLongUpdate;
 
+#ifdef HAVE_OPENCL
+    mutable bool opencl_ON;
+
+    UMat u_flag;
+    UMat u_sample;
+    UMat u_aModelIndexShort;
+    UMat u_aModelIndexMid;
+    UMat u_aModelIndexLong;
+    UMat u_nNextShortUpdate;
+    UMat u_nNextMidUpdate;
+    UMat u_nNextLongUpdate;
+
+    mutable ocl::Kernel kernel_apply;
+    mutable ocl::Kernel kernel_getBg;
+#endif
+
     String name_;
+
+#ifdef HAVE_OPENCL
+    bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
+    bool ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate=-1);
+    void create_ocl_apply_kernel();
+#endif
 };
 
-//{ to do - paralelization ...
-//struct KNNInvoker....
 CV_INLINE void
-        _cvUpdatePixelBackgroundNP(	long pixel,const uchar* data, int nchannels, int m_nN,
+        _cvUpdatePixelBackgroundNP(int x_idx, const uchar* data, int nchannels, int m_nN,
         uchar* m_aModel,
         uchar* m_nNextLongUpdate,
         uchar* m_nNextMidUpdate,
@@ -273,70 +352,53 @@ CV_INLINE void
         int m_nLongCounter,
         int m_nMidCounter,
         int m_nShortCounter,
-        int m_nLongUpdate,
-        int m_nMidUpdate,
-        int m_nShortUpdate,
         uchar include
         )
 {
     // hold the offset
     int ndata=1+nchannels;
-    long offsetLong =  ndata * (pixel * m_nN * 3 + m_aModelIndexLong[pixel] + m_nN * 2);
-    long offsetMid =   ndata * (pixel * m_nN * 3 + m_aModelIndexMid[pixel]  + m_nN * 1);
-    long offsetShort = ndata * (pixel * m_nN * 3 + m_aModelIndexShort[pixel]);
+    long offsetLong =  ndata * (m_aModelIndexLong[x_idx] + m_nN * 2);
+    long offsetMid =   ndata * (m_aModelIndexMid[x_idx]  + m_nN * 1);
+    long offsetShort = ndata * (m_aModelIndexShort[x_idx]);
 
     // Long update?
-    if (m_nNextLongUpdate[pixel] == m_nLongCounter)
+    if (m_nNextLongUpdate[x_idx] == m_nLongCounter)
     {
         // add the oldest pixel from Mid to the list of values (for each color)
         memcpy(&m_aModel[offsetLong],&m_aModel[offsetMid],ndata*sizeof(unsigned char));
         // increase the index
-        m_aModelIndexLong[pixel] = (m_aModelIndexLong[pixel] >= (m_nN-1)) ? 0 : (m_aModelIndexLong[pixel] + 1);
-    };
-    if (m_nLongCounter == (m_nLongUpdate-1))
-    {
-        //m_nNextLongUpdate[pixel] = (uchar)(((m_nLongUpdate)*(rand()-1))/RAND_MAX);//0,...m_nLongUpdate-1;
-        m_nNextLongUpdate[pixel] = (uchar)( rand() % m_nLongUpdate );//0,...m_nLongUpdate-1;
+        m_aModelIndexLong[x_idx] = (m_aModelIndexLong[x_idx] >= (m_nN-1)) ? 0 : (m_aModelIndexLong[x_idx] + 1);
     };
 
     // Mid update?
-    if (m_nNextMidUpdate[pixel] == m_nMidCounter)
+    if (m_nNextMidUpdate[x_idx] == m_nMidCounter)
     {
         // add this pixel to the list of values (for each color)
         memcpy(&m_aModel[offsetMid],&m_aModel[offsetShort],ndata*sizeof(unsigned char));
         // increase the index
-        m_aModelIndexMid[pixel] = (m_aModelIndexMid[pixel] >= (m_nN-1)) ? 0 : (m_aModelIndexMid[pixel] + 1);
-    };
-    if (m_nMidCounter == (m_nMidUpdate-1))
-    {
-        m_nNextMidUpdate[pixel] = (uchar)( rand() % m_nMidUpdate );
+        m_aModelIndexMid[x_idx] = (m_aModelIndexMid[x_idx] >= (m_nN-1)) ? 0 : (m_aModelIndexMid[x_idx] + 1);
     };
 
     // Short update?
-    if (m_nNextShortUpdate[pixel] == m_nShortCounter)
+    if (m_nNextShortUpdate[x_idx] == m_nShortCounter)
     {
         // add this pixel to the list of values (for each color)
-        memcpy(&m_aModel[offsetShort],data,ndata*sizeof(unsigned char));
+        memcpy(&m_aModel[offsetShort],data,nchannels*sizeof(unsigned char));
         //set the include flag
         m_aModel[offsetShort+nchannels]=include;
         // increase the index
-        m_aModelIndexShort[pixel] = (m_aModelIndexShort[pixel] >= (m_nN-1)) ? 0 : (m_aModelIndexShort[pixel] + 1);
-    };
-    if (m_nShortCounter == (m_nShortUpdate-1))
-    {
-        m_nNextShortUpdate[pixel] = (uchar)( rand() % m_nShortUpdate );
+        m_aModelIndexShort[x_idx] = (m_aModelIndexShort[x_idx] >= (m_nN-1)) ? 0 : (m_aModelIndexShort[x_idx] + 1);
     };
 }
 
 CV_INLINE int
-        _cvCheckPixelBackgroundNP(long pixel,
-        const uchar* data, int nchannels,
+        _cvCheckPixelBackgroundNP(const uchar* data, int nchannels,
         int m_nN,
         uchar* m_aModel,
         float m_fTb,
         int m_nkNN,
         float tau,
-        int m_nShadowDetection,
+        bool m_bShadowDetection,
         uchar& include)
 {
     int Pbf = 0; // the total probability that this pixel is background
@@ -347,12 +409,10 @@ CV_INLINE int
     include=0;//do we include this pixel into background model?
 
     int ndata=nchannels+1;
-    long posPixel = pixel * ndata * m_nN * 3;
-//	float k;
     // now increase the probability for each pixel
     for (int n = 0; n < m_nN*3; n++)
     {
-        uchar* mean_m = &m_aModel[posPixel + n*ndata];
+        uchar* mean_m = &m_aModel[n*ndata];
 
         //calculate difference and distance
         float dist2;
@@ -399,12 +459,12 @@ CV_INLINE int
 
     int Ps = 0; // the total probability that this pixel is background shadow
     // Detected as moving object, perform shadow detection
-    if (m_nShadowDetection)
+    if (m_bShadowDetection)
     {
         for (int n = 0; n < m_nN*3; n++)
         {
             //long subPosPixel = posPixel + n*ndata;
-            uchar* mean_m = &m_aModel[posPixel + n*ndata];
+            uchar* mean_m = &m_aModel[n*ndata];
 
             if(mean_m[nchannels])//check only background
             {
@@ -445,136 +505,253 @@ CV_INLINE int
     return 0;
 }
 
-CV_INLINE void
-        icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
-        Mat& _bgmodel,
-        Mat& _nNextLongUpdate,
-        Mat& _nNextMidUpdate,
-        Mat& _nNextShortUpdate,
-        Mat& _aModelIndexLong,
-        Mat& _aModelIndexMid,
-        Mat& _aModelIndexShort,
-        int& _nLongCounter,
-        int& _nMidCounter,
-        int& _nShortCounter,
-        int _nN,
-        float _fAlphaT,
-        float _fTb,
-        int _nkNN,
-        float _fTau,
-        int _bShadowDetection,
-        uchar nShadowDetection
-        )
+class KNNInvoker : public ParallelLoopBody
 {
-    int nchannels = CV_MAT_CN(_src.type());
+public:
+    KNNInvoker(const Mat& _src, Mat& _dst,
+               uchar* _bgmodel,
+               uchar* _nNextLongUpdate,
+               uchar* _nNextMidUpdate,
+               uchar* _nNextShortUpdate,
+               uchar* _aModelIndexLong,
+               uchar* _aModelIndexMid,
+               uchar* _aModelIndexShort,
+               int _nLongCounter,
+               int _nMidCounter,
+               int _nShortCounter,
+               int _nN,
+               float _fTb,
+               int _nkNN,
+               float _fTau,
+               bool _bShadowDetection,
+               uchar _nShadowDetection)
+    {
+        src = &_src;
+        dst = &_dst;
+        m_aModel0 = _bgmodel;
+        m_nNextLongUpdate0 = _nNextLongUpdate;
+        m_nNextMidUpdate0 = _nNextMidUpdate;
+        m_nNextShortUpdate0 = _nNextShortUpdate;
+        m_aModelIndexLong0 = _aModelIndexLong;
+        m_aModelIndexMid0 = _aModelIndexMid;
+        m_aModelIndexShort0 = _aModelIndexShort;
+        m_nLongCounter = _nLongCounter;
+        m_nMidCounter = _nMidCounter;
+        m_nShortCounter = _nShortCounter;
+        m_nN = _nN;
+        m_fTb = _fTb;
+        m_fTau = _fTau;
+        m_nkNN = _nkNN;
+        m_bShadowDetection = _bShadowDetection;
+        m_nShadowDetection = _nShadowDetection;
+    }
 
-    //model
-    uchar* m_aModel=_bgmodel.ptr(0);
-    uchar* m_nNextLongUpdate=_nNextLongUpdate.ptr(0);
-    uchar* m_nNextMidUpdate=_nNextMidUpdate.ptr(0);
-    uchar* m_nNextShortUpdate=_nNextShortUpdate.ptr(0);
-    uchar* m_aModelIndexLong=_aModelIndexLong.ptr(0);
-    uchar* m_aModelIndexMid=_aModelIndexMid.ptr(0);
-    uchar* m_aModelIndexShort=_aModelIndexShort.ptr(0);
+    void operator()(const Range& range) const
+    {
+        int y0 = range.start, y1 = range.end;
+        int ncols = src->cols, nchannels = src->channels();
+        int ndata=nchannels+1;
 
-    //some constants
-    int m_nN=_nN;
-    float m_fAlphaT=_fAlphaT;
-    float m_fTb=_fTb;//Tb - threshold on the distance
-    float m_fTau=_fTau;
-    int m_nkNN=_nkNN;
-    int m_bShadowDetection=_bShadowDetection;
+        for ( int y = y0; y < y1; y++ )
+        {
+            const uchar* data = src->ptr(y);
+            uchar* m_aModel = m_aModel0 + ncols*m_nN*3*ndata*y;
+            uchar* m_nNextLongUpdate = m_nNextLongUpdate0 + ncols*y;
+            uchar* m_nNextMidUpdate = m_nNextMidUpdate0 + ncols*y;
+            uchar* m_nNextShortUpdate = m_nNextShortUpdate0 + ncols*y;
+            uchar* m_aModelIndexLong = m_aModelIndexLong0 + ncols*y;
+            uchar* m_aModelIndexMid = m_aModelIndexMid0 + ncols*y;
+            uchar* m_aModelIndexShort = m_aModelIndexShort0 + ncols*y;
+            uchar* mask = dst->ptr(y);
+
+            for ( int x = 0; x < ncols; x++ )
+            {
+
+                //update model+ background subtract
+                uchar include=0;
+                int result= _cvCheckPixelBackgroundNP(data, nchannels,
+                        m_nN, m_aModel, m_fTb,m_nkNN, m_fTau,m_bShadowDetection,include);
+
+                _cvUpdatePixelBackgroundNP(x,data,nchannels,
+                        m_nN, m_aModel,
+                        m_nNextLongUpdate,
+                        m_nNextMidUpdate,
+                        m_nNextShortUpdate,
+                        m_aModelIndexLong,
+                        m_aModelIndexMid,
+                        m_aModelIndexShort,
+                        m_nLongCounter,
+                        m_nMidCounter,
+                        m_nShortCounter,
+                        include
+                        );
+                switch (result)
+                {
+                    case 0:
+                        //foreground
+                        mask[x] = 255;
+                        break;
+                    case 1:
+                        //background
+                        mask[x] = 0;
+                        break;
+                    case 2:
+                        //shadow
+                        mask[x] = m_nShadowDetection;
+                        break;
+                }
+                data += nchannels;
+                m_aModel += m_nN*3*ndata;
+            }
+        }
+    }
+
+    const Mat* src;
+    Mat* dst;
+    uchar* m_aModel0;
+    uchar* m_nNextLongUpdate0;
+    uchar* m_nNextMidUpdate0;
+    uchar* m_nNextShortUpdate0;
+    uchar* m_aModelIndexLong0;
+    uchar* m_aModelIndexMid0;
+    uchar* m_aModelIndexShort0;
+    int m_nLongCounter;
+    int m_nMidCounter;
+    int m_nShortCounter;
+    int m_nN;
+    float m_fTb;
+    float m_fTau;
+    int m_nkNN;
+    bool m_bShadowDetection;
+    uchar m_nShadowDetection;
+};
+
+#ifdef HAVE_OPENCL
+bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate)
+{
+    bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
+
+    if( needToInitialize )
+        initialize(_image.size(), _image.type());
+
+    ++nframes;
+    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
+    CV_Assert(learningRate >= 0);
+
+    _fgmask.create(_image.size(), CV_8U);
+    UMat fgmask = _fgmask.getUMat();
+
+    UMat frame = _image.getUMat();
 
     //recalculate update rates - in case alpha is changed
     // calculate update parameters (using alpha)
     int Kshort,Kmid,Klong;
     //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-m_fAlphaT))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-m_fAlphaT))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-m_fAlphaT))-Kshort-Kmid+1;//Klong
+    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
 
     //refresh rates
-    int	m_nShortUpdate = (Kshort/m_nN)+1;
-    int m_nMidUpdate = (Kmid/m_nN)+1;
-    int m_nLongUpdate = (Klong/m_nN)+1;
+    int nShortUpdate = (Kshort/nN)+1;
+    int nMidUpdate = (Kmid/nN)+1;
+    int nLongUpdate = (Klong/nN)+1;
 
-    //int	m_nShortUpdate = MAX((Kshort/m_nN),m_nN);
-    //int m_nMidUpdate = MAX((Kmid/m_nN),m_nN);
-    //int m_nLongUpdate = MAX((Klong/m_nN),m_nN);
+    int idxArg = 0;
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadOnly(frame));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadOnly(u_nNextLongUpdate));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadOnly(u_nNextMidUpdate));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadOnly(u_nNextShortUpdate));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_aModelIndexLong));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_aModelIndexMid));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_aModelIndexShort));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_flag));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_sample));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(fgmask));
 
-    //update counters for the refresh rate
-    int m_nLongCounter=_nLongCounter;
-    int m_nMidCounter=_nMidCounter;
-    int m_nShortCounter=_nShortCounter;
+    idxArg = kernel_apply.set(idxArg, nLongCounter);
+    idxArg = kernel_apply.set(idxArg, nMidCounter);
+    idxArg = kernel_apply.set(idxArg, nShortCounter);
+    idxArg = kernel_apply.set(idxArg, fTb);
+    idxArg = kernel_apply.set(idxArg, nkNN);
+    idxArg = kernel_apply.set(idxArg, fTau);
+    if (bShadowDetection)
+        kernel_apply.set(idxArg, nShadowDetection);
 
-    _nShortCounter++;//0,1,...,m_nShortUpdate-1
-    _nMidCounter++;
-    _nLongCounter++;
-    if (_nShortCounter >= m_nShortUpdate) _nShortCounter = 0;
-    if (_nMidCounter >= m_nMidUpdate) _nMidCounter = 0;
-    if (_nLongCounter >= m_nLongUpdate) _nLongCounter = 0;
+    size_t globalsize[2] = {(size_t)frame.cols, (size_t)frame.rows};
+    if(!kernel_apply.run(2, globalsize, NULL, true))
+        return false;
 
-    //go through the image
-    long i = 0;
-    for (long y = 0; y < _src.rows; y++)
+    nShortCounter++;//0,1,...,nShortUpdate-1
+    nMidCounter++;
+    nLongCounter++;
+    if (nShortCounter >= nShortUpdate)
     {
-        for (long x = 0; x < _src.cols; x++)
-        {
-            const uchar* data = _src.ptr((int)y, (int)x);
-
-            //update model+ background subtract
-            uchar include=0;
-            int result= _cvCheckPixelBackgroundNP(i, data, nchannels,
-                    m_nN, m_aModel, m_fTb,m_nkNN, m_fTau,m_bShadowDetection,include);
-
-            _cvUpdatePixelBackgroundNP(i,data,nchannels,
-                    m_nN, m_aModel,
-                    m_nNextLongUpdate,
-                    m_nNextMidUpdate,
-                    m_nNextShortUpdate,
-                    m_aModelIndexLong,
-                    m_aModelIndexMid,
-                    m_aModelIndexShort,
-                    m_nLongCounter,
-                    m_nMidCounter,
-                    m_nShortCounter,
-                    m_nLongUpdate,
-                    m_nMidUpdate,
-                    m_nShortUpdate,
-                    include
-                    );
-            switch (result)
-            {
-                case 0:
-                    //foreground
-                    *_dst.ptr((int)y, (int)x) = 255;
-                    break;
-                case 1:
-                    //background
-                    *_dst.ptr((int)y, (int)x) = 0;
-                    break;
-                case 2:
-                    //shadow
-                    *_dst.ptr((int)y, (int)x) = nShadowDetection;
-                    break;
-            }
-            i++;
-        }
+        nShortCounter = 0;
+        randu(u_nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
     }
+    if (nMidCounter >= nMidUpdate)
+    {
+        nMidCounter = 0;
+        randu(u_nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+    }
+    if (nLongCounter >= nLongUpdate)
+    {
+        nLongCounter = 0;
+        randu(u_nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+    }
+    return true;
 }
 
+bool BackgroundSubtractorKNNImpl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
+{
+    _backgroundImage.create(frameSize, frameType);
+    UMat dst = _backgroundImage.getUMat();
 
+    int idxArg = 0;
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_flag));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_sample));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalsize[2] = {(size_t)dst.cols, (size_t)dst.rows};
+
+    return kernel_getBg.run(2, globalsize, NULL, false);
+}
+
+void BackgroundSubtractorKNNImpl::create_ocl_apply_kernel()
+{
+    int nchannels = CV_MAT_CN(frameType);
+    String opts = format("-D CN=%d -D NSAMPLES=%d%s", nchannels, nN, bShadowDetection ? " -D SHADOW_DETECT" : "");
+    kernel_apply.create("knn_kernel", ocl::video::bgfg_knn_oclsrc, opts);
+}
+
+#endif
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     CV_INSTRUMENT_REGION()
 
-    Mat image = _image.getMat();
-    bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
+    {
+#ifndef __APPLE__
+        CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel() || _image.channels() == 1),
+                   ocl_apply(_image, _fgmask, learningRate))
+#else
+        CV_OCL_RUN(_fgmask.isUMat() && OCL_PERFORMANCE_CHECK(!ocl::Device::getDefault().isIntel()),
+                   ocl_apply(_image, _fgmask, learningRate))
+#endif
+
+        opencl_ON = false;
+        nframes = 0;
+    }
+#endif
+
+    bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
     if( needToInitialize )
-        initialize(image.size(), image.type());
+        initialize(_image.size(), _image.type());
 
+    Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
@@ -582,32 +759,71 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
-    //parallel_for_(Range(0, image.rows),
-    //              KNNInvoker(image, fgmask,
-    icvUpdatePixelBackgroundNP(image, fgmask,
-            bgmodel,
-            nNextLongUpdate,
-            nNextMidUpdate,
-            nNextShortUpdate,
-            aModelIndexLong,
-            aModelIndexMid,
-            aModelIndexShort,
-            nLongCounter,
-            nMidCounter,
-            nShortCounter,
-            nN,
-            (float)learningRate,
-            fTb,
-            nkNN,
-            fTau,
-            bShadowDetection,
-            nShadowDetection
-            );
+    //recalculate update rates - in case alpha is changed
+    // calculate update parameters (using alpha)
+    int Kshort,Kmid,Klong;
+    //approximate exponential learning curve
+    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+
+    //refresh rates
+    int nShortUpdate = (Kshort/nN)+1;
+    int nMidUpdate = (Kmid/nN)+1;
+    int nLongUpdate = (Klong/nN)+1;
+
+    parallel_for_(Range(0, image.rows),
+                  KNNInvoker(image, fgmask,
+                             bgmodel.ptr(),
+                             nNextLongUpdate.ptr(),
+                             nNextMidUpdate.ptr(),
+                             nNextShortUpdate.ptr(),
+                             aModelIndexLong.ptr(),
+                             aModelIndexMid.ptr(),
+                             aModelIndexShort.ptr(),
+                             nLongCounter,
+                             nMidCounter,
+                             nShortCounter,
+                             nN,
+                             fTb,
+                             nkNN,
+                             fTau,
+                             bShadowDetection,
+                             nShadowDetection),
+                             image.total()/(double)(1 << 16));
+
+    nShortCounter++;//0,1,...,nShortUpdate-1
+    nMidCounter++;
+    nLongCounter++;
+    if (nShortCounter >= nShortUpdate)
+    {
+        nShortCounter = 0;
+        randu(nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
+    }
+    if (nMidCounter >= nMidUpdate)
+    {
+        nMidCounter = 0;
+        randu(nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+    }
+    if (nLongCounter >= nLongUpdate)
+    {
+        nLongCounter = 0;
+        randu(nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+    }
 }
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
     CV_INSTRUMENT_REGION()
+
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
+    {
+        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
+
+        opencl_ON = false;
+    }
+#endif
 
     int nchannels = CV_MAT_CN(frameType);
     //CV_Assert( nchannels == 3 );

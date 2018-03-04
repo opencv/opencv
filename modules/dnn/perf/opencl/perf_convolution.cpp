@@ -4,25 +4,16 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest
-{
-namespace ocl
-{
+namespace opencv_test { namespace ocl {
+using namespace ::perf;
 
-using std::tr1::tuple;
-using std::tr1::get;
-using std::tr1::make_tuple;
-using std::make_pair;
-using namespace perf;
-using namespace testing;
-using namespace cv;
-using namespace cv::dnn;
-
+namespace {
 enum {STRIDE_OFF = 1, STRIDE_ON = 2};
 CV_ENUM(StrideSize, STRIDE_OFF, STRIDE_ON);
 
 enum {GROUP_OFF = 1, GROUP_2 = 2};
 CV_ENUM(GroupSize, GROUP_OFF, GROUP_2);
+} // namespace
 
 //Squared Size
 #define SSZ(n) cv::Size(n, n)
@@ -77,16 +68,14 @@ OCL_PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     std::vector<Mat*> inpBlobs(1, &inpBlob);
     std::vector<Mat> outBlobs, internalBlobs;
 
-    cv::setNumThreads(cv::getNumberOfCPUs());
-
     Ptr<Layer> layer = cv::dnn::LayerFactory::createLayerInstance("Convolution", lp);
     std::vector<MatShape> inputShapes(1, shape(inpBlob)), outShapes, internals;
     layer->getMemoryShapes(inputShapes, 0, outShapes, internals);
-    for (int i = 0; i < outShapes.size(); i++)
+    for (size_t i = 0; i < outShapes.size(); i++)
     {
         outBlobs.push_back(Mat(outShapes[i], CV_32F));
     }
-    for (int i = 0; i < internals.size(); i++)
+    for (size_t i = 0; i < internals.size(); i++)
     {
         internalBlobs.push_back(Mat());
         if (total(internals[i]))
@@ -99,7 +88,7 @@ OCL_PERF_TEST_P( ConvolutionPerfTest, perf, Combine(
     Mat inpBlob2D = inpBlob.reshape(1, outCn);
     Mat wgtBlob2D = wgtBlob.reshape(1, outCn*(inpCn/groups));
     Mat outBlob2D = outBlobs[0].reshape(1, outBlobs[0].size[0]);
-    declare.in(inpBlob2D, wgtBlob2D, WARMUP_RNG).out(outBlob2D).tbb_threads(cv::getNumThreads());
+    declare.in(inpBlob2D, wgtBlob2D, WARMUP_RNG).out(outBlob2D);
 
     // warmup
     layer->forward(inpBlobs, outBlobs, internalBlobs);

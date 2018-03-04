@@ -155,7 +155,7 @@ static int icvOpenFile_QT_Movie (CvCapture_QT_Movie * capture, const char * file
 
     // we would use CFStringCreateWithFileSystemRepresentation (kCFAllocatorDefault, filename) on Mac OS X 10.4
     CFStringRef   inPath = CFStringCreateWithCString (kCFAllocatorDefault, filename, kCFStringEncodingISOLatin1);
-    OPENCV_ASSERT ((inPath != nil), "icvOpenFile_QT_Movie", "couldnt create CFString from a string");
+    OPENCV_ASSERT ((inPath != nil), "icvOpenFile_QT_Movie", "couldn't create CFString from a string");
 
     // create the data reference
     myErr = QTNewDataReferenceFromFullPathCFString (inPath, kQTPOSIXPathStyle, 0, & myDataRef, & myDataRefType);
@@ -216,7 +216,7 @@ static int icvOpenFile_QT_Movie (CvCapture_QT_Movie * capture, const char * file
     // create gworld for decompressed image
     myErr = QTNewGWorld (& capture->myGWorld, k32ARGBPixelFormat /* k24BGRPixelFormat geht leider nicht */,
                          & myRect, nil, nil, 0);
-    OPENCV_ASSERT (myErr == noErr, "icvOpenFile_QT_Movie", "couldnt create QTNewGWorld() for output image");
+    OPENCV_ASSERT (myErr == noErr, "icvOpenFile_QT_Movie", "couldn't create QTNewGWorld() for output image");
     SetMovieGWorld (capture->myMovie, capture->myGWorld, nil);
 
     // build IplImage header that will point to the PixMap of the Movie's GWorld later on
@@ -510,7 +510,7 @@ static const void * icvRetrieveFrame_QT_Movie (CvCapture_QT_Movie * capture, int
 
     // update IplImage header that points to PixMap of the Movie's GWorld.
     // unfortunately, cvCvtColor doesn't know ARGB, the QuickTime pixel format,
-    // so we pass a modfied address.
+    // so we pass a modified address.
     // ATTENTION: don't access the last pixel's alpha entry, it's inexistant
     myPixMapHandle = GetGWorldPixMap (capture->myGWorld);
     LockPixels (myPixMapHandle);
@@ -662,7 +662,7 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
                 char                  nameBuffer [255];
 
                 result = GetComponentInfo (component, & desc, nameHandle, nil, nil);
-                OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt GetComponentInfo()");
+                OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't GetComponentInfo()");
                 OPENCV_ASSERT (*nameHandle, "icvOpenCamera_QT", "No name returned by GetComponentInfo()");
                 snprintf (nameBuffer, (**nameHandle) + 1, "%s", (char *) (* nameHandle + 1));
                 printf ("- Videodevice: %s\n", nameBuffer);
@@ -675,7 +675,7 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
             {
                 result = VDGetNumberOfInputs (capture->grabber, & capture->channel);
                 if (result != noErr)
-                    fprintf (stderr, "Couldnt GetNumberOfInputs: %d\n", (int) result);
+                    fprintf (stderr, "Couldn't GetNumberOfInputs: %d\n", (int) result);
                 else
                 {
                     #ifndef NDEBUG
@@ -699,7 +699,7 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
                             Str255  nameBuffer;
 
                             result = VDGetInputName (capture->grabber, capture->channel, nameBuffer);
-                            OPENCV_ASSERT (result == noErr, "ictOpenCamera_QT", "couldnt GetInputName()");
+                            OPENCV_ASSERT (result == noErr, "ictOpenCamera_QT", "couldn't GetInputName()");
                             snprintf (name, *nameBuffer, "%s", (char *) (nameBuffer + 1));
                             printf ("  Choosing input %d - %s\n", (int) capture->channel, name);
                         #endif
@@ -729,37 +729,37 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
     // Select the desired input
     result = VDSetInput (capture->grabber, capture->channel);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt select video digitizer input");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't select video digitizer input");
 
     // get the bounding rectangle of the video digitizer
     result = VDGetActiveSrcRect (capture->grabber, capture->channel, & myRect);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt create VDGetActiveSrcRect from digitizer");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't create VDGetActiveSrcRect from digitizer");
     myRect.right = 640; myRect.bottom = 480;
     capture->size = cvSize (myRect.right - myRect.left, myRect.bottom - myRect.top);
     printf ("Source rect is %d, %d -- %d, %d\n", (int) myRect.left, (int) myRect.top, (int) myRect.right, (int) myRect.bottom);
 
     // create offscreen GWorld
     result = QTNewGWorld (& capture->myGWorld, k32ARGBPixelFormat, & myRect, nil, nil, 0);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt create QTNewGWorld() for output image");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't create QTNewGWorld() for output image");
 
     // get pixmap
     capture->pixmap = GetGWorldPixMap (capture->myGWorld);
     result = GetMoviesError ();
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt get pixmap");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't get pixmap");
 
     // set digitizer rect
     result = VDSetDigitizerRect (capture->grabber, & myRect);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt create VDGetActiveSrcRect from digitizer");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't create VDGetActiveSrcRect from digitizer");
 
     // set destination of digitized input
     result = VDSetPlayThruDestination (capture->grabber, capture->pixmap, & myRect, nil, nil);
     printf ("QuickTime error: %d\n", (int) result);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set video destination");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set video destination");
 
     // get destination of digitized images
     result = VDGetPlayThruDestination (capture->grabber, & capture->pixmap, nil, nil, nil);
     printf ("QuickTime error: %d\n", (int) result);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt get video destination");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't get video destination");
     OPENCV_ASSERT (capture->pixmap != nil, "icvOpenCamera_QT", "empty set video destination");
 
     // get the bounding rectangle of the video digitizer
@@ -768,15 +768,15 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
     // build IplImage header that will point to the PixMap of the Movie's GWorld later on
     capture->image_rgb = cvCreateImageHeader (capture->size, IPL_DEPTH_8U, 4);
-    OPENCV_ASSERT (capture->image_rgb, "icvOpenCamera_QT", "couldnt create image header");
+    OPENCV_ASSERT (capture->image_rgb, "icvOpenCamera_QT", "couldn't create image header");
 
     // create IplImage that hold correctly formatted result
     capture->image_bgr = cvCreateImage (capture->size, IPL_DEPTH_8U, 3);
-    OPENCV_ASSERT (capture->image_bgr, "icvOpenCamera_QT", "couldnt create image");
+    OPENCV_ASSERT (capture->image_bgr, "icvOpenCamera_QT", "couldn't create image");
 
     // notify digitizer component, that we well be starting grabbing soon
     result = VDCaptureStateChanging (capture->grabber, vdFlagCaptureIsForRecord | vdFlagCaptureStarting | vdFlagCaptureLowLatency);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set capture state");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set capture state");
 
 
     // yeah, we did it
@@ -791,7 +791,7 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 
     // notify digitizer component, that we well be stopping grabbing soon
     result = VDCaptureStateChanging (capture->grabber, vdFlagCaptureStopping);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set capture state");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set capture state");
 
     // release memory
     cvReleaseImage       (& capture->image_bgr);
@@ -799,7 +799,7 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
     DisposeGWorld        (capture->myGWorld);
     CloseComponent       (capture->grabber);
 
-    // sucessful
+    // successful
     return 1;
 }
 
@@ -830,7 +830,7 @@ static const void * icvRetrieveFrame_QT_Cam (CvCapture_QT_Cam * capture, int)
 
     // update IplImage header that points to PixMap of the Movie's GWorld.
     // unfortunately, cvCvtColor doesn't know ARGB, the QuickTime pixel format,
-    // so we pass a modfied address.
+    // so we pass a modified address.
     // ATTENTION: don't access the last pixel's alpha entry, it's inexistant
     //myPixMapHandle = GetGWorldPixMap (capture->myGWorld);
     myPixMapHandle = capture->pixmap;
@@ -869,7 +869,7 @@ static OSErr icvDataProc_QT_Cam (SGChannel channel, Ptr raw_data, long len, long
 
         // we need a decompression sequence that fits the raw data coming from the camera
         err = SGGetChannelSampleDescription (channel, (Handle) description);
-        OPENCV_ASSERT (err == noErr, "icvDataProc_QT_Cam", "couldnt get channel sample description");
+        OPENCV_ASSERT (err == noErr, "icvDataProc_QT_Cam", "couldn't get channel sample description");
 
         //*************************************************************************************//
         //This fixed a bug when Quicktime is called twice to grab a frame (black band bug) - Yannick Verdie 2010
@@ -885,7 +885,7 @@ static OSErr icvDataProc_QT_Cam (SGChannel channel, Ptr raw_data, long len, long
         err = DecompressSequenceBegin (&capture->sequence, description, capture->gworld, 0,&capture->bounds,&scaleMatrix, srcCopy, NULL, 0, codecNormalQuality, bestSpeedCodec);
         //**************************************************************************************//
 
-        OPENCV_ASSERT (err == noErr, "icvDataProc_QT_Cam", "couldnt begin decompression sequence");
+        OPENCV_ASSERT (err == noErr, "icvDataProc_QT_Cam", "couldn't begin decompression sequence");
         DisposeHandle ((Handle) description);
     }
 
@@ -919,22 +919,22 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
     // open sequence grabber component
     capture->grabber = OpenDefaultComponent (SeqGrabComponentType, 0);
-    OPENCV_ASSERT (capture->grabber, "icvOpenCamera_QT", "couldnt create image");
+    OPENCV_ASSERT (capture->grabber, "icvOpenCamera_QT", "couldn't create image");
 
     // initialize sequence grabber component
     result = SGInitialize (capture->grabber);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt initialize sequence grabber");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't initialize sequence grabber");
     result = SGSetDataRef (capture->grabber, 0, 0, seqGrabDontMakeMovie);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set data reference of sequence grabber");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set data reference of sequence grabber");
 
     // set up video channel
     result = SGNewChannel (capture->grabber, VideoMediaType, & (capture->channel));
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt create new video channel");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't create new video channel");
 
     // select the camera indicated by index
     SGDeviceList device_list = 0;
     result = SGGetChannelDeviceList (capture->channel, 0, & device_list);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt get channel device list");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't get channel device list");
     for (int i = 0, current_index = 1; i < (*device_list)->count; i++)
     {
         SGDeviceName device = (*device_list)->entry[i];
@@ -943,33 +943,33 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
             if (current_index == index)
             {
                 result = SGSetChannelDevice (capture->channel, device.name);
-                OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set the channel video device");
+                OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set the channel video device");
                 break;
             }
             current_index++;
         }
     }
     result = SGDisposeDeviceList (capture->grabber, device_list);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt dispose the channel device list");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't dispose the channel device list");
 
     // query natural camera resolution -- this will be wrong, but will be an upper
     // bound on the actual resolution -- the actual resolution is set below
     // after starting the frame grabber
     result = SGGetSrcVideoBounds (capture->channel, & (capture->bounds));
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set video channel bounds");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set video channel bounds");
 
     // create offscreen GWorld
     result = QTNewGWorld (& (capture->gworld), k32ARGBPixelFormat, & (capture->bounds), 0, 0, 0);
     result = SGSetGWorld (capture->grabber, capture->gworld, 0);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set GWorld for sequence grabber");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set GWorld for sequence grabber");
     result = SGSetChannelBounds (capture->channel, & (capture->bounds));
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set video channel bounds");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set video channel bounds");
     result = SGSetChannelUsage (capture->channel, seqGrabRecord);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set channel usage");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set channel usage");
 
     // start recording so we can size
     result = SGStartRecord (capture->grabber);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt start recording");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't start recording");
 
     // don't know *actual* resolution until now
     ImageDescriptionHandle imageDesc = (ImageDescriptionHandle)NewHandle(0);
@@ -981,19 +981,19 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
     // stop grabber so that we can reset the parameters to the right size
     result = SGStop (capture->grabber);
-    OPENCV_ASSERT (result == noErr, "icveClose_QT_Cam", "couldnt stop recording");
+    OPENCV_ASSERT (result == noErr, "icveClose_QT_Cam", "couldn't stop recording");
 
     // reset GWorld to correct image size
     GWorldPtr tmpgworld;
     result = QTNewGWorld( &tmpgworld, k32ARGBPixelFormat, &(capture->bounds), 0, 0, 0);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt create offscreen GWorld");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't create offscreen GWorld");
     result = SGSetGWorld( capture->grabber, tmpgworld, 0);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set GWorld for sequence grabber");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set GWorld for sequence grabber");
     DisposeGWorld( capture->gworld );
     capture->gworld = tmpgworld;
 
     result = SGSetChannelBounds (capture->channel, & (capture->bounds));
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set video channel bounds");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set video channel bounds");
 
     // allocate images
     capture->size = cvSize (capture->bounds.right - capture->bounds.left, capture->bounds.bottom - capture->bounds.top);
@@ -1003,7 +1003,7 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
     // so we shift the base address by one byte.
     // ATTENTION: don't access the last pixel's alpha entry, it's inexistant
     capture->image_rgb = cvCreateImageHeader (capture->size, IPL_DEPTH_8U, 4);
-    OPENCV_ASSERT (capture->image_rgb, "icvOpenCamera_QT", "couldnt create image header");
+    OPENCV_ASSERT (capture->image_rgb, "icvOpenCamera_QT", "couldn't create image header");
     pixmap = GetGWorldPixMap (capture->gworld);
     OPENCV_ASSERT (pixmap, "icvOpenCamera_QT", "didn't get GWorld PixMap handle");
     LockPixels (pixmap);
@@ -1011,16 +1011,16 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
     // create IplImage that hold correctly formatted result
     capture->image_bgr = cvCreateImage (capture->size, IPL_DEPTH_8U, 3);
-    OPENCV_ASSERT (capture->image_bgr, "icvOpenCamera_QT", "couldnt create image");
+    OPENCV_ASSERT (capture->image_bgr, "icvOpenCamera_QT", "couldn't create image");
 
 
     // tell the sequence grabber to invoke our data proc
     result = SGSetDataProc (capture->grabber, NewSGDataUPP (icvDataProc_QT_Cam), (long) capture);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt set data proc");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't set data proc");
 
     // start recording
     result = SGStartRecord (capture->grabber);
-    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldnt start recording");
+    OPENCV_ASSERT (result == noErr, "icvOpenCamera_QT", "couldn't start recording");
 
     return 1;
 }
@@ -1035,11 +1035,11 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 
     // stop recording
     result = SGStop (capture->grabber);
-    OPENCV_ASSERT (result == noErr, "icveClose_QT_Cam", "couldnt stop recording");
+    OPENCV_ASSERT (result == noErr, "icveClose_QT_Cam", "couldn't stop recording");
 
     // close sequence grabber component
     result = CloseComponent (capture->grabber);
-    OPENCV_ASSERT (result == noErr, "icveClose_QT_Cam", "couldnt close sequence grabber component");
+    OPENCV_ASSERT (result == noErr, "icveClose_QT_Cam", "couldn't close sequence grabber component");
 
     // end decompression sequence
     CDSequenceEnd (capture->sequence);
@@ -1049,7 +1049,7 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
     cvReleaseImageHeader (& capture->image_rgb);
     DisposeGWorld (capture->gworld);
 
-    // sucessful
+    // successful
     return 1;
 }
 

@@ -1,14 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 CV_ENUM(ThreshType, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 
-typedef std::tr1::tuple<Size, MatType, ThreshType> Size_MatType_ThreshType_t;
+typedef tuple<Size, MatType, ThreshType> Size_MatType_ThreshType_t;
 typedef perf::TestBaseWithParam<Size_MatType_ThreshType_t> Size_MatType_ThreshType;
 
 PERF_TEST_P(Size_MatType_ThreshType, threshold,
@@ -33,7 +32,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
     declare.in(src, WARMUP_RNG).out(dst);
 
     int runs = (sz.width <= 640) ? 40 : 1;
-    TEST_CYCLE_MULTIRUN(runs) threshold(src, dst, thresh, maxval, threshType);
+    TEST_CYCLE_MULTIRUN(runs) cv::threshold(src, dst, thresh, maxval, threshType);
 
     SANITY_CHECK(dst);
 }
@@ -52,7 +51,7 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
     declare.in(src, WARMUP_RNG).out(dst);
 
     int runs = 15;
-    TEST_CYCLE_MULTIRUN(runs) threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_OTSU);
+    TEST_CYCLE_MULTIRUN(runs) cv::threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_OTSU);
 
     SANITY_CHECK(dst);
 }
@@ -60,7 +59,7 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
 CV_ENUM(AdaptThreshType, THRESH_BINARY, THRESH_BINARY_INV)
 CV_ENUM(AdaptThreshMethod, ADAPTIVE_THRESH_MEAN_C, ADAPTIVE_THRESH_GAUSSIAN_C)
 
-typedef std::tr1::tuple<Size, AdaptThreshType, AdaptThreshMethod, int, double> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta_t;
+typedef tuple<Size, AdaptThreshType, AdaptThreshMethod, int, double> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta_t;
 typedef perf::TestBaseWithParam<Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta_t> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta;
 
 PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta, adaptiveThreshold,
@@ -89,7 +88,9 @@ PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta, adaptiveThre
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() adaptiveThreshold(src, dst, maxValue, adaptThreshMethod, adaptThreshType, blockSize, C);
+    TEST_CYCLE() cv::adaptiveThreshold(src, dst, maxValue, adaptThreshMethod, adaptThreshType, blockSize, C);
 
     SANITY_CHECK(dst);
 }
+
+} // namespace

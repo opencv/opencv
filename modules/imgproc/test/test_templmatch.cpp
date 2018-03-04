@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_TemplMatchTest : public cvtest::ArrayTest
 {
@@ -334,3 +333,5 @@ void CV_TemplMatchTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Imgproc_MatchTemplate, accuracy) { CV_TemplMatchTest test; test.safe_run(); }
+
+}} // namespace

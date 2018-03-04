@@ -289,7 +289,7 @@ protected:
 };
 
 /** Image class which owns the data, so it can be allocated and is always
-freed.  It cannot be copied but can be explicity cloned.
+freed.  It cannot be copied but can be explicitly cloned.
 */
 template<typename T>
 class WImageBuffer : public WImage<T>

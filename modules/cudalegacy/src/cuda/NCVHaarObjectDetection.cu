@@ -2147,8 +2147,8 @@ static NCVStatus loadFromXML(const cv::String &filename,
     haar.ClassifierSize.width = oldCascade->orig_window_size.width;
     haar.ClassifierSize.height = oldCascade->orig_window_size.height;
 
-    int stagesCound = oldCascade->count;
-    for(int s = 0; s < stagesCound; ++s) // by stages
+    int stagesCount = oldCascade->count;
+    for(int s = 0; s < stagesCount; ++s) // by stages
     {
         HaarStage64 curStage;
         curStage.setStartClassifierRootNodeOffset(static_cast<Ncv32u>(haarClassifierNodes.size()));

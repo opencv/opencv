@@ -45,7 +45,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 struct WarperTestBase :
@@ -164,6 +164,6 @@ OCL_TEST_F(AffineWarperTest, Mat)
     }
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

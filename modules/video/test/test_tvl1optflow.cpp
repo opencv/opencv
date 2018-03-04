@@ -40,16 +40,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <fstream>
 
-using namespace std;
-using namespace cv;
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 //#define DUMP
 
-namespace
-{
     // first four bytes, should be the same in little endian
     const float FLO_TAG_FLOAT = 202021.25f;  // check for this when READING the file
 
@@ -83,7 +78,7 @@ namespace
     // http://vision.middlebury.edu/flow/data/
     void readOpticalFlowFromFile(Mat_<Point2f>& flow, const string& fileName)
     {
-        ifstream file(fileName.c_str(), ios_base::binary);
+        std::ifstream file(fileName.c_str(), std::ios_base::binary);
 
         float tag;
         file.read((char*) &tag, sizeof(float));
@@ -145,7 +140,6 @@ namespace
         }
         EXPECT_GE(valid_counter, expectedAccuracy * gold_counter);
     }
-}
 
 TEST(Video_calcOpticalFlowDual_TVL1, Regression)
 {
@@ -175,3 +169,5 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     check(gold, flow);
 #endif
 }
+
+}} // namespace

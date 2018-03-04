@@ -48,7 +48,7 @@ import cv2 as cv
 
 cap = cv.VideoCapture('vtest.avi')
 
-fgbg = cv.createBackgroundSubtractorMOG()
+fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
 
 while(1):
     ret, frame = cap.read()
@@ -68,7 +68,7 @@ cv.destroyAllWindows()
 ### BackgroundSubtractorMOG2
 
 It is also a Gaussian Mixture-based Background/Foreground Segmentation Algorithm. It is based on two
-papers by Z.Zivkovic, "Improved adaptive Gausian mixture model for background subtraction" in 2004
+papers by Z.Zivkovic, "Improved adaptive Gaussian mixture model for background subtraction" in 2004
 and "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction"
 in 2006. One important feature of this algorithm is that it selects the appropriate number of
 gaussian distribution for each pixel. (Remember, in last case, we took a K gaussian distributions
@@ -125,7 +125,7 @@ import cv2 as cv
 cap = cv.VideoCapture('vtest.avi')
 
 kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
-fgbg = cv.createBackgroundSubtractorGMG()
+fgbg = cv.bgsegm.createBackgroundSubtractorGMG()
 
 while(1):
     ret, frame = cap.read()

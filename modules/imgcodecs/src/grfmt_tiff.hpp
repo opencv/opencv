@@ -108,7 +108,8 @@ public:
 protected:
     void* m_tif;
     int normalizeChannelsNumber(int channels) const;
-    bool readHdrData(Mat& img);
+    bool readData_32FC3(Mat& img);
+    bool readData_32FC1(Mat& img);
     bool m_hdr;
     size_t m_buf_pos;
 
@@ -127,6 +128,9 @@ public:
     bool isFormatSupported( int depth ) const;
 
     bool  write( const Mat& img, const std::vector<int>& params );
+
+    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+
     ImageEncoder newEncoder() const;
 
 protected:
@@ -134,8 +138,9 @@ protected:
                     TiffFieldType fieldType,
                     int count, int value );
 
-    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
-    bool writeHdr( const Mat& img );
+    bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
+    bool write_32FC3( const Mat& img );
+    bool write_32FC1( const Mat& img );
 
 private:
     TiffEncoder(const TiffEncoder &); // copy disabled

@@ -182,13 +182,6 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
-/** @brief Returns a text string formatted using the printf-like expression.
-
-The function acts like sprintf but forms and returns an STL string. It can be used to form an error
-message in the Exception constructor.
-@param fmt printf-compatible formatting specifiers.
- */
-CV_EXPORTS String format( const char* fmt, ... );
 CV_EXPORTS String tempfile( const char* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
@@ -232,6 +225,8 @@ CV_EXPORTS_W int getNumThreads();
 
 /** @brief Returns the index of the currently executed thread within the current parallel region. Always
 returns 0 if called outside of parallel region.
+
+@deprecated Current implementation doesn't corresponding to this documentation.
 
 The exact meaning of the return value depends on the threading framework used by OpenCV library:
 - `TBB` - Unsupported with current 4.1 TBB release. Maybe will be supported in future.
@@ -426,6 +421,12 @@ in OpenCV.
 @param feature The feature of interest, one of cv::CpuFeatures
  */
 CV_EXPORTS_W bool checkHardwareSupport(int feature);
+
+/** @brief Returns feature name by ID
+
+Returns empty string if feature is not defined
+*/
+CV_EXPORTS_W String getHardwareFeatureName(int feature);
 
 /** @brief Returns the number of logical CPUs available for the process.
  */
@@ -909,7 +910,7 @@ public:
 
     /** @brief Check for parsing errors
 
-    Returns true if error occurred while accessing the parameters (bad conversion, missing arguments,
+    Returns false if error occurred while accessing the parameters (bad conversion, missing arguments,
     etc.). Call @ref printErrors to print error messages list.
      */
     bool check() const;

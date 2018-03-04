@@ -27,7 +27,7 @@ commands in your Python terminal :
 >>> print( flags )
 @endcode
 @note For HSV, Hue range is [0,179], Saturation range is [0,255] and Value range is [0,255].
-Different softwares use different scales. So if you are comparing OpenCV values with them, you need
+Different software use different scales. So if you are comparing OpenCV values with them, you need
 to normalize these ranges.
 
 Object Tracking

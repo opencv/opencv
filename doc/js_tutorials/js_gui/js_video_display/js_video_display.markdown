@@ -27,7 +27,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
         video.play();
     })
     .catch(function(err) {
-        console.log("An error occured! " + err);
+        console.log("An error occurred! " + err);
     });
 @endcode
 

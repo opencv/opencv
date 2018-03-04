@@ -292,11 +292,14 @@ bool  TiffDecoder::readData( Mat& img )
 {
     if(m_hdr && img.type() == CV_32FC3)
     {
-        return readHdrData(img);
+        return readData_32FC3(img);
+    }
+    if(img.type() == CV_32FC1)
+    {
+        return readData_32FC1(img);
     }
     bool result = false;
     bool color = img.channels() > 1;
-    uchar* data = img.ptr();
 
     if( img.depth() != CV_8U && img.depth() != CV_16U && img.depth() != CV_32F && img.depth() != CV_64F )
         return false;
@@ -312,6 +315,10 @@ bool  TiffDecoder::readData( Mat& img )
         uint16 bpp = 8, ncn = photometric > 1 ? 3 : 1;
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
+        uint16 img_orientation = ORIENTATION_TOPLEFT;
+        TIFFGetField( tif, TIFFTAG_ORIENTATION, &img_orientation);
+        bool vert_flip = (img_orientation == ORIENTATION_BOTRIGHT) || (img_orientation == ORIENTATION_RIGHTBOT) ||
+                         (img_orientation == ORIENTATION_BOTLEFT) || (img_orientation == ORIENTATION_LEFTBOT);
         const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         int wanted_channels = normalizeChannelsNumber(img.channels());
@@ -354,12 +361,14 @@ bool  TiffDecoder::readData( Mat& img )
             double* buffer64 = (double*)buffer;
             int tileidx = 0;
 
-            for( y = 0; y < m_height; y += tile_height0, data += img.step*tile_height0 )
+            for( y = 0; y < m_height; y += tile_height0 )
             {
                 int tile_height = tile_height0;
 
                 if( y + tile_height > m_height )
                     tile_height = m_height - y;
+
+                uchar* data = img.ptr(vert_flip ? m_height - y - tile_height : y);
 
                 for( x = 0; x < m_width; x += tile_width0, tileidx++ )
                 {
@@ -528,7 +537,7 @@ bool  TiffDecoder::readData( Mat& img )
     return result;
 }
 
-bool TiffDecoder::readHdrData(Mat& img)
+bool TiffDecoder::readData_32FC3(Mat& img)
 {
     int rows_per_strip = 0, photometric = 0;
     if(!m_tif)
@@ -557,6 +566,45 @@ bool TiffDecoder::readHdrData(Mat& img)
         cvtColor(img, img, COLOR_RGB2BGR);
     }
     return true;
+}
+
+bool TiffDecoder::readData_32FC1(Mat& img)
+{
+    if(!m_tif)
+    {
+        return false;
+    }
+    TIFF *tif = static_cast<TIFF*>(m_tif);
+
+    uint32 img_width, img_height;
+    TIFFGetField(tif,TIFFTAG_IMAGEWIDTH, &img_width);
+    TIFFGetField(tif,TIFFTAG_IMAGELENGTH, &img_height);
+    if(img.size() != Size(img_width,img_height))
+    {
+        close();
+        return false;
+    }
+    tsize_t scanlength = TIFFScanlineSize(tif);
+    tdata_t buf = _TIFFmalloc(scanlength);
+    float* data;
+    bool result = true;
+    for (uint32 row = 0; row < img_height; row++)
+    {
+        if (TIFFReadScanline(tif, buf, row) != 1)
+        {
+            result = false;
+            break;
+        }
+        data=(float*)buf;
+        for (uint32 i=0; i<img_width; i++)
+        {
+            img.at<float>(row,i) = data[i];
+        }
+    }
+    _TIFFfree(buf);
+    close();
+
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -676,44 +724,8 @@ static void readParam(const std::vector<int>& params, int key, int& value)
         }
 }
 
-bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
+bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
-    int channels = img.channels();
-    int width = img.cols, height = img.rows;
-    int depth = img.depth();
-
-    int bitsPerChannel = -1;
-    switch (depth)
-    {
-        case CV_8U:
-        {
-            bitsPerChannel = 8;
-            break;
-        }
-        case CV_16U:
-        {
-            bitsPerChannel = 16;
-            break;
-        }
-        default:
-        {
-            return false;
-        }
-    }
-
-    const int bitsPerByte = 8;
-    size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
-
-    int rowsPerStrip = (int)((1 << 13)/fileStep);
-    readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
-
-    if( rowsPerStrip < 1 )
-        rowsPerStrip = 1;
-
-    if( rowsPerStrip > height )
-        rowsPerStrip = height;
-
-
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
     // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
     TIFF* pTiffHandle;
@@ -732,73 +744,35 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
         return false;
     }
 
+    //Settings that matter to all images
     // defaults for now, maybe base them on params in the future
-    int   compression  = COMPRESSION_LZW;
-    int   predictor    = PREDICTOR_HORIZONTAL;
+    int compression = COMPRESSION_LZW;
+    int predictor = PREDICTOR_HORIZONTAL;
 
     readParam(params, TIFFTAG_COMPRESSION, compression);
     readParam(params, TIFFTAG_PREDICTOR, predictor);
 
-    int   colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
-
-    if ( !TIFFSetField(pTiffHandle, TIFFTAG_IMAGEWIDTH, width)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_IMAGELENGTH, height)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_BITSPERSAMPLE, bitsPerChannel)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_COMPRESSION, compression)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_PHOTOMETRIC, colorspace)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_SAMPLESPERPIXEL, channels)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_ROWSPERSTRIP, rowsPerStrip)
-       )
+    //Iterate through each image in the vector and write them out as Tiff directories
+    for (size_t page = 0; page < img_vec.size(); page++)
     {
-        TIFFClose(pTiffHandle);
-        return false;
-    }
+        const Mat& img = img_vec[page];
+        int channels = img.channels();
+        int width = img.cols, height = img.rows;
+        int depth = img.depth();
 
-    if (compression != COMPRESSION_NONE && !TIFFSetField(pTiffHandle, TIFFTAG_PREDICTOR, predictor) )
-    {
-        TIFFClose(pTiffHandle);
-        return false;
-    }
-
-    // row buffer, because TIFFWriteScanline modifies the original data!
-    size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
-    AutoBuffer<uchar> _buffer(scanlineSize+32);
-    uchar* buffer = _buffer;
-    if (!buffer)
-    {
-        TIFFClose(pTiffHandle);
-        return false;
-    }
-
-    for (int y = 0; y < height; ++y)
-    {
-        switch(channels)
+        int bitsPerChannel = -1;
+        switch (depth)
         {
-            case 1:
+            case CV_8U:
             {
-                memcpy(buffer, img.ptr(y), scanlineSize);
+                bitsPerChannel = 8;
                 break;
             }
-
-            case 3:
+            case CV_16U:
             {
-                if (depth == CV_8U)
-                    icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
-                else
-                    icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                bitsPerChannel = 16;
                 break;
             }
-
-            case 4:
-            {
-                if (depth == CV_8U)
-                    icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
-                else
-                    icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
-                break;
-            }
-
             default:
             {
                 TIFFClose(pTiffHandle);
@@ -806,19 +780,105 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
             }
         }
 
-        int writeResult = TIFFWriteScanline(pTiffHandle, buffer, y, 0);
-        if (writeResult != 1)
+        const int bitsPerByte = 8;
+        size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
+
+        int rowsPerStrip = (int)((1 << 13) / fileStep);
+        readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
+
+        if (rowsPerStrip < 1)
+            rowsPerStrip = 1;
+
+        if (rowsPerStrip > height)
+            rowsPerStrip = height;
+
+        int   colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
+
+        if (!TIFFSetField(pTiffHandle, TIFFTAG_IMAGEWIDTH, width)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_IMAGELENGTH, height)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_BITSPERSAMPLE, bitsPerChannel)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_COMPRESSION, compression)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_PHOTOMETRIC, colorspace)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_SAMPLESPERPIXEL, channels)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_ROWSPERSTRIP, rowsPerStrip)
+            || (img_vec.size() > 1 && (
+               !TIFFSetField(pTiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE)
+            || !TIFFSetField(pTiffHandle, TIFFTAG_PAGENUMBER, page, img_vec.size() )))
+            )
         {
             TIFFClose(pTiffHandle);
             return false;
         }
+
+        if (compression != COMPRESSION_NONE && !TIFFSetField(pTiffHandle, TIFFTAG_PREDICTOR, predictor))
+        {
+            TIFFClose(pTiffHandle);
+            return false;
+        }
+
+        // row buffer, because TIFFWriteScanline modifies the original data!
+        size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
+        AutoBuffer<uchar> _buffer(scanlineSize + 32);
+        uchar* buffer = _buffer;
+        if (!buffer)
+        {
+            TIFFClose(pTiffHandle);
+            return false;
+        }
+
+        for (int y = 0; y < height; ++y)
+        {
+            switch (channels)
+            {
+                case 1:
+                {
+                    memcpy(buffer, img.ptr(y), scanlineSize);
+                    break;
+                }
+
+                case 3:
+                {
+                    if (depth == CV_8U)
+                        icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width, 1));
+                    else
+                        icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width, 1));
+                    break;
+                }
+
+                case 4:
+                {
+                    if (depth == CV_8U)
+                        icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width, 1));
+                    else
+                        icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width, 1));
+                    break;
+                }
+
+                default:
+                {
+                    TIFFClose(pTiffHandle);
+                    return false;
+                }
+            }
+
+            int writeResult = TIFFWriteScanline(pTiffHandle, buffer, y, 0);
+            if (writeResult != 1)
+            {
+                TIFFClose(pTiffHandle);
+                return false;
+            }
+        }
+
+        TIFFWriteDirectory(pTiffHandle);
+
     }
 
     TIFFClose(pTiffHandle);
     return true;
 }
 
-bool TiffEncoder::writeHdr(const Mat& _img)
+bool TiffEncoder::write_32FC3(const Mat& _img)
 {
     Mat img;
     cvtColor(_img, img, COLOR_BGR2XYZ);
@@ -857,18 +917,70 @@ bool TiffEncoder::writeHdr(const Mat& _img)
     return true;
 }
 
+bool TiffEncoder::write_32FC1(const Mat& _img)
+{
+
+    TIFF* tif;
+
+    TiffEncoderBufHelper buf_helper(m_buf);
+    if ( m_buf )
+    {
+        tif = buf_helper.open();
+    }
+    else
+    {
+        tif = TIFFOpen(m_filename.c_str(), "w");
+    }
+
+    if (!tif)
+    {
+        return false;
+    }
+
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, _img.cols);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, _img.rows);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 32);
+    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+    TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP);
+    TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
+    for (uint32 row = 0; row < (uint32)_img.rows; row++)
+    {
+        if (TIFFWriteScanline(tif, (tdata_t)_img.ptr<float>(row), row, 1) != 1)
+        {
+            TIFFClose(tif);
+            return false;
+        }
+    }
+    TIFFWriteDirectory(tif);
+    TIFFClose(tif);
+
+    return true;
+}
+
+bool TiffEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
+{
+    return writeLibTiff(img_vec, params);
+}
+
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 {
     int depth = img.depth();
 
     if(img.type() == CV_32FC3)
     {
-        return writeHdr(img); // TODO Rename
+        return write_32FC3(img);
+    }
+    if(img.type() == CV_32FC1)
+    {
+        return write_32FC1(img);
     }
 
     CV_Assert(depth == CV_8U || depth == CV_16U);
 
-    return writeLibTiff(img, params);
+    std::vector<Mat> img_vec;
+    img_vec.push_back(img);
+    return writeLibTiff(img_vec, params);
 }
 
 } // namespace

@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 namespace
 {
@@ -62,8 +62,6 @@ namespace
         return m(roi);
     }
 }
-
-namespace {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Blur
@@ -705,6 +703,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Filters, Median, testing::Combine(
     WHOLE_SUBMAT)
     );
 
-} //namespace
+}} // namespace
 
 #endif // HAVE_CUDA

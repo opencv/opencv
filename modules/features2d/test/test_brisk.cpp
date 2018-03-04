@@ -42,8 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_BRISKTest : public cvtest::BaseTest
 {
@@ -93,3 +92,5 @@ void CV_BRISKTest::run( int )
 }
 
 TEST(Features2d_BRISK, regression) { CV_BRISKTest test; test.safe_run(); }
+
+}} // namespace

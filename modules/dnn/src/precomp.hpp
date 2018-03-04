@@ -43,7 +43,6 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/core/utils/trace.hpp>
-#include <opencv2/core/softfloat.hpp> // int32_t (MSVS 2010-2013)
 #include "cvconfig.h"
 #include <opencv2/dnn.hpp>
 #include <opencv2/dnn/all_layers.hpp>

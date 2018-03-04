@@ -1,10 +1,11 @@
-#define LOG_TAG "org.opencv.core.Mat"
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 
-#include <stdexcept>
-#include <string>
-
-#include "common.h"
 #include "opencv2/core.hpp"
+
+#define LOG_TAG "org.opencv.core.Mat"
+#include "common.h"
 
 using namespace cv;
 
@@ -1777,6 +1778,131 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1delete
     delete (Mat*) self;
 }
 
+} // extern "C"
+
+namespace {
+  /// map java-array-types to assigned data
+  template<class T> struct JavaOpenCVTrait;
+
+/// less typing for specialisations
+#define JOCvT(t,s,c1,c2) \
+  template<> struct JavaOpenCVTrait<t##Array> { \
+    typedef t value_type;    /* type of array element */ \
+    static const char get[]; /* name of getter */ \
+    static const char put[]; /* name of putter */ \
+    enum {cvtype_1 = c1, cvtype_2 = c2 }; /* allowed OpenCV-types */ \
+  }; \
+  const char JavaOpenCVTrait<t##Array>::get[] = "Mat::nGet" s "()"; \
+  const char JavaOpenCVTrait<t##Array>::put[] = "Mat::nPut" s "()"
+
+  JOCvT(jbyte, "B", CV_8U, CV_8S);
+  JOCvT(jshort, "S", CV_16U, CV_16S);
+  JOCvT(jint, "I", CV_32S, CV_32S);
+  JOCvT(jfloat, "F", CV_32F, CV_32F);
+  JOCvT(jdouble, "D", CV_64F, CV_64F);
+#undef JOCvT
+}
+
+template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, int offset, char* buff)
+{
+    if(! m) return 0;
+    if(! buff) return 0;
+
+    count *= sizeof(T);
+    int rest = ((m->rows - row) * m->cols - col) * (int)m->elemSize();
+    if(count>rest) count = rest;
+    int res = count;
+
+    if( m->isContinuous() )
+    {
+        memcpy(m->ptr(row, col), buff + offset, count);
+    } else {
+        // row by row
+        int num = (m->cols - col) * (int)m->elemSize(); // 1st partial row
+        if(count<num) num = count;
+        uchar* data = m->ptr(row++, col);
+        while(count>0){
+            memcpy(data, buff + offset, num);
+            count -= num;
+            buff += num;
+            num = m->cols * (int)m->elemSize();
+            if(count<num) num = count;
+            data = m->ptr(row++, 0);
+        }
+    }
+    return res;
+}
+
+template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, jint offset, ARRAY vals)
+{
+    static const char *method_name = JavaOpenCVTrait<ARRAY>::put;
+    try {
+        LOGD("%s", method_name);
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_put<typename JavaOpenCVTrait<ARRAY>::value_type>(me, row, col, count, offset, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, JNI_ABORT);
+        return res;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+extern "C" {
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals)
+{
+  return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwOffset
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwOffset
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals)
+{
+  return java_mat_put(env, self, row, col, count, offset, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals)
+{
+  return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals)
+{
+  return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
+{
+  return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
 #define PUT_ITEM(T, R, C) { T*dst = (T*)me->ptr(R, C); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
 
@@ -1786,7 +1912,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
-    static const char method_name[] = "Mat::nPutD()";
+    static const char* method_name = JavaOpenCVTrait<jdoubleArray>::put;
     try {
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
@@ -1835,123 +1961,6 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
     }
 
     return 0;
-}
-
-
-} // extern "C"
-
-namespace {
-  /// map java-array-types to assigned data
-  template<class T> struct JavaOpenCVTrait;
-
-/// less typing for specialisations
-#define JOCvT(t,s,c1,c2) \
-  template<> struct JavaOpenCVTrait<t##Array> { \
-    typedef t value_type;    /* type of array element */ \
-    static const char get[]; /* name of getter */ \
-    static const char put[]; /* name of putter */ \
-    enum {cvtype_1 = c1, cvtype_2 = c2 }; /* allowed OpenCV-types */ \
-  }; \
-  const char JavaOpenCVTrait<t##Array>::get[] = "Mat::nGet" s "()"; \
-  const char JavaOpenCVTrait<t##Array>::put[] = "Mat::nPut" s "()"
-
-  JOCvT(jbyte, "B", CV_8U, CV_8S);
-  JOCvT(jshort, "S", CV_16U, CV_16S);
-  JOCvT(jint, "I", CV_32S, CV_32S);
-  JOCvT(jfloat, "F", CV_32F, CV_32F);
-  JOCvT(jdouble, "D", CV_64F, CV_64F);
-#undef JOCvT
-}
-
-template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, char* buff)
-{
-    if(! m) return 0;
-    if(! buff) return 0;
-
-    count *= sizeof(T);
-    int rest = ((m->rows - row) * m->cols - col) * (int)m->elemSize();
-    if(count>rest) count = rest;
-    int res = count;
-
-    if( m->isContinuous() )
-    {
-        memcpy(m->ptr(row, col), buff, count);
-    } else {
-        // row by row
-        int num = (m->cols - col) * (int)m->elemSize(); // 1st partial row
-        if(count<num) num = count;
-        uchar* data = m->ptr(row++, col);
-        while(count>0){
-            memcpy(data, buff, num);
-            count -= num;
-            buff += num;
-            num = m->cols * (int)m->elemSize();
-            if(count<num) num = count;
-            data = m->ptr(row++, 0);
-        }
-    }
-    return res;
-}
-
-template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, ARRAY vals)
-{
-    static const char *method_name = JavaOpenCVTrait<ARRAY>::put;
-    try {
-        LOGD("%s", method_name);
-        cv::Mat* me = (cv::Mat*) self;
-        if(! self) return 0; // no native object behind
-        if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
-        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-
-        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-        int res = mat_put<typename JavaOpenCVTrait<ARRAY>::value_type>(me, row, col, count, values);
-        env->ReleasePrimitiveArrayCritical(vals, values, JNI_ABORT);
-        return res;
-    } catch(const std::exception &e) {
-        throwJavaException(env, &e, method_name);
-    } catch (...) {
-        throwJavaException(env, 0, method_name);
-    }
-
-    return 0;
-}
-
-extern "C" {
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals);
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals)
-{
-  return java_mat_put(env, self, row, col, count, vals);
-}
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals);
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals)
-{
-  return java_mat_put(env, self, row, col, count, vals);
-}
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals);
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals)
-{
-  return java_mat_put(env, self, row, col, count, vals);
-}
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals);
-
-JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
-{
-  return java_mat_put(env, self, row, col, count, vals);
 }
 
 } // extern "C"
