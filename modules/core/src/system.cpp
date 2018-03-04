@@ -249,9 +249,9 @@ const char* Exception::what() const throw() { return msg.c_str(); }
 void Exception::formatMessage()
 {
     if( func.size() > 0 )
-        msg = format("%s:%d: error: (%d) %s in function %s\n", file.c_str(), line, code, err.c_str(), func.c_str());
+        msg = format("%s:%d: error: (%d) %s: %s in function %s\n", file.c_str(), line, code, cvErrorStr(code), err.c_str(), func.c_str());
     else
-        msg = format("%s:%d: error: (%d) %s\n", file.c_str(), line, code, err.c_str());
+        msg = format("%s:%d: error: (%d) %s: %s\n", file.c_str(), line, code, cvErrorStr(code), err.c_str());
 }
 
 static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { NULL };
