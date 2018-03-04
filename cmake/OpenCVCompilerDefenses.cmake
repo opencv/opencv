@@ -70,7 +70,11 @@ else()
   # not supported
 endif()
 
-set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+if(NOT HAIKU)
+  set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+else()
+  set(CMAKE_POSITION_INDEPENDENT_CODE FALSE)
+endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
     if(NOT CMAKE_CXX_FLAGS MATCHES "-fPIC")
       ocv_add_defense_compiler_flag("-fPIC")
