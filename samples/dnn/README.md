@@ -20,7 +20,14 @@
 | GoogLeNet | `1.0` | `224x224` | `104 117 123` | BGR |
 | [SqueezeNet](https://github.com/DeepScale/SqueezeNet) | `1.0` | `227x227` | `0 0 0` | BGR |
 
+### Semantic segmentation
+|    Model | Scale |   Size WxH|   Mean subtraction | Channels order |
+|---------------|-------|-----------|--------------------|-------|
+| [ENet](https://github.com/e-lab/ENet-training) | `0.00392 (1/255)` | `1024x512` | `0 0 0` | RGB |
+| FCN8s | `1.0` | `500x500` | `0 0 0` | BGR |
+
 ## References
 * [Models downloading script](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
+* [Names of classes from different datasets](https://github.com/opencv/opencv/tree/master/samples/data/dnn)

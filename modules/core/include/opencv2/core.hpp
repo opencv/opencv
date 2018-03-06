@@ -3159,7 +3159,7 @@ protected:
 
 struct Param {
     enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
-           UNSIGNED_INT=8, UINT64=9, UCHAR=11 };
+           UNSIGNED_INT=8, UINT64=9, UCHAR=11, SCALAR=12 };
 };
 
 
@@ -3250,6 +3250,14 @@ template<> struct ParamType<uchar>
     typedef uchar member_type;
 
     enum { type = Param::UCHAR };
+};
+
+template<> struct ParamType<Scalar>
+{
+    typedef const Scalar& const_param_type;
+    typedef Scalar member_type;
+
+    enum { type = Param::SCALAR };
 };
 
 //! @} core_basic
