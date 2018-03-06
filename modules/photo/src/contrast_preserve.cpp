@@ -52,8 +52,6 @@ using namespace cv;
 
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 {
-    CV_INSTRUMENT_REGION()
-
     Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC1);
     Mat dst = _dst.getMat();
@@ -61,142 +59,138 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     _color_boost.create(I.size(), CV_8UC3);
     Mat color_boost = _color_boost.getMat();
 
-    CV_Assert(!I.empty() && (I.channels()==3));
+    CV_Assert(!I.empty() && (I.channels() == 3));
 
     // Parameter Setting
-    int maxIter = 15;
+    const int maxIter = 15;
+    const double tol = .0001;
     int iterCount = 0;
-    double tol = .0001;
     double E = 0;
     double pre_E = std::numeric_limits<double>::infinity();
 
-    Decolor obj;
-
-    Mat img;
-
-    img = Mat(I.size(),CV_32FC3);
-    I.convertTo(img,CV_32FC3,1.0/255.0);
-
     // Initialization
+    Decolor obj;
     obj.init();
 
-    vector <double> Cg;
-    vector < vector <double> > polyGrad;
-    vector < vector < int > > comb;
+    Mat img = Mat(I.size(), CV_32FC3);
+    I.convertTo(img, CV_32FC3, 1.0 / 255.0);
 
+    vector <double> Cg;
+    vector <std::vector <double> > polyGrad;
+    vector <Vec3i> comb;
     vector <double> alf;
 
-    obj.grad_system(img,polyGrad,Cg,comb);
-    obj.weak_order(img,alf);
+    obj.grad_system(img, polyGrad, Cg, comb);
+    obj.weak_order(img, alf);
 
     // Solver
-    Mat Mt = Mat((int)polyGrad.size(),(int)polyGrad[0].size(), CV_32FC1);
-    obj.wei_update_matrix(polyGrad,Cg,Mt);
+    Mat Mt(static_cast<int>(polyGrad.size()), static_cast<int>(polyGrad[0].size()), CV_32FC1);
+    obj.wei_update_matrix(polyGrad, Cg, Mt);
 
     vector <double> wei;
-    obj.wei_inti(comb,wei);
+    obj.wei_inti(comb, wei);
 
     //////////////////////////////// main loop starting ////////////////////////////////////////
 
-    while(sqrt(pow(E-pre_E,2)) > tol)
     {
-        iterCount +=1;
-        pre_E = E;
-
-        vector <double> G_pos;
-        vector <double> G_neg;
-
         vector <double> temp;
         vector <double> temp1;
-
-        double val = 0.0;
-        for(unsigned int i=0;i< polyGrad[0].size();i++)
-        {
-            val = 0.0;
-            for(unsigned int j =0;j<polyGrad.size();j++)
-                val = val + (polyGrad[j][i] * wei[j]);
-            temp.push_back(val - Cg[i]);
-            temp1.push_back(val + Cg[i]);
-        }
-
-        double pos = 0.0;
-        double neg = 0.0;
-        for(unsigned int i =0;i<alf.size();i++)
-        {
-            pos = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(obj.sigma,2));
-            neg = ((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(obj.sigma,2));
-            G_pos.push_back(pos);
-            G_neg.push_back(neg);
-        }
-
+        vector <double> temp2;
+        vector <double> G_pos;
+        vector <double> G_neg;
         vector <double> EXPsum;
         vector <double> EXPterm;
-
-        for(unsigned int i = 0;i<G_pos.size();i++)
-            EXPsum.push_back(G_pos[i]+G_neg[i]);
-
-        vector <double> temp2;
-
-        for(unsigned int i=0;i<EXPsum.size();i++)
-        {
-            if(EXPsum[i] == 0)
-                temp2.push_back(1.0);
-            else
-                temp2.push_back(0.0);
-        }
-
-        for(unsigned int i =0; i < G_pos.size();i++)
-            EXPterm.push_back((G_pos[i] - G_neg[i])/(EXPsum[i] + temp2[i]));
-
-        double val1 = 0.0;
         vector <double> wei1;
 
-        for(unsigned int i=0;i< polyGrad.size();i++)
+        while (sqrt(pow(E - pre_E, 2)) > tol)
         {
-            val1 = 0.0;
-            for(unsigned int j =0;j<polyGrad[0].size();j++)
+            iterCount += 1;
+            pre_E = E;
+
+            temp.clear();
+            temp1.clear();
+            temp2.clear();
+            G_pos.clear();
+            G_neg.clear();
+            EXPsum.clear();
+            EXPterm.clear();
+            wei1.clear();
+
+            temp.resize(polyGrad[0].size());
+            temp1.resize(polyGrad[0].size());
+            for (unsigned int i = 0; i < polyGrad[0].size(); i++)
             {
-                val1 = val1 + (Mt.at<float>(i,j) * EXPterm[j]);
+                double val = 0.0;
+                for (unsigned int j = 0; j < polyGrad.size(); j++)
+                    val = val + (polyGrad[j][i] * wei[j]);
+                temp[i] = val - Cg[i];
+                temp1[i] = val + Cg[i];
             }
-            wei1.push_back(val1);
+
+            G_pos.resize(alf.size());
+            G_neg.resize(alf.size());
+            for (unsigned int i = 0; i < alf.size(); i++)
+            {
+                const double pos = ((1 + alf[i]) / 2) * exp((-1.0 * 0.5 * pow(temp[i], 2)) / pow(obj.sigma, 2));
+                const double neg = ((1 - alf[i]) / 2) * exp((-1.0 * 0.5 * pow(temp1[i], 2)) / pow(obj.sigma, 2));
+                G_pos[i] = pos;
+                G_neg[i] = neg;
+            }
+
+            EXPsum.resize(G_pos.size());
+            for (unsigned int i = 0; i < G_pos.size(); i++)
+                EXPsum[i] = (G_pos[i] + G_neg[i]);
+
+            temp2.resize(EXPsum.size());
+            for (unsigned int i = 0; i < EXPsum.size(); i++)
+            {
+                if (EXPsum[i] == 0)
+                    temp2[i] = 1.0;
+                else
+                    temp2[i] = 0.0;
+            }
+
+            EXPterm.resize(G_pos.size());
+            for (unsigned int i = 0; i < G_pos.size(); i++)
+                EXPterm[i] = ((G_pos[i] - G_neg[i]) / (EXPsum[i] + temp2[i]));
+
+            wei1.resize(polyGrad.size());
+            for (unsigned int i = 0; i < polyGrad.size(); i++)
+            {
+                double val1 = 0.0;
+                for (unsigned int j = 0; j < polyGrad[0].size(); j++)
+                {
+                    val1 = val1 + (Mt.at<float>(i, j) * EXPterm[j]);
+                }
+                wei1[i] = val1;
+            }
+
+            for (unsigned int i = 0; i < wei.size(); i++)
+                wei[i] = wei1[i];
+
+            E = obj.energyCalcu(Cg, polyGrad, wei);
+
+            if (iterCount > maxIter)
+                break;
         }
-
-        for(unsigned int i =0;i<wei.size();i++)
-            wei[i] = wei1[i];
-
-        E = obj.energyCalcu(Cg,polyGrad,wei);
-
-        if(iterCount > maxIter)
-            break;
-
-        G_pos.clear();
-        G_neg.clear();
-        temp.clear();
-        temp1.clear();
-        EXPsum.clear();
-        EXPterm.clear();
-        temp2.clear();
-        wei1.clear();
     }
 
-    Mat Gray = Mat::zeros(img.size(),CV_32FC1);
+    Mat Gray = Mat::zeros(img.size(), CV_32FC1);
     obj.grayImContruct(wei, img, Gray);
 
-    Gray.convertTo(dst,CV_8UC1,255);
+    Gray.convertTo(dst, CV_8UC1, 255);
 
     ///////////////////////////////////       Contrast Boosting   /////////////////////////////////
 
-    Mat lab = Mat(img.size(),CV_8UC3);
-    Mat color = Mat(img.size(),CV_8UC3);
-
-    cvtColor(I,lab,COLOR_BGR2Lab);
+    Mat lab;
+    cvtColor(I, lab, COLOR_BGR2Lab);
 
     vector <Mat> lab_channel;
-    split(lab,lab_channel);
+    split(lab, lab_channel);
 
     dst.copyTo(lab_channel[0]);
 
-    merge(lab_channel,lab);
+    merge(lab_channel, lab);
 
-    cvtColor(lab,color_boost,COLOR_Lab2BGR);
+    cvtColor(lab, color_boost, COLOR_Lab2BGR);
 }
