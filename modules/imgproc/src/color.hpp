@@ -427,7 +427,11 @@ void CvtColorLoop(const uchar * src_data, size_t src_step, uchar * dst_data, siz
                   (width * height) / static_cast<double>(1<<16));
 }
 
-#define NEED_IPP (defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700))
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
+#  define NEED_IPP 1
+#else
+#  define NEED_IPP 0
+#endif
 
 #if NEED_IPP
 
