@@ -50,30 +50,30 @@ using namespace cv;
 
 class Decolor
 {
-private:
-    Mat kernelx;
-    Mat kernely;
-    int order;
+    private:
+        Mat kernelx;
+        Mat kernely;
+        int order;
 
-public:
-    float sigma;
-    void init();
+    public:
+        float sigma;
+        void init();
 
-    double energyCalcu(const vector<double> &Cg, const vector<vector<double> > &polyGrad, vector<double> &wei) const;
-    void singleChannelGradx(const Mat &img, Mat& dest) const;
-    void singleChannelGrady(const Mat &img, Mat& dest) const;
-    void gradvector(const Mat &img, vector<double> &grad) const;
-    void colorGrad(const Mat &img, vector<double> &Cg) const;
-    void weak_order(const Mat &img, vector<double> &alf) const;
-    void grad_system(const Mat &img, vector<vector<double> > &polyGrad,
-        vector<double> &Cg, vector<Vec3i> &comb) const;
-    void grayImContruct(const vector<double> &wei, const Mat &img, Mat &Gray) const;
+        double energyCalcu(const vector<double> &Cg, const vector<vector<double> > &polyGrad, vector<double> &wei) const;
+        void singleChannelGradx(const Mat &img, Mat& dest) const;
+        void singleChannelGrady(const Mat &img, Mat& dest) const;
+        void gradvector(const Mat &img, vector<double> &grad) const;
+        void colorGrad(const Mat &img, vector<double> &Cg) const;
+        void weak_order(const Mat &img, vector<double> &alf) const;
+        void grad_system(const Mat &img, vector<vector<double> > &polyGrad,
+            vector<double> &Cg, vector<Vec3i> &comb) const;
+        void grayImContruct(const vector<double> &wei, const Mat &img, Mat &Gray) const;
 
-    static vector<double> product(const vector<Vec3i> &comb, const double initRGB[3]);
-    static void add_vector(vector<Vec3i> &comb, int &idx, int r, int g, int b);
-    static void add_to_vector_poly(vector<vector<double> > &polyGrad, const vector<double> &curGrad, int &idx1);
-    static void wei_update_matrix(const vector<vector<double> > &poly, vector<double> &Cg, Mat &X);
-    static void wei_inti(const vector<Vec3i> &comb, vector<double> &wei);
+        static vector<double> product(const vector<Vec3i> &comb, const double initRGB[3]);
+        static void add_vector(vector<Vec3i> &comb, int &idx, int r, int g, int b);
+        static void add_to_vector_poly(vector<vector<double> > &polyGrad, const vector<double> &curGrad, int &idx1);
+        static void wei_update_matrix(const vector<vector<double> > &poly, vector<double> &Cg, Mat &X);
+        static void wei_inti(const vector<Vec3i> &comb, vector<double> &wei);
 };
 
 int round_num(double a)

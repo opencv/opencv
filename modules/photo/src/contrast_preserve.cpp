@@ -52,6 +52,8 @@ using namespace cv;
 
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC1);
     Mat dst = _dst.getMat();
