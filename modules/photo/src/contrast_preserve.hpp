@@ -76,6 +76,8 @@ class Decolor
         static void wei_inti(const vector<Vec3i> &comb, vector<double> &wei);
 };
 
+int round_num(double a);
+
 int round_num(double a)
 {
     return int(a + 0.5);
@@ -87,7 +89,7 @@ double Decolor::energyCalcu(const vector<double> &Cg, const vector<vector<double
     vector <double> temp;
     vector <double> temp1;
 
-    const auto size = polyGrad[0].size();
+    const vector<double>::size_type size = polyGrad[0].size();
     energy.resize(size);
     temp.resize(size);
     temp1.resize(size);
