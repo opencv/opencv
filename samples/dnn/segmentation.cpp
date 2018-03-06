@@ -15,6 +15,8 @@ const char* keys =
                       "It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet) }"
     "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes. }"
+    "{ colors      | | Optional path to a text file with colors for an every class. "
+                      "An every color is represented with three values from 0 to 255 in BGR channels order. }"
     "{ mean        | | Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces. }"
     "{ scale       | 1 | Preprocess input image by multiplying on a scale factor. }"
     "{ width       |   | Preprocess input image by resizing to a specific width. }"
@@ -32,11 +34,16 @@ using namespace cv;
 using namespace dnn;
 
 std::vector<std::string> classes;
+std::vector<Vec3b> colors;
+
+void showLegend();
+
+void colorizeSegmentation(const Mat &score, Mat &segm);
 
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Use this script to run classification deep learning networks using OpenCV.");
+    parser.about("Use this script to run semantic segmentation deep learning networks using OpenCV.");
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -69,6 +76,25 @@ int main(int argc, char** argv)
         }
     }
 
+    // Open file with colors.
+    if (parser.has("colors"))
+    {
+        std::string file = parser.get<String>("colors");
+        std::ifstream ifs(file.c_str());
+        if (!ifs.is_open())
+            CV_Error(Error::StsError, "File " + file + " not found");
+        std::string line;
+        while (std::getline(ifs, line))
+        {
+            std::istringstream colorStr(line.c_str());
+
+            Vec3b color;
+            for (int i = 0; i < 3 && !colorStr.eof(); ++i)
+                colorStr >> color[i];
+            colors.push_back(color);
+        }
+    }
+
     CV_Assert(parser.has("model"));
     //! [Read and initialize network]
     Net net = readNet(model, config, framework);
@@ -77,7 +103,7 @@ int main(int argc, char** argv)
     //! [Read and initialize network]
 
     // Create a window
-    static const std::string kWinName = "Deep learning image classification in OpenCV";
+    static const std::string kWinName = "Deep learning semantic segmentation in OpenCV";
     namedWindow(kWinName, WINDOW_NORMAL);
 
     //! [Open a video file or an image file or a camera stream]
@@ -107,15 +133,14 @@ int main(int argc, char** argv)
         net.setInput(blob);
         //! [Set input blob]
         //! [Make forward pass]
-        Mat prob = net.forward();
+        Mat score = net.forward();
         //! [Make forward pass]
 
-        //! [Get a class with a highest score]
-        Point classIdPoint;
-        double confidence;
-        minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
-        int classId = classIdPoint.x;
-        //! [Get a class with a highest score]
+        Mat segm;
+        colorizeSegmentation(score, segm);
+
+        resize(segm, segm, frame.size(), 0, 0, INTER_NEAREST);
+        addWeighted(frame, 0.1, segm, 0.9, 0.0, frame);
 
         // Put efficiency information.
         std::vector<double> layersTimes;
@@ -124,13 +149,89 @@ int main(int argc, char** argv)
         std::string label = format("Inference time: %.2f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
-        // Print predicted class.
-        label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
-                                                      classes[classId].c_str()),
-                                   confidence);
-        putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
         imshow(kWinName, frame);
+        if (!classes.empty())
+            showLegend();
     }
     return 0;
+}
+
+void colorizeSegmentation(const Mat &score, Mat &segm)
+{
+    const int rows = score.size[2];
+    const int cols = score.size[3];
+    const int chns = score.size[1];
+
+    if (colors.empty())
+    {
+        // Generate colors.
+        colors.push_back(Vec3b());
+        for (int i = 1; i < chns; ++i)
+        {
+            Vec3b color;
+            for (int j = 0; j < 3; ++j)
+                color[j] = (colors[i - 1][j] + rand() % 256) / 2;
+            colors.push_back(color);
+        }
+    }
+    else if (chns != (int)colors.size())
+    {
+        CV_Error(Error::StsError, format("Number of output classes does not match "
+                                         "number of colors (%d != %d)", chns, colors.size()));
+    }
+
+    Mat maxCl = Mat::zeros(rows, cols, CV_8UC1);
+    Mat maxVal(rows, cols, CV_32FC1, score.data);
+    for (int ch = 1; ch < chns; ch++)
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            const float *ptrScore = score.ptr<float>(0, ch, row);
+            uint8_t *ptrMaxCl = maxCl.ptr<uint8_t>(row);
+            float *ptrMaxVal = maxVal.ptr<float>(row);
+            for (int col = 0; col < cols; col++)
+            {
+                if (ptrScore[col] > ptrMaxVal[col])
+                {
+                    ptrMaxVal[col] = ptrScore[col];
+                    ptrMaxCl[col] = (uchar)ch;
+                }
+            }
+        }
+    }
+
+    segm.create(rows, cols, CV_8UC3);
+    for (int row = 0; row < rows; row++)
+    {
+        const uchar *ptrMaxCl = maxCl.ptr<uchar>(row);
+        Vec3b *ptrSegm = segm.ptr<Vec3b>(row);
+        for (int col = 0; col < cols; col++)
+        {
+            ptrSegm[col] = colors[ptrMaxCl[col]];
+        }
+    }
+}
+
+void showLegend()
+{
+    static const int kBlockHeight = 30;
+    static Mat legend;
+    if (legend.empty())
+    {
+        const int numClasses = (int)classes.size();
+        if ((int)colors.size() != numClasses)
+        {
+            CV_Error(Error::StsError, format("Number of output classes does not match "
+                                             "number of labels (%d != %d)", colors.size(), classes.size()));
+        }
+        legend.create(kBlockHeight * numClasses, 200, CV_8UC3);
+        for (int i = 0; i < numClasses; i++)
+        {
+            Mat block = legend.rowRange(i * kBlockHeight, (i + 1) * kBlockHeight);
+            block.setTo(colors[i]);
+            putText(block, classes[i], Point(0, kBlockHeight / 2), FONT_HERSHEY_SIMPLEX, 0.5, Vec3b(255, 255, 255));
+        }
+        namedWindow("Legend", WINDOW_NORMAL);
+        imshow("Legend", legend);
+    }
 }

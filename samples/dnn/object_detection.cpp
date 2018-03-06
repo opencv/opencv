@@ -1,5 +1,4 @@
 #include <fstream>
-#include <iostream>
 #include <sstream>
 
 #include <opencv2/dnn.hpp>
@@ -54,22 +53,10 @@ int main(int argc, char** argv)
 
     confThreshold = parser.get<float>("thr");
     float scale = parser.get<float>("scale");
+    Scalar mean = parser.get<Scalar>("mean");
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-
-    // Parse mean values.
-    Scalar mean;
-    if (parser.has("mean"))
-    {
-        std::istringstream meanStr(parser.get<String>("mean"));
-        std::vector<float> meanValues;
-        float val;
-        while (meanStr >> val)
-            meanValues.push_back(val);
-        CV_Assert(meanValues.size() == 3);
-        mean = Scalar(meanValues[0], meanValues[1], meanValues[2]);
-    }
 
     // Open file with classes names.
     if (parser.has("classes"))
