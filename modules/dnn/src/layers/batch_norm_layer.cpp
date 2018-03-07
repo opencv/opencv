@@ -32,7 +32,7 @@ public:
     BatchNormLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        CV_Assert(blobs.size() >= 3);
+        CV_Assert(blobs.size() >= 2);
 
         hasWeights = params.get<bool>("has_weight", false);
         hasBias = params.get<bool>("has_bias", false);
@@ -46,8 +46,8 @@ public:
                   blobs[0].type() == CV_32F && blobs[1].type() == CV_32F);
 
         float varMeanScale = 1.f;
-        if (!hasWeights && !hasBias) {
-            CV_Assert(blobs[2].type() == CV_32F);
+        if (!hasWeights && !hasBias && blobs.size() > 2) {
+            CV_Assert(blobs.size() == 3, blobs[2].type() == CV_32F);
             varMeanScale = blobs[2].at<float>(0);
             if (varMeanScale != 0)
                 varMeanScale = 1/varMeanScale;
