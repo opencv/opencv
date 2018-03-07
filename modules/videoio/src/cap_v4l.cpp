@@ -911,7 +911,7 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
             if(returnCode == -1)
                 return -1;
             if(returnCode == 1)
-                break;
+                return 1;
         }
     }
     return 0;
@@ -956,7 +956,7 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 #if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        if(mainloop_v4l2(capture) == -1)
+        if(mainloop_v4l2(capture) != 1)
                 return false;
 #endif
 
@@ -964,7 +964,7 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
       capture->FirstCapture = 0;
    }
 
-   if(mainloop_v4l2(capture) == -1) return false;
+   if(mainloop_v4l2(capture) != 1) return false;
 
    return true;
 }
