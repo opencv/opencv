@@ -2277,6 +2277,20 @@ namespace fisheye
     CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
+    /** @brief Transforms an image to compensate for fisheye lens distortion using field-of-view (FOV) distortion model.
+
+    @param distorted Image with fisheye lens distortion.
+    @param undistorted Output image with compensated fisheye lens distortion.
+    @param w Distortion coefficient.
+    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
+
+    The function transforms an image to compensate for fisheye lens distortion using field-of-view (FOV) distortion model
+    introduced by F. Devernay and O. Faugeras in the paper "Straight lines have to be straight" @cite Devernay2001.
+
+    ![image](pics/undistortImageFOV.jpg)
+    */
+    CV_EXPORTS_W void undistortImageFOV(InputArray distorted, OutputArray undistorted, const float w, InputArray K);
+
     /** @brief Estimates new camera matrix for undistortion or rectification.
 
     @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
