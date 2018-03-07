@@ -306,6 +306,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 }
 
 #ifdef CV_DOXYGEN
+#   undef CV_AVX2
 #   undef CV_SSE2
 #   undef CV_NEON
 #   undef CV_VSX
@@ -329,11 +330,17 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 #endif
 
+#if CV_AVX2
+
+#include "opencv2/core/hal/intrin_avx.hpp"
+
+#endif
+
 //! @addtogroup core_hal_intrin
 //! @{
 
 #ifndef CV_SIMD128
-//! Set to 1 if current compiler supports vector extensions (NEON or SSE is enabled)
+//! Set to 1 if current compiler supports vector extensions (NEON or SSE or VSX is enabled)
 #define CV_SIMD128 0
 #endif
 
@@ -343,10 +350,12 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 
 #ifndef CV_SIMD256
+//! Set to 1 if current compiler supports vector extensions (AVX2 is enabled)
 #define CV_SIMD256 0
 #endif
 
 #ifndef CV_SIMD256_64F
+//! Set to 1 if current intrinsics implementation supports 64-bit float vectors
 #define CV_SIMD256_64F 0
 #endif
 
