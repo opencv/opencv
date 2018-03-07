@@ -95,14 +95,7 @@ public:
 #ifdef HAVE_OPENCL
     virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
     {
-        OCL4DNNSoftmaxConfig config;
-
-        config.in_shape = shape(*inputs[0]);
-        config.axis = axisRaw;
-        config.channels = inputs[0]->size[axisRaw];
-        config.logsoftmax = logSoftMax;
-
-        softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
+        softmaxOp.release();
     }
 
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays itns)
@@ -114,6 +107,18 @@ public:
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
         itns.getUMatVector(internals);
+
+        if (softmaxOp.empty())
+        {
+            OCL4DNNSoftmaxConfig config;
+
+            config.in_shape = shape(inputs[0]);
+            config.axis = axisRaw;
+            config.channels = inputs[0].size[axisRaw];
+            config.logsoftmax = logSoftMax;
+
+            softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
+        }
 
         UMat& src = inputs[0];
         UMat& dstMat = outputs[0];
