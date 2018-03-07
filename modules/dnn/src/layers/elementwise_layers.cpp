@@ -46,8 +46,11 @@
 #include "op_inf_engine.hpp"
 #include "opencv2/imgproc.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include "opencl_kernels_dnn.hpp"
 #include <iostream>
+
+#ifdef HAVE_OPENCL
+#include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
