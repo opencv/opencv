@@ -42,7 +42,6 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include <opencv2/ts/ocl_test.hpp>
 
 namespace opencv_test
 {
@@ -60,21 +59,6 @@ static std::string _tf(TStr filename, bool inTorchDir = true)
         path += "torch/";
     path += filename;
     return findDataFile(path, false);
-}
-
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
-static testing::internal::ParamGenerator<DNNTarget> availableBackends()
-{
-    static std::vector<DNNTarget> targets;
-    if (targets.empty())
-    {
-        targets.push_back(DNN_TARGET_CPU);
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            targets.push_back(DNN_TARGET_OPENCL);
-#endif
-    }
-    return testing::ValuesIn(targets);
 }
 
 TEST(Torch_Importer, simple_read)
@@ -221,7 +205,7 @@ TEST_P(Test_Torch_layers, net_non_spatial)
     runTorchNet("net_non_spatial", GetParam(), "", false, true);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_layers, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_layers, availableDnnTargets());
 
 typedef testing::TestWithParam<DNNTarget> Test_Torch_nets;
 
@@ -323,7 +307,7 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_nets, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_nets, availableDnnTargets());
 
 // TODO: fix OpenCL and add to the rest of tests
 TEST(Torch_Importer, run_paralel)

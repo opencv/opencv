@@ -42,25 +42,8 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/ts/ocl_test.hpp>
 
 namespace opencv_test { namespace {
-
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
-static testing::internal::ParamGenerator<DNNTarget> availableBackends()
-{
-    static std::vector<DNNTarget> targets;
-    if (targets.empty())
-    {
-        targets.push_back(DNN_TARGET_CPU);
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            targets.push_back(DNN_TARGET_OPENCL);
-#endif
-    }
-    return testing::ValuesIn(targets);
-}
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -132,7 +115,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     normAssert(ref, out);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(), availableBackends()));
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(), availableDnnTargets()));
 
 #if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
@@ -232,7 +215,7 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     normAssert(outBatch.rowRange(0, numDetections), ref);
     normAssert(outBatch.rowRange(numDetections, 2 * numDetections).colRange(1, 7), ref.colRange(1, 7));
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, availableDnnTargets());
 
 typedef testing::TestWithParam<DNNTarget> Reproducibility_ResNet50;
 TEST_P(Reproducibility_ResNet50, Accuracy)
@@ -263,7 +246,7 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
         normAssert(ref, out_umats[0], "out_umat_vector");
     }
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50, availableDnnTargets());
 
 typedef testing::TestWithParam<DNNTarget> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
@@ -291,7 +274,7 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1, availableDnnTargets());
 
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {

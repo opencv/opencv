@@ -11,8 +11,6 @@ Test for Tensorflow models loading
 
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/ts/ocl_test.hpp>
 
 namespace opencv_test
 {
@@ -24,21 +22,6 @@ template<typename TString>
 static std::string _tf(TString filename)
 {
     return (getOpenCVExtraDir() + "/dnn/") + filename;
-}
-
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
-static testing::internal::ParamGenerator<DNNTarget> availableBackends()
-{
-    static std::vector<DNNTarget> targets;
-    if (targets.empty())
-    {
-        targets.push_back(DNN_TARGET_CPU);
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            targets.push_back(DNN_TARGET_OPENCL);
-#endif
-    }
-    return testing::ValuesIn(targets);
 }
 
 TEST(Test_TensorFlow, read_inception)
@@ -204,7 +187,7 @@ TEST_P(Test_TensorFlow_layers, reshape)
     runTensorFlowNet("flatten", targetId, true);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, availableDnnTargets());
 
 typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_nets;
 
@@ -302,7 +285,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
     normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref, "", 2.8e-4, 3.4e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableBackends());
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableDnnTargets());
 
 TEST(Test_TensorFlow, defun)
 {
