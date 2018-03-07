@@ -43,8 +43,11 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include "math_functions.hpp"
+
+#ifdef HAVE_OPENCL
+#include "../ocl4dnn/include/math_functions.hpp"
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {

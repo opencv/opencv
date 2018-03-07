@@ -49,18 +49,17 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <assert.h>
-#include "common.hpp"
-#include "ocl4dnn.hpp"
+#include "../include/common.hpp"
+#include "../include/ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
-#include "math_functions.hpp"
-#include "default_kernel_config.hpp"
+#include "../include/math_functions.hpp"
+#include "../include/default_kernel_config.hpp"
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
 #include <direct.h>
 #endif
 
-#ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
 static cv::Mutex kernelConfigMutex;
 typedef std::map<std::string, std::string> kernel_hash_t;
@@ -1863,7 +1862,5 @@ bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
 }
 
 template class OCL4DNNConvSpatial<float>;
-} // namespace ocl4dnn
-}
-}
-#endif // HAVE_OPENCL
+
+}}} // namespace cv::dnn::ocl4dnn
