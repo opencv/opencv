@@ -76,5 +76,7 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(IlmImf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
+ocv_install_3rdparty_licenses(openexr LICENSE AUTHORS.ilmbase AUTHORS.openexr fix_msvc2013_errors.patch)
+
 set(OPENEXR_INCLUDE_PATHS ${OPENEXR_INCLUDE_PATHS} PARENT_SCOPE)
 set(OPENEXR_VERSION "1.7.1" PARENT_SCOPE)
