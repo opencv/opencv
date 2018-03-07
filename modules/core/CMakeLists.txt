@@ -70,3 +70,5 @@ endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
+
+ocv_install_3rdparty_licenses(SoftFloat "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SoftFloat/COPYING.txt")
