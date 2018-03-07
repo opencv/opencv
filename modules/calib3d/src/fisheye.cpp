@@ -540,6 +540,56 @@ void cv::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
     cv::remap(distorted, undistorted, map1, map2, INTER_LINEAR, BORDER_CONSTANT);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// cv::fisheye::undistortImageFOV
+
+void cv::fisheye::undistortImageFOV(InputArray distorted, OutputArray undistorted, const float w, InputArray K)
+{
+    CV_INSTRUMENT_REGION()
+
+    CV_Assert( K.size() == Size(3, 3)       && (K.depth() == CV_32F || K.depth() == CV_64F));
+
+    cv::Vec2d f, c;
+    if (K.depth() == CV_32F)
+    {
+        Matx33f camMat = K.getMat();
+        f = Vec2f(camMat(0, 0), camMat(1, 1));
+        c = Vec2f(camMat(0, 2), camMat(1, 2));
+    }
+    else
+    {
+        Matx33d camMat = K.getMat();
+        f = Vec2d(camMat(0, 0), camMat(1, 1));
+        c = Vec2d(camMat(0, 2), camMat(1, 2));
+    }
+
+    cv::Mat mapX, mapY;
+    mapX.create(distorted.size(),CV_32FC1);
+    mapY.create(distorted.size(),CV_32FC1);
+
+    double rd, ru, distRatio, xu, yu, xd, yd;
+
+    for (int i = 0; i < distorted.cols; i++)
+    {
+        for (int j = 0; j < distorted.rows; j++)
+        {
+            xu = (i - c[0]) / f[0];
+            yu = (j - c[1]) / f[1];
+            ru = sqrt(xu*xu + yu*yu);
+            rd = 1 / w * atan(2*ru*tan(w / 2));
+            distRatio = rd / ru;
+            xd = xu * distRatio;
+            yd = yu * distRatio;
+
+            mapX.at<float>(j, i) = xd * f[0] + c[0];
+            mapY.at<float>(j, i) = yd * f[1] + c[1];
+        }
+    }
+
+    cv::remap(distorted, undistorted, mapX, mapY, INTER_LINEAR);
+    }
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::estimateNewCameraMatrixForUndistortRectify
