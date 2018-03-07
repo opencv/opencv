@@ -82,7 +82,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 
     vector <double> Cg;
     vector < vector <double> > polyGrad;
-    vector < vector < int > > comb;
+    vector <Vec3i> comb;
 
     vector <double> alf;
 
@@ -103,11 +103,11 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
         iterCount +=1;
         pre_E = E;
 
-        vector <double> G_pos;
-        vector <double> G_neg;
+        vector <double> G_pos(alf.size());
+        vector <double> G_neg(alf.size());
 
-        vector <double> temp;
-        vector <double> temp1;
+        vector <double> temp(polyGrad[0].size());
+        vector <double> temp1(polyGrad[0].size());
 
         double val = 0.0;
         for(unsigned int i=0;i< polyGrad[0].size();i++)
@@ -115,8 +115,8 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
             val = 0.0;
             for(unsigned int j =0;j<polyGrad.size();j++)
                 val = val + (polyGrad[j][i] * wei[j]);
-            temp.push_back(val - Cg[i]);
-            temp1.push_back(val + Cg[i]);
+            temp[i] = val - Cg[i];
+            temp1[i] = val + Cg[i];
         }
 
         double pos = 0.0;
@@ -125,31 +125,31 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
         {
             pos = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(obj.sigma,2));
             neg = ((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(obj.sigma,2));
-            G_pos.push_back(pos);
-            G_neg.push_back(neg);
+            G_pos[i] = pos;
+            G_neg[i] = neg;
         }
 
-        vector <double> EXPsum;
-        vector <double> EXPterm;
+        vector <double> EXPsum(G_pos.size());
+        vector <double> EXPterm(G_pos.size());
 
         for(unsigned int i = 0;i<G_pos.size();i++)
-            EXPsum.push_back(G_pos[i]+G_neg[i]);
+            EXPsum[i] = G_pos[i]+G_neg[i];
 
-        vector <double> temp2;
+        vector <double> temp2(EXPsum.size());
 
         for(unsigned int i=0;i<EXPsum.size();i++)
         {
             if(EXPsum[i] == 0)
-                temp2.push_back(1.0);
+                temp2[i] = 1.0;
             else
-                temp2.push_back(0.0);
+                temp2[i] = 0.0;
         }
 
         for(unsigned int i =0; i < G_pos.size();i++)
-            EXPterm.push_back((G_pos[i] - G_neg[i])/(EXPsum[i] + temp2[i]));
+            EXPterm[i] = ((G_pos[i] - G_neg[i])/(EXPsum[i] + temp2[i]));
 
         double val1 = 0.0;
-        vector <double> wei1;
+        vector <double> wei1(polyGrad.size());
 
         for(unsigned int i=0;i< polyGrad.size();i++)
         {
@@ -158,7 +158,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
             {
                 val1 = val1 + (Mt.at<float>(i,j) * EXPterm[j]);
             }
-            wei1.push_back(val1);
+            wei1[i] = val1;
         }
 
         for(unsigned int i =0;i<wei.size();i++)
