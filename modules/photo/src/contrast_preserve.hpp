@@ -58,22 +58,20 @@ class Decolor
     public:
         float sigma;
         void init();
-
-        double energyCalcu(const vector<double> &Cg, const vector<vector<double> > &polyGrad, vector<double> &wei) const;
-        void singleChannelGradx(const Mat &img, Mat& dest) const;
-        void singleChannelGrady(const Mat &img, Mat& dest) const;
-        void gradvector(const Mat &img, vector<double> &grad) const;
-        void colorGrad(const Mat &img, vector<double> &Cg) const;
-        void weak_order(const Mat &img, vector<double> &alf) const;
-        void grad_system(const Mat &img, vector<vector<double> > &polyGrad,
-            vector<double> &Cg, vector<Vec3i> &comb) const;
-        void grayImContruct(const vector<double> &wei, const Mat &img, Mat &Gray) const;
-
-        static vector<double> product(const vector<Vec3i> &comb, const double initRGB[3]);
-        static void add_vector(vector<Vec3i> &comb, int &idx, int r, int g, int b);
-        static void add_to_vector_poly(vector<vector<double> > &polyGrad, const vector<double> &curGrad, int &idx1);
-        static void wei_update_matrix(const vector<vector<double> > &poly, vector<double> &Cg, Mat &X);
-        static void wei_inti(const vector<Vec3i> &comb, vector<double> &wei);
+        vector<double> product(vector <Vec3i> &comb, const double initRGB[3]);
+        double energyCalcu(vector <double> &Cg, vector < vector <double> > &polyGrad, vector <double> &wei);
+        void singleChannelGradx(const Mat &img, Mat& dest);
+        void singleChannelGrady(const Mat &img, Mat& dest);
+        void gradvector(const Mat &img, vector <double> &grad);
+        void colorGrad(Mat img, vector <double> &Cg);
+        void add_vector(vector <Vec3i> &comb, int &idx, int r,int g,int b);
+        void add_to_vector_poly(vector < vector <double> > &polyGrad, vector <double> &curGrad, int &idx1);
+        void weak_order(Mat img, vector <double> &alf);
+        void grad_system(Mat img, vector < vector < double > > &polyGrad,
+                vector < double > &Cg, vector <Vec3i>& comb);
+        void wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X);
+        void wei_inti(vector <Vec3i> &comb, vector <double> &wei);
+        void grayImContruct(vector <double> &wei, Mat img, Mat &Gray);
 };
 
 int round_num(double a);
@@ -83,331 +81,342 @@ int round_num(double a)
     return int(a + 0.5);
 }
 
-double Decolor::energyCalcu(const vector<double> &Cg, const vector<vector<double> > &polyGrad, vector<double> &wei) const
+double Decolor::energyCalcu(vector <double> &Cg, vector < vector <double> > &polyGrad, vector <double> &wei)
 {
-    vector <double> energy;
-    vector <double> temp;
-    vector <double> temp1;
+    const size_t size = polyGrad[0].size();
+    vector <double> energy(size);
+    vector <double> temp(size);
+    vector <double> temp1(size);
 
-    const vector<double>::size_type size = polyGrad[0].size();
-    energy.resize(size);
-    temp.resize(size);
-    temp1.resize(size);
-
-    for (unsigned int i = 0; i< polyGrad[0].size(); i++)
+    double val = 0.0;
+    for(size_t i=0;i< polyGrad[0].size();i++)
     {
-        double val = 0.0;
-        for (unsigned int j = 0; j<polyGrad.size(); j++)
+        val = 0.0;
+        for(size_t j =0;j<polyGrad.size();j++)
             val = val + (polyGrad[j][i] * wei[j]);
-        temp[i] = (val - Cg[i]);
-        temp1[i] = (val + Cg[i]);
+        temp[i] = val - Cg[i];
+        temp1[i] = val + Cg[i];
     }
 
-    for (unsigned int i = 0; i<polyGrad[0].size(); i++)
-        energy[i] = (-1.0*log(exp(-1.0*pow(temp[i], 2) / sigma) + exp(-1.0*pow(temp1[i], 2) / sigma)));
+    for(size_t i=0;i<polyGrad[0].size();i++)
+        energy[i] = -1.0*log(exp(-1.0*pow(temp[i],2)/sigma) + exp(-1.0*pow(temp1[i],2)/sigma));
 
     double sum = 0.0;
-    for (unsigned int i = 0; i<polyGrad[0].size(); i++)
-        sum += energy[i];
+    for(size_t i=0;i<polyGrad[0].size();i++)
+        sum +=energy[i];
 
-    return (sum / polyGrad[0].size());
+    return (sum/polyGrad[0].size());
 
 }
 
 void Decolor::init()
 {
-    kernelx = Mat(1, 2, CV_32FC1);
-    kernely = Mat(2, 1, CV_32FC1);
-    kernelx.at<float>(0, 0) = 1.0;
-    kernelx.at<float>(0, 1) = -1.0;
-    kernely.at<float>(0, 0) = 1.0;
-    kernely.at<float>(1, 0) = -1.0;
+    kernelx = Mat(1,2, CV_32FC1);
+    kernely = Mat(2,1, CV_32FC1);
+    kernelx.at<float>(0,0)=1.0;
+    kernelx.at<float>(0,1)=-1.0;
+    kernely.at<float>(0,0)=1.0;
+    kernely.at<float>(1,0)=-1.0;
     order = 2;
     sigma = 0.02f;
 }
 
-vector<double> Decolor::product(const vector <Vec3i> &comb, const double initRGB[3])
+vector<double> Decolor::product(vector <Vec3i> &comb, const double initRGB[3])
 {
     vector <double> res(comb.size());
-    for (unsigned int i = 0; i<comb.size(); i++)
+    double dp;
+    for (size_t i=0;i<comb.size();i++)
     {
-        double dp = 0.0;
-        for (int j = 0; j<3; j++)
+        dp = 0.0;
+        for(int j=0;j<3;j++)
             dp = dp + (comb[i][j] * initRGB[j]);
         res[i] = dp;
     }
     return res;
 }
 
-void Decolor::singleChannelGradx(const Mat &img, Mat& dest) const
+void Decolor::singleChannelGradx(const Mat &img, Mat& dest)
 {
-    const int w = img.cols;
-    const Point anchor(kernelx.cols - kernelx.cols / 2 - 1, kernelx.rows - kernelx.rows / 2 - 1);
+    int w=img.size().width;
+    int h=img.size().height;
+    Point anchor(kernelx.cols - kernelx.cols/2 - 1, kernelx.rows - kernelx.rows/2 - 1);
     filter2D(img, dest, -1, kernelx, anchor, 0.0, BORDER_CONSTANT);
-    dest.col(w - 1) = 0.0;
+    for(int i=0;i<h;i++)
+        dest.at<float>(i,w-1)=0.0;
 }
 
-void Decolor::singleChannelGrady(const Mat &img, Mat& dest) const
+void Decolor::singleChannelGrady(const Mat &img, Mat& dest)
 {
-    const int h = img.rows;
-    const Point anchor(kernely.cols - kernely.cols / 2 - 1, kernely.rows - kernely.rows / 2 - 1);
+    int w=img.size().width;
+    int h=img.size().height;
+    Point anchor(kernely.cols - kernely.cols/2 - 1, kernely.rows - kernely.rows/2 - 1);
     filter2D(img, dest, -1, kernely, anchor, 0.0, BORDER_CONSTANT);
-    dest.row(h - 1) = 0.0;
+    for(int j=0;j<w;j++)
+        dest.at<float>(h-1,j)=0.0;
 }
 
-void Decolor::gradvector(const Mat &img, vector <double> &grad) const
+void Decolor::gradvector(const Mat &img, vector <double> &grad)
 {
     Mat dest;
     Mat dest1;
-    singleChannelGradx(img, dest);
-    singleChannelGrady(img, dest1);
+    singleChannelGradx(img,dest);
+    singleChannelGrady(img,dest1);
 
-    Mat d_trans = dest.t();
-    Mat d1_trans = dest1.t();
+    Mat d_trans=dest.t();
+    Mat d1_trans=dest1.t();
 
-    const int height = d_trans.rows;
-    const int width = d_trans.cols;
+    int height = d_trans.size().height;
+    int width = d_trans.size().width;
 
     grad.resize(width * height * 2);
 
-    for (int i = 0; i<height; i++)
-        for (int j = 0; j<width; j++)
-            grad[i*height + j] = (d_trans.at<float>(i, j));
+    for(int i=0;i<height;i++)
+        for(int j=0;j<width;j++)
+            grad[i*height + j] = d_trans.at<float>(i, j);
 
     const int offset = width * height;
-    for (int i = 0; i<height; i++)
-        for (int j = 0; j<width; j++)
-            grad[offset + i * height + j] = (d1_trans.at<float>(i, j));
+    for(int i=0;i<height;i++)
+        for(int j=0;j<width;j++)
+            grad[offset + i * height + j] = d1_trans.at<float>(i, j);
 }
 
-void Decolor::colorGrad(const Mat &img, vector<double> &Cg) const
+void Decolor::colorGrad(Mat img, vector <double> &Cg)
 {
-    Mat lab = Mat(img.size(), CV_32FC3);
 
-    cvtColor(img, lab, COLOR_BGR2Lab);
+    Mat lab;
+
+    cvtColor(img,lab,COLOR_BGR2Lab);
 
     vector <Mat> lab_channel;
-    split(lab, lab_channel);
+    split(lab,lab_channel);
 
     vector <double> ImL;
     vector <double> Ima;
     vector <double> Imb;
 
-    gradvector(lab_channel[0], ImL);
-    gradvector(lab_channel[1], Ima);
-    gradvector(lab_channel[2], Imb);
+    gradvector(lab_channel[0],ImL);
+    gradvector(lab_channel[1],Ima);
+    gradvector(lab_channel[2],Imb);
 
     Cg.resize(ImL.size());
-    for (unsigned int i = 0; i<ImL.size(); i++)
+    double res =0.0;
+    for(size_t i=0;i<ImL.size();i++)
     {
-        const double res = sqrt(pow(ImL[i], 2) + pow(Ima[i], 2) + pow(Imb[i], 2)) / 100;
+        res=sqrt(pow(ImL[i],2) + pow(Ima[i],2) + pow(Imb[i],2))/100;
         Cg[i] = res;
     }
 }
 
-void Decolor::add_vector(vector<Vec3i> &comb, int &idx, int r, int g, int b)
+void Decolor::add_vector(vector <Vec3i> &comb, int &idx, int r,int g,int b)
 {
     comb.push_back(Vec3i(r, g, b));
     idx++;
 }
 
-void Decolor::add_to_vector_poly(vector<vector<double> > &polyGrad, const vector<double> &curGrad, int &idx1)
+void Decolor::add_to_vector_poly(vector < vector <double> > &polyGrad, vector <double> &curGrad, int &idx1)
 {
     polyGrad.push_back(curGrad);
     idx1++;
 }
 
-void Decolor::weak_order(const Mat &img, vector <double> &alf) const
+void Decolor::weak_order(Mat img, vector <double> &alf)
 {
-    const int h = img.size().height;
-    const int w = img.size().width;
-    if ((h + w) > 800)
+    int h = img.size().height;
+    int w = img.size().width;
+    double sizefactor;
+    if((h + w) > 800)
     {
-        const double sizefactor = 800.0 / (h + w);
-        resize(img, img, Size(round_num(h*sizefactor), round_num(w*sizefactor)));
+        sizefactor = (double)800/(h+w);
+        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)));
     }
 
-    Mat curIm = Mat(img.size(), CV_32FC1);
-    Mat rgb_channel[3];
-    split(img, rgb_channel);
+    Mat curIm = Mat(img.size(),CV_32FC1);
+    vector <Mat> rgb_channel;
+    split(img,rgb_channel);
 
     vector <double> Rg, Gg, Bg;
-    gradvector(rgb_channel[2], Rg);
-    gradvector(rgb_channel[1], Gg);
-    gradvector(rgb_channel[0], Bg);
+    gradvector(rgb_channel[2],Rg);
+    gradvector(rgb_channel[1],Gg);
+    gradvector(rgb_channel[0],Bg);
 
     vector <double> t1(Rg.size()), t2(Rg.size()), t3(Rg.size());
     vector <double> tmp1(Rg.size()), tmp2(Rg.size()), tmp3(Rg.size());
 
-    const double level = .05;
+    double level = .05;
 
-    for (unsigned int i = 0; i<Rg.size(); i++)
+    for(unsigned int i=0;i<Rg.size();i++)
     {
-        if (Rg[i] > level)
-            t1[i] = (1.0);
+        if(Rg[i] > level)
+            t1[i] = 1.0;
         else
-            t1[i] = (0.0);
+            t1[i] = 0.0;
 
-        if (Gg[i] > level)
-            t2[i] = (1.0);
+        if(Gg[i] > level)
+            t2[i] = 1.0;
         else
-            t2[i] = (0.0);
+            t2[i] = 0.0;
 
-        if (Bg[i] > level)
-            t3[i] = (1.0);
+        if(Bg[i] > level)
+            t3[i] = 1.0;
         else
-            t3[i] = (0.0);
+            t3[i] = 0.0;
 
-        if (Rg[i] < -1.0*level)
-            tmp1[i] = (1.0);
+        if(Rg[i] < -1.0*level)
+            tmp1[i] = 1.0;
         else
-            tmp1[i] = (0.0);
+            tmp1[i] = 0.0;
 
-        if (Gg[i] < -1.0*level)
-            tmp2[i] = (1.0);
+        if(Gg[i] < -1.0*level)
+            tmp2[i] = 1.0;
         else
-            tmp2[i] = (0.0);
+            tmp2[i] = 0.0;
 
-        if (Bg[i] < -1.0*level)
-            tmp3[i] = (1.0);
+        if(Bg[i] < -1.0*level)
+            tmp3[i] = 1.0;
         else
-            tmp3[i] = (0.0);
+            tmp3[i] = 0.0;
     }
 
     alf.resize(Rg.size());
-    for (unsigned int i = 0; i < Rg.size(); i++)
+    for(size_t i =0 ;i < Rg.size();i++)
         alf[i] = (t1[i] * t2[i] * t3[i]);
 
-    for (unsigned int i = 0; i < Rg.size(); i++)
+    for(size_t i =0 ;i < Rg.size();i++)
         alf[i] -= tmp1[i] * tmp2[i] * tmp3[i];
 
-    /*
-    double sum = 0.0;
-    for (unsigned int i = 0; i<alf.size(); i++)
-    sum += abs(alf[i]);
-    sum = 100.0 * sum / alf.size();*/
+    double sum =0.0;
+    for(unsigned int i=0;i<alf.size();i++)
+        sum += abs(alf[i]);
+
+    sum = (double)100*sum/alf.size();
+
+    Rg.clear(); Gg.clear(); Bg.clear();
+    t1.clear(); t2.clear(); t3.clear();
+    tmp1.clear(); tmp2.clear(); tmp3.clear();
 }
 
-void Decolor::grad_system(const Mat &img, vector<vector<double> > &polyGrad,
-    vector<double> &Cg, vector<Vec3i> &comb) const
+void Decolor::grad_system(Mat img, vector < vector < double > > &polyGrad,
+        vector < double > &Cg, vector <Vec3i>& comb)
 {
     int h = img.size().height;
     int w = img.size().width;
 
-    if ((h + w) > 800)
+    double sizefactor;
+    if((h + w) > 800)
     {
-        const double sizefactor = 800.0 / (h + w);
-        resize(img, img, Size(round_num(h*sizefactor), round_num(w*sizefactor)));
+        sizefactor = (double)800/(h+w);
+        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)));
     }
 
     h = img.size().height;
     w = img.size().width;
-    colorGrad(img, Cg);
+    colorGrad(img,Cg);
 
-    Mat curIm = Mat(img.size(), CV_32FC1);
-    Mat rgb_channel[3];
-    split(img, rgb_channel);
+    Mat curIm = Mat(img.size(),CV_32FC1);
+    vector <Mat> rgb_channel;
+    split(img,rgb_channel);
 
     int idx = 0, idx1 = 0;
-    for (int r = 0; r <= order; r++)
-        for (int g = 0; g <= order; g++)
-            for (int b = 0; b <= order; b++)
+    for(int r=0 ;r <=order; r++)
+        for(int g=0; g<=order;g++)
+            for(int b =0; b <=order;b++)
             {
-                if ((r + g + b) <= order && (r + g + b) > 0)
+                if((r+g+b)<=order && (r+g+b) > 0)
                 {
-                    add_vector(comb, idx, r, g, b);
-                    for (int i = 0; i<h; i++)
-                        for (int j = 0; j<w; j++)
-                            curIm.at<float>(i, j) =
-                            pow(rgb_channel[2].at<float>(i, j), r)*
-                            pow(rgb_channel[1].at<float>(i, j), g)*
-                            pow(rgb_channel[0].at<float>(i, j), b);
+                    add_vector(comb,idx,r,g,b);
+                    for(int i = 0;i<h;i++)
+                        for(int j=0;j<w;j++)
+                            curIm.at<float>(i,j)=
+                                pow(rgb_channel[2].at<float>(i,j),r)*pow(rgb_channel[1].at<float>(i,j),g)*
+                                pow(rgb_channel[0].at<float>(i,j),b);
                     vector <double> curGrad;
-                    gradvector(curIm, curGrad);
-                    add_to_vector_poly(polyGrad, curGrad, idx1);
+                    gradvector(curIm,curGrad);
+                    add_to_vector_poly(polyGrad,curGrad,idx1);
                 }
             }
 }
 
-void Decolor::wei_update_matrix(const vector<vector<double> > &poly, vector<double> &Cg, Mat &X)
+void Decolor::wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X)
 {
-    const int size = static_cast<int>(poly.size());
-    const int size0 = static_cast<int>(poly[0].size());
+    int size = static_cast<int>(poly.size()), size0 = static_cast<int>(poly[0].size());
     Mat P = Mat(size, size0, CV_32FC1);
+    Mat A = Mat(size, size, CV_32FC1);
 
     for (int i = 0; i < size; i++)
-        for (int j = 0; j < size0; j++)
-            P.at<float>(i, j) = static_cast<float>(poly[i][j]);
+        for (int j = 0; j < size0;j++)
+            P.at<float>(i,j) = (float) poly[i][j];
 
-    const Mat P_trans = P.t();
+    Mat P_trans = P.t();
     Mat B = Mat(size, size0, CV_32FC1);
-    for (int i = 0; i < size; i++)
+    for(int i =0;i < size;i++)
     {
-        for (int j = 0, end = static_cast<int>(Cg.size()); j < end; j++)
-            B.at<float>(i, j) = static_cast<float>(poly[i][j] * Cg[j]);
+        for(int j = 0, end = (int)Cg.size(); j < end;j++)
+            B.at<float>(i,j) = (float) (poly[i][j] * Cg[j]);
     }
 
-    const Mat A = P * P_trans;
+    A = P*P_trans;
     solve(A, B, X, DECOMP_NORMAL);
+
 }
 
-void Decolor::wei_inti(const vector<Vec3i> &comb, vector<double> &wei)
+void Decolor::wei_inti(vector <Vec3i> &comb, vector <double> &wei)
 {
     double initRGB[3] = { .33, .33, .33 };
-    wei = product(comb, initRGB);
 
-    vector<int> sum(comb.size());
+    wei = product(comb,initRGB);
 
-    for (unsigned int i = 0; i<comb.size(); i++)
+    vector <int> sum(comb.size());
+
+    for(unsigned int i=0;i<comb.size();i++)
         sum[i] = (comb[i][0] + comb[i][1] + comb[i][2]);
 
-    for (unsigned int i = 0; i<sum.size(); i++)
+    for(unsigned int i=0;i<sum.size();i++)
     {
-        if (sum[i] == 1)
+        if(sum[i] == 1)
             wei[i] = wei[i] * double(1);
         else
             wei[i] = wei[i] * double(0);
     }
+
+    sum.clear();
+
 }
 
-void Decolor::grayImContruct(const vector<double> &wei, const Mat &img, Mat &Gray) const
+void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray)
 {
-    const int h = img.rows;
-    const int w = img.cols;
+    int h=img.size().height;
+    int w=img.size().width;
 
-    Mat rgb_channel[3];
-    split(img, rgb_channel);
+    vector <Mat> rgb_channel;
+    split(img,rgb_channel);
 
-    int kk = 0;
+    int kk =0;
 
-    for (int r = 0; r <= order; r++)
-        for (int g = 0; g <= order; g++)
-            for (int b = 0; b <= order; b++)
-                if ((r + g + b) <= order && (r + g + b) > 0)
+    for(int r =0;r<=order;r++)
+        for(int g=0;g<=order;g++)
+            for(int b=0;b<=order;b++)
+                if((r + g + b) <=order && (r+g+b) > 0)
                 {
-                    for (int i = 0; i < h; i++)
-                        for (int j = 0; j < w; j++)
-                            Gray.at<float>(i, j) =
-                            Gray.at<float>(i, j) +
-                            static_cast<float>(wei[kk]) *
-                            pow(rgb_channel[2].at<float>(i, j), r)*
-                            pow(rgb_channel[1].at<float>(i, j), g)*
-                            pow(rgb_channel[0].at<float>(i, j), b);
+                    for(int i = 0;i<h;i++)
+                        for(int j=0;j<w;j++)
+                            Gray.at<float>(i,j)=Gray.at<float>(i,j) +
+                                (float) wei[kk]*pow(rgb_channel[2].at<float>(i,j),r)*pow(rgb_channel[1].at<float>(i,j),g)*
+                                pow(rgb_channel[0].at<float>(i,j),b);
 
-                    kk = kk + 1;
+                    kk=kk+1;
                 }
 
     float minval = FLT_MAX;
     float maxval = -FLT_MAX;
 
-    for (int i = 0; i<h; i++)
-        for (int j = 0; j<w; j++)
-        {
-            if (Gray.at<float>(i, j) < minval)
-                minval = Gray.at<float>(i, j);
+    for(int i=0;i<h;i++)
+        for(int j =0;j<w;j++)
+       {
+            if(Gray.at<float>(i,j) < minval)
+                minval = Gray.at<float>(i,j);
 
-            if (Gray.at<float>(i, j) > maxval)
-                maxval = Gray.at<float>(i, j);
+            if(Gray.at<float>(i,j) > maxval)
+                maxval = Gray.at<float>(i,j);
         }
 
     Gray -= minval;
