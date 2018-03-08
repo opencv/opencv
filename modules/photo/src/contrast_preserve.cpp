@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "math.h"
+#include <cmath>
 #include <vector>
 #include <limits>
 #include "contrast_preserve.hpp"

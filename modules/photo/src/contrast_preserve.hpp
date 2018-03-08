@@ -41,9 +41,8 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "math.h"
+#include <cmath>
 #include <vector>
-#include <limits>
 
 using namespace std;
 using namespace cv;
