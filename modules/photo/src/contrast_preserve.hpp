@@ -56,21 +56,22 @@ class Decolor
 
     public:
         float sigma;
-        void init();
-        vector<double> product(vector <Vec3i> &comb, const double initRGB[3]);
-        double energyCalcu(vector <double> &Cg, vector < vector <double> > &polyGrad, vector <double> &wei);
-        void singleChannelGradx(const Mat &img, Mat& dest);
-        void singleChannelGrady(const Mat &img, Mat& dest);
+
+        Decolor();
+        static vector<double> product(vector <Vec3i> &comb, const double initRGB[3]);
+        double energyCalcu(vector <double> &Cg, const vector < vector <double> > &polyGrad, vector <double> &wei) const;
+        void singleChannelGradx(const Mat &img, Mat& dest) const;
+        void singleChannelGrady(const Mat &img, Mat& dest) const;
         void gradvector(const Mat &img, vector <double> &grad);
         void colorGrad(Mat img, vector <double> &Cg);
-        void add_vector(vector <Vec3i> &comb, int &idx, int r,int g,int b);
-        void add_to_vector_poly(vector < vector <double> > &polyGrad, vector <double> &curGrad, int &idx1);
+        static void add_vector(vector <Vec3i> &comb, int &idx, int r,int g,int b);
+        static void add_to_vector_poly(vector < vector <double> > &polyGrad, vector <double> &curGrad, int &idx1);
         void weak_order(Mat img, vector <double> &alf);
         void grad_system(Mat img, vector < vector < double > > &polyGrad,
                 vector < double > &Cg, vector <Vec3i>& comb);
-        void wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X);
+        static void wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X);
         void wei_inti(vector <Vec3i> &comb, vector <double> &wei);
-        void grayImContruct(vector <double> &wei, Mat img, Mat &Gray);
+        void grayImContruct(vector <double> &wei, Mat img, Mat &Gray) const;
 };
 
 int round_num(double a);
@@ -80,7 +81,7 @@ int round_num(double a)
     return int(a + 0.5);
 }
 
-double Decolor::energyCalcu(vector <double> &Cg, vector < vector <double> > &polyGrad, vector <double> &wei)
+double Decolor::energyCalcu(vector <double> &Cg, const vector < vector <double> > &polyGrad, vector <double> &wei) const
 {
     const size_t size = polyGrad[0].size();
     vector <double> energy(size);
@@ -108,7 +109,7 @@ double Decolor::energyCalcu(vector <double> &Cg, vector < vector <double> > &pol
 
 }
 
-void Decolor::init()
+Decolor::Decolor()
 {
     kernelx = Mat(1,2, CV_32FC1);
     kernely = Mat(2,1, CV_32FC1);
@@ -134,7 +135,7 @@ vector<double> Decolor::product(vector <Vec3i> &comb, const double initRGB[3])
     return res;
 }
 
-void Decolor::singleChannelGradx(const Mat &img, Mat& dest)
+void Decolor::singleChannelGradx(const Mat &img, Mat& dest) const
 {
     int w=img.size().width;
     int h=img.size().height;
@@ -144,7 +145,7 @@ void Decolor::singleChannelGradx(const Mat &img, Mat& dest)
         dest.at<float>(i,w-1)=0.0;
 }
 
-void Decolor::singleChannelGrady(const Mat &img, Mat& dest)
+void Decolor::singleChannelGrady(const Mat &img, Mat& dest) const
 {
     int w=img.size().width;
     int h=img.size().height;
@@ -381,7 +382,7 @@ void Decolor::wei_inti(vector <Vec3i> &comb, vector <double> &wei)
 
 }
 
-void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray)
+void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray) const
 {
     int h=img.size().height;
     int w=img.size().width;
