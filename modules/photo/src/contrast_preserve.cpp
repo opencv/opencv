@@ -123,16 +123,16 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
             G_pos[i] = pos;
             G_neg[i] = neg;
         }
-        
-        for(size_t i=0; i<G_pos.size(); i++)
-            EXPsum[i] = G_pos[i]+G_neg[i];               
 
-        for(size_t i=0; i<EXPsum.size(); i++)        
-            temp2[i] = (EXPsum[i] == 0) ? 1.0 : 0.0;        
+        for(size_t i=0; i<G_pos.size(); i++)
+            EXPsum[i] = G_pos[i]+G_neg[i];
+
+        for(size_t i=0; i<EXPsum.size(); i++)
+            temp2[i] = (EXPsum[i] == 0) ? 1.0 : 0.0;
 
         for(size_t i=0; i<G_pos.size(); i++)
             EXPterm[i] = (G_pos[i] - G_neg[i])/(EXPsum[i] + temp2[i]);
-        
+
         for(size_t i=0; i<polyGrad.size(); i++)
         {
             double val1 = 0.0;
