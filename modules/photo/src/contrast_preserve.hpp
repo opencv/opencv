@@ -59,19 +59,19 @@ class Decolor
 
         Decolor();
         static vector<double> product(const vector <Vec3i> &comb, const double initRGB[3]);
-        double energyCalcu(vector <double> &Cg, const vector < vector <double> > &polyGrad, vector <double> &wei) const;
+        double energyCalcu(const vector <double> &Cg, const vector < vector <double> > &polyGrad, const vector <double> &wei) const;
         void singleChannelGradx(const Mat &img, Mat& dest) const;
         void singleChannelGrady(const Mat &img, Mat& dest) const;
         void gradvector(const Mat &img, vector <double> &grad) const;
         void colorGrad(const Mat &img, vector <double> &Cg) const;
         static void add_vector(vector <Vec3i> &comb, int &idx, int r,int g,int b);
-        static void add_to_vector_poly(vector < vector <double> > &polyGrad, vector <double> &curGrad, int &idx1);
+        static void add_to_vector_poly(vector < vector <double> > &polyGrad, const vector <double> &curGrad, int &idx1);
         void weak_order(const Mat &img, vector <double> &alf) const;
         void grad_system(const Mat &img, vector < vector < double > > &polyGrad,
                 vector < double > &Cg, vector <Vec3i>& comb) const;
-        static void wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X);
-    static void wei_inti(vector <Vec3i> &comb, vector <double> &wei);
-        void grayImContruct(vector <double> &wei, Mat img, Mat &Gray) const;
+        static void wei_update_matrix(const vector < vector <double> > &poly, const vector <double> &Cg, Mat &X);
+        static void wei_inti(const vector <Vec3i> &comb, vector <double> &wei);
+        void grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) const;
 };
 
 int round_num(double a);
@@ -81,7 +81,7 @@ int round_num(double a)
     return int(a + 0.5);
 }
 
-double Decolor::energyCalcu(vector <double> &Cg, const vector < vector <double> > &polyGrad, vector <double> &wei) const
+double Decolor::energyCalcu(const vector <double> &Cg, const vector < vector <double> > &polyGrad, const vector <double> &wei) const
 {
     const size_t size = polyGrad[0].size();
     vector <double> energy(size);
@@ -205,7 +205,7 @@ void Decolor::add_vector(vector <Vec3i> &comb, int &idx, int r,int g,int b)
     idx++;
 }
 
-void Decolor::add_to_vector_poly(vector < vector <double> > &polyGrad, vector <double> &curGrad, int &idx1)
+void Decolor::add_to_vector_poly(vector < vector <double> > &polyGrad, const vector <double> &curGrad, int &idx1)
 {
     polyGrad.push_back(curGrad);
     idx1++;
@@ -293,18 +293,17 @@ void Decolor::grad_system(const Mat &img, vector < vector < double > > &polyGrad
             }
 }
 
-void Decolor::wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X)
+void Decolor::wei_update_matrix(const vector < vector <double> > &poly, const vector <double> &Cg, Mat &X)
 {
     const int size = static_cast<int>(poly.size());
     const int size0 = static_cast<int>(poly[0].size());
     Mat P = Mat(size, size0, CV_32FC1);
-    Mat A = Mat(size, size, CV_32FC1);
 
     for (int i = 0; i < size; i++)
         for (int j = 0; j < size0;j++)
             P.at<float>(i,j) = static_cast<float>(poly[i][j]);
 
-    Mat P_trans = P.t();
+    const Mat P_trans = P.t();
     Mat B = Mat(size, size0, CV_32FC1);
     for(int i =0;i < size;i++)
     {
@@ -312,12 +311,12 @@ void Decolor::wei_update_matrix(vector < vector <double> > &poly, vector <double
             B.at<float>(i,j) = static_cast<float>(poly[i][j] * Cg[j]);
     }
 
-    A = P*P_trans;
+    Mat A = P*P_trans;
     solve(A, B, X, DECOMP_NORMAL);
 
 }
 
-void Decolor::wei_inti(vector <Vec3i> &comb, vector <double> &wei)
+void Decolor::wei_inti(const vector <Vec3i> &comb, vector <double> &wei)
 {
     double initRGB[3] = { .33, .33, .33 };
 
@@ -340,7 +339,7 @@ void Decolor::wei_inti(vector <Vec3i> &comb, vector <double> &wei)
 
 }
 
-void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray) const
+void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) const
 {
     const int h = img.size().height;
     const int w = img.size().width;
