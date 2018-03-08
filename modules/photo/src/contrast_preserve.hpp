@@ -363,18 +363,8 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
                     kk=kk+1;
                 }
 
-    float minval = FLT_MAX;
-    float maxval = -FLT_MAX;
-
-    for(int i=0;i<h;i++)
-        for(int j =0;j<w;j++)
-       {
-            if(Gray.at<float>(i,j) < minval)
-                minval = Gray.at<float>(i,j);
-
-            if(Gray.at<float>(i,j) > maxval)
-                maxval = Gray.at<float>(i,j);
-        }
+    double minval, maxval;
+    minMaxLoc(Gray, &minval, &maxval);
 
     Gray -= minval;
     Gray /= maxval - minval;
