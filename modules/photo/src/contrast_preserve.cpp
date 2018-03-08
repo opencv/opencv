@@ -75,7 +75,6 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 
     // Initialization
     Decolor obj;
-    obj.init();
 
     vector <double> Cg;
     vector < vector <double> > polyGrad;
