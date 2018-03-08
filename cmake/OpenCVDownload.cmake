@@ -34,9 +34,9 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 function(ocv_download)
   cmake_parse_arguments(DL "UNPACK;RELATIVE_URL" "FILENAME;HASH;DESTINATION_DIR;ID;STATUS" "URL" ${ARGN})
 
-  macro(ocv_download_log)
+  function(ocv_download_log)
     file(APPEND "${OPENCV_DOWNLOAD_LOG}" "${ARGN}\n")
-  endmacro()
+  endfunction()
 
   ocv_assert(DL_FILENAME)
   ocv_assert(DL_HASH)
