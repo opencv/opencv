@@ -43,8 +43,8 @@
 
 namespace opencv_test { namespace {
 
-TEST(Photo_Decolor, regression)
-{
+    TEST(Photo_Decolor, regression)
+    {
         string folder = string(cvtest::TS::ptr()->get_data_path()) + "decolor/";
         string original_path = folder + "color_image_1.png";
 
@@ -63,6 +63,6 @@ TEST(Photo_Decolor, regression)
         Mat reference_boost = imread(folder + "boost_reference.png");
         double boost_psnr = cvtest::PSNR(reference_boost, color_boost);
         EXPECT_GT(boost_psnr, 60.0);
-}
+    }
 
 }} // namespace
