@@ -70,8 +70,8 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     double E = 0;
     double pre_E = std::numeric_limits<double>::infinity();
 
-    Mat img = Mat(I.size(),CV_32FC3);
-    I.convertTo(img,CV_32FC3,1.0/255.0);
+    Mat img;
+    I.convertTo(img, CV_32FC3, 1.0/255.0);
 
     // Initialization
     Decolor obj;
