@@ -41,11 +41,8 @@
 
 #ifndef _OPENCV_LIBDNN_COMMON_HPP_
 #define _OPENCV_LIBDNN_COMMON_HPP_
-#include "../../precomp.hpp"
 #include "../../caffe/glog_emulator.hpp"
 #include <opencv2/core/opencl/runtime/opencl_core.hpp>
-
-#ifdef HAVE_OPENCL
 
 // Macro to select the single (_float) or double (_double) precision kernel
 #define CL_KERNEL_SELECT(kernel) kernel "_float"
@@ -58,5 +55,4 @@
 
 bool clOptionSupport(cv::String option);
 
-#endif // HAVE_OPENCL
 #endif

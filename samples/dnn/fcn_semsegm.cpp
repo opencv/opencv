@@ -113,7 +113,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    resize(img, img, Size(500, 500));       //FCN accepts 500x500 BGR-images
+    resize(img, img, Size(500, 500), 0, 0, INTER_LINEAR_EXACT);       //FCN accepts 500x500 BGR-images
     Mat inputBlob = blobFromImage(img, 1, Size(), Scalar(), false);   //Convert Mat to batch of images
     //! [Prepare blob]
 

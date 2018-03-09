@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 //#define DUMP
 
@@ -224,7 +222,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, HOG, ALL_DEVICES);
 */
 //============== caltech hog tests =====================//
 
-struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
+struct CalTech : public ::testing::TestWithParam<tuple<cv::cuda::DeviceInfo, std::string> >
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Mat img;
@@ -272,7 +270,7 @@ INSTANTIATE_TEST_CASE_P(detect, CalTech, testing::Combine(ALL_DEVICES,
 
 
 //------------------------variable GPU HOG Tests------------------------//
-struct Hog_var : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
+struct Hog_var : public ::testing::TestWithParam<tuple<cv::cuda::DeviceInfo, std::string> >
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Mat img, c_img;
@@ -330,7 +328,7 @@ CUDA_TEST_P(Hog_var, HOG)
 INSTANTIATE_TEST_CASE_P(detect, Hog_var, testing::Combine(ALL_DEVICES,
     ::testing::Values<std::string>("/hog/road.png")));
 
-struct Hog_var_cell : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
+struct Hog_var_cell : public ::testing::TestWithParam<tuple<cv::cuda::DeviceInfo, std::string> >
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Mat img, c_img, c_img2, c_img3, c_img4;
@@ -560,6 +558,6 @@ CUDA_TEST_P(LBP_classify, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, LBP_classify,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
-} // namespace
 
+}} // namespace
 #endif // HAVE_CUDA

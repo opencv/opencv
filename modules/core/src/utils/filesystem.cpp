@@ -25,6 +25,7 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#undef NOMINMAX
 #define NOMINMAX
 #include <windows.h>
 #include <direct.h>
@@ -40,6 +41,8 @@
 #include <unistd.h>
 #include <errno.h>
 #endif
+
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 namespace cv { namespace utils { namespace fs {
 
@@ -79,6 +82,8 @@ cv::String join(const cv::String& base, const cv::String& path)
     }
     return result;
 }
+
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 bool exists(const cv::String& path)
 {
@@ -511,6 +516,14 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
     return cache_path;
 }
 
-}}} // namespace
-
+#else
+#define NOT_IMPLEMENTED CV_ErrorNoReturn(Error::StsNotImplemented, "");
+CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
+#undef NOT_IMPLEMENTED
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+
+}}} // namespace

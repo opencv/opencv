@@ -17,7 +17,7 @@ static void help()
     << "\n------------------------------------------------------------------\n"
     << " This program shows the serial out capabilities of cv::Mat\n"
     << "That is, cv::Mat M(...); cout << M;  Now works.\n"
-    << "Output can be formated to OpenCV, matlab, python, numpy, csv and \n"
+    << "Output can be formatted to OpenCV, matlab, python, numpy, csv and \n"
     << "C styles Usage:\n"
     << "./cvout_sample\n"
     << "------------------------------------------------------------------\n\n"

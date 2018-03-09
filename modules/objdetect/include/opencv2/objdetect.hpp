@@ -346,7 +346,7 @@ struct DetectionROI
 {
    //! scale(size) of the bounding box
    double scale;
-   //! set of requrested locations to be evaluated
+   //! set of requested locations to be evaluated
    std::vector<cv::Point> locations;
    //! vector that will contain confidence values for each location
    std::vector<double> confidences;
@@ -497,11 +497,11 @@ public:
     @param foundLocations Vector of point where each point contains left-top corner point of detected object boundaries.
     @param weights Vector that will contain confidence values for each detected object.
     @param hitThreshold Threshold for the distance between features and SVM classifying plane.
-    Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient).
+    Usually it is 0 and should be specified in the detector coefficients (as the last free coefficient).
     But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
-    @param searchLocations Vector of Point includes set of requrested locations to be evaluated.
+    @param searchLocations Vector of Point includes set of requested locations to be evaluated.
     */
     CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         CV_OUT std::vector<double>& weights,
@@ -513,7 +513,7 @@ public:
     @param img Matrix of the type CV_8U or CV_8UC3 containing an image where objects are detected.
     @param foundLocations Vector of point where each point contains left-top corner point of detected object boundaries.
     @param hitThreshold Threshold for the distance between features and SVM classifying plane.
-    Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient).
+    Usually it is 0 and should be specified in the detector coefficients (as the last free coefficient).
     But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
@@ -530,7 +530,7 @@ public:
     @param foundLocations Vector of rectangles where each rectangle contains the detected object.
     @param foundWeights Vector that will contain confidence values for each detected object.
     @param hitThreshold Threshold for the distance between features and SVM classifying plane.
-    Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient).
+    Usually it is 0 and should be specified in the detector coefficients (as the last free coefficient).
     But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
@@ -548,7 +548,7 @@ public:
     @param img Matrix of the type CV_8U or CV_8UC3 containing an image where objects are detected.
     @param foundLocations Vector of rectangles where each rectangle contains the detected object.
     @param hitThreshold Threshold for the distance between features and SVM classifying plane.
-    Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient).
+    Usually it is 0 and should be specified in the detector coefficients (as the last free coefficient).
     But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
@@ -632,7 +632,7 @@ public:
     @param foundLocations Vector of Point where each Point is detected object's top-left point.
     @param confidences confidences
     @param hitThreshold Threshold for the distance between features and SVM classifying plane. Usually
-    it is 0 and should be specfied in the detector coefficients (as the last free coefficient). But if
+    it is 0 and should be specified in the detector coefficients (as the last free coefficient). But if
     the free coefficient is omitted (which is allowed), you can specify it manually here
     @param winStride winStride
     @param padding padding
@@ -646,7 +646,7 @@ public:
     @param img Matrix of the type CV_8U or CV_8UC3 containing an image where objects are detected.
     @param foundLocations Vector of rectangles where each rectangle contains the detected object.
     @param locations Vector of DetectionROI
-    @param hitThreshold Threshold for the distance between features and SVM classifying plane. Usually it is 0 and should be specfied
+    @param hitThreshold Threshold for the distance between features and SVM classifying plane. Usually it is 0 and should be specified
     in the detector coefficients (as the last free coefficient). But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param groupThreshold Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.
     */

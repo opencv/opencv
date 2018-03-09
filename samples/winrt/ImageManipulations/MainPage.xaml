@@ -61,7 +61,7 @@
                     <Grid Grid.Row="1">
 
                         <!-- All XAML in this section is purely for design time so you can see sample content in the designer. -->
-                        <!-- This will be repaced at runtime by live content.                                                  -->
+                        <!-- This will be replaced at runtime by live content.                                                 -->
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>

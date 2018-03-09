@@ -43,7 +43,11 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "op_inf_engine.hpp"
+
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
@@ -87,7 +91,7 @@ public:
                 for (int curAxis = 0; curAxis < outputs[0].size(); curAxis++)
                 {
                     if (curAxis != cAxis && outputs[0][curAxis] != curShape[curAxis])
-                        CV_Error(Error::StsBadSize, "Inconsitent shape for ConcatLayer");
+                        CV_Error(Error::StsBadSize, "Inconsistent shape for ConcatLayer");
                 }
             }
 
@@ -100,7 +104,8 @@ public:
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding;  // By channels
+               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding ||  // By channels
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !padding;
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
@@ -185,12 +190,13 @@ public:
         outs.getUMatVector(outputs);
 
         int cAxis = clamp(axis, inputs[0].dims);
-        if (!(cAxis == 1 && outputs[0].dims == 4 && !padding))
+        if (padding)
             return false;
 
         int bottom_concat_axis;
-        int concat_size = inputs[0].size[2] * inputs[0].size[3];
-        int top_concat_axis = outputs[0].size[1];
+        int concat_size = total(shape(inputs[0]), cAxis + 1);
+        int top_concat_axis = outputs[0].size[cAxis];
+        int num_concats = total(shape(inputs[0]), 0, cAxis);
         int offset_concat_axis = 0;
         UMat& outMat = outputs[0];
         String buildopt = String("-DDtype=") + ocl::typeToStr(inputs[0].type()) + String(" ");
@@ -202,12 +208,12 @@ public:
                 return false;
 
             UMat& inpMat = inputs[i];
-            bottom_concat_axis = inputs[i].size[1];
+            bottom_concat_axis = inputs[i].size[cAxis];
             size_t nthreads = inputs[i].total();
 
             kernel.set(0, (int)nthreads);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(inpMat));
-            kernel.set(2, (int)inputs[i].size[0]);
+            kernel.set(2, (int)num_concats);
             kernel.set(3, (int)concat_size);
             kernel.set(4, (int)top_concat_axis);
             kernel.set(5, (int)bottom_concat_axis);
@@ -292,6 +298,21 @@ public:
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs)
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Concat";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ConcatLayer> ieLayer(new InferenceEngine::ConcatLayer(lp));
+        ieLayer->_axis = clamp(axis, input->dims.size());
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 };

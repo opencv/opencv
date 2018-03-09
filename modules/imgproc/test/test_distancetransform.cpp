@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_DisTransTest : public cvtest::ArrayTest
 {
@@ -283,3 +282,5 @@ void CV_DisTransTest::prepare_to_validation( int /*test_case_idx*/ )
 
 
 TEST(Imgproc_DistanceTransform, accuracy) { CV_DisTransTest test; test.safe_run(); }
+
+}} // namespace

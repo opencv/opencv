@@ -96,7 +96,7 @@ class TestInfo(object):
             frequency = self.metrix.get("frequency", 1.0) or 1.0
             if units == "ms":
                 scale = 1000.0
-            if units == "mks":
+            if units == "us" or units == "mks":  # mks is typo error for microsecond (<= OpenCV 3.4)
                 scale = 1000000.0
             if units == "ns":
                 scale = 1000000000.0

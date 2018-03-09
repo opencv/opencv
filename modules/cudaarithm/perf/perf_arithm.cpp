@@ -42,11 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
-
-namespace { // workaround conflict with DftFlags
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // GEMM
@@ -255,4 +251,4 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
     }
 }
 
-} // namespace
+}} // namespace

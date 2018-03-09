@@ -1,0 +1,14 @@
+    // these constants are wrapped inside functions to prevent inlining
+    private static String getVersion() { return "@OPENCV_VERSION@"; }
+    private static String getNativeLibraryName() { return "opencv_java@OPENCV_VERSION_MAJOR@@OPENCV_VERSION_MINOR@@OPENCV_VERSION_PATCH@"; }
+    private static int getVersionMajor() { return @OPENCV_VERSION_MAJOR@; }
+    private static int getVersionMinor() { return @OPENCV_VERSION_MINOR@; }
+    private static int getVersionRevision() { return @OPENCV_VERSION_PATCH@; }
+    private static String getVersionStatus() { return "@OPENCV_VERSION_STATUS@"; }
+
+    public static final String VERSION = getVersion();
+    public static final String NATIVE_LIBRARY_NAME = getNativeLibraryName();
+    public static final int VERSION_MAJOR = getVersionMajor();
+    public static final int VERSION_MINOR = getVersionMinor();
+    public static final int VERSION_REVISION = getVersionRevision();
+    public static final String VERSION_STATUS = getVersionStatus();

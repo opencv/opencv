@@ -136,6 +136,13 @@ if(BUILD_IPP_IW)
   # local sources
   ippiw_setup("${OpenCV_SOURCE_DIR}/3rdparty/ippiw" 1)
 
+  set(IPPIW_ROOT "${IPPROOT}/../${IW_PACKAGE_SUBDIR}")
+  ocv_install_3rdparty_licenses(ippiw
+    "${IPPIW_ROOT}/EULA.txt"
+    "${IPPIW_ROOT}/redist.txt"
+    "${IPPIW_ROOT}/support.txt"
+    "${IPPIW_ROOT}/third-party-programs.txt")
+
   # Package sources
   get_filename_component(__PATH "${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" ABSOLUTE)
   ippiw_setup("${__PATH}" 1)
@@ -161,9 +168,15 @@ if(NOT HAVE_IPP_ICV AND BUILD_IPP_IW)
   set(TEMP_ROOT 0)
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/ippicv.cmake")
   download_ippicv(TEMP_ROOT)
+  set(IPPIW_ROOT "${TEMP_ROOT}/../${IW_PACKAGE_SUBDIR}")
+  ocv_install_3rdparty_licenses(ippiw
+    "${IPPIW_ROOT}/EULA.txt"
+    "${IPPIW_ROOT}/redist.txt"
+    "${IPPIW_ROOT}/support.txt"
+    "${IPPIW_ROOT}/third-party-programs.txt")
 
   # Package sources. Only sources are compatible with regular Intel IPP
-  ippiw_setup("${TEMP_ROOT}/../${IW_PACKAGE_SUBDIR}/" 1)
+  ippiw_setup("${IPPIW_ROOT}" 1)
 endif()
 
 

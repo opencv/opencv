@@ -1,5 +1,5 @@
 import sys
-import cv2
+import cv2 as cv
 import numpy as np
 
 #  Global Variables
@@ -14,13 +14,13 @@ window_name = 'Smoothing Demo'
 
 
 def main(argv):
-    cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+    cv.namedWindow(window_name, cv.WINDOW_AUTOSIZE)
 
     # Load the source image
     imageName = argv[0] if len(argv) > 0 else "../data/lena.jpg"
 
     global src
-    src = cv2.imread(imageName, 1)
+    src = cv.imread(imageName, 1)
     if src is None:
         print ('Error opening image')
         print ('Usage: smoothing.py [image_name -- default ../data/lena.jpg] \n')
@@ -40,7 +40,7 @@ def main(argv):
 
     ## [blur]
     for i in range(1, MAX_KERNEL_LENGTH, 2):
-        dst = cv2.blur(src, (i, i))
+        dst = cv.blur(src, (i, i))
         if display_dst(DELAY_BLUR) != 0:
             return 0
     ## [blur]
@@ -51,7 +51,7 @@ def main(argv):
 
     ## [gaussianblur]
     for i in range(1, MAX_KERNEL_LENGTH, 2):
-        dst = cv2.GaussianBlur(src, (i, i), 0)
+        dst = cv.GaussianBlur(src, (i, i), 0)
         if display_dst(DELAY_BLUR) != 0:
             return 0
     ## [gaussianblur]
@@ -62,7 +62,7 @@ def main(argv):
 
     ## [medianblur]
     for i in range(1, MAX_KERNEL_LENGTH, 2):
-        dst = cv2.medianBlur(src, i)
+        dst = cv.medianBlur(src, i)
         if display_dst(DELAY_BLUR) != 0:
             return 0
     ## [medianblur]
@@ -74,7 +74,7 @@ def main(argv):
     ## [bilateralfilter]
     # Remember, bilateral is a bit slow, so as value go higher, it takes long time
     for i in range(1, MAX_KERNEL_LENGTH, 2):
-        dst = cv2.bilateralFilter(src, i, i * 2, i / 2)
+        dst = cv.bilateralFilter(src, i, i * 2, i / 2)
         if display_dst(DELAY_BLUR) != 0:
             return 0
     ## [bilateralfilter]
@@ -89,16 +89,16 @@ def display_caption(caption):
     global dst
     dst = np.zeros(src.shape, src.dtype)
     rows, cols, ch = src.shape
-    cv2.putText(dst, caption,
+    cv.putText(dst, caption,
                 (int(cols / 4), int(rows / 2)),
-                cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))
+                cv.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))
 
     return display_dst(DELAY_CAPTION)
 
 
 def display_dst(delay):
-    cv2.imshow(window_name, dst)
-    c = cv2.waitKey(delay)
+    cv.imshow(window_name, dst)
+    c = cv.waitKey(delay)
     if c >= 0 : return -1
     return 0
 

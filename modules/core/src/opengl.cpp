@@ -56,52 +56,41 @@ using namespace cv::cuda;
 
 namespace
 {
-    #ifndef HAVE_OPENGL
-        inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
-    #else
-        inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context doesn't exist"); }
-
-    bool checkError(const char* file, const int line, const char* func = 0)
+#ifndef HAVE_OPENGL
+inline static void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
+#elif defined _DEBUG
+inline static bool checkError(const char* file, const int line, const char* func = 0)
+{
+    GLenum err = gl::GetError();
+    if (err != gl::NO_ERROR_)
     {
-        GLenum err = gl::GetError();
-
-        if (err != gl::NO_ERROR_)
+        const char* msg;
+        switch (err)
         {
-            const char* msg;
-
-            switch (err)
-            {
-            case gl::INVALID_ENUM:
-                msg = "An unacceptable value is specified for an enumerated argument";
-                break;
-
-            case gl::INVALID_VALUE:
-                msg = "A numeric argument is out of range";
-                break;
-
-            case gl::INVALID_OPERATION:
-                msg = "The specified operation is not allowed in the current state";
-                break;
-
-            case gl::OUT_OF_MEMORY:
-                msg = "There is not enough memory left to execute the command";
-                break;
-
-            default:
-                msg = "Unknown error";
-            };
-
-            cvError(CV_OpenGlApiCallError, func, msg, file, line);
-
-            return false;
-        }
-
-        return true;
+        case gl::INVALID_ENUM:
+            msg = "An unacceptable value is specified for an enumerated argument";
+            break;
+        case gl::INVALID_VALUE:
+            msg = "A numeric argument is out of range";
+            break;
+        case gl::INVALID_OPERATION:
+            msg = "The specified operation is not allowed in the current state";
+            break;
+        case gl::OUT_OF_MEMORY:
+            msg = "There is not enough memory left to execute the command";
+            break;
+        default:
+            msg = "Unknown error";
+        };
+        cvError(CV_OpenGlApiCallError, func, msg, file, line);
+        return false;
     }
-    #endif
-
-    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
+    return true;
+}
+#endif // HAVE_OPENGL
 } // namespace
+
+#define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
 
 #ifdef HAVE_OPENGL
 namespace
@@ -1630,7 +1619,7 @@ Context& initializeContextFromGL()
 
     for (int i = 0; i < (int)numPlatforms; i++)
     {
-        // query platform extension: presence of "cl_khr_gl_sharing" extension is requred
+        // query platform extension: presence of "cl_khr_gl_sharing" extension is required
         {
             AutoBuffer<char> extensionStr;
 

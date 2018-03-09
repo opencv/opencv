@@ -45,10 +45,6 @@ The references are:
 #include "precomp.hpp"
 #include "agast_score.hpp"
 
-#ifdef _MSC_VER
-#pragma warning( disable : 4127 )
-#endif
-
 namespace cv
 {
 
@@ -8070,7 +8066,6 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
-        std::vector<KeyPoint>::iterator currCorner_nms;
         std::vector<KeyPoint>::const_iterator currCorner;
 
         currCorner = kpts.begin();

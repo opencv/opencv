@@ -76,7 +76,7 @@ public:
     //! copy constructor
     __host__ GpuMat_(const GpuMat_& m);
 
-    //! copy/conversion contructor. If m is of different type, it's converted
+    //! copy/conversion constructor. If m is of different type, it's converted
     __host__ explicit GpuMat_(const GpuMat& m, Allocator* allocator = defaultAllocator());
 
     //! constructs a matrix on top of user-allocated data. step is in bytes(!!!), regardless of the type

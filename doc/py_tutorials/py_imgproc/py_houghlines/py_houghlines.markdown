@@ -7,7 +7,7 @@ Goal
 In this chapter,
     -   We will understand the concept of the Hough Transform.
     -   We will see how to use it to detect lines in an image.
-    -   We will see the following functions: **cv2.HoughLines()**, **cv2.HoughLinesP()**
+    -   We will see the following functions: **cv.HoughLines()**, **cv.HoughLinesP()**
 
 Theory
 ------
@@ -62,7 +62,7 @@ denote they are the parameters of possible lines in the image. (Image courtesy: 
 Hough Transform in OpenCV
 =========================
 
-Everything explained above is encapsulated in the OpenCV function, **cv2.HoughLines()**. It simply returns an array of :math:(rho,
+Everything explained above is encapsulated in the OpenCV function, **cv.HoughLines()**. It simply returns an array of :math:(rho,
 theta)\` values. \f$\rho\f$ is measured in pixels and \f$\theta\f$ is measured in radians. First parameter,
 Input image should be a binary image, so apply threshold or use canny edge detection before
 applying hough transform. Second and third parameters are \f$\rho\f$ and \f$\theta\f$ accuracies
@@ -88,7 +88,7 @@ Hough Transform and Probabilistic Hough Transform in Hough space. (Image Courtes
 
 OpenCV implementation is based on Robust Detection of Lines Using the Progressive Probabilistic
 Hough Transform by Matas, J. and Galambos, C. and Kittler, J.V. @cite Matas00. The function used is
-**cv2.HoughLinesP()**. It has two new arguments.
+**cv.HoughLinesP()**. It has two new arguments.
 -   **minLineLength** - Minimum length of line. Line segments shorter than this are rejected.
 -   **maxLineGap** - Maximum allowed gap between line segments to treat them as a single line.
 

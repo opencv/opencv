@@ -1,13 +1,11 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <iostream>
 
 using namespace cv;
-using namespace cv::dnn;
-
-#include <iostream>
-#include <cstdlib>
 using namespace std;
+using namespace cv::dnn;
 
 const size_t inWidth = 300;
 const size_t inHeight = 300;
@@ -30,6 +28,7 @@ const char* params
       "{ model          |       | model weights (res10_300x300_ssd_iter_140000.caffemodel) }"
       "{ camera_device  | 0     | camera device number }"
       "{ video          |       | video or image for detection }"
+      "{ opencl         | false | enable OpenCL }"
       "{ min_confidence | 0.5   | min confidence       }";
 
 int main(int argc, char** argv)
@@ -60,6 +59,11 @@ int main(int argc, char** argv)
         cerr << "or here:" << endl;
         cerr << "https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector" << endl;
         exit(-1);
+    }
+
+    if (parser.get<bool>("opencl"))
+    {
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
     }
 
     VideoCapture cap;
@@ -146,7 +150,7 @@ int main(int argc, char** argv)
                 Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
                 rectangle(frame, Rect(Point(xLeftBottom, yLeftBottom - labelSize.height),
                                       Size(labelSize.width, labelSize.height + baseLine)),
-                          Scalar(255, 255, 255), CV_FILLED);
+                          Scalar(255, 255, 255), FILLED);
                 putText(frame, label, Point(xLeftBottom, yLeftBottom),
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,0));
             }

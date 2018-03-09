@@ -47,11 +47,9 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-using std::tr1::make_tuple;
-
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// FarnebackOpticalFlow ////////////////////////
@@ -109,6 +107,6 @@ OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
     SANITY_CHECK(uFlow, eps, ERROR_RELATIVE);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

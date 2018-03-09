@@ -8,8 +8,6 @@
 #ifndef __OPENCV_DNN_OP_HALIDE_HPP__
 #define __OPENCV_DNN_OP_HALIDE_HPP__
 
-#include "precomp.hpp"
-
 #ifdef HAVE_HALIDE
 #include <Halide.h>
 #endif  // HAVE_HALIDE

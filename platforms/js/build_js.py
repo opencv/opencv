@@ -134,7 +134,7 @@ class Builder:
                "-DBUILD_ZLIB=ON",
                "-DBUILD_opencv_apps=OFF",
                "-DBUILD_opencv_calib3d=OFF",
-               "-DBUILD_opencv_dnn=OFF",
+               "-DBUILD_opencv_dnn=ON",
                "-DBUILD_opencv_features2d=OFF",
                "-DBUILD_opencv_flann=OFF",
                "-DBUILD_opencv_ml=OFF",

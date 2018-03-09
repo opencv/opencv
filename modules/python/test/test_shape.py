@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import cv2
+import cv2 as cv
 
 from tests_common import NewOpenCVTests
 
@@ -7,14 +7,14 @@ class shape_test(NewOpenCVTests):
 
     def test_computeDistance(self):
 
-        a = self.get_sample('samples/data/shape_sample/1.png', cv2.IMREAD_GRAYSCALE)
-        b = self.get_sample('samples/data/shape_sample/2.png', cv2.IMREAD_GRAYSCALE)
+        a = self.get_sample('samples/data/shape_sample/1.png', cv.IMREAD_GRAYSCALE)
+        b = self.get_sample('samples/data/shape_sample/2.png', cv.IMREAD_GRAYSCALE)
 
-        _, ca, _ = cv2.findContours(a, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
-        _, cb, _ = cv2.findContours(b, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+        _, ca, _ = cv.findContours(a, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_KCOS)
+        _, cb, _ = cv.findContours(b, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_KCOS)
 
-        hd = cv2.createHausdorffDistanceExtractor()
-        sd = cv2.createShapeContextDistanceExtractor()
+        hd = cv.createHausdorffDistanceExtractor()
+        sd = cv.createShapeContextDistanceExtractor()
 
         d1 = hd.computeDistance(ca[0], cb[0])
         d2 = sd.computeDistance(ca[0], cb[0])

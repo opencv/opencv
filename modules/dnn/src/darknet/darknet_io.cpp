@@ -66,7 +66,7 @@
 //
 //M*/
 
-#include <opencv2/core.hpp>
+#include "../precomp.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -482,7 +482,7 @@ namespace cv {
                     }
                     else if (layer_type == "region")
                     {
-                        float thresh = 0.001;    // in the original Darknet is equal to the detection threshold set by the user
+                        float thresh = getParam<float>(layer_params, "thresh", 0.001);
                         int coords = getParam<int>(layer_params, "coords", 4);
                         int classes = getParam<int>(layer_params, "classes", -1);
                         int num_of_anchors = getParam<int>(layer_params, "num", -1);

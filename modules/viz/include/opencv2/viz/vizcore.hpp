@@ -60,21 +60,24 @@ namespace cv
 
         /** @brief Takes coordinate frame data and builds transform to global coordinate frame.
 
-        @param axis_x X axis vector in global coordinate frame. @param axis_y Y axis vector in global
-        coordinate frame. @param axis_z Z axis vector in global coordinate frame. @param origin Origin of
-        the coordinate frame in global coordinate frame.
+        @param axis_x X axis vector in global coordinate frame.
+        @param axis_y Y axis vector in global coordinate frame.
+        @param axis_z Z axis vector in global coordinate frame.
+        @param origin Origin of the coordinate frame in global coordinate frame.
 
-        This function returns affine transform that describes transformation between global coordinate frame
+        @return An affine transform that describes transformation between global coordinate frame
         and a given coordinate frame.
+        The returned transforms can transform a point in the given coordinate frame to the global
+        coordinate frame.
          */
         CV_EXPORTS Affine3d makeTransformToGlobal(const Vec3d& axis_x, const Vec3d& axis_y, const Vec3d& axis_z, const Vec3d& origin = Vec3d::all(0));
 
         /** @brief Constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more
-        infromation).
+        information).
 
-        @param position Position of the camera in global coordinate frame. @param focal_point Focal point
-        of the camera in global coordinate frame. @param y_dir Up vector of the camera in global
-        coordinate frame.
+        @param position Position of the camera in global coordinate frame.
+        @param focal_point Focal point of the camera in global coordinate frame.
+        @param y_dir Up vector of the camera in global coordinate frame.
 
         This function returns pose of the camera in global coordinate frame.
          */
@@ -98,7 +101,7 @@ namespace cv
          */
         CV_EXPORTS Viz3d getWindowByName(const String &window_name);
 
-        //! Unregisters all Viz windows from internal database. After it 'getWindowByName()' will create new windows instead getting existing from the database.
+        //! Unregisters all Viz windows from internal database. After it 'getWindowByName()' will create new windows instead of getting existing from the database.
         CV_EXPORTS void unregisterAllWindows();
 
         //! Displays image in specified window
@@ -142,7 +145,23 @@ namespace cv
         ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Read/write clouds. Supported formats: ply, xyz, obj and stl (readonly)
 
+        /**
+         * @param file Filename with extension. Supported formats: PLY, XYZ and OBJ.
+         * @param cloud  Supported depths: CV_32F and CV_64F. Supported channels: 3 and 4.
+         * @param colors Used by PLY format only. Supported depth: CV_8U. Supported channels: 1, 3 and 4.
+         * @param normals Used by PLY and OBJ format only. Supported depths: CV_32F and CV_64F.
+         *                Supported channels: 3 and 4.
+         * @param binary Used only for PLY format.
+         */
         CV_EXPORTS void writeCloud(const String& file, InputArray cloud, InputArray colors = noArray(), InputArray normals = noArray(), bool binary = false);
+
+        /**
+         * @param file Filename with extension. Supported formats: PLY, XYZ, OBJ and STL.
+         * @param colors Used by PLY and STL formats only.
+         * @param normals Used by PLY, OBJ and STL formats only.
+         * @return A mat containing the point coordinates with depth CV_32F or CV_64F and number of
+         *         channels 3 or 4 with only 1 row.
+         */
         CV_EXPORTS Mat  readCloud (const String& file, OutputArray colors = noArray(), OutputArray normals = noArray());
 
         ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,19 +172,50 @@ namespace cv
         ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Read/write poses and trajectories
 
+        /**
+         * @param file Filename of type supported by cv::FileStorage.
+         * @param pose Output matrix.
+         * @param tag Name of the pose in the file.
+         */
         CV_EXPORTS bool readPose(const String& file, Affine3d& pose, const String& tag = "pose");
+        /**
+         * @param file Filename.
+         * @param pose Input matrix.
+         * @param tag Name of the pose to be saved into the given file.
+         */
         CV_EXPORTS void writePose(const String& file, const Affine3d& pose, const String& tag = "pose");
 
-        //! takes vector<Affine3<T>> with T = float/dobule and writes to a sequence of files with given filename format
+        /** takes vector<Affine3<T>> with T = float/dobule and writes to a sequence of files with given filename format
+         * @param traj Trajectory containing a list of poses. It can be
+         *          - std::vector<cv::Mat>, each cv::Mat is of type CV_32F16 or CV_64FC16
+         *          - std::vector<cv::Affine3f>, std::vector<cv::Affine3d>
+         *          - cv::Mat of type CV_32FC16 OR CV_64F16
+         * @param files_format Format specifier string for constructing filenames.
+         *                     The only placeholder in the string should support `int`.
+         * @param start The initial counter for files_format.
+         * @param tag Name of the matrix in the file.
+         */
         CV_EXPORTS void writeTrajectory(InputArray traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");
 
-        //! takes vector<Affine3<T>> with T = float/dobule and loads poses from sequence of files
+        /** takes vector<Affine3<T>> with T = float/dobule and loads poses from sequence of files
+         *
+         * @param traj Output array containing a lists of poses. It can be
+         *             - std::vector<cv::Affine3f>, std::vector<cv::Affine3d>
+         *             - cv::Mat
+         * @param files_format Format specifier string for constructing filenames.
+         *                     The only placeholder in the string should support `int`.
+         * @param start The initial counter for files_format. It must be greater than or equal to 0.
+         * @param end The final  counter for files_format.
+         * @param tag Name of the matrix in the file.
+         */
         CV_EXPORTS void readTrajectory(OutputArray traj, const String& files_format = "pose%05d.xml", int start = 0, int end = INT_MAX, const String& tag = "pose");
 
 
         ///////////////////////////////////////////////////////////////////////////////////////////////
-        /// Computing normals for mesh
-
+        /** Computing normals for mesh
+         * @param mesh Input mesh.
+         * @param normals Normals at very point in the mesh of type CV_64FC3.
+         */
         CV_EXPORTS void computeNormals(const Mesh& mesh, OutputArray normals);
 
 //! @}

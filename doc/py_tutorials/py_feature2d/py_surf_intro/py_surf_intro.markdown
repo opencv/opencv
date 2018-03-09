@@ -26,7 +26,7 @@ and location.
 ![image](images/surf_boxfilter.jpg)
 
 For orientation assignment, SURF uses wavelet responses in horizontal and vertical direction for a
-neighbourhood of size 6s. Adequate guassian weights are also applied to it. Then they are plotted in
+neighbourhood of size 6s. Adequate gaussian weights are also applied to it. Then they are plotted in
 a space as given in below image. The dominant orientation is estimated by calculating the sum of all
 responses within a sliding orientation window of angle 60 degrees. Interesting thing is that,
 wavelet response can be found out using integral images very easily at any scale. For many
@@ -76,11 +76,11 @@ and descriptors.
 First we will see a simple demo on how to find SURF keypoints and descriptors and draw it. All
 examples are shown in Python terminal since it is just same as SIFT only.
 @code{.py}
->>> img = cv2.imread('fly.png',0)
+>>> img = cv.imread('fly.png',0)
 
 # Create SURF object. You can specify params here or later.
 # Here I set Hessian Threshold to 400
->>> surf = cv2.xfeatures2d.SURF_create(400)
+>>> surf = cv.xfeatures2d.SURF_create(400)
 
 # Find keypoints and descriptors directly
 >>> kp, des = surf.detectAndCompute(img,None)
@@ -107,7 +107,7 @@ While matching, we may need all those features, but not now. So we increase the 
 @endcode
 It is less than 50. Let's draw it on the image.
 @code{.py}
->>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv.drawKeypoints(img,kp,None,(255,0,0),4)
 
 >>> plt.imshow(img2),plt.show()
 @endcode
@@ -126,7 +126,7 @@ False
 
 # Recompute the feature points and draw it
 >>> kp = surf.detect(img,None)
->>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv.drawKeypoints(img,kp,None,(255,0,0),4)
 
 >>> plt.imshow(img2),plt.show()
 @endcode
@@ -147,7 +147,7 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
  False
 
 # So we make it to True to get 128-dim descriptors.
->>> surf.extended = True
+>>> surf.setExtended(True)
 >>> kp, des = surf.detectAndCompute(img,None)
 >>> print( surf.descriptorSize() )
 128

@@ -5,6 +5,7 @@ if(APPLE)
 else(APPLE)
   set(OPENCL_LIBRARY "" CACHE STRING "OpenCL library")
   set(OPENCL_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2" CACHE PATH "OpenCL include directory")
+  ocv_install_3rdparty_licenses(opencl-headers "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/LICENSE.txt")
 endif(APPLE)
 mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 

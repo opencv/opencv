@@ -51,10 +51,6 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267) # vs2008 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456) # vs2015
 
-if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 if(MSVC AND CV_ICC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qrestrict")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qrestrict")
@@ -79,6 +75,8 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(IlmImf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(openexr LICENSE AUTHORS.ilmbase AUTHORS.openexr fix_msvc2013_errors.patch)
 
 set(OPENEXR_INCLUDE_PATHS ${OPENEXR_INCLUDE_PATHS} PARENT_SCOPE)
 set(OPENEXR_VERSION "1.7.1" PARENT_SCOPE)

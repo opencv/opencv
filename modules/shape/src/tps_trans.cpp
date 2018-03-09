@@ -235,7 +235,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
 
     // Building the matrices for solving the L*(w|a)=(v|0) problem with L={[K|P];[P'|0]}
 
-    //Building K and P (Neede to buil L)
+    //Building K and P (Needed to build L)
     Mat matK((int)matches.size(),(int)matches.size(),CV_32F);
     Mat matP((int)matches.size(),3,CV_32F);
     for (int i=0, end=(int)matches.size(); i<end; i++)

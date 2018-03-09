@@ -431,7 +431,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     cv::Ptr<CvMemStorage> storage;
 
-    try
+    CV_TRY
     {
     int k = 0;
     const int min_dilations = 0;
@@ -617,11 +617,11 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                             cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
     }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
         cvFree(&quads);
         cvFree(&corners);
-        throw;
+        CV_RETHROW();
     }
     cvFree(&quads);
     cvFree(&corners);
@@ -1391,7 +1391,7 @@ icvCheckQuadGroup( CvCBQuad **quad_group, int quad_count,
         }
     }
 
-    // start with a corner that belongs to a quad with a signle neighbor.
+    // start with a corner that belongs to a quad with a single neighbor.
     // if we do not have such, start with a corner of a quad with two neighbors.
     if( !first )
         first = first2;
@@ -2151,13 +2151,13 @@ bool cv::findCirclesGrid2( InputArray _image, Size patternSize,
       void* oldCbkData;
       ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData);
 #endif
-      try
+      CV_TRY
       {
         isFound = boxFinder.findHoles();
       }
-      catch (const cv::Exception &)
+      CV_CATCH(Exception, e)
       {
-
+          CV_UNUSED(e);
       }
 #if BE_QUIET
       redirectError(oldCbk, oldCbkData);
@@ -2173,7 +2173,7 @@ bool cv::findCirclesGrid2( InputArray _image, Size patternSize,
         boxFinder.getAsymmetricHoles(centers);
         break;
           default:
-            CV_Error(CV_StsBadArg, "Unkown pattern type");
+            CV_Error(CV_StsBadArg, "Unknown pattern type");
         }
 
         if (i != 0)

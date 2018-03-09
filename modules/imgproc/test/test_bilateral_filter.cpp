@@ -42,10 +42,8 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
-namespace cvtest
-{
     class CV_BilateralFilterTest :
         public cvtest::BaseTest
     {
@@ -128,7 +126,8 @@ namespace cvtest
         d = radius*2 + 1;
         // compute the min/max range for the input image (even if multichannel)
 
-        minMaxLoc( src.reshape(1), &minValSrc, &maxValSrc );
+        // TODO cvtest
+        cv::minMaxLoc( src.reshape(1), &minValSrc, &maxValSrc );
         if(std::abs(minValSrc - maxValSrc) < FLT_EPSILON)
         {
             src.copyTo(dst);
@@ -137,8 +136,8 @@ namespace cvtest
 
         // temporary copy of the image with borders for easy processing
         Mat temp;
-        copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-        patchNaNs(temp);
+        cv::copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
+        cv::patchNaNs(temp);
 
         // allocate lookup tables
         vector<float> _space_weight(d*d);
@@ -290,4 +289,4 @@ namespace cvtest
         test.safe_run();
     }
 
-} // end of namespace cvtest
+}} // namespace

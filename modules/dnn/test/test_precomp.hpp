@@ -38,25 +38,37 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include "opencv2/core.hpp"
-#include "opencv2/dnn.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
 #include "opencv2/ts.hpp"
-#include <opencv2/ts/ts_perf.hpp>
-#include <opencv2/core/utility.hpp>
+#include "opencv2/ts/ts_perf.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/ocl.hpp"
+
+#include "opencv2/dnn.hpp"
 #include "test_common.hpp"
+
+namespace opencv_test {
+using namespace cv::dnn;
+
+CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
+CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+
+static testing::internal::ParamGenerator<DNNTarget> availableDnnTargets()
+{
+    static std::vector<DNNTarget> targets;
+    if (targets.empty())
+    {
+        targets.push_back(DNN_TARGET_CPU);
+#ifdef HAVE_OPENCL
+        if (cv::ocl::useOpenCL())
+            targets.push_back(DNN_TARGET_OPENCL);
+#endif
+    }
+    return testing::ValuesIn(targets);
+}
+
+}
 
 #endif

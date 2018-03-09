@@ -53,7 +53,7 @@ results for images with varying illumination.
 
 We use the function: **cv.adaptiveThreshold (src, dst, maxValue, adaptiveMethod, thresholdType, blockSize, C)**
 @param src             source 8-bit single-channel image.
-@param dst             dstination image of the same size and the same type as src.
+@param dst             destination image of the same size and the same type as src.
 @param maxValue        non-zero value assigned to the pixels for which the condition is satisfied
 @param adaptiveMethod  adaptive thresholding algorithm to use.
 @param thresholdType   thresholding type that must be either cv.THRESH_BINARY or cv.THRESH_BINARY_INV.

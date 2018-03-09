@@ -4,7 +4,9 @@
  * @author OpenCV Team
  */
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 using namespace std;
@@ -73,15 +75,15 @@ int main()
 //! [bin]
     // Create binary image from source image
     Mat bw;
-    cvtColor(src, bw, CV_BGR2GRAY);
-    threshold(bw, bw, 40, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    cvtColor(src, bw, COLOR_BGR2GRAY);
+    threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
     imshow("Binary Image", bw);
 //! [bin]
 
 //! [dist]
     // Perform the distance transform algorithm
     Mat dist;
-    distanceTransform(bw, dist, CV_DIST_L2, 3);
+    distanceTransform(bw, dist, DIST_L2, 3);
 
     // Normalize the distance image for range = {0.0, 1.0}
     // so we can visualize and threshold it
@@ -92,7 +94,7 @@ int main()
 //! [peaks]
     // Threshold to obtain the peaks
     // This will be the markers for the foreground objects
-    threshold(dist, dist, .4, 1., CV_THRESH_BINARY);
+    threshold(dist, dist, .4, 1., THRESH_BINARY);
 
     // Dilate a bit the dist image
     Mat kernel1 = Mat::ones(3, 3, CV_8UC1);
@@ -108,7 +110,7 @@ int main()
 
     // Find total markers
     vector<vector<Point> > contours;
-    findContours(dist_8u, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    findContours(dist_8u, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
     // Create the marker image for the watershed algorithm
     Mat markers = Mat::zeros(dist.size(), CV_32SC1);

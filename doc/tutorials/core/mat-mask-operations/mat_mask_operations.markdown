@@ -82,7 +82,7 @@ At first we make sure that the input images data in unsigned 8 bit format.
 
 At first we make sure that the input images data in unsigned 8 bit format.
 @code{.py}
-my_image = cv2.cvtColor(my_image, cv2.CV_8U)
+my_image = cv.cvtColor(my_image, cv.CV_8U)
 @endcode
 
 @end_toggle

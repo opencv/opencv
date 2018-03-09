@@ -430,6 +430,9 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(w_needed) Mat(w).copyTo(_width);
     if(p_needed) Mat(p).copyTo(_prec);
     if(n_needed) Mat(n).copyTo(_nfa);
+
+    // Clear used structures
+    list.clear();
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
@@ -450,7 +453,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
-        resize(gaussian_img, scaled_image, Size(), SCALE, SCALE);
+        resize(gaussian_img, scaled_image, Size(), SCALE, SCALE, INTER_LINEAR_EXACT);
         ll_angle(rho, N_BINS);
     }
     else

@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class Core_ConcatenationTest : public cvtest::BaseTest
 {
@@ -145,3 +144,5 @@ TEST(Core_Concatenation, hconcat_empty_empty) { Core_ConcatenationTest test(true
 TEST(Core_Concatenation, vconcat_empty_nonempty) { Core_ConcatenationTest test(false, true, false); test.safe_run(); }
 TEST(Core_Concatenation, vconcat_nonempty_empty) { Core_ConcatenationTest test(false, false, true); test.safe_run(); }
 TEST(Core_Concatenation, vconcat_empty_empty) { Core_ConcatenationTest test(false, true, true); test.safe_run(); }
+
+}} // namespace

@@ -4,23 +4,25 @@
  * @author OpenCV team
  */
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <iostream>
 
 void show_wait_destroy(const char* winname, cv::Mat img);
 
 using namespace std;
 using namespace cv;
 
-int main(int, char** argv)
+int main(int argc, char** argv)
 {
     //! [load_image]
-    // Load the image
-    Mat src = imread(argv[1]);
-
-    // Check if image is loaded fine
-    if(src.empty()){
-        printf(" Error opening image\n");
-        printf(" Program Arguments: [image_path]\n");
+    CommandLineParser parser(argc, argv, "{@input | ../data/notes.png | input image}");
+    Mat src = imread(parser.get<String>("@input"), IMREAD_COLOR);
+    if (src.empty())
+    {
+        cout << "Could not open or find the image!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
         return -1;
     }
 

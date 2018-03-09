@@ -41,6 +41,14 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
+#ifdef GTEST_CAN_COMPARE_NULL
+#  define EXPECT_NULL(ptr) EXPECT_EQ(NULL, ptr)
+#else
+#  define EXPECT_NULL(ptr) EXPECT_TRUE(ptr == NULL)
+#endif
+
 using namespace cv;
 
 namespace {
@@ -78,7 +86,7 @@ int dummyObject;
 TEST(Core_Ptr, default_ctor)
 {
     Ptr<int> p;
-    EXPECT_EQ(NULL, p.get());
+    EXPECT_NULL(p.get());
 }
 
 TEST(Core_Ptr, owning_ctor)
@@ -102,7 +110,7 @@ TEST(Core_Ptr, owning_ctor)
 
     {
         Ptr<void> p((void*)0, ReportingDeleter(&deleted));
-        EXPECT_EQ(NULL, p.get());
+        EXPECT_NULL(p.get());
     }
 
     EXPECT_FALSE(deleted);
@@ -187,7 +195,7 @@ TEST(Core_Ptr, release)
     Ptr<Reporter> p1(new Reporter(&deleted));
     p1.release();
     EXPECT_TRUE(deleted);
-    EXPECT_EQ(NULL, p1.get());
+    EXPECT_NULL(p1.get());
 }
 
 TEST(Core_Ptr, reset)
@@ -253,7 +261,7 @@ TEST(Core_Ptr, accessors)
 {
     {
         Ptr<int> p;
-        EXPECT_EQ(NULL, static_cast<int*>(p));
+        EXPECT_NULL(static_cast<int*>(p));
         EXPECT_TRUE(p.empty());
     }
 
@@ -327,7 +335,7 @@ TEST(Core_Ptr, casts)
     {
         Ptr<Reporter> p1(new Reporter(&deleted));
         Ptr<SubReporter> p2 = p1.dynamicCast<SubReporter>();
-        EXPECT_EQ(NULL, p2.get());
+        EXPECT_NULL(p2.get());
         p1.release();
         EXPECT_FALSE(deleted);
     }
@@ -360,6 +368,8 @@ TEST(Core_Ptr, make)
     EXPECT_TRUE(deleted);
 }
 
+}} // namespace
+
 namespace {
 
 struct SpeciallyDeletable
@@ -379,6 +389,8 @@ void DefaultDeleter<SpeciallyDeletable>::operator()(SpeciallyDeletable * obj) co
 
 }
 
+namespace opencv_test { namespace {
+
 TEST(Core_Ptr, specialized_deleter)
 {
     SpeciallyDeletable sd;
@@ -387,3 +399,5 @@ TEST(Core_Ptr, specialized_deleter)
 
     ASSERT_TRUE(sd.deleted);
 }
+
+}} // namespace

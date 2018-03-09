@@ -87,7 +87,7 @@ Source Code
 -----------
 
 You may also find the source code in `samples/cpp/tutorial_code/ml/non_linear_svms` folder of the OpenCV source library or
-[download it from here](https://github.com/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
+[download it from here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
 
 @note The following code has been implemented with OpenCV 3.0 classes and functions. An equivalent version of the code
 using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tutorials/ml/non_linear_svms/non_linear_svms.html#nonlinearsvms)
@@ -115,7 +115,7 @@ Explanation
 -#  __Set up SVM's parameters__
 
     @note In the previous tutorial @ref tutorial_introduction_to_svm there is an explanation of the
-    atributes of the class @ref cv::ml::SVM that we configure here before training the SVM.
+    attributes of the class @ref cv::ml::SVM that we configure here before training the SVM.
 
     @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp init
 

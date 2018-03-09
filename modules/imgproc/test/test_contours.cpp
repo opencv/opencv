@@ -40,9 +40,9 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <opencv2/highgui.hpp>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_FindContourTest : public cvtest::BaseTest
 {
@@ -471,7 +471,7 @@ TEST(Imgproc_FindContours, hilbert)
 TEST(Imgproc_FindContours, border)
 {
     Mat img;
-    copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
+    cv::copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
 
     std::vector<std::vector<cv::Point> > contours;
     findContours(img, contours, RETR_LIST, CHAIN_APPROX_NONE);
@@ -479,10 +479,25 @@ TEST(Imgproc_FindContours, border)
     Mat img_draw_contours = Mat::zeros(img.size(), CV_8U);
     for (size_t cpt = 0; cpt < contours.size(); cpt++)
     {
-      drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(255));
+      drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(1));
     }
 
-    ASSERT_TRUE(norm(img - img_draw_contours, NORM_INF) == 0.0);
+    ASSERT_EQ(0, cvtest::norm(img, img_draw_contours, NORM_INF));
 }
 
+TEST(Imgproc_PointPolygonTest, regression_10222)
+{
+    vector<Point> contour;
+    contour.push_back(Point(0, 0));
+    contour.push_back(Point(0, 100000));
+    contour.push_back(Point(100000, 100000));
+    contour.push_back(Point(100000, 50000));
+    contour.push_back(Point(100000, 0));
+
+    const Point2f point(40000, 40000);
+    const double result = cv::pointPolygonTest(contour, point, false);
+    EXPECT_GT(result, 0) << "Desired result: point is inside polygon - actual result: point is not inside polygon";
+}
+
+}} // namespace
 /* End of file. */

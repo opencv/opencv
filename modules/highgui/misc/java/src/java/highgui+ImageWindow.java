@@ -126,7 +126,7 @@ public final class ImageWindow {
     private void resizeImage() {
         if (flag == WINDOW_NORMAL) {
             Size tmpSize = keepAspectRatioSize(img.width(), img.height(), width, height);
-            Imgproc.resize(img, img, tmpSize);
+            Imgproc.resize(img, img, tmpSize, 0, 0, Imgproc.INTER_LINEAR_EXACT);
         }
     }
 }

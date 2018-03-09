@@ -151,7 +151,7 @@ namespace cv { namespace viz {
         {
             [self breakEventLoop];
 
-            // The NSWindow is closing, so prevent anyone from accidently using it
+            // The NSWindow is closing, so prevent anyone from accidentally using it
             renWin->SetRootWindow(NULL);
         }
     }

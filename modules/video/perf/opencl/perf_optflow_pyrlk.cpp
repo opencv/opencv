@@ -47,11 +47,9 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-using std::tr1::make_tuple;
-
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 typedef tuple< int > PyrLKOpticalFlowParams;
@@ -80,6 +78,15 @@ OCL_PERF_TEST_P(PyrLKOpticalFlowFixture, PyrLKOpticalFlow,
     const PyrLKOpticalFlowParams params = GetParam();
     const int pointsCount = get<0>(params);
 
+    // SKIP unstable tests
+#ifdef __linux__
+    if (cvtest::skipUnstableTests && ocl::useOpenCL())
+    {
+         if (ocl::Device::getDefault().isIntel())
+             throw ::perf::TestBase::PerfSkipTestException();
+    }
+#endif
+
     vector<Point2f> pts;
     goodFeaturesToTrack(frame0, pts, pointsCount, 0.01, 0.0);
     Mat ptsMat(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
@@ -92,6 +99,6 @@ OCL_PERF_TEST_P(PyrLKOpticalFlowFixture, PyrLKOpticalFlow,
     SANITY_CHECK(uNextPts, eps);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

@@ -45,12 +45,10 @@ The references are:
 #include "fast.hpp"
 #include "fast_score.hpp"
 #include "opencl_kernels_features2d.hpp"
+#include "hal_replacement.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
-#if defined _MSC_VER
-# pragma warning( disable : 4127)
-#endif
 
 namespace cv
 {
@@ -417,6 +415,62 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
 #endif
 
+static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+{
+    if (threshold > 20)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    cv::Mat scores(src.size(), src.type());
+
+    int error = cv_hal_FAST_dense(src.data, src.step, scores.data, scores.step, src.cols, src.rows, type);
+
+    if (error != CV_HAL_ERROR_OK)
+        return error;
+
+    cv::Mat suppressedScores(src.size(), src.type());
+
+    if (nonmax_suppression)
+    {
+        error = cv_hal_FAST_NMS(scores.data, scores.step, suppressedScores.data, suppressedScores.step, scores.cols, scores.rows);
+
+        if (error != CV_HAL_ERROR_OK)
+            return error;
+    }
+    else
+    {
+        suppressedScores = scores;
+    }
+
+    if (!threshold && nonmax_suppression) threshold = 1;
+
+    cv::KeyPoint kpt(0, 0, 7.f, -1, 0);
+
+    unsigned uthreshold = (unsigned) threshold;
+
+    int ofs = 3;
+
+    int stride = (int)suppressedScores.step;
+    const unsigned char* pscore = suppressedScores.data;
+
+    keypoints.clear();
+
+    for (int y = ofs; y + ofs < suppressedScores.rows; ++y)
+    {
+        kpt.pt.y = (float)(y);
+        for (int x = ofs; x + ofs < suppressedScores.cols; ++x)
+        {
+            unsigned score = pscore[y * stride + x];
+            if (score > uthreshold)
+            {
+                kpt.pt.x = (float)(x);
+                kpt.response = (nonmax_suppression != 0) ? (float)((int)score - 1) : 0.f;
+                keypoints.push_back(kpt);
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
@@ -424,6 +478,13 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 
     CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
                ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
+
+    cv::Mat img = _img.getMat();
+    CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
+
+    size_t keypoints_count;
+    CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
+             (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
 
     CV_OVX_RUN(true,
                openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))

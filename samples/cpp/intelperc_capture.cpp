@@ -36,7 +36,7 @@ static void printUsage(const char *arg0)
     cout << "   -isp=IDX,       set profile index of the image stream" << endl;
     cout << "   -dsp=IDX,       set profile index of the depth stream" << endl;
     cout << "   -ir,            show data from IR stream" << endl;
-    cout << "   -imb=VAL,       set brighness value for a image stream" << endl;
+    cout << "   -imb=VAL,       set brightness value for an image stream" << endl;
     cout << "   -imc=VAL,       set contrast value for a image stream" << endl;
     cout << "   -pts,           print frame index and frame time" << endl;
     cout << "   --show-closed,  print frame index and frame time" << endl;
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    //Setup additional properies only after set profile of the stream
+    //Setup additional properties only after set profile of the stream
     if ( (-10000.0 < g_imageBrightness) && (g_imageBrightness < 10000.0))
         capture.set(CAP_INTELPERC_IMAGE_GENERATOR | CAP_PROP_BRIGHTNESS, g_imageBrightness);
     if ( (0 < g_imageContrast) && (g_imageContrast < 10000.0))

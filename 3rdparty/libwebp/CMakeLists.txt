@@ -9,8 +9,8 @@ if(ANDROID)
   ocv_include_directories(${CPUFEATURES_INCLUDE_DIRS})
 endif()
 
-file(GLOB lib_srcs dec/*.c demux/*.c dsp/*.c enc/*.c mux/*.c utils/*.c webp/*.c)
-file(GLOB lib_hdrs dec/*.h demux/*.h dsp/*.h enc/*.h mux/*.h utils/*.h webp/*.h)
+file(GLOB lib_srcs src/dec/*.c src/demux/*.c src/dsp/*.c src/enc/*.c src/mux/*.c src/utils/*.c src/webp/*.c)
+file(GLOB lib_hdrs src/dec/*.h src/demux/*.h src/dsp/*.h src/enc/*.h src/mux/*.h src/utils/*.h src/webp/*.h)
 
 # FIXIT
 if(ANDROID AND ARMEABI_V7A AND NOT NEON)
@@ -34,13 +34,10 @@ if(ANDROID)
   target_link_libraries(${WEBP_LIBRARY} ${CPUFEATURES_LIBRARIES})
 endif()
 
-if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  endif()
-endif()
-
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wunused-function -Wshadow -Wmaybe-uninitialized)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wunused-function -Wshadow -Wmaybe-uninitialized
+    -Wmissing-prototypes  # clang
+    -Wmissing-declarations # gcc
+)
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 
 set_target_properties(${WEBP_LIBRARY}

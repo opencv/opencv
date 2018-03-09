@@ -54,7 +54,11 @@ void shrinkCaffeModel(const String& src, const String& dst, const std::vector<St
             blob->set_raw_data_type(caffe::FLOAT16);
         }
     }
+#if GOOGLE_PROTOBUF_VERSION < 3005000
+    size_t msgSize = saturate_cast<size_t>(net.ByteSize());
+#else
     size_t msgSize = net.ByteSizeLong();
+#endif
     std::vector<uint8_t> output(msgSize);
     net.SerializeWithCachedSizesToArray(&output[0]);
 

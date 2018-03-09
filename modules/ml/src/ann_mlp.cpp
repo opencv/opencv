@@ -51,6 +51,8 @@ struct AnnParams
         bpDWScale = bpMomentScale = 0.1;
         rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
         rpDWMin = FLT_EPSILON; rpDWMax = 50.;
+        initialT=10;finalT=0.1,coolingRatio=0.95;itePerStep=10;
+        rEnergy = cv::RNG(12345);
     }
 
     TermCriteria termCrit;
@@ -64,6 +66,12 @@ struct AnnParams
     double rpDWMinus;
     double rpDWMin;
     double rpDWMax;
+
+    double initialT;
+    double finalT;
+    double coolingRatio;
+    int itePerStep;
+    RNG rEnergy;
 };
 
 template <typename T>
@@ -72,13 +80,146 @@ inline T inBounds(T val, T min_val, T max_val)
     return std::min(std::max(val, min_val), max_val);
 }
 
-class ANN_MLPImpl : public ANN_MLP
+class SimulatedAnnealingANN_MLP
+{
+protected:
+    ml::ANN_MLP& nn;
+    Ptr<ml::TrainData> data;
+    int nbVariables;
+    vector<double*> adrVariables;
+    RNG rVar;
+    RNG rIndex;
+    double varTmp;
+    int index;
+public:
+    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d), varTmp(0.0), index(0)
+    {
+        initVarMap();
+    }
+    ~SimulatedAnnealingANN_MLP() {}
+
+    void changeState()
+    {
+        index = rIndex.uniform(0, nbVariables);
+        double dv = rVar.uniform(-1.0, 1.0);
+        varTmp = *adrVariables[index];
+        *adrVariables[index] = dv;
+    }
+
+    void reverseState()
+    {
+        *adrVariables[index] = varTmp;
+    }
+
+    double energy() const { return nn.calcError(data, false, noArray()); }
+
+protected:
+    void initVarMap()
+    {
+        Mat l = nn.getLayerSizes();
+        nbVariables = 0;
+        adrVariables.clear();
+        for (int i = 1; i < l.rows-1; i++)
+        {
+            Mat w = nn.getWeights(i);
+            for (int j = 0; j < w.rows; j++)
+            {
+                for (int k = 0; k < w.cols; k++, nbVariables++)
+                {
+                    if (j == w.rows - 1)
+                    {
+                        adrVariables.push_back(&w.at<double>(w.rows - 1, k));
+                    }
+                    else
+                    {
+                        adrVariables.push_back(&w.at<double>(j, k));
+                    }
+                }
+            }
+        }
+    }
+
+};
+
+double ANN_MLP::getAnnealInitialT() const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    return this_->getAnnealInitialT();
+}
+
+void ANN_MLP::setAnnealInitialT(double val)
+{
+    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealInitialT(val);
+}
+
+double ANN_MLP::getAnnealFinalT() const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    return this_->getAnnealFinalT();
+}
+
+void ANN_MLP::setAnnealFinalT(double val)
+{
+    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealFinalT(val);
+}
+
+double ANN_MLP::getAnnealCoolingRatio() const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    return this_->getAnnealCoolingRatio();
+}
+
+void ANN_MLP::setAnnealCoolingRatio(double val)
+{
+    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealCoolingRatio(val);
+}
+
+int ANN_MLP::getAnnealItePerStep() const
+{
+    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    return this_->getAnnealItePerStep();
+}
+
+void ANN_MLP::setAnnealItePerStep(int val)
+{
+    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealItePerStep(val);
+}
+
+void ANN_MLP::setAnnealEnergyRNG(const RNG& rng)
+{
+    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
+    if (!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
+    this_->setAnnealEnergyRNG(rng);
+}
+
+class ANN_MLPImpl : public ANN_MLP_ANNEAL
 {
 public:
     ANN_MLPImpl()
     {
         clear();
-        setActivationFunction( SIGMOID_SYM, 0, 0 );
+        setActivationFunction( SIGMOID_SYM, 0, 0);
         setLayerSizes(Mat());
         setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON);
     }
@@ -93,6 +234,13 @@ public:
     CV_IMPL_PROPERTY(double, RpropDWMinus, params.rpDWMinus)
     CV_IMPL_PROPERTY(double, RpropDWMin, params.rpDWMin)
     CV_IMPL_PROPERTY(double, RpropDWMax, params.rpDWMax)
+    CV_IMPL_PROPERTY(double, AnnealInitialT, params.initialT)
+    CV_IMPL_PROPERTY(double, AnnealFinalT, params.finalT)
+    CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
+    CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
+
+    //CV_IMPL_PROPERTY(RNG, AnnealEnergyRNG, params.rEnergy)
+    inline void setAnnealEnergyRNG(const RNG& val) { params.rEnergy = val; }
 
     void clear()
     {
@@ -107,7 +255,7 @@ public:
 
     void setTrainMethod(int method, double param1, double param2)
     {
-        if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP)
+        if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP && method != ANN_MLP::ANNEAL)
             method = ANN_MLP::RPROP;
         params.trainMethod = method;
         if(method == ANN_MLP::RPROP )
@@ -117,14 +265,14 @@ public:
             params.rpDW0 = param1;
             params.rpDWMin = std::max( param2, 0. );
         }
-        else if(method == ANN_MLP::BACKPROP )
+        else if (method == ANN_MLP::BACKPROP)
         {
-            if( param1 <= 0 )
+            if (param1 <= 0)
                 param1 = 0.1;
             params.bpDWScale = inBounds<double>(param1, 1e-3, 1.);
-            if( param2 < 0 )
+            if (param2 < 0)
                 param2 = 0.1;
-            params.bpMomentScale = std::min( param2, 1. );
+            params.bpMomentScale = std::min(param2, 1.);
         }
     }
 
@@ -133,7 +281,7 @@ public:
         return params.trainMethod;
     }
 
-    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2 )
+    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2)
     {
         if( _activ_func < 0 || _activ_func > LEAKYRELU)
             CV_Error( CV_StsOutOfRange, "Unknown activation function" );
@@ -779,12 +927,28 @@ public:
         termcrit.maxCount = std::max((params.termCrit.type & CV_TERMCRIT_ITER ? params.termCrit.maxCount : MAX_ITER), 1);
         termcrit.epsilon = std::max((params.termCrit.type & CV_TERMCRIT_EPS ? params.termCrit.epsilon : DEFAULT_EPSILON), DBL_EPSILON);
 
-        int iter = params.trainMethod == ANN_MLP::BACKPROP ?
-            train_backprop( inputs, outputs, sw, termcrit ) :
-            train_rprop( inputs, outputs, sw, termcrit );
-
+        int iter = 0;
+        switch(params.trainMethod){
+        case ANN_MLP::BACKPROP:
+            iter = train_backprop(inputs, outputs, sw, termcrit);
+            break;
+        case ANN_MLP::RPROP:
+            iter = train_rprop(inputs, outputs, sw, termcrit);
+            break;
+        case ANN_MLP::ANNEAL:
+            iter = train_anneal(trainData);
+            break;
+        }
         trained = iter > 0;
         return trained;
+    }
+    int train_anneal(const Ptr<TrainData>& trainData)
+    {
+        SimulatedAnnealingANN_MLP s(*this, trainData);
+        trained = true; // Enable call to CalcError
+        int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);
+        trained =false;
+        return iter + 1; // ensure that 'train()' call is always successful
     }
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )
@@ -849,7 +1013,7 @@ public:
                 E = 0;
 
                 // shuffle indices
-                for( i = 0; i < count; i++ )
+                for( i = 0; i <count; i++ )
                 {
                     j = rng.uniform(0, count);
                     k = rng.uniform(0, count);
@@ -1200,7 +1364,7 @@ public:
             fs << "dw_scale" << params.bpDWScale;
             fs << "moment_scale" << params.bpMomentScale;
         }
-        else if( params.trainMethod == ANN_MLP::RPROP )
+        else if (params.trainMethod == ANN_MLP::RPROP)
         {
             fs << "train_method" << "RPROP";
             fs << "dw0" << params.rpDW0;
@@ -1208,6 +1372,14 @@ public:
             fs << "dw_minus" << params.rpDWMinus;
             fs << "dw_min" << params.rpDWMin;
             fs << "dw_max" << params.rpDWMax;
+        }
+        else if (params.trainMethod == ANN_MLP::ANNEAL)
+        {
+            fs << "train_method" << "ANNEAL";
+            fs << "initialT" << params.initialT;
+            fs << "finalT" << params.finalT;
+            fs << "coolingRatio" << params.coolingRatio;
+            fs << "itePerStep" << params.itePerStep;
         }
         else
             CV_Error(CV_StsError, "Unknown training method");
@@ -1270,7 +1442,7 @@ public:
         f_param1 = (double)fn["f_param1"];
         f_param2 = (double)fn["f_param2"];
 
-        setActivationFunction( activ_func, f_param1, f_param2 );
+        setActivationFunction( activ_func, f_param1, f_param2);
 
         min_val = (double)fn["min_val"];
         max_val = (double)fn["max_val"];
@@ -1290,7 +1462,7 @@ public:
                 params.bpDWScale = (double)tpn["dw_scale"];
                 params.bpMomentScale = (double)tpn["moment_scale"];
             }
-            else if( tmethod_name == "RPROP" )
+            else if (tmethod_name == "RPROP")
             {
                 params.trainMethod = ANN_MLP::RPROP;
                 params.rpDW0 = (double)tpn["dw0"];
@@ -1298,6 +1470,14 @@ public:
                 params.rpDWMinus = (double)tpn["dw_minus"];
                 params.rpDWMin = (double)tpn["dw_min"];
                 params.rpDWMax = (double)tpn["dw_max"];
+            }
+            else if (tmethod_name == "ANNEAL")
+            {
+                params.trainMethod = ANN_MLP::ANNEAL;
+                params.initialT = (double)tpn["initialT"];
+                params.finalT = (double)tpn["finalT"];
+                params.coolingRatio = (double)tpn["coolingRatio"];
+                params.itePerStep = tpn["itePerStep"];
             }
             else
                 CV_Error(CV_StsParseError, "Unknown training method (should be BACKPROP or RPROP)");
@@ -1390,6 +1570,8 @@ public:
 };
 
 
+
+
 Ptr<ANN_MLP> ANN_MLP::create()
 {
     return makePtr<ANN_MLPImpl>();
@@ -1401,12 +1583,10 @@ Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
     fs.open(filepath, FileStorage::READ);
     CV_Assert(fs.isOpened());
     Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
-
     ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());
     return ann;
 }
 
-
-    }}
+}}
 
 /* End of file. */

@@ -1,7 +1,6 @@
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #undef RGB
 #undef YUV
@@ -724,3 +723,5 @@ INSTANTIATE_TEST_CASE_P(cvt422, Imgproc_ColorYUV,
                       (int)CV_YUV2RGB_YUY2, (int)CV_YUV2BGR_YUY2, (int)CV_YUV2RGB_YVYU, (int)CV_YUV2BGR_YVYU,
                       (int)CV_YUV2RGBA_YUY2, (int)CV_YUV2BGRA_YUY2, (int)CV_YUV2RGBA_YVYU, (int)CV_YUV2BGRA_YVYU,
                       (int)CV_YUV2GRAY_UYVY, (int)CV_YUV2GRAY_YUY2));
+
+}} // namespace

@@ -1,10 +1,14 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
 #ifdef HAVE_OPENCV_VIZ
+
+#include <opencv2/viz.hpp>
 
 const String keys =
 "{Aide h usage ? help  |     | print this message   }"
@@ -32,10 +36,10 @@ void  KeyboardViz3d(const viz::KeyboardEvent &w, void *t);
 void DrawHistogram3D(Histo3DData &h)
 {
     //! [get_cube_size]
-    int planSize = h.histogram.step1(0);
-    int cols = h.histogram.step1(1);
-    int rows = planSize / cols;
-    int plans = h.histogram.total() / planSize;
+    int planSize = (int)h.histogram.step1(0);
+    int cols = (int)h.histogram.step1(1);
+    int rows = (int)planSize / cols;
+    int plans = (int)h.histogram.total() / planSize;
     h.fen3D->removeAllWidgets();
     h.nbWidget=0;
     if (h.nbWidget==0)

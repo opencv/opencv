@@ -1,9 +1,7 @@
 #include "opencv2/objdetect.hpp"
-#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 
-#include <iostream>
 #include <stdio.h>
 
 using namespace std;
@@ -26,12 +24,12 @@ int main( int argc, const char** argv )
         "{face_cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|}"
         "{eyes_cascade|../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}");
 
-    cout << "\nThis program demonstrates using the cv::CascadeClassifier class to detect objects (Face + eyes) in a video stream.\n"
-            "You can use Haar or LBP features.\n\n";
+    parser.about( "\nThis program demonstrates using the cv::CascadeClassifier class to detect objects (Face + eyes) in a video stream.\n"
+                  "You can use Haar or LBP features.\n\n" );
     parser.printMessage();
 
-    face_cascade_name = parser.get<string>("face_cascade");
-    eyes_cascade_name = parser.get<string>("eyes_cascade");
+    face_cascade_name = parser.get<String>("face_cascade");
+    eyes_cascade_name = parser.get<String>("eyes_cascade");
     VideoCapture capture;
     Mat frame;
 
@@ -54,8 +52,7 @@ int main( int argc, const char** argv )
         //-- 3. Apply the classifier to the frame
         detectAndDisplay( frame );
 
-        char c = (char)waitKey(10);
-        if( c == 27 ) { break; } // escape
+        if( waitKey(10) == 27 ) { break; } // escape
     }
     return 0;
 }
@@ -70,7 +67,7 @@ void detectAndDisplay( Mat frame )
     equalizeHist( frame_gray, frame_gray );
 
     //-- Detect faces
-    face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0|CASCADE_SCALE_IMAGE, Size(30, 30) );
+    face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0|CASCADE_SCALE_IMAGE, Size(60, 60) );
 
     for ( size_t i = 0; i < faces.size(); i++ )
     {

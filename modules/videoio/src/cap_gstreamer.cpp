@@ -78,11 +78,8 @@
 #if GST_VERSION_MAJOR == 0
 #define COLOR_ELEM "ffmpegcolorspace"
 #define COLOR_ELEM_NAME "ffmpegcsp"
-#elif FULL_GST_VERSION < VERSION_NUM(1,5,0)
-#define COLOR_ELEM "videoconvert"
-#define COLOR_ELEM_NAME COLOR_ELEM
 #else
-#define COLOR_ELEM "autovideoconvert"
+#define COLOR_ELEM "videoconvert"
 #define COLOR_ELEM_NAME COLOR_ELEM
 #endif
 
@@ -283,7 +280,7 @@ bool CvCapture_GStreamer::grabFrame()
 /*!
  * \brief CvCapture_GStreamer::retrieveFrame
  * \return IplImage pointer. [Transfer Full]
- *  Retreive the previously grabbed buffer, and wrap it in an IPLImage structure
+ *  Retrieve the previously grabbed buffer, and wrap it in an IPLImage structure
  */
 IplImage * CvCapture_GStreamer::retrieveFrame(int)
 {
@@ -925,7 +922,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
         if (!gst_structure_get_int (structure, "height", &height))
         {
-            CV_WARN("Cannot query video heigth\n");
+            CV_WARN("Cannot query video height\n");
         }
 
         gint num = 0, denom=1;
@@ -970,11 +967,11 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 }
 
 /*!
- * \brief CvCapture_GStreamer::getProperty retreive the requested property from the pipeline
+ * \brief CvCapture_GStreamer::getProperty retrieve the requested property from the pipeline
  * \param propId requested property
  * \return property value
  *
- * There are two ways the properties can be retreived. For seek-based properties we can query the pipeline.
+ * There are two ways the properties can be retrieved. For seek-based properties we can query the pipeline.
  * For frame-based properties, we use the caps of the lasst receivef sample. This means that some properties
  * are not available until a first frame was received
  */

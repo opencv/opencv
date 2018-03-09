@@ -42,11 +42,11 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
-using namespace cvtest;
+using namespace opencv_test;
 using namespace testing;
 using namespace cv;
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 #define UMAT_TEST_SIZES testing::Values(cv::Size(1, 1), cv::Size(1,128), cv::Size(128, 1), \
@@ -1073,7 +1073,7 @@ TEST(UMat, async_unmap)
             Mat m = Mat(1000, 1000, CV_8UC1, Scalar::all(0));
             UMat u = m.getUMat(ACCESS_READ);
             UMat dst;
-            add(u, Scalar::all(0), dst); // start async operation
+            cv::add(u, Scalar::all(0), dst); // start async operation
             u.release();
             m.release();
         }
@@ -1192,7 +1192,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
     }
 }
 
-// Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
+// Case 2: concurrent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
 OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
 {
     if (!cv::ocl::useOpenCL())
@@ -1233,7 +1233,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
         UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_READ);
         UMat dst;
-        add(u, Scalar::all(1), dst);
+        cv::add(u, Scalar::all(1), dst);
     }
     catch (...)
     {
@@ -1250,7 +1250,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_write)
     {
         UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_READ);
-        add(u, Scalar::all(1), u);
+        cv::add(u, Scalar::all(1), u);
     }
     catch (...)
     {
@@ -1267,7 +1267,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
         UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_WRITE);
         UMat dst;
-        add(u, Scalar::all(1), dst);
+        cv::add(u, Scalar::all(1), dst);
     }
     catch (...)
     {
@@ -1283,7 +1283,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     {
         UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_WRITE);
-        add(u, Scalar::all(1), u);
+        cv::add(u, Scalar::all(1), u);
     }
     catch (...)
     {
@@ -1301,7 +1301,7 @@ TEST(UMat, mat_umat_sync)
     }
 
     UMat uDiff;
-    compare(u, 255, uDiff, CMP_NE);
+    cv::compare(u, 255, uDiff, CMP_NE);
     ASSERT_EQ(0, countNonZero(uDiff));
 }
 
@@ -1314,7 +1314,7 @@ TEST(UMat, testTempObjects_UMat)
     }
 
     UMat uDiff;
-    compare(u, 255, uDiff, CMP_NE);
+    cv::compare(u, 255, uDiff, CMP_NE);
     ASSERT_EQ(0, countNonZero(uDiff));
 }
 
@@ -1383,4 +1383,4 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl

@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v2 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v4 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_v2 { } using namespace experimental_dnn_v2; }}
+namespace cv { namespace dnn { namespace experimental_dnn_v4 { } using namespace experimental_dnn_v4; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -70,7 +70,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     enum Backend
     {
         DNN_BACKEND_DEFAULT,
-        DNN_BACKEND_HALIDE
+        DNN_BACKEND_HALIDE,
+        DNN_BACKEND_INFERENCE_ENGINE
     };
 
     /**
@@ -242,6 +243,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs);
 
+        virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
+
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
         * @param[in] node Backend node with Halide functions.
@@ -278,20 +281,26 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual bool setActivation(const Ptr<ActivationLayer>& layer);
 
         /**
-         * @brief Tries to attach to the layer the subsequent batch normalization layer, i.e. do the layer fusion in a partial case.
-         * @param[in] layer The subsequent batch normalization layer.
-         *
-         * Returns true if the batch normalization layer has been attached successfully.
+         * @brief Try to fuse current layer with a next one
+         * @param[in] top Next layer to be fused.
+         * @returns True if fusion was performed.
          */
-        virtual bool setBatchNorm(const Ptr<BatchNormLayer>& layer);
+        virtual bool tryFuse(Ptr<Layer>& top);
 
         /**
-         * @brief Tries to attach to the layer the subsequent scaling layer, i.e. do the layer fusion in a partial case.
-         * @param[in] layer The subsequent scaling layer.
+         * @brief Returns parameters of layers with channel-wise multiplication and addition.
+         * @param[out] scale Channel-wise multipliers. Total number of values should
+         *                   be equal to number of channels.
+         * @param[out] shift Channel-wise offsets. Total number of values should
+         *                   be equal to number of channels.
          *
-         * Returns true if the scaling layer has been attached successfully.
+         * Some layers can fuse their transformations with further layers.
+         * In example, convolution + batch normalization. This way base layer
+         * use weights from layer after it. Fused layer is skipped.
+         * By default, @p scale and @p shift are empty that means layer has no
+         * element-wise multiplications or additions.
          */
-        virtual bool setScale(const Ptr<ScaleLayer>& layer);
+        virtual void getScaleShift(Mat& scale, Mat& shift) const;
 
         /**
          * @brief "Deattaches" all the layers, attached to particular layer.
@@ -423,17 +432,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
-        CV_WRAP void forward(std::vector<std::vector<Mat> >& outputBlobs,
-                             const std::vector<String>& outBlobNames);
-
-        //TODO:
-        /** @brief Optimized forward.
-         *  @warning Not implemented yet.
-         *  @details Makes forward only those layers which weren't changed after previous forward().
-         */
-        void forwardOpt(LayerId toLayer);
-        /** @overload */
-        void forwardOpt(const std::vector<LayerId> &toLayers);
+        CV_WRAP_AS(forwardAndRetrieve) void forward(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
+                                                    const std::vector<String>& outBlobNames);
 
         /**
          * @brief Compile Halide layers.
@@ -467,7 +467,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @note If updating blob is not empty then @p blob must have the same shape,
          *  because network reshaping is not implemented yet.
          */
-        CV_WRAP void setInput(const Mat &blob, const String& name = "");
+        CV_WRAP void setInput(InputArray blob, const String& name = "");
 
         /** @brief Sets the new value for the learned param of the layer.
          *  @param layer name or id of the layer.
@@ -609,38 +609,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         Ptr<Impl> impl;
     };
 
-    /**
-     * @deprecated Deprecated as external interface. Will be for internal needs only.
-     * @brief Small interface class for loading trained serialized models of different dnn-frameworks. */
-    class CV_EXPORTS_W Importer : public Algorithm
-    {
-    public:
-
-        /** @brief Adds loaded layers into the @p net and sets connections between them. */
-        CV_DEPRECATED CV_WRAP virtual void populateNet(Net net) = 0;
-
-        virtual ~Importer();
-    };
-
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
     *  @param darknetModel path to the .weights file with learned network.
     *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    * @details This is shortcut consisting from DarknetImporter and Net::populateNet calls.
+    *  @returns Net object.
     */
     CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
 
-    /**
-     *  @deprecated Use @ref readNetFromCaffe instead.
-     *  @brief Creates the importer of <a href="http://caffe.berkeleyvision.org">Caffe</a> framework network.
-     *  @param prototxt   path to the .prototxt file with text description of the network architecture.
-     *  @param caffeModel path to the .caffemodel file with learned network.
-     *  @returns Pointer to the created importer, NULL in failure cases.
-     */
-    CV_DEPRECATED CV_EXPORTS_W Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeModel = String());
-
-    /** @brief Reads a network model stored in Caffe model files.
-      * @details This is shortcut consisting from createCaffeImporter and Net::populateNet calls.
+    /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
+      * @param prototxt   path to the .prototxt file with text description of the network architecture.
+      * @param caffeModel path to the .caffemodel file with learned network.
+      * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
 
@@ -651,16 +631,21 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @param lenProto length of bufferProto
       * @param bufferModel buffer containing the content of the .caffemodel file
       * @param lenModel length of bufferModel
+      * @returns Net object.
       */
     CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
                                     const char *bufferModel = NULL, size_t lenModel = 0);
 
-    /** @brief Reads a network model stored in Tensorflow model file.
-      * @details This is shortcut consisting from createTensorflowImporter and Net::populateNet calls.
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
+      * @param model  path to the .pb file with binary protobuf description of the network architecture
+      * @param config path to the .pbtxt file that contains text graph definition in protobuf format.
+      *               Resulting Net object is built by text graph using weights from a binary one that
+      *               let us make it more flexible.
+      * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
 
-    /** @brief Reads a network model stored in Tensorflow model in memory.
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
       * It differs from the above function only in what argument(s) it accepts.
       * @param bufferModel buffer containing the content of the pb file
@@ -671,27 +656,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
                                          const char *bufferConfig = NULL, size_t lenConfig = 0);
 
-    /** @brief Reads a network model stored in Torch model file.
-      * @details This is shortcut consisting from createTorchImporter and Net::populateNet calls.
-      */
-    CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true);
-
     /**
-     *  @deprecated Use @ref readNetFromTensorflow instead.
-     *  @brief Creates the importer of <a href="http://www.tensorflow.org">TensorFlow</a> framework network.
-     *  @param model   path to the .pb file with binary protobuf description of the network architecture.
-     *  @returns Pointer to the created importer, NULL in failure cases.
-     */
-    CV_DEPRECATED CV_EXPORTS_W Ptr<Importer> createTensorflowImporter(const String &model);
-
-    /**
-     *  @deprecated Use @ref readNetFromTorch instead.
-     *  @brief Creates the importer of <a href="http://torch.ch">Torch7</a> framework network.
-     *  @param filename path to the file, dumped from Torch by using torch.save() function.
+     *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.
+     *  @param model    path to the file, dumped from Torch by using torch.save() function.
      *  @param isBinary specifies whether the network was serialized in ascii mode or binary.
-     *  @returns Pointer to the created importer, NULL in failure cases.
-     *
-     *  @warning Torch7 importer is experimental now, you need explicitly set CMake `opencv_dnn_BUILD_TORCH_IMPORTER` flag to compile its.
+     *  @returns Net object.
      *
      *  @note Ascii mode of Torch serializer is more preferable, because binary mode extensively use `long` type of C language,
      *  which has various bit-length on different systems.
@@ -712,10 +681,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *
      * Also some equivalents of these classes from cunn, cudnn, and fbcunn may be successfully imported.
      */
-    CV_DEPRECATED CV_EXPORTS_W Ptr<Importer> createTorchImporter(const String &filename, bool isBinary = true);
+     CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true);
 
     /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
-     *  @warning This function has the same limitations as createTorchImporter().
+     *  @warning This function has the same limitations as readNetFromTorch().
      */
     CV_EXPORTS_W Mat readTorchBlob(const String &filename, bool isBinary = true);
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
@@ -728,13 +697,23 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
-     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
-    CV_EXPORTS_W Mat blobFromImage(const Mat& image, double scalefactor=1.0, const Size& size = Size(),
+    CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
+
+    /** @brief Creates 4-dimensional blob from image.
+     *  @details This is an overloaded member function, provided for convenience.
+     *           It differs from the above function only in what argument(s) it accepts.
+     */
+    CV_EXPORTS void blobFromImage(InputArray image, OutputArray blob, double scalefactor=1.0,
+                                  const Size& size = Size(), const Scalar& mean = Scalar(),
+                                  bool swapRB=true, bool crop=true);
+
+
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
      *  crops @p images from center, subtract @p mean values, scales values by @p scalefactor,
      *  swap Blue and Red channels.
@@ -746,13 +725,31 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
-     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponing
+     *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimansional Mat with NCHW dimensions order.
      */
-    CV_EXPORTS_W Mat blobFromImages(const std::vector<Mat>& images, double scalefactor=1.0,
+    CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
+
+    /** @brief Creates 4-dimensional blob from series of images.
+     *  @details This is an overloaded member function, provided for convenience.
+     *           It differs from the above function only in what argument(s) it accepts.
+     */
+    CV_EXPORTS void blobFromImages(InputArrayOfArrays images, OutputArray blob,
+                                   double scalefactor=1.0, Size size = Size(),
+                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
+
+    /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
+     *  (std::vector<cv::Mat>).
+     *  @param[in] blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from
+     *  which you would like to extract the images.
+     *  @param[out] images_ array of 2D Mat containing the images extracted from the blob in floating point precision
+     *  (CV_32F). They are non normalized neither mean added. The number of returned images equals the first dimension
+     *  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
+     */
+    CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
 
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single

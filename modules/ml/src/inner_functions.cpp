@@ -94,26 +94,29 @@ public:
         int idxErr = range.start;
         CV_TRACE_FUNCTION_SKIP_NESTED();
         Mat samples = data->getSamples();
+        Mat weights=testerr? data->getTestSampleWeights() : data->getTrainSampleWeights();
         int layout = data->getLayout();
         Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
         const int* sidx_ptr = sidx.ptr<int>();
         bool isclassifier = s.isClassifier();
         Mat responses = data->getResponses();
         int responses_type = responses.type();
-
         double err = 0;
 
+
+        const float* sw = weights.empty() ? 0 : weights.ptr<float>();
         for (int i = range.start; i < range.end; i++)
         {
             int si = sidx_ptr ? sidx_ptr[i] : i;
+            double sweight = sw ? static_cast<double>(sw[i]) : 1.;
             Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
             float val = s.predict(sample);
             float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
 
             if (isclassifier)
-                err += fabs(val - val0) > FLT_EPSILON;
+                err += sweight * fabs(val - val0) > FLT_EPSILON;
             else
-                err += (val - val0)*(val - val0);
+                err += sweight * (val - val0)*(val - val0);
             if (!resp.empty())
                 resp.at<float>(i) = val;
         }
@@ -133,12 +136,17 @@ float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray
     CV_TRACE_FUNCTION_SKIP_NESTED();
     Mat samples = data->getSamples();
     Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
+    Mat weights = testerr ? data->getTestSampleWeights() : data->getTrainSampleWeights();
     int n = (int)sidx.total();
     bool isclassifier = isClassifier();
     Mat responses = data->getResponses();
 
     if (n == 0)
+    {
         n = data->getNSamples();
+        weights = data->getTrainSampleWeights();
+        testerr =false;
+    }
 
     if (n == 0)
         return -FLT_MAX;
@@ -155,11 +163,11 @@ float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray
 
     for (size_t i = 0; i < errStrip.size(); i++)
         err += errStrip[i];
-
+    float weightSum= weights.empty() ? n: static_cast<float>(sum(weights)(0));
     if (_resp.needed())
         resp.copyTo(_resp);
 
-    return (float)(err / n * (isclassifier ? 100 : 1));
+    return (float)(err/ weightSum * (isclassifier ? 100 : 1));
 }
 
 /* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */

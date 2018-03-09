@@ -108,7 +108,7 @@ def getTest(stests, x, y, row, col):
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
-    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
+    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
     parser.add_option("-x", "", dest="x", help="argument number for rows", metavar="ROW", default=1)
     parser.add_option("-y", "", dest="y", help="argument number for columns", metavar="COL", default=0)

@@ -1,18 +1,22 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef tr1::tuple<MatType, Size, Size> MatInfo_Size_Size_t;
+typedef tuple<MatType, Size, Size> MatInfo_Size_Size_t;
 typedef TestBaseWithParam<MatInfo_Size_Size_t> MatInfo_Size_Size;
 
 PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
             testing::Values(
                 MatInfo_Size_Size_t(CV_8UC1, szVGA, szqHD),
+                MatInfo_Size_Size_t(CV_8UC2, szVGA, szqHD),
+                MatInfo_Size_Size_t(CV_8UC3, szVGA, szqHD),
+                MatInfo_Size_Size_t(CV_8UC4, szVGA, szqHD),
                 MatInfo_Size_Size_t(CV_8UC1, szVGA, sz720p),
+                MatInfo_Size_Size_t(CV_8UC2, szVGA, sz720p),
+                MatInfo_Size_Size_t(CV_8UC3, szVGA, sz720p),
                 MatInfo_Size_Size_t(CV_8UC4, szVGA, sz720p)
                 )
             )
@@ -25,7 +29,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
     cvtest::fillGradient(src);
     declare.in(src).out(dst);
 
-    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to);
+    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to, 0, 0, INTER_LINEAR_EXACT);
 
 #ifdef __ANDROID__
     SANITY_CHECK(dst, 5);
@@ -37,9 +41,24 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
 PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
             testing::Values(
                 MatInfo_Size_Size_t(CV_8UC1, szVGA, szQVGA),
+                MatInfo_Size_Size_t(CV_8UC2, szVGA, szQVGA),
+                MatInfo_Size_Size_t(CV_8UC3, szVGA, szQVGA),
+                MatInfo_Size_Size_t(CV_8UC4, szVGA, szQVGA),
+                MatInfo_Size_Size_t(CV_8UC1, szqHD, szVGA),
+                MatInfo_Size_Size_t(CV_8UC2, szqHD, szVGA),
+                MatInfo_Size_Size_t(CV_8UC3, szqHD, szVGA),
                 MatInfo_Size_Size_t(CV_8UC4, szqHD, szVGA),
                 MatInfo_Size_Size_t(CV_8UC1, sz720p, Size(120 * sz720p.width / sz720p.height, 120)),//face detection min_face_size = 20%
+                MatInfo_Size_Size_t(CV_8UC2, sz720p, Size(120 * sz720p.width / sz720p.height, 120)),//face detection min_face_size = 20%
+                MatInfo_Size_Size_t(CV_8UC3, sz720p, Size(120 * sz720p.width / sz720p.height, 120)),//face detection min_face_size = 20%
+                MatInfo_Size_Size_t(CV_8UC4, sz720p, Size(120 * sz720p.width / sz720p.height, 120)),//face detection min_face_size = 20%
+                MatInfo_Size_Size_t(CV_8UC1, sz720p, szVGA),
+                MatInfo_Size_Size_t(CV_8UC2, sz720p, szVGA),
+                MatInfo_Size_Size_t(CV_8UC3, sz720p, szVGA),
                 MatInfo_Size_Size_t(CV_8UC4, sz720p, szVGA),
+                MatInfo_Size_Size_t(CV_8UC1, sz720p, szQVGA),
+                MatInfo_Size_Size_t(CV_8UC2, sz720p, szQVGA),
+                MatInfo_Size_Size_t(CV_8UC3, sz720p, szQVGA),
                 MatInfo_Size_Size_t(CV_8UC4, sz720p, szQVGA)
                 )
             )
@@ -52,7 +71,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
     cvtest::fillGradient(src);
     declare.in(src).out(dst);
 
-    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to);
+    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to, 0, 0, INTER_LINEAR_EXACT);
 
 #ifdef __ANDROID__
     SANITY_CHECK(dst, 5);
@@ -62,7 +81,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
 }
 
 
-typedef tr1::tuple<MatType, Size, int> MatInfo_Size_Scale_t;
+typedef tuple<MatType, Size, int> MatInfo_Size_Scale_t;
 typedef TestBaseWithParam<MatInfo_Size_Scale_t> MatInfo_Size_Scale;
 
 PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
@@ -93,7 +112,7 @@ PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
 }
 
 
-typedef TestBaseWithParam<tr1::tuple<MatType, Size, double> > MatInfo_Size_Scale_Area;
+typedef TestBaseWithParam<tuple<MatType, Size, double> > MatInfo_Size_Scale_Area;
 
 PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
             testing::Combine(
@@ -148,3 +167,5 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNN,
     EXPECT_GT(countNonZero(dst.reshape(1)), 0);
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

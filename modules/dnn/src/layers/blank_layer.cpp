@@ -63,8 +63,22 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    bool forward_ocl(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        for (int i = 0, n = outputs.size(); i < n; ++i)
+        {
+            void *src_handle = inputs[i].handle(ACCESS_READ);
+            void *dst_handle = outputs[i].handle(ACCESS_WRITE);
+            if (src_handle != dst_handle)
+                inputs[i].copyTo(outputs[i]);
+        }
+
         return true;
     }
 #endif
@@ -92,9 +106,25 @@ public:
     }
 };
 
-Ptr<BlankLayer> BlankLayer::create(const LayerParams& params)
+Ptr<Layer> BlankLayer::create(const LayerParams& params)
 {
-    return Ptr<BlankLayer>(new BlankLayerImpl(params));
+    // In case of Caffe's Dropout layer from Faster-RCNN framework,
+    // https://github.com/rbgirshick/caffe-fast-rcnn/tree/faster-rcnn
+    // return Power layer.
+    if (!params.get<bool>("scale_train", true))
+    {
+        float scale = 1 - params.get<float>("dropout_ratio", 0.5f);
+        CV_Assert(scale > 0);
+
+        LayerParams powerParams;
+        powerParams.name = params.name;
+        powerParams.type = "Power";
+        powerParams.set("scale", scale);
+
+        return PowerLayer::create(powerParams);
+    }
+    else
+        return Ptr<BlankLayer>(new BlankLayerImpl(params));
 }
 
 }

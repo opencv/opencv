@@ -1353,6 +1353,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     Mat dst = _dst.getMat();
     int depth = src.depth();
 
+    CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrDown(src, dst))
         return;

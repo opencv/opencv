@@ -6251,6 +6251,7 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     c = CV_DESCALE(c, trilinear_shift*3);
 }
 
+#if CV_SIMD128
 
 // 8 inValues are in [0; LAB_BASE]
 static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uint16x8& inY, const v_uint16x8& inZ,
@@ -6338,6 +6339,8 @@ static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uin
 
 #undef DOT_SHIFT_PACK
 }
+
+#endif // CV_SIMD128
 
 
 struct RGB2Lab_b
@@ -6465,6 +6468,8 @@ struct RGB2Lab_f
         i = 0;
         if(useInterpolation)
         {
+
+#if CV_SIMD128
             if(enablePackedLab)
             {
                 static const int nPixels = 4*2;
@@ -6548,6 +6553,7 @@ struct RGB2Lab_f
                     v_store_interleave(dst + i + 3*4, l_vec1, a_vec1, b_vec1);
                 }
             }
+#endif // CV_SIMD128
 
             for(; i < n; i += 3, src += scn)
             {
@@ -6955,7 +6961,7 @@ struct Lab2RGBinteger
         bo = tab[bo];
     }
 
-    // L, a, b shoule be in their natural range
+    // L, a, b should be in their natural range
     inline void processLabToXYZ(const v_uint8x16& lv, const v_uint8x16& av, const v_uint8x16& bv,
                                 v_int32x4& xiv00, v_int32x4& yiv00, v_int32x4& ziv00,
                                 v_int32x4& xiv01, v_int32x4& yiv01, v_int32x4& ziv01,
@@ -7036,6 +7042,8 @@ struct Lab2RGBinteger
         float alpha = ColorChannel<float>::max();
 
         int i = 0;
+
+#if CV_SIMD128
         if(enablePackedLab)
         {
             v_float32x4 vldiv  = v_setall_f32(256.f/100.0f);
@@ -7122,6 +7130,7 @@ struct Lab2RGBinteger
                 }
             }
         }
+#endif
 
         for(; i < n*3; i += 3, dst += dcn)
         {
@@ -7142,6 +7151,7 @@ struct Lab2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
         i = 0;
 
+#if CV_SIMD128
         if(enablePackedLab)
         {
             static const int nPixels = 8*2;
@@ -7213,6 +7223,7 @@ struct Lab2RGBinteger
                 }
             }
         }
+#endif
 
         for (; i < n*3; i += 3, dst += dcn)
         {
@@ -8097,6 +8108,8 @@ struct RGB2Luvinterpolate
         int i, scn = srccn, bIdx = blueIdx;
 
         i = 0; n *= 3;
+
+#if CV_SIMD128
         if(enablePackedRGB2Luv)
         {
             static const int nPixels = 8*2;
@@ -8154,6 +8167,7 @@ struct RGB2Luvinterpolate
                 v_store_interleave(dst + i, l16, u16, v16);
             }
         }
+#endif // CV_SIMD128
 
         for(; i < n; i += 3, src += scn)
         {
@@ -8514,6 +8528,7 @@ struct Luv2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
+#if CV_SIMD128
         if(enablePackedLuv2RGB)
         {
             static const int nPixels = 16;
@@ -8586,6 +8601,7 @@ struct Luv2RGBinteger
                 }
             }
         }
+#endif
 
         for (; i < n*3; i += 3, dst += dcn)
         {
@@ -11033,6 +11049,42 @@ inline bool isFullRange(int code)
 }
 
 } // namespace::
+
+// helper function for dual-plane modes
+void cv::cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code )
+{
+    // only YUV420 is currently supported
+    switch (code) {
+        case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21:  case COLOR_YUV2BGR_NV12:  case COLOR_YUV2RGB_NV12:
+        case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
+            break;
+        default:
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            return;
+    }
+
+    int stype = _ysrc.type();
+    int depth = CV_MAT_DEPTH(stype), uidx, dcn;
+
+    Mat ysrc, uvsrc, dst;
+    ysrc = _ysrc.getMat();
+    uvsrc = _uvsrc.getMat();
+    Size ysz = _ysrc.size();
+    Size uvs = _uvsrc.size();
+
+    // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
+    // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
+    dcn = (code==COLOR_YUV420sp2BGRA || code==COLOR_YUV420sp2RGBA || code==COLOR_YUV2BGRA_NV12 || code==COLOR_YUV2RGBA_NV12) ? 4 : 3;
+    uidx = (code==COLOR_YUV2BGR_NV21 || code==COLOR_YUV2BGRA_NV21 || code==COLOR_YUV2RGB_NV21 || code==COLOR_YUV2RGBA_NV21) ? 1 : 0;
+    CV_Assert( dcn == 3 || dcn == 4 );
+    CV_Assert( ysz.width == uvs.width * 2 );
+    CV_Assert( ysz.width % 2 == 0 && depth == CV_8U );
+    CV_Assert( ysz.height == uvs.height * 2 );
+    _dst.create( ysz, CV_MAKETYPE(depth, dcn));
+    dst = _dst.getMat();
+    hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step, dst.data, dst.step, dst.cols, dst.rows, dcn, swapBlue(code), uidx);
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                   The main function                                  //

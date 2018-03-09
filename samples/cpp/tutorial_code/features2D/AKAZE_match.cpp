@@ -1,7 +1,6 @@
 #include <opencv2/features2d.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-#include <vector>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 using namespace std;
@@ -10,13 +9,17 @@ using namespace cv;
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
 const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
-int main(void)
+int main(int argc, char* argv[])
 {
-    Mat img1 = imread("../data/graf1.png", IMREAD_GRAYSCALE);
-    Mat img2 = imread("../data/graf3.png", IMREAD_GRAYSCALE);
+    CommandLineParser parser(argc, argv,
+                             "{@img1 | ../data/graf1.png | input image 1}"
+                             "{@img2 | ../data/graf3.png | input image 2}"
+                             "{@homography | ../data/H1to3p.xml | homography matrix}");
+    Mat img1 = imread(parser.get<String>("@img1"), IMREAD_GRAYSCALE);
+    Mat img2 = imread(parser.get<String>("@img2"), IMREAD_GRAYSCALE);
 
     Mat homography;
-    FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
+    FileStorage fs(parser.get<String>("@homography"), FileStorage::READ);
     fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;

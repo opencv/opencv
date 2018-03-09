@@ -16,7 +16,7 @@
 
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS // eliminate build warning
 
-#if __APPLE__
+#ifdef __APPLE__
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>

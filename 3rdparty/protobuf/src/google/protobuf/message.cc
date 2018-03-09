@@ -96,12 +96,12 @@ bool Message::IsInitialized() const {
   return ReflectionOps::IsInitialized(*this);
 }
 
-void Message::FindInitializationErrors(vector<string>* errors) const {
+void Message::FindInitializationErrors(std::vector<string>* errors) const {
   return ReflectionOps::FindInitializationErrors(*this, "", errors);
 }
 
 string Message::InitializationErrorString() const {
-  vector<string> errors;
+  std::vector<string> errors;
   FindInitializationErrors(&errors);
   return Join(errors, ", ");
 }
@@ -130,12 +130,12 @@ bool Message::ParsePartialFromFileDescriptor(int file_descriptor) {
   return ParsePartialFromZeroCopyStream(&input) && input.GetErrno() == 0;
 }
 
-bool Message::ParseFromIstream(istream* input) {
+bool Message::ParseFromIstream(std::istream* input) {
   io::IstreamInputStream zero_copy_input(input);
   return ParseFromZeroCopyStream(&zero_copy_input) && input->eof();
 }
 
-bool Message::ParsePartialFromIstream(istream* input) {
+bool Message::ParsePartialFromIstream(std::istream* input) {
   io::IstreamInputStream zero_copy_input(input);
   return ParsePartialFromZeroCopyStream(&zero_copy_input) && input->eof();
 }
@@ -143,7 +143,13 @@ bool Message::ParsePartialFromIstream(istream* input) {
 
 void Message::SerializeWithCachedSizes(
     io::CodedOutputStream* output) const {
-  WireFormat::SerializeWithCachedSizes(*this, GetCachedSize(), output);
+  const internal::SerializationTable* table =
+      static_cast<const internal::SerializationTable*>(InternalGetTable());
+  if (table == 0) {
+    WireFormat::SerializeWithCachedSizes(*this, GetCachedSize(), output);
+  } else {
+    internal::TableSerialize(*this, table, output);
+  }
 }
 
 size_t Message::ByteSizeLong() const {
@@ -158,21 +164,21 @@ void Message::SetCachedSize(int /* size */) const {
                 "Must implement one or the other.";
 }
 
-int Message::SpaceUsed() const {
-  return GetReflection()->SpaceUsed(*this);
+size_t Message::SpaceUsedLong() const {
+  return GetReflection()->SpaceUsedLong(*this);
 }
 
 bool Message::SerializeToFileDescriptor(int file_descriptor) const {
   io::FileOutputStream output(file_descriptor);
-  return SerializeToZeroCopyStream(&output);
+  return SerializeToZeroCopyStream(&output) && output.Flush();
 }
 
 bool Message::SerializePartialToFileDescriptor(int file_descriptor) const {
   io::FileOutputStream output(file_descriptor);
-  return SerializePartialToZeroCopyStream(&output);
+  return SerializePartialToZeroCopyStream(&output) && output.Flush();
 }
 
-bool Message::SerializeToOstream(ostream* output) const {
+bool Message::SerializeToOstream(std::ostream* output) const {
   {
     io::OstreamOutputStream zero_copy_output(output);
     if (!SerializeToZeroCopyStream(&zero_copy_output)) return false;
@@ -180,7 +186,7 @@ bool Message::SerializeToOstream(ostream* output) const {
   return output->good();
 }
 
-bool Message::SerializePartialToOstream(ostream* output) const {
+bool Message::SerializePartialToOstream(std::ostream* output) const {
   io::OstreamOutputStream zero_copy_output(output);
   return SerializePartialToZeroCopyStream(&zero_copy_output);
 }
@@ -190,6 +196,10 @@ bool Message::SerializePartialToOstream(ostream* output) const {
 // Reflection and associated Template Specializations
 
 Reflection::~Reflection() {}
+
+void Reflection::AddAllocatedMessage(Message* /* message */,
+                                     const FieldDescriptor* /*field */,
+                                     Message* /* new_entry */) const {}
 
 #define HANDLE_TYPE(TYPE, CPPTYPE, CTYPE)                             \
 template<>                                                            \
@@ -224,38 +234,6 @@ void* Reflection::MutableRawRepeatedString(
       FieldDescriptor::CPPTYPE_STRING, FieldOptions::STRING, NULL);
 }
 
-
-// Default EnumValue API implementations. Real reflection implementations should
-// override these. However, there are several legacy implementations that do
-// not, and cannot easily be changed at the same time as the Reflection API, so
-// we provide these for now.
-// TODO: Remove these once all Reflection implementations are updated.
-int Reflection::GetEnumValue(const Message& message,
-                             const FieldDescriptor* field) const {
-  GOOGLE_LOG(FATAL) << "Unimplemented EnumValue API.";
-  return 0;
-}
-void Reflection::SetEnumValue(Message* message,
-                  const FieldDescriptor* field,
-                  int value) const {
-  GOOGLE_LOG(FATAL) << "Unimplemented EnumValue API.";
-}
-int Reflection::GetRepeatedEnumValue(
-    const Message& message,
-    const FieldDescriptor* field, int index) const {
-  GOOGLE_LOG(FATAL) << "Unimplemented EnumValue API.";
-  return 0;
-}
-void Reflection::SetRepeatedEnumValue(Message* message,
-                                  const FieldDescriptor* field, int index,
-                                  int value) const {
-  GOOGLE_LOG(FATAL) << "Unimplemented EnumValue API.";
-}
-void Reflection::AddEnumValue(Message* message,
-                  const FieldDescriptor* field,
-                  int value) const {
-  GOOGLE_LOG(FATAL) << "Unimplemented EnumValue API.";
-}
 
 MapIterator Reflection::MapBegin(
     Message* message,
@@ -483,27 +461,27 @@ struct ShutdownRepeatedFieldRegister {
 
 namespace internal {
 template<>
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-// Note: force noinline to workaround MSVC 2015 compiler bug, issue #240
-GOOGLE_ATTRIBUTE_NOINLINE
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// Note: force noinline to workaround MSVC compiler bug with /Zc:inline, issue #240
+GOOGLE_PROTOBUF_ATTRIBUTE_NOINLINE
 #endif
 Message* GenericTypeHandler<Message>::NewFromPrototype(
     const Message* prototype, google::protobuf::Arena* arena) {
   return prototype->New(arena);
 }
 template<>
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-// Note: force noinline to workaround MSVC 2015 compiler bug, issue #240
-GOOGLE_ATTRIBUTE_NOINLINE
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// Note: force noinline to workaround MSVC compiler bug with /Zc:inline, issue #240
+GOOGLE_PROTOBUF_ATTRIBUTE_NOINLINE
 #endif
 google::protobuf::Arena* GenericTypeHandler<Message>::GetArena(
     Message* value) {
   return value->GetArena();
 }
 template<>
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-// Note: force noinline to workaround MSVC 2015 compiler bug, issue #240
-GOOGLE_ATTRIBUTE_NOINLINE
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// Note: force noinline to workaround MSVC compiler bug with /Zc:inline, issue #240
+GOOGLE_PROTOBUF_ATTRIBUTE_NOINLINE
 #endif
 void* GenericTypeHandler<Message>::GetMaybeArenaPointer(
     Message* value) {

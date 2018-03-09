@@ -342,15 +342,15 @@ namespace color_cvt_detail
 
             const int delta = ColorChannel<T>::half() * (1 << yuv_shift);
 
-            const int Y = CV_CUDEV_DESCALE(b * c_RGB2YUVCoeffs_i[2] + g * c_RGB2YUVCoeffs_i[1] + r * c_RGB2YUVCoeffs_i[0], yuv_shift);
-            const int Cr = CV_CUDEV_DESCALE((r - Y) * c_RGB2YUVCoeffs_i[3] + delta, yuv_shift);
-            const int Cb = CV_CUDEV_DESCALE((b - Y) * c_RGB2YUVCoeffs_i[4] + delta, yuv_shift);
+            const int Y = CV_CUDEV_DESCALE(b * c_RGB2YUVCoeffs_i[0] + g * c_RGB2YUVCoeffs_i[1] + r * c_RGB2YUVCoeffs_i[2], yuv_shift);
+            const int Cb = CV_CUDEV_DESCALE((b - Y) * c_RGB2YUVCoeffs_i[3] + delta, yuv_shift);
+            const int Cr = CV_CUDEV_DESCALE((r - Y) * c_RGB2YUVCoeffs_i[4] + delta, yuv_shift);
 
             typename MakeVec<T, dcn>::type dst;
 
             dst.x = saturate_cast<T>(Y);
-            dst.y = saturate_cast<T>(Cr);
-            dst.z = saturate_cast<T>(Cb);
+            dst.y = saturate_cast<T>(Cb);
+            dst.z = saturate_cast<T>(Cr);
 
             return dst;
         }
@@ -367,9 +367,9 @@ namespace color_cvt_detail
 
             typename MakeVec<float, dcn>::type dst;
 
-            dst.x = b * c_RGB2YUVCoeffs_f[2] + g * c_RGB2YUVCoeffs_f[1] + r * c_RGB2YUVCoeffs_f[0];
-            dst.y = (r - dst.x) * c_RGB2YUVCoeffs_f[3] + ColorChannel<float>::half();
-            dst.z = (b - dst.x) * c_RGB2YUVCoeffs_f[4] + ColorChannel<float>::half();
+            dst.x = b * c_RGB2YUVCoeffs_f[0] + g * c_RGB2YUVCoeffs_f[1] + r * c_RGB2YUVCoeffs_f[2];
+            dst.y = (b - dst.x) * c_RGB2YUVCoeffs_f[3] + ColorChannel<float>::half();
+            dst.z = (r - dst.x) * c_RGB2YUVCoeffs_f[4] + ColorChannel<float>::half();
 
             return dst;
         }
@@ -385,9 +385,9 @@ namespace color_cvt_detail
     {
         __device__ typename MakeVec<T, dcn>::type operator ()(const typename MakeVec<T, scn>::type& src) const
         {
-            const int b = src.x + CV_CUDEV_DESCALE((src.z - ColorChannel<T>::half()) * c_YUV2RGBCoeffs_i[3], yuv_shift);
+            const int r = src.x + CV_CUDEV_DESCALE((src.z - ColorChannel<T>::half()) * c_YUV2RGBCoeffs_i[3], yuv_shift);
             const int g = src.x + CV_CUDEV_DESCALE((src.z - ColorChannel<T>::half()) * c_YUV2RGBCoeffs_i[2] + (src.y - ColorChannel<T>::half()) * c_YUV2RGBCoeffs_i[1], yuv_shift);
-            const int r = src.x + CV_CUDEV_DESCALE((src.y - ColorChannel<T>::half()) * c_YUV2RGBCoeffs_i[0], yuv_shift);
+            const int b = src.x + CV_CUDEV_DESCALE((src.y - ColorChannel<T>::half()) * c_YUV2RGBCoeffs_i[0], yuv_shift);
 
             typename MakeVec<T, dcn>::type dst;
 
@@ -405,9 +405,9 @@ namespace color_cvt_detail
     {
         __device__ typename MakeVec<float, dcn>::type operator ()(const typename MakeVec<float, scn>::type& src) const
         {
-            const float b = src.x + (src.z - ColorChannel<float>::half()) * c_YUV2RGBCoeffs_f[3];
+            const float r = src.x + (src.z - ColorChannel<float>::half()) * c_YUV2RGBCoeffs_f[3];
             const float g = src.x + (src.z - ColorChannel<float>::half()) * c_YUV2RGBCoeffs_f[2] + (src.y - ColorChannel<float>::half()) * c_YUV2RGBCoeffs_f[1];
-            const float r = src.x + (src.y - ColorChannel<float>::half()) * c_YUV2RGBCoeffs_f[0];
+            const float b = src.x + (src.y - ColorChannel<float>::half()) * c_YUV2RGBCoeffs_f[0];
 
             typename MakeVec<float, dcn>::type dst;
 

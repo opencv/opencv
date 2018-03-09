@@ -278,7 +278,7 @@ CvCaptureCAM_DC1394_v2_CPP::CvCaptureCAM_DC1394_v2_CPP()
     dcCam = 0;
     isoSpeed = 400;
     fps = 15;
-    // Resetted the value here to 1 in order to ensure only a single frame is stored in the buffer!
+    // Reset the value here to 1 in order to ensure only a single frame is stored in the buffer!
     nDMABufs = 8;
     started = false;
     cameraId = 0;

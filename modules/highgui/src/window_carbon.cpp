@@ -718,6 +718,43 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     return ;
 }
 
+CvRect cvGetWindowRect_CARBON(const char* name)
+{
+    CvRect result = cvRect(-1, -1, -1, -1);
+
+    CV_FUNCNAME( "cvGetWindowRect_QT" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if(!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName( name );
+    if( !window )
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+
+
+    Rect portrect;
+    GetWindowPortBounds(window->window, &portrect);
+    LocalToGlobal(&topLeft(portrect));
+    LocalToGlobal(&botRight(portrect));
+    if(!( window->flags & CV_WINDOW_AUTOSIZE) )
+    {
+        result = cvRect(portrect.left, portrect.top, portrect.right-portrect.left,
+            portrect.bottom-portrect.top-window->trackbarheight);
+    }
+    else
+    {
+        result = cvRect(portrect.left, portrect.bottom - height - window->trackbarheight,
+            window->imageWidth, window->imageHeight);
+    }
+
+    __END__;
+    return result;
+}
+
 CV_IMPL void* cvGetWindowHandle( const char* name )
 {
     WindowRef result = 0;
@@ -873,7 +910,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         }
         else
         {
-            fprintf(stderr, "Failed to tranform process type: %d\n", (int) ret);
+            fprintf(stderr, "Failed to transform process type: %d\n", (int) ret);
             fflush (stderr);
         }
     }

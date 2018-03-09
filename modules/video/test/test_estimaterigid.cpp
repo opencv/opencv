@@ -42,15 +42,7 @@
 
 #include "test_precomp.hpp"
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <limits>
-#include <numeric>
-
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_RigidTransform_Test : public cvtest::BaseTest
 {
@@ -101,7 +93,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
         Mat tpts(1, n, CV_32FC2);
 
         rng.fill(fpts, RNG::UNIFORM, Scalar(0,0), Scalar(10,10));
-        transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
+        std::transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
 
         Mat noise(1, n, CV_32FC2);
         rng.fill(noise, RNG::NORMAL, Scalar::all(0), Scalar::all(0.001*(n<=7 ? 0 : n <= 30 ? 1 : 10)));
@@ -179,3 +171,5 @@ void CV_RigidTransform_Test::run( int start_from )
 }
 
 TEST(Video_RigidFlow, accuracy) { CV_RigidTransform_Test test; test.safe_run(); }
+
+}} // namespace

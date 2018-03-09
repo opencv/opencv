@@ -1,13 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
 
 #ifdef HAVE_VIDEO_INPUT
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
-
 
 typedef perf::TestBaseWithParam<std::string> VideoCapture_Reading;
 
@@ -33,5 +33,7 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
 
   SANITY_CHECK_NOTHING();
 }
+
+} // namespace
 
 #endif // HAVE_VIDEO_INPUT

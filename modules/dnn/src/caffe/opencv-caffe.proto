@@ -131,7 +131,7 @@ message PriorBoxParameter {
   // Variance for adjusting the prior bboxes.
   repeated float variance = 6;
   // By default, we calculate img_height, img_width, step_x, step_y based on
-  // bottom[0] (feat) and bottom[1] (img). Unless these values are explicitely
+  // bottom[0] (feat) and bottom[1] (img). Unless these values are explicitly
   // provided.
   // Explicitly provide the img_size.
   optional uint32 img_size = 7;
@@ -179,6 +179,8 @@ message DetectionOutputParameter {
   // Only consider detections whose confidences are larger than a threshold.
   // If not provided, consider all boxes.
   optional float confidence_threshold = 9;
+  // If prior boxes are normalized to [0, 1] or not.
+  optional bool normalized_bbox = 10 [default = true];
 }
 
 message Datum {
@@ -547,11 +549,14 @@ message LayerParameter {
   optional PowerParameter power_param = 122;
   optional PReLUParameter prelu_param = 131;
   optional PriorBoxParameter prior_box_param = 150;
+  optional ProposalParameter proposal_param = 201;
+  optional PSROIPoolingParameter psroi_pooling_param = 10002;  // https://github.com/daijifeng001/caffe-rfcn
   optional PythonParameter python_param = 130;
   optional RecurrentParameter recurrent_param = 146;
   optional ReductionParameter reduction_param = 136;
   optional ReLUParameter relu_param = 123;
   optional ReshapeParameter reshape_param = 133;
+  optional ROIPoolingParameter roi_pooling_param = 8266711;  // https://github.com/rbgirshick/caffe-fast-rcnn/tree/fast-rcnn
   optional ScaleParameter scale_param = 142;
   optional SigmoidParameter sigmoid_param = 124;
   optional SoftmaxParameter softmax_param = 125;
@@ -667,6 +672,8 @@ message BatchNormParameter {
   // Small value to add to the variance estimate so that we don't divide by
   // zero.
   optional float eps = 3 [default = 1e-5];
+  // It true, scale and add biases. Source: https://github.com/NVIDIA/caffe/
+  optional bool scale_bias = 7 [default = false];
 }
 
 message BiasParameter {
@@ -853,6 +860,9 @@ message SaveOutputParameter {
 
 message DropoutParameter {
   optional float dropout_ratio = 1 [default = 0.5]; // dropout ratio
+  // Faster-RCNN framework's parameter.
+  // source: https://github.com/rbgirshick/caffe-fast-rcnn/tree/faster-rcnn
+  optional bool scale_train = 2 [default = true];  // scale train or test phase
 }
 
 // DummyDataLayer fills any number of arbitrarily shaped blobs with random
@@ -1604,4 +1614,34 @@ message NormalizedBBox {
   optional bool difficult = 6;
   optional float score = 7;
   optional float size = 8;
+}
+
+// origin: https://github.com/rbgirshick/caffe-fast-rcnn/tree/fast-rcnn
+// Message that stores parameters used by ROIPoolingLayer
+message ROIPoolingParameter {
+  // Pad, kernel size, and stride are all given as a single value for equal
+  // dimensions in height and width or as Y, X pairs.
+  optional uint32 pooled_h = 1 [default = 0]; // The pooled output height
+  optional uint32 pooled_w = 2 [default = 0]; // The pooled output width
+  // Multiplicative spatial scale factor to translate ROI coords from their
+  // input scale to the scale used when pooling
+  optional float spatial_scale = 3 [default = 1];
+}
+
+message ProposalParameter {
+  optional uint32 feat_stride = 1 [default = 16];
+  optional uint32 base_size = 2 [default = 16];
+  optional uint32 min_size = 3 [default = 16];
+  repeated float ratio = 4;
+  repeated float scale = 5;
+  optional uint32 pre_nms_topn = 6 [default = 6000];
+  optional uint32 post_nms_topn = 7 [default = 300];
+  optional float nms_thresh = 8 [default = 0.7];
+}
+
+// origin: https://github.com/daijifeng001/caffe-rfcn
+message PSROIPoolingParameter {
+  required float spatial_scale = 1;
+  required int32 output_dim = 2; // output channel number
+  required int32 group_size = 3; // equal to pooled_size
 }

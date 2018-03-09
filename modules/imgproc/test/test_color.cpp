@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 /////////////////////////// base test class for color transformations /////////////////////////
 
@@ -2054,7 +2053,7 @@ static void validateResult(const Mat& reference, const Mat& actual, const Mat& s
     int cn = reference.channels();
     ssize.width *= cn;
     bool next = true;
-    //RGB2Lab_f works throug LUT and brings additional error
+    //RGB2Lab_f works through LUT and brings additional error
     static const float maxErr = 1.f/192.f;
 
     for (int y = 0; y < ssize.height && next; ++y)
@@ -2338,9 +2337,9 @@ static void initLabTabs()
                     #define FILL(_p, _q, _r) \
                         do {\
                         int idxold = 0;\
-                        idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;\
-                        idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;\
-                        idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;\
+                        idxold += std::min(p+(_p), (int)(LAB_LUT_DIM-1))*3;\
+                        idxold += std::min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;\
+                        idxold += std::min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;\
                         int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);\
                         RGB2LuvLUT_s16[idxnew]    = RGB2Luvprev[idxold];\
                         RGB2LuvLUT_s16[idxnew+8]  = RGB2Luvprev[idxold+1];\
@@ -2464,9 +2463,9 @@ int row8uLab2RGB(const uchar* src_row, uchar *dst_row, int n, int cn, int blue_i
         go = CV_DESCALE(coeffs[3]*xx + coeffs[4]*yy + coeffs[5]*zz, shift);
         bo = CV_DESCALE(coeffs[6]*xx + coeffs[7]*yy + coeffs[8]*zz, shift);
 
-        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
-        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
-        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+        ro = std::max(0, std::min((int)INV_GAMMA_TAB_SIZE-1, ro));
+        go = std::max(0, std::min((int)INV_GAMMA_TAB_SIZE-1, go));
+        bo = std::max(0, std::min((int)INV_GAMMA_TAB_SIZE-1, bo));
 
         ro = tab[ro];
         go = tab[go];
@@ -2580,16 +2579,16 @@ int row8uLuv2RGB(const uchar* src_row, uchar *dst_row, int n, int cn, int blue_i
         int z = zm/256 + zm/65536;
 
         //limit X, Y, Z to [0, 2] to fit white point
-        x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+        x = std::max(0, std::min(2*BASE, x)); z = std::max(0, std::min(2*BASE, z));
 
         int ro, go, bo;
         ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
         go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
         bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
 
-        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
-        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
-        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+        ro = max(0, std::min((int)INV_GAMMA_TAB_SIZE-1, ro));
+        go = max(0, std::min((int)INV_GAMMA_TAB_SIZE-1, go));
+        bo = max(0, std::min((int)INV_GAMMA_TAB_SIZE-1, bo));
 
         ro = tab[ro];
         go = tab[go];
@@ -3046,7 +3045,7 @@ TEST(ImgProc_BGR2RGBA, regression_8696)
     Mat dst;
     cvtColor(src, dst, COLOR_BGR2BGRA);
 
-    EXPECT_DOUBLE_EQ(norm(dst - src, NORM_INF), 0.);
+    EXPECT_DOUBLE_EQ(cvtest::norm(dst - src, NORM_INF), 0.);
 }
 
 TEST(ImgProc_BGR2RGBA, 3ch24ch)
@@ -3060,5 +3059,7 @@ TEST(ImgProc_BGR2RGBA, 3ch24ch)
     Mat expected(Size(80, 10), CV_8UC4);
     expected.setTo(Scalar(80, 0, 200, 255));
 
-    EXPECT_DOUBLE_EQ(norm(expected - dst, NORM_INF), 0.);
+    EXPECT_DOUBLE_EQ(cvtest::norm(expected - dst, NORM_INF), 0.);
 }
+
+}} // namespace

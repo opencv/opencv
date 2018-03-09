@@ -119,11 +119,11 @@ using namespace perf;
 namespace perf {
 
 // Check for current device limitation
-CV_EXPORTS void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1);
+void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1);
 
 // Initialize Mat with random numbers. Range is depends on the data type.
 // TODO Parameter type is actually OutputArray
-CV_EXPORTS void randu(InputOutputArray dst);
+void randu(InputOutputArray dst);
 
 inline void safeFinish()
 {

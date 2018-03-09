@@ -19,7 +19,7 @@ Keys:
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 from common import Sketcher
 
 if __name__ == '__main__':
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     print(__doc__)
 
-    img = cv2.imread(fn)
+    img = cv.imread(fn)
     if img is None:
         print('Failed to load image file:', fn)
         sys.exit(1)
@@ -41,14 +41,14 @@ if __name__ == '__main__':
     sketch = Sketcher('img', [img_mark, mark], lambda : ((255, 255, 255), 255))
 
     while True:
-        ch = cv2.waitKey()
+        ch = cv.waitKey()
         if ch == 27:
             break
         if ch == ord(' '):
-            res = cv2.inpaint(img_mark, mark, 3, cv2.INPAINT_TELEA)
-            cv2.imshow('inpaint', res)
+            res = cv.inpaint(img_mark, mark, 3, cv.INPAINT_TELEA)
+            cv.imshow('inpaint', res)
         if ch == ord('r'):
             img_mark[:] = img
             mark[:] = 0
             sketch.show()
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()

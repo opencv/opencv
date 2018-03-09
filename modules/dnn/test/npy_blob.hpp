@@ -7,7 +7,6 @@
 
 #ifndef __OPENCV_DNN_TEST_NPY_BLOB_HPP__
 #define __OPENCV_DNN_TEST_NPY_BLOB_HPP__
-#include "test_precomp.hpp"
 
 namespace cv
 {

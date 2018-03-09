@@ -61,9 +61,9 @@ let dst = new cv.Mat.zeros(src.rows, histSize[0] * scale,
 // draw histogram
 for (let i = 0; i < histSize[0]; i++) {
     let binVal = hist.data32F[i] * src.rows / max;
-    let pioint1 = new cv.Point(i * scale, src.rows - 1);
-    let pioint2 = new cv.Point((i + 1) * scale - 1, src.rows - binVal);
-    cv.rectangle(dst, pioint1, pioint2, color, cv.FILLED);
+    let point1 = new cv.Point(i * scale, src.rows - 1);
+    let point2 = new cv.Point((i + 1) * scale - 1, src.rows - binVal);
+    cv.rectangle(dst, point1, point2, color, cv.FILLED);
 }
 cv.imshow('canvasOutput', dst);
 src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete();

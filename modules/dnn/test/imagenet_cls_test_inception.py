@@ -9,10 +9,10 @@ try:
     import cv2 as cv
 except ImportError:
     raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
-                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+                      'configure environment variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 # If you've got an exception "Cannot load libmkl_avx.so or libmkl_def.so" or similar, try to export next variable
-# before runnigng the script:
+# before running the script:
 # LD_PRELOAD=/opt/intel/mkl/lib/intel64/libmkl_core.so:/opt/intel/mkl/lib/intel64/libmkl_sequential.so
 
 

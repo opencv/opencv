@@ -244,6 +244,7 @@ if(NOT DEFINED IPPROOT)
   if(NOT IPPROOT)
     return()
   endif()
+  ocv_install_3rdparty_licenses(ippicv "${IPPROOT}/readme.htm" "${IPPROOT}/license/ippEULA.txt")
 endif()
 
 file(TO_CMAKE_PATH "${IPPROOT}" __IPPROOT)

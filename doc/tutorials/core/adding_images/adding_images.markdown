@@ -86,7 +86,7 @@ Now we need to generate the `g(x)` image. For this, the function **addWeighted()
 
 @add_toggle_python
 @snippet python/tutorial_code/core/AddingImages/adding_images.py blend_images
-Numpy version of above line (but cv2 function is around 2x faster):
+Numpy version of above line (but cv function is around 2x faster):
 \code{.py}
     dst = np.uint8(alpha*(img1)+beta*(img2))
 \endcode

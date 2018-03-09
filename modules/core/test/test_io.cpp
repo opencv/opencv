@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 static SparseMat cvTsGetRandomSparseMat(int dims, const int* sz, int type,
                                         int nzcount, double a, double b, RNG& rng)
@@ -122,7 +124,7 @@ protected:
                 exp(test_mat, test_mat);
                 Mat test_mat_scale(test_mat.size(), test_mat.type());
                 rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
-                multiply(test_mat, test_mat_scale, test_mat);
+                cv::multiply(test_mat, test_mat_scale, test_mat);
             }
 
             CvSeq* seq = cvCreateSeq(test_mat.type(), (int)sizeof(CvSeq),
@@ -158,7 +160,7 @@ protected:
                 exp(test_mat_nd, test_mat_nd);
                 MatND test_mat_scale(test_mat_nd.dims, test_mat_nd.size, test_mat_nd.type());
                 rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
-                multiply(test_mat_nd, test_mat_scale, test_mat_nd);
+                cv::multiply(test_mat_nd, test_mat_scale, test_mat_nd);
             }
 
             int ssz[] = {
@@ -386,8 +388,6 @@ protected:
 };
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
-
-extern void testFormatter();
 
 
 struct UserDefinedType
@@ -653,6 +653,11 @@ struct data_t
 
 TEST(Core_InputOutput, filestorage_base64_basic)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_valid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_basic_test.yml",
         "core_io_base64_basic_test.xml",
@@ -662,7 +667,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         std::vector<data_t> rawdata;
 
@@ -809,12 +815,17 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         EXPECT_EQ(_rd_in.depth(), _rd_out.depth());
         EXPECT_EQ(cv::countNonZero(cv::mean(_rd_in != _rd_out)), 0);
 
-        remove(name);
+        remove(name.c_str());
     }
 }
 
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_valid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
@@ -839,7 +850,8 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         EXPECT_NO_THROW(
         {
@@ -897,12 +909,17 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             fs.release();
         }
 
-        remove(real_name[ptr - filenames]);
+        remove((basename + '_' + real_name[ptr - filenames]).c_str());
     }
 }
 
 TEST(Core_InputOutput, filestorage_base64_invalid_call)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_invalid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
@@ -912,7 +929,8 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         EXPECT_ANY_THROW({
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
@@ -924,10 +942,10 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
             cvStartWriteStruct(*fs, "rawdata", CV_NODE_SEQ);
             cvStartWriteStruct(*fs, 0, CV_NODE_SEQ | CV_NODE_FLOW);
-            cvWriteRawDataBase64(*fs, name, 1, "u");
+            cvWriteRawDataBase64(*fs, name.c_str(), 1, "u");
         });
 
-        remove(name);
+        remove(name.c_str());
     }
 }
 
@@ -1015,7 +1033,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         }
     }
 
-    String fileName = "vec_test.";
+    String fileName = "vec_vec_io_test.";
 
     std::vector<String> formats;
     formats.push_back("xml");
@@ -1040,7 +1058,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
 
             for(size_t k = 0; k < testMats[j].size(); k++)
             {
-                ASSERT_TRUE(norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
+                ASSERT_TRUE(cvtest::norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
             }
         }
 
@@ -1111,7 +1129,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+000 ]\n");
 #else
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
@@ -1142,7 +1160,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
 
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
@@ -1199,7 +1217,8 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
 
     EXPECT_NO_THROW(fs << "dvv" << dvv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
@@ -1226,6 +1245,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
 "      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
 );
 #endif
+#endif // OPENCV_TRAITS_ENABLE_DEPRECATED
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1344,6 +1364,7 @@ TEST(Core_InputOutput, FileStorage_KeyPoint_vector_vector)
 
     EXPECT_NO_THROW(fs << "kvv" << kvv);
     cv::String fs_result = fs.releaseAndGetString();
+#ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
     EXPECT_STREQ(fs_result.c_str(),
 "<?xml version=\"1.0\"?>\n"
 "<opencv_storage>\n"
@@ -1362,6 +1383,7 @@ TEST(Core_InputOutput, FileStorage_KeyPoint_vector_vector)
 "      1. 2. 16. 0. 100. 1 -1</_></_></kvv>\n"
 "</opencv_storage>\n"
 );
+#endif //OPENCV_TRAITS_ENABLE_DEPRECATED
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1572,10 +1594,10 @@ TEST(Core_InputOutput, FileStorage_json_bool)
 
 TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 {
-    const std::string fileName = "test.yml";
+    const std::string fileName = "FileStorage_free_file_after_exception_test.yml";
     const std::string content = "%YAML:1.0\n cameraMatrix;:: !<tag:yaml.org,2002:opencv-matrix>\n";
 
-    fstream testFile;
+    std::fstream testFile;
     testFile.open(fileName.c_str(), std::fstream::out);
     if(!testFile.is_open()) FAIL();
     testFile << content;
@@ -1589,5 +1611,7 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     catch (const std::exception&)
     {
     }
-    ASSERT_EQ(std::remove(fileName.c_str()), 0);
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
+
+}} // namespace

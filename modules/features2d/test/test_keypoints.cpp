@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/core/core_c.h"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -177,3 +176,5 @@ TEST(Features2d_Detector_Keypoints_AKAZE, validation)
     CV_FeatureDetectorKeypointsTest test_mldb(AKAZE::create(AKAZE::DESCRIPTOR_MLDB));
     test_mldb.safe_run();
 }
+
+}} // namespace

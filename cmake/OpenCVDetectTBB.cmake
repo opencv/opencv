@@ -18,7 +18,24 @@
 #   - HAVE_TBB set to TRUE
 #   - "tbb" target exists and added to OPENCV_LINKER_LIBS
 
-function(ocv_tbb_verify)
+function(ocv_tbb_cmake_guess _found)
+    find_package(TBB QUIET COMPONENTS tbb PATHS "$ENV{TBBROOT}/cmake")
+    if(TBB_FOUND)
+      if(NOT TARGET TBB::tbb)
+        message(WARNING "No TBB::tbb target found!")
+        return()
+      endif()
+      get_target_property(_lib TBB::tbb IMPORTED_LOCATION_RELEASE)
+      message(STATUS "Found TBB (cmake): ${_lib}")
+      get_target_property(_inc TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
+      ocv_tbb_read_version("${_inc}")
+      add_library(tbb INTERFACE)
+      target_link_libraries(tbb INTERFACE TBB::tbb)
+      set(${_found} TRUE PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(ocv_tbb_env_verify)
   if (NOT "$ENV{TBBROOT}" STREQUAL "")
     # check that library and include dir are inside TBBROOT location
     get_filename_component(_root "$ENV{TBBROOT}" ABSOLUTE)
@@ -46,7 +63,7 @@ function(ocv_tbb_env_guess _found)
   find_library(TBB_ENV_LIB_DEBUG NAMES "tbb_debug" PATHS ENV LIBRARY_PATH NO_DEFAULT_PATH)
   find_library(TBB_ENV_LIB_DEBUG NAMES "tbb_debug")
   if (TBB_ENV_INCLUDE AND (TBB_ENV_LIB OR TBB_ENV_LIB_DEBUG))
-    ocv_tbb_verify()
+    ocv_tbb_env_verify()
     ocv_tbb_read_version("${TBB_ENV_INCLUDE}")
     add_library(tbb UNKNOWN IMPORTED)
     set_target_properties(tbb PROPERTIES
@@ -54,7 +71,12 @@ function(ocv_tbb_env_guess _found)
       IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
       INTERFACE_INCLUDE_DIRECTORIES "${TBB_ENV_INCLUDE}"
     )
-    message(STATUS "Found TBB: ${TBB_ENV_LIB}")
+    # workaround: system TBB library is used for linking instead of provided
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      get_filename_component(_dir "${TBB_ENV_LIB}" DIRECTORY)
+      set_target_properties(tbb PROPERTIES INTERFACE_LINK_LIBRARIES "-L${_dir}")
+    endif()
+    message(STATUS "Found TBB (env): ${TBB_ENV_LIB}")
     set(${_found} TRUE PARENT_SCOPE)
   endif()
 endfunction()
@@ -72,6 +94,10 @@ if(BUILD_TBB)
     return()
   endif()
   set(HAVE_TBB TRUE)
+endif()
+
+if(NOT HAVE_TBB)
+  ocv_tbb_cmake_guess(HAVE_TBB)
 endif()
 
 if(NOT HAVE_TBB)
