@@ -51,6 +51,14 @@ protected:
 
 };
 
+class Imgproc_LSD_Common : public LSDBase
+{
+public:
+    Imgproc_LSD_Common() { }
+protected:
+
+};
+
 void LSDBase::GenerateWhiteNoise(Mat& image)
 {
     image = Mat(img_size, CV_8UC1);
@@ -260,6 +268,38 @@ TEST_F(Imgproc_LSD_NONE, rotatedRect)
         detector->detect(test_image, lines);
 
         if(8u <= lines.size()) ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_Common, supportsVec4iResult)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        GenerateWhiteNoise(test_image);
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+        detector->detect(test_image, lines);
+
+        std::vector<Vec4i> linesVec4i;
+        detector->detect(test_image, linesVec4i);
+
+        if (lines.size() == linesVec4i.size())
+        {
+            bool pass = true;
+            for (size_t lineIndex = 0; pass && lineIndex < lines.size(); lineIndex++)
+            {
+                for (int ch = 0; ch < 4; ch++)
+                {
+                    if (cv::saturate_cast<int>(lines[lineIndex][ch]) != linesVec4i[lineIndex][ch])
+                    {
+                        pass = false;
+                        break;
+                    }
+                }
+            }
+            if (pass)
+                ++passedtests;
+        }
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
