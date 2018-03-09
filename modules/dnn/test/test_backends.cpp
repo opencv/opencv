@@ -10,9 +10,6 @@
 
 namespace opencv_test { namespace {
 
-CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
-
 static void loadNet(const std::string& weights, const std::string& proto,
                     const std::string& framework, Net* net)
 {

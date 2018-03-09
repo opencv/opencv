@@ -94,6 +94,11 @@ public:
     }
 
 #ifdef HAVE_OPENCL
+    virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    {
+        softmaxOp.release();
+    }
+
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays itns)
     {
         std::vector<UMat> inputs;

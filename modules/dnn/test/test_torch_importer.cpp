@@ -42,7 +42,6 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include <opencv2/ts/ocl_test.hpp>
 
 namespace opencv_test
 {
@@ -100,196 +99,122 @@ static void runTorchNet(String prefix, int targetId = DNN_TARGET_CPU, String out
     }
 }
 
-TEST(Torch_Importer, run_convolution)
+typedef testing::TestWithParam<DNNTarget> Test_Torch_layers;
+
+TEST_P(Test_Torch_layers, run_convolution)
 {
-    runTorchNet("net_conv");
+    runTorchNet("net_conv", GetParam());
 }
 
-OCL_TEST(Torch_Importer, run_convolution)
+TEST_P(Test_Torch_layers, run_pool_max)
 {
-    runTorchNet("net_conv", DNN_TARGET_OPENCL);
+    runTorchNet("net_pool_max", GetParam(), "", true);
 }
 
-TEST(Torch_Importer, run_pool_max)
+TEST_P(Test_Torch_layers, run_pool_ave)
 {
-    runTorchNet("net_pool_max", DNN_TARGET_CPU, "", true);
+    runTorchNet("net_pool_ave", GetParam());
 }
 
-OCL_TEST(Torch_Importer, run_pool_max)
+TEST_P(Test_Torch_layers, run_reshape)
 {
-    runTorchNet("net_pool_max", DNN_TARGET_OPENCL, "", true);
+    int targetId = GetParam();
+    runTorchNet("net_reshape", targetId);
+    runTorchNet("net_reshape_batch", targetId);
+    runTorchNet("net_reshape_single_sample", targetId);
+    runTorchNet("net_reshape_channels", targetId, "", false, true);
 }
 
-TEST(Torch_Importer, run_pool_ave)
+TEST_P(Test_Torch_layers, run_linear)
 {
-    runTorchNet("net_pool_ave");
+    runTorchNet("net_linear_2d", GetParam());
 }
 
-OCL_TEST(Torch_Importer, run_pool_ave)
+TEST_P(Test_Torch_layers, run_concat)
 {
-    runTorchNet("net_pool_ave", DNN_TARGET_OPENCL);
+    int targetId = GetParam();
+    runTorchNet("net_concat", targetId, "l5_torchMerge");
+    runTorchNet("net_depth_concat", targetId, "", false, true);
 }
 
-TEST(Torch_Importer, run_reshape)
+TEST_P(Test_Torch_layers, run_deconv)
 {
-    runTorchNet("net_reshape");
-    runTorchNet("net_reshape_batch");
-    runTorchNet("net_reshape_single_sample");
-    runTorchNet("net_reshape_channels", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_deconv", GetParam());
 }
 
-TEST(Torch_Importer, run_linear)
+TEST_P(Test_Torch_layers, run_batch_norm)
 {
-    runTorchNet("net_linear_2d");
+    runTorchNet("net_batch_norm", GetParam(), "", false, true);
 }
 
-TEST(Torch_Importer, run_paralel)
+TEST_P(Test_Torch_layers, net_prelu)
 {
-    runTorchNet("net_parallel", DNN_TARGET_CPU, "l5_torchMerge");
+    runTorchNet("net_prelu", GetParam());
 }
 
-TEST(Torch_Importer, run_concat)
+TEST_P(Test_Torch_layers, net_cadd_table)
 {
-    runTorchNet("net_concat", DNN_TARGET_CPU, "l5_torchMerge");
-    runTorchNet("net_depth_concat", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_cadd_table", GetParam());
 }
 
-OCL_TEST(Torch_Importer, run_concat)
+TEST_P(Test_Torch_layers, net_softmax)
 {
-    runTorchNet("net_concat", DNN_TARGET_OPENCL, "l5_torchMerge");
-    runTorchNet("net_depth_concat", DNN_TARGET_OPENCL, "", false, true);
+    int targetId = GetParam();
+    runTorchNet("net_softmax", targetId);
+    runTorchNet("net_softmax_spatial", targetId);
 }
 
-TEST(Torch_Importer, run_deconv)
-{
-    runTorchNet("net_deconv");
-}
-
-OCL_TEST(Torch_Importer, run_deconv)
-{
-    runTorchNet("net_deconv", DNN_TARGET_OPENCL);
-}
-
-TEST(Torch_Importer, run_batch_norm)
-{
-    runTorchNet("net_batch_norm", DNN_TARGET_CPU, "", false, true);
-}
-
-OCL_TEST(Torch_Importer, run_batch_norm)
-{
-    runTorchNet("net_batch_norm", DNN_TARGET_OPENCL, "", false, true);
-}
-
-TEST(Torch_Importer, net_prelu)
-{
-    runTorchNet("net_prelu");
-}
-
-TEST(Torch_Importer, net_cadd_table)
-{
-    runTorchNet("net_cadd_table");
-}
-
-TEST(Torch_Importer, net_softmax)
-{
-    runTorchNet("net_softmax");
-    runTorchNet("net_softmax_spatial");
-}
-
-OCL_TEST(Torch_Importer, net_softmax)
-{
-    runTorchNet("net_softmax", DNN_TARGET_OPENCL);
-    runTorchNet("net_softmax_spatial", DNN_TARGET_OPENCL);
-}
-
-TEST(Torch_Importer, net_logsoftmax)
+TEST_P(Test_Torch_layers, net_logsoftmax)
 {
     runTorchNet("net_logsoftmax");
     runTorchNet("net_logsoftmax_spatial");
 }
 
-OCL_TEST(Torch_Importer, net_logsoftmax)
+TEST_P(Test_Torch_layers, net_lp_pooling)
 {
-    runTorchNet("net_logsoftmax", DNN_TARGET_OPENCL);
-    runTorchNet("net_logsoftmax_spatial", DNN_TARGET_OPENCL);
+    int targetId = GetParam();
+    runTorchNet("net_lp_pooling_square", targetId, "", false, true);
+    runTorchNet("net_lp_pooling_power", targetId, "", false, true);
 }
 
-TEST(Torch_Importer, net_lp_pooling)
+TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 {
-    runTorchNet("net_lp_pooling_square", DNN_TARGET_CPU, "", false, true);
-    runTorchNet("net_lp_pooling_power", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_conv_gemm_lrn", GetParam(), "", false, true);
 }
 
-TEST(Torch_Importer, net_conv_gemm_lrn)
+TEST_P(Test_Torch_layers, net_inception_block)
 {
-    runTorchNet("net_conv_gemm_lrn", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_inception_block", GetParam(), "", false, true);
 }
 
-TEST(Torch_Importer, net_inception_block)
+TEST_P(Test_Torch_layers, net_normalize)
 {
-    runTorchNet("net_inception_block", DNN_TARGET_CPU, "", false, true);
+    runTorchNet("net_normalize", GetParam(), "", false, true);
 }
 
-TEST(Torch_Importer, net_normalize)
+TEST_P(Test_Torch_layers, net_padding)
 {
-    runTorchNet("net_normalize", DNN_TARGET_CPU, "", false, true);
+    int targetId = GetParam();
+    runTorchNet("net_padding", targetId, "", false, true);
+    runTorchNet("net_spatial_zero_padding", targetId, "", false, true);
+    runTorchNet("net_spatial_reflection_padding", targetId, "", false, true);
 }
 
-OCL_TEST(Torch_Importer, net_normalize)
+TEST_P(Test_Torch_layers, net_non_spatial)
 {
-    runTorchNet("net_normalize", DNN_TARGET_OPENCL, "", false, true);
+    runTorchNet("net_non_spatial", GetParam(), "", false, true);
 }
 
-TEST(Torch_Importer, net_padding)
-{
-    runTorchNet("net_padding", DNN_TARGET_CPU, "", false, true);
-    runTorchNet("net_spatial_zero_padding", DNN_TARGET_CPU, "", false, true);
-    runTorchNet("net_spatial_reflection_padding", DNN_TARGET_CPU, "", false, true);
-}
+INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_layers, availableDnnTargets());
 
-TEST(Torch_Importer, net_non_spatial)
-{
-    runTorchNet("net_non_spatial", DNN_TARGET_CPU, "", false, true);
-}
+typedef testing::TestWithParam<DNNTarget> Test_Torch_nets;
 
-OCL_TEST(Torch_Importer, net_non_spatial)
-{
-    runTorchNet("net_non_spatial", DNN_TARGET_OPENCL, "", false, true);
-}
-
-TEST(Torch_Importer, ENet_accuracy)
-{
-    Net net;
-    {
-        const string model = findDataFile("dnn/Enet-model-best.net", false);
-        net = readNetFromTorch(model, true);
-        ASSERT_FALSE(net.empty());
-    }
-
-    Mat sample = imread(_tf("street.png", false));
-    Mat inputBlob = blobFromImage(sample, 1./255);
-
-    net.setInput(inputBlob, "");
-    Mat out = net.forward();
-    Mat ref = blobFromNPY(_tf("torch_enet_prob.npy", false));
-    // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
-    // thresholds for ENet must be changed. Accuracy of resuults was checked on
-    // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
-    normAssert(ref, out, "", 0.00044, 0.44);
-
-    const int N = 3;
-    for (int i = 0; i < N; i++)
-    {
-        net.setInput(inputBlob, "");
-        Mat out = net.forward();
-        normAssert(ref, out, "", 0.00044, 0.44);
-    }
-}
-
-TEST(Torch_Importer, OpenFace_accuracy)
+TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
     const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
     Net net = readNetFromTorch(model);
+
+    net.setPreferableTarget(GetParam());
 
     Mat sample = imread(findDataFile("cv/shared/lena.png", false));
     Mat sampleF32(sample.size(), CV_32FC3);
@@ -306,30 +231,7 @@ TEST(Torch_Importer, OpenFace_accuracy)
     normAssert(out, outRef);
 }
 
-OCL_TEST(Torch_Importer, OpenFace_accuracy)
-{
-    const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
-    Net net = readNetFromTorch(model);
-
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    net.setPreferableTarget(DNN_TARGET_OPENCL);
-
-    Mat sample = imread(findDataFile("cv/shared/lena.png", false));
-    Mat sampleF32(sample.size(), CV_32FC3);
-    sample.convertTo(sampleF32, sampleF32.type());
-    sampleF32 /= 255;
-    resize(sampleF32, sampleF32, Size(96, 96), 0, 0, INTER_NEAREST);
-
-    Mat inputBlob = blobFromImage(sampleF32);
-
-    net.setInput(inputBlob);
-    Mat out = net.forward();
-
-    Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
-    normAssert(out, outRef);
-}
-
-OCL_TEST(Torch_Importer, ENet_accuracy)
+TEST_P(Test_Torch_nets, ENet_accuracy)
 {
     Net net;
     {
@@ -338,8 +240,7 @@ OCL_TEST(Torch_Importer, ENet_accuracy)
         ASSERT_TRUE(!net.empty());
     }
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    net.setPreferableTarget(DNN_TARGET_OPENCL);
+    net.setPreferableTarget(GetParam());
 
     Mat sample = imread(_tf("street.png", false));
     Mat inputBlob = blobFromImage(sample, 1./255);
@@ -374,7 +275,7 @@ OCL_TEST(Torch_Importer, ENet_accuracy)
 //   -median_filter 0 \
 //   -image_size 0 \
 //   -model models/instance_norm/feathers.t7
-TEST(Torch_Importer, FastNeuralStyle_accuracy)
+TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
     std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
                             "dnn/fast_neural_style_instance_norm_feathers.t7"};
@@ -384,6 +285,8 @@ TEST(Torch_Importer, FastNeuralStyle_accuracy)
     {
         const string model = findDataFile(models[i], false);
         Net net = readNetFromTorch(model);
+
+        net.setPreferableTarget(GetParam());
 
         Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
@@ -404,37 +307,17 @@ TEST(Torch_Importer, FastNeuralStyle_accuracy)
     }
 }
 
-OCL_TEST(Torch_Importer, FastNeuralStyle_accuracy)
+INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_nets, availableDnnTargets());
+
+// TODO: fix OpenCL and add to the rest of tests
+TEST(Torch_Importer, run_paralel)
 {
-    std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
-                            "dnn/fast_neural_style_instance_norm_feathers.t7"};
-    std::string targets[] = {"dnn/lena_starry_night.png", "dnn/lena_feathers.png"};
+    runTorchNet("net_parallel", DNN_TARGET_CPU, "l5_torchMerge");
+}
 
-    for (int i = 0; i < 2; ++i)
-    {
-        const string model = findDataFile(models[i], false);
-        Net net = readNetFromTorch(model);
-
-        net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-        net.setPreferableTarget(DNN_TARGET_OPENCL);
-
-        Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
-        Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
-
-        net.setInput(inputBlob);
-        Mat out = net.forward();
-
-        // Deprocessing.
-        getPlane(out, 0, 0) += 103.939;
-        getPlane(out, 0, 1) += 116.779;
-        getPlane(out, 0, 2) += 123.68;
-        out = cv::min(cv::max(0, out), 255);
-
-        Mat ref = imread(findDataFile(targets[i]));
-        Mat refBlob = blobFromImage(ref, 1.0, Size(), Scalar(), false);
-
-        normAssert(out, refBlob, "", 0.5, 1.1);
-    }
+TEST(Torch_Importer, DISABLED_run_paralel)
+{
+    runTorchNet("net_parallel", DNN_TARGET_OPENCL, "l5_torchMerge");
 }
 
 }

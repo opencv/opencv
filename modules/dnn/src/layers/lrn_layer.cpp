@@ -96,6 +96,11 @@ public:
     }
 
 #ifdef HAVE_OPENCL
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    {
+        lrnOp.release();
+    }
+
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         std::vector<UMat> inputs;
