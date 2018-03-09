@@ -1158,13 +1158,28 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
     _lines = lines.getMat();
     int N = _lines.checkVector(4);
 
+    CV_Assert(_lines.depth() == CV_32F || _lines.depth() == CV_32S);
+
     // Draw segments
-    for(int i = 0; i < N; ++i)
+    if (_lines.depth() == CV_32F)
     {
-        const Vec4f& v = _lines.at<Vec4f>(i);
-        Point2f b(v[0], v[1]);
-        Point2f e(v[2], v[3]);
-        line(_image, b, e, Scalar(0, 0, 255), 1);
+        for (int i = 0; i < N; ++i)
+        {
+            const Vec4f& v = _lines.at<Vec4f>(i);
+            Point2f b(v[0], v[1]);
+            Point2f e(v[2], v[3]);
+            line(_image, b, e, Scalar(0, 0, 255), 1);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            const Vec4i& v = _lines.at<Vec4i>(i);
+            Point2i b(v[0], v[1]);
+            Point2i e(v[2], v[3]);
+            line(_image, b, e, Scalar(0, 0, 255), 1);
+        }
     }
 }
 

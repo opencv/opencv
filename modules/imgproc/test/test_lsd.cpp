@@ -304,4 +304,66 @@ TEST_F(Imgproc_LSD_Common, supportsVec4iResult)
     ASSERT_EQ(EPOCHS, passedtests);
 }
 
+TEST_F(Imgproc_LSD_Common, drawSegmentsVec4f)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        GenerateWhiteNoise(test_image);
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+        detector->detect(test_image, lines);
+
+        Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
+        Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
+
+        detector->drawSegments(actual, lines);
+
+        // something should be drawn
+        if (sum(actual == expected) == Scalar::all(0))
+            continue;
+
+        for (size_t lineIndex = 0; lineIndex < lines.size(); lineIndex++)
+        {
+            const Vec4f &v = lines[lineIndex];
+            const Point2f b(v[0], v[1]);
+            const Point2f e(v[2], v[3]);
+            line(expected, b, e, Scalar(0, 0, 255), 1);
+        }
+        if (sum(actual != expected) == Scalar::all(0))
+            ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_Common, drawSegmentsVec4i)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        GenerateWhiteNoise(test_image);
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+
+        std::vector<Vec4i> linesVec4i;
+        detector->detect(test_image, linesVec4i);
+
+        Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
+        Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
+
+        detector->drawSegments(actual, linesVec4i);
+
+        // something should be drawn
+        if (sum(actual == expected) == Scalar::all(0))
+            continue;
+
+        for (size_t lineIndex = 0; lineIndex < linesVec4i.size(); lineIndex++)
+        {
+            const Vec4f &v = linesVec4i[lineIndex];
+            const Point2f b(v[0], v[1]);
+            const Point2f e(v[2], v[3]);
+            line(expected, b, e, Scalar(0, 0, 255), 1);
+        }
+        if (sum(actual != expected) == Scalar::all(0))
+            ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
 }} // namespace
