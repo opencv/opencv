@@ -273,6 +273,9 @@ public:
             for(int i = 0; i < outCn; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
+#ifdef HAVE_OPENCL
+        convolutionOp.release();
+#endif
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer)

@@ -127,6 +127,10 @@ public:
         }
 
         getConvPoolPaddings(inp, out, kernel, stride, padMode, Size(1, 1), pad);
+
+#ifdef HAVE_OPENCL
+        poolOp.release();
+#endif
     }
 
     virtual bool supportBackend(int backendId)
