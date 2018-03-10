@@ -11,10 +11,10 @@
 
 namespace cv { namespace dnn {
 
-class ResizeNearestNeighborLayerImpl CV_FINAL : public ResizeNearestNeighborLayer
+class ResizeLayerImpl CV_FINAL : public ResizeLayer
 {
 public:
-    ResizeNearestNeighborLayerImpl(const LayerParams& params)
+    ResizeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
         CV_Assert(params.has("width") && params.has("height") || params.has("zoom_factor"));
@@ -22,9 +22,10 @@ public:
         outWidth = params.get<float>("width", 0);
         outHeight = params.get<float>("height", 0);
         zoomFactor = params.get<int>("zoom_factor", 1);
+        interpolation = params.get<int>("interpolation");
         alignCorners = params.get<bool>("align_corners", false);
         if (alignCorners)
-            CV_Error(Error::StsNotImplemented, "Nearest neighborhood resize with align_corners=true is not implemented");
+            CV_Error(Error::StsNotImplemented, "Resize with align_corners=true is not implemented");
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -78,7 +79,7 @@ public:
             for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
             {
                 resize(getPlane(inp, n, ch), getPlane(out, n, ch),
-                       Size(outWidth, outHeight), 0, 0, INTER_NEAREST);
+                    Size(outWidth, outHeight), 0, 0, interpolation);
             }
         }
     }
@@ -103,14 +104,14 @@ public:
     }
 
 private:
-    int outWidth, outHeight, zoomFactor;
+    int outWidth, outHeight, zoomFactor, interpolation;
     bool alignCorners;
 };
 
 
-Ptr<ResizeNearestNeighborLayer> ResizeNearestNeighborLayer::create(const LayerParams& params)
+Ptr<ResizeLayer> ResizeLayer::create(const LayerParams& params)
 {
-    return Ptr<ResizeNearestNeighborLayer>(new ResizeNearestNeighborLayerImpl(params));
+    return Ptr<ResizeLayer>(new ResizeLayerImpl(params));
 }
 
 }  // namespace dnn
