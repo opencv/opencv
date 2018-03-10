@@ -451,9 +451,14 @@ static void testEigenSymmetric3x3()
             -1, 2, -1,
             0, -1, 2
     };
+    T valuesZero_[] = {
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0
+    };
 
     Mat_<T> src(3, 3, values_);
-    Mat_<T> srcZero(3, 3, 0.0);
+    Mat_<T> srcZero(3, 3, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 3.414213562373095f, 2, 0.585786437626905f };
     T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f, 0.000000000000000f };
@@ -478,8 +483,16 @@ static void testEigenSymmetric5x5()
             2, 0, 1, 4, 0,
             1, 0, -1, 0, 1
     };
+
+    T valuesZero_[5*5] = {
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+    };
     Mat_<T> src(5, 5, values_);
-    Mat_<T> srcZero(5, 5, 0.0);
+    Mat_<T> srcZero(5, 5, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 7.028919644935684f, 4.406130784616501f, 3.73626552682258f, 1.438067799899037f, 0.390616243726198f };
     T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f, 0.000000000000000f, 0.000000000000000f, 0.000000000000000f };
@@ -499,11 +512,12 @@ template<typename T>
 static void testEigen2x2()
 {
     /*const*/ T values_[] = { 4, 1, 6, 3 };
+    T valuesZero_[] = { 0, 0, 0, 0 };
     Mat_<T> src(2, 2, values_);
-    Mat_<T> srcZero(2, 2, 0.0);
+    Mat_<T> srcZero(2, 2, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 6, 1 };
-    T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f };
+    T expected_eigenvaluesZero_[] = { 0, 0 };
     Mat_<T> expected_eigenvalues(2, 1, expected_eigenvalues_);
     Mat_<T> expected_eigenvalueZero(2, 1, expected_eigenvaluesZero_);
 
@@ -521,11 +535,16 @@ static void testEigen3x3()
             0,3,1,
             0,0,3
     };
+    T valuesZero_[3*3] = {
+        0,0,0,
+        0,0,0,
+        0,0,0
+    };
     Mat_<T> src(3, 3, values_);
-    Mat_<T> srcZero(3, 3, 0.0);
+    Mat_<T> srcZero(3, 3, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 3, 3, 3 };
-    T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f, 0.000000000000000f };
+    T expected_eigenvaluesZero_[] = { 0, 0, 0 };
     Mat_<T> expected_eigenvalues(3, 1, expected_eigenvalues_);
     Mat_<T> expected_eigenvalueZero(3, 1, expected_eigenvaluesZero_);
 
