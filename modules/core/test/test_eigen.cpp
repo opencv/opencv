@@ -522,7 +522,7 @@ static void testEigen3x3()
             0,0,3
     };
     Mat_<T> src(3, 3, values_);
-    Mat_<T> srcZero(2, 2, 0.0);
+    Mat_<T> srcZero(3, 3, 0.0);
 
     /*const*/ T expected_eigenvalues_[] = { 3, 3, 3 };
     T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f, 0.000000000000000f };
