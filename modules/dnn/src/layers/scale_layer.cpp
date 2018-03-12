@@ -132,20 +132,6 @@ public:
 #endif  // HAVE_HALIDE
                 break;
             }
-            case DNN_BACKEND_INFERENCE_ENGINE:
-            {
-#ifdef HAVE_INF_ENGINE
-                auto base = node.dynamicCast<InfEngineBackendNode>();
-                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
-                if (conv)
-                {
-                    Mat bias = hasBias ? blobs[1] : Mat();
-                    fuseConvWeights(conv, blobs[0], bias);
-                    return base;
-                }
-#endif  // HAVE_INF_ENGINE
-                break;
-            }
         }
         return Ptr<BackendNode>();
     }
@@ -192,9 +178,10 @@ public:
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
 
-        ieLayer->_weights = wrapToInfEngineBlob(blobs[0]);
+        const int numChannels = blobs[0].total();
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
         if (hasBias)
-            ieLayer->_biases = wrapToInfEngineBlob(blobs[1]);
+            ieLayer->_biases = wrapToInfEngineBlob(blobs[1], {numChannels}, InferenceEngine::Layout::C);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE

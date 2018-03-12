@@ -32,6 +32,8 @@ public:
 
     virtual void Release() noexcept CV_OVERRIDE;
 
+    void setPrecision(InferenceEngine::Precision p) noexcept;
+
     virtual InferenceEngine::Precision getPrecision() noexcept CV_OVERRIDE;
 
     virtual void getOutputsInfo(InferenceEngine::OutputsDataMap &out) noexcept /*CV_OVERRIDE*/;
@@ -68,7 +70,7 @@ public:
 
     virtual size_t getBatchSize() const noexcept CV_OVERRIDE;
 
-    void init();
+    void init(int targetId);
 
     void addBlobs(const std::vector<Ptr<BackendWrapper> >& wrappers);
 
@@ -83,6 +85,8 @@ private:
     InferenceEngine::BlobMap inpBlobs;
     InferenceEngine::BlobMap outBlobs;
     InferenceEngine::BlobMap allBlobs;
+    InferenceEngine::TargetDevice targetDevice;
+    InferenceEngine::Precision precision;
     InferenceEngine::InferenceEnginePluginPtr plugin;
 
     void initPlugin(InferenceEngine::ICNNNetwork& net);
@@ -116,15 +120,17 @@ public:
     InferenceEngine::TBlob<float>::Ptr blob;
 };
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m);
+InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape);
+InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape, InferenceEngine::Layout layout);
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
-// Fuses convolution weights and biases with channel-wise scales and shifts.
-void fuseConvWeights(const std::shared_ptr<InferenceEngine::ConvolutionLayer>& conv,
-                     const Mat& w, const Mat& b = Mat());
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+// Convert Inference Engine blob with FP32 precision to FP16 precision.
+// Allocates memory for a new blob.
+InferenceEngine::TBlob<int16_t>::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob);
 
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by
@@ -150,7 +156,6 @@ public:
 private:
     InferenceEngine::DataPtr output;
 };
-
 
 #endif  // HAVE_INF_ENGINE
 
