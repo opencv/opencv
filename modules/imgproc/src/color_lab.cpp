@@ -8,6 +8,7 @@
   See the page [http://vision.stanford.edu/~ruzon/software/rgblab.html]
 \**********************************************************************************/
 
+#include "precomp.hpp"
 #include "color.hpp"
 
 using cv::softfloat;
