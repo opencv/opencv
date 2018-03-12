@@ -222,7 +222,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         /** @brief Returns index of output blob in output array.
          *  @see inputNameToIndex()
          */
-        CV_WRAP virtual int outputNameToIndex(String outputName);
+        CV_WRAP virtual int outputNameToIndex(const String& outputName);
 
         /**
          * @brief Ask layer if it support specific backend for doing computations.
@@ -704,7 +704,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @ref readNetFromTorch or @ref readNetFromDarknet. An order of @p model and @p config
       * arguments does not matter.
       */
-     CV_EXPORTS_W Net readNet(String model, String config = "", String framework = "");
+     CV_EXPORTS_W Net readNet(const String& model, const String& config = "", const String& framework = "");
 
     /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
      *  @warning This function has the same limitations as readNetFromTorch().
