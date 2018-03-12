@@ -59,7 +59,6 @@ namespace {
 
 inline bool isHSV(int code)
 {
-    using namespace cv;
     switch(code)
     {
     case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
@@ -72,7 +71,6 @@ inline bool isHSV(int code)
 
 inline bool isLab(int code)
 {
-    using namespace cv;
     switch (code)
     {
     case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
@@ -83,9 +81,8 @@ inline bool isLab(int code)
     }
 }
 
-inline bool issRGB(int code)
+inline bool isSRGB(int code)
 {
-    using namespace cv;
     switch (code)
     {
     case COLOR_BGR2Lab: case COLOR_RGB2Lab: case COLOR_BGR2Luv: case COLOR_RGB2Luv:
@@ -98,7 +95,6 @@ inline bool issRGB(int code)
 
 inline bool swapBlue(int code)
 {
-    using namespace cv;
     switch (code)
     {
     case COLOR_BGR2BGRA: case COLOR_BGRA2BGR:
@@ -123,9 +119,8 @@ inline bool swapBlue(int code)
     }
 }
 
-inline bool isFullRange(int code)
+inline bool isFullRangeHSV(int code)
 {
-    using namespace cv;
     switch (code)
     {
     case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
