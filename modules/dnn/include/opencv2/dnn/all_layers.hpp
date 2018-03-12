@@ -153,7 +153,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         */
 
         int inputNameToIndex(String inputName);
-        int outputNameToIndex(String outputName);
+        int outputNameToIndex(const String& outputName);
     };
 
     /** @brief Classical recurrent layer

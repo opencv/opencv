@@ -398,7 +398,7 @@ struct DataLayer : public Layer
     void forward(std::vector<Mat*>&, std::vector<Mat>&, std::vector<Mat> &) {}
     void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) {}
 
-    int outputNameToIndex(String tgtName)
+    int outputNameToIndex(const String& tgtName)
     {
         int idx = (int)(std::find(outNames.begin(), outNames.end(), tgtName) - outNames.begin());
         return (idx < (int)outNames.size()) ? idx : -1;
@@ -2513,7 +2513,7 @@ int Layer::inputNameToIndex(String)
     return -1;
 }
 
-int Layer::outputNameToIndex(String)
+int Layer::outputNameToIndex(const String&)
 {
     return -1;
 }
@@ -2805,9 +2805,11 @@ BackendWrapper::BackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& 
 
 BackendWrapper::~BackendWrapper() {}
 
-Net readNet(String model, String config, String framework)
+Net readNet(const String& _model, const String& _config, const String& _framework)
 {
-    framework = framework.toLowerCase();
+    String framework = _framework.toLowerCase();
+    String model = _model;
+    String config = _config;
     const std::string modelExt = model.substr(model.rfind('.') + 1);
     const std::string configExt = config.substr(config.rfind('.') + 1);
     if (framework == "caffe" || modelExt == "caffemodel" || configExt == "caffemodel" ||
