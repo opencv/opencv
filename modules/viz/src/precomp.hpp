@@ -104,6 +104,7 @@
 #include <vtkMath.h>
 #include <vtkExtractEdges.h>
 #include <vtkFrustumSource.h>
+#include <vtkTexture.h>
 #include <vtkTextureMapToPlane.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
