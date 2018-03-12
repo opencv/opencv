@@ -311,9 +311,6 @@ struct OclHelper
 
         _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
         dst = _dst.getUMat();
-
-        srcarg = ocl::KernelArg::ReadOnlyNoSize(src);
-        dstarg = ocl::KernelArg::WriteOnly(dst);
     }
 
     bool createKernel(cv::String name, ocl::ProgramSource& source, cv::String options)
@@ -354,8 +351,8 @@ struct OclHelper
         if(k.empty())
             return false;
 
-        nArgs = k.set(0, srcarg);
-        nArgs = k.set(nArgs, dstarg);
+        nArgs = k.set(0, ocl::KernelArg::ReadOnlyNoSize(src));
+        nArgs = k.set(nArgs, ocl::KernelArg::WriteOnly(dst));
         return true;
     }
 
@@ -373,7 +370,6 @@ struct OclHelper
     UMat src, dst;
     ocl::Kernel k;
     size_t globalSize[2];
-    ocl::KernelArg srcarg, dstarg;
     int nArgs;
 };
 
@@ -406,10 +402,10 @@ public:
 
 private:
     const uchar * src_data;
-    size_t src_step;
+    const size_t src_step;
     uchar * dst_data;
-    size_t dst_step;
-    int width;
+    const size_t dst_step;
+    const int width;
     const Cvt& cvt;
 
     const CvtColorLoop_Invoker& operator= (const CvtColorLoop_Invoker&);
@@ -465,10 +461,10 @@ public:
 
 private:
     const uchar * src_data;
-    size_t src_step;
+    const size_t src_step;
     uchar * dst_data;
-    size_t dst_step;
-    int width;
+    const size_t dst_step;
+    const int width;
     const Cvt& cvt;
     bool *ok;
 
