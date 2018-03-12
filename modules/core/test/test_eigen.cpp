@@ -451,24 +451,13 @@ static void testEigenSymmetric3x3()
             -1, 2, -1,
             0, -1, 2
     };
-    T valuesZero_[] = {
-        0, 0, 0,
-        0, 0, 0,
-        0, 0, 0
-    };
-
     Mat_<T> src(3, 3, values_);
-    Mat_<T> srcZero(3, 3, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 3.414213562373095f, 2, 0.585786437626905f };
-    T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f, 0.000000000000000f };
     Mat_<T> expected_eigenvalues(3, 1, expected_eigenvalues_);
-    Mat_<T> expected_eigenvalueZero(3, 1, expected_eigenvaluesZero_);
 
     testEigen(src, expected_eigenvalues);
     testEigen(src, expected_eigenvalues, true);
-    testEigen(srcZero, expected_eigenvalueZero);
-    testEigen(srcZero, expected_eigenvalueZero, true);
 }
 TEST(Core_EigenSymmetric, float3x3) { testEigenSymmetric3x3<float>(); }
 TEST(Core_EigenSymmetric, double3x3) { testEigenSymmetric3x3<double>(); }
@@ -483,26 +472,13 @@ static void testEigenSymmetric5x5()
             2, 0, 1, 4, 0,
             1, 0, -1, 0, 1
     };
-
-    T valuesZero_[5*5] = {
-        0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0,
-    };
     Mat_<T> src(5, 5, values_);
-    Mat_<T> srcZero(5, 5, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 7.028919644935684f, 4.406130784616501f, 3.73626552682258f, 1.438067799899037f, 0.390616243726198f };
-    T expected_eigenvaluesZero_[] = { 0.000000000000000f, 0.000000000000000f, 0.000000000000000f, 0.000000000000000f, 0.000000000000000f };
     Mat_<T> expected_eigenvalues(5, 1, expected_eigenvalues_);
-    Mat_<T> expected_eigenvalueZero(5, 1, expected_eigenvaluesZero_);
 
     testEigen(src, expected_eigenvalues);
     testEigen(src, expected_eigenvalues, true);
-    testEigen(srcZero, expected_eigenvalueZero);
-    testEigen(srcZero, expected_eigenvalueZero, true);
 }
 TEST(Core_EigenSymmetric, float5x5) { testEigenSymmetric5x5<float>(); }
 TEST(Core_EigenSymmetric, double5x5) { testEigenSymmetric5x5<double>(); }
@@ -512,17 +488,12 @@ template<typename T>
 static void testEigen2x2()
 {
     /*const*/ T values_[] = { 4, 1, 6, 3 };
-    T valuesZero_[] = { 0, 0, 0, 0 };
     Mat_<T> src(2, 2, values_);
-    Mat_<T> srcZero(2, 2, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 6, 1 };
-    T expected_eigenvaluesZero_[] = { 0, 0 };
     Mat_<T> expected_eigenvalues(2, 1, expected_eigenvalues_);
-    Mat_<T> expected_eigenvalueZero(2, 1, expected_eigenvaluesZero_);
 
     testEigen(src, expected_eigenvalues);
-    testEigen(srcZero, expected_eigenvalueZero);
 }
 TEST(Core_EigenNonSymmetric, float2x2) { testEigen2x2<float>(); }
 TEST(Core_EigenNonSymmetric, double2x2) { testEigen2x2<double>(); }
@@ -535,23 +506,25 @@ static void testEigen3x3()
             0,3,1,
             0,0,3
     };
-    T valuesZero_[3*3] = {
-        0,0,0,
-        0,0,0,
-        0,0,0
-    };
     Mat_<T> src(3, 3, values_);
-    Mat_<T> srcZero(3, 3, valuesZero_);
 
     /*const*/ T expected_eigenvalues_[] = { 3, 3, 3 };
-    T expected_eigenvaluesZero_[] = { 0, 0, 0 };
     Mat_<T> expected_eigenvalues(3, 1, expected_eigenvalues_);
-    Mat_<T> expected_eigenvalueZero(3, 1, expected_eigenvaluesZero_);
 
     testEigen(src, expected_eigenvalues);
-    testEigen(srcZero, expected_eigenvalueZero);
 }
 TEST(Core_EigenNonSymmetric, float3x3) { testEigen3x3<float>(); }
 TEST(Core_EigenNonSymmetric, double3x3) { testEigen3x3<double>(); }
+
+typedef testing::TestWithParam<int> Core_EigenZero;
+TEST_P(Core_EigenZero, double)
+{
+    int N = GetParam();
+    Mat_<double> srcZero = Mat_<double>::zeros(N, N);
+    Mat_<double> expected_eigenvalueZero = Mat_<double>::zeros(N, 1);  // 1D Mat
+    testEigen(srcZero, expected_eigenvalueZero);
+    testEigen(srcZero, expected_eigenvalueZero, true);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Core_EigenZero, testing::Values(2, 3, 5));
 
 }} // namespace
