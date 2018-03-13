@@ -306,74 +306,100 @@ TEST_F(Imgproc_LSD_Common, supportsVec4iResult)
 
 TEST_F(Imgproc_LSD_Common, drawSegmentsVec4f)
 {
-    for (int i = 0; i < EPOCHS; ++i)
-    {
-        GenerateConstColor(test_image);
+    GenerateConstColor(test_image);
 
-        std::vector<Vec4f> linesVec4f;
-        RNG cr(0); // constant seed for deterministic test
-        for (int j = 0; j < 10; j++) {
-            linesVec4f.push_back(
-                Vec4f(float(cr) * test_image.cols, float(cr) * test_image.rows, float(cr) * test_image.cols, float(cr) * test_image.rows));
-        }
-
-        Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
-        Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
-
-        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
-        detector->drawSegments(actual, linesVec4f);
-
-        // something should be drawn
-        if (sum(actual == expected) == Scalar::all(0))
-            continue;
-
-        for (size_t lineIndex = 0; lineIndex < linesVec4f.size(); lineIndex++)
-        {
-            const Vec4f &v = linesVec4f[lineIndex];
-            const Point2f b(v[0], v[1]);
-            const Point2f e(v[2], v[3]);
-            line(expected, b, e, Scalar(0, 0, 255), 1);
-        }
-        if (sum(actual != expected) == Scalar::all(0))
-            ++passedtests;
+    std::vector<Vec4f> linesVec4f;
+    RNG cr(0); // constant seed for deterministic test
+    for (int j = 0; j < 10; j++) {
+        linesVec4f.push_back(
+            Vec4f(float(cr) * test_image.cols, float(cr) * test_image.rows, float(cr) * test_image.cols, float(cr) * test_image.rows));
     }
-    ASSERT_EQ(EPOCHS, passedtests);
+
+    Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
+    Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
+
+    Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+    detector->drawSegments(actual, linesVec4f);
+
+    // something should be drawn
+    ASSERT_EQ(sum(actual == expected) != Scalar::all(0), true);
+    
+    for (size_t lineIndex = 0; lineIndex < linesVec4f.size(); lineIndex++)
+    {
+        const Vec4f &v = linesVec4f[lineIndex];
+        const Point2f b(v[0], v[1]);
+        const Point2f e(v[2], v[3]);
+        line(expected, b, e, Scalar(0, 0, 255), 1);
+    }
+
+    ASSERT_EQ(sum(actual != expected) == Scalar::all(0), true);
 }
 
 TEST_F(Imgproc_LSD_Common, drawSegmentsVec4i)
 {
-    for (int i = 0; i < EPOCHS; ++i)
-    {
-        GenerateConstColor(test_image);
+    GenerateConstColor(test_image);
 
-        std::vector<Vec4i> linesVec4i;
-        RNG cr(0); // constant seed for deterministic test
-        for (int j = 0; j < 10; j++) {
-            linesVec4i.push_back(
-                Vec4i(cr(test_image.cols), cr(test_image.rows), cr(test_image.cols), cr(test_image.rows)));
-        }
-
-        Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
-        Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
-
-        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
-        detector->drawSegments(actual, linesVec4i);
-
-        // something should be drawn
-        if (sum(actual == expected) == Scalar::all(0))
-            continue;
-
-        for (size_t lineIndex = 0; lineIndex < linesVec4i.size(); lineIndex++)
-        {
-            const Vec4f &v = linesVec4i[lineIndex];
-            const Point2f b(v[0], v[1]);
-            const Point2f e(v[2], v[3]);
-            line(expected, b, e, Scalar(0, 0, 255), 1);
-        }
-        if (sum(actual != expected) == Scalar::all(0))
-            ++passedtests;
+    std::vector<Vec4i> linesVec4i;
+    RNG cr(0); // constant seed for deterministic test
+    for (int j = 0; j < 10; j++) {
+        linesVec4i.push_back(
+            Vec4i(cr(test_image.cols), cr(test_image.rows), cr(test_image.cols), cr(test_image.rows)));
     }
-    ASSERT_EQ(EPOCHS, passedtests);
+
+    Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
+    Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
+
+    Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+    detector->drawSegments(actual, linesVec4i);
+
+    // something should be drawn
+    ASSERT_EQ(sum(actual == expected) != Scalar::all(0), true);
+
+    for (size_t lineIndex = 0; lineIndex < linesVec4i.size(); lineIndex++)
+    {
+        const Vec4f &v = linesVec4i[lineIndex];
+        const Point2f b(v[0], v[1]);
+        const Point2f e(v[2], v[3]);
+        line(expected, b, e, Scalar(0, 0, 255), 1);
+    }
+
+    ASSERT_EQ(sum(actual != expected) == Scalar::all(0), true);
+}
+
+TEST_F(Imgproc_LSD_Common, compareSegmentsVec4f)
+{
+    GenerateConstColor(test_image);
+    Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+
+    std::vector<Vec4f> lines1, lines2;
+    lines1.push_back(Vec4f(0, 0, 100, 200));
+    lines2.push_back(Vec4f(0, 0, 100, 200));    
+    int result1 = detector->compareSegments(test_image.size(), lines1, lines2);
+
+    ASSERT_EQ(result1, 0);
+
+    lines2.push_back(Vec4f(100, 100, 110, 100));
+    int result2 = detector->compareSegments(test_image.size(), lines1, lines2);
+
+    ASSERT_EQ(result2, 11);
+}
+
+TEST_F(Imgproc_LSD_Common, compareSegmentsVec4i)
+{
+    GenerateConstColor(test_image);
+    Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+
+    std::vector<Vec4i> lines1, lines2;
+    lines1.push_back(Vec4i(0, 0, 100, 200));
+    lines2.push_back(Vec4i(0, 0, 100, 200));
+    int result1 = detector->compareSegments(test_image.size(), lines1, lines2);
+
+    ASSERT_EQ(result1, 0);
+
+    lines2.push_back(Vec4i(100, 100, 110, 100));
+    int result2 = detector->compareSegments(test_image.size(), lines1, lines2);
+
+    ASSERT_EQ(result2, 11);
 }
 
 }} // namespace
