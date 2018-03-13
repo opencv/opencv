@@ -606,7 +606,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
                     resY[idx] = 0.0;
                 }
 
-                Ang[idx] = fastAtan2(resX[idx], resY[idx]) * (float)(CV_PI / 180.0f);
+                Ang[idx] = fastAtan2(resY[idx], resX[idx]) * (float)(CV_PI / 180.0f);
                 ++idx;
             }
         }
@@ -638,7 +638,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
         if (sumX*sumX + sumY*sumY > max) {
             // store largest orientation
             max = sumX*sumX + sumY*sumY;
-            kpt.angle = fastAtan2(sumX, sumY);
+            kpt.angle = fastAtan2(sumY, sumX);
         }
     }
 }
