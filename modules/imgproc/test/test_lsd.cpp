@@ -323,7 +323,7 @@ TEST_F(Imgproc_LSD_Common, drawSegmentsVec4f)
 
     // something should be drawn
     ASSERT_EQ(sum(actual == expected) != Scalar::all(0), true);
-    
+
     for (size_t lineIndex = 0; lineIndex < linesVec4f.size(); lineIndex++)
     {
         const Vec4f &v = linesVec4f[lineIndex];
@@ -373,7 +373,7 @@ TEST_F(Imgproc_LSD_Common, compareSegmentsVec4f)
 
     std::vector<Vec4f> lines1, lines2;
     lines1.push_back(Vec4f(0, 0, 100, 200));
-    lines2.push_back(Vec4f(0, 0, 100, 200));    
+    lines2.push_back(Vec4f(0, 0, 100, 200));
     int result1 = detector->compareSegments(test_image.size(), lines1, lines2);
 
     ASSERT_EQ(result1, 0);
