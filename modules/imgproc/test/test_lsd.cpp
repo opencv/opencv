@@ -308,22 +308,28 @@ TEST_F(Imgproc_LSD_Common, drawSegmentsVec4f)
 {
     for (int i = 0; i < EPOCHS; ++i)
     {
-        GenerateWhiteNoise(test_image);
-        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
-        detector->detect(test_image, lines);
+        GenerateConstColor(test_image);
+
+        std::vector<Vec4f> linesVec4f;
+        RNG cr(0); // constant seed for deterministic test
+        for (int j = 0; j < 10; j++) {
+            linesVec4f.push_back(
+                Vec4f(float(cr) * test_image.cols, float(cr) * test_image.rows, float(cr) * test_image.cols, float(cr) * test_image.rows));
+        }
 
         Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
         Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
 
-        detector->drawSegments(actual, lines);
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+        detector->drawSegments(actual, linesVec4f);
 
         // something should be drawn
         if (sum(actual == expected) == Scalar::all(0))
             continue;
 
-        for (size_t lineIndex = 0; lineIndex < lines.size(); lineIndex++)
+        for (size_t lineIndex = 0; lineIndex < linesVec4f.size(); lineIndex++)
         {
-            const Vec4f &v = lines[lineIndex];
+            const Vec4f &v = linesVec4f[lineIndex];
             const Point2f b(v[0], v[1]);
             const Point2f e(v[2], v[3]);
             line(expected, b, e, Scalar(0, 0, 255), 1);
@@ -338,15 +344,19 @@ TEST_F(Imgproc_LSD_Common, drawSegmentsVec4i)
 {
     for (int i = 0; i < EPOCHS; ++i)
     {
-        GenerateWhiteNoise(test_image);
-        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+        GenerateConstColor(test_image);
 
         std::vector<Vec4i> linesVec4i;
-        detector->detect(test_image, linesVec4i);
+        RNG cr(0); // constant seed for deterministic test
+        for (int j = 0; j < 10; j++) {
+            linesVec4i.push_back(
+                Vec4i(cr(test_image.cols), cr(test_image.rows), cr(test_image.cols), cr(test_image.rows)));
+        }
 
         Mat actual = Mat::zeros(test_image.size(), CV_8UC3);
         Mat expected = Mat::zeros(test_image.size(), CV_8UC3);
 
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
         detector->drawSegments(actual, linesVec4i);
 
         // something should be drawn
