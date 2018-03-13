@@ -129,19 +129,19 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
     case COLOR_BGR2Lab: case COLOR_LBGR2Lab:
     case COLOR_RGB2Lab: case COLOR_LRGB2Lab:
-        return oclCvtColorBGR2Lab(_src, _dst, bidx, isSRGB(code));
+        return oclCvtColorBGR2Lab(_src, _dst, bidx, is_sRGB(code));
 
     case COLOR_BGR2Luv: case COLOR_LBGR2Luv:
     case COLOR_RGB2Luv: case COLOR_LRGB2Luv:
-        return oclCvtColorBGR2Luv(_src, _dst, bidx, isSRGB(code));
+        return oclCvtColorBGR2Luv(_src, _dst, bidx, is_sRGB(code));
 
     case COLOR_Lab2BGR: case COLOR_Lab2LBGR:
     case COLOR_Lab2RGB: case COLOR_Lab2LRGB:
-        return oclCvtColorLab2BGR(_src, _dst, dcn, bidx, isSRGB(code));
+        return oclCvtColorLab2BGR(_src, _dst, dcn, bidx, is_sRGB(code));
 
     case COLOR_Luv2BGR: case COLOR_Luv2LBGR:
     case COLOR_Luv2RGB: case COLOR_Luv2LRGB:
-        return oclCvtColorLuv2BGR(_src, _dst, dcn, bidx, isSRGB(code));
+        return oclCvtColorLuv2BGR(_src, _dst, dcn, bidx, is_sRGB(code));
 
     default:
         return false;
@@ -264,22 +264,22 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case COLOR_BGR2Lab: case COLOR_LBGR2Lab:
         case COLOR_RGB2Lab: case COLOR_LRGB2Lab:
-            cvtColorBGR2Lab(_src, _dst, swapBlue(code), isSRGB(code));
+            cvtColorBGR2Lab(_src, _dst, swapBlue(code), is_sRGB(code));
             break;
 
         case COLOR_BGR2Luv: case COLOR_LBGR2Luv:
         case COLOR_RGB2Luv: case COLOR_LRGB2Luv:
-            cvtColorBGR2Luv(_src, _dst, swapBlue(code), isSRGB(code));
+            cvtColorBGR2Luv(_src, _dst, swapBlue(code), is_sRGB(code));
             break;
 
         case COLOR_Lab2BGR: case COLOR_Lab2LBGR:
         case COLOR_Lab2RGB: case COLOR_Lab2LRGB:
-            cvtColorLab2BGR(_src, _dst, dcn, swapBlue(code), isSRGB(code));
+            cvtColorLab2BGR(_src, _dst, dcn, swapBlue(code), is_sRGB(code));
             break;
 
         case COLOR_Luv2BGR: case COLOR_Luv2LBGR:
         case COLOR_Luv2RGB: case COLOR_Luv2LRGB:
-            cvtColorLuv2BGR(_src, _dst, dcn, swapBlue(code), isSRGB(code));
+            cvtColorLuv2BGR(_src, _dst, dcn, swapBlue(code), is_sRGB(code));
             break;
 
         case COLOR_BayerBG2GRAY: case COLOR_BayerGB2GRAY: case COLOR_BayerRG2GRAY: case COLOR_BayerGR2GRAY:

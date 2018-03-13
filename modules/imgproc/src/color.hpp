@@ -81,7 +81,7 @@ inline bool isLab(int code)
     }
 }
 
-inline bool isSRGB(int code)
+inline bool is_sRGB(int code)
 {
     switch (code)
     {
