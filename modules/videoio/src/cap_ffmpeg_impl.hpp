@@ -101,7 +101,7 @@ extern "C" {
         long   tv_nsec;
     };
   #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -298,7 +298,7 @@ static int get_number_of_cpus(void)
     GetSystemInfo( &sysinfo );
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined __linux__
+#elif defined __linux__ || defined __HAIKU__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;
