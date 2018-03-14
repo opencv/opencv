@@ -22,6 +22,7 @@ Implementation of Tensorflow models parser
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "tf_io.hpp"
+#include "tf_graph_simplifier.hpp"
 #endif
 
 namespace cv {
@@ -85,77 +86,6 @@ void blobShapeFromTensor(const tensorflow::TensorProto &tensor, MatShape& shape)
     {
         CV_Error(Error::StsError, "Unknown shape of input tensor");
     }
-}
-
-static Mat getTensorContent(const tensorflow::TensorProto &tensor)
-{
-    std::string content = tensor.tensor_content();
-    switch (tensor.dtype())
-    {
-        case tensorflow::DT_FLOAT:
-        {
-            if (!content.empty())
-                return Mat(1, content.size() / sizeof(float), CV_32FC1, (void*)content.c_str()).clone();
-            else
-            {
-                const RepeatedField<float>& field = tensor.float_val();
-                CV_Assert(!field.empty());
-                return Mat(1, field.size(), CV_32FC1, (void*)field.data()).clone();
-            }
-        }
-        case tensorflow::DT_DOUBLE:
-        {
-            if (!content.empty())
-                return Mat(1, content.size() / sizeof(double), CV_64FC1, (void*)content.c_str()).clone();
-            else
-            {
-                const RepeatedField<double>& field = tensor.double_val();
-                CV_Assert(!field.empty());
-                return Mat(1, field.size(), CV_64FC1, (void*)field.data()).clone();
-            }
-        }
-        case tensorflow::DT_INT32:
-        {
-            if (!content.empty())
-                return Mat(1, content.size() / sizeof(int32_t), CV_32SC1, (void*)content.c_str()).clone();
-            else
-            {
-                const RepeatedField<int32_t>& field = tensor.int_val();
-                CV_Assert(!field.empty());
-                return Mat(1, field.size(), CV_32SC1, (void*)field.data()).clone();
-            }
-        }
-        case tensorflow::DT_HALF:
-        {
-            Mat halfs;
-            if (!content.empty())
-            {
-                static const int kHalfSize = 2;
-                halfs = Mat(1, content.size() / kHalfSize, CV_16UC1, (void*)content.c_str());
-            }
-            else
-            {
-                const RepeatedField<int32_t>& field = tensor.half_val();
-                CV_Assert(!field.empty());
-                Mat ints(1, field.size(), CV_32SC1, (void*)field.data());
-                ints.convertTo(halfs, CV_16UC1);
-            }
-            // Reinterpret as a signed shorts just for a convertFp16 call.
-            Mat halfsSigned(halfs.size(), CV_16SC1, halfs.data);
-            Mat floats(halfs.size(), CV_32FC1);
-            convertFp16(halfsSigned, floats);
-            return floats;
-        }
-        case tensorflow::DT_QUINT8:
-        {
-            CV_Assert(!content.empty());
-            return Mat(1, content.size(), CV_8UC1, (void*)content.c_str()).clone();
-        }
-        default:
-            CV_Error(Error::StsError, "Tensor's data type is not supported");
-            break;
-    }
-    return Mat();
 }
 
 template <typename T>
@@ -362,47 +292,6 @@ void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "padding"))
         layerParams.set("pad_mode", getLayerAttr(layer, "padding").s());
-}
-
-void RemoveIdentityOps(tensorflow::GraphDef& net) {
-    typedef std::map<String, String>  IdentityOpsMap;
-    IdentityOpsMap identity_ops;
-
-    std::vector<int> identity_ops_idx;
-
-    int layersCount = net.node_size();
-    for (int li = 0; li < layersCount; li++)
-    {
-        const tensorflow::NodeDef &layer = net.node(li);
-        String type = layer.op();
-
-        if (type == "Identity" || type == "Dropout") {
-            identity_ops_idx.push_back(li);
-            identity_ops[layer.name()] = layer.input(0);
-        }
-    }
-
-    for (int li = 0; li < layersCount; li++)
-    {
-        tensorflow::NodeDef* layer = net.mutable_node(li);
-        for (int input_id = 0; input_id < layer->input_size(); input_id++) {
-            String input_op_name = layer->input(input_id);
-            IdentityOpsMap::iterator it = identity_ops.find(input_op_name);
-
-            if (it != identity_ops.end()) {
-                layer->set_input(input_id, it->second);
-            }
-        }
-    }
-
-    std::sort(identity_ops_idx.begin(), identity_ops_idx.end());
-
-    int removed_nodes = 0;
-    for(size_t i = 0; i < identity_ops_idx.size(); i++) {
-        int start_id = identity_ops_idx[i] - removed_nodes;
-        net.mutable_node()->DeleteSubrange(start_id, 1);
-        removed_nodes++;
-    }
 }
 
 Pin parsePin(const std::string &name)
@@ -697,6 +586,9 @@ void TFImporter::populateNet(Net dstNet)
     RemoveIdentityOps(netBin);
     RemoveIdentityOps(netTxt);
 
+    if (!netTxt.ByteSize())
+        simplifySubgraphs(netBin);
+
     std::set<String> layers_to_ignore;
 
     tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
@@ -823,9 +715,9 @@ void TFImporter::populateNet(Net dstNet)
             if (hasLayerAttr(layer, "data_format"))
             {
                 std::string format = getLayerAttr(layer, "data_format").s();
-                if (format == "NHWC")
+                if (format == "NHWC" || format == "channels_last")
                     data_layouts[name] = DATA_LAYOUT_NHWC;
-                else if (format == "NCHW")
+                else if (format == "NCHW" || format == "channels_first")
                     data_layouts[name] = DATA_LAYOUT_NCHW;
                 else
                     CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
@@ -912,9 +804,9 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Reshape")
         {
             Pin inpId = parsePin(layer.input(0));
-            DictValue newShape = parseDims(getConstBlob(layer, value_id, 1));
+            Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
 
-            if (newShape.size() != 4 && data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
+            if (newShape.total() != 4 && data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
             {
                 LayerParams permLP;
                 int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
@@ -927,19 +819,42 @@ void TFImporter::populateNet(Net dstNet)
                 connect(layer_id, dstNet, inpId, permId, 0);
                 inpId = Pin(permName);
             }
-            layerParams.set("dim", newShape);
+            else if (newShape.total() == 4 && data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
+            {
+                // NHWC->NCHW
+                std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+            }
+            layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
 
             int id = dstNet.addLayer(name, "Reshape", layerParams);
             layer_id[name] = id;
 
             // one input only
             connect(layer_id, dstNet, inpId, id, 0);
-            data_layouts[name] = DATA_LAYOUT_UNKNOWN;
         }
-        else if (type == "Flatten")
+        else if (type == "Flatten" || type == "Squeeze")
         {
             Pin inpId = parsePin(layer.input(0));
-            if (data_layouts[layer.input(0)] == DATA_LAYOUT_NHWC)
+            int inpLayout = data_layouts[layer.input(0)];
+            if (type == "Squeeze")
+            {
+                CV_Assert(hasLayerAttr(layer, "squeeze_dims"));
+                const tensorflow::AttrValue& dims = getLayerAttr(layer, "squeeze_dims");
+                if (inpLayout == DATA_LAYOUT_NHWC)
+                {
+                    if (dims.list().i_size() != 2 || dims.list().i(0) != 1 || dims.list().i(1) != 2)
+                        CV_Error(Error::StsNotImplemented, "Unsupported squeeze configuration");
+                }
+                else if (inpLayout == DATA_LAYOUT_NCHW)
+                {
+                    if (dims.list().i_size() != 2 || dims.list().i(0) != 2 || dims.list().i(1) != 3)
+                        CV_Error(Error::StsNotImplemented, "Unsupported squeeze configuration");
+                }
+                else
+                    CV_Error(Error::StsNotImplemented, "Unsupported squeeze configuration");
+            }
+            if (inpLayout == DATA_LAYOUT_NHWC)
             {
                 LayerParams permLP;
                 int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
@@ -1274,14 +1189,36 @@ void TFImporter::populateNet(Net dstNet)
 
             bool isTraining = hasLayerAttr(layer, "is_training") && getLayerAttr(layer, "is_training").b();
 
-            layerParams.blobs.resize(4);
-            Mat gamma, beta, mean, std;
-            blobFromTensor(getConstBlob(layer, value_id, 1), gamma);
-            blobFromTensor(getConstBlob(layer, value_id, 2), beta);
+            layerParams.blobs.resize(2);
+
+            const tensorflow::TensorProto& gammaTensor = getConstBlob(layer, value_id, 1);
+            if (!gammaTensor.tensor_content().empty())
+            {
+                layerParams.blobs.resize(layerParams.blobs.size() + 1);
+                layerParams.set("has_weight", true);
+                blobFromTensor(gammaTensor, layerParams.blobs.back());
+            }
+            else
+                layerParams.set("has_weight", false);
+
+            const tensorflow::TensorProto& betaTensor = getConstBlob(layer, value_id, 2);
+            if (!betaTensor.tensor_content().empty())
+            {
+                layerParams.blobs.resize(layerParams.blobs.size() + 1);
+                layerParams.set("has_bias", true);
+                blobFromTensor(betaTensor, layerParams.blobs.back());
+            }
+            else
+                layerParams.set("has_bias", false);
+
+            Mat mean, std;
             if (isTraining)
             {
-                mean = Mat::zeros(1, beta.total(), CV_32F);
-                std = Mat::ones(1, beta.total(), CV_32F);
+                if (layerParams.blobs.size() == 2)
+                    CV_Error(Error::StsNotImplemented, "Cannot determine number "
+                             "of parameters for batch normalization layer.");
+                mean = Mat::zeros(1, layerParams.blobs[3].total(), CV_32F);
+                std = Mat::ones(1, layerParams.blobs[3].total(), CV_32F);
 
                 // Add an extra layer: Mean-Variance normalization
                 LayerParams mvnParams;
@@ -1299,14 +1236,9 @@ void TFImporter::populateNet(Net dstNet)
             }
             layerParams.blobs[0] = mean;
             layerParams.blobs[1] = std;
-            layerParams.blobs[2] = gamma;
-            layerParams.blobs[3] = beta;
 
             if (hasLayerAttr(layer, "epsilon"))
                 layerParams.set("eps", getLayerAttr(layer, "epsilon").f());
-
-            layerParams.set("has_weight", true);
-            layerParams.set("has_bias", true);
 
             int id = dstNet.addLayer(name, "BatchNorm", layerParams);
             layer_id[name] = id;
@@ -1560,6 +1492,39 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Softmax", layerParams);
             layer_id[name] = id;
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+        }
+        else if (type == "Mean")
+        {
+            Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
+            CV_Assert(indices.type() == CV_32SC1);
+
+            if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
+                CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+
+            layerParams.set("pool", "ave");
+            layerParams.set("global_pooling", true);
+
+            int id = dstNet.addLayer(name, "Pooling", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+            // There are two attributes, "keepdims" and a deprecated "keep_dims".
+            bool keepDims = false;
+            if (hasLayerAttr(layer, "keepdims"))
+                keepDims = getLayerAttr(layer, "keepdims").b();
+            else if (hasLayerAttr(layer, "keep_dims"))
+                keepDims = getLayerAttr(layer, "keep_dims").b();
+
+            if (!keepDims)
+            {
+                LayerParams flattenLp;
+                std::string flattenName = name + "/flatten";
+                CV_Assert(layer_id.find(flattenName) == layer_id.end());
+                int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
+                layer_id[flattenName] = flattenId;
+                connect(layer_id, dstNet, Pin(name), flattenId, 0);
+            }
         }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
                  type == "Relu" || type == "Elu" ||
