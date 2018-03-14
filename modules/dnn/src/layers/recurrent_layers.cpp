@@ -355,7 +355,7 @@ int LSTMLayer::inputNameToIndex(String inputName)
     return -1;
 }
 
-int LSTMLayer::outputNameToIndex(String outputName)
+int LSTMLayer::outputNameToIndex(const String& outputName)
 {
     if (outputName.toLowerCase() == "h")
         return 0;

@@ -18,40 +18,26 @@ VIDEO DEMO:
 Source Code
 -----------
 
-The latest version of sample source code can be downloaded [here](https://github.com/opencv/opencv/blob/master/samples/dnn/yolo_object_detection.cpp).
+Use a universal sample for object detection models written
+[in C++](https://github.com/opencv/opencv/blob/master/samples/dnn/object_detection.cpp) and
+[in Python](https://github.com/opencv/opencv/blob/master/samples/dnn/object_detection.py) languages
 
-@include dnn/yolo_object_detection.cpp
-
-How to compile in command line with pkg-config
-----------------------------------------------
-
-@code{.bash}
-
-# g++ `pkg-config --cflags opencv` `pkg-config --libs opencv` yolo_object_detection.cpp -o yolo_object_detection
-
-@endcode
+Usage examples
+--------------
 
 Execute in webcam:
 
 @code{.bash}
 
-$ yolo_object_detection -camera_device=0  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -class_names=[PATH-TO-DARKNET]/data/coco.names
+$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=object_detection_classes_pascal_voc.txt --width=416 --height=416 --scale=0.00392
 
 @endcode
 
-Execute with image:
+Execute with image or video file:
 
 @code{.bash}
 
-$ yolo_object_detection -source=[PATH-IMAGE]  -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -class_names=[PATH-TO-DARKNET]/data/coco.names
-
-@endcode
-
-Execute in video file:
-
-@code{.bash}
-
-$ yolo_object_detection -source=[PATH-TO-VIDEO] -cfg=[PATH-TO-DARKNET]/cfg/yolo.cfg -model=[PATH-TO-DARKNET]/yolo.weights   -class_names=[PATH-TO-DARKNET]/data/coco.names
+$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=object_detection_classes_pascal_voc.txt --width=416 --height=416 --scale=0.00392 --input=[PATH-TO-IMAGE-OR-VIDEO-FILE]
 
 @endcode
 
