@@ -104,6 +104,12 @@ static void from_str(const String& str, int type, void* dst)
         ss >> *(double*)dst;
     else if( type == Param::STRING )
         *(String*)dst = str;
+    else if( type == Param::SCALAR)
+    {
+        Scalar& scalar = *(Scalar*)dst;
+        for (int i = 0; i < 4 && !ss.eof(); ++i)
+            ss >> scalar[i];
+    }
     else
         CV_Error(Error::StsBadArg, "unknown/unsupported parameter type");
 
