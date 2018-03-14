@@ -71,7 +71,6 @@ else()
 endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-
 if(CMAKE_COMPILER_IS_GNUCXX)
     if(NOT CMAKE_CXX_FLAGS MATCHES "-fPIC")
       ocv_add_defense_compiler_flag("-fPIC")
