@@ -150,6 +150,9 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("batch_norm_text", targetId, true);
     runTensorFlowNet("mvn_batch_norm", targetId);
     runTensorFlowNet("mvn_batch_norm_1x1", targetId);
+    runTensorFlowNet("unfused_batch_norm", targetId);
+    runTensorFlowNet("fused_batch_norm_no_gamma", targetId);
+    runTensorFlowNet("unfused_batch_norm_no_gamma", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, pooling)
@@ -159,6 +162,7 @@ TEST_P(Test_TensorFlow_layers, pooling)
     runTensorFlowNet("max_pool_odd_valid", targetId);
     runTensorFlowNet("ave_pool_same", targetId);
     runTensorFlowNet("max_pool_odd_same", targetId);
+    runTensorFlowNet("reduce_mean", targetId);  // an average pooling over all spatial dimensions.
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
@@ -185,6 +189,8 @@ TEST_P(Test_TensorFlow_layers, reshape)
     runTensorFlowNet("shift_reshape_no_reorder", targetId);
     runTensorFlowNet("reshape_reduce", targetId);
     runTensorFlowNet("flatten", targetId, true);
+    runTensorFlowNet("unfused_flatten", targetId);
+    runTensorFlowNet("unfused_flatten_unknown_batch", targetId);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, availableDnnTargets());
@@ -330,6 +336,21 @@ TEST(Test_TensorFlow, resize_nearest_neighbor)
 TEST(Test_TensorFlow, slice)
 {
     runTensorFlowNet("slice_4d");
+}
+
+TEST(Test_TensorFlow, softmax)
+{
+    runTensorFlowNet("keras_softmax");
+}
+
+TEST(Test_TensorFlow, relu6)
+{
+    runTensorFlowNet("keras_relu6");
+}
+
+TEST(Test_TensorFlow, keras_mobilenet_head)
+{
+    runTensorFlowNet("keras_mobilenet_head");
 }
 
 TEST(Test_TensorFlow, memory_read)
