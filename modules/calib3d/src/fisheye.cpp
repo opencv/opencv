@@ -381,11 +381,6 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 
         double theta_d = sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
 
-        // the current camera model is only valid up to 180 FOV
-        // for larger FOV the loop below does not converge
-        // clip values so we still get plausible results for super fisheye images > 180 grad
-        theta_d = min(max(-CV_PI/2., theta_d), CV_PI/2.);
-
         if (theta_d > 1e-8)
         {
             // compensate distortion iteratively
