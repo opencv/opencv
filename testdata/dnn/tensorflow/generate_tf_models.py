@@ -12,22 +12,25 @@ from tensorflow.tools.graph_transforms import TransformGraph
 np.random.seed(2701)
 
 def gen_data(placeholder):
-    return np.random.standard_normal(placeholder.shape).astype(placeholder.dtype.as_numpy_dtype())
+    shape = placeholder.shape.as_list()
+    shape[0] = shape[0] if shape[0] else 1  # batch size = 1 instead None
+    return np.random.standard_normal(shape).astype(placeholder.dtype.as_numpy_dtype())
 
-def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, quantize=False):
+def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, optimize=True, quantize=False):
     # Freeze graph. Replaces variables to constants.
-    frozen_graph = tf.graph_util.convert_variables_to_constants(sess, graph_def, [out_node])
-    # Optimize graph. Removes training-only ops, unused nodes.
-    opt_graph = optimize_for_inference_lib.optimize_for_inference(frozen_graph, [in_node], [out_node], dtype.as_datatype_enum)
-    # Fuse constant operations.
-    transforms = ["fold_constants(ignore_errors=True)"]
-    if quantize:
-        transforms += ["quantize_weights(minimum_size=0)"]
-    transforms += ["sort_by_execution_order"]
-    fused_graph = TransformGraph(opt_graph, [in_node], [out_node], transforms)
+    graph_def = tf.graph_util.convert_variables_to_constants(sess, graph_def, [out_node])
+    if optimize:
+        # Optimize graph. Removes training-only ops, unused nodes.
+        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [in_node], [out_node], dtype.as_datatype_enum)
+        # Fuse constant operations.
+        transforms = ["fold_constants(ignore_errors=True)"]
+        if quantize:
+            transforms += ["quantize_weights(minimum_size=0)"]
+        transforms += ["sort_by_execution_order"]
+        graph_def = TransformGraph(graph_def, [in_node], [out_node], transforms)
     # Serialize
     with tf.gfile.FastGFile(out_graph, 'wb') as f:
-            f.write(fused_graph.SerializeToString())
+            f.write(graph_def.SerializeToString())
 
 tf.reset_default_graph()
 tf.Graph().as_default()
@@ -60,7 +63,7 @@ def runModel(inp, out, name):
         writeBlob(inputData, name + '_in')
         writeBlob(outputData, name + '_out')
 
-def save(inp, out, name, quantize=False):
+def save(inp, out, name, quantize=False, optimize=True):
     sess.run(tf.global_variables_initializer())
 
     inputData = gen_data(inp)
@@ -69,7 +72,8 @@ def save(inp, out, name, quantize=False):
     writeBlob(outputData, name + '_out')
 
     prepare_for_dnn(sess, sess.graph.as_graph_def(), inp.name[:inp.name.rfind(':')],
-                    out.name[:out.name.rfind(':')], name + '_net.pb', inp.dtype, quantize)
+                    out.name[:out.name.rfind(':')], name + '_net.pb', inp.dtype,
+                    optimize, quantize)
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
@@ -391,6 +395,72 @@ gamma = tf.Variable(tf.random_normal([5], dtype=tf.float32))
 beta = tf.Variable(tf.random_normal([5], dtype=tf.float32))
 bn = tf.nn.fused_batch_norm(inp, gamma, beta, epsilon=1e-5, is_training=True)[0]
 save(inp, bn, 'mvn_batch_norm_1x1')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='unfused_batch_norm',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   gamma_initializer=tf.random_normal_initializer(),
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'unfused_batch_norm', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+bn = tf.layers.batch_normalization(inp, training=False, fused=True, name='fused_batch_norm_no_gamma',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   scale=False,
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'fused_batch_norm_no_gamma', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='unfused_batch_norm_no_gamma',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   scale=False,
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'unfused_batch_norm_no_gamma', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3], 'input')
+flatten = tf.contrib.layers.flatten(inp)
+save(inp, flatten, 'unfused_flatten', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [None, 2, 3], 'input')
+flatten = tf.contrib.layers.flatten(inp)
+save(inp, flatten, 'unfused_flatten_unknown_batch', optimize=False)
+################################################################################
+from tensorflow import keras as K
+model = K.models.Sequential()
+model.add(K.layers.Softmax(name='keras_softmax', input_shape=(2, 3, 4)))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_softmax_input:0'),
+     sess.graph.get_tensor_by_name('keras_softmax/truediv:0'), 'keras_softmax', optimize=False)
+################################################################################
+model = K.models.Sequential()
+model.add(K.layers.Conv2D(filters=4, kernel_size=1, data_format='channels_last',
+                          name='keras_mobilenet_head_conv', input_shape=(2, 3, 4)))
+model.add(K.layers.GlobalAveragePooling2D(name='keras_mobilenet_head_pool'))
+model.add(K.layers.Reshape((1, 1, 4), name='keras_mobilenet_head_reshape'))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_mobilenet_head_conv_input:0'),
+     sess.graph.get_tensor_by_name('keras_mobilenet_head_reshape/Reshape:0'),
+     'keras_mobilenet_head', optimize=False)
+################################################################################
+def keras_relu6(x):
+    return K.activations.relu(x, max_value=6)
+
+inp = K.Input(shape=(2, 3, 4), name='keras_relu6_input')
+relu = K.layers.Activation(keras_relu6, name='keras_relu6')(inp)
+model = K.Model(inp, relu)
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_relu6_input:0'),
+     sess.graph.get_tensor_by_name('keras_relu6/clip_by_value:0'), 'keras_relu6', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+reduced = tf.reduce_mean(inp, axis=[1, 2], keepdims=True)
+save(inp, reduced, 'reduce_mean')
 ################################################################################
 
 # Uncomment to print the final graph.
