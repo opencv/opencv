@@ -127,15 +127,27 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
     {
         Vec3d Xi = objectPoints.depth() == CV_32F ? (Vec3d)Xf[i] : Xd[i];
         Vec3d Y = aff*Xi;
-        if (fabs(Y[2]) < DBL_MIN)
-            Y[2] = 1;
-        Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
+
+        if(fabs(Y[2]) < 1e-8)
+        {
+            if(Y[2] > 0)
+                Y[2] = 1e-8;
+            else
+                Y[2] = -1e-8;
+        }
+
+        Vec2d x(Y[0]/fabs(Y[2]), Y[1]/fabs(Y[2]));
 
         double r2 = x.dot(x);
         double r = std::sqrt(r2);
 
         // Angle of the incoming ray:
-        double theta = atan(r);
+        double theta;
+
+        if(Y[2] > 0)
+            theta = atan2(r, 1);
+        else
+            theta = atan2(1, r) + M_PI/2;
 
         double theta2 = theta*theta, theta3 = theta2*theta, theta4 = theta2*theta2, theta5 = theta4*theta,
                 theta6 = theta3*theta3, theta7 = theta6*theta, theta8 = theta4*theta4, theta9 = theta8*theta;
@@ -170,12 +182,12 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 
             //Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
             Vec3d dxdom[2];
-            dxdom[0] = (1.0/Y[2]) * dYdom[0] - x[0]/Y[2] * dYdom[2];
-            dxdom[1] = (1.0/Y[2]) * dYdom[1] - x[1]/Y[2] * dYdom[2];
+            dxdom[0] = (1.0/fabs(Y[2])) * dYdom[0] - x[0]/fabs(Y[2]) * dYdom[2];
+            dxdom[1] = (1.0/fabs(Y[2])) * dYdom[1] - x[1]/fabs(Y[2]) * dYdom[2];
 
             Vec3d dxdT[2];
-            dxdT[0]  = (1.0/Y[2]) * dYdT[0] - x[0]/Y[2] * dYdT[2];
-            dxdT[1]  = (1.0/Y[2]) * dYdT[1] - x[1]/Y[2] * dYdT[2];
+            dxdT[0]  = (1.0/fabs(Y[2])) * dYdT[0] - x[0]/fabs(Y[2]) * dYdT[2];
+            dxdT[1]  = (1.0/fabs(Y[2])) * dYdT[1] - x[1]/fabs(Y[2]) * dYdT[2];
 
             //double r2 = x.dot(x);
             Vec3d dr2dom = 2 * x[0] * dxdom[0] + 2 * x[1] * dxdom[1];
@@ -188,7 +200,12 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 
             // Angle of the incoming ray:
             //double theta = atan(r);
-            double dthetadr = 1.0/(1+r2);
+            double dthetadr;
+            if(Y[2] > 0)
+                dthetadr = 1/(1+r2);
+            else
+                dthetadr = -1/(1+r2);
+
             Vec3d dthetadom = dthetadr * drdom;
             Vec3d dthetadT  = dthetadr *  drdT;
 
