@@ -47,6 +47,8 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv {
 
 static Mutex* __initialization_mutex = NULL;
@@ -412,24 +414,24 @@ struct HWFeatures
         have[CV_CPU_FP16] = true;
     #elif defined __arm__ && defined __ANDROID__
       #if defined HAVE_CPUFEATURES
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "calling android_getCpuFeatures() ...");
+        CV_LOG_INFO(NULL, "calling android_getCpuFeatures() ...");
         uint64_t features = android_getCpuFeatures();
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "calling android_getCpuFeatures() ... Done (%llx)", features);
+        CV_LOG_INFO(NULL, cv::format("calling android_getCpuFeatures() ... Done (%llx)", (long long)features));
         have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
         have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
       #else
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "cpufeatures library is not available for CPU detection");
+        CV_LOG_INFO(NULL, "cpufeatures library is not available for CPU detection");
         #if CV_NEON
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- NEON instructions is enabled via build flags");
+        CV_LOG_INFO(NULL, "- NEON instructions is enabled via build flags");
         have[CV_CPU_NEON] = true;
         #else
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- NEON instructions is NOT enabled via build flags");
+        CV_LOG_INFO(NULL, "- NEON instructions is NOT enabled via build flags");
         #endif
         #if CV_FP16
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- FP16 instructions is enabled via build flags");
+        CV_LOG_INFO(NULL, "- FP16 instructions is enabled via build flags");
         have[CV_CPU_FP16] = true;
         #else
-        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- FP16 instructions is NOT enabled via build flags");
+        CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
     #elif defined __arm__
