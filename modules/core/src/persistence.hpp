@@ -321,4 +321,8 @@ void icvJSONWriteReal( CvFileStorage* fs, const char* key, double value );
 void icvJSONWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
 void icvJSONWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
 
+// Adding icvGets is not enough - we need to merge buffer contents (see #11061)
+#define CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG() \
+    CV_Assert((ptr[0] != 0 || ptr != fs->buffer_end - 1) && "OpenCV persistence doesn't support very long lines")
+
 #endif // SRC_PERSISTENCE_HPP
