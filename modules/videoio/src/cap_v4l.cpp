@@ -265,7 +265,7 @@ struct buffer
 
 static unsigned int n_buffers = 0;
 
-struct CvCaptureCAM_V4L : public CvCapture
+struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 {
     int deviceHandle;
     int bufferIndex;
@@ -301,10 +301,10 @@ struct CvCaptureCAM_V4L : public CvCapture
    bool open(int _index);
    bool open(const char* deviceName);
 
-   virtual double getProperty(int) const;
-   virtual bool setProperty(int, double);
-   virtual bool grabFrame();
-   virtual IplImage* retrieveFrame(int);
+   virtual double getProperty(int) const CV_OVERRIDE;
+   virtual bool setProperty(int, double) CV_OVERRIDE;
+   virtual bool grabFrame() CV_OVERRIDE;
+   virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
    Range getRange(int property_id) const {
        switch (property_id) {

@@ -90,10 +90,10 @@ public:
     CvCapture_OpenNI2(const char * filename);
     virtual ~CvCapture_OpenNI2();
 
-    virtual double getProperty(int propIdx) const;
-    virtual bool setProperty(int probIdx, double propVal);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int outputType);
+    virtual double getProperty(int propIdx) const CV_OVERRIDE;
+    virtual bool setProperty(int probIdx, double propVal) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int outputType) CV_OVERRIDE;
 
     bool isOpened() const;
 
