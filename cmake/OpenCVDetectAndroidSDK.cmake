@@ -302,6 +302,27 @@ macro(add_android_project target path)
     else()
       list(APPEND android_proj_extra_deps opencv_java_android)
     endif()
+
+    set(_native_deps "")
+    if(NOT android_proj_IGNORE_JAVA)
+      set(_native_deps opencv_java)
+    endif()
+    if(android_proj_native_deps)
+      list(APPEND _native_deps ${android_proj_native_deps})
+    endif()
+    if(_native_deps)
+      list(APPEND android_proj_extra_deps ${_native_deps})
+    endif()
+
+    if((android_proj_COPY_LIBS OR ANDROID_EXAMPLES_WITH_LIBS) AND _native_deps)
+      message(STATUS "Android project with native libs: " ${target} " (" ${_native_deps} ")")
+
+      ocv_copyfiles_append_dir(NATIVE_COPY "${OpenCV_BINARY_DIR}/lib" "${android_proj_bin_dir}/libs" "${OpenCV_BINARY_DIR}/lib/*.so")
+      ocv_copyfiles_add_target(${target}_copy_libs NATIVE_COPY "Copy native libs for project: ${target}" ${_native_deps})
+
+      list(APPEND android_proj_extra_deps ${target}_copy_libs)
+    endif()
+
     add_custom_command(
         OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
         COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug -Djava.target=1.6 -Djava.source=1.6
@@ -314,26 +335,6 @@ macro(add_android_project target path)
     unset(JNI_LIB_NAME)
 
     add_custom_target(${target} ALL SOURCES "${android_proj_bin_dir}/bin/${target}-debug.apk" )
-
-    set(_native_deps "")
-    if(NOT android_proj_IGNORE_JAVA)
-      set(_native_deps opencv_java)
-    endif()
-    if(android_proj_native_deps)
-      list(APPEND _native_deps ${android_proj_native_deps})
-    endif()
-    if(_native_deps)
-      add_dependencies(${target} ${_native_deps})
-    endif()
-
-    if((android_proj_COPY_LIBS OR ANDROID_EXAMPLES_WITH_LIBS) AND _native_deps)
-      message(STATUS "Android project with native libs: " ${target} " (" ${_native_deps} ")")
-
-      ocv_copyfiles_append_dir(NATIVE_COPY "${OpenCV_BINARY_DIR}/lib" "${android_proj_bin_dir}/libs" "${OpenCV_BINARY_DIR}/lib/*.so")
-      ocv_copyfiles_add_target(${target}_copy_libs NATIVE_COPY "Copy native libs for project: ${target}" ${_native_deps})
-
-      add_dependencies(${target} ${target}_copy_libs)
-    endif()
 
     # There is some strange problem with concurrent Android .APK builds:
     # <android-sdk>/tools/ant/build.xml:781: Problem reading <build_dir>/bin/classes.jar'
