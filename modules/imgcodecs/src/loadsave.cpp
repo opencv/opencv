@@ -89,7 +89,7 @@ public:
 protected:
     virtual pos_type seekoff( off_type offset,
                               std::ios_base::seekdir dir,
-                              std::ios_base::openmode )
+                              std::ios_base::openmode ) CV_OVERRIDE
     {
         char* whence = eback();
         if (dir == std::ios_base::cur)
