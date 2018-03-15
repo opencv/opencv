@@ -51,7 +51,7 @@ else()
       add_library(libprotobuf UNKNOWN IMPORTED)
       set_target_properties(libprotobuf PROPERTIES
         IMPORTED_LOCATION "${Protobuf_LIBRARY}"
-        INTERFACE_INCLUDE_DIRECTORIES "${Protobuf_INCLUDE_DIR}"
+        INTERFACE_INCLUDE_SYSTEM_DIRECTORIES "${Protobuf_INCLUDE_DIR}"
       )
       get_protobuf_version(Protobuf_VERSION "${Protobuf_INCLUDE_DIR}")
     endif()
