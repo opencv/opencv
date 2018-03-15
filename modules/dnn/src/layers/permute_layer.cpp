@@ -54,7 +54,7 @@ namespace cv
 {
 namespace dnn
 {
-class PermuteLayerImpl : public PermuteLayer
+class PermuteLayerImpl CV_FINAL : public PermuteLayer
 {
 public:
     void checkCurrentOrder(int currentOrder)
@@ -116,7 +116,7 @@ public:
         checkNeedForPermutation();
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
@@ -125,7 +125,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         if(!_needsPermute)
         {
@@ -172,7 +172,7 @@ public:
         _count = _oldStride[0] * shapeBefore[0];
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         if(!_needsPermute)
         {
@@ -230,7 +230,7 @@ public:
 
         PermuteInvoker() : inp(0), out(0), order(0), nstripes(0) {}
 
-        void operator()(const Range& r) const
+        void operator()(const Range& r) const CV_OVERRIDE
         {
             int n0 = out->size[0], n1 = out->size[1], n2 = out->size[2], n3 = out->size[3];
 
@@ -308,7 +308,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -320,7 +320,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -380,7 +380,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;

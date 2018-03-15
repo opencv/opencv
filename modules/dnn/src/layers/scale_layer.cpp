@@ -20,7 +20,7 @@ namespace cv
 namespace dnn
 {
 
-class ScaleLayerImpl : public ScaleLayer
+class ScaleLayerImpl CV_FINAL : public ScaleLayer
 {
 public:
     ScaleLayerImpl(const LayerParams& params)
@@ -33,21 +33,21 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2 && blobs.empty() || blobs.size() == 1 + hasBias);
         outputs.assign(1, inputs[0]);
         return true;
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -55,7 +55,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -117,7 +117,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node)
+    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         switch (node->backendId)
         {
@@ -150,7 +150,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         Halide::Buffer<float> input = halideBuffer(inputs[0]);
@@ -183,7 +183,7 @@ public:
     }
 #endif  // HAVE_HALIDE
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
@@ -201,14 +201,14 @@ public:
         return Ptr<BackendNode>();
     }
 
-    void getScaleShift(Mat& scale, Mat& shift) const
+    void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {
         scale = !blobs.empty() ? blobs[0] : Mat();
         shift = hasBias ? blobs[1] : Mat();
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         (void)outputs; // suppress unused variable warning
         long flops = 0;
