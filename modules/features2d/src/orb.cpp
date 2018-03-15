@@ -651,7 +651,7 @@ static inline float getScale(int level, int firstLevel, double scaleFactor)
 }
 
 
-class ORB_Impl : public ORB
+class ORB_Impl CV_FINAL : public ORB
 {
 public:
     explicit ORB_Impl(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
@@ -661,43 +661,43 @@ public:
         scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
     {}
 
-    void setMaxFeatures(int maxFeatures) { nfeatures = maxFeatures; }
-    int getMaxFeatures() const { return nfeatures; }
+    void setMaxFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
+    int getMaxFeatures() const CV_OVERRIDE { return nfeatures; }
 
-    void setScaleFactor(double scaleFactor_) { scaleFactor = scaleFactor_; }
-    double getScaleFactor() const { return scaleFactor; }
+    void setScaleFactor(double scaleFactor_) CV_OVERRIDE { scaleFactor = scaleFactor_; }
+    double getScaleFactor() const CV_OVERRIDE { return scaleFactor; }
 
-    void setNLevels(int nlevels_) { nlevels = nlevels_; }
-    int getNLevels() const { return nlevels; }
+    void setNLevels(int nlevels_) CV_OVERRIDE { nlevels = nlevels_; }
+    int getNLevels() const CV_OVERRIDE { return nlevels; }
 
-    void setEdgeThreshold(int edgeThreshold_) { edgeThreshold = edgeThreshold_; }
-    int getEdgeThreshold() const { return edgeThreshold; }
+    void setEdgeThreshold(int edgeThreshold_) CV_OVERRIDE { edgeThreshold = edgeThreshold_; }
+    int getEdgeThreshold() const CV_OVERRIDE { return edgeThreshold; }
 
-    void setFirstLevel(int firstLevel_) { CV_Assert(firstLevel_ >= 0);  firstLevel = firstLevel_; }
-    int getFirstLevel() const { return firstLevel; }
+    void setFirstLevel(int firstLevel_) CV_OVERRIDE { CV_Assert(firstLevel_ >= 0);  firstLevel = firstLevel_; }
+    int getFirstLevel() const CV_OVERRIDE { return firstLevel; }
 
-    void setWTA_K(int wta_k_) { wta_k = wta_k_; }
-    int getWTA_K() const { return wta_k; }
+    void setWTA_K(int wta_k_) CV_OVERRIDE { wta_k = wta_k_; }
+    int getWTA_K() const CV_OVERRIDE { return wta_k; }
 
-    void setScoreType(int scoreType_) { scoreType = scoreType_; }
-    int getScoreType() const { return scoreType; }
+    void setScoreType(int scoreType_) CV_OVERRIDE { scoreType = scoreType_; }
+    int getScoreType() const CV_OVERRIDE { return scoreType; }
 
-    void setPatchSize(int patchSize_) { patchSize = patchSize_; }
-    int getPatchSize() const { return patchSize; }
+    void setPatchSize(int patchSize_) CV_OVERRIDE { patchSize = patchSize_; }
+    int getPatchSize() const CV_OVERRIDE { return patchSize; }
 
-    void setFastThreshold(int fastThreshold_) { fastThreshold = fastThreshold_; }
-    int getFastThreshold() const { return fastThreshold; }
+    void setFastThreshold(int fastThreshold_) CV_OVERRIDE { fastThreshold = fastThreshold_; }
+    int getFastThreshold() const CV_OVERRIDE { return fastThreshold; }
 
     // returns the descriptor size in bytes
-    int descriptorSize() const;
+    int descriptorSize() const CV_OVERRIDE;
     // returns the descriptor type
-    int descriptorType() const;
+    int descriptorType() const CV_OVERRIDE;
     // returns the default norm type
-    int defaultNorm() const;
+    int defaultNorm() const CV_OVERRIDE;
 
     // Compute the ORB_Impl features and descriptors on an image
     void detectAndCompute( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
-                     OutputArray descriptors, bool useProvidedKeypoints=false );
+                     OutputArray descriptors, bool useProvidedKeypoints=false ) CV_OVERRIDE;
 
 protected:
 
