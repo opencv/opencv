@@ -3919,7 +3919,6 @@ private:
 
     HRESULT InitializeSinkWriter(const char* filename);
     static const GUID FourCC2GUID(int fourcc);
-    HRESULT WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& rtStart, const LONGLONG& rtDuration);
 };
 
 CvVideoWriter_MSMF::CvVideoWriter_MSMF():
@@ -3988,6 +3987,8 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
                        double _fps, CvSize _frameSize, bool /*isColor*/ )
 {
+    if (initiated)
+        close();
     videoWidth = _frameSize.width;
     videoHeight = _frameSize.height;
     fps = _fps;
@@ -4007,11 +4008,13 @@ bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
                 initiated = true;
                 rtStart = 0;
                 MFFrameRateToAverageTimePerFrame((UINT32)fps, 1, &rtDuration);
+                return true;
             }
+            MFShutdown();
         }
+        CoUninitialize();
     }
-
-    return SUCCEEDED(hr);
+    return false;
 }
 
 void CvVideoWriter_MSMF::close()
@@ -4023,40 +4026,100 @@ void CvVideoWriter_MSMF::close()
 
     initiated = false;
     sinkWriter->Finalize();
+    sinkWriter.Reset();
     MFShutdown();
+    CoUninitialize();
 }
 
 bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
 {
-    if (!img)
+    if (!img ||
+        (img->nChannels != 1 && img->nChannels != 3 && img->nChannels != 4) ||
+        img->width != videoWidth || img->height != videoHeight)
         return false;
+    // Send frame to the sink writer.
+    const LONG cbWidth = 4 * videoWidth;
+    const DWORD cbBuffer = cbWidth * videoHeight;
 
-    int length = img->width * img->height * 4;
-    DWORD* target = new DWORD[length];
+    // Create a new memory buffer.
+    _ComPtr<IMFMediaBuffer> buffer;
+    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &buffer);
 
-    for (int rowIdx = 0; rowIdx < img->height; rowIdx++)
+    // Lock the buffer and copy the video frame to the buffer.
+    BYTE *pData = NULL;
+    if (SUCCEEDED(hr))
     {
-        char* rowStart = img->imageData + rowIdx*img->widthStep;
-        for (int colIdx = 0; colIdx < img->width; colIdx++)
-        {
-            BYTE b = rowStart[colIdx * img->nChannels + 0];
-            BYTE g = rowStart[colIdx * img->nChannels + 1];
-            BYTE r = rowStart[colIdx * img->nChannels + 2];
-
-            target[rowIdx*img->width+colIdx] = (r << 16) + (g << 8) + b;
-        }
+        hr = buffer->Lock(&pData, NULL, NULL);
     }
 
-    // Send frame to the sink writer.
-    HRESULT hr = WriteFrame(target, rtStart, rtDuration);
+    if (SUCCEEDED(hr))
+    {
+        if(img->nChannels != 4 || FAILED(MFCopyImage(
+                                                        pData,                 // Destination buffer.
+                                                        cbWidth,               // Destination stride.
+                                                        (BYTE*)img->imageData, // First row in source image.
+                                                        img->widthStep,        // Source stride.
+                                                        cbWidth,               // Image width in bytes.
+                                                        videoHeight            // Image height in pixels.
+                                                    )))
+        {
+            int bIdx = 0;
+            int gIdx = img->nChannels > 1 ? 1 : 0;
+            int rIdx = img->nChannels > 1 ? 2 : 0;
+            BYTE* px = pData;
+            for (int rowIdx = 0; rowIdx < img->height; rowIdx++)
+            {
+                char* rowStart = img->imageData + rowIdx*img->widthStep;
+                for (int colIdx = 0; colIdx < img->width; colIdx++)
+                {
+                    *(px++) = rowStart[colIdx * img->nChannels + bIdx];
+                    *(px++) = rowStart[colIdx * img->nChannels + gIdx];
+                    *(px++) = rowStart[colIdx * img->nChannels + rIdx];
+                    *(px++) = 0;
+                }
+            }
+        }
+
+        buffer->Unlock();
+    }
+
+    // Set the data length of the buffer.
+    if (SUCCEEDED(hr))
+    {
+        hr = buffer->SetCurrentLength(cbBuffer);
+    }
+
+    // Create a media sample and add the buffer to the sample.
+    _ComPtr<IMFSample> sample;
+    if (SUCCEEDED(hr))
+    {
+        hr = MFCreateSample(&sample);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = sample->AddBuffer(buffer.Get());
+    }
+    // Set the time stamp and the duration.
+    if (SUCCEEDED(hr))
+    {
+        hr = sample->SetSampleTime(rtStart);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = sample->SetSampleDuration(rtDuration);
+    }
+
+    // Send the sample to the Sink Writer.
+    if (SUCCEEDED(hr))
+    {
+        hr = sinkWriter->WriteSample(streamIndex, sample.Get());
+    }
+
     if (FAILED(hr))
     {
-        delete[] target;
         return false;
     }
     rtStart += rtDuration;
-
-    delete[] target;
 
     return true;
 }
@@ -4066,10 +4129,10 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     _ComPtr<IMFAttributes> spAttr;
     _ComPtr<IMFMediaType>  mediaTypeOut;
     _ComPtr<IMFMediaType>  mediaTypeIn;
-    _ComPtr<IMFByteStream> spByteStream;
 
     MFCreateAttributes(&spAttr, 10);
     spAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true);
+    spAttr->SetUINT32(MF_SINK_WRITER_DISABLE_THROTTLING, true);
 
     wchar_t* unicodeFileName = new wchar_t[strlen(filename)+1];
     MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, (int)strlen(filename)+1);
@@ -4146,6 +4209,10 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     {
         hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
     }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeIn->SetUINT32(MF_MT_DEFAULT_STRIDE, 4 * videoWidth);//Assume BGR32 input
+    }
 
     if (SUCCEEDED(hr))
     {
@@ -4156,88 +4223,6 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     if (SUCCEEDED(hr))
     {
         hr = sinkWriter->BeginWriting();
-    }
-
-    return hr;
-}
-
-HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& Start, const LONGLONG& Duration)
-{
-    _ComPtr<IMFSample> sample;
-    _ComPtr<IMFMediaBuffer> buffer;
-
-    const LONG cbWidth = 4 * videoWidth;
-    const DWORD cbBuffer = cbWidth * videoHeight;
-
-    BYTE *pData = NULL;
-
-    // Create a new memory buffer.
-    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &buffer);
-
-    // Lock the buffer and copy the video frame to the buffer.
-    if (SUCCEEDED(hr))
-    {
-        hr = buffer->Lock(&pData, NULL, NULL);
-    }
-
-    if (SUCCEEDED(hr))
-    {
-#if defined(_M_ARM)
-        hr = MFCopyImage(
-            pData,                      // Destination buffer.
-            -cbWidth,                   // Destination stride.
-            (BYTE*)videoFrameBuffer,    // First row in source image.
-            cbWidth,                    // Source stride.
-            cbWidth,                    // Image width in bytes.
-            videoHeight                 // Image height in pixels.
-            );
-#else
-        hr = MFCopyImage(
-            pData,                      // Destination buffer.
-            cbWidth,                    // Destination stride.
-            ((BYTE*)videoFrameBuffer) + (videoHeight-1)*cbWidth,    // First row in source image.
-            -cbWidth,                   // Source stride.
-            cbWidth,                    // Image width in bytes.
-            videoHeight                 // Image height in pixels.
-            );
-#endif
-    }
-
-    if (buffer)
-    {
-        buffer->Unlock();
-    }
-
-    // Set the data length of the buffer.
-    if (SUCCEEDED(hr))
-    {
-        hr = buffer->SetCurrentLength(cbBuffer);
-    }
-
-    // Create a media sample and add the buffer to the sample.
-    if (SUCCEEDED(hr))
-    {
-        hr = MFCreateSample(&sample);
-    }
-    if (SUCCEEDED(hr))
-    {
-        hr = sample->AddBuffer(buffer.Get());
-    }
-
-    // Set the time stamp and the duration.
-    if (SUCCEEDED(hr))
-    {
-        hr = sample->SetSampleTime(Start);
-    }
-    if (SUCCEEDED(hr))
-    {
-        hr = sample->SetSampleDuration(Duration);
-    }
-
-    // Send the sample to the Sink Writer.
-    if (SUCCEEDED(hr))
-    {
-        hr = sinkWriter->WriteSample(streamIndex, sample.Get());
     }
 
     return hr;
