@@ -55,7 +55,7 @@ namespace cv
 namespace opt_AVX2
 {
 
-class resizeNNInvokerAVX4 :
+class resizeNNInvokerAVX4 CV_FINAL :
     public ParallelLoopBody
 {
 public:
@@ -68,7 +68,7 @@ public:
 #if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=AVX
 #endif
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int y, x;
@@ -138,7 +138,7 @@ private:
     resizeNNInvokerAVX4& operator=(const resizeNNInvokerAVX4&);
 };
 
-class resizeNNInvokerAVX2 :
+class resizeNNInvokerAVX2 CV_FINAL :
     public ParallelLoopBody
 {
 public:
@@ -151,7 +151,7 @@ public:
 #if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=AVX
 #endif
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int y, x;

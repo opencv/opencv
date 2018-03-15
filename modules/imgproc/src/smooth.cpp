@@ -88,7 +88,7 @@ struct RowSum :
         anchor = _anchor;
     }
 
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
@@ -199,9 +199,9 @@ struct ColumnSum :
         sumCount = 0;
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int i;
         ST* SUM;
@@ -297,9 +297,9 @@ struct ColumnSum<int, uchar> :
         sumCount = 0;
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int* SUM;
         bool haveScale = scale != 1;
@@ -444,9 +444,9 @@ public BaseColumnFilter
         }
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         const int ds = divScale;
         const int dd = divDelta;
@@ -573,9 +573,9 @@ struct ColumnSum<int, short> :
         sumCount = 0;
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int i;
         int* SUM;
@@ -701,9 +701,9 @@ struct ColumnSum<int, ushort> :
         sumCount = 0;
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int* SUM;
         bool haveScale = scale != 1;
@@ -826,9 +826,9 @@ struct ColumnSum<int, int> :
         sumCount = 0;
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int* SUM;
         bool haveScale = scale != 1;
@@ -945,9 +945,9 @@ struct ColumnSum<int, float> :
         sumCount = 0;
     }
 
-    virtual void reset() { sumCount = 0; }
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
 
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int* SUM;
         bool haveScale = scale != 1;
@@ -1606,7 +1606,7 @@ struct SqrRowSum :
         anchor = _anchor;
     }
 
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
@@ -2979,7 +2979,7 @@ public:
         else
             vlineSmoothFunc = vlineSmooth;
     }
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         AutoBuffer<FT> _buf(width*cn*kylen);
         FT* buf = _buf;
@@ -3384,7 +3384,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION_IPP()
 
@@ -4632,7 +4632,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         int i, j, cn = dest->channels(), k;
         Size size = dest->size();
@@ -4970,7 +4970,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         int i, j, k;
         Size size = dest->size();
@@ -5263,7 +5263,7 @@ public:
     }
     ~ipp_bilateralFilterParallel() {}
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         if(*pOk == false)
             return;

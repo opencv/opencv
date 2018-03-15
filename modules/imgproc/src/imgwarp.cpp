@@ -1084,7 +1084,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         int x, y, x1, y1;
         const int buf_size = 1 << 14;
@@ -2232,7 +2232,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 64;
         short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
@@ -2408,7 +2408,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         IppiSize srcsize = { src.cols, src.rows };
         IppiRect srcroi = { 0, 0, src.cols, src.rows };
@@ -2800,7 +2800,7 @@ public:
 #endif
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 32;
         short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
@@ -2916,7 +2916,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         IppiSize srcsize = {src.cols, src.rows};
         IppiRect srcroi = {0, 0, src.cols, src.rows};

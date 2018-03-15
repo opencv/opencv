@@ -98,7 +98,7 @@ public:
 #endif
     }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int begin = range.start;
         const int end = range.end;
