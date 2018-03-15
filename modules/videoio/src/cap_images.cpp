@@ -74,17 +74,17 @@ public:
         grabbedInOpen = false;
     }
 
-    virtual ~CvCapture_Images()
+    virtual ~CvCapture_Images() CV_OVERRIDE
     {
         close();
     }
 
     virtual bool open(const char* _filename);
     virtual void close();
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
 protected:
     char*  filename; // actually a printf-pattern
@@ -321,7 +321,7 @@ CvCapture* cvCreateFileCapture_Images(const char * filename)
 // image sequence writer
 //
 //
-class CvVideoWriter_Images : public CvVideoWriter
+class CvVideoWriter_Images CV_FINAL : public CvVideoWriter
 {
 public:
     CvVideoWriter_Images()
@@ -333,8 +333,8 @@ public:
 
     virtual bool open( const char* _filename );
     virtual void close();
-    virtual bool setProperty( int, double );
-    virtual bool writeFrame( const IplImage* );
+    virtual bool setProperty( int, double ); // FIXIT doesn't work: IVideoWriter interface only!
+    virtual bool writeFrame( const IplImage* ) CV_OVERRIDE;
 
 protected:
     char* filename;

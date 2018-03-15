@@ -438,9 +438,9 @@ public:
         return true;
     }
 
-    bool isOpened() const { return container.isOpenedStream(); }
+    bool isOpened() const CV_OVERRIDE { return container.isOpenedStream(); }
 
-    void write(InputArray _img)
+    void write(InputArray _img) CV_OVERRIDE
     {
         Mat img = _img.getMat();
         size_t chunkPointer = container.getStreamPos();
@@ -493,7 +493,7 @@ public:
         }
     }
 
-    double getProperty(int propId) const
+    double getProperty(int propId) const CV_OVERRIDE
     {
         if( propId == VIDEOWRITER_PROP_QUALITY )
             return quality;
@@ -507,7 +507,7 @@ public:
         return 0.;
     }
 
-    bool setProperty(int propId, double value)
+    bool setProperty(int propId, double value) CV_OVERRIDE
     {
         if( propId == VIDEOWRITER_PROP_QUALITY )
         {
@@ -1186,7 +1186,7 @@ public:
         m_buffer_list.allocate_buffers(stripes_count, (height*width*2)/stripes_count);
     }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int CAT_TAB_SIZE = 4096;
         unsigned code = 0;

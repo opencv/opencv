@@ -12,8 +12,6 @@
 #ifndef _CAP_DSHOW_HPP_
 #define _CAP_DSHOW_HPP_
 
-#include "precomp.hpp"
-
 #ifdef HAVE_DSHOW
 
 class videoInput;
@@ -26,12 +24,12 @@ public:
     VideoCapture_DShow(int index);
     virtual ~VideoCapture_DShow();
 
-    virtual double getProperty(int propIdx) const;
-    virtual bool setProperty(int propIdx, double propVal);
+    virtual double getProperty(int propIdx) const CV_OVERRIDE;
+    virtual bool setProperty(int propIdx, double propVal) CV_OVERRIDE;
 
-    virtual bool grabFrame();
-    virtual bool retrieveFrame(int outputType, OutputArray frame);
-    virtual int getCaptureDomain();
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual bool retrieveFrame(int outputType, OutputArray frame) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE;
     virtual bool isOpened() const;
 protected:
     void open(int index);
