@@ -15,7 +15,7 @@ namespace detail
                           Size _winSize, TermCriteria _criteria,
                           int _level, int _maxLevel, int _flags, float _minEigThreshold );
 
-        void operator()(const Range& range) const;
+        void operator()(const Range& range) const CV_OVERRIDE;
 
         const Mat* prevImg;
         const Mat* nextImg;
