@@ -524,7 +524,7 @@ public:
         m_functor(functor)
     { }
 
-    virtual void operator() (const cv::Range& range) const
+    virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
         m_functor(range);
     }
@@ -558,7 +558,8 @@ void Mat::forEach_impl(const Functor& operation) {
         virtual ~PixelOperationWrapper(){}
         // ! Overloaded virtual operator
         // convert range call to row call.
-        virtual void operator()(const Range &range) const {
+        virtual void operator()(const Range &range) const CV_OVERRIDE
+        {
             const int DIMS = mat->dims;
             const int COLS = mat->size[DIMS - 1];
             if (DIMS <= 2) {
@@ -711,8 +712,8 @@ public:
     inline void cleanup() { TLSDataContainer::cleanup(); }
 
 private:
-    virtual void* createDataInstance() const {return new T;}                // Wrapper to allocate data by template
-    virtual void  deleteDataInstance(void* pData) const {delete (T*)pData;} // Wrapper to release data by template
+    virtual void* createDataInstance() const CV_OVERRIDE {return new T;}                // Wrapper to allocate data by template
+    virtual void  deleteDataInstance(void* pData) const CV_OVERRIDE {delete (T*)pData;} // Wrapper to release data by template
 
     // Disable TLS copy operations
     TLSData(TLSData &) {}

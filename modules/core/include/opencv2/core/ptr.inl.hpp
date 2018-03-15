@@ -89,12 +89,12 @@ private:
 };
 
 template<typename Y, typename D>
-struct PtrOwnerImpl : PtrOwner
+struct PtrOwnerImpl CV_FINAL : PtrOwner
 {
     PtrOwnerImpl(Y* p, D d) : owned(p), deleter(d)
     {}
 
-    void deleteSelf()
+    void deleteSelf() CV_OVERRIDE
     {
         deleter(owned);
         delete this;
