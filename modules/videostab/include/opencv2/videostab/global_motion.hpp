@@ -139,7 +139,7 @@ public:
     void setMinInlierRatio(float val) { minInlierRatio_ = val; }
     float minInlierRatio() const { return minInlierRatio_; }
 
-    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0);
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     RansacParams ransacParams_;
@@ -155,7 +155,7 @@ class CV_EXPORTS MotionEstimatorL1 : public MotionEstimatorBase
 public:
     MotionEstimatorL1(MotionModel model = MM_AFFINE);
 
-    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0);
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     std::vector<double> obj_, collb_, colub_;
@@ -194,7 +194,7 @@ class CV_EXPORTS FromFileMotionReader : public ImageMotionEstimatorBase
 public:
     FromFileMotionReader(const String &path);
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     std::ifstream file_;
@@ -205,10 +205,10 @@ class CV_EXPORTS ToFileMotionWriter : public ImageMotionEstimatorBase
 public:
     ToFileMotionWriter(const String &path, Ptr<ImageMotionEstimatorBase> estimator);
 
-    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
-    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const CV_OVERRIDE { return motionEstimator_->motionModel(); }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     std::ofstream file_;
@@ -223,8 +223,8 @@ class CV_EXPORTS KeypointBasedMotionEstimator : public ImageMotionEstimatorBase
 public:
     KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator);
 
-    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
-    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const CV_OVERRIDE { return motionEstimator_->motionModel(); }
 
     void setDetector(Ptr<FeatureDetector> val) { detector_ = val; }
     Ptr<FeatureDetector> detector() const { return detector_; }
@@ -235,7 +235,7 @@ public:
     void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
     Mat estimate(InputArray frame0, InputArray frame1, bool *ok = 0);
 
 private:
@@ -257,13 +257,13 @@ class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBa
 public:
     KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator);
 
-    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
-    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const CV_OVERRIDE { return motionEstimator_->motionModel(); }
 
     void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
     Mat estimate(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, bool *ok = 0);
 
 private:
