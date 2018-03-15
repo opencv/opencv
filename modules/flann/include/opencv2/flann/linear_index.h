@@ -63,47 +63,47 @@ public:
     LinearIndex(const LinearIndex&);
     LinearIndex& operator=(const LinearIndex&);
 
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_LINEAR;
     }
 
 
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return dataset_.rows;
     }
 
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return dataset_.cols;
     }
 
 
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return 0;
     }
 
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         /* nothing to do here for linear search */
     }
 
-    void saveIndex(FILE*)
+    void saveIndex(FILE*) CV_OVERRIDE
     {
         /* nothing to do here for linear search */
     }
 
 
-    void loadIndex(FILE*)
+    void loadIndex(FILE*) CV_OVERRIDE
     {
         /* nothing to do here for linear search */
 
         index_params_["algorithm"] = getType();
     }
 
-    void findNeighbors(ResultSet<DistanceType>& resultSet, const ElementType* vec, const SearchParams& /*searchParams*/)
+    void findNeighbors(ResultSet<DistanceType>& resultSet, const ElementType* vec, const SearchParams& /*searchParams*/) CV_OVERRIDE
     {
         ElementType* data = dataset_.data;
         for (size_t i = 0; i < dataset_.rows; ++i, data += dataset_.cols) {
@@ -112,7 +112,7 @@ public:
         }
     }
 
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return index_params_;
     }
