@@ -957,7 +957,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -1137,7 +1137,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
