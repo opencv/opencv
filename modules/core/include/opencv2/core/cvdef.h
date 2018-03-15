@@ -453,6 +453,30 @@ Cv64suf;
 #endif
 
 
+/****************************************************************************************\
+*                                 C++11 override / final                                 *
+\****************************************************************************************/
+
+#ifndef CV_OVERRIDE
+#  ifdef CV_CXX11
+#    define CV_OVERRIDE override
+#  endif
+#endif
+#ifndef CV_OVERRIDE
+#  define CV_OVERRIDE
+#endif
+
+#ifndef CV_FINAL
+#  ifdef CV_CXX11
+#    define CV_FINAL final
+#  endif
+#endif
+#ifndef CV_FINAL
+#  define CV_FINAL
+#endif
+
+
+
 // Integer types portatibility
 #ifdef OPENCV_STDINT_HEADER
 #include OPENCV_STDINT_HEADER
