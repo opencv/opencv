@@ -1793,7 +1793,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int i, i1 = range.start, i2 = range.end;
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
@@ -3501,7 +3501,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
