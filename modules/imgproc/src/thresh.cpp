@@ -1206,7 +1206,7 @@ public:
         thresholdType = _thresholdType;
     }
 
-    void operator () ( const Range& range ) const
+    void operator () (const Range& range) const CV_OVERRIDE
     {
         int row0 = range.start;
         int row1 = range.end;

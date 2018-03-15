@@ -389,7 +389,7 @@ public:
     {
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
 
@@ -447,7 +447,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         const void *yS = src_data + src_step * range.start;
         void *yD = dst_data + dst_step * range.start;

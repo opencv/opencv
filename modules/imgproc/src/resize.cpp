@@ -675,7 +675,7 @@ public:
                            cn(_cn), xoffsets(_xoffsets), yoffsets(_yoffsets), xcoeffs(_xcoeffs), ycoeffs(_ycoeffs),
                            min_x(_min_x), max_x(_max_x), min_y(_min_y), max_y(_max_y), hResize(_hResize) {}
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         AutoBuffer<fixedpoint> linebuf(interp_y_len * dst_width * cn);
         int last_eval = - interp_y_len;
@@ -859,7 +859,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int y, x, pix_size = (int)src.elemSize();
@@ -2211,7 +2211,7 @@ public:
         CV_Assert(ksize <= MAX_ESIZE);
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         int dy, cn = src.channels();
         HResize hresize;
@@ -2921,7 +2921,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int cn = src.channels();
@@ -3031,7 +3031,7 @@ public:
         tabofs = _tabofs;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size dsize = dst->size();
         int cn = dst->channels();
@@ -3489,7 +3489,7 @@ public:
         m_ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION_IPP()
 
@@ -3539,7 +3539,7 @@ public:
         m_ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION_IPP()
 

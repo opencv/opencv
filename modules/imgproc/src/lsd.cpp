@@ -160,7 +160,7 @@ inline double log_gamma_lanczos(const double& x)
 
 namespace cv{
 
-class LineSegmentDetectorImpl : public LineSegmentDetector
+class LineSegmentDetectorImpl CV_FINAL : public LineSegmentDetector
 {
 public:
 
@@ -205,7 +205,7 @@ public:
  */
     void detect(InputArray _image, OutputArray _lines,
                 OutputArray width = noArray(), OutputArray prec = noArray(),
-                OutputArray nfa = noArray());
+                OutputArray nfa = noArray()) CV_OVERRIDE;
 
 /**
  * Draw lines on the given canvas.
@@ -214,7 +214,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    void drawSegments(InputOutputArray _image, InputArray lines);
+    void drawSegments(InputOutputArray _image, InputArray lines) CV_OVERRIDE;
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
@@ -226,7 +226,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray());
+    int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) CV_OVERRIDE;
 
 private:
     Mat image;
