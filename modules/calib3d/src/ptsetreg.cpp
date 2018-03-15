@@ -161,7 +161,7 @@ public:
         return i == modelPoints && iters < maxAttempts;
     }
 
-    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const
+    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
     {
         bool result = false;
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
@@ -257,7 +257,7 @@ public:
         return result;
     }
 
-    void setCallback(const Ptr<PointSetRegistrator::Callback>& _cb) { cb = _cb; }
+    void setCallback(const Ptr<PointSetRegistrator::Callback>& _cb) CV_OVERRIDE { cb = _cb; }
 
     Ptr<PointSetRegistrator::Callback> cb;
     int modelPoints;
@@ -274,7 +274,7 @@ public:
                               int _modelPoints=0, double _confidence=0.99, int _maxIters=1000)
     : RANSACPointSetRegistrator(_cb, _modelPoints, 0, _confidence, _maxIters) {}
 
-    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const
+    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
     {
         const double outlierRatio = 0.45;
         bool result = false;
@@ -412,7 +412,7 @@ Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegist
 class Affine3DEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point3f* from = m1.ptr<Point3f>();
@@ -450,7 +450,7 @@ public:
         return 1;
     }
 
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
         const Point3f* from = m1.ptr<Point3f>();
@@ -477,7 +477,7 @@ public:
         }
     }
 
-    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
         const float threshold = 0.996f;
         Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
@@ -527,7 +527,7 @@ public:
 class Affine2DEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
@@ -587,7 +587,7 @@ public:
         return 1;
     }
 
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
         const Point2f* from = m1.ptr<Point2f>();
@@ -616,7 +616,7 @@ public:
         }
     }
 
-    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
         Mat ms1 = _ms1.getMat();
         Mat ms2 = _ms2.getMat();
@@ -640,7 +640,7 @@ public:
 class AffinePartial2DEstimatorCallback : public Affine2DEstimatorCallback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
@@ -696,7 +696,7 @@ public:
         dst = _dst.getMat();
     }
 
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
@@ -754,7 +754,7 @@ public:
         dst = _dst.getMat();
     }
 
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();

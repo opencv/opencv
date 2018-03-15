@@ -59,10 +59,10 @@ namespace cv
  * where \f$\lambda \in \mathbb{R} \f$.
  *
  */
-class HomographyEstimatorCallback : public PointSetRegistrator::Callback
+class HomographyEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
-    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
         Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
         if( haveCollinearPoints(ms1, count) || haveCollinearPoints(ms2, count) )
@@ -113,7 +113,7 @@ public:
      *            2 columns 1 channel
      * @param _model, CV_64FC1, 3x3, normalized, i.e., the last element is 1
      */
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         int i, count = m1.checkVector(2);
@@ -188,7 +188,7 @@ public:
      * @param _model CV_64FC1, 3x3
      * @param _err, output, CV_32FC1, square of the L2 norm
      */
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
         int i, count = m1.checkVector(2);
@@ -211,7 +211,7 @@ public:
 };
 
 
-class HomographyRefineCallback : public LMSolver::Callback
+class HomographyRefineCallback CV_FINAL : public LMSolver::Callback
 {
 public:
     HomographyRefineCallback(InputArray _src, InputArray _dst)
@@ -220,7 +220,7 @@ public:
         dst = _dst.getMat();
     }
 
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
@@ -700,16 +700,16 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 }
 
 
-class FMEstimatorCallback : public PointSetRegistrator::Callback
+class FMEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
-    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
         Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
         return !haveCollinearPoints(ms1, count) && !haveCollinearPoints(ms2, count);
     }
 
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         double f[9*3];
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
@@ -725,7 +725,7 @@ public:
         return n;
     }
 
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat __m1 = _m1.getMat(), __m2 = _m2.getMat(), __model = _model.getMat();
         int i, count = __m1.checkVector(2);
