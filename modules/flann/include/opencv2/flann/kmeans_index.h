@@ -266,7 +266,7 @@ public:
 
 public:
 
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_KMEANS;
     }
@@ -291,7 +291,7 @@ public:
         {
         }
 
-        void operator()(const cv::Range& range) const
+        void operator()(const cv::Range& range) const CV_OVERRIDE
         {
             const int begin = range.start;
             const int end = range.end;
@@ -398,7 +398,7 @@ public:
     /**
      *  Returns size of index.
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return size_;
     }
@@ -406,7 +406,7 @@ public:
     /**
      * Returns the length of an index feature.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return veclen_;
     }
@@ -421,7 +421,7 @@ public:
      * Computes the inde memory usage
      * Returns: memory used by the index
      */
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return pool_.usedMemory+pool_.wastedMemory+memoryCounter_;
     }
@@ -429,7 +429,7 @@ public:
     /**
      * Builds the index
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
             throw FLANNException("Branching factor must be at least 2");
@@ -448,7 +448,7 @@ public:
     }
 
 
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE* stream) CV_OVERRIDE
     {
         save_value(stream, branching_);
         save_value(stream, iterations_);
@@ -460,7 +460,7 @@ public:
     }
 
 
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE* stream) CV_OVERRIDE
     {
         load_value(stream, branching_);
         load_value(stream, iterations_);
@@ -495,7 +495,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     searchParams = parameters that influence the search algorithm (checks, cb_index)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
 
         int maxChecks = get_param(searchParams,"checks",32);
@@ -554,7 +554,7 @@ public:
         return clusterCount;
     }
 
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return index_params_;
     }

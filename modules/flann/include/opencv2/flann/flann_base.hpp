@@ -128,7 +128,7 @@ public:
     /**
      * Builds the index.
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         if (!loaded_) {
             nnIndex_->buildIndex();
@@ -150,7 +150,7 @@ public:
      * \brief Saves the index to a stream
      * \param stream The stream to save the index to
      */
-    virtual void saveIndex(FILE* stream)
+    virtual void saveIndex(FILE* stream) CV_OVERRIDE
     {
         nnIndex_->saveIndex(stream);
     }
@@ -159,7 +159,7 @@ public:
      * \brief Loads the index from a stream
      * \param stream The stream from which the index is loaded
      */
-    virtual void loadIndex(FILE* stream)
+    virtual void loadIndex(FILE* stream) CV_OVERRIDE
     {
         nnIndex_->loadIndex(stream);
     }
@@ -167,7 +167,7 @@ public:
     /**
      * \returns number of features in this index.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return nnIndex_->veclen();
     }
@@ -175,7 +175,7 @@ public:
     /**
      * \returns The dimensionality of the features in this index.
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return nnIndex_->size();
     }
@@ -183,7 +183,7 @@ public:
     /**
      * \returns The index type (kdtree, kmeans,...)
      */
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return nnIndex_->getType();
     }
@@ -191,7 +191,7 @@ public:
     /**
      * \returns The amount of memory (in bytes) used by the index.
      */
-    virtual int usedMemory() const
+    virtual int usedMemory() const CV_OVERRIDE
     {
         return nnIndex_->usedMemory();
     }
@@ -200,7 +200,7 @@ public:
     /**
      * \returns The index parameters
      */
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return nnIndex_->getParameters();
     }
@@ -213,7 +213,7 @@ public:
      * \param[in] knn Number of nearest neighbors to return
      * \param[in] params Search parameters
      */
-    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
+    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) CV_OVERRIDE
     {
         nnIndex_->knnSearch(queries, indices, dists, knn, params);
     }
@@ -227,7 +227,7 @@ public:
      * \param[in] params Search parameters
      * \returns Number of neighbors found
      */
-    int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params)
+    int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params) CV_OVERRIDE
     {
         return nnIndex_->radiusSearch(query, indices, dists, radius, params);
     }
@@ -235,7 +235,7 @@ public:
     /**
      * \brief Method that searches for nearest-neighbours
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
         nnIndex_->findNeighbors(result, vec, searchParams);
     }
