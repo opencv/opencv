@@ -149,7 +149,7 @@ struct SvmParams
 };
 
 /////////////////////////////////////// SVM kernel ///////////////////////////////////////
-class SVMKernelImpl : public SVM::Kernel
+class SVMKernelImpl CV_FINAL : public SVM::Kernel
 {
 public:
     SVMKernelImpl( const SvmParams& _params = SvmParams() )
@@ -157,7 +157,7 @@ public:
         params = _params;
     }
 
-    int getType() const
+    int getType() const CV_OVERRIDE
     {
         return params.kernelType;
     }
@@ -300,7 +300,7 @@ public:
     }
 
     void calc( int vcount, int var_count, const float* vecs,
-               const float* another, Qfloat* results )
+               const float* another, Qfloat* results ) CV_OVERRIDE
     {
         switch( params.kernelType )
         {
@@ -414,7 +414,7 @@ ParamGrid SVM::getDefaultGrid( int param_id )
 }
 
 
-class SVMImpl : public SVM
+class SVMImpl CV_FINAL : public SVM
 {
 public:
     struct DecisionFunc
@@ -1241,7 +1241,7 @@ public:
         clear();
     }
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         decision_func.clear();
         df_alpha.clear();
@@ -1255,34 +1255,39 @@ public:
         return uncompressed_sv;
     }
 
-    Mat getSupportVectors() const
+    Mat getSupportVectors() const CV_OVERRIDE
     {
         return sv;
     }
 
-    CV_IMPL_PROPERTY(int, Type, params.svmType)
-    CV_IMPL_PROPERTY(double, Gamma, params.gamma)
-    CV_IMPL_PROPERTY(double, Coef0, params.coef0)
-    CV_IMPL_PROPERTY(double, Degree, params.degree)
-    CV_IMPL_PROPERTY(double, C, params.C)
-    CV_IMPL_PROPERTY(double, Nu, params.nu)
-    CV_IMPL_PROPERTY(double, P, params.p)
-    CV_IMPL_PROPERTY_S(cv::Mat, ClassWeights, params.classWeights)
-    CV_IMPL_PROPERTY_S(cv::TermCriteria, TermCriteria, params.termCrit)
+    inline int getType() const CV_OVERRIDE { return params.svmType; }
+    inline void setType(int val) CV_OVERRIDE { params.svmType = val; }
+    inline double getGamma() const CV_OVERRIDE { return params.gamma; }
+    inline void setGamma(double val) CV_OVERRIDE { params.gamma = val; }
+    inline double getCoef0() const CV_OVERRIDE { return params.coef0; }
+    inline void setCoef0(double val) CV_OVERRIDE { params.coef0 = val; }
+    inline double getDegree() const CV_OVERRIDE { return params.degree; }
+    inline void setDegree(double val) CV_OVERRIDE { params.degree = val; }
+    inline double getC() const CV_OVERRIDE { return params.C; }
+    inline void setC(double val) CV_OVERRIDE { params.C = val; }
+    inline double getNu() const CV_OVERRIDE { return params.nu; }
+    inline void setNu(double val) CV_OVERRIDE { params.nu = val; }
+    inline double getP() const CV_OVERRIDE { return params.p; }
+    inline void setP(double val) CV_OVERRIDE { params.p = val; }
+    inline cv::Mat getClassWeights() const CV_OVERRIDE { return params.classWeights; }
+    inline void setClassWeights(const cv::Mat& val) CV_OVERRIDE { params.classWeights = val; }
+    inline cv::TermCriteria getTermCriteria() const CV_OVERRIDE { return params.termCrit; }
+    inline void setTermCriteria(const cv::TermCriteria& val) CV_OVERRIDE { params.termCrit = val; }
 
-    int getKernelType() const
-    {
-        return params.kernelType;
-    }
-
-    void setKernel(int kernelType)
+    int getKernelType() const CV_OVERRIDE { return params.kernelType; }
+    void setKernel(int kernelType) CV_OVERRIDE
     {
         params.kernelType = kernelType;
         if (kernelType != CUSTOM)
             kernel = makePtr<SVMKernelImpl>(params);
     }
 
-    void setCustomKernel(const Ptr<Kernel> &_kernel)
+    void setCustomKernel(const Ptr<Kernel> &_kernel) CV_OVERRIDE
     {
         params.kernelType = CUSTOM;
         kernel = _kernel;
@@ -1606,7 +1611,7 @@ public:
         std::swap(decision_func, new_df);
     }
 
-    bool train( const Ptr<TrainData>& data, int )
+    bool train( const Ptr<TrainData>& data, int ) CV_OVERRIDE
     {
         clear();
 
@@ -1651,7 +1656,7 @@ public:
         sidx(_sidx), is_classification(_is_classification), k_fold(_k_fold), result(_result)
         {}
 
-        void operator()( const cv::Range& range ) const
+        void operator()( const cv::Range& range ) const CV_OVERRIDE
         {
             int sample_count = samples.rows;
             int var_count_ = samples.cols;
@@ -1732,7 +1737,7 @@ public:
     bool trainAuto( const Ptr<TrainData>& data, int k_fold,
                     ParamGrid C_grid, ParamGrid gamma_grid, ParamGrid p_grid,
                     ParamGrid nu_grid, ParamGrid coef_grid, ParamGrid degree_grid,
-                    bool balanced )
+                    bool balanced ) CV_OVERRIDE
     {
         checkParams();
 
@@ -1902,7 +1907,7 @@ public:
             returnDFVal = _returnDFVal;
         }
 
-        void operator()( const Range& range ) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             int svmType = svm->params.svmType;
             int sv_total = svm->sv.rows;
@@ -1995,7 +2000,7 @@ public:
     }
 
 
-    float predict( InputArray _samples, OutputArray _results, int flags ) const
+    float predict( InputArray _samples, OutputArray _results, int flags ) const CV_OVERRIDE
     {
         float result = 0;
         Mat samples = _samples.getMat(), results;
@@ -2023,7 +2028,7 @@ public:
         return result;
     }
 
-    double getDecisionFunction(int i, OutputArray _alpha, OutputArray _svidx ) const
+    double getDecisionFunction(int i, OutputArray _alpha, OutputArray _svidx ) const CV_OVERRIDE
     {
         CV_Assert( 0 <= i && i < (int)decision_func.size());
         const DecisionFunc& df = decision_func[i];
@@ -2085,27 +2090,27 @@ public:
         fs << "}";
     }
 
-    bool isTrained() const
+    bool isTrained() const CV_OVERRIDE
     {
         return !sv.empty();
     }
 
-    bool isClassifier() const
+    bool isClassifier() const CV_OVERRIDE
     {
         return params.svmType == C_SVC || params.svmType == NU_SVC || params.svmType == ONE_CLASS;
     }
 
-    int getVarCount() const
+    int getVarCount() const CV_OVERRIDE
     {
         return var_count;
     }
 
-    String getDefaultName() const
+    String getDefaultName() const CV_OVERRIDE
     {
         return "opencv_ml_svm";
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         int class_count = !class_labels.empty() ? (int)class_labels.total() :
                           params.svmType == ONE_CLASS ? 1 : 0;
@@ -2238,7 +2243,7 @@ public:
         setParams( _params );
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         clear();
 
