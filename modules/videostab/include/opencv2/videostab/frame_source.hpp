@@ -65,8 +65,8 @@ public:
 class CV_EXPORTS NullFrameSource : public IFrameSource
 {
 public:
-    virtual void reset() {}
-    virtual Mat nextFrame() { return Mat(); }
+    virtual void reset() CV_OVERRIDE {}
+    virtual Mat nextFrame() CV_OVERRIDE { return Mat(); }
 };
 
 class CV_EXPORTS VideoFileSource : public IFrameSource
@@ -74,8 +74,8 @@ class CV_EXPORTS VideoFileSource : public IFrameSource
 public:
     VideoFileSource(const String &path, bool volatileFrame = false);
 
-    virtual void reset();
-    virtual Mat nextFrame();
+    virtual void reset() CV_OVERRIDE;
+    virtual Mat nextFrame() CV_OVERRIDE;
 
     int width();
     int height();
