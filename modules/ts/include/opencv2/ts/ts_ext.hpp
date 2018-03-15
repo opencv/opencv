@@ -48,7 +48,7 @@ extern int testThreads;
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
      private:\
-      virtual void TestBody();\
+      virtual void TestBody() CV_OVERRIDE;\
       virtual void Body();\
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
@@ -74,7 +74,7 @@ extern int testThreads;
      public:\
       GTEST_TEST_CLASS_NAME_(test_fixture, test_name)() {}\
      private:\
-      virtual void TestBody();\
+      virtual void TestBody() CV_OVERRIDE;\
       virtual void Body(); \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
@@ -102,7 +102,7 @@ extern int testThreads;
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
    private: \
     virtual void bodyMethodName(); \
-    virtual void TestBody(); \
+    virtual void TestBody() CV_OVERRIDE; \
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\

@@ -63,7 +63,14 @@
 # endif
 #endif
 
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include "opencv2/ts/ts_gtest.h"
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic pop
+#endif
 #include "opencv2/ts/ts_ext.hpp"
 
 #ifndef GTEST_USES_SIMPLE_RE
@@ -519,13 +526,13 @@ public:
     ArrayTest();
     virtual ~ArrayTest();
 
-    virtual void clear();
+    virtual void clear() CV_OVERRIDE;
 
 protected:
 
-    virtual int read_params( CvFileStorage* fs );
-    virtual int prepare_test_case( int test_case_idx );
-    virtual int validate_test_results( int test_case_idx );
+    virtual int read_params( CvFileStorage* fs ) CV_OVERRIDE;
+    virtual int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    virtual int validate_test_results( int test_case_idx ) CV_OVERRIDE;
 
     virtual void prepare_to_validation( int test_case_idx );
     virtual void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -558,7 +565,7 @@ public:
 
 protected:
     virtual int run_test_case( int expected_code, const string& descr );
-    virtual void run_func(void) = 0;
+    virtual void run_func(void) CV_OVERRIDE = 0;
     int test_case_idx;
 
     template<class F>
