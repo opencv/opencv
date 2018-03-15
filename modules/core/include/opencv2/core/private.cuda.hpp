@@ -108,6 +108,8 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The l
 
 #else // HAVE_CUDA
 
+#define nppSafeSetStream(oldStream, newStream) { if(oldStream != newStream) { cudaStreamSynchronize(oldStream); nppSetStream(newStream); } }
+
 static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 namespace cv { namespace cuda
@@ -139,13 +141,13 @@ namespace cv { namespace cuda
         inline explicit NppStreamHandler(Stream& newStream)
         {
             oldStream = nppGetStream();
-            nppSetStream(StreamAccessor::getStream(newStream));
+            nppSafeSetStream(oldStream, StreamAccessor::getStream(newStream));
         }
 
         inline explicit NppStreamHandler(cudaStream_t newStream)
         {
             oldStream = nppGetStream();
-            nppSetStream(newStream);
+            nppSafeSetStream(oldStream, newStream);
         }
 
         inline ~NppStreamHandler()
