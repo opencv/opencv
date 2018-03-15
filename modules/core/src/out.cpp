@@ -45,7 +45,7 @@
 
 namespace cv
 {
-    class FormattedImpl : public Formatted
+    class FormattedImpl CV_FINAL : public Formatted
     {
         enum { STATE_PROLOGUE, STATE_EPILOGUE, STATE_INTERLUDE,
                STATE_ROW_OPEN, STATE_ROW_CLOSE, STATE_CN_OPEN, STATE_CN_CLOSE, STATE_VALUE, STATE_FINISHED,
@@ -119,12 +119,12 @@ namespace cv
             }
         }
 
-        void reset()
+        void reset() CV_OVERRIDE
         {
             state = STATE_PROLOGUE;
         }
 
-        const char* next()
+        const char* next() CV_OVERRIDE
         {
             switch(state)
             {
@@ -258,17 +258,17 @@ namespace cv
     public:
         FormatterBase() : prec32f(8), prec64f(16), multiline(true) {}
 
-        void set32fPrecision(int p)
+        void set32fPrecision(int p) CV_OVERRIDE
         {
             prec32f = p;
         }
 
-        void set64fPrecision(int p)
+        void set64fPrecision(int p) CV_OVERRIDE
         {
             prec64f = p;
         }
 
-        void setMultiline(bool ml)
+        void setMultiline(bool ml) CV_OVERRIDE
         {
             multiline = ml;
         }
@@ -279,11 +279,11 @@ namespace cv
         int multiline;
     };
 
-    class DefaultFormatter : public FormatterBase
+    class DefaultFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        Ptr<Formatted> format(const Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
             return makePtr<FormattedImpl>("[", "]", mtx, &*braces,
@@ -291,11 +291,11 @@ namespace cv
         }
     };
 
-    class MatlabFormatter : public FormatterBase
+    class MatlabFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        Ptr<Formatted> format(const Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
             return makePtr<FormattedImpl>("", "", mtx, &*braces,
@@ -303,11 +303,11 @@ namespace cv
         }
     };
 
-    class PythonFormatter : public FormatterBase
+    class PythonFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        Ptr<Formatted> format(const Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
@@ -317,11 +317,11 @@ namespace cv
         }
     };
 
-    class NumpyFormatter : public FormatterBase
+    class NumpyFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        Ptr<Formatted> format(const Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             static const char* numpyTypes[] =
             {
@@ -336,11 +336,11 @@ namespace cv
         }
     };
 
-    class CSVFormatter : public FormatterBase
+    class CSVFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        Ptr<Formatted> format(const Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', '\0', '\0', '\0'};
             return makePtr<FormattedImpl>(String(),
@@ -349,11 +349,11 @@ namespace cv
         }
     };
 
-    class CFormatter : public FormatterBase
+    class CFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        Ptr<Formatted> format(const Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', ',', '\0', '\0'};
             return makePtr<FormattedImpl>("{", "}", mtx, &*braces,
