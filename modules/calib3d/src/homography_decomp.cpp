@@ -99,25 +99,25 @@ private:
     cv::Matx33d _Hnorm;
 };
 
-class HomographyDecompZhang : public HomographyDecomp {
+class HomographyDecompZhang CV_FINAL : public HomographyDecomp {
 
 public:
     HomographyDecompZhang():HomographyDecomp() {}
     virtual ~HomographyDecompZhang() {}
 
 private:
-    virtual void decompose(std::vector<CameraMotion>& camMotions);
+    virtual void decompose(std::vector<CameraMotion>& camMotions) CV_OVERRIDE;
     bool findMotionFrom_tstar_n(const cv::Vec3d& tstar, const cv::Vec3d& n, CameraMotion& motion);
 };
 
-class HomographyDecompInria : public HomographyDecomp {
+class HomographyDecompInria CV_FINAL : public HomographyDecomp {
 
 public:
     HomographyDecompInria():HomographyDecomp() {}
     virtual ~HomographyDecompInria() {}
 
 private:
-    virtual void decompose(std::vector<CameraMotion>& camMotions);
+    virtual void decompose(std::vector<CameraMotion>& camMotions) CV_OVERRIDE;
     double oppositeOfMinor(const cv::Matx33d& M, const int row, const int col);
     void findRmatFrom_tstar_n(const cv::Vec3d& tstar, const cv::Vec3d& n, const double v, cv::Matx33d& R);
 };
