@@ -48,7 +48,7 @@ namespace cv
 namespace dnn
 {
 
-class CropLayerImpl : public CropLayer
+class CropLayerImpl CV_FINAL : public CropLayer
 {
 public:
     CropLayerImpl(const LayerParams& params)
@@ -67,7 +67,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
 
@@ -83,7 +83,7 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         CV_Assert(2 == inputs.size());
 
@@ -119,7 +119,7 @@ public:
         }
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -127,7 +127,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());

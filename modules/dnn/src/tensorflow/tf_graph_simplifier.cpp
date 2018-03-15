@@ -214,7 +214,7 @@ public:
     }
 
     virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
-                          std::vector<tensorflow::NodeDef*>& inputNodes)
+                          std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
     {
         Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
         CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
@@ -249,7 +249,7 @@ public:
     }
 
     virtual void finalize(tensorflow::GraphDef& net, tensorflow::NodeDef* fusedNode,
-                          std::vector<tensorflow::NodeDef*>& inputNodes)
+                          std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
     {
         Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
         CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
@@ -343,7 +343,7 @@ public:
         setFusedNode("Relu6", input);
     }
 
-    virtual bool match(const tensorflow::GraphDef& net, int nodeId, std::vector<int>& matchedNodesIds)
+    virtual bool match(const tensorflow::GraphDef& net, int nodeId, std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
         if (!Subgraph::match(net, nodeId, matchedNodesIds))
             return false;
@@ -378,7 +378,7 @@ public:
     }
 
     virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
-                          std::vector<tensorflow::NodeDef*>& inputNodes)
+                          std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
     {
         std::vector<int> shape(numOutDims + 1);  // batch size in Keras is implicit.
         shape[0] = -1;

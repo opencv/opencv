@@ -12,16 +12,12 @@ Implementation of Tensorflow models parser
 #include "../precomp.hpp"
 
 #ifdef HAVE_PROTOBUF
-#include "graph.pb.h"
+#include "tf_io.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <string>
-#include <google/protobuf/message.h>
-#include <google/protobuf/text_format.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-#include "tf_io.hpp"
 #include "tf_graph_simplifier.hpp"
 #endif
 

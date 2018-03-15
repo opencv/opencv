@@ -79,14 +79,14 @@ public:
                   adjustPad.height < stride.height);
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         CV_Assert(inputs.size() > 0);
 
@@ -123,7 +123,7 @@ public:
     virtual void applyHalideScheduler(Ptr<BackendNode>& node,
                                       const std::vector<Mat*> &inputs,
                                       const std::vector<Mat> &outputs,
-                                      int targetId) const
+                                      int targetId) const CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         if (targetId != DNN_TARGET_CPU)
@@ -165,7 +165,7 @@ public:
 #define IS_POWER_LAYER(layer) \
             (!layer.empty() && !layer->type.compare("Power"))
 //TODO: simultaneously convolution and bias addition for cache optimization
-class ConvolutionLayerImpl : public BaseConvolutionLayerImpl
+class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
@@ -194,7 +194,7 @@ public:
 #endif
     }
 
-    MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
+    MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
         Size out(outShape[3], outShape[2]);
         int inpGroupCn = blobs[0].size[1];
@@ -205,7 +205,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(blobs.size() != 0);
         CV_Assert(!hasBias() || blobs[1].total() == (size_t)blobs[0].size[0]);
@@ -239,7 +239,7 @@ public:
         return false;
     }
 
-    virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         BaseConvolutionLayerImpl::finalize(inputs, outputs);
 
@@ -278,7 +278,7 @@ public:
 #endif
     }
 
-    bool setActivation(const Ptr<ActivationLayer>& layer)
+    bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
         activ = layer;
         if (activ.empty())
@@ -312,7 +312,7 @@ public:
         return !activ.empty();
     }
 
-    virtual bool tryFuse(Ptr<Layer>& top)
+    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
         Mat w, b;
         top->getScaleShift(w, b);
@@ -357,7 +357,7 @@ public:
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
@@ -405,7 +405,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
@@ -517,7 +517,7 @@ public:
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
 
-        virtual void operator ()(const Range &r0) const
+        virtual void operator ()(const Range &r0) const CV_OVERRIDE
         {
             const int valign = ConvolutionLayerImpl::VEC_ALIGN;
             int ngroups = ngroups_, batchSize = input_->size[0]*ngroups;
@@ -937,7 +937,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -949,7 +949,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -993,7 +993,7 @@ public:
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == outputs.size());
 
@@ -1007,7 +1007,7 @@ public:
     }
 };
 
-class DeConvolutionLayerImpl : public BaseConvolutionLayerImpl
+class DeConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     Mat weightsMat, biasesMat;
@@ -1016,7 +1016,7 @@ public:
 
     DeConvolutionLayerImpl(const LayerParams& params) : BaseConvolutionLayerImpl(params) {}
 
-    MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
+    MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
         int inpCn = inpShape[1];
         int inpH = inpShape[2];
@@ -1031,7 +1031,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
         CV_Assert(inputs.size() != 0);
@@ -1080,7 +1080,7 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         BaseConvolutionLayerImpl::finalize(inputs, outputs);
         getConvPoolPaddings(Size(outputs[0].size[3], outputs[0].size[2]),
@@ -1102,7 +1102,7 @@ public:
             useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
         }
 
-        void operator()(const Range& range_) const
+        void operator()(const Range& range_) const CV_OVERRIDE
         {
             int stripeSize = (int)alignSize((b_->cols + nstripes_ - 1)/nstripes_, 16);
             Range range(range_.start*stripeSize, std::min(range_.end*stripeSize, b_->cols));
@@ -1277,7 +1277,7 @@ public:
             parallel_for_(Range(0, nstripes), t, nstripes);
         }
 
-        virtual void operator ()(const Range &r) const
+        virtual void operator ()(const Range &r) const CV_OVERRIDE
         {
             const float* data_col_ = data_col;
             float* data_im_ = data_im;
@@ -1423,7 +1423,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -1435,7 +1435,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -1489,7 +1489,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
@@ -1543,7 +1543,7 @@ public:
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == outputs.size());
 
