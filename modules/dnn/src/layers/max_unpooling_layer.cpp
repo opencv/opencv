@@ -11,7 +11,7 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
+#include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include <iostream>

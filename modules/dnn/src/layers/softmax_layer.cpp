@@ -42,8 +42,8 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
-#include "op_inf_engine.hpp"
+#include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
 #include <algorithm>
 #include <stdlib.h>
 using std::max;

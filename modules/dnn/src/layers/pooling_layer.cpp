@@ -43,8 +43,8 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-#include "op_halide.hpp"
-#include "op_inf_engine.hpp"
+#include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
 #include <float.h>
 #include <algorithm>
 using std::max;

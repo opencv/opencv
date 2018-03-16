@@ -43,7 +43,7 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
-#include "nms.inl.hpp"
+#include "../nms.inl.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"

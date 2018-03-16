@@ -6,7 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
-#include <nms.inl.hpp>
+#include "nms.inl.hpp"
 
 namespace cv
 {

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <precomp.hpp>
+#include "precomp.hpp"
 
 #include <opencv2/core/utils/trace.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
