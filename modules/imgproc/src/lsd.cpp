@@ -268,12 +268,6 @@ private:
 
     std::vector<normPoint> ordered_points;
 
-    // Compare norm
-    static inline bool compare_norm(const normPoint& n1, const normPoint& n2)
-    {
-        return (n1.norm > n2.norm);
-    }
-
     struct rect
     {
         double x1, y1, x2, y2;    // first and second point of the line segment
@@ -386,6 +380,13 @@ private:
  * @return      Whether the point is aligned.
  */
     bool isAligned(int x, int y, const double& theta, const double& prec) const;
+
+public:
+    // Compare norm
+    static inline bool compare_norm( const normPoint& n1, const normPoint& n2 )
+    {
+        return (n1.norm > n2.norm);
+    }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
