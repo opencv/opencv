@@ -75,12 +75,6 @@ struct edge
     bool taken;
 };
 
-struct coorlist
-{
-    cv::Point2i p;
-    int norm;
-};
-
 /////////////////////////////////////////////////////////////////////////////////////////
 
 inline double distSq(const double x1, const double y1,
@@ -161,12 +155,6 @@ inline double log_gamma_lanczos(const double& x)
         b += q[n] * pow(x, double(n));
     }
     return a + log(b);
-}
-
-// Compare norm
-inline bool compare_norm(const coorlist& n1, const coorlist& n2)
-{
-    return (n1.norm > n2.norm);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -272,7 +260,19 @@ private:
         double modgrad;
     };
 
-    std::vector<coorlist> list;
+    struct normPoint
+    {
+        Point2i p;
+        int norm;
+    };
+
+    std::vector<normPoint> ordered_points;
+
+    // Compare norm
+    static inline bool compare_norm(const normPoint& n1, const normPoint& n2)
+    {
+        return (n1.norm > n2.norm);
+    }
 
     struct rect
     {
@@ -308,10 +308,10 @@ private:
 /**
  * Finds the angles and the gradients of the image. Generates a list of pseudo ordered points.
  *
- * @param threshold The minimum value of the angle that is considered defined, otherwise NOTDEF
- * @param n_bins    The number of bins with which gradients are ordered by, using bucket sort.
- * @param list      Return: Vector of coordinate points that are pseudo ordered by magnitude.
- *                  Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
+ * @param threshold      The minimum value of the angle that is considered defined, otherwise NOTDEF
+ * @param n_bins         The number of bins with which gradients are ordered by, using bucket sort.
+ * @param ordered_points Return: Vector of coordinate points that are pseudo ordered by magnitude.
+ *                       Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */
     void ll_angle(const double& threshold, const unsigned int& n_bins);
 
@@ -437,7 +437,7 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(n_needed) Mat(n).copyTo(_nfa);
 
     // Clear used structures
-    list.clear();
+    ordered_points.clear();
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
@@ -476,13 +476,13 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     std::vector<RegionPoint> reg;
 
     // Search for line segments
-    for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
+    for(size_t i = 0, points_size = ordered_points.size(); i < points_size; ++i)
     {
-        const Point2i& point = list[i].p;
+        const Point2i& point = ordered_points[i].p;
         if((used.at<uchar>(point) == NOTUSED) && (angles.at<double>(point) != NOTDEF))
         {
             double reg_angle;
-            region_grow(list[i].p, reg, reg_angle, prec);
+            region_grow(ordered_points[i].p, reg, reg_angle, prec);
 
             // Ignore small regions
             if(reg.size() < min_reg_size) { continue; }
@@ -579,16 +579,16 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
         const double* modgrad_row = modgrad.ptr<double>(y);
         for(int x = 0; x < img_width - 1; ++x)
         {
-            coorlist _list;
+            normPoint _point;
             int i = int(modgrad_row[x] * bin_coef);
-            _list.p = Point(x, y);
-            _list.norm = i;
-            list.push_back(_list);
+            _point.p = Point(x, y);
+            _point.norm = i;
+            ordered_points.push_back(_point);
         }
     }
 
     // Sort
-    std::sort(list.begin(), list.end(), compare_norm);
+    std::sort(ordered_points.begin(), ordered_points.end(), compare_norm);
 }
 
 void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPoint>& reg,
