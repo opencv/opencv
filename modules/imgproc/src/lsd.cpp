@@ -260,14 +260,13 @@ private:
         double modgrad;
     };
 
-
-    struct coorlist
+    struct normPoint
     {
         Point2i p;
-        struct coorlist* next;
+        int norm;
     };
 
-    std::vector<coorlist> list;
+    std::vector<normPoint> ordered_points;
 
     struct rect
     {
@@ -303,10 +302,10 @@ private:
 /**
  * Finds the angles and the gradients of the image. Generates a list of pseudo ordered points.
  *
- * @param threshold The minimum value of the angle that is considered defined, otherwise NOTDEF
- * @param n_bins    The number of bins with which gradients are ordered by, using bucket sort.
- * @param list      Return: Vector of coordinate points that are pseudo ordered by magnitude.
- *                  Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
+ * @param threshold      The minimum value of the angle that is considered defined, otherwise NOTDEF
+ * @param n_bins         The number of bins with which gradients are ordered by, using bucket sort.
+ * @param ordered_points Return: Vector of coordinate points that are pseudo ordered by magnitude.
+ *                       Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */
     void ll_angle(const double& threshold, const unsigned int& n_bins);
 
@@ -381,6 +380,13 @@ private:
  * @return      Whether the point is aligned.
  */
     bool isAligned(int x, int y, const double& theta, const double& prec) const;
+
+public:
+    // Compare norm
+    static inline bool compare_norm( const normPoint& n1, const normPoint& n2 )
+    {
+        return (n1.norm > n2.norm);
+    }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -432,7 +438,7 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(n_needed) Mat(n).copyTo(_nfa);
 
     // Clear used structures
-    list.clear();
+    ordered_points.clear();
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
@@ -471,13 +477,13 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     std::vector<RegionPoint> reg;
 
     // Search for line segments
-    for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
+    for(size_t i = 0, points_size = ordered_points.size(); i < points_size; ++i)
     {
-        const Point2i& point = list[i].p;
+        const Point2i& point = ordered_points[i].p;
         if((used.at<uchar>(point) == NOTUSED) && (angles.at<double>(point) != NOTDEF))
         {
             double reg_angle;
-            region_grow(list[i].p, reg, reg_angle, prec);
+            region_grow(ordered_points[i].p, reg, reg_angle, prec);
 
             // Ignore small regions
             if(reg.size() < min_reg_size) { continue; }
@@ -568,52 +574,22 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
     }
 
     // Compute histogram of gradient values
-    list.resize(img_width * img_height);
-    std::vector<coorlist*> range_s(n_bins);
-    std::vector<coorlist*> range_e(n_bins);
-    unsigned int count = 0;
     double bin_coef = (max_grad > 0) ? double(n_bins - 1) / max_grad : 0; // If all image is smooth, max_grad <= 0
-
     for(int y = 0; y < img_height - 1; ++y)
     {
         const double* modgrad_row = modgrad.ptr<double>(y);
         for(int x = 0; x < img_width - 1; ++x)
         {
-            // Store the point in the right bin according to its norm
+            normPoint _point;
             int i = int(modgrad_row[x] * bin_coef);
-            if(!range_e[i])
-            {
-                range_e[i] = range_s[i] = &list[count];
-                ++count;
-            }
-            else
-            {
-                range_e[i]->next = &list[count];
-                range_e[i] = &list[count];
-                ++count;
-            }
-            range_e[i]->p = Point(x, y);
-            range_e[i]->next = 0;
+            _point.p = Point(x, y);
+            _point.norm = i;
+            ordered_points.push_back(_point);
         }
     }
 
     // Sort
-    int idx = n_bins - 1;
-    for(;idx > 0 && !range_s[idx]; --idx);
-    coorlist* start = range_s[idx];
-    coorlist* end = range_e[idx];
-    if(start)
-    {
-        while(idx > 0)
-        {
-            --idx;
-            if(range_s[idx])
-            {
-                end->next = range_s[idx];
-                end = range_e[idx];
-            }
-        }
-    }
+    std::sort(ordered_points.begin(), ordered_points.end(), compare_norm);
 }
 
 void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPoint>& reg,
