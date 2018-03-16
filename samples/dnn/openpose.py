@@ -82,7 +82,7 @@ while cv.waitKey(1) < 0:
         y = (frameHeight * point[1]) / out.shape[2]
 
         # Add a point if it's confidence is higher than threshold.
-        points.append((x, y) if conf > args.thr else None)
+        points.append((int(x), int(y)) if conf > args.thr else None)
 
     for pair in POSE_PAIRS:
         partFrom = pair[0]
