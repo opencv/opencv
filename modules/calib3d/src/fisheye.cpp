@@ -1173,7 +1173,7 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert(!objectPoints.empty() && objectPoints.type() == CV_64FC3);
+    CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
     Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
                        0,               param.f[1], param.c[1],
                        0,                        0,         1);
