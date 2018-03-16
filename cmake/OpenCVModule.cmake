@@ -700,7 +700,6 @@ endmacro()
 macro(ocv_module_include_directories)
   ocv_target_include_directories(${the_module}
       "${OPENCV_MODULE_${the_module}_LOCATION}/include"
-      "${OPENCV_MODULE_${the_module}_LOCATION}/src"
       "${CMAKE_CURRENT_BINARY_DIR}" # for precompiled headers
       )
   ocv_target_include_modules(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${ARGN})

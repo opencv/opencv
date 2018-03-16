@@ -10,8 +10,8 @@ Implementation of Batch Normalization layer.
 */
 
 #include "../precomp.hpp"
-#include "op_halide.hpp"
-#include "op_inf_engine.hpp"
+#include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL

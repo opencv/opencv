@@ -743,11 +743,11 @@ endmacro()
 macro(ocv_add_dispatched_file filename)
   if(NOT OPENCV_INITIAL_PASS)
     set(__codestr "
-#include \"precomp.hpp\"
-#include \"${filename}.simd.hpp\"
+#include \"${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp\"
+#include \"${CMAKE_CURRENT_LIST_DIR}/src/${filename}.simd.hpp\"
 ")
 
-    set(__declarations_str "#define CV_CPU_SIMD_FILENAME \"${filename}.simd.hpp\"")
+    set(__declarations_str "#define CV_CPU_SIMD_FILENAME \"${CMAKE_CURRENT_LIST_DIR}/src/${filename}.simd.hpp\"")
     set(__dispatch_modes "BASELINE")
 
     set(__optimizations "${ARGN}")
