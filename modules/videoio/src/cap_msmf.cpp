@@ -1052,7 +1052,7 @@ ImageGrabberCallback::ImageGrabberCallback(bool synchronous):
     ig_Close(false),
     ig_Synchronous(synchronous),
     ig_hFrameReady(synchronous ? CreateEvent(NULL, FALSE, FALSE, NULL): 0),
-    ig_hFrameGrabbed(synchronous ? CreateEvent(NULL, FALSE, TRUE, NULL): 0),
+    ig_hFrameGrabbed(synchronous ? CreateEvent(NULL, FALSE, FALSE, NULL): 0),
     ig_hFinish(CreateEvent(NULL, TRUE, FALSE, NULL))
 {}
 
