@@ -5,11 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace cv;
 using namespace std;
@@ -25,10 +23,16 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image
-  src = imread(argv[1]);
+  String imageName("../data/happyfish.jpg"); // by default
+  if (argc > 1)
+  {
+    imageName = argv[1];
+  }
+  src = imread(imageName, IMREAD_COLOR);
+
   if (src.empty())
   {
     cerr << "No image supplied ..." << endl;

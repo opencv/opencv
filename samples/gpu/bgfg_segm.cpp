@@ -23,10 +23,10 @@ enum Method
 int main(int argc, const char** argv)
 {
     cv::CommandLineParser cmd(argc, argv,
-        "{ c camera |             | use camera }"
-        "{ f file   | ../data/768x576.avi | input video file }"
-        "{ m method | mog         | method (mog, mog2, gmg, fgd) }"
-        "{ h help   |             | print help message }");
+        "{ c camera |                    | use camera }"
+        "{ f file   | ../data/vtest.avi  | input video file }"
+        "{ m method | mog                | method (mog, mog2, gmg, fgd) }"
+        "{ h help   |                    | print help message }");
 
     if (cmd.has("help") || !cmd.check())
     {
@@ -161,7 +161,7 @@ int main(int argc, const char** argv)
         if (!bgimg.empty())
             imshow("mean background image", bgimg);
 
-        int key = waitKey(30);
+        char key = (char)waitKey(30);
         if (key == 27)
             break;
     }

@@ -21,3 +21,23 @@ ocv_add_module(ts INTERNAL opencv_core opencv_imgproc opencv_imgcodecs opencv_vi
 ocv_glob_module_sources()
 ocv_module_include_directories()
 ocv_create_module()
+
+# generate config file
+set(OPENCV_TESTS_CONFIG_FILE "${CMAKE_BINARY_DIR}/opencv_tests_config.hpp")
+set(OPENCV_TESTS_CONFIG_STR "")
+if(CMAKE_INSTALL_PREFIX)
+  set(OPENCV_TESTS_CONFIG_STR "${OPENCV_TESTS_CONFIG_STR}
+#define OPENCV_INSTALL_PREFIX \"${CMAKE_INSTALL_PREFIX}\"
+")
+endif()
+if(OPENCV_TEST_DATA_INSTALL_PATH)
+  set(OPENCV_TESTS_CONFIG_STR "${OPENCV_TESTS_CONFIG_STR}
+#define OPENCV_TEST_DATA_INSTALL_PATH \"${OPENCV_TEST_DATA_INSTALL_PATH}\"
+")
+endif()
+if(EXISTS "${OPENCV_TESTS_CONFIG_FILE}")
+  file(READ "${OPENCV_TESTS_CONFIG_FILE}" __content)
+endif()
+if(NOT OPENCV_TESTS_CONFIG_STR STREQUAL "${__content}")
+  file(WRITE "${OPENCV_TESTS_CONFIG_FILE}" "${OPENCV_TESTS_CONFIG_STR}")
+endif()

@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_TrackBaseTest : public cvtest::BaseTest
 {
@@ -346,7 +345,7 @@ _exit_:
 
     if( code < 0 )
     {
-#if 0 //defined _DEBUG && defined WIN32
+#if 0 //defined _DEBUG && defined _WIN32
         IplImage* dst = cvCreateImage( img_size, 8, 3 );
         cvNamedWindow( "test", 1 );
         cvCmpS( img, 0, img, CV_CMP_GT );
@@ -485,7 +484,7 @@ _exit_:
 
     if( code < 0 )
     {
-#if 0// defined _DEBUG && defined WIN32
+#if 0// defined _DEBUG && defined _WIN32
         IplImage* dst = cvCreateImage( img_size, 8, 3 );
         cvNamedWindow( "test", 1 );
         cvCmpS( img, 0, img, CV_CMP_GT );
@@ -509,4 +508,5 @@ _exit_:
 TEST(Video_CAMShift, accuracy) { CV_CamShiftTest test; test.safe_run(); }
 TEST(Video_MeanShift, accuracy) { CV_MeanShiftTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

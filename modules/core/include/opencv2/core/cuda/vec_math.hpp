@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_VECMATH_HPP__
-#define __OPENCV_CUDA_VECMATH_HPP__
+#ifndef OPENCV_CUDA_VECMATH_HPP
+#define OPENCV_CUDA_VECMATH_HPP
 
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"
@@ -927,4 +927,4 @@ CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, double, double, double)
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_VECMATH_HPP__
+#endif // OPENCV_CUDA_VECMATH_HPP

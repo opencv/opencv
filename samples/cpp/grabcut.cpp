@@ -1,6 +1,6 @@
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <iostream>
 
@@ -276,12 +276,9 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||}{@input||}");
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
+    cv::CommandLineParser parser(argc, argv, "{@input| ../data/messi5.jpg |}");
+    help();
+
     string filename = parser.get<string>("@input");
     if( filename.empty() )
     {
@@ -295,8 +292,6 @@ int main( int argc, char** argv )
         return 1;
     }
 
-    help();
-
     const string winName = "image";
     namedWindow( winName, WINDOW_AUTOSIZE );
     setMouseCallback( winName, on_mouse, 0 );
@@ -306,8 +301,8 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
-        switch( (char) c )
+        char c = (char)waitKey(0);
+        switch( c )
         {
         case '\x1b':
             cout << "Exiting ..." << endl;

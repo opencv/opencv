@@ -49,9 +49,6 @@
 #elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-#define CT double
-#else
-#define CT float
 #endif
 
 #define INTER_BITS 5
@@ -104,8 +101,8 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
 
         for (int dy = dy0, dy1 = min(dst_rows, dy0 + rowsPerWI); dy < dy1; ++dy, dst_index += dst_step)
         {
-            int X0 = X0_ + rint(fma(M[1], dy, M[2]) * AB_SCALE) + round_delta;
-            int Y0 = Y0_ + rint(fma(M[4], dy, M[5]) * AB_SCALE) + round_delta;
+            int X0 = X0_ + rint(fma(M[1], (CT)dy, M[2]) * AB_SCALE) + round_delta;
+            int Y0 = Y0_ + rint(fma(M[4], (CT)dy, M[5]) * AB_SCALE) + round_delta;
 
             short sx = convert_short_sat(X0 >> AB_BITS);
             short sy = convert_short_sat(Y0 >> AB_BITS);
@@ -146,8 +143,8 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
 
         for (int dy = dy0, dy1 = min(dst_rows, dy0 + rowsPerWI); dy < dy1; ++dy)
         {
-            int X0 = X0_ + rint(fma(M[1], dy, M[2]) * AB_SCALE) + ROUND_DELTA;
-            int Y0 = Y0_ + rint(fma(M[4], dy, M[5]) * AB_SCALE) + ROUND_DELTA;
+            int X0 = X0_ + rint(fma(M[1], (CT)dy, M[2]) * AB_SCALE) + ROUND_DELTA;
+            int Y0 = Y0_ + rint(fma(M[4], (CT)dy, M[5]) * AB_SCALE) + ROUND_DELTA;
             X0 = X0 >> (AB_BITS - INTER_BITS);
             Y0 = Y0 >> (AB_BITS - INTER_BITS);
 
@@ -274,8 +271,8 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
     if (dx < dst_cols && dy < dst_rows)
     {
         int tmp = (dx << AB_BITS);
-        int X0 = rint(M[0] * tmp) + rint(fma(M[1], dy, M[2]) * AB_SCALE) + ROUND_DELTA;
-        int Y0 = rint(M[3] * tmp) + rint(fma(M[4], dy, M[5]) * AB_SCALE) + ROUND_DELTA;
+        int X0 = rint(M[0] * tmp) + rint(fma(M[1], (CT)dy, M[2]) * AB_SCALE) + ROUND_DELTA;
+        int Y0 = rint(M[3] * tmp) + rint(fma(M[4], (CT)dy, M[5]) * AB_SCALE) + ROUND_DELTA;
 
         X0 = X0 >> (AB_BITS - INTER_BITS);
         Y0 = Y0 >> (AB_BITS - INTER_BITS);

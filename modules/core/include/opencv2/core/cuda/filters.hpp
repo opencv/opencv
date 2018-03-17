@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_FILTERS_HPP__
-#define __OPENCV_CUDA_FILTERS_HPP__
+#ifndef OPENCV_CUDA_FILTERS_HPP
+#define OPENCV_CUDA_FILTERS_HPP
 
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
@@ -283,4 +283,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_FILTERS_HPP__
+#endif // OPENCV_CUDA_FILTERS_HPP

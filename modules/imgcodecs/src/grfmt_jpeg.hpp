@@ -72,10 +72,8 @@ protected:
     void* m_state;
 
 private:
-    //Support for handling exif orientation tag in Jpeg file
-    int m_orientation;
-    int getOrientation();
-    void setOrientation(Mat& img);
+    JpegDecoder(const JpegDecoder &); // copy disabled
+    JpegDecoder& operator=(const JpegDecoder &); // assign disabled
 };
 
 

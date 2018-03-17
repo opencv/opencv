@@ -15,7 +15,7 @@ using namespace std;
  * @function help
  * @brief Display instructions to use this tutorial program
  */
-void help()
+static void help()
 {
     cout
     << "--------------------------------------------------------------------------"   << endl
@@ -31,7 +31,7 @@ void help()
  * @function cvcloud_load
  * @brief load bunny.ply
  */
-Mat cvcloud_load()
+static Mat cvcloud_load()
 {
     Mat cloud(1, 1889, CV_32FC3);
     ifstream ifs("bunny.ply");
@@ -71,7 +71,7 @@ int main(int argn, char **argv)
     myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
     /// Let's assume camera has the following properties
-    Point3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
+    Vec3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
 
     /// We can get the pose of the cam using makeCameraPose
     Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);

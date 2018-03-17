@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_HPP__
-#define __OPENCV_VIZ_HPP__
+#ifndef OPENCV_VIZ_HPP
+#define OPENCV_VIZ_HPP
 
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
@@ -64,7 +64,7 @@ methods to interact with scene and widgets.
     @defgroup viz_widget Widget
 
 In this section, the widget framework is explained. Widgets represent 2D or 3D objects, varying from
-simple ones such as lines to complex one such as point clouds and meshes.
+simple ones such as lines to complex ones such as point clouds and meshes.
 
 Widgets are **implicitly shared**. Therefore, one can add a widget to the scene, and modify the
 widget without re-adding the widget.
@@ -81,4 +81,4 @@ cw.setColor(viz::Color::yellow());
   @}
 */
 
-#endif /* __OPENCV_VIZ_HPP__ */
+#endif /* OPENCV_VIZ_HPP */

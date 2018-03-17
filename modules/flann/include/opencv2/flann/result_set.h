@@ -303,7 +303,7 @@ public:
 
     /** Default cosntructor */
     UniqueResultSet() :
-        worst_distance_(std::numeric_limits<DistanceType>::max())
+        is_full_(false), worst_distance_(std::numeric_limits<DistanceType>::max())
     {
     }
 

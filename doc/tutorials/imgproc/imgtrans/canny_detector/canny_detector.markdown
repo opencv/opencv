@@ -12,7 +12,7 @@ Theory
 ------
 
 The *Canny Edge detector* was developed by John F. Canny in 1986. Also known to many as the
-*optimal detector*, Canny algorithm aims to satisfy three main criteria:
+*optimal detector*, the Canny algorithm aims to satisfy three main criteria:
 -   **Low error rate:** Meaning a good detection of only existent edges.
 -   **Good localization:** The distance between edge pixels detected and real edge pixels have
     to be minimized.
@@ -68,61 +68,39 @@ Code
 
 -#  **What does this program do?**
     -   Asks the user to enter a numerical value to set the lower threshold for our *Canny Edge
-        Detector* (by means of a Trackbar)
+        Detector* (by means of a Trackbar).
     -   Applies the *Canny Detector* and generates a **mask** (bright lines representing the edges
         on a black background).
     -   Applies the mask obtained on the original image and display it in a window.
 
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp
 
 Explanation
 -----------
 
 -#  Create some needed variables:
-    @code{.cpp}
-    Mat src, src_gray;
-    Mat dst, detected_edges;
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp variables
 
-    int edgeThresh = 1;
-    int lowThreshold;
-    int const max_lowThreshold = 100;
-    int ratio = 3;
-    int kernel_size = 3;
-    char* window_name = "Edge Map";
-    @endcode
     Note the following:
 
-    -#  We establish a ratio of lower:upper threshold of 3:1 (with the variable *ratio*)
+    -#  We establish a ratio of lower:upper threshold of 3:1 (with the variable *ratio*).
     -#  We set the kernel size of \f$3\f$ (for the Sobel operations to be performed internally by the
-        Canny function)
+        Canny function).
     -#  We set a maximum value for the lower Threshold of \f$100\f$.
 
 -#  Loads the source image:
-    @code{.cpp}
-    /// Load an image
-    src = imread( argv[1] );
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp load
 
-    if( !src.data )
-      { return -1; }
-    @endcode
--#  Create a matrix of the same type and size of *src* (to be *dst*)
-    @code{.cpp}
-    dst.create( src.size(), src.type() );
-    @endcode
--#  Convert the image to grayscale (using the function @ref cv::cvtColor :
-    @code{.cpp}
-    cvtColor( src, src_gray, COLOR_BGR2GRAY );
-    @endcode
--#  Create a window to display the results
-    @code{.cpp}
-    namedWindow( window_name, WINDOW_AUTOSIZE );
-    @endcode
+-#  Create a matrix of the same type and size of *src* (to be *dst*):
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp create_mat
+-#  Convert the image to grayscale (using the function @ref cv::cvtColor ):
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp convert_to_gray
+-#  Create a window to display the results:
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp create_window
 -#  Create a Trackbar for the user to enter the lower threshold for our Canny detector:
-    @code{.cpp}
-    createTrackbar( "Min Threshold:", window_name, &lowThreshold, max_lowThreshold, CannyThreshold );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp create_trackbar
     Observe the following:
 
     -#  The variable to be controlled by the Trackbar is *lowThreshold* with a limit of
@@ -132,13 +110,9 @@ Explanation
 
 -#  Let's check the *CannyThreshold* function, step by step:
     -#  First, we blur the image with a filter of kernel size 3:
-        @code{.cpp}
-        blur( src_gray, detected_edges, Size(3,3) );
-        @endcode
+        @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp reduce_noise
     -#  Second, we apply the OpenCV function @ref cv::Canny :
-        @code{.cpp}
-        Canny( detected_edges, detected_edges, lowThreshold, lowThreshold*ratio, kernel_size );
-        @endcode
+        @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp canny
         where the arguments are:
 
         -   *detected_edges*: Source image, grayscale
@@ -150,23 +124,16 @@ Explanation
             internally)
 
 -#  We fill a *dst* image with zeros (meaning the image is completely black).
-    @code{.cpp}
-    dst = Scalar::all(0);
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp fill
 -#  Finally, we will use the function @ref cv::Mat::copyTo to map only the areas of the image that are
     identified as edges (on a black background).
-    @code{.cpp}
-    src.copyTo( dst, detected_edges);
-    @endcode
     @ref cv::Mat::copyTo copy the *src* image onto *dst*. However, it will only copy the pixels in the
     locations where they have non-zero values. Since the output of the Canny detector is the edge
     contours on a black background, the resulting *dst* will be black in all the area but the
     detected edges.
-
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp copyto
 -#  We display our result:
-    @code{.cpp}
-    imshow( window_name, dst );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp display
 
 Result
 ------

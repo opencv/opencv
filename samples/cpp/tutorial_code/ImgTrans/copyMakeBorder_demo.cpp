@@ -4,71 +4,81 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
-/// Global Variables
+//![variables]
+// Declare the variables
 Mat src, dst;
 int top, bottom, left, right;
-int borderType;
+int borderType = BORDER_CONSTANT;
 const char* window_name = "copyMakeBorder Demo";
 RNG rng(12345);
+//![variables]
 
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
+    //![load]
+    const char* imageName = argc >=2 ? argv[1] : "../data/lena.jpg";
 
-  int c;
+    // Loads an image
+    src = imread( imageName, IMREAD_COLOR ); // Load an image
 
-  /// Load an image
-  src = imread( argv[1] );
+    // Check if image is loaded fine
+    if( src.empty()) {
+        printf(" Error opening image\n");
+        printf(" Program Arguments: [image_name -- default ../data/lena.jpg] \n");
+        return -1;
+    }
+    //![load]
 
-  if( src.empty() )
+    // Brief how-to for this program
+    printf( "\n \t copyMakeBorder Demo: \n" );
+    printf( "\t -------------------- \n" );
+    printf( " ** Press 'c' to set the border to a random constant value \n");
+    printf( " ** Press 'r' to set the border to be replicated \n");
+    printf( " ** Press 'ESC' to exit the program \n");
+
+    //![create_window]
+    namedWindow( window_name, WINDOW_AUTOSIZE );
+    //![create_window]
+
+    //![init_arguments]
+    // Initialize arguments for the filter
+    top = (int) (0.05*src.rows); bottom = top;
+    left = (int) (0.05*src.cols); right = left;
+    //![init_arguments]
+
+    for(;;)
     {
-      printf(" No data entered, please enter the path to an image file \n");
-      return -1;
+        //![update_value]
+        Scalar value( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
+        //![update_value]
+
+        //![copymakeborder]
+        copyMakeBorder( src, dst, top, bottom, left, right, borderType, value );
+        //![copymakeborder]
+
+        //![display]
+        imshow( window_name, dst );
+        //![display]
+
+        //![check_keypress]
+        char c = (char)waitKey(500);
+        if( c == 27 )
+        { break; }
+        else if( c == 'c' )
+        { borderType = BORDER_CONSTANT; }
+        else if( c == 'r' )
+        { borderType = BORDER_REPLICATE; }
+        //![check_keypress]
     }
 
-  /// Brief how-to for this program
-  printf( "\n \t copyMakeBorder Demo: \n" );
-  printf( "\t -------------------- \n" );
-  printf( " ** Press 'c' to set the border to a random constant value \n");
-  printf( " ** Press 'r' to set the border to be replicated \n");
-  printf( " ** Press 'ESC' to exit the program \n");
-
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
-
-  /// Initialize arguments for the filter
-  top = (int) (0.05*src.rows); bottom = (int) (0.05*src.rows);
-  left = (int) (0.05*src.cols); right = (int) (0.05*src.cols);
-  dst = src;
-
-  imshow( window_name, dst );
-
-  for(;;)
-       {
-         c = waitKey(500);
-
-         if( (char)c == 27 )
-           { break; }
-         else if( (char)c == 'c' )
-           { borderType = BORDER_CONSTANT; }
-         else if( (char)c == 'r' )
-           { borderType = BORDER_REPLICATE; }
-
-         Scalar value( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
-         copyMakeBorder( src, dst, top, bottom, left, right, borderType, value );
-
-         imshow( window_name, dst );
-       }
-
-  return 0;
+    return 0;
 }

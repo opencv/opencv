@@ -52,7 +52,7 @@ Code
     -   Wait for the user to exit the program
 
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp
 
 Explanation
@@ -85,9 +85,9 @@ Explanation
     while( true )
     {
       /// Each 1 sec. Press ESC to exit the program
-      int c = waitKey( 1000 );
+      char c = (char)waitKey( 1000 );
 
-      if( (char)c == 27 )
+      if( c == 27 )
         { break; }
 
       /// Update map_x & map_y. Then apply remap

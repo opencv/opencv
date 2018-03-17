@@ -46,7 +46,7 @@ and the subsequent words start with a capital letter (like *copyMakeBorder*).
 
 Now, remember that you need to link to your application all the modules you use, and in case you are
 on Windows using the *DLL* system you will need to add, again, to the path all the binaries. For
-more in-depth information if you're on Windows read @ref tutorial_windows_visual_studio_Opencv and for
+more in-depth information if you're on Windows read @ref tutorial_windows_visual_studio_opencv and for
 Linux an example usage is explained in @ref tutorial_linux_eclipse.
 
 Now for converting the *Mat* object you can use either the *IplImage* or the *CvMat* operators.
@@ -85,7 +85,7 @@ L = Mat(pI);
 A case study
 ------------
 
-Now that you have the basics done [here's](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+Now that you have the basics done [here's](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 an example that mixes the usage of the C interface with the C++ one. You will also find it in the
 sample directory of the OpenCV source code library at the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp` .
@@ -132,13 +132,9 @@ output:
 
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=qckm-zvo31w) and you can [download the source code from here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 or find it in the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp`
 of the OpenCV source code library.
 
-\htmlonly
-<div align="center">
-<iframe title="Interoperability with OpenCV 1" width="560" height="349" src="http://www.youtube.com/embed/qckm-zvo31w?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{qckm-zvo31w}

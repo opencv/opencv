@@ -61,11 +61,15 @@ public:
     void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                  InputArray, InputArray)
     {
+        CV_INSTRUMENT_REGION()
+
         process(src, dst);
     }
 
     void process(InputArrayOfArrays _src, std::vector<Mat>& dst)
     {
+        CV_INSTRUMENT_REGION()
+
         std::vector<Mat> src;
         _src.getMatVector(src);
 
@@ -114,6 +118,8 @@ public:
 
     Point calculateShift(InputArray _img0, InputArray _img1)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat img0 = _img0.getMat();
         Mat img1 = _img1.getMat();
         CV_Assert(img0.channels() == 1 && img0.type() == img1.type());
@@ -160,6 +166,8 @@ public:
 
     void shiftMat(InputArray _src, OutputArray _dst, const Point shift)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat src = _src.getMat();
         _dst.create(src.size(), src.type());
         Mat dst = _dst.getMat();
@@ -184,6 +192,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "max_bits" << max_bits
            << "exclude_range" << exclude_range
@@ -202,6 +211,8 @@ public:
 
     void computeBitmaps(InputArray _img, OutputArray _tb, OutputArray _eb)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat img = _img.getMat();
         _tb.create(img.size(), CV_8U);
         _eb.create(img.size(), CV_8U);

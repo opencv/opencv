@@ -359,7 +359,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double distance = Imgproc.compareHist(H1, H2, Imgproc.CV_COMP_CORREL);
 
-        assertEquals(1., distance);
+        assertEquals(1., distance, EPS);
     }
 
     public void testContourAreaMat() {
@@ -368,7 +368,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double area = Imgproc.contourArea(contour);
 
-        assertEquals(45., area);
+        assertEquals(45., area, EPS);
     }
 
     public void testContourAreaMatBoolean() {
@@ -377,7 +377,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double area = Imgproc.contourArea(contour, true);
 
-        assertEquals(45., area);
+        assertEquals(45., area, EPS);
         // TODO_: write better test
     }
 
@@ -1033,7 +1033,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
         MatOfPoint lp = new MatOfPoint();
 
-        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true, 0);
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, 3, true, 0);
 
         assertEquals(4, lp.total());
     }
@@ -1116,7 +1116,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.HoughLinesP(img, lines, 1, 3.1415926/180, 100);
 
-        assertEquals(2, lines.cols());
+        assertEquals(2, lines.rows());
 
         /*
         Log.d("HoughLinesP", "lines=" + lines);
@@ -1407,14 +1407,14 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testMinEnclosingCircle() {
-        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 0), new Point(0, -1), new Point(1, 0), new Point(0, 1));
+        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-100, 0), new Point(0, -100), new Point(100, 0), new Point(0, 100));
         Point actualCenter = new Point();
         float[] radius = new float[1];
 
         Imgproc.minEnclosingCircle(points, actualCenter, radius);
 
         assertEquals(new Point(0, 0), actualCenter);
-        assertEquals(1.03f, radius[0], EPS);
+        assertEquals(100.0f, radius[0], 1.0);
     }
 
     public void testMomentsMat() {
@@ -1617,7 +1617,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(1));
         Size dsize = new Size(1, 1);
 
-        Imgproc.resize(src, dst, dsize);
+        Imgproc.resize(src, dst, dsize, 0, 0, Imgproc.INTER_LINEAR_EXACT);
 
         truth = new Mat(1, 1, CvType.CV_8UC1, new Scalar(1));
         assertMatEqual(truth, dst);

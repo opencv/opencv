@@ -41,9 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_FFMPEG
 
@@ -118,6 +117,9 @@ public:
                     frame_s = Size(352, 288);
                 else if( tag == VideoWriter::fourcc('H', '2', '6', '3') )
                     frame_s = Size(704, 576);
+                else if( tag == VideoWriter::fourcc('H', '2', '6', '4') )
+                    // OpenH264 1.5.0 has resolution limitations, so lets use DCI 4K resolution
+                    frame_s = Size(4096, 2160);
                 /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
                          tag == CV_FOURCC('j', 'p', 'e', 'g') )
                     frame_s = Size(1920, 1080);*/
@@ -128,14 +130,14 @@ public:
                     fps = 25;
                 }
 
-                VideoWriter writer(filename, tag, fps, frame_s);
+                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
 
                 if (writer.isOpened() == false)
                 {
                     fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
                     fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
                                tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
-                    fprintf(stderr, "Error: cannot create video file.");
+                    fprintf(stderr, "Error: cannot create video file.\n");
                     if (entries[j].required)
                         ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                 }
@@ -191,7 +193,7 @@ public:
         try
         {
             string filename = ts->get_data_path() + "readwrite/ordinary.bmp";
-            VideoCapture cap(filename);
+            VideoCapture cap(filename, CAP_FFMPEG);
             Mat img0 = imread(filename, 1);
             Mat img, img_next;
             cap >> img;
@@ -239,7 +241,7 @@ public:
             std::string fileName = tempfile(stream.str().c_str());
 
             files->operator[](i) = fileName;
-            writers->operator[](i) = new VideoWriter(fileName, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
+            writers->operator[](i) = new VideoWriter(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
 
             CV_Assert(writers->operator[](i)->isOpened());
         }
@@ -322,7 +324,7 @@ public:
     {
         for (int i = range.start; i != range.end; ++i)
         {
-            readers->operator[](i) = new VideoCapture(files->operator[](i));
+            readers->operator[](i) = new VideoCapture(files->operator[](i), CAP_FFMPEG);
             CV_Assert(readers->operator[](i)->isOpened());
         }
     }
@@ -438,3 +440,4 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
 }
 
 #endif
+}} // namespace

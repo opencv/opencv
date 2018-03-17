@@ -43,10 +43,13 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP__
-#define __OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP__
+#ifndef OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP
+#define OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP
 
 #include "../common.hpp"
+#if __CUDACC_VER_MAJOR__ >= 9
+#include <cuda_fp16.h>
+#endif
 
 namespace cv { namespace cudev {
 
@@ -270,6 +273,26 @@ template <> __device__ __forceinline__ uint saturate_cast<uint>(double v)
 #endif
 }
 
+template <typename T, typename D> __device__ __forceinline__ D cast_fp16(T v);
+
+template <> __device__ __forceinline__ float cast_fp16<short, float>(short v)
+{
+#if __CUDACC_VER_MAJOR__ >= 9
+  return float(*(__half*)&v);
+#else
+    return __half2float(v);
+#endif
+}
+
+template <> __device__ __forceinline__ short cast_fp16<float, short>(float v)
+{
+#if __CUDACC_VER_MAJOR__ >= 9
+  __half h(v);
+  return *(short*)&v;
+#else
+  return (short)__float2half_rn(v);
+#endif
+}
 //! @}
 
 }}

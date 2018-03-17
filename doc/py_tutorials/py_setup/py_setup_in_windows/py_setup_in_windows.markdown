@@ -15,15 +15,15 @@ Installing OpenCV from prebuilt binaries
 
 -#  Below Python packages are to be downloaded and installed to their default locations.
 
-    -#  [Python-2.7.x](http://python.org/ftp/python/2.7.5/python-2.7.5.msi).
+    -#  [Python-2.7.x](http://www.python.org/ftp/python/2.7.13/python-2.7.13.msi).
 
-    -#  [Numpy](http://sourceforge.net/projects/numpy/files/NumPy/1.7.1/numpy-1.7.1-win32-superpack-python2.7.exe/download).
+    -#  [Numpy](https://sourceforge.net/projects/numpy/files/NumPy/1.10.2/numpy-1.10.2-win32-superpack-python2.7.exe/download).
 
-    -#  [Matplotlib](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.3.0/matplotlib-1.3.0.win32-py2.7.exe) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
+    -#  [Matplotlib](https://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.5.0/windows/matplotlib-1.5.0.win32-py2.7.exe/download) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
 
 -#  Install all packages into their default locations. Python will be installed to `C:/Python27/`.
 
--#  After installation, open Python IDLE. Enter import numpy and make sure Numpy is working fine.
+-#  After installation, open Python IDLE. Enter **import numpy** and make sure Numpy is working fine.
 
 -#  Download latest OpenCV release from [sourceforge
     site](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/2.4.6/OpenCV-2.4.6.0.exe/download)
@@ -35,8 +35,8 @@ Installing OpenCV from prebuilt binaries
 
 -#  Open Python IDLE and type following codes in Python terminal.
     @code
-        >>> import cv2
-        >>> print cv2.__version__
+        >>> import cv2 as cv
+        >>> print( cv.__version__ )
     @endcode
 
 If the results are printed out without any errors, congratulations !!! You have installed
@@ -76,7 +76,7 @@ Building OpenCV from source
 
 -#  Download OpenCV source. It can be from
     [Sourceforge](http://sourceforge.net/projects/opencvlibrary/) (for official release version) or
-    from [Github](https://github.com/Itseez/opencv) (for latest source).
+    from [Github](https://github.com/opencv/opencv) (for latest source).
 -#  Extract it to a folder, opencv and create a new folder build in it.
 -#  Open CMake-gui (*Start \> All Programs \> CMake-gui*)
 -#  Fill the fields as follows (see the image below):
@@ -136,7 +136,7 @@ Building OpenCV from source
 
     ![image](images/Capture8.png)
 
--#  Open Python IDLE and enter import cv2. If no error, it is installed correctly.
+-#  Open Python IDLE and enter 'import cv2 as cv'. If no error, it is installed correctly.
 
 @note We have installed with no other support like TBB, Eigen, Qt, Documentation etc. It would be
 difficult to explain it here. A more detailed video will be added soon or you can just hack around.

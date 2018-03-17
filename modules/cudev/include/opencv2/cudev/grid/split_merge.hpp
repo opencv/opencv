@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP__
-#define __OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP__
+#ifndef OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP
+#define OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"

@@ -770,6 +770,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "training_params" << "{";
         write_params(fs);
         fs << "}";
@@ -842,6 +843,11 @@ public:
 Ptr<EM> EM::create()
 {
     return makePtr<EMImpl>();
+}
+
+Ptr<EM> EM::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<EM>(filepath, nodeName);
 }
 
 }

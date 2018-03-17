@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP__
-#define __OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP__
+#ifndef OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP
+#define OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"

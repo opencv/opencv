@@ -42,7 +42,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 
 #ifndef __vtkImageMatSource_h
 #define __vtkImageMatSource_h

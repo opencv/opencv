@@ -4,63 +4,71 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
 /**
  * @function main
  */
-int main ( int, char** argv )
+int main ( int argc, char** argv )
 {
-  /// Declare variables
-  Mat src, dst;
+    // Declare variables
+    Mat src, dst;
 
-  Mat kernel;
-  Point anchor;
-  double delta;
-  int ddepth;
-  int kernel_size;
-  const char* window_name = "filter2D Demo";
+    Mat kernel;
+    Point anchor;
+    double delta;
+    int ddepth;
+    int kernel_size;
+    const char* window_name = "filter2D Demo";
 
-  int c;
+    //![load]
+    const char* imageName = argc >=2 ? argv[1] : "../data/lena.jpg";
 
-  /// Load an image
-  src = imread( argv[1] );
+    // Loads an image
+    src = imread( imageName, IMREAD_COLOR ); // Load an image
 
-  if( src.empty() )
-    { return -1; }
+    if( src.empty() )
+    {
+        printf(" Error opening image\n");
+        printf(" Program Arguments: [image_name -- default ../data/lena.jpg] \n");
+        return -1;
+    }
+    //![load]
 
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
+    //![init_arguments]
+    // Initialize arguments for the filter
+    anchor = Point( -1, -1 );
+    delta = 0;
+    ddepth = -1;
+    //![init_arguments]
 
-  /// Initialize arguments for the filter
-  anchor = Point( -1, -1 );
-  delta = 0;
-  ddepth = -1;
+    // Loop - Will filter the image with different kernel sizes each 0.5 seconds
+    int ind = 0;
+    for(;;)
+    {
+        //![update_kernel]
+        // Update kernel size for a normalized box filter
+        kernel_size = 3 + 2*( ind%5 );
+        kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
+        //![update_kernel]
 
-  /// Loop - Will filter the image with different kernel sizes each 0.5 seconds
-  int ind = 0;
-  for(;;)
-       {
-         c = waitKey(500);
-         /// Press 'ESC' to exit the program
-         if( (char)c == 27 )
-           { break; }
+        //![apply_filter]
+        // Apply filter
+        filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
+        //![apply_filter]
+        imshow( window_name, dst );
 
-         /// Update kernel size for a normalized box filter
-         kernel_size = 3 + 2*( ind%5 );
-         kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
+        char c = (char)waitKey(500);
+        // Press 'ESC' to exit the program
+        if( c == 27 )
+        { break; }
 
-         /// Apply filter
-         filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
-         imshow( window_name, dst );
-         ind++;
-       }
+        ind++;
+    }
 
-  return 0;
+    return 0;
 }

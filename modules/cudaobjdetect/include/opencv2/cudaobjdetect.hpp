@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDAOBJDETECT_HPP__
-#define __OPENCV_CUDAOBJDETECT_HPP__
+#ifndef OPENCV_CUDAOBJDETECT_HPP
+#define OPENCV_CUDAOBJDETECT_HPP
 
 #ifndef __cplusplus
 #  error cudaobjdetect.hpp header must be compiled as C++
@@ -115,7 +115,7 @@ public:
     virtual int getNumLevels() const = 0;
 
     //! Threshold for the distance between features and SVM classifying plane.
-    //! Usually it is 0 and should be specfied in the detector coefficients (as the last free
+    //! Usually it is 0 and should be specified in the detector coefficients (as the last free
     //! coefficient). But if the free coefficient is omitted (which is allowed), you can specify it
     //! manually here.
     virtual void setHitThreshold(double hit_threshold) = 0;
@@ -285,4 +285,4 @@ public:
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDAOBJDETECT_HPP__ */
+#endif /* OPENCV_CUDAOBJDETECT_HPP */

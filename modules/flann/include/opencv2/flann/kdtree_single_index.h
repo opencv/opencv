@@ -87,6 +87,7 @@ public:
     {
         size_ = dataset_.rows;
         dim_ = dataset_.cols;
+        root_node_ = 0;
         int dim_param = get_param(params,"dim",-1);
         if (dim_param>0) dim_ = dim_param;
         leaf_max_size_ = get_param(params,"leaf_max_size",10);

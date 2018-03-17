@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDAOPTFLOW_HPP__
-#define __OPENCV_CUDAOPTFLOW_HPP__
+#ifndef OPENCV_CUDAOPTFLOW_HPP
+#define OPENCV_CUDAOPTFLOW_HPP
 
 #ifndef __cplusplus
 #  error cudaoptflow.hpp header must be compiled as C++
@@ -210,7 +210,7 @@ public:
 // FarnebackOpticalFlow
 //
 
-/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm.
+/** @brief Class computing a dense optical flow using the Gunnar Farneback's algorithm.
  */
 class CV_EXPORTS FarnebackOpticalFlow : public DenseOpticalFlow
 {
@@ -346,4 +346,4 @@ public:
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDAOPTFLOW_HPP__ */
+#endif /* OPENCV_CUDAOPTFLOW_HPP */

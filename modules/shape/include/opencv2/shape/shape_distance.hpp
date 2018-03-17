@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_SHAPE_SHAPE_DISTANCE_HPP__
-#define __OPENCV_SHAPE_SHAPE_DISTANCE_HPP__
+#ifndef OPENCV_SHAPE_SHAPE_DISTANCE_HPP
+#define OPENCV_SHAPE_SHAPE_DISTANCE_HPP
 #include "opencv2/core.hpp"
 #include "opencv2/shape/hist_cost.hpp"
 #include "opencv2/shape/shape_transformer.hpp"
@@ -53,6 +53,9 @@ namespace cv
 //! @addtogroup shape
 //! @{
 
+/** @example shape_example.cpp
+An example using shape distance algorithm
+*/
 /** @brief Abstract base class for shape distance algorithms.
  */
 class CV_EXPORTS_W ShapeDistanceExtractor : public Algorithm

@@ -1,5 +1,5 @@
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 using namespace cv;
@@ -7,8 +7,8 @@ using namespace std;
 
 static void help()
 {
-    cout << "\nThis program demostrates iterative construction of\n"
-           "delaunay triangulation and voronoi tesselation.\n"
+    cout << "\nThis program demonstrates iterative construction of\n"
+           "delaunay triangulation and voronoi tessellation.\n"
            "It draws a random set of points in an image and then delaunay triangulates them.\n"
            "Usage: \n"
            "./delaunay \n"

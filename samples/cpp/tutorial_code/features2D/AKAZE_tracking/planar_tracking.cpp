@@ -1,6 +1,8 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/videoio.hpp>
-#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>      //for imshow
 #include <vector>
 #include <iostream>
 #include <iomanip>
@@ -17,6 +19,7 @@ const double nn_match_ratio = 0.8f; // Nearest-neighbour matching ratio
 const int bb_min_inliers = 100; // Minimal number of inliers to draw bounding box
 const int stats_update_period = 10; // On-screen statistics are updated every 10 frames
 
+namespace example {
 class Tracker
 {
 public:
@@ -40,18 +43,31 @@ protected:
 
 void Tracker::setFirstFrame(const Mat frame, vector<Point2f> bb, string title, Stats& stats)
 {
+    cv::Point *ptMask = new cv::Point[bb.size()];
+    const Point* ptContain = { &ptMask[0] };
+    int iSize = static_cast<int>(bb.size());
+    for (size_t i=0; i<bb.size(); i++) {
+        ptMask[i].x = static_cast<int>(bb[i].x);
+        ptMask[i].y = static_cast<int>(bb[i].y);
+    }
     first_frame = frame.clone();
-    detector->detectAndCompute(first_frame, noArray(), first_kp, first_desc);
+    cv::Mat matMask = cv::Mat::zeros(frame.size(), CV_8UC1);
+    cv::fillPoly(matMask, &ptContain, &iSize, 1, cv::Scalar::all(255));
+    detector->detectAndCompute(first_frame, matMask, first_kp, first_desc);
     stats.keypoints = (int)first_kp.size();
     drawBoundingBox(first_frame, bb);
     putText(first_frame, title, Point(0, 60), FONT_HERSHEY_PLAIN, 5, Scalar::all(0), 4);
     object_bb = bb;
+    delete[] ptMask;
 }
 
 Mat Tracker::process(const Mat frame, Stats& stats)
 {
+    TickMeter tm;
     vector<KeyPoint> kp;
     Mat desc;
+
+    tm.start();
     detector->detectAndCompute(frame, noArray(), kp, desc);
     stats.keypoints = (int)kp.size();
 
@@ -73,6 +89,8 @@ Mat Tracker::process(const Mat frame, Stats& stats)
         homography = findHomography(Points(matched1), Points(matched2),
                                     RANSAC, ransac_thresh, inlier_mask);
     }
+    tm.stop();
+    stats.fps = 1. / tm.getTimeSec();
 
     if(matched1.size() < 4 || homography.empty()) {
         Mat res;
@@ -104,58 +122,69 @@ Mat Tracker::process(const Mat frame, Stats& stats)
                 Scalar(255, 0, 0), Scalar(255, 0, 0));
     return res;
 }
+}
 
 int main(int argc, char **argv)
 {
-    if(argc < 4) {
-        cerr << "Usage: " << endl <<
-                "akaze_track input_path output_path bounding_box" << endl;
-        return 1;
+    CommandLineParser parser(argc, argv, "{@input_path |0|input path can be a camera id, like 0,1,2 or a video filename}");
+    parser.printMessage();
+    string input_path = parser.get<string>(0);
+    string video_name = input_path;
+
+    VideoCapture video_in;
+
+    if ( ( isdigit(input_path[0]) && input_path.size() == 1 ) )
+    {
+    int camera_no = input_path[0] - '0';
+        video_in.open( camera_no );
     }
-    VideoCapture video_in(argv[1]);
-    VideoWriter  video_out(argv[2],
-                           (int)video_in.get(CAP_PROP_FOURCC),
-                           (int)video_in.get(CAP_PROP_FPS),
-                           Size(2 * (int)video_in.get(CAP_PROP_FRAME_WIDTH),
-                                2 * (int)video_in.get(CAP_PROP_FRAME_HEIGHT)));
+    else {
+        video_in.open(video_name);
+    }
 
     if(!video_in.isOpened()) {
-        cerr << "Couldn't open " << argv[1] << endl;
+        cerr << "Couldn't open " << video_name << endl;
         return 1;
     }
-    if(!video_out.isOpened()) {
-        cerr << "Couldn't open " << argv[2] << endl;
-        return 1;
-    }
-
-    vector<Point2f> bb;
-    FileStorage fs(argv[3], FileStorage::READ);
-    if(fs["bounding_box"].empty()) {
-        cerr << "Couldn't read bounding_box from " << argv[3] << endl;
-        return 1;
-    }
-    fs["bounding_box"] >> bb;
 
     Stats stats, akaze_stats, orb_stats;
     Ptr<AKAZE> akaze = AKAZE::create();
     akaze->setThreshold(akaze_thresh);
     Ptr<ORB> orb = ORB::create();
-    orb->setMaxFeatures(stats.keypoints);
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
-    Tracker akaze_tracker(akaze, matcher);
-    Tracker orb_tracker(orb, matcher);
+    example::Tracker akaze_tracker(akaze, matcher);
+    example::Tracker orb_tracker(orb, matcher);
 
     Mat frame;
-    video_in >> frame;
+    namedWindow(video_name, WINDOW_NORMAL);
+    cout << "\nPress any key to stop the video and select a bounding box" << endl;
+
+    while ( waitKey(1) < 1 )
+    {
+        video_in >> frame;
+        cv::resizeWindow(video_name, frame.size());
+        imshow(video_name, frame);
+    }
+
+    vector<Point2f> bb;
+    cv::Rect uBox = cv::selectROI(video_name, frame);
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y)));
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y+uBox.height)));
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y+uBox.height)));
+
     akaze_tracker.setFirstFrame(frame, bb, "AKAZE", stats);
     orb_tracker.setFirstFrame(frame, bb, "ORB", stats);
 
     Stats akaze_draw_stats, orb_draw_stats;
-    int frame_count = (int)video_in.get(CAP_PROP_FRAME_COUNT);
     Mat akaze_res, orb_res, res_frame;
-    for(int i = 1; i < frame_count; i++) {
+    int i = 0;
+    for(;;) {
+        i++;
         bool update_stats = (i % stats_update_period == 0);
         video_in >> frame;
+        // stop the program if no more images
+        if(frame.empty()) break;
 
         akaze_res = akaze_tracker.process(frame, stats);
         akaze_stats += stats;
@@ -173,11 +202,11 @@ int main(int argc, char **argv)
         drawStatistics(akaze_res, akaze_draw_stats);
         drawStatistics(orb_res, orb_draw_stats);
         vconcat(akaze_res, orb_res, res_frame);
-        video_out << res_frame;
-        cout << i << "/" << frame_count - 1 << endl;
+        cv::imshow(video_name, res_frame);
+        if(waitKey(1)==27) break; //quit on ESC button
     }
-    akaze_stats /= frame_count - 1;
-    orb_stats /= frame_count - 1;
+    akaze_stats /= i - 1;
+    orb_stats /= i - 1;
     printStatistics("AKAZE", akaze_stats);
     printStatistics("ORB", orb_stats);
     return 0;

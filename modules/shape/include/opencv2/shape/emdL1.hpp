@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_EMD_L1_HPP__
-#define __OPENCV_EMD_L1_HPP__
+#ifndef OPENCV_EMD_L1_HPP
+#define OPENCV_EMD_L1_HPP
 
 #include "opencv2/core.hpp"
 

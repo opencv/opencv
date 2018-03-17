@@ -5,10 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
 
 using namespace cv;
 
@@ -24,10 +23,12 @@ void update_map( void );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main(int argc, const char** argv)
 {
   /// Load the image
-  src = imread( argv[1], 1 );
+  CommandLineParser parser(argc, argv, "{@image |../data/chicky_512.png|input image name}");
+  std::string filename = parser.get<std::string>(0);
+  src = imread( filename, IMREAD_COLOR );
 
   /// Create dst, map_x and map_y with the same size as src:
   dst.create( src.size(), src.type() );
@@ -41,9 +42,9 @@ int main( int, char** argv )
   for(;;)
   {
     /// Each 1 sec. Press ESC to exit the program
-    int c = waitKey( 1000 );
+    char c = (char)waitKey( 1000 );
 
-    if( (char)c == 27 )
+    if( c == 27 )
       { break; }
 
     /// Update map_x & map_y. Then apply remap

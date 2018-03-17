@@ -56,52 +56,41 @@ using namespace cv::cuda;
 
 namespace
 {
-    #ifndef HAVE_OPENGL
-        inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
-    #else
-        inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context doesn't exist"); }
-
-    bool checkError(const char* file, const int line, const char* func = 0)
+#ifndef HAVE_OPENGL
+inline static void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
+#elif defined _DEBUG
+inline static bool checkError(const char* file, const int line, const char* func = 0)
+{
+    GLenum err = gl::GetError();
+    if (err != gl::NO_ERROR_)
     {
-        GLenum err = gl::GetError();
-
-        if (err != gl::NO_ERROR_)
+        const char* msg;
+        switch (err)
         {
-            const char* msg;
-
-            switch (err)
-            {
-            case gl::INVALID_ENUM:
-                msg = "An unacceptable value is specified for an enumerated argument";
-                break;
-
-            case gl::INVALID_VALUE:
-                msg = "A numeric argument is out of range";
-                break;
-
-            case gl::INVALID_OPERATION:
-                msg = "The specified operation is not allowed in the current state";
-                break;
-
-            case gl::OUT_OF_MEMORY:
-                msg = "There is not enough memory left to execute the command";
-                break;
-
-            default:
-                msg = "Unknown error";
-            };
-
-            cvError(CV_OpenGlApiCallError, func, msg, file, line);
-
-            return false;
-        }
-
-        return true;
+        case gl::INVALID_ENUM:
+            msg = "An unacceptable value is specified for an enumerated argument";
+            break;
+        case gl::INVALID_VALUE:
+            msg = "A numeric argument is out of range";
+            break;
+        case gl::INVALID_OPERATION:
+            msg = "The specified operation is not allowed in the current state";
+            break;
+        case gl::OUT_OF_MEMORY:
+            msg = "There is not enough memory left to execute the command";
+            break;
+        default:
+            msg = "Unknown error";
+        };
+        cvError(CV_OpenGlApiCallError, func, msg, file, line);
+        return false;
     }
-    #endif
-
-    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
+    return true;
+}
+#endif // HAVE_OPENGL
 } // namespace
+
+#define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
 
 #ifdef HAVE_OPENGL
 namespace
@@ -1580,12 +1569,17 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 
 #ifdef HAVE_OPENCL
 #  include "opencv2/core/opencl/runtime/opencl_gl.hpp"
+#  ifdef cl_khr_gl_sharing
+#    define HAVE_OPENCL_OPENGL_SHARING
+#  else
+#    define NO_OPENCL_SHARING_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL/OpenGL sharing support")
+#  endif
 #else // HAVE_OPENCL
 #  define NO_OPENCL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
 
 #if defined(HAVE_OPENGL)
-#  if defined(ANDROID)
+#  if defined(__ANDROID__)
 #    include <EGL/egl.h>
 #  elif defined(__linux__)
 #    include <GL/glx.h>
@@ -1602,6 +1596,8 @@ Context& initializeContextFromGL()
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     cl_uint numPlatforms;
     cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
@@ -1623,7 +1619,7 @@ Context& initializeContextFromGL()
 
     for (int i = 0; i < (int)numPlatforms; i++)
     {
-        // query platform extension: presence of "cl_khr_gl_sharing" extension is requred
+        // query platform extension: presence of "cl_khr_gl_sharing" extension is required
         {
             AutoBuffer<char> extensionStr;
 
@@ -1648,11 +1644,11 @@ Context& initializeContextFromGL()
 
         cl_context_properties properties[] =
         {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-#elif defined(ANDROID)
+#elif defined(__ANDROID__)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
@@ -1701,6 +1697,8 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)texture.cols() && srcSize.height == (int)texture.rows());
@@ -1753,6 +1751,8 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     // check texture format
     const int dtype = CV_8UC4;
@@ -1812,6 +1812,8 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
@@ -1862,6 +1864,8 @@ void unmapGLBuffer(UMat& u)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     using namespace cv::ocl;
     cl_command_queue clQueue = (cl_command_queue)Queue::getDefault().ptr();

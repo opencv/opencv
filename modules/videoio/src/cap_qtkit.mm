@@ -93,6 +93,8 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
 - (int)updateImage;
 - (IplImage*)getOutput;
 
+- (void)doFireTimer:(NSTimer *)timer;
+
 @end
 
 /*****************************************************************************
@@ -268,8 +270,6 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
 
 CvCaptureCAM::~CvCaptureCAM() {
     stopCaptureDevice();
-
-    std::cout << "Cleaned up camera." << std::endl;
 }
 
 int CvCaptureCAM::didStart() {
@@ -620,6 +620,11 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
     CVBufferRelease(pixels);
 
     return 1;
+}
+
+- (void)doFireTimer:(NSTimer *)timer {
+    (void)timer;
+    // dummy
 }
 
 @end

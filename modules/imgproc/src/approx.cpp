@@ -83,6 +83,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         return cvEndWriteSeq( &writer );
     }
 
+    reader.code = 0;
     cvStartReadChainPoints( chain, &reader );
 
     temp.next = 0;
@@ -674,6 +675,8 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
 void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
                       double epsilon, bool closed )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat curve = _curve.getMat();
     int npoints = curve.checkVector(2), depth = curve.depth();
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F));
@@ -751,7 +754,7 @@ cvApproxPoly( const void* array, int header_size,
         }
         else
         {
-            CV_Error( CV_StsBadArg, "Input curves have uknown type" );
+            CV_Error( CV_StsBadArg, "Input curves have unknown type" );
         }
     }
 

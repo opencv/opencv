@@ -681,6 +681,8 @@ namespace cv
 {
 static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
 
     CV_Assert( src.type() == CV_8UC1);
@@ -693,7 +695,7 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
     {
         IppiSize roi = { src.cols, src.rows };
         Ipp32s pMetrics[2] = { 1, 2 }; //L1, 3x3 mask
-        if (ippiDistanceTransform_3x3_8u_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics)>=0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics) >= 0)
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return;
@@ -710,6 +712,8 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labels,
                             int distType, int maskSize, int labelType )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), labels;
     bool need_labels = _labels.needed();
 
@@ -743,7 +747,9 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 #ifdef HAVE_IPP
         CV_IPP_CHECK()
         {
-            if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<14)))
+#if IPP_DISABLE_PERF_TRUE_DIST_MT
+            if(cv::getNumThreads()<=1 || (src.total()<(int)(1<<14)))
+#endif
             {
                 IppStatus status;
                 IppiSize roi = { src.cols, src.rows };
@@ -753,8 +759,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                 status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
                 if (status>=0)
                 {
-                    pBuffer = (Ipp8u *)ippMalloc( bufSize );
-                    status = ippiTrueDistanceTransform_8u32f_C1R(src.ptr<uchar>(),(int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
+                    pBuffer = (Ipp8u *)CV_IPP_MALLOC( bufSize );
+                    status = CV_INSTRUMENT_FUN_IPP(ippiTrueDistanceTransform_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
                     ippFree( pBuffer );
                     if (status>=0)
                     {
@@ -789,7 +795,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             CV_IPP_CHECK()
             {
                 IppiSize roi = { src.cols, src.rows };
-                if (ippiDistanceTransform_3x3_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
+                if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
                 {
                     CV_IMPL_ADD(CV_IMPL_IPP);
                     return;
@@ -806,7 +812,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             CV_IPP_CHECK()
             {
                 IppiSize roi = { src.cols, src.rows };
-                if (ippiDistanceTransform_5x5_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
+                if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_5x5_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
                 {
                     CV_IMPL_ADD(CV_IMPL_IPP);
                     return;
@@ -825,7 +831,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         if( labelType == CV_DIST_LABEL_CCOMP )
         {
             Mat zpix = src == 0;
-            connectedComponents(zpix, labels, 8, CV_32S);
+            connectedComponents(zpix, labels, 8, CV_32S, CCL_WU);
         }
         else
         {
@@ -848,6 +854,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 void cv::distanceTransform( InputArray _src, OutputArray _dst,
                             int distanceType, int maskSize, int dstType)
 {
+    CV_INSTRUMENT_REGION()
+
     if (distanceType == CV_DIST_L1 && dstType==CV_8U)
         distanceTransform_L1_8U(_src, _dst);
     else

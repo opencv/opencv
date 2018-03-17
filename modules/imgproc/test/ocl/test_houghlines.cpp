@@ -10,7 +10,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 struct Vec2fComparator
@@ -40,7 +40,7 @@ PARAM_TEST_CASE(HoughLines, double, double, int)
         threshold = GET_PARAM(2);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         src_size = randomSize(500, 1920);
         src.create(src_size, CV_8UC1);
@@ -55,7 +55,7 @@ PARAM_TEST_CASE(HoughLines, double, double, int)
         src.copyTo(usrc);
     }
 
-    virtual void readRealTestData()
+    void readRealTestData()
     {
         Mat img = readImage("shared/pic5.png", IMREAD_GRAYSCALE);
         Canny(img, src, 100, 150, 3);
@@ -63,7 +63,7 @@ PARAM_TEST_CASE(HoughLines, double, double, int)
         src.copyTo(usrc);
     }
 
-    virtual void Near(double eps = 0.)
+    void Near(double eps = 0.)
     {
         EXPECT_EQ(dst.size(), udst.size());
 
@@ -124,7 +124,7 @@ PARAM_TEST_CASE(HoughLinesP, int, double, double)
         maxGap = GET_PARAM(2);
     }
 
-    virtual void readRealTestData()
+    void readRealTestData()
     {
         Mat img = readImage("shared/pic5.png", IMREAD_GRAYSCALE);
         Canny(img, src, 50, 200, 3);
@@ -132,7 +132,7 @@ PARAM_TEST_CASE(HoughLinesP, int, double, double)
         src.copyTo(usrc);
     }
 
-    virtual void Near(double eps = 0.)
+    void Near(double eps = 0.)
     {
         Mat lines_gpu = udst.getMat(ACCESS_READ);
 
@@ -179,6 +179,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesP, Combine(Values(100, 150),     
                                                           Values(50, 100),                      // minLineLength
                                                           Values(5, 10)));                      // maxLineGap
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

@@ -80,9 +80,11 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     }
     IndexHeader header = load_header(fin);
     if (header.data_type != Datatype<ElementType>::type()) {
+        fclose(fin);
         throw FLANNException("Datatype of saved index is different than of the one to be created.");
     }
     if ((size_t(header.rows) != dataset.rows)||(size_t(header.cols) != dataset.cols)) {
+        fclose(fin);
         throw FLANNException("The index saved belongs to a different dataset");
     }
 
@@ -241,7 +243,7 @@ public:
     /**
      * \brief Returns actual index
      */
-    FLANN_DEPRECATED NNIndex<Distance>* getIndex()
+    CV_DEPRECATED NNIndex<Distance>* getIndex()
     {
         return nnIndex_;
     }
@@ -250,7 +252,7 @@ public:
      * \brief Returns index parameters.
      * \deprecated use getParameters() instead.
      */
-    FLANN_DEPRECATED  const IndexParams* getIndexParameters()
+    CV_DEPRECATED  const IndexParams* getIndexParameters()
     {
         return &index_params_;
     }
@@ -262,6 +264,9 @@ private:
     bool loaded_;
     /** Parameters passed to the index */
     IndexParams index_params_;
+
+    Index(const Index &); // copy disabled
+    Index& operator=(const Index &); // assign disabled
 };
 
 /**

@@ -1,12 +1,9 @@
 //! [head]
-#include <stdio.h>
 #include <iostream>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace cv;  // The new C++ interface API is inside this namespace. Import it.
 using namespace std;
@@ -16,7 +13,7 @@ static void help( char* progName)
 {
     cout << endl << progName
         << " shows how to use cv::Mat and IplImages together (converting back and forth)." << endl
-        << "Also contains example for image read, spliting the planes, merging back and "  << endl
+        << "Also contains example for image read, splitting the planes, merging back and " << endl
         << " color conversion, plus iterating through pixels. "                            << endl
         << "Usage:" << endl
         << progName << " [image-name Default: ../data/lena.jpg]"                   << endl << endl;

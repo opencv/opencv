@@ -101,10 +101,14 @@ bool HdrDecoder::readData(Mat& _img)
 
 bool HdrDecoder::checkSignature( const String& signature ) const
 {
-    if(signature.size() >= m_signature.size() &&
-       (!memcmp(signature.c_str(), m_signature.c_str(), m_signature.size()) ||
-       !memcmp(signature.c_str(), m_signature_alt.c_str(), m_signature_alt.size())))
-       return true;
+    if (signature.size() >= m_signature.size() &&
+        0 == memcmp(signature.c_str(), m_signature.c_str(), m_signature.size())
+    )
+        return true;
+    if (signature.size() >= m_signature_alt.size() &&
+        0 == memcmp(signature.c_str(), m_signature_alt.c_str(), m_signature_alt.size())
+    )
+        return true;
     return false;
 }
 

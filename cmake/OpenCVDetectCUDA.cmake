@@ -33,12 +33,17 @@ if(CUDA_FOUND)
     if(WIN32)
       find_cuda_helper_libs(nvcuvenc)
     endif()
-    set(HAVE_NVCUVID 1)
+    if(CUDA_nvcuvid_LIBRARY)
+      set(HAVE_NVCUVID 1)
+    endif()
+    if(CUDA_nvcuvenc_LIBRARY)
+      set(HAVE_NVCUVENC 1)
+    endif()
   endif()
 
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-  set(_generations "Fermi" "Kepler")
+  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta")
   if(NOT CMAKE_CROSSCOMPILING)
     list(APPEND _generations "Auto")
   endif()
@@ -58,15 +63,17 @@ if(CUDA_FOUND)
 
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
-    set(__cuda_arch_bin "2.0 2.1(2.0)")
+    set(__cuda_arch_bin "2.0")
   elseif(CUDA_GENERATION STREQUAL "Kepler")
-    if(${CUDA_VERSION} VERSION_LESS "5.0")
-      set(__cuda_arch_bin "3.0")
-    else()
-      set(__cuda_arch_bin "3.0 3.5")
-    endif()
+    set(__cuda_arch_bin "3.0 3.5 3.7")
+  elseif(CUDA_GENERATION STREQUAL "Maxwell")
+    set(__cuda_arch_bin "5.0 5.2")
+  elseif(CUDA_GENERATION STREQUAL "Pascal")
+    set(__cuda_arch_bin "6.0 6.1")
+  elseif(CUDA_GENERATION STREQUAL "Volta")
+    set(__cuda_arch_bin "7.0")
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                      RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -83,17 +90,24 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      set(__cuda_arch_bin "5.3")
+      execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+                       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+                       RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
+                       ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+      if(NOT _nvcc_res EQUAL 0)
+        message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
+        set(__cuda_arch_bin "5.3 6.2 7.0")
+      else()
+        set(__cuda_arch_bin "${_nvcc_out}")
+        string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
+      endif()
       set(__cuda_arch_ptx "")
     else()
-      if(${CUDA_VERSION} VERSION_LESS "5.0")
-        set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0")
-      elseif(${CUDA_VERSION} VERSION_GREATER "6.5")
-        set(__cuda_arch_bin "2.0 2.1(2.0) 3.0 3.5")
+      if(${CUDA_VERSION} VERSION_LESS "9.0")
+        set(__cuda_arch_bin "2.0 3.0 3.5 3.7 5.0 5.2 6.0 6.1")
       else()
-        set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0 3.5")
+        set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0")
       endif()
-      set(__cuda_arch_ptx "3.0")
     endif()
   endif()
 
@@ -133,6 +147,7 @@ if(CUDA_FOUND)
       set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
     endif()
   endforeach()
+  set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -D_FORCE_INLINES)
 
   # Tell NVCC to add PTX intermediate code for the specified architectures
   string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
@@ -160,7 +175,7 @@ if(CUDA_FOUND)
 
   mark_as_advanced(CUDA_BUILD_CUBIN CUDA_BUILD_EMULATION CUDA_VERBOSE_BUILD CUDA_SDK_ROOT_DIR)
 
-  macro(ocv_cuda_compile VAR)
+  macro(ocv_cuda_filter_options)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
@@ -186,6 +201,10 @@ if(CUDA_FOUND)
 
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
     endforeach()
+  endmacro()
+
+  macro(ocv_cuda_compile VAR)
+    ocv_cuda_filter_options()
 
     if(BUILD_SHARED_LIBS)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -DCVAPI_EXPORTS)
@@ -203,7 +222,7 @@ if(CUDA_FOUND)
     endif()
 
     # disabled because of multiple warnings during building nvcc auto generated files
-    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_GCC_REGEX_VERSION VERSION_GREATER "4.6.0")
+    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.6.0")
       ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-but-set-variable)
     endif()
 

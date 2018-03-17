@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CALIB3D_C_H__
-#define __OPENCV_CALIB3D_C_H__
+#ifndef OPENCV_CALIB3D_C_H
+#define OPENCV_CALIB3D_C_H
 
 #include "opencv2/core/core_c.h"
 
@@ -245,7 +245,9 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_FIX_S1_S2_S3_S4  65536
 #define CV_CALIB_TILTED_MODEL  262144
 #define CV_CALIB_FIX_TAUX_TAUY  524288
+#define CV_CALIB_FIX_TANGENT_DIST 2097152
 
+#define CV_CALIB_NINTRINSIC 18
 
 /* Finds intrinsic and extrinsic camera parameters
    from a few views of known calibration pattern */
@@ -422,4 +424,4 @@ public:
 
 #endif
 
-#endif /* __OPENCV_CALIB3D_C_H__ */
+#endif /* OPENCV_CALIB3D_C_H */

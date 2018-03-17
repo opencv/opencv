@@ -1,4 +1,4 @@
-README for libpng version 1.6.19 - November 12, 2015 (shared library 16.0)
+README for libpng version 1.6.34 - September 29, 2017 (shared library 16.0)
 See the note about version numbers near the top of png.h
 
 See INSTALL for instructions on how to install libpng.
@@ -23,7 +23,7 @@ earlier versions if you are using a shared library.  The type of the
 png_uint_32, which will affect shared-library applications that use
 this function.
 
-To avoid problems with changes to the internals of png info_struct,
+To avoid problems with changes to the internals of the png info_struct,
 new APIs have been made available in 0.95 to avoid direct application
 access to info_ptr.  These functions are the png_set_<chunk> and
 png_get_<chunk> functions.  These functions should be used when
@@ -88,11 +88,11 @@ zlib should be available at the same place that libpng is, or at zlib.net.
 
 You may also want a copy of the PNG specification.  It is available
 as an RFC, a W3C Recommendation, and an ISO/IEC Standard.  You can find
-these at http://www.libpng.org/pub/png/documents/
+these at http://www.libpng.org/pub/png/pngdocs.html .
 
-This code is currently being archived at libpng.sf.net in the
-[DOWNLOAD] area, and at ftp://ftp.simplesystems.org.  If you can't find it
-in any of those places, e-mail me, and I'll help you find it.
+This code is currently being archived at libpng.sourceforge.io in the
+[DOWNLOAD] area, and at http://libpng.download/src .  If you
+can't find it in any of those places, e-mail me, and I'll help you find it.
 
 I am not a lawyer, but I believe that the Export Control Classification
 Number (ECCN) for libpng is EAR99, which means not subject to export
@@ -179,18 +179,25 @@ Files in this distribution:
       pngwtran.c    =>  Write data transformations
       pngwutil.c    =>  Write utility functions
       arm           =>  Contains optimized code for the ARM platform
+      powerpc       =>  Contains optimized code for the PowerPC platform
       contrib       =>  Contributions
+       arm-neon         =>  Optimized code for ARM-NEON platform
+       powerpc-vsx      =>  Optimized code for POWERPC-VSX platform
        examples         =>  Example programs
        gregbook         =>  source code for PNG reading and writing, from
                             Greg Roelofs' "PNG: The Definitive Guide",
                             O'Reilly, 1999
        libtests         =>  Test programs
+       mips-msa         =>  Optimized code for MIPS-MSA platform
        pngminim         =>  Minimal decoder, encoder, and progressive decoder
                             programs demonstrating use of pngusr.dfa
        pngminus         =>  Simple pnm2png and png2pnm programs
        pngsuite         =>  Test images
+       testpngs
        tools            =>  Various tools
        visupng          =>  Contains a MSVC workspace for VisualPng
+      intel             =>  Optimized code for INTEL-SSE2 platform
+      mips              =>  Optimized code for MIPS platform
       projects      =>  Contains project files and workspaces for
                         building a DLL
        owatcom          =>  Contains a WATCOM project for building libpng

@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_HPP__
-#define __OPENCV_HAL_INTRIN_HPP__
+#ifndef OPENCV_HAL_INTRIN_HPP
+#define OPENCV_HAL_INTRIN_HPP
 
 #include <cmath>
 #include <float.h>
@@ -59,6 +59,25 @@
 // we put intrinsics into cv namespace to make its
 // access from within opencv code more accessible
 namespace cv {
+
+#ifndef CV_DOXYGEN
+
+#ifdef CV_CPU_DISPATCH_MODE
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE __CV_CAT(hal_, CV_CPU_DISPATCH_MODE)
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace __CV_CAT(hal_, CV_CPU_DISPATCH_MODE) {
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+#else
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE hal_baseline
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace hal_baseline {
+#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+#endif
+
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
 
 //! @addtogroup core_hal_intrin
 //! @{
@@ -281,11 +300,15 @@ template <typename T> struct V_SIMD128Traits
 
 //! @}
 
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
 }
 
 #ifdef CV_DOXYGEN
 #   undef CV_SSE2
 #   undef CV_NEON
+#   undef CV_VSX
 #endif
 
 #if CV_SSE2
@@ -295,6 +318,10 @@ template <typename T> struct V_SIMD128Traits
 #elif CV_NEON
 
 #include "opencv2/core/hal/intrin_neon.hpp"
+
+#elif CV_VSX
+
+#include "opencv2/core/hal/intrin_vsx.hpp"
 
 #else
 
@@ -316,5 +343,130 @@ template <typename T> struct V_SIMD128Traits
 #endif
 
 //! @}
+
+//==================================================================================================
+
+//! @cond IGNORED
+
+namespace cv {
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
+
+template <typename R> struct V_RegTrait128;
+
+template <> struct V_RegTrait128<uchar> {
+    typedef v_uint8x16 reg;
+    typedef v_uint16x8 w_reg;
+    typedef v_uint32x4 q_reg;
+    typedef v_uint8x16 u_reg;
+    static v_uint8x16 zero() { return v_setzero_u8(); }
+    static v_uint8x16 all(uchar val) { return v_setall_u8(val); }
+};
+
+template <> struct V_RegTrait128<schar> {
+    typedef v_int8x16 reg;
+    typedef v_int16x8 w_reg;
+    typedef v_int32x4 q_reg;
+    typedef v_uint8x16 u_reg;
+    static v_int8x16 zero() { return v_setzero_s8(); }
+    static v_int8x16 all(schar val) { return v_setall_s8(val); }
+};
+
+template <> struct V_RegTrait128<ushort> {
+    typedef v_uint16x8 reg;
+    typedef v_uint32x4 w_reg;
+    typedef v_int16x8 int_reg;
+    typedef v_uint16x8 u_reg;
+    static v_uint16x8 zero() { return v_setzero_u16(); }
+    static v_uint16x8 all(ushort val) { return v_setall_u16(val); }
+};
+
+template <> struct V_RegTrait128<short> {
+    typedef v_int16x8 reg;
+    typedef v_int32x4 w_reg;
+    typedef v_uint16x8 u_reg;
+    static v_int16x8 zero() { return v_setzero_s16(); }
+    static v_int16x8 all(short val) { return v_setall_s16(val); }
+};
+
+template <> struct V_RegTrait128<unsigned> {
+    typedef v_uint32x4 reg;
+    typedef v_uint64x2 w_reg;
+    typedef v_int32x4 int_reg;
+    typedef v_uint32x4 u_reg;
+    static v_uint32x4 zero() { return v_setzero_u32(); }
+    static v_uint32x4 all(unsigned val) { return v_setall_u32(val); }
+};
+
+template <> struct V_RegTrait128<int> {
+    typedef v_int32x4 reg;
+    typedef v_int64x2 w_reg;
+    typedef v_uint32x4 u_reg;
+    static v_int32x4 zero() { return v_setzero_s32(); }
+    static v_int32x4 all(int val) { return v_setall_s32(val); }
+};
+
+template <> struct V_RegTrait128<uint64> {
+    typedef v_uint64x2 reg;
+    static v_uint64x2 zero() { return v_setzero_u64(); }
+    static v_uint64x2 all(uint64 val) { return v_setall_u64(val); }
+};
+
+template <> struct V_RegTrait128<int64> {
+    typedef v_int64x2 reg;
+    static v_int64x2 zero() { return v_setzero_s64(); }
+    static v_int64x2 all(int64 val) { return v_setall_s64(val); }
+};
+
+template <> struct V_RegTrait128<float> {
+    typedef v_float32x4 reg;
+    typedef v_int32x4 int_reg;
+    typedef v_float32x4 u_reg;
+    static v_float32x4 zero() { return v_setzero_f32(); }
+    static v_float32x4 all(float val) { return v_setall_f32(val); }
+};
+
+#if CV_SIMD128_64F
+template <> struct V_RegTrait128<double> {
+    typedef v_float64x2 reg;
+    typedef v_int32x4 int_reg;
+    typedef v_float64x2 u_reg;
+    static v_float64x2 zero() { return v_setzero_f64(); }
+    static v_float64x2 all(double val) { return v_setall_f64(val); }
+};
+#endif
+
+inline unsigned int trailingZeros32(unsigned int value) {
+#if defined(_MSC_VER)
+#if (_MSC_VER < 1700) || defined(_M_ARM)
+    unsigned long index = 0;
+    _BitScanForward(&index, value);
+    return (unsigned int)index;
+#else
+    return _tzcnt_u32(value);
+#endif
+#elif defined(__GNUC__) || defined(__GNUG__)
+    return __builtin_ctz(value);
+#elif defined(__ICC) || defined(__INTEL_COMPILER)
+    return _bit_scan_forward(value);
+#elif defined(__clang__)
+    return llvm.cttz.i32(value, true);
+#else
+    static const int MultiplyDeBruijnBitPosition[32] = {
+        0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
+    return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
+#endif
+}
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
+
+} // cv::
+
+//! @endcond
 
 #endif

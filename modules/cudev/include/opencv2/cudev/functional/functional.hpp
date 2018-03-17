@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_FUNCTIONAL_FUNCTIONAL_HPP__
-#define __OPENCV_CUDEV_FUNCTIONAL_FUNCTIONAL_HPP__
+#ifndef OPENCV_CUDEV_FUNCTIONAL_FUNCTIONAL_HPP
+#define OPENCV_CUDEV_FUNCTIONAL_FUNCTIONAL_HPP
 
 #include "../common.hpp"
 #include "../util/saturate_cast.hpp"
@@ -665,6 +665,27 @@ template <typename T, typename D> struct saturate_cast_func : unary_function<T, 
     __device__ __forceinline__ D operator ()(typename TypeTraits<T>::parameter_type v) const
     {
         return saturate_cast<D>(v);
+    }
+};
+
+// Convert Fp16 dummy
+template <typename T, typename D> struct saturate_cast_fp16_func;
+
+// Convert Fp16 from Fp32
+template <> struct saturate_cast_fp16_func<float, short> : unary_function<float, short>
+{
+    __device__ __forceinline__ short operator ()(float v) const
+    {
+        return cast_fp16<float, short>(v);
+    }
+};
+
+// Convert Fp16 to Fp32
+template <> struct saturate_cast_fp16_func<short, float> : unary_function<short, float>
+{
+    __device__ __forceinline__ float operator ()(short v) const
+    {
+        return cast_fp16<short, float>(v);
     }
 };
 

@@ -26,7 +26,7 @@ and location.
 ![image](images/surf_boxfilter.jpg)
 
 For orientation assignment, SURF uses wavelet responses in horizontal and vertical direction for a
-neighbourhood of size 6s. Adequate guassian weights are also applied to it. Then they are plotted in
+neighbourhood of size 6s. Adequate gaussian weights are also applied to it. Then they are plotted in
 a space as given in below image. The dominant orientation is estimated by calculating the sum of all
 responses within a sliding orientation window of angle 60 degrees. Interesting thing is that,
 wavelet response can be found out using integral images very easily at any scale. For many
@@ -34,7 +34,7 @@ applications, rotation invariance is not required, so no need of finding this or
 speeds up the process. SURF provides such a functionality called Upright-SURF or U-SURF. It improves
 speed and is robust upto \f$\pm 15^{\circ}\f$. OpenCV supports both, depending upon the flag,
 **upright**. If it is 0, orientation is calculated. If it is 1, orientation is not calculated and it
-is more faster.
+is faster.
 
 ![image](images/surf_orientation.jpg)
 
@@ -76,11 +76,11 @@ and descriptors.
 First we will see a simple demo on how to find SURF keypoints and descriptors and draw it. All
 examples are shown in Python terminal since it is just same as SIFT only.
 @code{.py}
->>> img = cv2.imread('fly.png',0)
+>>> img = cv.imread('fly.png',0)
 
 # Create SURF object. You can specify params here or later.
 # Here I set Hessian Threshold to 400
->>> surf = cv2.xfeatures2d.SURF_create(400)
+>>> surf = cv.xfeatures2d.SURF_create(400)
 
 # Find keypoints and descriptors directly
 >>> kp, des = surf.detectAndCompute(img,None)
@@ -92,7 +92,7 @@ examples are shown in Python terminal since it is just same as SIFT only.
 While matching, we may need all those features, but not now. So we increase the Hessian Threshold.
 @code{.py}
 # Check present Hessian threshold
->>> print surf.getHessianThreshold()
+>>> print( surf.getHessianThreshold() )
 400.0
 
 # We set it to some 50000. Remember, it is just for representing in picture.
@@ -102,12 +102,12 @@ While matching, we may need all those features, but not now. So we increase the 
 # Again compute keypoints and check its number.
 >>> kp, des = surf.detectAndCompute(img,None)
 
->>> print len(kp)
+>>> print( len(kp) )
 47
 @endcode
 It is less than 50. Let's draw it on the image.
 @code{.py}
->>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv.drawKeypoints(img,kp,None,(255,0,0),4)
 
 >>> plt.imshow(img2),plt.show()
 @endcode
@@ -119,18 +119,18 @@ on wings of butterfly. You can test it with other images.
 Now I want to apply U-SURF, so that it won't find the orientation.
 @code{.py}
 # Check upright flag, if it False, set it to True
->>> print surf.getUpright()
+>>> print( surf.getUpright() )
 False
 
 >>> surf.setUpright(True)
 
 # Recompute the feature points and draw it
 >>> kp = surf.detect(img,None)
->>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv.drawKeypoints(img,kp,None,(255,0,0),4)
 
 >>> plt.imshow(img2),plt.show()
 @endcode
-See the results below. All the orientations are shown in same direction. It is more faster than
+See the results below. All the orientations are shown in same direction. It is faster than
 previous. If you are working on cases where orientation is not a problem (like panorama stitching)
 etc, this is better.
 
@@ -139,7 +139,7 @@ etc, this is better.
 Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 @code{.py}
 # Find size of descriptor
->>> print surf.descriptorSize()
+>>> print( surf.descriptorSize() )
 64
 
 # That means flag, "extended" is False.
@@ -147,11 +147,11 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
  False
 
 # So we make it to True to get 128-dim descriptors.
->>> surf.extended = True
+>>> surf.setExtended(True)
 >>> kp, des = surf.detectAndCompute(img,None)
->>> print surf.descriptorSize()
+>>> print( surf.descriptorSize() )
 128
->>> print des.shape
+>>> print( des.shape )
 (47, 128)
 @endcode
 Remaining part is matching which we will do in another chapter.

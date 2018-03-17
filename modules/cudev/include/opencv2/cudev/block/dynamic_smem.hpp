@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_BLOCK_DYNAMIC_SMEM_HPP__
-#define __OPENCV_CUDEV_BLOCK_DYNAMIC_SMEM_HPP__
+#ifndef OPENCV_CUDEV_BLOCK_DYNAMIC_SMEM_HPP
+#define OPENCV_CUDEV_BLOCK_DYNAMIC_SMEM_HPP
 
 #include "../common.hpp"
 

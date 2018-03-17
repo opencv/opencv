@@ -184,11 +184,14 @@ void SimpleBlobDetectorImpl::read( const cv::FileNode& fn )
 
 void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
 {
+    writeFormat(fs);
     params.write(fs);
 }
 
 void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
     (void)image;
     centers.clear();
@@ -301,12 +304,13 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
 #endif
 }
 
-void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>& keypoints, InputArray)
+void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>& keypoints, InputArray mask)
 {
-    //TODO: support mask
+    CV_INSTRUMENT_REGION()
+
     keypoints.clear();
     Mat grayscaleImage;
-    if (image.channels() == 3)
+    if (image.channels() == 3 || image.channels() == 4)
         cvtColor(image, grayscaleImage, COLOR_BGR2GRAY);
     else
         grayscaleImage = image.getMat();
@@ -367,11 +371,21 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
         KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
         keypoints.push_back(kpt);
     }
+
+    if (!mask.empty())
+    {
+        KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
+    }
 }
 
 Ptr<SimpleBlobDetector> SimpleBlobDetector::create(const SimpleBlobDetector::Params& params)
 {
     return makePtr<SimpleBlobDetectorImpl>(params);
+}
+
+String SimpleBlobDetector::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".SimpleBlobDetector");
 }
 
 }

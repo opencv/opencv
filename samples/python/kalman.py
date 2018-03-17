@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
    Tracking of rotating point.
    Rotation speed is constant.
@@ -18,19 +18,19 @@ PY3 = sys.version_info[0] == 3
 if PY3:
     long = int
 
-import cv2
-from math import cos, sin
+import cv2 as cv
+from math import cos, sin, sqrt
 import numpy as np
 
 if __name__ == "__main__":
 
     img_height = 500
     img_width = 500
-    kalman = cv2.KalmanFilter(2, 1, 0)
+    kalman = cv.KalmanFilter(2, 1, 0)
 
     code = long(-1)
 
-    cv2.namedWindow("Kalman")
+    cv.namedWindow("Kalman")
 
     while True:
         state = 0.1 * np.random.randn(2, 1)
@@ -64,33 +64,33 @@ if __name__ == "__main__":
 
             # plot points
             def draw_cross(center, color, d):
-                cv2.line(img,
+                cv.line(img,
                          (center[0] - d, center[1] - d), (center[0] + d, center[1] + d),
-                         color, 1, cv2.LINE_AA, 0)
-                cv2.line(img,
+                         color, 1, cv.LINE_AA, 0)
+                cv.line(img,
                          (center[0] + d, center[1] - d), (center[0] - d, center[1] + d),
-                         color, 1, cv2.LINE_AA, 0)
+                         color, 1, cv.LINE_AA, 0)
 
             img = np.zeros((img_height, img_width, 3), np.uint8)
             draw_cross(np.int32(state_pt), (255, 255, 255), 3)
             draw_cross(np.int32(measurement_pt), (0, 0, 255), 3)
             draw_cross(np.int32(predict_pt), (0, 255, 0), 3)
 
-            cv2.line(img, state_pt, measurement_pt, (0, 0, 255), 3, cv2.LINE_AA, 0)
-            cv2.line(img, state_pt, predict_pt, (0, 255, 255), 3, cv2.LINE_AA, 0)
+            cv.line(img, state_pt, measurement_pt, (0, 0, 255), 3, cv.LINE_AA, 0)
+            cv.line(img, state_pt, predict_pt, (0, 255, 255), 3, cv.LINE_AA, 0)
 
             kalman.correct(measurement)
 
-            process_noise = kalman.processNoiseCov * np.random.randn(2, 1)
+            process_noise = sqrt(kalman.processNoiseCov[0,0]) * np.random.randn(2, 1)
             state = np.dot(kalman.transitionMatrix, state) + process_noise
 
-            cv2.imshow("Kalman", img)
+            cv.imshow("Kalman", img)
 
-            code = cv2.waitKey(100) % 0x100
+            code = cv.waitKey(100)
             if code != -1:
                 break
 
         if code in [27, ord('q'), ord('Q')]:
             break
 
-    cv2.destroyWindow("Kalman")
+    cv.destroyWindow("Kalman")

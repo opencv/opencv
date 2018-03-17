@@ -14,8 +14,7 @@
 #include <iomanip>
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudalegacy.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/highgui.hpp"
 
 #if !defined(HAVE_CUDA)
 int main( int, const char** )
@@ -25,7 +24,7 @@ int main( int, const char** )
 }
 #else
 
-//using std::tr1::shared_ptr;
+//using std::shared_ptr;
 using cv::Ptr;
 
 #define PARAM_LEFT  "--left"

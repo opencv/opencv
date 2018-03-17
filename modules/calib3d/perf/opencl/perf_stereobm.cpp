@@ -45,10 +45,10 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
-typedef std::tr1::tuple<int, int> StereoBMFixture_t;
+typedef tuple<int, int> StereoBMFixture_t;
 typedef TestBaseWithParam<StereoBMFixture_t> StereoBMFixture;
 
 OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 64, 128), OCL_PERF_ENUM(11,21) ) )

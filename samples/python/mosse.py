@@ -18,7 +18,7 @@ Keys:
   c        - clear targets
 
 [1] David S. Bolme et al. "Visual Object Tracking using Adaptive Correlation Filters"
-    http://www.cs.colostate.edu/~bolme/publications/Bolme2010Tracking.pdf
+    http://www.cs.colostate.edu/~draper/papers/bolme_cvpr10.pdf
 '''
 
 # Python 2/3 compatibility
@@ -30,7 +30,7 @@ if PY3:
     xrange = range
 
 import numpy as np
-import cv2
+import cv2 as cv
 from common import draw_str, RectSelector
 import video
 
@@ -44,7 +44,7 @@ def rnd_warp(a):
     T[:2, :2] += (np.random.rand(2, 2) - 0.5)*coef
     c = (w/2, h/2)
     T[:,2] = c - np.dot(T[:2, :2], c)
-    return cv2.warpAffine(a, T, (w, h), borderMode = cv2.BORDER_REFLECT)
+    return cv.warpAffine(a, T, (w, h), borderMode = cv.BORDER_REFLECT)
 
 def divSpec(A, B):
     Ar, Ai = A[...,0], A[...,1]
@@ -58,32 +58,32 @@ eps = 1e-5
 class MOSSE:
     def __init__(self, frame, rect):
         x1, y1, x2, y2 = rect
-        w, h = map(cv2.getOptimalDFTSize, [x2-x1, y2-y1])
+        w, h = map(cv.getOptimalDFTSize, [x2-x1, y2-y1])
         x1, y1 = (x1+x2-w)//2, (y1+y2-h)//2
         self.pos = x, y = x1+0.5*(w-1), y1+0.5*(h-1)
         self.size = w, h
-        img = cv2.getRectSubPix(frame, (w, h), (x, y))
+        img = cv.getRectSubPix(frame, (w, h), (x, y))
 
-        self.win = cv2.createHanningWindow((w, h), cv2.CV_32F)
+        self.win = cv.createHanningWindow((w, h), cv.CV_32F)
         g = np.zeros((h, w), np.float32)
         g[h//2, w//2] = 1
-        g = cv2.GaussianBlur(g, (-1, -1), 2.0)
+        g = cv.GaussianBlur(g, (-1, -1), 2.0)
         g /= g.max()
 
-        self.G = cv2.dft(g, flags=cv2.DFT_COMPLEX_OUTPUT)
+        self.G = cv.dft(g, flags=cv.DFT_COMPLEX_OUTPUT)
         self.H1 = np.zeros_like(self.G)
         self.H2 = np.zeros_like(self.G)
-        for i in xrange(128):
+        for _i in xrange(128):
             a = self.preprocess(rnd_warp(img))
-            A = cv2.dft(a, flags=cv2.DFT_COMPLEX_OUTPUT)
-            self.H1 += cv2.mulSpectrums(self.G, A, 0, conjB=True)
-            self.H2 += cv2.mulSpectrums(     A, A, 0, conjB=True)
+            A = cv.dft(a, flags=cv.DFT_COMPLEX_OUTPUT)
+            self.H1 += cv.mulSpectrums(self.G, A, 0, conjB=True)
+            self.H2 += cv.mulSpectrums(     A, A, 0, conjB=True)
         self.update_kernel()
         self.update(frame)
 
     def update(self, frame, rate = 0.125):
         (x, y), (w, h) = self.pos, self.size
-        self.last_img = img = cv2.getRectSubPix(frame, (w, h), (x, y))
+        self.last_img = img = cv.getRectSubPix(frame, (w, h), (x, y))
         img = self.preprocess(img)
         self.last_resp, (dx, dy), self.psr = self.correlate(img)
         self.good = self.psr > 8.0
@@ -91,19 +91,19 @@ class MOSSE:
             return
 
         self.pos = x+dx, y+dy
-        self.last_img = img = cv2.getRectSubPix(frame, (w, h), self.pos)
+        self.last_img = img = cv.getRectSubPix(frame, (w, h), self.pos)
         img = self.preprocess(img)
 
-        A = cv2.dft(img, flags=cv2.DFT_COMPLEX_OUTPUT)
-        H1 = cv2.mulSpectrums(self.G, A, 0, conjB=True)
-        H2 = cv2.mulSpectrums(     A, A, 0, conjB=True)
+        A = cv.dft(img, flags=cv.DFT_COMPLEX_OUTPUT)
+        H1 = cv.mulSpectrums(self.G, A, 0, conjB=True)
+        H2 = cv.mulSpectrums(     A, A, 0, conjB=True)
         self.H1 = self.H1 * (1.0-rate) + H1 * rate
         self.H2 = self.H2 * (1.0-rate) + H2 * rate
         self.update_kernel()
 
     @property
     def state_vis(self):
-        f = cv2.idft(self.H, flags=cv2.DFT_SCALE | cv2.DFT_REAL_OUTPUT )
+        f = cv.idft(self.H, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT )
         h, w = f.shape
         f = np.roll(f, -h//2, 0)
         f = np.roll(f, -w//2, 1)
@@ -116,12 +116,12 @@ class MOSSE:
     def draw_state(self, vis):
         (x, y), (w, h) = self.pos, self.size
         x1, y1, x2, y2 = int(x-0.5*w), int(y-0.5*h), int(x+0.5*w), int(y+0.5*h)
-        cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255))
+        cv.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255))
         if self.good:
-            cv2.circle(vis, (int(x), int(y)), 2, (0, 0, 255), -1)
+            cv.circle(vis, (int(x), int(y)), 2, (0, 0, 255), -1)
         else:
-            cv2.line(vis, (x1, y1), (x2, y2), (0, 0, 255))
-            cv2.line(vis, (x2, y1), (x1, y2), (0, 0, 255))
+            cv.line(vis, (x1, y1), (x2, y2), (0, 0, 255))
+            cv.line(vis, (x2, y1), (x1, y2), (0, 0, 255))
         draw_str(vis, (x1, y2+16), 'PSR: %.2f' % self.psr)
 
     def preprocess(self, img):
@@ -130,12 +130,12 @@ class MOSSE:
         return img*self.win
 
     def correlate(self, img):
-        C = cv2.mulSpectrums(cv2.dft(img, flags=cv2.DFT_COMPLEX_OUTPUT), self.H, 0, conjB=True)
-        resp = cv2.idft(C, flags=cv2.DFT_SCALE | cv2.DFT_REAL_OUTPUT)
+        C = cv.mulSpectrums(cv.dft(img, flags=cv.DFT_COMPLEX_OUTPUT), self.H, 0, conjB=True)
+        resp = cv.idft(C, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT)
         h, w = resp.shape
-        _, mval, _, (mx, my) = cv2.minMaxLoc(resp)
+        _, mval, _, (mx, my) = cv.minMaxLoc(resp)
         side_resp = resp.copy()
-        cv2.rectangle(side_resp, (mx-5, my-5), (mx+5, my+5), 0, -1)
+        cv.rectangle(side_resp, (mx-5, my-5), (mx+5, my+5), 0, -1)
         smean, sstd = side_resp.mean(), side_resp.std()
         psr = (mval-smean) / (sstd+eps)
         return resp, (mx-w//2, my-h//2), psr
@@ -148,13 +148,13 @@ class App:
     def __init__(self, video_src, paused = False):
         self.cap = video.create_capture(video_src)
         _, self.frame = self.cap.read()
-        cv2.imshow('frame', self.frame)
+        cv.imshow('frame', self.frame)
         self.rect_sel = RectSelector('frame', self.onrect)
         self.trackers = []
         self.paused = paused
 
     def onrect(self, rect):
-        frame_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        frame_gray = cv.cvtColor(self.frame, cv.COLOR_BGR2GRAY)
         tracker = MOSSE(frame_gray, rect)
         self.trackers.append(tracker)
 
@@ -164,7 +164,7 @@ class App:
                 ret, self.frame = self.cap.read()
                 if not ret:
                     break
-                frame_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+                frame_gray = cv.cvtColor(self.frame, cv.COLOR_BGR2GRAY)
                 for tracker in self.trackers:
                     tracker.update(frame_gray)
 
@@ -172,11 +172,11 @@ class App:
             for tracker in self.trackers:
                 tracker.draw_state(vis)
             if len(self.trackers) > 0:
-                cv2.imshow('tracker state', self.trackers[-1].state_vis)
+                cv.imshow('tracker state', self.trackers[-1].state_vis)
             self.rect_sel.draw(vis)
 
-            cv2.imshow('frame', vis)
-            ch = cv2.waitKey(10) & 0xFF
+            cv.imshow('frame', vis)
+            ch = cv.waitKey(10)
             if ch == 27:
                 break
             if ch == ord(' '):

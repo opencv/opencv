@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDASTEREO_HPP__
-#define __OPENCV_CUDASTEREO_HPP__
+#ifndef OPENCV_CUDASTEREO_HPP
+#define OPENCV_CUDASTEREO_HPP
 
 #ifndef __cplusplus
 #  error cudastereo.hpp header must be compiled as C++
@@ -330,4 +330,4 @@ CV_EXPORTS void drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndi
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDASTEREO_HPP__ */
+#endif /* OPENCV_CUDASTEREO_HPP */

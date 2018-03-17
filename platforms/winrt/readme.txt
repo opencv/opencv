@@ -124,7 +124,7 @@ Running tests for Windows Store
 ===============================
 1. You might need to install this if you haven't already: http://www.microsoft.com/en-US/download/details.aspx?id=40784
 
-2. Set OPENCV_TEST_DATA_PATH environment variable to location of opencv_extra/testdata (cloning of https://github.com/Itseez/opencv_extra repo required) to get tests work correctly. Also, set OPENCV_PERF_VALIDATION_DIR environment variable in case you are planning to have place where to store performance test results and compare them with the future test runs.
+2. Set OPENCV_TEST_DATA_PATH environment variable to location of opencv_extra/testdata (cloning of https://github.com/opencv/opencv_extra repo required) to get tests work correctly. Also, set OPENCV_PERF_VALIDATION_DIR environment variable in case you are planning to have place where to store performance test results and compare them with the future test runs.
 
 3. In case you'd like to adjust some flags that are defaulted by setup_winrt script, go to "Manual build" section. Otherwise go to platforms/winrt and execute
 

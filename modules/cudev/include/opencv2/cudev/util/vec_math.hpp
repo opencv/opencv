@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_VEC_MATH_HPP__
-#define __OPENCV_CUDEV_UTIL_VEC_MATH_HPP__
+#ifndef OPENCV_CUDEV_UTIL_VEC_MATH_HPP
+#define OPENCV_CUDEV_UTIL_VEC_MATH_HPP
 
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"

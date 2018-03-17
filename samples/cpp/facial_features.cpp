@@ -6,9 +6,9 @@
  *
  */
 
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <iostream>
 #include <cstdio>
@@ -89,10 +89,10 @@ static void help()
         "\tThis will detect only the face in image.jpg.\n";
 
     cout << " \n\nThe classifiers for face and eyes can be downloaded from : "
-        " \nhttps://github.com/Itseez/opencv/tree/master/data/haarcascades";
+        " \nhttps://github.com/opencv/opencv/tree/master/data/haarcascades";
 
     cout << "\n\nThe classifiers for nose and mouth can be downloaded from : "
-        " \nhttps://github.com/Itseez/opencv_contrib/tree/master/modules/face/data/cascades\n";
+        " \nhttps://github.com/opencv/opencv_contrib/tree/master/modules/face/data/cascades\n";
 }
 
 static void detectFaces(Mat& img, vector<Rect_<int> >& faces, string cascade_path)

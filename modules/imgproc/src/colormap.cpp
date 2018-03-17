@@ -144,10 +144,7 @@ namespace colormap
 
         // Applies the colormap on a given image.
         //
-        // This function expects BGR-aligned data of type CV_8UC1 or
-        // CV_8UC3. If the wrong image type is given, the original image
-        // will be returned.
-        //
+        // This function expects BGR-aligned data of type CV_8UC1 or CV_8UC3.
         // Throws an error for wrong-aligned lookup table, which must be
         // of size 256 in the latest OpenCV release (2.3.1).
         void operator()(InputArray src, OutputArray dst) const;
@@ -493,17 +490,31 @@ namespace colormap
         }
     };
 
+    // UserColormap .
+    class UserColorMap : public ColorMap {
+    public:
+
+        UserColorMap(Mat c) : ColorMap() {
+            init(c);
+        }
+
+        void init(Mat c) {
+            this->_lut = c;
+        }
+        void init(int n) {
+            CV_Error(Error::StsAssert, format("unused method in UserColormap init(%d).",n));
+        }
+    };
+
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
+        CV_INSTRUMENT_REGION()
+
         if(_lut.total() != 256)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         Mat src = _src.getMat();
-        // Return original matrix if wrong type is given (is fail loud better here?)
-        if(src.type() != CV_8UC1 && src.type() != CV_8UC3)
-        {
-            src.copyTo(_dst);
-            return;
-        }
+        if(src.type() != CV_8UC1  &&  src.type() != CV_8UC3)
+            CV_Error(Error::StsBadArg, "cv::ColorMap only supports source images of type CV_8UC1 or CV_8UC3");
         // Turn into a BGR matrix into its grayscale representation.
         if(src.type() == CV_8UC3)
             cvtColor(src.clone(), src, COLOR_BGR2GRAY);
@@ -551,4 +562,16 @@ namespace colormap
 
         delete cm;
     }
+
+    void applyColorMap(InputArray src, OutputArray dst, InputArray userColor)
+    {
+        if (userColor.size() != Size(1,256))
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
+        if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
+        colormap::UserColorMap cm(userColor.getMat());
+
+        (cm)(src, dst);
+    }
+
 }

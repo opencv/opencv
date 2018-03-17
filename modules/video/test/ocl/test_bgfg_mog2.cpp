@@ -2,22 +2,9 @@
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
+#ifdef HAVE_VIDEO_INPUT
 
-#if defined(HAVE_XINE)     || \
-defined(HAVE_GSTREAMER)    || \
-defined(HAVE_QUICKTIME)    || \
-defined(HAVE_AVFOUNDATION) || \
-defined(HAVE_FFMPEG)       || \
-defined(WIN32)
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
-
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////Mog2_Update///////////////////////////////////
@@ -26,16 +13,19 @@ namespace
 {
     IMPLEMENT_PARAM_CLASS(UseGray, bool)
     IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
+    IMPLEMENT_PARAM_CLASS(UseFloat, bool)
 }
 
-PARAM_TEST_CASE(Mog2_Update, UseGray, DetectShadow)
+PARAM_TEST_CASE(Mog2_Update, UseGray, DetectShadow,UseFloat)
 {
     bool useGray;
     bool detectShadow;
+    bool useFloat;
     virtual void SetUp()
     {
         useGray = GET_PARAM(0);
         detectShadow = GET_PARAM(1);
+        useFloat = GET_PARAM(2);
     }
 };
 
@@ -66,6 +56,13 @@ OCL_TEST_P(Mog2_Update, Accuracy)
             swap(temp, frame);
         }
 
+        if(useFloat)
+        {
+            Mat temp;
+            frame.convertTo(temp,CV_32F);
+            swap(temp,frame);
+        }
+
         OCL_OFF(mog2_cpu->apply(frame, foreground));
         OCL_ON (mog2_ocl->apply(frame, u_foreground));
 
@@ -78,12 +75,14 @@ OCL_TEST_P(Mog2_Update, Accuracy)
 
 //////////////////////////Mog2_getBackgroundImage///////////////////////////////////
 
-PARAM_TEST_CASE(Mog2_getBackgroundImage, DetectShadow)
+PARAM_TEST_CASE(Mog2_getBackgroundImage, DetectShadow, UseFloat)
 {
     bool detectShadow;
+    bool useFloat;
     virtual void SetUp()
     {
         detectShadow = GET_PARAM(0);
+        useFloat = GET_PARAM(1);
     }
 };
 
@@ -107,6 +106,13 @@ OCL_TEST_P(Mog2_getBackgroundImage, Accuracy)
         cap >> frame;
         ASSERT_FALSE(frame.empty());
 
+        if(useFloat)
+        {
+            Mat temp;
+            frame.convertTo(temp,CV_32F);
+            swap(temp,frame);
+        }
+
         OCL_OFF(mog2_cpu->apply(frame, foreground));
         OCL_ON (mog2_ocl->apply(frame, u_foreground));
     }
@@ -123,14 +129,17 @@ OCL_TEST_P(Mog2_getBackgroundImage, Accuracy)
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_Update, Combine(
-                                    Values(UseGray(true), UseGray(false)),
-                                    Values(DetectShadow(true), DetectShadow(false)))
+                                    Values(UseGray(true),UseGray(false)),
+                                    Values(DetectShadow(true), DetectShadow(false)),
+                                    Values(UseFloat(false),UseFloat(true)))
                            );
 
-OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_getBackgroundImage, (Values(DetectShadow(true), DetectShadow(false)))
+OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_getBackgroundImage, Combine(
+                                                     Values(DetectShadow(true), DetectShadow(false)),
+                                                     Values(UseFloat(false),UseFloat(true)))
                            );
 
-}}// namespace cvtest::ocl
+}}// namespace opencv_test::ocl
 
-    #endif
+#endif
 #endif

@@ -1,7 +1,7 @@
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/videoio/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 
@@ -105,13 +105,13 @@ int main( int argc, char** argv )
     {
         imshow("image", isColor ? image : gray);
 
-        int c = waitKey(0);
-        if( (c & 255) == 27 )
+        char c = (char)waitKey(0);
+        if( c == 27 )
         {
             cout << "Exiting ...\n";
             break;
         }
-        switch( (char)c )
+        switch( c )
         {
         case 'c':
             if( isColor )

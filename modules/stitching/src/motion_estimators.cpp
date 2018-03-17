@@ -88,6 +88,28 @@ struct CalcRotation
 };
 
 
+/**
+ * @brief Functor calculating final transformation by chaining linear transformations
+ */
+struct CalcAffineTransform
+{
+    CalcAffineTransform(int _num_images,
+                      const std::vector<MatchesInfo> &_pairwise_matches,
+                      std::vector<CameraParams> &_cameras)
+    : num_images(_num_images), pairwise_matches(&_pairwise_matches[0]), cameras(&_cameras[0]) {}
+
+    void operator()(const GraphEdge &edge)
+    {
+        int pair_idx = edge.from * num_images + edge.to;
+        cameras[edge.to].R = cameras[edge.from].R * pairwise_matches[pair_idx].H;
+    }
+
+    int num_images;
+    const MatchesInfo *pairwise_matches;
+    CameraParams *cameras;
+};
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 void calcDeriv(const Mat &err1, const Mat &err2, double h, Mat res)
@@ -167,6 +189,31 @@ bool HomographyBasedEstimator::estimate(
     }
 
     LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool AffineBasedEstimator::estimate(const std::vector<ImageFeatures> &features,
+                                    const std::vector<MatchesInfo> &pairwise_matches,
+                                    std::vector<CameraParams> &cameras)
+{
+    cameras.assign(features.size(), CameraParams());
+    const int num_images = static_cast<int>(features.size());
+
+    // find maximum spaning tree on pairwise matches
+    cv::detail::Graph span_tree;
+    std::vector<int> span_tree_centers;
+    // uses number of inliers as weights
+    findMaxSpanningTree(num_images, pairwise_matches, span_tree,
+                      span_tree_centers);
+
+    // compute final transform by chaining H together
+    span_tree.walkBreadthFirst(
+            span_tree_centers[0],
+            CalcAffineTransform(num_images, pairwise_matches, cameras));
+    // this estimator never fails
     return true;
 }
 
@@ -582,6 +629,243 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 
     double val;
     const double step = 1e-3;
+
+    for (int i = 0; i < num_images_; ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+        {
+            val = cam_params_.at<double>(i * 4 + j, 0);
+            cam_params_.at<double>(i * 4 + j, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 4 + j, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 4 + j));
+            cam_params_.at<double>(i * 4 + j, 0) = val;
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BundleAdjusterAffine::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
+{
+    cam_params_.create(num_images_ * 6, 1, CV_64F);
+    for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
+    {
+        CV_Assert(cameras[i].R.type() == CV_32F);
+        // cameras[i].R is
+        //     a b tx
+        //     c d ty
+        //     0 0 1. (optional)
+        // cam_params_ model for LevMarq is
+        //     (a, b, tx, c, d, ty)
+        Mat params (2, 3, CV_64F, cam_params_.ptr<double>() + i * 6);
+        cameras[i].R.rowRange(0, 2).convertTo(params, CV_64F);
+    }
+}
+
+
+void BundleAdjusterAffine::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const
+{
+    for (int i = 0; i < num_images_; ++i)
+    {
+        // cameras[i].R will be
+        //     a b tx
+        //     c d ty
+        //     0 0 1
+        cameras[i].R = Mat::eye(3, 3, CV_32F);
+        Mat params = cam_params_.rowRange(i * 6, i * 6 + 6).reshape(1, 2);
+        params.convertTo(cameras[i].R.rowRange(0, 2), CV_32F);
+    }
+}
+
+
+void BundleAdjusterAffine::calcError(Mat &err)
+{
+    err.create(total_num_matches_ * 2, 1, CV_64F);
+
+    int match_idx = 0;
+    for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
+    {
+        size_t i = edges_[edge_idx].first;
+        size_t j = edges_[edge_idx].second;
+
+        const ImageFeatures& features1 = features_[i];
+        const ImageFeatures& features2 = features_[j];
+        const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
+
+        Mat H1 (2, 3, CV_64F, cam_params_.ptr<double>() + i * 6);
+        Mat H2 (2, 3, CV_64F, cam_params_.ptr<double>() + j * 6);
+
+        // invert H1
+        Mat H1_inv;
+        invertAffineTransform(H1, H1_inv);
+
+        // convert to representation in homogeneous coordinates
+        Mat last_row = Mat::zeros(1, 3, CV_64F);
+        last_row.at<double>(2) = 1.;
+        H1_inv.push_back(last_row);
+        H2.push_back(last_row);
+
+        Mat_<double> H = H1_inv * H2;
+
+        for (size_t k = 0; k < matches_info.matches.size(); ++k)
+        {
+            if (!matches_info.inliers_mask[k])
+                continue;
+
+            const DMatch& m = matches_info.matches[k];
+            const Point2f& p1 = features1.keypoints[m.queryIdx].pt;
+            const Point2f& p2 = features2.keypoints[m.trainIdx].pt;
+
+            double x = H(0,0)*p1.x + H(0,1)*p1.y + H(0,2);
+            double y = H(1,0)*p1.x + H(1,1)*p1.y + H(1,2);
+
+            err.at<double>(2 * match_idx + 0, 0) = p2.x - x;
+            err.at<double>(2 * match_idx + 1, 0) = p2.y - y;
+
+            ++match_idx;
+        }
+    }
+}
+
+
+void BundleAdjusterAffine::calcJacobian(Mat &jac)
+{
+    jac.create(total_num_matches_ * 2, num_images_ * 6, CV_64F);
+
+    double val;
+    const double step = 1e-4;
+
+    for (int i = 0; i < num_images_; ++i)
+    {
+        for (int j = 0; j < 6; ++j)
+        {
+            val = cam_params_.at<double>(i * 6 + j, 0);
+            cam_params_.at<double>(i * 6 + j, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 6 + j, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 6 + j));
+            cam_params_.at<double>(i * 6 + j, 0) = val;
+        }
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BundleAdjusterAffinePartial::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
+{
+    cam_params_.create(num_images_ * 4, 1, CV_64F);
+    for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
+    {
+        CV_Assert(cameras[i].R.type() == CV_32F);
+        // cameras[i].R is
+        //     a -b tx
+        //     b  a ty
+        //     0  0 1. (optional)
+        // cam_params_ model for LevMarq is
+        //     (a, b, tx, ty)
+        double *params = cam_params_.ptr<double>() + i * 4;
+        params[0] = cameras[i].R.at<float>(0, 0);
+        params[1] = cameras[i].R.at<float>(1, 0);
+        params[2] = cameras[i].R.at<float>(0, 2);
+        params[3] = cameras[i].R.at<float>(1, 2);
+    }
+}
+
+
+void BundleAdjusterAffinePartial::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const
+{
+    for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
+    {
+        // cameras[i].R will be
+        //     a -b tx
+        //     b  a ty
+        //     0  0 1
+        // cam_params_ model for LevMarq is
+        //     (a, b, tx, ty)
+        const double *params = cam_params_.ptr<double>() + i * 4;
+        double transform_buf[9] =
+        {
+            params[0], -params[1], params[2],
+            params[1],  params[0], params[3],
+            0., 0., 1.
+        };
+        Mat transform(3, 3, CV_64F, transform_buf);
+        transform.convertTo(cameras[i].R, CV_32F);
+    }
+}
+
+
+void BundleAdjusterAffinePartial::calcError(Mat &err)
+{
+    err.create(total_num_matches_ * 2, 1, CV_64F);
+
+    int match_idx = 0;
+    for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
+    {
+        size_t i = edges_[edge_idx].first;
+        size_t j = edges_[edge_idx].second;
+
+        const ImageFeatures& features1 = features_[i];
+        const ImageFeatures& features2 = features_[j];
+        const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
+
+        const double *H1_ptr = cam_params_.ptr<double>() + i * 4;
+        double H1_buf[9] =
+        {
+            H1_ptr[0], -H1_ptr[1], H1_ptr[2],
+            H1_ptr[1],  H1_ptr[0], H1_ptr[3],
+            0., 0., 1.
+        };
+        Mat H1 (3, 3, CV_64F, H1_buf);
+        const double *H2_ptr = cam_params_.ptr<double>() + j * 4;
+        double H2_buf[9] =
+        {
+            H2_ptr[0], -H2_ptr[1], H2_ptr[2],
+            H2_ptr[1],  H2_ptr[0], H2_ptr[3],
+            0., 0., 1.
+        };
+        Mat H2 (3, 3, CV_64F, H2_buf);
+
+        // invert H1
+        Mat H1_aff (H1, Range(0, 2));
+        double H1_inv_buf[6];
+        Mat H1_inv (2, 3, CV_64F, H1_inv_buf);
+        invertAffineTransform(H1_aff, H1_inv);
+        H1_inv.copyTo(H1_aff);
+
+        Mat_<double> H = H1 * H2;
+
+        for (size_t k = 0; k < matches_info.matches.size(); ++k)
+        {
+            if (!matches_info.inliers_mask[k])
+                continue;
+
+            const DMatch& m = matches_info.matches[k];
+            const Point2f& p1 = features1.keypoints[m.queryIdx].pt;
+            const Point2f& p2 = features2.keypoints[m.trainIdx].pt;
+
+            double x = H(0,0)*p1.x + H(0,1)*p1.y + H(0,2);
+            double y = H(1,0)*p1.x + H(1,1)*p1.y + H(1,2);
+
+            err.at<double>(2 * match_idx + 0, 0) = p2.x - x;
+            err.at<double>(2 * match_idx + 1, 0) = p2.y - y;
+
+            ++match_idx;
+        }
+    }
+}
+
+
+void BundleAdjusterAffinePartial::calcJacobian(Mat &jac)
+{
+    jac.create(total_num_matches_ * 2, num_images_ * 4, CV_64F);
+
+    double val;
+    const double step = 1e-4;
 
     for (int i = 0; i < num_images_; ++i)
     {

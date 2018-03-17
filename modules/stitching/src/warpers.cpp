@@ -111,7 +111,7 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
     _ymap.create(dsize, CV_32FC1);
 
 #ifdef HAVE_OPENCL
-    if (ocl::useOpenCL())
+    if (ocl::isOpenCLActivated())
     {
         ocl::Kernel k("buildWarpPlaneMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
@@ -222,6 +222,58 @@ void PlaneWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 }
 
 
+Point2f AffineWarper::warpPoint(const Point2f &pt, InputArray K, InputArray H)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warpPoint(pt, K, R, T);
+}
+
+
+Rect AffineWarper::buildMaps(Size src_size, InputArray K, InputArray H, OutputArray xmap, OutputArray ymap)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::buildMaps(src_size, K, R, T, xmap, ymap);
+}
+
+
+Point AffineWarper::warp(InputArray src, InputArray K, InputArray H,
+                         int interp_mode, int border_mode, OutputArray dst)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warp(src, K, R, T, interp_mode, border_mode, dst);
+}
+
+
+Rect AffineWarper::warpRoi(Size src_size, InputArray K, InputArray H)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warpRoi(src_size, K, R, T);
+}
+
+
+void AffineWarper::getRTfromHomogeneous(InputArray H_, Mat &R, Mat &T)
+{
+    Mat H = H_.getMat();
+    CV_Assert(H.size() == Size(3, 3) && H.type() == CV_32F);
+
+    T = Mat::zeros(3, 1, CV_32F);
+    R = H.clone();
+
+    T.at<float>(0,0) = R.at<float>(0,2);
+    T.at<float>(1,0) = R.at<float>(1,2);
+    R.at<float>(0,2) = 0.f;
+    R.at<float>(1,2) = 0.f;
+
+    // we want to compensate transform to fit into plane warper
+    R = R.t();
+    T = (R * T) * -1;
+}
+
+
 void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
     detectResultRoiByBorder(src_size, dst_tl, dst_br);
@@ -313,7 +365,7 @@ void SphericalPortraitWarper::detectResultRoi(Size src_size, Point &dst_tl, Poin
 Rect SphericalWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
 #ifdef HAVE_OPENCL
-    if (ocl::useOpenCL())
+    if (ocl::isOpenCLActivated())
     {
         ocl::Kernel k("buildWarpSphericalMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
@@ -362,7 +414,7 @@ Point SphericalWarper::warp(InputArray src, InputArray K, InputArray R, int inte
 Rect CylindricalWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
 #ifdef HAVE_OPENCL
-    if (ocl::useOpenCL())
+    if (ocl::isOpenCLActivated())
     {
         ocl::Kernel k("buildWarpCylindricalMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())

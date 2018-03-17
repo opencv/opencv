@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP__
-#define __OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP__
+#ifndef OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP
+#define OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP
 
 #include "../common.hpp"
 

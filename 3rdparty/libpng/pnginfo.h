@@ -2,7 +2,7 @@
 /* pnginfo.h - header file for PNG reference library
  *
  * Last changed in libpng 1.6.1 [March 28, 2013]
- * Copyright (c) 1998-2013 Glenn Randers-Pehrson
+ * Copyright (c) 1998-2002,2004,2006-2013 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -185,6 +185,14 @@ defined(PNG_READ_BACKGROUND_SUPPORTED)
    png_byte phys_unit_type; /* resolution type (see PNG_RESOLUTION_ below) */
 #endif
 
+#ifdef PNG_eXIf_SUPPORTED
+   int num_exif;  /* Added at libpng-1.6.31 */
+   png_bytep exif;
+# ifdef PNG_READ_eXIf_SUPPORTED
+   png_bytep eXIf_buf;  /* Added at libpng-1.6.32 */
+# endif
+#endif
+
 #ifdef PNG_hIST_SUPPORTED
    /* The hIST chunk contains the relative frequency or importance of the
     * various palette entries, so that a viewer can intelligently select a
@@ -223,7 +231,7 @@ defined(PNG_READ_BACKGROUND_SUPPORTED)
    /* Storage for unknown chunks that the library doesn't recognize. */
    png_unknown_chunkp unknown_chunks;
 
-   /* The type of this field is limited by the type of 
+   /* The type of this field is limited by the type of
     * png_struct::user_chunk_cache_max, else overflow can occur.
     */
    int                unknown_chunks_num;

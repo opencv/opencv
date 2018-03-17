@@ -1,4 +1,4 @@
-#ifndef __OPENCV_CORE_OCL_RUNTIME_OPENCL_WRAPPERS_HPP__
+#ifndef OPENCV_CORE_OCL_RUNTIME_OPENCL_WRAPPERS_HPP
 #error "Invalid usage"
 #endif
 

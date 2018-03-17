@@ -45,15 +45,14 @@
  * Create test/training samples
  */
 
+#include "opencv2/core.hpp"
+#include "utility.hpp"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
-#include <ctime>
 
 using namespace std;
-
-#include "utility.hpp"
 
 int main( int argc, char* argv[] )
 {
@@ -76,8 +75,8 @@ int main( int argc, char* argv[] )
     double scale = 4.0;
     int width  = 24;
     int height = 24;
-
-    srand((unsigned int)time(0));
+    double maxscale = -1.0;
+    int rngseed = 12345;
 
     if( argc == 1 )
     {
@@ -92,9 +91,11 @@ int main( int argc, char* argv[] )
                 "  [-maxyangle <max_y_rotation_angle = %f>]\n"
                 "  [-maxzangle <max_z_rotation_angle = %f>]\n"
                 "  [-show [<scale = %f>]]\n"
-                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n",
+                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n"
+                "  [-maxscale <max sample scale = %f>]\n"
+                "  [-rngseed <rng seed = %d>]\n",
                 argv[0], num, bgcolor, bgthreshold, maxintensitydev,
-                maxxangle, maxyangle, maxzangle, scale, width, height );
+                maxxangle, maxyangle, maxzangle, scale, width, height, maxscale, rngseed );
 
         return 0;
     }
@@ -172,7 +173,17 @@ int main( int argc, char* argv[] )
         {
             height = atoi( argv[++i] );
         }
+        else if( !strcmp( argv[i], "-maxscale" ) )
+        {
+            maxscale = atof( argv[++i] );
+        }
+        else if (!strcmp(argv[i], "-rngseed"))
+        {
+            rngseed = atoi(argv[++i]);
+        }
     }
+
+    cv::setRNGSeed( rngseed );
 
     printf( "Info file name: %s\n", ((infoname == NULL) ?   nullname : infoname ) );
     printf( "Img file name: %s\n",  ((imagename == NULL) ?  nullname : imagename ) );
@@ -194,6 +205,8 @@ int main( int argc, char* argv[] )
     }
     printf( "Width: %d\n", width );
     printf( "Height: %d\n", height );
+    printf( "Max Scale: %g\n", maxscale );
+    printf( "RNG Seed: %d\n", rngseed );
 
     /* determine action */
     if( imagename && vecname )
@@ -213,7 +226,7 @@ int main( int argc, char* argv[] )
 
         cvCreateTestSamples( infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
             invert, maxintensitydev,
-            maxxangle, maxyangle, maxzangle, showsamples, width, height );
+            maxxangle, maxyangle, maxzangle, showsamples, width, height, maxscale);
 
         printf( "Done\n" );
     }

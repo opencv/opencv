@@ -10,7 +10,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// SetTo ////////////////////////
@@ -139,13 +139,13 @@ OCL_PERF_TEST_P(CopyToFixture, CopyToWithMaskUninit,
         dst.release();
         startTimer();
         src.copyTo(dst, mask);
-        cv::ocl::finish();
+        cvtest::ocl::perf::safeFinish();
         stopTimer();
     }
 
     SANITY_CHECK(dst);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

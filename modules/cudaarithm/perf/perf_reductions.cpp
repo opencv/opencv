@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // Norm
@@ -127,6 +125,8 @@ PERF_TEST_P(Sz_Norm, NormDiff,
 
 //////////////////////////////////////////////////////////////////////
 // Sum
+
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
 
 PERF_TEST_P(Sz_Depth_Cn, Sum,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -227,6 +227,8 @@ PERF_TEST_P(Sz_Depth_Cn, SumSqr,
 
 //////////////////////////////////////////////////////////////////////
 // MinMax
+
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 
 PERF_TEST_P(Sz_Depth, MinMax,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -367,6 +369,8 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp, CV_32F);
+
+        dst = dst.reshape(dst.channels(), 1);
 
         CUDA_SANITY_CHECK(dst);
     }
@@ -512,3 +516,5 @@ PERF_TEST_P(Sz, IntegralSqr,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace

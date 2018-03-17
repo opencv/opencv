@@ -466,6 +466,7 @@ public:
 
     void write( FileStorage& fs ) const
     {
+        writeFormat(fs);
         impl->write(fs);
     }
 

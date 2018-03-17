@@ -77,13 +77,13 @@ Source code
 
 You may also find the source code in the `samples/cpp/tutorial_code/calib3d/camera_calibration/`
 folder of the OpenCV source library or [download it from here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). The program has a
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). The program has a
 single argument: the name of its configuration file. If none is given then it will try to open the
 one named "default.xml". [Here's a sample configuration file
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
 configuration file you may choose to use camera as an input, a video file or an image list. If you
 opt for the last one, you will need to create a configuration file where you enumerate the images to
-use. Here's [an example of this ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
+use. Here's [an example of this ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
 The important part to remember is that the images need to be specified using the absolute path or
 the relative one from your application's working directory. You may find all this in the samples
 directory mentioned above.
@@ -279,8 +279,4 @@ quality cameras.
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=ViPN810E0SU).
 
-\htmlonly
-<div align="center">
-<iframe title=" Camera calibration With OpenCV - Chessboard or asymmetrical circle pattern." width="560" height="349" src="http://www.youtube.com/embed/ViPN810E0SU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{ViPN810E0SU}

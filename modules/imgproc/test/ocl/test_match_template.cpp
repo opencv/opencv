@@ -43,12 +43,10 @@
 
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
-#include "iostream"
-#include "fstream"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
@@ -74,7 +72,7 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size image_roiSize = randomSize(2, 100);
         Size templ_roiSize = Size(randomInt(1, image_roiSize.width), randomInt(1, image_roiSize.height));
@@ -130,6 +128,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 MatchTemplType::all(),
                                 Bool())
                            );
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

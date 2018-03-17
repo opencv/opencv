@@ -87,6 +87,8 @@ allocWSNodes( std::vector<WSNode>& storage )
 
 void cv::watershed( InputArray _src, InputOutputArray _markers )
 {
+    CV_INSTRUMENT_REGION()
+
     // Labels for pixels
     const int IN_QUEUE = -2; // Pixel visited
     const int WSHED = -1; // Pixel belongs to watershed
@@ -332,6 +334,8 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
                                 double sp0, double sr, int max_level,
                                 TermCriteria termcrit )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src0 = _src.getMat();
 
     if( src0.empty() )

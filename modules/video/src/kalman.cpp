@@ -81,6 +81,8 @@ void KalmanFilter::init(int DP, int MP, int CP, int type)
 
 const Mat& KalmanFilter::predict(const Mat& control)
 {
+    CV_INSTRUMENT_REGION()
+
     // update the state: x'(k) = A*x(k)
     statePre = transitionMatrix*statePost;
 
@@ -103,6 +105,8 @@ const Mat& KalmanFilter::predict(const Mat& control)
 
 const Mat& KalmanFilter::correct(const Mat& measurement)
 {
+    CV_INSTRUMENT_REGION()
+
     // temp2 = H*P'(k)
     temp2 = measurementMatrix * errorCovPre;
 

@@ -69,6 +69,8 @@ Ptr<Filter> cv::cuda::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_
 Ptr<Filter> cv::cuda::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 Ptr<Filter> cv::cuda::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
+Ptr<Filter> cv::cuda::createMedianFilter(int srcType, int _windowSize, int _partitions){ throw_no_cuda(); return Ptr<Filter>();}
+
 #else
 
 namespace
@@ -101,13 +103,14 @@ namespace
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
     private:
-        typedef NppStatus (*nppFilterBox_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep,
+        typedef NppStatus (*nppFilterBox8U_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep,
+                                            NppiSize oSizeROI, NppiSize oMaskSize, NppiPoint oAnchor);
+        typedef NppStatus (*nppFilterBox32F_t)(const Npp32f* pSrc, Npp32s nSrcStep, Npp32f* pDst, Npp32s nDstStep,
                                             NppiSize oSizeROI, NppiSize oMaskSize, NppiPoint oAnchor);
 
         Size ksize_;
         Point anchor_;
         int type_;
-        nppFilterBox_t func_;
         int borderMode_;
         Scalar borderVal_;
         GpuMat srcBorder_;
@@ -116,14 +119,10 @@ namespace
     NPPBoxFilter::NPPBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
         ksize_(ksize), anchor_(anchor), type_(srcType), borderMode_(borderMode), borderVal_(borderVal)
     {
-        static const nppFilterBox_t funcs[] = {0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R};
-
-        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 );
+        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_32FC1);
         CV_Assert( dstType == srcType );
 
         normalizeAnchor(anchor_, ksize);
-
-        func_ = funcs[CV_MAT_CN(srcType)];
     }
 
     void NPPBoxFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
@@ -153,10 +152,30 @@ namespace
         oAnchor.x = anchor_.x;
         oAnchor.y = anchor_.y;
 
-        nppSafeCall( func_(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
-                           dst.ptr<Npp8u>(), static_cast<int>(dst.step),
-                           oSizeROI, oMaskSize, oAnchor) );
+        const int depth = CV_MAT_DEPTH(type_);
+        const int cn = CV_MAT_CN(type_);
 
+        switch (depth)
+        {
+        case CV_8U:
+        {
+            static const nppFilterBox8U_t funcs8U[] = { 0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R };
+            const nppFilterBox8U_t func8U = funcs8U[cn];
+            nppSafeCall(func8U(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                oSizeROI, oMaskSize, oAnchor));
+        }
+            break;
+        case CV_32F:
+        {
+            static const nppFilterBox32F_t funcs32F[] = { 0, nppiFilterBox_32f_C1R, 0, 0, 0 };
+            const nppFilterBox32F_t func32F = funcs32F[cn];
+            nppSafeCall(func32F(srcRoi.ptr<Npp32f>(), static_cast<int>(srcRoi.step),
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step),
+                oSizeROI, oMaskSize, oAnchor));
+        }
+            break;
+        }
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
@@ -293,9 +312,8 @@ Ptr<Filter> cv::cuda::createLaplacianFilter(int srcType, int dstType, int ksize,
         {2.0f, 0.0f, 2.0f, 0.0f, -8.0f, 0.0f, 2.0f, 0.0f, 2.0f}
     };
 
-    Mat kernel(3, 3, CV_32FC1, (void*)K[ksize == 3]);
-    if (scale != 1)
-        kernel *= scale;
+    Mat kernel1(3, 3, CV_32FC1, (void*)K[ksize == 3]);
+    Mat kernel = (scale == 1) ? kernel1 : (kernel1 * scale);
 
     return cuda::createLinearFilter(srcType, dstType, kernel, Point(-1,-1), borderMode, borderVal);
 }
@@ -442,7 +460,7 @@ Ptr<Filter> cv::cuda::createDerivFilter(int srcType, int dstType, int dx, int dy
     if (scale != 1)
     {
         // usually the smoothing part is the slowest to compute,
-        // so try to scale it instead of the faster differenciating part
+        // so try to scale it instead of the faster differentiating part
         if (dx == 0)
             kx *= scale;
         else
@@ -506,14 +524,17 @@ namespace
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
     private:
-        typedef NppStatus (*nppMorfFilter_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep, NppiSize oSizeROI,
-                                             const Npp8u* pMask, NppiSize oMaskSize, NppiPoint oAnchor);
+        typedef NppStatus (*nppMorfFilter8u_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep, NppiSize oSizeROI,
+                                               const Npp8u* pMask, NppiSize oMaskSize, NppiPoint oAnchor);
+        typedef NppStatus (*nppMorfFilter32f_t)(const Npp32f* pSrc, Npp32s nSrcStep, Npp32f* pDst, Npp32s nDstStep, NppiSize oSizeROI,
+                                                const Npp8u* pMask, NppiSize oMaskSize, NppiPoint oAnchor);
 
         int type_;
         GpuMat kernel_;
         Point anchor_;
         int iters_;
-        nppMorfFilter_t func_;
+        nppMorfFilter8u_t func8u_;
+        nppMorfFilter32f_t func32f_;
 
         GpuMat srcBorder_;
         GpuMat buf_;
@@ -522,14 +543,19 @@ namespace
     MorphologyFilter::MorphologyFilter(int op, int srcType, InputArray _kernel, Point anchor, int iterations) :
         type_(srcType), anchor_(anchor), iters_(iterations)
     {
-        static const nppMorfFilter_t funcs[2][5] =
+        static const nppMorfFilter8u_t funcs8u[2][5] =
         {
             {0, nppiErode_8u_C1R, 0, 0, nppiErode_8u_C4R },
             {0, nppiDilate_8u_C1R, 0, 0, nppiDilate_8u_C4R }
         };
+        static const nppMorfFilter32f_t funcs32f[2][5] =
+        {
+            {0, nppiErode_32f_C1R, 0, 0, nppiErode_32f_C4R },
+            {0, nppiDilate_32f_C1R, 0, 0, nppiDilate_32f_C4R }
+        };
 
         CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
-        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 );
+        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_32FC1 || srcType == CV_32FC4 );
 
         Mat kernel = _kernel.getMat();
         Size ksize = !kernel.empty() ? _kernel.size() : Size(3, 3);
@@ -560,7 +586,14 @@ namespace
         kernel_ = cuda::createContinuous(kernel.size(), CV_8UC1);
         kernel_.upload(kernel8U);
 
-        func_ = funcs[op][CV_MAT_CN(srcType)];
+        if(srcType == CV_8UC1 || srcType == CV_8UC4)
+        {
+            func8u_ = funcs8u[op][CV_MAT_CN(srcType)];
+        }
+        else if(srcType == CV_32FC1 || srcType == CV_32FC4)
+        {
+            func32f_ = funcs32f[op][CV_MAT_CN(srcType)];
+        }
     }
 
     void MorphologyFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
@@ -599,15 +632,31 @@ namespace
         oAnchor.x = anchor_.x;
         oAnchor.y = anchor_.y;
 
-        nppSafeCall( func_(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
-                           oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
-
-        for(int i = 1; i < iters_; ++i)
+        if (type_ == CV_8UC1 || type_ == CV_8UC4)
         {
-            dst.copyTo(bufRoi, _stream);
+            nppSafeCall( func8u_(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                                 oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
 
-            nppSafeCall( func_(bufRoi.ptr<Npp8u>(), static_cast<int>(bufRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
-                               oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
+            for(int i = 1; i < iters_; ++i)
+            {
+                dst.copyTo(bufRoi, _stream);
+
+                nppSafeCall( func8u_(bufRoi.ptr<Npp8u>(), static_cast<int>(bufRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                                     oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
+            }
+        }
+        else if (type_ == CV_32FC1 || type_ == CV_32FC4)
+        {
+            nppSafeCall( func32f_(srcRoi.ptr<Npp32f>(), static_cast<int>(srcRoi.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step),
+                                  oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
+
+            for(int i = 1; i < iters_; ++i)
+            {
+                dst.copyTo(bufRoi, _stream);
+
+                nppSafeCall( func32f_(bufRoi.ptr<Npp32f>(), static_cast<int>(bufRoi.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step),
+                                      oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
+            }
         }
 
         if (stream == 0)
@@ -993,6 +1042,77 @@ namespace
 Ptr<Filter> cv::cuda::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
     return makePtr<NppColumnSumFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Median Filter
+
+
+
+namespace cv { namespace cuda { namespace device
+{
+    void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist,
+        PtrStepSzi devCoarseHist,int kernel, int partitions, cudaStream_t stream);
+}}}
+
+namespace
+{
+    class MedianFilter : public Filter
+    {
+    public:
+        MedianFilter(int srcType, int _windowSize, int _partitions=128);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        int windowSize;
+        int partitions;
+        GpuMat devHist;
+        GpuMat devCoarseHist;
+    };
+
+    MedianFilter::MedianFilter(int srcType, int _windowSize, int _partitions) :
+        windowSize(_windowSize),partitions(_partitions)
+    {
+        CV_Assert( srcType == CV_8UC1 );
+        CV_Assert(windowSize>=3);
+        CV_Assert(_partitions>=1);
+
+    }
+
+    void MedianFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        using namespace cv::cuda::device;
+
+        GpuMat src = _src.getGpuMat();
+         _dst.create(src.rows, src.cols, src.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        if (partitions>src.rows)
+            partitions=src.rows/2;
+
+        // Kernel needs to be half window size
+        int kernel=windowSize/2;
+
+        CV_Assert(kernel < src.rows);
+        CV_Assert(kernel < src.cols);
+
+        // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
+        int histSize=256, histCoarseSize=8;
+
+        devHist.create(1, src.cols*histSize*partitions, CV_32SC1);
+        devCoarseHist.create(1, src.cols*histCoarseSize*partitions, CV_32SC1);
+
+        devHist.setTo(0, _stream);
+        devCoarseHist.setTo(0, _stream);
+
+        medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions,StreamAccessor::getStream(_stream));
+    }
+}
+
+Ptr<Filter> cv::cuda::createMedianFilter(int srcType, int _windowSize, int _partitions)
+{
+    return makePtr<MedianFilter>(srcType, _windowSize,_partitions);
 }
 
 #endif

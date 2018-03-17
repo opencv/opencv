@@ -39,13 +39,17 @@
 //
 //M*/
 
-#ifndef __OPENCV_HIGHGUI_H__
-#define __OPENCV_HIGHGUI_H__
+#ifndef OPENCV_HIGHGUI_H
+#define OPENCV_HIGHGUI_H
 
 #include "opencv2/core/core_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
+#ifdef HAVE_OPENCV_IMGCODECS
 #include "opencv2/imgcodecs/imgcodecs_c.h"
+#endif
+#ifdef HAVE_OPENCV_VIDEOIO
 #include "opencv2/videoio/videoio_c.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +111,7 @@ enum
     CV_WND_PROP_AUTOSIZE   = 1, //to change/get window's autosize property
     CV_WND_PROP_ASPECTRATIO= 2, //to change/get window's aspectratio property
     CV_WND_PROP_OPENGL     = 3, //to change/get window's opengl support
+    CV_WND_PROP_VISIBLE    = 4,
 
     //These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
     CV_WINDOW_NORMAL       = 0x00000000, //the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
@@ -129,6 +134,9 @@ CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOS
 /* Set and Get Property of the window */
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
 CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
+
+/* Get window image rectangle coordinates, width and height */
+CVAPI(cv::Rect)cvGetWindowImageRect(const char* name);
 
 /* display image within window (highgui windows remember their content) */
 CVAPI(void) cvShowImage( const char* name, const CvArr* image );
@@ -234,7 +242,7 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 #define set_preprocess_func cvSetPreprocessFuncWin32
 #define set_postprocess_func cvSetPostprocessFuncWin32
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 
 CVAPI(void) cvSetPreprocessFuncWin32_(const void* callback);
 CVAPI(void) cvSetPostprocessFuncWin32_(const void* callback);

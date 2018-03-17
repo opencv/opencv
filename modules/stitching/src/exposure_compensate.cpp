@@ -63,7 +63,7 @@ void ExposureCompensator::feed(const std::vector<Point> &corners, const std::vec
 {
     std::vector<std::pair<UMat,uchar> > level_masks;
     for (size_t i = 0; i < masks.size(); ++i)
-        level_masks.push_back(std::make_pair(masks[i], 255));
+        level_masks.push_back(std::make_pair(masks[i], (uchar)255));
     feed(corners, images, level_masks);
 }
 
@@ -147,6 +147,8 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
 
 void GainCompensator::apply(int index, Point /*corner*/, InputOutputArray image, InputArray /*mask*/)
 {
+    CV_INSTRUMENT_REGION()
+
     multiply(image, gains_(index, 0), image);
 }
 
@@ -225,6 +227,8 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
 
 void BlocksGainCompensator::apply(int index, Point /*corner*/, InputOutputArray _image, InputArray /*mask*/)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(_image.type() == CV_8UC3);
 
     UMat u_gain_map;

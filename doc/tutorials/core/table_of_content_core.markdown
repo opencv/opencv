@@ -25,6 +25,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_mat_mask_operations
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
@@ -37,6 +39,8 @@ understanding how to manipulate the images on a pixel level.
     Reading/writing images from file, accessing pixels, primitive operations, visualizing images.
 
 -   @subpage tutorial_adding_images
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -54,6 +58,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_basic_geometric_drawing
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -69,6 +75,8 @@ understanding how to manipulate the images on a pixel level.
     We will draw some *fancy-looking* stuff using OpenCV!
 
 -   @subpage tutorial_discrete_fourier_transform
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -104,3 +112,10 @@ understanding how to manipulate the images on a pixel level.
     *Author:* Elena Gvozdeva
 
     You will see how to use the IPP Async with OpenCV.
+
+
+-   @subpage tutorial_how_to_use_OpenCV_parallel_for_
+
+    *Compatibility:* \>= OpenCV 2.4.3
+
+    You will see how to use the OpenCV parallel_for_ to easily parallelize your code.

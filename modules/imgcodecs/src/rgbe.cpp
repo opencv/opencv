@@ -43,9 +43,7 @@
 #include "precomp.hpp"
 #include "rgbe.hpp"
 #include <math.h>
-#if !defined(__APPLE__)
-#include <malloc.h>
-#endif
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -207,7 +205,7 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
       return rgbe_error(rgbe_read_error,NULL);
     if (buf[0] == '\n') // end of the header
       break;
-    else if (buf[0] == '#') // commment
+    else if (buf[0] == '#') // comment
       continue;
     else if (strcmp(buf,"FORMAT=32-bit_rle_rgbe\n") == 0)
       hasFormat = true;

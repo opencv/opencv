@@ -38,8 +38,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H
+#define OPENCV_PRECOMP_H
 
 #include "opencv2/core.hpp"
 #include "old_ml.hpp"
@@ -257,7 +257,7 @@ CvMat* icvGenerateRandomClusterCenters( int seed,
 /* Fills the <labels> using <probs> by choosing the maximal probability. Outliers are
    fixed by <oulier_tresh> and have cluster label (-1). Function also controls that there
    weren't "empty" clusters by filling empty clusters with the maximal probability vector.
-   If probs_sums != NULL, filles it with the sums of probabilities for each sample (it is
+   If probs_sums != NULL, fills it with the sums of probabilities for each sample (it is
    useful for normalizing probabilities' matrice of FCM) */
 void icvFindClusterLabels( const CvMat* probs, float outlier_thresh, float r,
                            const CvMat* labels );

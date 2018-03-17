@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 /*static int
 cvTsPointConvexPolygon( CvPoint2D32f pt, CvPoint2D32f* v, int n )
@@ -1017,6 +1016,62 @@ _exit_:
     return code;
 }
 
+/****************************************************************************************\
+*                                 MinEnclosingCircle Test 2                              *
+\****************************************************************************************/
+
+class CV_MinCircleTest2 : public CV_BaseShapeDescrTest
+{
+public:
+    CV_MinCircleTest2();
+protected:
+    RNG rng;
+    void run_func(void);
+    int validate_test_results( int test_case_idx );
+    float delta;
+};
+
+
+CV_MinCircleTest2::CV_MinCircleTest2()
+{
+    rng = ts->get_rng();
+}
+
+
+void CV_MinCircleTest2::run_func()
+{
+    Point2f center = Point2f(rng.uniform(0.0f, 1000.0f), rng.uniform(0.0f, 1000.0f));;
+    float radius = rng.uniform(0.0f, 500.0f);
+    float angle = (float)rng.uniform(0.0f, (float)(CV_2PI));
+    vector<Point2f> pts;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    angle += (float)CV_PI;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    float radius2 = radius * radius;
+    float x = rng.uniform(center.x - radius, center.x + radius);
+    float deltaX = x - center.x;
+    float upperBoundY = sqrt(radius2 - deltaX * deltaX);
+    float y = rng.uniform(center.y - upperBoundY, center.y + upperBoundY);
+    pts.push_back(Point2f(x, y));
+    // Find the minimum area enclosing circle
+    Point2f calcCenter;
+    float calcRadius;
+    minEnclosingCircle(pts, calcCenter, calcRadius);
+    delta = (float)cv::norm(calcCenter - center) + abs(calcRadius - radius);
+}
+
+int CV_MinCircleTest2::validate_test_results( int test_case_idx )
+{
+    float eps = 1.0F;
+    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
+    if (delta > eps)
+    {
+        ts->printf( cvtest::TS::LOG, "Delta center and calcCenter > %f\n", eps );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+        ts->set_failed_test_info( code );
+    }
+    return code;
+}
 
 /****************************************************************************************\
 *                                   Perimeter Test                                     *
@@ -1905,6 +1960,7 @@ TEST(Imgproc_ConvexHull, accuracy) { CV_ConvHullTest test; test.safe_run(); }
 TEST(Imgproc_MinAreaRect, accuracy) { CV_MinAreaRectTest test; test.safe_run(); }
 TEST(Imgproc_MinTriangle, accuracy) { CV_MinTriangleTest test; test.safe_run(); }
 TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
+TEST(Imgproc_MinCircle2, accuracy) { CV_MinCircleTest2 test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeter, accuracy) { CV_PerimeterTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, parallel) { CV_FitEllipseParallelTest test; test.safe_run(); }
@@ -1913,4 +1969,62 @@ TEST(Imgproc_ContourMoments, accuracy) { CV_ContourMomentsTest test; test.safe_r
 TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
 
+
+
+PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
+{
+public:
+    int start_index;
+    bool clockwise;
+
+    Mat contour;
+
+    virtual void SetUp()
+    {
+        clockwise = GET_PARAM(0);
+        start_index = GET_PARAM(1);
+
+        const int N = 11;
+        const Point2i points[N] = {
+            Point2i(154, 408),
+            Point2i(45, 223),
+            Point2i(115, 275), // inner
+            Point2i(104, 166),
+            Point2i(154, 256), // inner
+            Point2i(169, 144),
+            Point2i(185, 256), // inner
+            Point2i(235, 170),
+            Point2i(240, 320), // inner
+            Point2i(330, 287),
+            Point2i(224, 390)
+        };
+
+        contour = Mat(N, 1, CV_32SC2);
+        for (int i = 0; i < N; i++)
+        {
+            contour.at<Point2i>(i) = (!clockwise) // image and convexHull coordinate systems are different
+                    ? points[(start_index + i) % N]
+                    : points[N - 1 - ((start_index + i) % N)];
+        }
+    }
+};
+
+TEST_P(ConvexityDefects_regression_5908, simple)
+{
+    std::vector<int> hull;
+    cv::convexHull(contour, hull, clockwise, false);
+
+    std::vector<Vec4i> result;
+    cv::convexityDefects(contour, hull, result);
+
+    EXPECT_EQ(4, (int)result.size());
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
+        testing::Combine(
+                testing::Bool(),
+                testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+        ));
+
+}} // namespace
 /* End of file. */

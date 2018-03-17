@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TRACKING_HPP__
-#define __OPENCV_TRACKING_HPP__
+#ifndef OPENCV_TRACKING_HPP
+#define OPENCV_TRACKING_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
@@ -78,7 +78,9 @@ See the OpenCV sample camshiftdemo.c that tracks colored objects.
  */
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
-
+/** @example camshiftdemo.cpp
+An example using the mean-shift tracking algorithm
+*/
 /** @brief Finds an object on a back projection image.
 
 @param probImage Back projection of the object histogram. See calcBackProject for details.
@@ -97,8 +99,6 @@ projection and remove the noise. For example, you can do this by retrieving conn
 with findContours , throwing away contours with small area ( contourArea ), and rendering the
 remaining contours with drawContours.
 
-@note
--   A mean-shift tracking sample can be found at opencv_source_code/samples/cpp/camshiftdemo.cpp
  */
 CV_EXPORTS_W int meanShift( InputArray probImage, CV_IN_OUT Rect& window, TermCriteria criteria );
 
@@ -123,6 +123,9 @@ CV_EXPORTS_W int buildOpticalFlowPyramid( InputArray img, OutputArrayOfArrays py
                                           int derivBorder = BORDER_CONSTANT,
                                           bool tryReuseInputImage = true );
 
+/** @example lkdemo.cpp
+An example using the Lucas-Kanade optical flow algorithm
+ */
 /** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with
 pyramids.
 
@@ -226,7 +229,7 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, In
 @param dst Second input 2D point set of the same size and the same type as A, or another image.
 @param fullAffine If true, the function finds an optimal affine transformation with no additional
 restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is
-limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
+limited to combinations of translation, rotation, and uniform scaling (4 degrees of freedom).
 
 The function finds an optimal affine transform *[A|b]* (a 2 x 3 floating-point matrix) that
 approximates best the affine transformation between:
@@ -245,7 +248,7 @@ where src[i] and dst[i] are the i-th points in src and dst, respectively
 when fullAffine=false.
 
 @sa
-getAffineTransform, getPerspectiveTransform, findHomography
+estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
@@ -257,6 +260,10 @@ enum
     MOTION_AFFINE      = 2,
     MOTION_HOMOGRAPHY  = 3
 };
+
+/** @example image_alignment.cpp
+An example using the image alignment ECC algorithm
+ */
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08 .
 
@@ -297,7 +304,7 @@ row is ignored.
 Unlike findHomography and estimateRigidTransform, the function findTransformECC implements an
 area-based alignment that builds on intensity similarities. In essence, the function updates the
 initial transformation that roughly aligns the images. If this information is missing, the identity
-warp (unity matrix) should be given as input. Note that if images undergo strong
+warp (unity matrix) is used as an initialization. Note that if images undergo strong
 displacements/rotations, an initial transformation that roughly aligns the images is necessary
 (e.g., a simple euclidean/similarity transform that allows for the images showing the same image
 content approximately). Use inverse warping in the second image to take an image close to the first
@@ -306,32 +313,27 @@ sample image_alignment.cpp that demonstrates the use of the function. Note that 
 an exception if algorithm does not converges.
 
 @sa
-estimateRigidTransform, findHomography
+estimateAffine2D, estimateAffinePartial2D, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
                                       TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
                                       InputArray inputMask = noArray());
 
+/** @example kalman.cpp
+An example using the standard Kalman filter
+*/
 /** @brief Kalman filter class.
 
 The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>,
 @cite Welch95 . However, you can modify transitionMatrix, controlMatrix, and measurementMatrix to get
-an extended Kalman filter functionality. See the OpenCV sample kalman.cpp.
-
-@note
-
--   An example using the standard Kalman filter can be found at
-    opencv_source_code/samples/cpp/kalman.cpp
+an extended Kalman filter functionality.
+@note In C API when CvKalman\* kalmanFilter structure is not needed anymore, it should be released
+with cvReleaseKalman(&kalmanFilter)
  */
 class CV_EXPORTS_W KalmanFilter
 {
 public:
-    /** @brief The constructors.
-
-    @note In C API when CvKalman\* kalmanFilter structure is not needed anymore, it should be released
-    with cvReleaseKalman(&kalmanFilter)
-     */
     CV_WRAP KalmanFilter();
     /** @overload
     @param dynamParams Dimensionality of the state.
@@ -397,6 +399,27 @@ public:
     CV_WRAP virtual void collectGarbage() = 0;
 };
 
+/** @brief Base interface for sparse optical flow algorithms.
+ */
+class CV_EXPORTS_W SparseOpticalFlow : public Algorithm
+{
+public:
+    /** @brief Calculates a sparse optical flow.
+
+    @param prevImg First input image.
+    @param nextImg Second input image of the same size and the same type as prevImg.
+    @param prevPts Vector of 2D points for which the flow needs to be found.
+    @param nextPts Output vector of 2D points containing the calculated new positions of input features in the second image.
+    @param status Output status vector. Each element of the vector is set to 1 if the
+                  flow for the corresponding features has been found. Otherwise, it is set to 0.
+    @param err Optional output vector that contains error response for each point (inverse confidence).
+     */
+    CV_WRAP virtual void calc(InputArray prevImg, InputArray nextImg,
+                      InputArray prevPts, InputOutputArray nextPts,
+                      OutputArray status,
+                      OutputArray err = cv::noArray()) = 0;
+};
+
 /** @brief "Dual TV L1" Optical Flow Algorithm.
 
 The class implements the "Dual TV L1" optical flow algorithm described in @cite Zach2007 and
@@ -444,69 +467,159 @@ class CV_EXPORTS_W DualTVL1OpticalFlow : public DenseOpticalFlow
 public:
     //! @brief Time step of the numerical scheme
     /** @see setTau */
-    virtual double getTau() const = 0;
+    CV_WRAP virtual double getTau() const = 0;
     /** @copybrief getTau @see getTau */
-    virtual void setTau(double val) = 0;
+    CV_WRAP virtual void setTau(double val) = 0;
     //! @brief Weight parameter for the data term, attachment parameter
     /** @see setLambda */
-    virtual double getLambda() const = 0;
+    CV_WRAP virtual double getLambda() const = 0;
     /** @copybrief getLambda @see getLambda */
-    virtual void setLambda(double val) = 0;
+    CV_WRAP virtual void setLambda(double val) = 0;
     //! @brief Weight parameter for (u - v)^2, tightness parameter
     /** @see setTheta */
-    virtual double getTheta() const = 0;
+    CV_WRAP virtual double getTheta() const = 0;
     /** @copybrief getTheta @see getTheta */
-    virtual void setTheta(double val) = 0;
+    CV_WRAP virtual void setTheta(double val) = 0;
     //! @brief coefficient for additional illumination variation term
     /** @see setGamma */
-    virtual double getGamma() const = 0;
+    CV_WRAP virtual double getGamma() const = 0;
     /** @copybrief getGamma @see getGamma */
-    virtual void setGamma(double val) = 0;
+    CV_WRAP virtual void setGamma(double val) = 0;
     //! @brief Number of scales used to create the pyramid of images
     /** @see setScalesNumber */
-    virtual int getScalesNumber() const = 0;
+    CV_WRAP virtual int getScalesNumber() const = 0;
     /** @copybrief getScalesNumber @see getScalesNumber */
-    virtual void setScalesNumber(int val) = 0;
+    CV_WRAP virtual void setScalesNumber(int val) = 0;
     //! @brief Number of warpings per scale
     /** @see setWarpingsNumber */
-    virtual int getWarpingsNumber() const = 0;
+    CV_WRAP virtual int getWarpingsNumber() const = 0;
     /** @copybrief getWarpingsNumber @see getWarpingsNumber */
-    virtual void setWarpingsNumber(int val) = 0;
+    CV_WRAP virtual void setWarpingsNumber(int val) = 0;
     //! @brief Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
     /** @see setEpsilon */
-    virtual double getEpsilon() const = 0;
+    CV_WRAP virtual double getEpsilon() const = 0;
     /** @copybrief getEpsilon @see getEpsilon */
-    virtual void setEpsilon(double val) = 0;
+    CV_WRAP virtual void setEpsilon(double val) = 0;
     //! @brief Inner iterations (between outlier filtering) used in the numerical scheme
     /** @see setInnerIterations */
-    virtual int getInnerIterations() const = 0;
+    CV_WRAP virtual int getInnerIterations() const = 0;
     /** @copybrief getInnerIterations @see getInnerIterations */
-    virtual void setInnerIterations(int val) = 0;
+    CV_WRAP virtual void setInnerIterations(int val) = 0;
     //! @brief Outer iterations (number of inner loops) used in the numerical scheme
     /** @see setOuterIterations */
-    virtual int getOuterIterations() const = 0;
+    CV_WRAP virtual int getOuterIterations() const = 0;
     /** @copybrief getOuterIterations @see getOuterIterations */
-    virtual void setOuterIterations(int val) = 0;
+    CV_WRAP virtual void setOuterIterations(int val) = 0;
     //! @brief Use initial flow
     /** @see setUseInitialFlow */
-    virtual bool getUseInitialFlow() const = 0;
+    CV_WRAP virtual bool getUseInitialFlow() const = 0;
     /** @copybrief getUseInitialFlow @see getUseInitialFlow */
-    virtual void setUseInitialFlow(bool val) = 0;
+    CV_WRAP virtual void setUseInitialFlow(bool val) = 0;
     //! @brief Step between scales (<1)
     /** @see setScaleStep */
-    virtual double getScaleStep() const = 0;
+    CV_WRAP virtual double getScaleStep() const = 0;
     /** @copybrief getScaleStep @see getScaleStep */
-    virtual void setScaleStep(double val) = 0;
+    CV_WRAP virtual void setScaleStep(double val) = 0;
     //! @brief Median filter kernel size (1 = no filter) (3 or 5)
     /** @see setMedianFiltering */
-    virtual int getMedianFiltering() const = 0;
+    CV_WRAP virtual int getMedianFiltering() const = 0;
     /** @copybrief getMedianFiltering @see getMedianFiltering */
-    virtual void setMedianFiltering(int val) = 0;
+    CV_WRAP virtual void setMedianFiltering(int val) = 0;
+
+    /** @brief Creates instance of cv::DualTVL1OpticalFlow*/
+    CV_WRAP static Ptr<DualTVL1OpticalFlow> create(
+                                            double tau = 0.25,
+                                            double lambda = 0.15,
+                                            double theta = 0.3,
+                                            int nscales = 5,
+                                            int warps = 5,
+                                            double epsilon = 0.01,
+                                            int innnerIterations = 30,
+                                            int outerIterations = 10,
+                                            double scaleStep = 0.8,
+                                            double gamma = 0.0,
+                                            int medianFiltering = 5,
+                                            bool useInitialFlow = false);
 };
 
 /** @brief Creates instance of cv::DenseOpticalFlow
 */
 CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
+
+/** @brief Class computing a dense optical flow using the Gunnar Farneback's algorithm.
+ */
+class CV_EXPORTS_W FarnebackOpticalFlow : public DenseOpticalFlow
+{
+public:
+    CV_WRAP virtual int getNumLevels() const = 0;
+    CV_WRAP virtual void setNumLevels(int numLevels) = 0;
+
+    CV_WRAP virtual double getPyrScale() const = 0;
+    CV_WRAP virtual void setPyrScale(double pyrScale) = 0;
+
+    CV_WRAP virtual bool getFastPyramids() const = 0;
+    CV_WRAP virtual void setFastPyramids(bool fastPyramids) = 0;
+
+    CV_WRAP virtual int getWinSize() const = 0;
+    CV_WRAP virtual void setWinSize(int winSize) = 0;
+
+    CV_WRAP virtual int getNumIters() const = 0;
+    CV_WRAP virtual void setNumIters(int numIters) = 0;
+
+    CV_WRAP virtual int getPolyN() const = 0;
+    CV_WRAP virtual void setPolyN(int polyN) = 0;
+
+    CV_WRAP virtual double getPolySigma() const = 0;
+    CV_WRAP virtual void setPolySigma(double polySigma) = 0;
+
+    CV_WRAP virtual int getFlags() const = 0;
+    CV_WRAP virtual void setFlags(int flags) = 0;
+
+    CV_WRAP static Ptr<FarnebackOpticalFlow> create(
+            int numLevels = 5,
+            double pyrScale = 0.5,
+            bool fastPyramids = false,
+            int winSize = 13,
+            int numIters = 10,
+            int polyN = 5,
+            double polySigma = 1.1,
+            int flags = 0);
+};
+
+
+/** @brief Class used for calculating a sparse optical flow.
+
+The class can calculate an optical flow for a sparse feature set using the
+iterative Lucas-Kanade method with pyramids.
+
+@sa calcOpticalFlowPyrLK
+
+*/
+class CV_EXPORTS_W SparsePyrLKOpticalFlow : public SparseOpticalFlow
+{
+public:
+    CV_WRAP virtual Size getWinSize() const = 0;
+    CV_WRAP virtual void setWinSize(Size winSize) = 0;
+
+    CV_WRAP virtual int getMaxLevel() const = 0;
+    CV_WRAP virtual void setMaxLevel(int maxLevel) = 0;
+
+    CV_WRAP virtual TermCriteria getTermCriteria() const = 0;
+    CV_WRAP virtual void setTermCriteria(TermCriteria& crit) = 0;
+
+    CV_WRAP virtual int getFlags() const = 0;
+    CV_WRAP virtual void setFlags(int flags) = 0;
+
+    CV_WRAP virtual double getMinEigThreshold() const = 0;
+    CV_WRAP virtual void setMinEigThreshold(double minEigThreshold) = 0;
+
+    CV_WRAP static Ptr<SparsePyrLKOpticalFlow> create(
+            Size winSize = Size(21, 21),
+            int maxLevel = 3, TermCriteria crit =
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
+            int flags = 0,
+            double minEigThreshold = 1e-4);
+};
 
 //! @} video_track
 

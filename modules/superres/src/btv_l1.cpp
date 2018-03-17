@@ -447,17 +447,19 @@ namespace
     {
         CV_OCL_RUN(_dst.isUMat(),
                    ocl_calcBtvRegularization(_src, _dst, btvKernelSize, ubtvWeights))
-        (void)ubtvWeights;
-
-        typedef void (*func_t)(InputArray _src, OutputArray _dst, int btvKernelSize, const std::vector<float>& btvWeights);
-        static const func_t funcs[] =
+        CV_UNUSED(ubtvWeights);
+        if (_src.channels() == 1)
         {
-            0, calcBtvRegularizationImpl<float>, 0, calcBtvRegularizationImpl<Point3f>, 0
-        };
-
-        const func_t func = funcs[_src.channels()];
-        CV_Assert(func != 0);
-        func(_src, _dst, btvKernelSize, btvWeights);
+            calcBtvRegularizationImpl<float>(_src, _dst, btvKernelSize, btvWeights);
+        }
+        else if (_src.channels() == 3)
+        {
+            calcBtvRegularizationImpl<Point3f>(_src, _dst, btvKernelSize, btvWeights);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "Unsupported number of channels in _src");
+        }
     }
 
     class BTVL1_Base : public cv::superres::SuperResolution
@@ -658,6 +660,8 @@ namespace
     void BTVL1_Base::process(InputArrayOfArrays _src, OutputArray _dst, InputArrayOfArrays _forwardMotions,
                              InputArrayOfArrays _backwardMotions, int baseIdx)
     {
+        CV_INSTRUMENT_REGION()
+
         CV_Assert( scale_ > 1 );
         CV_Assert( iterations_ > 0 );
         CV_Assert( tau_ > 0.0 );
@@ -852,6 +856,9 @@ namespace
     BTVL1::BTVL1()
     {
         temporalAreaRadius_ = 4;
+        procPos_ = 0;
+        outPos_ = 0;
+        storePos_ = 0;
     }
 
     void BTVL1::collectGarbage()
@@ -954,6 +961,8 @@ namespace
 
     void BTVL1::processImpl(Ptr<FrameSource>& frameSource, OutputArray _output)
     {
+        CV_INSTRUMENT_REGION()
+
         if (outPos_ >= storePos_)
         {
             _output.release();
@@ -1003,6 +1012,8 @@ namespace
 
     void BTVL1::readNextFrame(Ptr<FrameSource>& frameSource)
     {
+        CV_INSTRUMENT_REGION()
+
         frameSource->nextFrame(curFrame_);
         if (curFrame_.empty())
             return;
@@ -1065,6 +1076,8 @@ namespace
 
     void BTVL1::processFrame(int idx)
     {
+        CV_INSTRUMENT_REGION()
+
         CV_OCL_RUN(isUmat_,
                    ocl_processFrame(idx))
 

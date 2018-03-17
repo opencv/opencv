@@ -46,6 +46,7 @@
 //#define DEBUG_CIRCLES
 
 #ifdef DEBUG_CIRCLES
+#  include <iostream>
 #  include "opencv2/opencv_modules.hpp"
 #  ifdef HAVE_OPENCV_HIGHGUI
 #    include "opencv2/highgui.hpp"
@@ -116,6 +117,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
         Mat tmpRow = dists.row(minIdx);
         Mat tmpCol = dists.col(minIdx);
         cv::min(dists.row(minLoc.x), dists.row(minLoc.y), tmpRow);
+        tmpRow = tmpRow.t();
         tmpRow.copyTo(tmpCol);
 
         clusters[minIdx].splice(clusters[minIdx].end(), clusters[maxIdx]);
@@ -129,7 +131,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
     }
 
     patternPoints.reserve(clusters[patternClusterIdx].size());
-    for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end(); it++)
+    for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end();++it)
     {
         patternPoints.push_back(points[*it]);
     }
@@ -289,7 +291,7 @@ void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f>
 
 #ifdef DEBUG_CIRCLES
   drawPoints(outsideCorners, cornersImage, 2, Scalar(128));
-  imshow("corners", outsideCornersImage);
+  imshow("corners", cornersImage);
 #endif
 }
 
@@ -320,7 +322,7 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
 
   std::vector<Point2f>::const_iterator firstCornerIterator = std::find(hull2f.begin(), hull2f.end(), firstCorner);
   sortedCorners.clear();
-  for(std::vector<Point2f>::const_iterator it = firstCornerIterator; it != hull2f.end(); it++)
+  for(std::vector<Point2f>::const_iterator it = firstCornerIterator; it != hull2f.end();++it)
   {
     std::vector<Point2f>::const_iterator itCorners = std::find(corners.begin(), corners.end(), *it);
     if(itCorners != corners.end())
@@ -328,7 +330,7 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
       sortedCorners.push_back(*it);
     }
   }
-  for(std::vector<Point2f>::const_iterator it = hull2f.begin(); it != firstCornerIterator; it++)
+  for(std::vector<Point2f>::const_iterator it = hull2f.begin(); it != firstCornerIterator;++it)
   {
     std::vector<Point2f>::const_iterator itCorners = std::find(corners.begin(), corners.end(), *it);
     if(itCorners != corners.end())
@@ -391,6 +393,12 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
 
 void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
 {
+#ifndef HAVE_OPENCV_FLANN
+  (void)patternPoints;
+  (void)rectifiedPatternPoints;
+  (void)centers;
+  CV_Error(Error::StsNotImplemented, "The desired functionality requires flann module, which was disabled.");
+#else
   flann::LinearIndexParams flannIndexParams;
   flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1), flannIndexParams);
 
@@ -417,13 +425,14 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
       if(distsbuf[0] > maxRectifiedDistance)
       {
 #ifdef DEBUG_CIRCLES
-        cout << "Pattern not detected: too large rectified distance" << endl;
+        std::cout << "Pattern not detected: too large rectified distance" << std::endl;
 #endif
         centers.clear();
         return;
       }
     }
   }
+#endif
 }
 
 Graph::Graph(size_t n)
@@ -466,11 +475,10 @@ void Graph::removeEdge(size_t id1, size_t id2)
 
 bool Graph::areVerticesAdjacent(size_t id1, size_t id2) const
 {
-  CV_Assert( doesVertexExist( id1 ) );
-  CV_Assert( doesVertexExist( id2 ) );
-
   Vertices::const_iterator it = vertices.find(id1);
-  return it->second.neighbors.find(id2) != it->second.neighbors.end();
+  CV_Assert(it != vertices.end());
+  const Neighbors & neighbors = it->second.neighbors;
+  return neighbors.find(id2) != neighbors.end();
 }
 
 size_t Graph::getVerticesCount() const
@@ -480,9 +488,8 @@ size_t Graph::getVerticesCount() const
 
 size_t Graph::getDegree(size_t id) const
 {
-  CV_Assert( doesVertexExist(id) );
-
   Vertices::const_iterator it = vertices.find(id);
+  CV_Assert( it != vertices.end() );
   return it->second.neighbors.size();
 }
 
@@ -493,21 +500,21 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
   const int n = (int)getVerticesCount();
   distanceMatrix.create(n, n, CV_32SC1);
   distanceMatrix.setTo(infinity);
-  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end(); it1++)
+  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end();++it1)
   {
     distanceMatrix.at<int> ((int)it1->first, (int)it1->first) = 0;
-    for (Neighbors::const_iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end(); it2++)
+    for (Neighbors::const_iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end();++it2)
     {
       CV_Assert( it1->first != *it2 );
       distanceMatrix.at<int> ((int)it1->first, (int)*it2) = edgeWeight;
     }
   }
 
-  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end(); it1++)
+  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end();++it1)
   {
-    for (Vertices::const_iterator it2 = vertices.begin(); it2 != vertices.end(); it2++)
+    for (Vertices::const_iterator it2 = vertices.begin(); it2 != vertices.end();++it2)
     {
-      for (Vertices::const_iterator it3 = vertices.begin(); it3 != vertices.end(); it3++)
+      for (Vertices::const_iterator it3 = vertices.begin(); it3 != vertices.end();++it3)
       {
       int i1 = (int)it1->first, i2 = (int)it2->first, i3 = (int)it3->first;
         int val1 = distanceMatrix.at<int> (i2, i3);
@@ -527,9 +534,8 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
 
 const Graph::Neighbors& Graph::getNeighbors(size_t id) const
 {
-  CV_Assert( doesVertexExist(id) );
-
   Vertices::const_iterator it = vertices.find(id);
+  CV_Assert( it != vertices.end() );
   return it->second.neighbors;
 }
 
@@ -551,14 +557,21 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
   keypointScale = 1;
 
   minGraphConfidence = 9;
-  vertexGain = 2;
-  vertexPenalty = -5;
+  vertexGain = 1;
+  vertexPenalty = -0.6f;
   edgeGain = 1;
-  edgePenalty = -5;
-  existingVertexGain = 0;
+  edgePenalty = -0.6f;
+  existingVertexGain = 10000;
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
+}
+
+CirclesGridFinderParameters2::CirclesGridFinderParameters2()
+: CirclesGridFinderParameters()
+{
+    squareSize = 1.0f;
+    maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,
@@ -607,7 +620,7 @@ bool CirclesGridFinder::findHoles()
     }
 
     default:
-      CV_Error(Error::StsBadArg, "Unkown pattern type");
+      CV_Error(Error::StsBadArg, "Unknown pattern type");
   }
   return (isDetectionCorrect());
   //CV_Error( 0, "Detection is not correct" );
@@ -618,10 +631,10 @@ void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vect
   for (size_t i = 0; i < rng.getVerticesCount(); i++)
   {
     Graph::Neighbors neighbors1 = rng.getNeighbors(i);
-    for (Graph::Neighbors::iterator it1 = neighbors1.begin(); it1 != neighbors1.end(); it1++)
+    for (Graph::Neighbors::iterator it1 = neighbors1.begin(); it1 != neighbors1.end(); ++it1)
     {
       Graph::Neighbors neighbors2 = rng.getNeighbors(*it1);
-      for (Graph::Neighbors::iterator it2 = neighbors2.begin(); it2 != neighbors2.end(); it2++)
+      for (Graph::Neighbors::iterator it2 = neighbors2.begin(); it2 != neighbors2.end(); ++it2)
       {
         if (i < *it2)
         {
@@ -839,7 +852,11 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
   //Mat H = findHomography( Mat( corners ), Mat( dstPoints ) );
 
   if (H.empty())
+  {
       H = Mat::zeros(3, 3, CV_64FC1);
+      warpedKeypoints.clear();
+      return H;
+  }
 
   std::vector<Point2f> srcKeypoints;
   for (size_t i = 0; i < keypoints.size(); i++)
@@ -1531,7 +1548,7 @@ void CirclesGridFinder::getCornerSegments(const std::vector<std::vector<size_t> 
   if (!isClockwise)
   {
 #ifdef DEBUG_CIRCLES
-    cout << "Corners are counterclockwise" << endl;
+    std::cout << "Corners are counterclockwise" << std::endl;
 #endif
     std::reverse(segments.begin(), segments.end());
     std::reverse(cornerIndices.begin(), cornerIndices.end());

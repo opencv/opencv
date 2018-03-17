@@ -23,8 +23,7 @@ Build OpenCV with HAL replacement
 2. Go to the created folder and run cmake:
     ```
     cmake \
-        -DOPENCV_HAL_HEADERS="<opencv-src>/samples/hal/slow_hal/impl.hpp" \
-        -DOPENCV_HAL_LIBS="<home-dir>/my-hal-build/libslow_hal.a" \
+        -DOpenCV_HAL_DIR="<home-dir>/my-hal-build/" \
         <opencv-src>
     ```
 3. Run make (or `make opencv_perf_core` to build the demonstration test executable only)

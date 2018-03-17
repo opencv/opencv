@@ -46,26 +46,26 @@
 #include <vector>
 #include <algorithm>
 
-//#define DEBUG_WINDOWS
+using namespace cv;
+using namespace std;
 
-#if defined(DEBUG_WINDOWS)
-#  include "opencv2/opencv_modules.hpp"
-#  ifdef HAVE_OPENCV_HIGHGUI
-#    include "opencv2/highgui.hpp"
-#  else
-#    undef DEBUG_WINDOWS
-#  endif
-#endif
-
-static void icvGetQuadrangleHypotheses(CvSeq* contours, std::vector<std::pair<float, int> >& quads, int class_id)
+static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point > > & contours, const std::vector< cv::Vec4i > & hierarchy, std::vector<std::pair<float, int> >& quads, int class_id)
 {
     const float min_aspect_ratio = 0.3f;
     const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
 
-    for(CvSeq* seq = contours; seq != NULL; seq = seq->h_next)
+    typedef std::vector< std::vector< cv::Point > >::const_iterator iter_t;
+    iter_t i;
+    for (i = contours.begin(); i != contours.end(); ++i)
     {
-        CvBox2D box = cvMinAreaRect2(seq);
+        const iter_t::difference_type idx = i - contours.begin();
+        if (hierarchy.at(idx)[3] != -1)
+            continue; // skip holes
+
+        const std::vector< cv::Point > & c = *i;
+        cv::RotatedRect box = cv::minAreaRect(c);
+
         float box_size = MAX(box.size.width, box.size.height);
         if(box_size < min_box_size)
         {
@@ -96,6 +96,64 @@ inline bool less_pred(const std::pair<float, int>& p1, const std::pair<float, in
     return p1.first < p2.first;
 }
 
+static void fillQuads(Mat & white, Mat & black, double white_thresh, double black_thresh, vector<pair<float, int> > & quads)
+{
+    Mat thresh;
+    {
+        vector< vector<Point> > contours;
+        vector< Vec4i > hierarchy;
+        threshold(white, thresh, white_thresh, 255, THRESH_BINARY);
+        findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 1);
+    }
+
+    {
+        vector< vector<Point> > contours;
+        vector< Vec4i > hierarchy;
+        threshold(black, thresh, black_thresh, 255, THRESH_BINARY_INV);
+        findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 0);
+    }
+}
+
+static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
+{
+    const size_t min_quads_count = size.width*size.height/2;
+    std::sort(quads.begin(), quads.end(), less_pred);
+
+    // now check if there are many hypotheses with similar sizes
+    // do this by floodfill-style algorithm
+    const float size_rel_dev = 0.4f;
+
+    for(size_t i = 0; i < quads.size(); i++)
+    {
+        size_t j = i + 1;
+        for(; j < quads.size(); j++)
+        {
+            if(quads[j].first/quads[i].first > 1.0f + size_rel_dev)
+            {
+                break;
+            }
+        }
+
+        if(j + 1 > min_quads_count + i)
+        {
+            // check the number of black and white squares
+            std::vector<int> counts;
+            countClasses(quads, i, j, counts);
+            const int black_count = cvRound(ceil(size.width/2.0)*ceil(size.height/2.0));
+            const int white_count = cvRound(floor(size.width/2.0)*floor(size.height/2.0));
+            if(counts[0] < black_count*0.75 ||
+               counts[1] < white_count*0.75)
+            {
+                continue;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 // does a fast check if a chessboard is in the input image. This is a workaround to
 // a problem of cvFindChessboardCorners being slow on images with no chessboard
 // - src: input image
@@ -104,104 +162,64 @@ inline bool less_pred(const std::pair<float, int>& p1, const std::pair<float, in
 // 0 if there is no chessboard, -1 in case of error
 int cvCheckChessboard(IplImage* src, CvSize size)
 {
-    if(src->nChannels > 1)
-    {
-        cvError(CV_BadNumChannels, "cvCheckChessboard", "supports single-channel images only",
-                __FILE__, __LINE__);
-    }
+    cv::Mat img = cv::cvarrToMat(src);
+    return checkChessboard(img, size);
+}
 
-    if(src->depth != 8)
-    {
-        cvError(CV_BadDepth, "cvCheckChessboard", "supports depth=8 images only",
-                __FILE__, __LINE__);
-    }
+int checkChessboard(const cv::Mat & img, const cv::Size & size)
+{
+    CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
 
     const int erosion_count = 1;
     const float black_level = 20.f;
     const float white_level = 130.f;
     const float black_white_gap = 70.f;
 
-#if defined(DEBUG_WINDOWS)
-    cvNamedWindow("1", 1);
-    cvShowImage("1", src);
-    cvWaitKey(0);
-#endif //DEBUG_WINDOWS
-
-    CvMemStorage* storage = cvCreateMemStorage();
-
-    IplImage* white = cvCloneImage(src);
-    IplImage* black = cvCloneImage(src);
-
-    cvErode(white, white, NULL, erosion_count);
-    cvDilate(black, black, NULL, erosion_count);
-    IplImage* thresh = cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1);
+    Mat white;
+    Mat black;
+    erode(img, white, Mat(), Point(-1, -1), erosion_count);
+    dilate(img, black, Mat(), Point(-1, -1), erosion_count);
 
     int result = 0;
     for(float thresh_level = black_level; thresh_level < white_level && !result; thresh_level += 20.0f)
     {
-        cvThreshold(white, thresh, thresh_level + black_white_gap, 255, CV_THRESH_BINARY);
-
-#if defined(DEBUG_WINDOWS)
-        cvShowImage("1", thresh);
-        cvWaitKey(0);
-#endif //DEBUG_WINDOWS
-
-        CvSeq* first = 0;
-        std::vector<std::pair<float, int> > quads;
-        cvFindContours(thresh, storage, &first, sizeof(CvContour), CV_RETR_CCOMP);
-        icvGetQuadrangleHypotheses(first, quads, 1);
-
-        cvThreshold(black, thresh, thresh_level, 255, CV_THRESH_BINARY_INV);
-
-#if defined(DEBUG_WINDOWS)
-        cvShowImage("1", thresh);
-        cvWaitKey(0);
-#endif //DEBUG_WINDOWS
-
-        cvFindContours(thresh, storage, &first, sizeof(CvContour), CV_RETR_CCOMP);
-        icvGetQuadrangleHypotheses(first, quads, 0);
-
-        const size_t min_quads_count = size.width*size.height/2;
-        std::sort(quads.begin(), quads.end(), less_pred);
-
-        // now check if there are many hypotheses with similar sizes
-        // do this by floodfill-style algorithm
-        const float size_rel_dev = 0.4f;
-
-        for(size_t i = 0; i < quads.size(); i++)
-        {
-            size_t j = i + 1;
-            for(; j < quads.size(); j++)
-            {
-                if(quads[j].first/quads[i].first > 1.0f + size_rel_dev)
-                {
-                    break;
-                }
-            }
-
-            if(j + 1 > min_quads_count + i)
-            {
-                // check the number of black and white squares
-                std::vector<int> counts;
-                countClasses(quads, i, j, counts);
-                const int black_count = cvRound(ceil(size.width/2.0)*ceil(size.height/2.0));
-                const int white_count = cvRound(floor(size.width/2.0)*floor(size.height/2.0));
-                if(counts[0] < black_count*0.75 ||
-                   counts[1] < white_count*0.75)
-                {
-                    continue;
-                }
-                result = 1;
-                break;
-            }
-        }
+        vector<pair<float, int> > quads;
+        fillQuads(white, black, thresh_level + black_white_gap, thresh_level, quads);
+        if (checkQuads(quads, size))
+            result = 1;
     }
+    return result;
+}
 
+// does a fast check if a chessboard is in the input image. This is a workaround to
+// a problem of cvFindChessboardCorners being slow on images with no chessboard
+// - src: input binary image
+// - size: chessboard size
+// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
+// 0 if there is no chessboard, -1 in case of error
+int checkChessboardBinary(const cv::Mat & img, const cv::Size & size)
+{
+    CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
 
-    cvReleaseImage(&thresh);
-    cvReleaseImage(&white);
-    cvReleaseImage(&black);
-    cvReleaseMemStorage(&storage);
+    Mat white = img.clone();
+    Mat black = img.clone();
 
+    int result = 0;
+    for ( int erosion_count = 0; erosion_count <= 3; erosion_count++ )
+    {
+        if ( 1 == result )
+            break;
+
+        if ( 0 != erosion_count ) // first iteration keeps original images
+        {
+            erode(white, white, Mat(), Point(-1, -1), 1);
+            dilate(black, black, Mat(), Point(-1, -1), 1);
+        }
+
+        vector<pair<float, int> > quads;
+        fillQuads(white, black, 128, 128, quads);
+        if (checkQuads(quads, size))
+            result = 1;
+    }
     return result;
 }

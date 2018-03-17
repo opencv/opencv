@@ -1,19 +1,21 @@
 Basic Drawing {#tutorial_basic_geometric_drawing}
 =============
 
+@prev_tutorial{tutorial_basic_linear_transform}
+@next_tutorial{tutorial_random_generator_and_text}
+
 Goals
 -----
 
 In this tutorial you will learn how to:
 
--   Use @ref cv::Point to define 2D points in an image.
--   Use @ref cv::Scalar and why it is useful
--   Draw a **line** by using the OpenCV function @ref cv::line
--   Draw an **ellipse** by using the OpenCV function @ref cv::ellipse
--   Draw a **rectangle** by using the OpenCV function @ref cv::rectangle
--   Draw a **circle** by using the OpenCV function @ref cv::circle
--   Draw a **filled polygon** by using the OpenCV function @ref cv::fillPoly
+-   Draw a **line** by using the OpenCV function **line()**
+-   Draw an **ellipse** by using the OpenCV function **ellipse()**
+-   Draw a **rectangle** by using the OpenCV function **rectangle()**
+-   Draw a **circle** by using the OpenCV function **circle()**
+-   Draw a **filled polygon** by using the OpenCV function **fillPoly()**
 
+@add_toggle_cpp
 OpenCV Theory
 -------------
 
@@ -42,198 +44,217 @@ Point pt =  Point(10, 8);
     Scalar( a, b, c )
     @endcode
     We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
+@end_toggle
+
+@add_toggle_java
+OpenCV Theory
+-------------
+
+For this tutorial, we will heavily use two structures: @ref cv::Point and @ref cv::Scalar :
+
+### Point
+
+It represents a 2D point, specified by its image coordinates \f$x\f$ and \f$y\f$. We can define it as:
+@code{.java}
+Point pt = new Point();
+pt.x = 10;
+pt.y = 8;
+@endcode
+or
+@code{.java}
+Point pt = new Point(10, 8);
+@endcode
+### Scalar
+
+-   Represents a 4-element vector. The type Scalar is widely used in OpenCV for passing pixel
+    values.
+-   In this tutorial, we will use it extensively to represent BGR color values (3 parameters). It is
+    not necessary to define the last argument if it is not going to be used.
+-   Let's see an example, if we are asked for a color argument and we give:
+    @code{.java}
+    Scalar( a, b, c )
+    @endcode
+    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
+@end_toggle
 
 Code
 ----
 
+@add_toggle_cpp
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
+    @include samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp
+@end_toggle
+
+@add_toggle_java
+-   This code is in your OpenCV sample folder. Otherwise you can grab it from
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java)
+    @include samples/java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java
+@end_toggle
+
+@add_toggle_python
+-   This code is in your OpenCV sample folder. Otherwise you can grab it from
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py)
+    @include samples/python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Since we plan to draw two examples (an atom and a rook), we have to create 02 images and two
-    windows to display them.
-    @code{.cpp}
-    /// Windows names
-    char atom_window[] = "Drawing 1: Atom";
-    char rook_window[] = "Drawing 2: Rook";
+Since we plan to draw two examples (an atom and a rook), we have to create two images and two
+windows to display them.
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp create_images
+@end_toggle
 
-    /// Create black empty images
-    Mat atom_image = Mat::zeros( w, w, CV_8UC3 );
-    Mat rook_image = Mat::zeros( w, w, CV_8UC3 );
-    @endcode
--#  We created functions to draw different geometric shapes. For instance, to draw the atom we used
-    *MyEllipse* and *MyFilledCircle*:
-    @code{.cpp}
-    /// 1. Draw a simple atom:
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java create_images
+@end_toggle
 
-    /// 1.a. Creating ellipses
-    MyEllipse( atom_image, 90 );
-    MyEllipse( atom_image, 0 );
-    MyEllipse( atom_image, 45 );
-    MyEllipse( atom_image, -45 );
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py create_images
+@end_toggle
 
-    /// 1.b. Creating circles
-    MyFilledCircle( atom_image, Point( w/2.0, w/2.0) );
-    @endcode
--#  And to draw the rook we employed *MyLine*, *rectangle* and a *MyPolygon*:
-    @code{.cpp}
-    /// 2. Draw a rook
+We created functions to draw different geometric shapes. For instance, to draw the atom we used
+**MyEllipse** and **MyFilledCircle**:
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp draw_atom
+@end_toggle
 
-    /// 2.a. Create a convex polygon
-    MyPolygon( rook_image );
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java draw_atom
+@end_toggle
 
-    /// 2.b. Creating rectangles
-    rectangle( rook_image,
-           Point( 0, 7*w/8.0 ),
-           Point( w, w),
-           Scalar( 0, 255, 255 ),
-           -1,
-           8 );
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py draw_atom
+@end_toggle
 
-    /// 2.c. Create a few lines
-    MyLine( rook_image, Point( 0, 15*w/16 ), Point( w, 15*w/16 ) );
-    MyLine( rook_image, Point( w/4, 7*w/8 ), Point( w/4, w ) );
-    MyLine( rook_image, Point( w/2, 7*w/8 ), Point( w/2, w ) );
-    MyLine( rook_image, Point( 3*w/4, 7*w/8 ), Point( 3*w/4, w ) );
-    @endcode
--#  Let's check what is inside each of these functions:
-    -   *MyLine*
-        @code{.cpp}
-        void MyLine( Mat img, Point start, Point end )
-        {
-            int thickness = 2;
-            int lineType = 8;
-            line( img, start, end,
-                  Scalar( 0, 0, 0 ),
-                  thickness,
-                  lineType );
-        }
-        @endcode
-        As we can see, *MyLine* just call the function @ref cv::line , which does the following:
+And to draw the rook we employed **MyLine**, **rectangle** and a **MyPolygon**:
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp draw_rook
+@end_toggle
 
-        -   Draw a line from Point **start** to Point **end**
-        -   The line is displayed in the image **img**
-        -   The line color is defined by **Scalar( 0, 0, 0)** which is the RGB value correspondent
-            to **Black**
-        -   The line thickness is set to **thickness** (in this case 2)
-        -   The line is a 8-connected one (**lineType** = 8)
-    -   *MyEllipse*
-        @code{.cpp}
-        void MyEllipse( Mat img, double angle )
-        {
-            int thickness = 2;
-            int lineType = 8;
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java draw_rook
+@end_toggle
 
-            ellipse( img,
-               Point( w/2.0, w/2.0 ),
-               Size( w/4.0, w/16.0 ),
-               angle,
-               0,
-               360,
-               Scalar( 255, 0, 0 ),
-               thickness,
-               lineType );
-        }
-        @endcode
-        From the code above, we can observe that the function @ref cv::ellipse draws an ellipse such
-        that:
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py draw_rook
+@end_toggle
 
-        -   The ellipse is displayed in the image **img**
-        -   The ellipse center is located in the point **(w/2.0, w/2.0)** and is enclosed in a box
-            of size **(w/4.0, w/16.0)**
-        -   The ellipse is rotated **angle** degrees
-        -   The ellipse extends an arc between **0** and **360** degrees
-        -   The color of the figure will be **Scalar( 255, 0, 0)** which means blue in RGB value.
-        -   The ellipse's **thickness** is 2.
-    -   *MyFilledCircle*
-        @code{.cpp}
-        void MyFilledCircle( Mat img, Point center )
-        {
-            int thickness = -1;
-            int lineType = 8;
 
-            circle( img,
-                center,
-                w/32.0,
-                Scalar( 0, 0, 255 ),
-                thickness,
-                lineType );
-        }
-        @endcode
-        Similar to the ellipse function, we can observe that *circle* receives as arguments:
+Let's check what is inside each of these functions:
+@add_toggle_cpp
+@end_toggle
 
-        -   The image where the circle will be displayed (**img**)
-        -   The center of the circle denoted as the Point **center**
-        -   The radius of the circle: **w/32.0**
-        -   The color of the circle: **Scalar(0, 0, 255)** which means *Red* in BGR
-        -   Since **thickness** = -1, the circle will be drawn filled.
-    -   *MyPolygon*
-        @code{.cpp}
-        void MyPolygon( Mat img )
-        {
-            int lineType = 8;
+<H4>MyLine</H4>
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_line
+@end_toggle
 
-            /* Create some points */
-            Point rook_points[1][20];
-            rook_points[0][0] = Point( w/4.0, 7*w/8.0 );
-            rook_points[0][1] = Point( 3*w/4.0, 7*w/8.0 );
-            rook_points[0][2] = Point( 3*w/4.0, 13*w/16.0 );
-            rook_points[0][3] = Point( 11*w/16.0, 13*w/16.0 );
-            rook_points[0][4] = Point( 19*w/32.0, 3*w/8.0 );
-            rook_points[0][5] = Point( 3*w/4.0, 3*w/8.0 );
-            rook_points[0][6] = Point( 3*w/4.0, w/8.0 );
-            rook_points[0][7] = Point( 26*w/40.0, w/8.0 );
-            rook_points[0][8] = Point( 26*w/40.0, w/4.0 );
-            rook_points[0][9] = Point( 22*w/40.0, w/4.0 );
-            rook_points[0][10] = Point( 22*w/40.0, w/8.0 );
-            rook_points[0][11] = Point( 18*w/40.0, w/8.0 );
-            rook_points[0][12] = Point( 18*w/40.0, w/4.0 );
-            rook_points[0][13] = Point( 14*w/40.0, w/4.0 );
-            rook_points[0][14] = Point( 14*w/40.0, w/8.0 );
-            rook_points[0][15] = Point( w/4.0, w/8.0 );
-            rook_points[0][16] = Point( w/4.0, 3*w/8.0 );
-            rook_points[0][17] = Point( 13*w/32.0, 3*w/8.0 );
-            rook_points[0][18] = Point( 5*w/16.0, 13*w/16.0 );
-            rook_points[0][19] = Point( w/4.0, 13*w/16.0) ;
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_line
+@end_toggle
 
-            const Point* ppt[1] = { rook_points[0] };
-            int npt[] = { 20 };
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_line
+@end_toggle
 
-            fillPoly( img,
-                      ppt,
-                      npt,
-                          1,
-                      Scalar( 255, 255, 255 ),
-                      lineType );
-        }
-        @endcode
-        To draw a filled polygon we use the function @ref cv::fillPoly . We note that:
+-   As we can see, **MyLine** just call the function **line()** , which does the following:
+    -   Draw a line from Point **start** to Point **end**
+    -   The line is displayed in the image **img**
+    -   The line color is defined by <B>( 0, 0, 0 )</B> which is the RGB value correspondent
+        to **Black**
+    -   The line thickness is set to **thickness** (in this case 2)
+    -   The line is a 8-connected one (**lineType** = 8)
 
-        -   The polygon will be drawn on **img**
-        -   The vertices of the polygon are the set of points in **ppt**
-        -   The total number of vertices to be drawn are **npt**
-        -   The number of polygons to be drawn is only **1**
-        -   The color of the polygon is defined by **Scalar( 255, 255, 255)**, which is the BGR
-            value for *white*
-    -   *rectangle*
-        @code{.cpp}
-        rectangle( rook_image,
-                   Point( 0, 7*w/8.0 ),
-                   Point( w, w),
-                   Scalar( 0, 255, 255 ),
-                   -1, 8 );
-        @endcode
-        Finally we have the @ref cv::rectangle function (we did not create a special function for
-        this guy). We note that:
+<H4>MyEllipse</H4>
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_ellipse
+@end_toggle
 
-        -   The rectangle will be drawn on **rook_image**
-        -   Two opposite vertices of the rectangle are defined by *\* Point( 0, 7*w/8.0 )*\*
-            andPoint( w, w)*\*
-        -   The color of the rectangle is given by **Scalar(0, 255, 255)** which is the BGR value
-            for *yellow*
-        -   Since the thickness value is given by **-1**, the rectangle will be filled.
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_ellipse
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_ellipse
+@end_toggle
+
+-   From the code above, we can observe that the function **ellipse()** draws an ellipse such
+    that:
+
+    -   The ellipse is displayed in the image **img**
+    -   The ellipse center is located in the point <B>(w/2, w/2)</B> and is enclosed in a box
+        of size <B>(w/4, w/16)</B>
+    -   The ellipse is rotated **angle** degrees
+    -   The ellipse extends an arc between **0** and **360** degrees
+    -   The color of the figure will be <B>( 255, 0, 0 )</B> which means blue in BGR value.
+    -   The ellipse's **thickness** is 2.
+
+<H4>MyFilledCircle</H4>
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_filled_circle
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_filled_circle
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_filled_circle
+@end_toggle
+
+-   Similar to the ellipse function, we can observe that *circle* receives as arguments:
+
+    -   The image where the circle will be displayed (**img**)
+    -   The center of the circle denoted as the point **center**
+    -   The radius of the circle: **w/32**
+    -   The color of the circle: <B>( 0, 0, 255 )</B> which means *Red* in BGR
+    -   Since **thickness** = -1, the circle will be drawn filled.
+
+<H4>MyPolygon</H4>
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_polygon
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_polygon
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_polygon
+@end_toggle
+
+-   To draw a filled polygon we use the function **fillPoly()** . We note that:
+
+    -   The polygon will be drawn on **img**
+    -   The vertices of the polygon are the set of points in **ppt**
+    -   The color of the polygon is defined by <B>( 255, 255, 255 )</B>, which is the BGR
+        value for *white*
+
+<H4>rectangle</H4>
+@add_toggle_cpp
+@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp rectangle
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java rectangle
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py rectangle
+@end_toggle
+
+-   Finally we have the @ref cv::rectangle function (we did not create a special function for
+    this guy). We note that:
+
+    -   The rectangle will be drawn on **rook_image**
+    -   Two opposite vertices of the rectangle are defined by <B>( 0, 7*w/8 )</B>
+        and <B>( w, w )</B>
+    -   The color of the rectangle is given by <B>( 0, 255, 255 )</B> which is the BGR value
+        for *yellow*
+    -   Since the thickness value is given by **FILLED (-1)**, the rectangle will be filled.
 
 Result
 ------

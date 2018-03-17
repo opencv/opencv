@@ -155,6 +155,10 @@
 #                          Implies -frtti -fno-exceptions.
 #                          Available for NDK r7b and newer.
 #                          Silently degrades to gnustl_static if not available.
+#        c++_static     -> Use the LLVM libc++ runtime as a static library.
+#                          Implies -frtti -fexceptions.
+#        c++_shared     -> Use the LLVM libc++ runtime as a static library.
+#                          Implies -frtti -fno-exceptions.
 #
 #    ANDROID_STL_FORCE_FEATURES=ON - turn rtti and exceptions support based on
 #      chosen runtime. If disabled, then the user is responsible for settings
@@ -240,7 +244,7 @@ set( ANDROID_SUPPORTED_ABIS_mips "mips" )
 set( ANDROID_SUPPORTED_ABIS_mips64 "mips64" )
 
 # API level defaults
-set( ANDROID_DEFAULT_NDK_API_LEVEL 8 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL 9 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_arm64 21 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_x86 9 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_x86_64 21 )
@@ -308,9 +312,16 @@ macro( __DETECT_NATIVE_API_LEVEL _var _path )
   set( __ndkApiLevelRegex "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9]+)[\t ]*.*$" )
   file( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
   if( NOT __apiFileContent )
-    message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
+    set( __ndkApiLevelRegex "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+__ANDROID_API_FUTURE__[\t ]*$" )
+    file( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
+    if( __apiFileContent )
+      set(${_var} 10000)
+    else()
+      message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
+    endif()
+  else()
+    string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
   endif()
-  string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
   unset( __apiFileContent )
   unset( __ndkApiLevelRegex )
 endmacro()
@@ -806,10 +817,15 @@ unset(__real_api_level)
 # validate
 list( FIND ANDROID_SUPPORTED_NATIVE_API_LEVELS "${ANDROID_NATIVE_API_LEVEL}" __levelIdx )
 if( __levelIdx EQUAL -1 )
- message( SEND_ERROR "Specified Android native API level 'android-${ANDROID_NATIVE_API_LEVEL}' is not supported by your NDK/toolchain." )
+ message( SEND_ERROR "Specified Android native API level 'android-${ANDROID_NATIVE_API_LEVEL}' is not supported by your NDK/toolchain.\nSupported values of ANDROID_NATIVE_API_LEVEL: ${ANDROID_SUPPORTED_NATIVE_API_LEVELS}" )
 else()
  if( BUILD_WITH_ANDROID_NDK )
-  __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h" )
+  if(EXISTS "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h")
+    __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h" )
+  else()
+    __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/sysroot/usr/include/android/api-level.h")
+  endif()
+
   if( NOT __realApiLevel EQUAL ANDROID_NATIVE_API_LEVEL AND NOT __realApiLevel GREATER 9000 )
    message( SEND_ERROR "Specified Android API level (${ANDROID_NATIVE_API_LEVEL}) does not match to the level found (${__realApiLevel}). Probably your copy of NDK is broken." )
   endif()
@@ -842,7 +858,7 @@ set( ANDROID_STL_FORCE_FEATURES ON CACHE BOOL "automatically configure rtti and 
 mark_as_advanced( ANDROID_STL ANDROID_STL_FORCE_FEATURES )
 
 if( BUILD_WITH_ANDROID_NDK )
- if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared)$")
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared|c\\+\\+_static|c\\+\\+_shared)$")
   message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
 The possible values are:
   none           -> Do not configure the runtime.
@@ -854,15 +870,19 @@ The possible values are:
   stlport_shared -> Use the STLport runtime as a shared library.
   gnustl_static  -> (default) Use the GNU STL as a static library.
   gnustl_shared  -> Use the GNU STL as a shared library.
+  c++_shared     -> Use the LLVM libc++ runtime as a shared library.
+  c++_static     -> Use the LLVM libc++ runtime as a static library.
 " )
  endif()
 elseif( BUILD_WITH_STANDALONE_TOOLCHAIN )
- if( NOT "${ANDROID_STL}" MATCHES "^(none|gnustl_static|gnustl_shared)$")
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|gnustl_static|gnustl_shared|c\\+\\+_static|c\\+\\+_shared)$")
   message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
 The possible values are:
   none           -> Do not configure the runtime.
   gnustl_static  -> (default) Use the GNU STL as a static library.
   gnustl_shared  -> Use the GNU STL as a shared library.
+  c++_shared     -> Use the LLVM libc++ runtime as a shared library.
+  c++_static     -> Use the LLVM libc++ runtime as a static library.
 " )
  endif()
 endif()
@@ -906,6 +926,7 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_STANDALONE_TOOLCHAIN}" )
  set( ANDROID_CLANG_TOOLCHAIN_ROOT "${ANDROID_STANDALONE_TOOLCHAIN}" )
  set( ANDROID_SYSROOT "${ANDROID_STANDALONE_TOOLCHAIN}/sysroot" )
+ set( ANDROID_SYSROOT_INCLUDE "${ANDROID_STANDALONE_TOOLCHAIN}/sysroot/usr/include" )
 
  if( NOT ANDROID_STL STREQUAL "none" )
   set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_STANDALONE_TOOLCHAIN}/include/c++/${ANDROID_COMPILER_VERSION}" )
@@ -983,6 +1004,11 @@ endif()
 if( BUILD_WITH_ANDROID_NDK )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAINS_PATH}/${ANDROID_GCC_TOOLCHAIN_NAME}${ANDROID_NDK_TOOLCHAINS_SUBPATH}" )
  set( ANDROID_SYSROOT "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}" )
+ if( EXISTS "${ANDROID_SYSROOT}/usr/include" )
+   set( ANDROID_SYSROOT_INCLUDE "${ANDROID_SYSROOT}/usr/include" )
+ else()
+   set( ANDROID_SYSROOT_INCLUDE "${ANDROID_NDK}/sysroot/usr/include" "${ANDROID_NDK}/sysroot/usr/include/${ANDROID_TOOLCHAIN_MACHINE_NAME}" )
+ endif()
 
  if( ANDROID_STL STREQUAL "none" )
   # do nothing
@@ -1035,9 +1061,16 @@ if( BUILD_WITH_ANDROID_NDK )
   else()
    set( __libstl                "${__libstl}/libs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
   endif()
+ elseif( ANDROID_STL MATCHES "c\\+\\+" )
+  set( ANDROID_EXCEPTIONS       ON )
+  set( ANDROID_RTTI             ON )
+  set( __libstl                "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++" )
+  set( __libstl                "${__libstl}/libs/${ANDROID_NDK_ABI_NAME}/libc++_static.a" )
+  set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_NDK}/sources/android/support/include" "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libcxx/include" "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++abi/libcxxabi/include" )
  else()
   message( FATAL_ERROR "Unknown runtime: ${ANDROID_STL}" )
  endif()
+
  # find libsupc++.a - rtti & exceptions
  if( ANDROID_STL STREQUAL "system_re" OR ANDROID_STL MATCHES "gnustl" )
   set( __libsupcxx "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${ANDROID_COMPILER_VERSION}/libs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" ) # r8b or newer
@@ -1067,7 +1100,9 @@ endif()
 # case of shared STL linkage
 if( ANDROID_STL MATCHES "shared" AND DEFINED __libstl )
  string( REPLACE "_static.a" "_shared.so" __libstl "${__libstl}" )
- # TODO: check if .so file exists before the renaming
+ if( NOT EXISTS "${__libstl}" )
+   message( FATAL_ERROR "Unable to find shared library ${__libstl}" )
+ endif()
 endif()
 
 
@@ -1133,8 +1168,10 @@ if( APPLE )
 endif()
 
 # Force set compilers because standard identification works badly for us
-include( CMakeForceCompiler )
-CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
+if( CMAKE_VERSION VERSION_LESS 3.5.0 )
+  include( CMakeForceCompiler )
+  CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
+endif()
 if( ANDROID_COMPILER_IS_CLANG )
  set( CMAKE_C_COMPILER_ID Clang )
 endif()
@@ -1146,7 +1183,9 @@ else()
 endif()
 set( CMAKE_C_HAS_ISYSROOT 1 )
 set( CMAKE_C_COMPILER_ABI ELF )
-CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+if( CMAKE_VERSION VERSION_LESS 3.5.0 )
+  CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+endif()
 if( ANDROID_COMPILER_IS_CLANG )
  set( CMAKE_CXX_COMPILER_ID Clang)
 endif()
@@ -1459,7 +1498,7 @@ if( DEFINED ANDROID_RTTI AND ANDROID_STL_FORCE_FEATURES )
  endif()
 endif()
 
-# configure exceptios
+# configure exceptions
 if( DEFINED ANDROID_EXCEPTIONS AND ANDROID_STL_FORCE_FEATURES )
  if( ANDROID_EXCEPTIONS )
   set( CMAKE_CXX_FLAGS "-fexceptions ${CMAKE_CXX_FLAGS}" )
@@ -1471,9 +1510,11 @@ if( DEFINED ANDROID_EXCEPTIONS AND ANDROID_STL_FORCE_FEATURES )
 endif()
 
 # global includes and link directories
-include_directories( SYSTEM "${ANDROID_SYSROOT}/usr/include" ${ANDROID_STL_INCLUDE_DIRS} )
+include_directories( SYSTEM "${ANDROID_SYSROOT_INCLUDE}" ${ANDROID_STL_INCLUDE_DIRS} )
 get_filename_component(__android_install_path "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" ABSOLUTE) # avoid CMP0015 policy warning
 link_directories( "${__android_install_path}" )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}" )
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DANDROID -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}" )
 
 # detect if need link crtbegin_so.o explicitly
 if( NOT DEFINED ANDROID_EXPLICIT_CRT_LINK )
@@ -1546,19 +1587,58 @@ set( ANDROID True )
 set( BUILD_ANDROID True )
 
 # where is the target environment
-set( CMAKE_FIND_ROOT_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin" "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" "${ANDROID_SYSROOT}" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_PREFIX}/share" )
+set( CMAKE_FIND_ROOT_PATH
+    "${ANDROID_TOOLCHAIN_ROOT}/bin"
+    "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}"
+    "${ANDROID_SYSROOT}"
+    "${ANDROID_NDK}/sysroot"  # NDK16+
+    "${CMAKE_INSTALL_PREFIX}"
+    "${CMAKE_INSTALL_PREFIX}/share" )
 
 # only search for libraries and includes in the ndk toolchain
-set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
-set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
-set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
+  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+endif()
 
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
+  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_PACKAGE)
+  set( CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY )
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
+  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+endif()
+
+macro(__cmake_find_root_save_and_reset)
+  foreach(v
+      CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
+      CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+      CMAKE_FIND_ROOT_PATH_MODE_PACKAGE
+      CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
+  )
+    set(__save_${v} ${${v}})
+    set(${v} NEVER)
+  endforeach()
+endmacro()
+
+macro(__cmake_find_root_restore)
+  foreach(v
+      CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
+      CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+      CMAKE_FIND_ROOT_PATH_MODE_PACKAGE
+      CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
+  )
+    set(${v} ${__save_${v}})
+    unset(__save_${v})
+  endforeach()
+endmacro()
 
 # macro to find packages on the host OS
 macro( find_host_package )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ __cmake_find_root_save_and_reset()
  if( CMAKE_HOST_WIN32 )
   SET( WIN32 1 )
   SET( UNIX )
@@ -1570,17 +1650,13 @@ macro( find_host_package )
  SET( WIN32 )
  SET( APPLE )
  SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+ __cmake_find_root_restore()
 endmacro()
 
 
 # macro to find programs on the host OS
 macro( find_host_program )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ __cmake_find_root_save_and_reset()
  if( CMAKE_HOST_WIN32 )
   SET( WIN32 1 )
   SET( UNIX )
@@ -1592,9 +1668,7 @@ macro( find_host_program )
  SET( WIN32 )
  SET( APPLE )
  SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+ __cmake_find_root_restore()
 endmacro()
 
 
@@ -1692,6 +1766,7 @@ endif()
 #   ANDROID_NDK_RELEASE_NUM : numeric ANDROID_NDK_RELEASE version (1000*major+minor)
 #   ANDROID_ARCH_NAME : "arm", "x86", "mips", "arm64", "x86_64", "mips64" depending on ANDROID_ABI
 #   ANDROID_SYSROOT : path to the compiler sysroot
+#   ANDROID_SYSROOT_INCLUDE : paths to system include paths
 #   TOOL_OS_SUFFIX : "" or ".exe" depending on host platform
 #   ANDROID_COMPILER_IS_CLANG : TRUE if clang compiler is used
 #

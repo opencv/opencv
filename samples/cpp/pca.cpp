@@ -42,9 +42,9 @@
 #include <fstream>
 #include <sstream>
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace cv;
 using namespace std;
@@ -183,9 +183,9 @@ int main(int argc, char** argv)
     // display until user presses q
     imshow(winName, reconstruction);
 
-    int key = 0;
+    char key = 0;
     while(key != 'q')
-        key = waitKey();
+        key = (char)waitKey();
 
    return 0;
 }

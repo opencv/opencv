@@ -1,28 +1,26 @@
 #include "perf_precomp.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/flann.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-using namespace std;
-using namespace cv;
+#include "opencv2/core/ocl.hpp"
+
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 #define SURF_MATCH_CONFIDENCE 0.65f
 #define ORB_MATCH_CONFIDENCE  0.3f
 #define WORK_MEGAPIX 0.6
 
 typedef TestBaseWithParam<string> stitch;
-typedef TestBaseWithParam<string> match;
-typedef std::tr1::tuple<string, int> matchVector_t;
-typedef TestBaseWithParam<matchVector_t> matchVector;
+typedef TestBaseWithParam<tuple<string, string> > stitchDatasets;
 
-#ifdef HAVE_OPENCV_XFEATURES2D_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
-#define TEST_DETECTORS testing::Values("surf", "orb")
+#ifdef HAVE_OPENCV_XFEATURES2D
+#define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
 #else
-#define TEST_DETECTORS testing::Values<string>("orb")
+#define TEST_DETECTORS testing::Values("orb", "akaze")
 #endif
+#define AFFINE_DATASETS testing::Values("s", "budapest", "newspaper", "prague")
 
 PERF_TEST_P(stitch, a123, TEST_DETECTORS)
 {
@@ -33,9 +31,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -70,9 +66,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -93,118 +87,83 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stopTimer();
     }
 
-    Mat pano_small;
-    if (!pano.empty())
-        resize(pano, pano_small, Size(320, 240), 0, 0, INTER_AREA);
+    EXPECT_NEAR(pano.size().width, 1117, GetParam() == "surf" ? 100 : 50);
+    EXPECT_NEAR(pano.size().height, 642, GetParam() == "surf" ? 60 : 30);
 
-    SANITY_CHECK(pano_small, 5);
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
+PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETECTORS))
 {
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
-    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
-    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
+    string dataset = get<0>(GetParam());
+    string detector = get<1>(GetParam());
 
-    Ptr<detail::FeaturesFinder> finder;
-    Ptr<detail::FeaturesMatcher> matcher;
-    if (GetParam() == "surf")
+    Mat pano;
+    vector<Mat> imgs;
+    int width, height, allowed_diff = 20;
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(detector);
+
+    if(dataset == "budapest")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
-        matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
+        imgs.push_back(imread(getDataPath("stitching/budapest1.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/budapest2.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/budapest3.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/budapest4.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/budapest5.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/budapest6.jpg")));
+        width = 2313;
+        height = 1158;
+        // this dataset is big, the results between surf and orb differ slightly,
+        // but both are still good
+        allowed_diff = 50;
     }
-    else if (GetParam() == "orb")
+    else if (dataset == "newspaper")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
-        matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
+        imgs.push_back(imread(getDataPath("stitching/newspaper1.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/newspaper2.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/newspaper3.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/newspaper4.jpg")));
+        width = 1791;
+        height = 1136;
+        // we need to boost ORB number of features to be able to stitch this dataset
+        // SURF works just fine with default settings
+        if(detector == "orb")
+            featuresFinder = makePtr<detail::OrbFeaturesFinder>(Size(3,1), 3000);
     }
-    else
+    else if (dataset == "prague")
     {
-        FAIL() << "Unknown 2D features type: " << GetParam();
+        imgs.push_back(imread(getDataPath("stitching/prague1.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/prague2.jpg")));
+        width = 983;
+        height = 1759;
+    }
+    else // dataset == "s"
+    {
+        imgs.push_back(imread(getDataPath("stitching/s1.jpg")));
+        imgs.push_back(imread(getDataPath("stitching/s2.jpg")));
+        width = 1815;
+        height = 700;
     }
 
-    detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
-
-    detail::MatchesInfo pairwise_matches;
-
-    declare.in(features1.descriptors, features2.descriptors);
+    declare.time(30 * 20).iterations(20);
 
     while(next())
     {
-        cvflann::seed_random(42);//for predictive FlannBasedMatcher
+        Ptr<Stitcher> stitcher = Stitcher::create(Stitcher::SCANS, false);
+        stitcher->setFeaturesFinder(featuresFinder);
+
+        if (cv::ocl::useOpenCL())
+            cv::theRNG() = cv::RNG(12345); // prevent fails of Windows OpenCL builds (see #8294)
+
         startTimer();
-        (*matcher)(features1, features2, pairwise_matches);
+        stitcher->stitch(imgs, pano);
         stopTimer();
-        matcher->collectGarbage();
     }
 
-    std::vector<DMatch>& matches = pairwise_matches.matches;
-    if (GetParam() == "orb") matches.resize(0);
-    for(size_t q = 0; q < matches.size(); ++q)
-        if (matches[q].imgIdx < 0) { matches.resize(q); break;}
-    SANITY_CHECK_MATCHES(matches);
+    EXPECT_NEAR(pano.size().width, width, allowed_diff);
+    EXPECT_NEAR(pano.size().height, height, allowed_diff);
+
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
-                 TEST_DETECTORS,
-                 testing::Values(2, 4, 8))
-             )
-{
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
-    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
-    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
-
-    Ptr<detail::FeaturesFinder> finder;
-    Ptr<detail::FeaturesMatcher> matcher;
-    string detectorName = get<0>(GetParam());
-    int featuresVectorSize = get<1>(GetParam());
-    if (detectorName == "surf")
-    {
-        finder = makePtr<detail::SurfFeaturesFinder>();
-        matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
-    }
-    else if (detectorName == "orb")
-    {
-        finder = makePtr<detail::OrbFeaturesFinder>();
-        matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
-    }
-    else
-    {
-        FAIL() << "Unknown 2D features type: " << get<0>(GetParam());
-    }
-
-    detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
-    vector<detail::ImageFeatures> features;
-    vector<detail::MatchesInfo> pairwise_matches;
-    for(int i = 0; i < featuresVectorSize/2; i++)
-    {
-        features.push_back(features1);
-        features.push_back(features2);
-    }
-
-    declare.time(200);
-    while(next())
-    {
-        cvflann::seed_random(42);//for predictive FlannBasedMatcher
-        startTimer();
-        (*matcher)(features, pairwise_matches);
-        stopTimer();
-        matcher->collectGarbage();
-    }
-
-
-    std::vector<DMatch>& matches = pairwise_matches[detectorName == "surf" ? 1 : 0].matches;
-    for(size_t q = 0; q < matches.size(); ++q)
-        if (matches[q].imgIdx < 0) { matches.resize(q); break;}
-    SANITY_CHECK_MATCHES(matches);
-}
+} // namespace

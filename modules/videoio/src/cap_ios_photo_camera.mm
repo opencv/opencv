@@ -36,8 +36,11 @@
 
 
 @interface CvPhotoCamera ()
+{
+    id<CvPhotoCameraDelegate> _delegate;
+}
 
-@property (nonatomic, retain) AVCaptureStillImageOutput* stillImageOutput;
+@property (nonatomic, strong) AVCaptureStillImageOutput* stillImageOutput;
 
 @end
 
@@ -53,8 +56,14 @@
 #pragma mark Public
 
 @synthesize stillImageOutput;
-@synthesize delegate;
 
+- (void)setDelegate:(id<CvPhotoCameraDelegate>)newDelegate {
+    _delegate = newDelegate;
+}
+
+- (id<CvPhotoCameraDelegate>)delegate {
+    return _delegate;
+}
 
 #pragma mark - Public interface
 
@@ -106,9 +115,7 @@
                  cameraAvailable = YES;
 
                  NSLog(@"CvPhotoCamera captured image");
-                 if (self.delegate) {
-                     [self.delegate photoCamera:self capturedImage:newImage];
-                 }
+                 [self.delegate photoCamera:self capturedImage:newImage];
 
                  [self.captureSession startRunning];
              });

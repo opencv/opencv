@@ -1,7 +1,7 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
-These steps have been tested for Ubuntu 10.04 but should work with other distros as well.
+The following steps have been tested for Ubuntu 10.04 but should work with other distros as well.
 
 Required Packages
 -----------------
@@ -16,6 +16,7 @@ Required Packages
 -   [optional] libtbb2 libtbb-dev
 -   [optional] libdc1394 2.x
 -   [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev, libdc1394-22-dev
+-   [optional] CUDA Toolkit 6.5 or higher
 
 The packages can be installed using a terminal and the following commands or by using Synaptic
 Manager:
@@ -28,23 +29,23 @@ Getting OpenCV Source Code
 --------------------------
 
 You can use the latest stable OpenCV version or you can grab the latest snapshot from our [Git
-repository](https://github.com/Itseez/opencv.git).
+repository](https://github.com/opencv/opencv.git).
 
 ### Getting the Latest Stable OpenCV Version
 
--   Go to our [downloads page](http://opencv.org/downloads.html).
+-   Go to our [downloads page](http://opencv.org/releases.html).
 -   Download the source archive and unpack it.
 
 ### Getting the Cutting-edge OpenCV from the Git Repository
 
-Launch Git client and clone [OpenCV repository](http://github.com/itseez/opencv). If you need
-modules from [OpenCV contrib repository](http://github.com/itseez/opencv_contrib) then clone it too.
+Launch Git client and clone [OpenCV repository](http://github.com/opencv/opencv). If you need
+modules from [OpenCV contrib repository](http://github.com/opencv/opencv_contrib) then clone it as well.
 
 For example
 @code{.bash}
 cd ~/<my_working_directory>
-git clone https://github.com/Itseez/opencv.git
-git clone https://github.com/Itseez/opencv_contrib.git
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
 @endcode
 Building OpenCV from Source Using CMake
 ---------------------------------------
@@ -73,6 +74,9 @@ Building OpenCV from Source Using CMake
     -   run: “Configure”
     -   run: “Generate”
 
+    @note
+    Use `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..` , without spaces after -D if the above example doesn't work.
+
 -#  Description of some parameters
     -   build type: `CMAKE_BUILD_TYPE=Release\Debug`
     -   to build with modules from opencv_contrib set OPENCV_EXTRA_MODULES_PATH to \<path to
@@ -93,32 +97,32 @@ Building OpenCV from Source Using CMake
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
 
--#  Build. From build directory execute make, recomend to do it in several threads
+-#  Build. From build directory execute *make*, it is recommended to do this in several threads
 
     For example
     @code{.bash}
     make -j7 # runs 7 jobs in parallel
     @endcode
 -#  [optional] Building documents. Enter \<cmake_build_dir/doc/\> and run make with target
-    "html_docs"
+    "doxygen"
 
     For example
     @code{.bash}
     cd ~/opencv/build/doc/
-    make -j7 html_docs
+    make -j7 doxygen
     @endcode
--#  To install libraries, from build directory execute
+-#  To install libraries, execute the following command from build directory
     @code{.bash}
     sudo make install
     @endcode
 -#  [optional] Running tests
 
     -   Get the required test data from [OpenCV extra
-        repository](https://github.com/Itseez/opencv_extra).
+        repository](https://github.com/opencv/opencv_extra).
 
     For example
     @code{.bash}
-    git clone https://github.com/Itseez/opencv_extra.git
+    git clone https://github.com/opencv/opencv_extra.git
     @endcode
     -   set OPENCV_TEST_DATA_PATH environment variable to \<path to opencv_extra/testdata\>.
     -   execute tests from build directory.
@@ -130,6 +134,6 @@ Building OpenCV from Source Using CMake
 
 @note
    If the size of the created library is a critical issue (like in case of an Android build) you
-    can use the install/strip command to get the smallest size as possible. The *stripped* version
+    can use the install/strip command to get the smallest size possible. The *stripped* version
     appears to be twice as small. However, we do not recommend using this unless those extra
     megabytes do really matter.

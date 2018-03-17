@@ -12,7 +12,7 @@ OpenCV 3.0 introduced many new algorithms and features comparing to version 2.4.
 This section describes most notable changes in general, all details and examples of transition actions are in the next part of the document.
 
 ##### Contrib repository
-<https://github.com/Itseez/opencv_contrib>
+<https://github.com/opencv/opencv_contrib>
 
 This is a place for all new, experimental and non-free algorithms. It does not receive so much attention from the support team comparing to main repository, but the community makes an effort to keep it in a good shape.
 
@@ -193,7 +193,7 @@ OpenCL {#tutorial_transition_hints_opencl}
 ------
 All specialized `ocl` implemetations has been hidden behind general C++ algorithm interface. Now the function execution path can be selected dynamically at runtime: CPU or OpenCL; this mechanism is also called "Transparent API".
 
-New class cv::UMat is intended to hide data exchange with OpenCL device in a convinient way.
+New class cv::UMat is intended to hide data exchange with OpenCL device in a convenient way.
 
 Following example illustrate API modifications (from [OpenCV site](http://opencv.org/platforms/opencl.html)):
 

@@ -42,8 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace cv::viz;
+namespace opencv_test { namespace {
 
 TEST(Viz, show_cloud_bluberry)
 {
@@ -451,3 +450,5 @@ TEST(Viz, show_follower)
     viz.getWidget("t3d_2").cast<WText3D>().setText("Updated follower 3D");
     viz.spin();
 }
+
+}} // namespace

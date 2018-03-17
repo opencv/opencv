@@ -49,20 +49,20 @@ using namespace cv;
 
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
+    CV_INSTRUMENT_REGION()
+
     const Mat src  = _src.getMat();
     const Mat dest = _dst.getMat();
     const Mat mask = _mask.getMat();
     _blend.create(dest.size(), CV_8UC3);
     Mat blend = _blend.getMat();
+    dest.copyTo(blend);
 
     int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
     int h = mask.size().height;
     int w = mask.size().width;
 
     Mat gray = Mat(mask.size(),CV_8UC1);
-    Mat dst_mask = Mat::zeros(dest.size(),CV_8UC1);
-    Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
-    Mat cd_mask = Mat::zeros(dest.size(),CV_8UC3);
 
     if(mask.channels() == 3)
         cvtColor(mask, gray, COLOR_BGR2GRAY );
@@ -86,8 +86,6 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     int lenx = maxx - minx;
     int leny = maxy - miny;
 
-    Mat patch = Mat::zeros(Size(leny, lenx), CV_8UC3);
-
     int minxd = p.y - lenx/2;
     int maxxd = p.y + lenx/2;
     int minyd = p.x - leny/2;
@@ -98,24 +96,23 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     Rect roi_d(minyd,minxd,leny,lenx);
     Rect roi_s(miny,minx,leny,lenx);
 
-    Mat destinationROI = dst_mask(roi_d);
-    Mat sourceROI = cs_mask(roi_s);
+    Mat destinationROI = dest(roi_d).clone();
 
-    gray(roi_s).copyTo(destinationROI);
+    Mat sourceROI = Mat::zeros(leny, lenx, src.type());
     src(roi_s).copyTo(sourceROI,gray(roi_s));
-    src(roi_s).copyTo(patch, gray(roi_s));
 
-    destinationROI = cd_mask(roi_d);
-    cs_mask(roi_s).copyTo(destinationROI);
-
+    Mat maskROI = gray(roi_s);
+    Mat recoveredROI = blend(roi_d);
 
     Cloning obj;
-    obj.normalClone(dest,cd_mask,dst_mask,blend,flags);
+    obj.normalClone(destinationROI,sourceROI,maskROI,recoveredROI,flags);
 
 }
 
 void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float r, float g, float b)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();
     _dst.create(src.size(), src.type());
@@ -142,6 +139,8 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
 {
+    CV_INSTRUMENT_REGION()
+
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();
@@ -169,6 +168,8 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
 void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
                            float low_threshold, float high_threshold, int kernel_size)
 {
+    CV_INSTRUMENT_REGION()
+
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();

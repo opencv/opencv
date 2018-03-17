@@ -138,7 +138,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             convertAndUnrollScalar(src2sc, srctype, (uchar*)buf, 1);
         }
 
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, esz);
 
         if( !haveMask )
             k.args(src1arg, dstarg, scalararg);
@@ -369,58 +369,78 @@ static BinaryFuncC* getMinTab()
 
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
+    CV_INSTRUMENT_REGION()
+
     BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::and8u);
     binary_op(a, b, c, mask, &f, true, OCL_OP_AND);
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
+    CV_INSTRUMENT_REGION()
+
     BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::or8u);
     binary_op(a, b, c, mask, &f, true, OCL_OP_OR);
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
+    CV_INSTRUMENT_REGION()
+
     BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::xor8u);
     binary_op(a, b, c, mask, &f, true, OCL_OP_XOR);
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
+    CV_INSTRUMENT_REGION()
+
     BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::not8u);
     binary_op(a, a, c, mask, &f, true, OCL_OP_NOT);
 }
 
 void cv::max( InputArray src1, InputArray src2, OutputArray dst )
 {
+    CV_INSTRUMENT_REGION()
+
     binary_op(src1, src2, dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
 }
 
 void cv::min( InputArray src1, InputArray src2, OutputArray dst )
 {
+    CV_INSTRUMENT_REGION()
+
     binary_op(src1, src2, dst, noArray(), getMinTab(), false, OCL_OP_MIN );
 }
 
 void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
 {
+    CV_INSTRUMENT_REGION()
+
     OutputArray _dst(dst);
     binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
 }
 
 void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
 {
+    CV_INSTRUMENT_REGION()
+
     OutputArray _dst(dst);
     binary_op(src1, src2, _dst, noArray(), getMinTab(), false, OCL_OP_MIN );
 }
 
 void cv::max(const UMat& src1, const UMat& src2, UMat& dst)
 {
+    CV_INSTRUMENT_REGION()
+
     OutputArray _dst(dst);
     binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
 }
 
 void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
 {
+    CV_INSTRUMENT_REGION()
+
     OutputArray _dst(dst);
     binary_op(src1, src2, _dst, noArray(), getMinTab(), false, OCL_OP_MIN );
 }
@@ -503,7 +523,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     float usrdata_f[3];
     int i, n = oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE ||
         oclop == OCL_OP_RDIV_SCALE || oclop == OCL_OP_RECIP_SCALE ? 1 : oclop == OCL_OP_ADDW ? 3 : 0;
-    if( n > 0 && wdepth == CV_32F )
+    if( usrdata && n > 0 && wdepth == CV_32F )
     {
         for( i = 0; i < n; i++ )
             usrdata_f[i] = (float)usrdata_d[i];
@@ -530,7 +550,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( !src2sc.empty() )
             convertAndUnrollScalar(src2sc, wtype, (uchar*)buf, 1);
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, esz);
 
         if( !haveMask )
         {
@@ -538,7 +558,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 k.args(src1arg, dstarg, scalararg);
             else if(n == 1)
                 k.args(src1arg, dstarg, scalararg,
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p, usrdata_esz));
             else
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
@@ -556,12 +576,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 k.args(src1arg, src2arg, dstarg);
             else if (n == 1)
                 k.args(src1arg, src2arg, dstarg,
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p, usrdata_esz));
             else if (n == 3)
                 k.args(src1arg, src2arg, dstarg,
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz),
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz*2, usrdata_esz));
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p, usrdata_esz),
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p + usrdata_esz*2, usrdata_esz));
             else
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
@@ -643,7 +663,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         if (!muldiv)
         {
             Mat sc = psrc2->getMat();
-            depth2 = actualScalarDepth(sc.ptr<double>(), cn);
+            depth2 = actualScalarDepth(sc.ptr<double>(), sz2 == Size(1, 1) ? cn2 : cn);
             if( depth2 == CV_64F && (depth1 < CV_32S || depth1 == CV_32F) )
                 depth2 = CV_32F;
         }
@@ -901,12 +921,16 @@ static BinaryFuncC* getAbsDiffTab()
 void cv::add( InputArray src1, InputArray src2, OutputArray dst,
           InputArray mask, int dtype )
 {
+    CV_INSTRUMENT_REGION()
+
     arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD );
 }
 
 void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray mask, int dtype )
 {
+    CV_INSTRUMENT_REGION()
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra())
     {
@@ -965,6 +989,8 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
+    CV_INSTRUMENT_REGION()
+
     arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
 }
 
@@ -1016,6 +1042,8 @@ static BinaryFuncC* getRecipTab()
 void cv::multiply(InputArray src1, InputArray src2,
                   OutputArray dst, double scale, int dtype)
 {
+    CV_INSTRUMENT_REGION()
+
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
               true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
 }
@@ -1023,12 +1051,16 @@ void cv::multiply(InputArray src1, InputArray src2,
 void cv::divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
+    CV_INSTRUMENT_REGION()
+
     arithm_op(src1, src2, dst, noArray(), dtype, getDivTab(), true, &scale, OCL_OP_DIV_SCALE);
 }
 
 void cv::divide(double scale, InputArray src2,
                 OutputArray dst, int dtype)
 {
+    CV_INSTRUMENT_REGION()
+
     arithm_op(src2, src2, dst, noArray(), dtype, getRecipTab(), true, &scale, OCL_OP_RECIP_SCALE);
 }
 
@@ -1056,6 +1088,8 @@ static BinaryFuncC* getAddWeightedTab()
 void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
                       double beta, double gamma, OutputArray dst, int dtype )
 {
+    CV_INSTRUMENT_REGION()
+
     double scalars[] = {alpha, beta, gamma};
     arithm_op(src1, src2, dst, noArray(), dtype, getAddWeightedTab(), true, scalars, OCL_OP_ADDW);
 }
@@ -1170,7 +1204,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
             convertAndUnrollScalar(Mat(1, 1, CV_32S, &ival), depth1, (uchar *)buf, kercn);
         }
 
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, esz);
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn),
                ocl::KernelArg::WriteOnly(dst, cn, kercn), scalararg);
@@ -1194,6 +1228,8 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
 void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
 
@@ -1203,7 +1239,10 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             || !_src1.sameSize(_src2)
             || _src1.type() != _src2.type())
     {
-        if (checkScalar(_src1, _src2.type(), _src1.kind(), _src2.kind()))
+        bool is_src1_scalar = checkScalar(_src1, _src2.type(), _src1.kind(), _src2.kind());
+        bool is_src2_scalar = checkScalar(_src2, _src1.type(), _src2.kind(), _src1.kind());
+
+        if (is_src1_scalar && !is_src2_scalar)
         {
             op = op == CMP_LT ? CMP_GT : op == CMP_LE ? CMP_GE :
                 op == CMP_GE ? CMP_LE : op == CMP_GT ? CMP_LT : op;
@@ -1211,7 +1250,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             compare(_src2, _src1, _dst, op);
             return;
         }
-        else if( !checkScalar(_src2, _src1.type(), _src2.kind(), _src1.kind()) )
+        else if( (is_src1_scalar && is_src2_scalar) || (!is_src1_scalar && !is_src2_scalar) )
             CV_Error( CV_StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );
@@ -1240,7 +1279,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     src1 = src1.reshape(1); src2 = src2.reshape(1);
     Mat dst = _dst.getMat().reshape(1);
 
-    size_t esz = src1.elemSize();
+    size_t esz = std::max(src1.elemSize(), (size_t)1);
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFuncC func = getCmpFunc(depth1);
 
@@ -1329,191 +1368,24 @@ struct InRange_SIMD
     }
 };
 
-#if CV_SSE2
+#if CV_SIMD128
 
 template <>
 struct InRange_SIMD<uchar>
 {
     int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = v_uint8x16::nlanes;
 
-        if (USE_SSE2)
+        for (; x <= len - width; x += width)
         {
-            __m128i v_full = _mm_set1_epi8(-1), v_128 = _mm_set1_epi8(-128);
+            v_uint8x16 values = v_load(src1 + x);
+            v_uint8x16 low = v_load(src2 + x);
+            v_uint8x16 high = v_load(src3 + x);
 
-            for ( ; x <= len - 16; x += 16 )
-            {
-                __m128i v_src = _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)), v_128);
-                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_add_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_128), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src3 + x)), v_128));
-                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<schar>
-{
-    int operator () (const schar * src1, const schar * src2, const schar * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_full = _mm_set1_epi8(-1);
-
-            for ( ; x <= len - 16; x += 16 )
-            {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
-                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
-                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<ushort>
-{
-    int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1), v_32768 = _mm_set1_epi16(-32768);
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128i v_src = _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src1 + x)), v_32768);
-                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_add_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_32768), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src3 + x)), v_32768));
-                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<short>
-{
-    int operator () (const short * src1, const short * src2, const short * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1);
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
-                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
-                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
-                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<int>
-{
-    int operator () (const int * src1, const int * src2, const int * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi32(-1);
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
-                __m128i v_res1 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src),
-                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x))));
-
-                v_src = _mm_loadu_si128((const __m128i *)(src1 + x + 4));
-                __m128i v_res2 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x + 4)), v_src),
-                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x + 4))));
-
-                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(_mm_andnot_si128(v_res1, v_full), 16),
-                                                _mm_srli_epi32(_mm_andnot_si128(v_res2, v_full), 16));
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct InRange_SIMD<float>
-{
-    int operator () (const float * src1, const float * src2, const float * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        if (USE_SSE2)
-        {
-            __m128i v_zero = _mm_setzero_si128();
-
-            for ( ; x <= len - 8; x += 8 )
-            {
-                __m128 v_src = _mm_loadu_ps(src1 + x);
-                __m128 v_res1 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x), v_src),
-                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x)));
-
-                v_src = _mm_loadu_ps(src1 + x + 4);
-                __m128 v_res2 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x + 4), v_src),
-                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x + 4)));
-
-                __m128i v_res1i = _mm_cvtps_epi32(v_res1), v_res2i = _mm_cvtps_epi32(v_res2);
-                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(v_res1i, 16), _mm_srli_epi32(v_res2i, 16));
-                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
-            }
-        }
-
-        return x;
-    }
-};
-
-#elif CV_NEON
-
-template <>
-struct InRange_SIMD<uchar>
-{
-    int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
-                     uchar * dst, int len) const
-    {
-        int x = 0;
-
-        for ( ; x <= len - 16; x += 16 )
-        {
-            uint8x16_t values = vld1q_u8(src1 + x);
-            uint8x16_t low = vld1q_u8(src2 + x);
-            uint8x16_t high = vld1q_u8(src3 + x);
-
-            vst1q_u8(dst + x, vandq_u8(vcgeq_u8(values, low), vcgeq_u8(high, values)));
+            v_store(dst + x, (values >= low) & (high >= values));
         }
         return x;
     }
@@ -1523,17 +1395,18 @@ template <>
 struct InRange_SIMD<schar>
 {
     int operator () (const schar * src1, const schar * src2, const schar * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = v_int8x16::nlanes;
 
-        for ( ; x <= len - 16; x += 16 )
+        for (; x <= len - width; x += width)
         {
-            int8x16_t values = vld1q_s8(src1 + x);
-            int8x16_t low = vld1q_s8(src2 + x);
-            int8x16_t high = vld1q_s8(src3 + x);
+            v_int8x16 values = v_load(src1 + x);
+            v_int8x16 low = v_load(src2 + x);
+            v_int8x16 high = v_load(src3 + x);
 
-            vst1q_u8(dst + x, vandq_u8(vcgeq_s8(values, low), vcgeq_s8(high, values)));
+            v_store((schar*)(dst + x), (values >= low) & (high >= values));
         }
         return x;
     }
@@ -1543,23 +1416,22 @@ template <>
 struct InRange_SIMD<ushort>
 {
     int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = v_uint16x8::nlanes * 2;
 
-        for ( ; x <= len - 16; x += 16 )
+        for (; x <= len - width; x += width)
         {
-            uint16x8_t values = vld1q_u16((const uint16_t*)(src1 + x));
-            uint16x8_t low = vld1q_u16((const uint16_t*)(src2 + x));
-            uint16x8_t high = vld1q_u16((const uint16_t*)(src3 + x));
-            uint8x8_t  r1 = vmovn_u16(vandq_u16(vcgeq_u16(values, low), vcgeq_u16(high, values)));
+            v_uint16x8 values1 = v_load(src1 + x);
+            v_uint16x8 low1 = v_load(src2 + x);
+            v_uint16x8 high1 = v_load(src3 + x);
 
-            values = vld1q_u16((const uint16_t*)(src1 + x + 8));
-            low = vld1q_u16((const uint16_t*)(src2 + x + 8));
-            high = vld1q_u16((const uint16_t*)(src3 + x + 8));
-            uint8x8_t  r2 = vmovn_u16(vandq_u16(vcgeq_u16(values, low), vcgeq_u16(high, values)));
+            v_uint16x8 values2 = v_load(src1 + x + v_uint16x8::nlanes);
+            v_uint16x8 low2 = v_load(src2 + x + v_uint16x8::nlanes);
+            v_uint16x8 high2 = v_load(src3 + x + v_uint16x8::nlanes);
 
-            vst1q_u8(dst + x, vcombine_u8(r1, r2));
+            v_store(dst + x, v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
         }
         return x;
     }
@@ -1569,23 +1441,22 @@ template <>
 struct InRange_SIMD<short>
 {
     int operator () (const short * src1, const short * src2, const short * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = (int)v_int16x8::nlanes * 2;
 
-        for ( ; x <= len - 16; x += 16 )
+        for (; x <= len - width; x += width)
         {
-            int16x8_t values = vld1q_s16((const int16_t*)(src1 + x));
-            int16x8_t low = vld1q_s16((const int16_t*)(src2 + x));
-            int16x8_t high = vld1q_s16((const int16_t*)(src3 + x));
-            uint8x8_t r1 = vmovn_u16(vandq_u16(vcgeq_s16(values, low), vcgeq_s16(high, values)));
+            v_int16x8 values1 = v_load(src1 + x);
+            v_int16x8 low1 = v_load(src2 + x);
+            v_int16x8 high1 = v_load(src3 + x);
 
-            values = vld1q_s16((const int16_t*)(src1 + x + 8));
-            low = vld1q_s16((const int16_t*)(src2 + x + 8));
-            high = vld1q_s16((const int16_t*)(src3 + x + 8));
-            uint8x8_t r2 = vmovn_u16(vandq_u16(vcgeq_s16(values, low), vcgeq_s16(high, values)));
+            v_int16x8 values2 = v_load(src1 + x + v_int16x8::nlanes);
+            v_int16x8 low2 = v_load(src2 + x + v_int16x8::nlanes);
+            v_int16x8 high2 = v_load(src3 + x + v_int16x8::nlanes);
 
-            vst1q_u8(dst + x, vcombine_u8(r1, r2));
+            v_store((schar*)(dst + x), v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
         }
         return x;
     }
@@ -1595,27 +1466,22 @@ template <>
 struct InRange_SIMD<int>
 {
     int operator () (const int * src1, const int * src2, const int * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = (int)v_int32x4::nlanes * 2;
 
-        for ( ; x <= len - 8; x += 8 )
+        for (; x <= len - width; x += width)
         {
-            int32x4_t values = vld1q_s32((const int32_t*)(src1 + x));
-            int32x4_t low = vld1q_s32((const int32_t*)(src2 + x));
-            int32x4_t high = vld1q_s32((const int32_t*)(src3 + x));
+            v_int32x4 values1 = v_load(src1 + x);
+            v_int32x4 low1 = v_load(src2 + x);
+            v_int32x4 high1 = v_load(src3 + x);
 
-            uint16x4_t r1 = vmovn_u32(vandq_u32(vcgeq_s32(values, low), vcgeq_s32(high, values)));
+            v_int32x4 values2 = v_load(src1 + x + v_int32x4::nlanes);
+            v_int32x4 low2 = v_load(src2 + x + v_int32x4::nlanes);
+            v_int32x4 high2 = v_load(src3 + x + v_int32x4::nlanes);
 
-            values = vld1q_s32((const int32_t*)(src1 + x + 4));
-            low = vld1q_s32((const int32_t*)(src2 + x + 4));
-            high = vld1q_s32((const int32_t*)(src3 + x + 4));
-
-            uint16x4_t r2 = vmovn_u32(vandq_u32(vcgeq_s32(values, low), vcgeq_s32(high, values)));
-
-            uint16x8_t res_16 = vcombine_u16(r1, r2);
-
-            vst1_u8(dst + x, vmovn_u16(res_16));
+            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2))));
         }
         return x;
     }
@@ -1625,27 +1491,22 @@ template <>
 struct InRange_SIMD<float>
 {
     int operator () (const float * src1, const float * src2, const float * src3,
-                     uchar * dst, int len) const
+        uchar * dst, int len) const
     {
         int x = 0;
+        const int width = (int)v_float32x4::nlanes * 2;
 
-        for ( ; x <= len - 8; x += 8 )
+        for (; x <= len - width; x += width)
         {
-            float32x4_t values = vld1q_f32((const float32_t*)(src1 + x));
-            float32x4_t low = vld1q_f32((const float32_t*)(src2 + x));
-            float32x4_t high = vld1q_f32((const float32_t*)(src3 + x));
+            v_float32x4 values1 = v_load(src1 + x);
+            v_float32x4 low1 = v_load(src2 + x);
+            v_float32x4 high1 = v_load(src3 + x);
 
-            uint16x4_t r1 = vmovn_u32(vandq_u32(vcgeq_f32(values, low), vcgeq_f32(high, values)));
+            v_float32x4 values2 = v_load(src1 + x + v_float32x4::nlanes);
+            v_float32x4 low2 = v_load(src2 + x + v_float32x4::nlanes);
+            v_float32x4 high2 = v_load(src3 + x + v_float32x4::nlanes);
 
-            values = vld1q_f32((const float32_t*)(src1 + x + 4));
-            low = vld1q_f32((const float32_t*)(src2 + x + 4));
-            high = vld1q_f32((const float32_t*)(src3 + x + 4));
-
-            uint16x4_t r2 = vmovn_u32(vandq_u32(vcgeq_f32(values, low), vcgeq_f32(high, values)));
-
-            uint16x8_t res_16 = vcombine_u16(r1, r2);
-
-            vst1_u8(dst + x, vmovn_u16(res_16));
+            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32((values1 >= low1) & (high1 >= values1)), v_reinterpret_as_u32((values2 >= low2) & (high2 >= values2))));
         }
         return x;
     }
@@ -1784,7 +1645,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(_lowerb, stype, lkind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The lower bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
 
@@ -1793,7 +1654,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(_upperb, stype, ukind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The upper bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
 
@@ -1889,6 +1750,8 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
 void cv::inRange(InputArray _src, InputArray _lowerb,
                  InputArray _upperb, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.dims() <= 2 && _lowerb.dims() <= 2 &&
                _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
@@ -1903,7 +1766,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(lb, src.type(), lkind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The lower bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
 
@@ -1912,7 +1775,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     {
         if( !checkScalar(ub, src.type(), ukind, skind) )
             CV_Error( CV_StsUnmatchedSizes,
-                     "The upper bounary is neither an array of the same size and same type as src, nor a scalar");
+                     "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
 
@@ -2274,7 +2137,7 @@ static inline void fixSteps(int width, int height, size_t elemSize, size_t& step
     CV_IPP_CHECK() \
     { \
         fixSteps(width, height, sizeof(dst[0]), step1, step2, step); \
-        if (0 <= fun(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height), 0)) \
+        if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height), 0)) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \
             return; \
@@ -2286,7 +2149,7 @@ static inline void fixSteps(int width, int height, size_t elemSize, size_t& step
     CV_IPP_CHECK() \
     { \
         fixSteps(width, height, sizeof(dst[0]), step1, step2, step); \
-        if (0 <= fun(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(width, height), 0)) \
+        if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(width, height), 0)) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \
             return; \
@@ -2298,7 +2161,7 @@ static inline void fixSteps(int width, int height, size_t elemSize, size_t& step
     CV_IPP_CHECK() \
     { \
         fixSteps(width, height, sizeof(dst[0]), step1, step2, step); \
-        if (0 <= fun(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height))) \
+        if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height))) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \
             return; \
@@ -2310,7 +2173,7 @@ static inline void fixSteps(int width, int height, size_t elemSize, size_t& step
     CV_IPP_CHECK() \
     { \
         fixSteps(width, height, sizeof(dst[0]), step1, step2, step); \
-        if (0 <= fun(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(width, height))) \
+        if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(width, height))) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \
             return; \
@@ -2467,7 +2330,7 @@ void sub64f( const double* src1, size_t step1,
         int i = 0; \
         for(; i < height; i++) \
         { \
-            if (0 > fun(s1, s2, d, width)) \
+            if (0 > CV_INSTRUMENT_FUN_IPP(fun, s1, s2, d, width)) \
                 break; \
             s1 = (type*)((uchar*)s1 + step1); \
             s2 = (type*)((uchar*)s2 + step2); \
@@ -2684,7 +2547,7 @@ void absdiff64f( const double* src1, size_t step1,
     CV_IPP_CHECK() \
     { \
         fixSteps(width, height, sizeof(dst[0]), step1, step2, step); (void)src2; \
-        if (0 <= fun(src1, (int)step1, dst, (int)step, ippiSize(width, height))) \
+        if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, dst, (int)step, ippiSize(width, height))) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \
             return; \
@@ -2750,7 +2613,7 @@ inline static IppCmpOp convert_cmp(int _cmpop)
         if( op  >= 0 ) \
         { \
             fixSteps(width, height, sizeof(dst[0]), step1, step2, step); \
-            if (0 <= fun(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height), op)) \
+            if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height), op)) \
             { \
                 CV_IMPL_ADD(CV_IMPL_IPP); \
                 return; \
@@ -2788,33 +2651,17 @@ void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
-            #if CV_SSE2
-            if( USE_SSE2 )
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
-                __m128i c128 = _mm_set1_epi8 (-128);
-                for( ; x <= width - 16; x += 16 )
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+
+                for( ; x <= width - v_uint8x16::nlanes; x += v_uint8x16::nlanes )
                 {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    // no simd for 8u comparison, that's why we need the trick
-                    r00 = _mm_sub_epi8(r00,c128);
-                    r10 = _mm_sub_epi8(r10,c128);
-
-                    r00 =_mm_xor_si128(_mm_cmpgt_epi8(r00, r10), m128);
-                    _mm_storeu_si128((__m128i*)(dst + x),r00);
-
+                    v_store(dst + x, (v_load(src1 + x) > v_load(src2 + x)) ^ mask);
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_GT ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                vst1q_u8(dst+x, veorq_u8(vcgtq_u8(vld1q_u8(src1+x), vld1q_u8(src2+x)), mask));
-            }
-
-           #endif
+#endif
 
             for( ; x < width; x++ ){
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
@@ -2827,26 +2674,17 @@ void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-            #if CV_SSE2
-            if( USE_SSE2 )
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
-                for( ; x <= width - 16; x += 16 )
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+
+                for( ; x <= width - v_uint8x16::nlanes; x += v_uint8x16::nlanes )
                 {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi8 (r00, r10), m128);
-                    _mm_storeu_si128((__m128i*)(dst + x), r00);
+                    v_store(dst+x, (v_load(src1+x) == v_load(src2+x)) ^ mask);
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_EQ ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                vst1q_u8(dst+x, veorq_u8(vceqq_u8(vld1q_u8(src1+x), vld1q_u8(src2+x)), mask));
-            }
-           #endif
+#endif
            for( ; x < width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
         }
@@ -2891,49 +2729,26 @@ void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
-            #if CV_SSE2
-            if( USE_SSE2)
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
-                for( ; x <= width - 16; x += 16 )
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
-                    __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-                    __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
-                    r01 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r01, r11), m128);
-                    r11 = _mm_packs_epi16(r00, r01);
-                    _mm_storeu_si128((__m128i*)(dst + x), r11);
-                }
-                if( x <= width-8)
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
-                    r10 = _mm_packs_epi16(r00, r00);
-                    _mm_storel_epi64((__m128i*)(dst + x), r10);
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+                const int dWidth = v_uint8x16::nlanes;
 
-                    x += 8;
+                for( ; x <= width - dWidth; x += dWidth )
+                {
+                    v_int16x8 in1 = v_load(src1 + x);
+                    v_int16x8 in2 = v_load(src2 + x);
+                    v_uint16x8 t1 = v_reinterpret_as_u16(in1 > in2);
+
+                    in1 = v_load(src1 + x + v_uint16x8::nlanes);
+                    in2 = v_load(src2 + x + v_uint16x8::nlanes);
+                    v_uint16x8 t2 = v_reinterpret_as_u16(in1 > in2);
+
+                    v_store(dst+x, (v_pack(t1, t2)) ^ mask);
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_GT ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                int16x8_t in1 = vld1q_s16(src1 + x);
-                int16x8_t in2 = vld1q_s16(src2 + x);
-                uint8x8_t t1 = vmovn_u16(vcgtq_s16(in1, in2));
-
-                in1 = vld1q_s16(src1 + x + 8);
-                in2 = vld1q_s16(src2 + x + 8);
-                uint8x8_t t2 = vmovn_u16(vcgtq_s16(in1, in2));
-
-                vst1q_u8(dst+x, veorq_u8(vcombine_u8(t1, t2), mask));
-            }
-            #endif
-
+#endif
             for( ; x < width; x++ ){
                  dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
             }
@@ -2945,48 +2760,26 @@ void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
         for( ; height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-            #if CV_SSE2
-            if( USE_SSE2 )
+#if CV_SIMD128
+            if( hasSIMD128() )
             {
-                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
-                for( ; x <= width - 16; x += 16 )
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
-                    __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-                    __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
-                    r01 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r01, r11), m128);
-                    r11 = _mm_packs_epi16(r00, r01);
-                    _mm_storeu_si128((__m128i*)(dst + x), r11);
-                }
-                if( x <= width - 8)
-                {
-                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
-                    r10 = _mm_packs_epi16(r00, r00);
-                    _mm_storel_epi64((__m128i*)(dst + x), r10);
+                v_uint8x16 mask = v_setall_u8((uchar)m);
+                const int dWidth = v_uint8x16::nlanes;
 
-                    x += 8;
+                for( ; x <= width - dWidth; x += dWidth )
+                {
+                    v_int16x8 in1 = v_load(src1 + x);
+                    v_int16x8 in2 = v_load(src2 + x);
+                    v_uint16x8 t1 = v_reinterpret_as_u16(in1 == in2);
+
+                    in1 = v_load(src1 + x + 8);
+                    in2 = v_load(src2 + x + 8);
+                    v_uint16x8 t2 = v_reinterpret_as_u16(in1 == in2);
+
+                    v_store(dst+x, (v_pack(t1, t2)^ mask));
                 }
             }
-            #elif CV_NEON
-            uint8x16_t mask = code == CMP_EQ ? vdupq_n_u8(0) : vdupq_n_u8(255);
-
-            for( ; x <= width - 16; x += 16 )
-            {
-                int16x8_t in1 = vld1q_s16(src1 + x);
-                int16x8_t in2 = vld1q_s16(src2 + x);
-                uint8x8_t t1 = vmovn_u16(vceqq_s16(in1, in2));
-
-                in1 = vld1q_s16(src1 + x + 8);
-                in2 = vld1q_s16(src2 + x + 8);
-                uint8x8_t t2 = vmovn_u16(vceqq_s16(in1, in2));
-
-                vst1q_u8(dst+x, veorq_u8(vcombine_u8(t1, t2), mask));
-            }
-            #endif
+#endif
             for( ; x < width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
         }
@@ -3023,7 +2816,7 @@ void cmp64f(const double* src1, size_t step1, const double* src2, size_t step2,
     { \
         if (std::fabs(fscale - 1) <= FLT_EPSILON) \
         { \
-            if (fun(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height), 0) >= 0) \
+            if (CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height), 0) >= 0) \
             { \
                 CV_IMPL_ADD(CV_IMPL_IPP); \
                 return; \
@@ -3037,7 +2830,7 @@ void cmp64f(const double* src1, size_t step1, const double* src2, size_t step2,
     { \
         if (std::fabs(fscale - 1) <= FLT_EPSILON) \
         { \
-            if (fun(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height)) >= 0) \
+            if (CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height)) >= 0) \
             { \
                 CV_IMPL_ADD(CV_IMPL_IPP); \
                 return; \
@@ -3123,7 +2916,7 @@ void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
     if( src1 )
         div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
     else
-        recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+        recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
 void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
@@ -3172,53 +2965,53 @@ void div64f( const double* src1, size_t step1, const double* src2, size_t step2,
 // Reciprocial
 //=======================================
 
-void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+void recip8u( const uchar*, size_t, const uchar* src2, size_t step2,
                   uchar* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip8u, cv_hal_recip8u, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip8u, cv_hal_recip8u, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+void recip8s( const schar*, size_t, const schar* src2, size_t step2,
                   schar* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip8s, cv_hal_recip8s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip8s, cv_hal_recip8s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+void recip16u( const ushort*, size_t, const ushort* src2, size_t step2,
                    ushort* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip16u, cv_hal_recip16u, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip16u, cv_hal_recip16u, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip16s( const short* src1, size_t step1, const short* src2, size_t step2,
+void recip16s( const short*, size_t, const short* src2, size_t step2,
                    short* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip16s, cv_hal_recip16s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip16s, cv_hal_recip16s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip32s( const int* src1, size_t step1, const int* src2, size_t step2,
+void recip32s( const int*, size_t, const int* src2, size_t step2,
                    int* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip32s, cv_hal_recip32s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip32s, cv_hal_recip32s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip32f( const float* src1, size_t step1, const float* src2, size_t step2,
+void recip32f( const float*, size_t, const float* src2, size_t step2,
                    float* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip32f, cv_hal_recip32f, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_f(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip32f, cv_hal_recip32f, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_f(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip64f( const double* src1, size_t step1, const double* src2, size_t step2,
+void recip64f( const double*, size_t, const double* src2, size_t step2,
                    double* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip64f, cv_hal_recip64f, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_f(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip64f, cv_hal_recip64f, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_f(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
 //=======================================
@@ -3239,59 +3032,33 @@ addWeighted8u( const uchar* src1, size_t step1,
     {
         int x = 0;
 
-#if CV_SSE2
-        if( USE_SSE2 )
+#if CV_SIMD128
+        if( hasSIMD128() )
         {
-            __m128 a4 = _mm_set1_ps(alpha), b4 = _mm_set1_ps(beta), g4 = _mm_set1_ps(gamma);
-            __m128i z = _mm_setzero_si128();
+            v_float32x4 g = v_setall_f32(gamma);
+            v_float32x4 a = v_setall_f32(alpha);
+            v_float32x4 b = v_setall_f32(beta);
 
-            for( ; x <= width - 8; x += 8 )
+            for( ; x <= width - v_uint16x8::nlanes; x += v_uint16x8::nlanes )
             {
-                __m128i u = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(src1 + x)), z);
-                __m128i v = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(src2 + x)), z);
+                v_uint16x8 in1_16 = v_load_expand(src1 + x);
+                v_int32x4 in1_32_l, in1_32_h;
+                v_expand(v_reinterpret_as_s16(in1_16), in1_32_l, in1_32_h);
+                v_float32x4 in1_f_l = v_cvt_f32(in1_32_l);
+                v_float32x4 in1_f_h = v_cvt_f32(in1_32_h);
 
-                __m128 u0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(u, z));
-                __m128 u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(u, z));
-                __m128 v0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v, z));
-                __m128 v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v, z));
+                v_uint16x8 in2_16 = v_load_expand(src2 + x);
+                v_int32x4 in2_32_l, in2_32_h;
+                v_expand(v_reinterpret_as_s16(in2_16), in2_32_l, in2_32_h);
+                v_float32x4 in2_f_l = v_cvt_f32(in2_32_l);
+                v_float32x4 in2_f_h = v_cvt_f32(in2_32_h);
 
-                u0 = _mm_add_ps(_mm_mul_ps(u0, a4), _mm_mul_ps(v0, b4));
-                u1 = _mm_add_ps(_mm_mul_ps(u1, a4), _mm_mul_ps(v1, b4));
-                u0 = _mm_add_ps(u0, g4); u1 = _mm_add_ps(u1, g4);
+                v_int32x4 out_l = v_round(in1_f_l * a + in2_f_l * b + g);
+                v_int32x4 out_h = v_round(in1_f_h * a + in2_f_h * b + g);
 
-                u = _mm_packs_epi32(_mm_cvtps_epi32(u0), _mm_cvtps_epi32(u1));
-                u = _mm_packus_epi16(u, u);
-
-                _mm_storel_epi64((__m128i*)(dst + x), u);
+                v_int16x8 out_16 = v_pack(out_l, out_h);
+                v_pack_u_store(dst + x, out_16);
             }
-        }
-#elif CV_NEON
-        float32x4_t g = vdupq_n_f32 (gamma);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            uint8x8_t in1 = vld1_u8(src1+x);
-            uint16x8_t in1_16 = vmovl_u8(in1);
-            float32x4_t in1_f_l = vcvtq_f32_u32(vmovl_u16(vget_low_u16(in1_16)));
-            float32x4_t in1_f_h = vcvtq_f32_u32(vmovl_u16(vget_high_u16(in1_16)));
-
-            uint8x8_t in2 = vld1_u8(src2+x);
-            uint16x8_t in2_16 = vmovl_u8(in2);
-            float32x4_t in2_f_l = vcvtq_f32_u32(vmovl_u16(vget_low_u16(in2_16)));
-            float32x4_t in2_f_h = vcvtq_f32_u32(vmovl_u16(vget_high_u16(in2_16)));
-
-            float32x4_t out_f_l = vaddq_f32(vmulq_n_f32(in1_f_l, alpha), vmulq_n_f32(in2_f_l, beta));
-            float32x4_t out_f_h = vaddq_f32(vmulq_n_f32(in1_f_h, alpha), vmulq_n_f32(in2_f_h, beta));
-            out_f_l = vaddq_f32(out_f_l, g);
-            out_f_h = vaddq_f32(out_f_h, g);
-
-            uint16x4_t out_16_l = vqmovun_s32(cv_vrndq_s32_f32(out_f_l));
-            uint16x4_t out_16_h = vqmovun_s32(cv_vrndq_s32_f32(out_f_h));
-
-            uint16x8_t out_16 = vcombine_u16(out_16_l, out_16_h);
-            uint8x8_t out = vqmovn_u16(out_16);
-
-            vst1_u8(dst+x, out);
         }
 #endif
         #if CV_ENABLE_UNROLLED

@@ -79,7 +79,8 @@ struct big_any_policy : typed_base_any_policy<T>
 {
     virtual void static_delete(void** x)
     {
-        if (* x) delete (* reinterpret_cast<T**>(x)); *x = NULL;
+        if (* x) delete (* reinterpret_cast<T**>(x));
+        *x = NULL;
     }
     virtual void copy_from_value(void const* src, void** dest)
     {
@@ -241,6 +242,12 @@ public:
     /// Assignment operator.
     template<typename T>
     any& operator=(const T& x)
+    {
+        return assign(x);
+    }
+
+    /// Assignment operator. Template-based version above doesn't work as expected. We need regular assignment operator here.
+    any& operator=(const any& x)
     {
         return assign(x);
     }

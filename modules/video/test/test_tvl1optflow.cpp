@@ -40,16 +40,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <fstream>
 
-using namespace std;
-using namespace cv;
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 //#define DUMP
 
-namespace
-{
     // first four bytes, should be the same in little endian
     const float FLO_TAG_FLOAT = 202021.25f;  // check for this when READING the file
 
@@ -83,7 +78,7 @@ namespace
     // http://vision.middlebury.edu/flow/data/
     void readOpticalFlowFromFile(Mat_<Point2f>& flow, const string& fileName)
     {
-        ifstream file(fileName.c_str(), ios_base::binary);
+        std::ifstream file(fileName.c_str(), std::ios_base::binary);
 
         float tag;
         file.read((char*) &tag, sizeof(float));
@@ -116,34 +111,38 @@ namespace
         return !cvIsNaN(u.x) && !cvIsNaN(u.y) && (fabs(u.x) < 1e9) && (fabs(u.y) < 1e9);
     }
 
-    double calcRMSE(const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2)
+    void check(const Mat_<Point2f>& gold, const Mat_<Point2f>& flow, double threshold = 0.1, double expectedAccuracy = 0.95)
     {
-        double sum = 0.0;
-        int counter = 0;
+        threshold = threshold*threshold;
 
-        for (int i = 0; i < flow1.rows; ++i)
+        size_t gold_counter = 0;
+        size_t valid_counter = 0;
+
+        for (int i = 0; i < gold.rows; ++i)
         {
-            for (int j = 0; j < flow1.cols; ++j)
+            for (int j = 0; j < gold.cols; ++j)
             {
-                const Point2f u1 = flow1(i, j);
-                const Point2f u2 = flow2(i, j);
+                const Point2f u1 = gold(i, j);
+                const Point2f u2 = flow(i, j);
 
-                if (isFlowCorrect(u1) && isFlowCorrect(u2))
+                if (isFlowCorrect(u1))
                 {
-                    const Point2f diff = u1 - u2;
-                    sum += diff.ddot(diff);
-                    ++counter;
+                    gold_counter++;
+                    if (isFlowCorrect(u2))
+                    {
+                        const Point2f diff = u1 - u2;
+                        double err = diff.ddot(diff);
+                        if (err <= threshold)
+                            valid_counter++;
+                    }
                 }
             }
         }
-        return sqrt(sum / (1e-9 + counter));
+        EXPECT_GE(valid_counter, expectedAccuracy * gold_counter);
     }
-}
 
 TEST(Video_calcOpticalFlowDual_TVL1, Regression)
 {
-    const double MAX_RMSE = 0.03;
-
     const string frame1_path = TS::ptr()->get_data_path() + "optflow/RubberWhale1.png";
     const string frame2_path = TS::ptr()->get_data_path() + "optflow/RubberWhale2.png";
     const string gold_flow_path = TS::ptr()->get_data_path() + "optflow/tvl1_flow.flo";
@@ -154,7 +153,7 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     ASSERT_FALSE(frame2.empty());
 
     Mat_<Point2f> flow;
-    Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
+    Ptr<DualTVL1OpticalFlow> tvl1 = cv::DualTVL1OpticalFlow::create();
 
     tvl1->calc(frame1, frame2, flow);
 
@@ -167,7 +166,8 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     ASSERT_EQ(gold.rows, flow.rows);
     ASSERT_EQ(gold.cols, flow.cols);
 
-    double err = calcRMSE(gold, flow);
-    EXPECT_LE(err, MAX_RMSE);
+    check(gold, flow);
 #endif
 }
+
+}} // namespace

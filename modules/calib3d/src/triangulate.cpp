@@ -114,52 +114,6 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
         cvmSet(points4D,2,i,matrV(3,2));/* Z */
         cvmSet(points4D,3,i,matrV(3,3));/* W */
     }
-
-#if 0
-    double err = 0;
-    /* Points was reconstructed. Try to reproject points */
-    /* We can compute reprojection error if need */
-    {
-        int i;
-        CvMat point3D;
-        double point3D_dat[4];
-        point3D = cvMat(4,1,CV_64F,point3D_dat);
-
-        CvMat point2D;
-        double point2D_dat[3];
-        point2D = cvMat(3,1,CV_64F,point2D_dat);
-
-        for( i = 0; i < numPoints; i++ )
-        {
-            double W = cvmGet(points4D,3,i);
-
-            point3D_dat[0] = cvmGet(points4D,0,i)/W;
-            point3D_dat[1] = cvmGet(points4D,1,i)/W;
-            point3D_dat[2] = cvmGet(points4D,2,i)/W;
-            point3D_dat[3] = 1;
-
-            /* !!! Project this point for each camera */
-            for( int currCamera = 0; currCamera < 2; currCamera++ )
-            {
-                cvMatMul(projMatrs[currCamera], &point3D, &point2D);
-
-                float x,y;
-                float xr,yr,wr;
-                x = (float)cvmGet(projPoints[currCamera],0,i);
-                y = (float)cvmGet(projPoints[currCamera],1,i);
-
-                wr = (float)point2D_dat[2];
-                xr = (float)(point2D_dat[0]/wr);
-                yr = (float)(point2D_dat[1]/wr);
-
-                float deltaX,deltaY;
-                deltaX = (float)fabs(x-xr);
-                deltaY = (float)fabs(y-yr);
-                err += deltaX*deltaX + deltaY*deltaY;
-            }
-        }
-    }
-#endif
 }
 
 
@@ -327,7 +281,7 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         c = cvGetReal2D(RTFTR,2,1);
         d = cvGetReal2D(RTFTR,2,2);
 
-        // Form the polynomial g(t) = k6*t⁶ + k5*t⁵ + k4*t⁴ + k3*t³ + k2*t² + k1*t + k0
+        // Form the polynomial g(t) = k6*t^6 + k5*t^5 + k4*t^4 + k3*t^3 + k2*t^2 + k1*t + k0
         // from f1, f2, a, b, c and d
         cvSetReal2D(polynomial,0,6,( +b*c*c*f1*f1*f1*f1*a-a*a*d*f1*f1*f1*f1*c ));
         cvSetReal2D(polynomial,0,5,( +f2*f2*f2*f2*c*c*c*c+2*a*a*f2*f2*c*c-a*a*d*d*f1*f1*f1*f1+b*b*c*c*f1*f1*f1*f1+a*a*a*a ));
@@ -393,6 +347,8 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
                             InputArray _projPoints1, InputArray _projPoints2,
                             OutputArray _points4D )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat matr1 = _projMatr1.getMat(), matr2 = _projMatr2.getMat();
     Mat points1 = _projPoints1.getMat(), points2 = _projPoints2.getMat();
 
@@ -414,6 +370,8 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
 void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
                          OutputArray _newPoints1, OutputArray _newPoints2 )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat F = _F.getMat();
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
 

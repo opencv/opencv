@@ -134,7 +134,7 @@ namespace clahe
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    __global__ void tranformKernel(const PtrStepSzb src, PtrStepb dst, const PtrStepb lut, const int2 tileSize, const int tilesX, const int tilesY)
+    __global__ void transformKernel(const PtrStepSzb src, PtrStepb dst, const PtrStepb lut, const int2 tileSize, const int tilesX, const int tilesY)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -173,9 +173,9 @@ namespace clahe
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        cudaSafeCall( cudaFuncSetCacheConfig(tranformKernel, cudaFuncCachePreferL1) );
+        cudaSafeCall( cudaFuncSetCacheConfig(transformKernel, cudaFuncCachePreferL1) );
 
-        tranformKernel<<<grid, block, 0, stream>>>(src, dst, lut, tileSize, tilesX, tilesY);
+        transformKernel<<<grid, block, 0, stream>>>(src, dst, lut, tileSize, tilesX, tilesY);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)

@@ -44,7 +44,7 @@ Code
         histogram of the lower half base image and with the same base image histogram.
     -   Display the numerical matching parameters obtained.
 -   **Downloadable code**: Click
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp)
 -   **Code at glance:**
 
 @include cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp

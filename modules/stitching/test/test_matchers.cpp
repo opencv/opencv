@@ -42,10 +42,9 @@
 #include "test_precomp.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_XFEATURES2D
+namespace opencv_test { namespace {
 
-using namespace cv;
-using namespace std;
+#ifdef HAVE_OPENCV_XFEATURES2D
 
 TEST(SurfFeaturesFinder, CanFindInROIs)
 {
@@ -75,4 +74,29 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     ASSERT_EQ(bad_count, 0);
 }
 
-#endif
+#endif // HAVE_OPENCV_XFEATURES2D
+
+TEST(ParallelFeaturesFinder, IsSameWithSerial)
+{
+    Ptr<detail::FeaturesFinder> para_finder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<detail::FeaturesFinder> serial_finder = makePtr<detail::OrbFeaturesFinder>();
+    Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a3.png", IMREAD_GRAYSCALE);
+
+    vector<Mat> imgs(50, img);
+    detail::ImageFeatures serial_features;
+    vector<detail::ImageFeatures> para_features(imgs.size());
+
+    (*serial_finder)(img, serial_features);
+    (*para_finder)(imgs, para_features);
+
+    // results must be the same
+    for(size_t i = 0; i < para_features.size(); ++i)
+    {
+        Mat diff_descriptors = serial_features.descriptors.getMat(ACCESS_READ) != para_features[i].descriptors.getMat(ACCESS_READ);
+        ASSERT_EQ(countNonZero(diff_descriptors), 0);
+        ASSERT_EQ(serial_features.img_size, para_features[i].img_size);
+        ASSERT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
+    }
+}
+
+}} // namespace

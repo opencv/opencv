@@ -282,7 +282,7 @@ static void icvPutImage( CvWindow* window )
 
 static void icvUpdateWindowSize( const CvWindow* window )
 {
-    int width = 0, height = 240; /* init à al taille de base de l'image*/
+    int width = 0, height = 240;
     Rect globalBounds;
 
     GetWindowBounds(window->window, kWindowContentRgn, &globalBounds);
@@ -718,6 +718,43 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     return ;
 }
 
+CvRect cvGetWindowRect_CARBON(const char* name)
+{
+    CvRect result = cvRect(-1, -1, -1, -1);
+
+    CV_FUNCNAME( "cvGetWindowRect_QT" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if(!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName( name );
+    if( !window )
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+
+
+    Rect portrect;
+    GetWindowPortBounds(window->window, &portrect);
+    LocalToGlobal(&topLeft(portrect));
+    LocalToGlobal(&botRight(portrect));
+    if(!( window->flags & CV_WINDOW_AUTOSIZE) )
+    {
+        result = cvRect(portrect.left, portrect.top, portrect.right-portrect.left,
+            portrect.bottom-portrect.top-window->trackbarheight);
+    }
+    else
+    {
+        result = cvRect(portrect.left, portrect.bottom - height - window->trackbarheight,
+            window->imageWidth, window->imageHeight);
+    }
+
+    __END__;
+    return result;
+}
+
 CV_IMPL void* cvGetWindowHandle( const char* name )
 {
     WindowRef result = 0;
@@ -873,7 +910,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         }
         else
         {
-            fprintf(stderr, "Failed to tranform process type: %d\n", (int) ret);
+            fprintf(stderr, "Failed to transform process type: %d\n", (int) ret);
             fflush (stderr);
         }
     }
@@ -1031,7 +1068,7 @@ static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, Event
                 GetWindowBounds(theWindow, kWindowStructureRgn, &structure);
                 GetWindowBounds(theWindow, kWindowContentRgn, &content);
                 lx = (int)point.x - content.left + structure.left;
-                ly = (int)point.y - window->trackbarheight  - content.top + structure.top; /* minus la taille des trackbars */
+                ly = (int)point.y - window->trackbarheight  - content.top + structure.top;
                 if (window->flags & CV_WINDOW_AUTOSIZE) {//FD
                                                          //printf("was %d,%d\n", lx, ly);
                     /* scale the mouse coordinates */
@@ -1039,7 +1076,7 @@ static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, Event
                     ly = ly * window->imageHeight / (content.bottom - content.top - window->trackbarheight);
                 }
 
-                if (lx>0 && ly >0){ /* a remettre dans les coordonnées locale */
+                if (lx>0 && ly >0){
                     window->on_mouse (event, lx, ly, flags, window->on_mouse_param);
                     return noErr;
                 }

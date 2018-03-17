@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_NEON_UTILS_HPP__
-#define __OPENCV_HAL_NEON_UTILS_HPP__
+#ifndef OPENCV_HAL_NEON_UTILS_HPP
+#define OPENCV_HAL_NEON_UTILS_HPP
 
 #include "opencv2/core/cvdef.h"
 
@@ -125,4 +125,4 @@ inline float32x2_t cv_vsqrt_f32(float32x2_t val)
 
 //! @}
 
-#endif // __OPENCV_HAL_NEON_UTILS_HPP__
+#endif // OPENCV_HAL_NEON_UTILS_HPP

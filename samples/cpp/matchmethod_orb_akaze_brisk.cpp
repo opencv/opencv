@@ -1,4 +1,7 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/highgui.hpp>
 #include <vector>
 #include <iostream>
 
@@ -59,7 +62,7 @@ int main(int argc, char *argv[])
 
     // Descriptor loop
     vector<String>::iterator itDesc;
-    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); itDesc++)
+    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); ++itDesc)
     {
         Ptr<DescriptorMatcher> descriptorMatcher;
         // Match between img1 and img2
@@ -90,7 +93,7 @@ int main(int argc, char *argv[])
             // or detect and compute descriptors in one step
             b->detectAndCompute(img2, Mat(),keyImg2, descImg2,false);
             // Match method loop
-            for (itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); itMatcher++){
+            for (itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); ++itMatcher){
                 descriptorMatcher = DescriptorMatcher::create(*itMatcher);
                 if ((*itMatcher == "BruteForce-Hamming" || *itMatcher == "BruteForce-Hamming(2)") && (b->descriptorType() == CV_32F || b->defaultNorm() <= NORM_L2SQR))
                 {
@@ -135,7 +138,7 @@ int main(int argc, char *argv[])
                     cout << "in img1\tin img2\n";
                     // Use to compute distance between keyPoint matches and to evaluate match algorithm
                     double cumSumDist2=0;
-                    for (it = bestMatches.begin(); it != bestMatches.end(); it++)
+                    for (it = bestMatches.begin(); it != bestMatches.end(); ++it)
                     {
                         cout << it->queryIdx << "\t" <<  it->trainIdx << "\t"  <<  it->distance << "\n";
                         Point2d p=keyImg1[it->queryIdx].pt-keyImg2[it->trainIdx].pt;
@@ -164,16 +167,16 @@ int main(int argc, char *argv[])
     }
     int i=0;
     cout << "Cumulative distance between keypoint match for different algorithm and feature detector \n\t";
-    cout << "We cannot say which is the best but we can say results are differents! \n\t";
-    for (vector<String>::iterator itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); itMatcher++)
+    cout << "We cannot say which is the best but we can say results are different! \n\t";
+    for (vector<String>::iterator itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); ++itMatcher)
     {
         cout<<*itMatcher<<"\t";
     }
     cout << "\n";
-    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); itDesc++)
+    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); ++itDesc)
     {
         cout << *itDesc << "\t";
-        for (vector<String>::iterator itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); itMatcher++, i++)
+        for (vector<String>::iterator itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); ++itMatcher, ++i)
         {
             cout << desMethCmp[i]<<"\t";
         }

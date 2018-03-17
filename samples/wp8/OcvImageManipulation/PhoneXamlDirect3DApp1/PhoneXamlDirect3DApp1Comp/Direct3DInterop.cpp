@@ -4,9 +4,9 @@
 #include <windows.storage.streams.h>
 #include <wrl.h>
 #include <robuffer.h>
-#include <opencv2\core\core.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
-#include <opencv2\features2d\features2d.hpp>
+#include <opencv2\core.hpp>
+#include <opencv2\imgproc.hpp>
+#include <opencv2\features2d.hpp>
 #include <algorithm>
 
 using namespace Windows::Storage::Streams;

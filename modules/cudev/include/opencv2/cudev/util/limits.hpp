@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_LIMITS_HPP__
-#define __OPENCV_CUDEV_UTIL_LIMITS_HPP__
+#ifndef OPENCV_CUDEV_UTIL_LIMITS_HPP
+#define OPENCV_CUDEV_UTIL_LIMITS_HPP
 
 #include <limits.h>
 #include <float.h>

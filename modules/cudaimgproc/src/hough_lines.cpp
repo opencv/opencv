@@ -95,6 +95,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "name" << "HoughLinesDetector_CUDA"
             << "rho" << rho_
             << "theta" << theta_

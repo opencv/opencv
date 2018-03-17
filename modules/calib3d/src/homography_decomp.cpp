@@ -2,7 +2,7 @@
  //
  // This is a homography decomposition implementation contributed to OpenCV
  // by Samson Yilma. It implements the homography decomposition algorithm
- // descriped in the research report:
+ // described in the research report:
  // Malis, E and Vargas, M, "Deeper understanding of the homography decomposition
  // for vision-based control", Research Report 6303, INRIA (2007)
  //
@@ -16,7 +16,7 @@
  //                           License Agreement
  //                For Open Source Computer Vision Library
  //
- // Copyright (C) 2014, Samson Yilma¸ (samson_yilma@yahoo.com), all rights reserved.
+ // Copyright (C) 2014, Samson Yilma (samson_yilma@yahoo.com), all rights reserved.
  //
  // Third party copyrights are property of their respective owners.
  //
@@ -84,6 +84,16 @@ protected:
     }
 
 private:
+    /**
+     * Normalize the homograhpy \f$H\f$.
+     *
+     * @param H Homography matrix.
+     * @param K Intrinsic parameter matrix.
+     * @return It returns
+     * \f[
+     *   K^{-1} * H * K
+     * \f]
+     */
     cv::Matx33d normalize(const cv::Matx33d& H, const cv::Matx33d& K);
     void removeScale();
     cv::Matx33d _Hnorm;
@@ -447,7 +457,7 @@ int decomposeHomographyMat(InputArray _H,
     Mat K = _K.getMat().reshape(1, 3);
     CV_Assert(K.cols == 3 && K.rows == 3);
 
-    auto_ptr<HomographyDecomp> hdecomp(new HomographyDecompInria);
+    cv::Ptr<HomographyDecomp> hdecomp(new HomographyDecompInria);
 
     vector<CameraMotion> motions;
     hdecomp->decomposeHomography(H, K, motions);

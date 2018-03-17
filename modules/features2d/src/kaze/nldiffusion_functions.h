@@ -21,10 +21,10 @@ namespace cv
 void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst, int ksize_x, int ksize_y, float sigma);
 
 // Diffusivity functions
-void pm_g1(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k);
-void pm_g2(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k);
-void weickert_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k);
-void charbonnier_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k);
+void pm_g1(InputArray Lx, InputArray Ly, OutputArray dst, float k);
+void pm_g2(InputArray Lx, InputArray Ly, OutputArray dst, float k);
+void weickert_diffusivity(InputArray Lx, InputArray Ly, OutputArray dst, float k);
+void charbonnier_diffusivity(InputArray Lx, InputArray Ly, OutputArray dst, float k);
 
 float compute_k_percentile(const cv::Mat& img, float perc, float gscale, int nbins, int ksize_x, int ksize_y);
 

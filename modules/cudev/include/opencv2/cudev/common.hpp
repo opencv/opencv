@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_COMMON_HPP__
-#define __OPENCV_CUDEV_COMMON_HPP__
+#ifndef OPENCV_CUDEV_COMMON_HPP
+#define OPENCV_CUDEV_COMMON_HPP
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda.hpp"

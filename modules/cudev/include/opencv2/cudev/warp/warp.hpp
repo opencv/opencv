@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_WARP_WARP_HPP__
-#define __OPENCV_CUDEV_WARP_WARP_HPP__
+#ifndef OPENCV_CUDEV_WARP_WARP_HPP
+#define OPENCV_CUDEV_WARP_WARP_HPP
 
 #include "../common.hpp"
 
@@ -64,7 +64,7 @@ struct Warp
     __device__ __forceinline__ static uint laneId()
     {
         uint ret;
-        asm("mov.u32 %0, %laneid;" : "=r"(ret));
+        asm("mov.u32 %0, %%laneid;" : "=r"(ret));
         return ret;
     }
 

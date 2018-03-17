@@ -14,7 +14,7 @@ Source Code
 -----------
 
 Download the source code from
-[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp).
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp).
 
 @include cpp/tutorial_code/introduction/display_image/display_image.cpp
 
@@ -105,8 +105,4 @@ Result
 
     ![](images/Display_Image_Tutorial_Result.jpg)
 
-\htmlonly
-<div align="center">
-<iframe title="Introduction - Display an Image" width="560" height="349" src="http://www.youtube.com/embed/1OJEqpuaGc4?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{1OJEqpuaGc4}

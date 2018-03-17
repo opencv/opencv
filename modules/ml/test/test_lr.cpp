@@ -58,12 +58,11 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace cv::ml;
+namespace opencv_test { namespace {
 
-static bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error)
+bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error)
 {
+    CV_TRACE_FUNCTION();
     error = 0.0f;
     float accuracy = 0.0f;
     Mat _p_labels_temp;
@@ -91,9 +90,15 @@ protected:
 
 void CV_LRTest::run( int /*start_from*/ )
 {
-    // initialize varibles from the popular Iris Dataset
+    CV_TRACE_FUNCTION();
+    // initialize variables from the popular Iris Dataset
     string dataFileName = ts->get_data_path() + "iris.data";
     Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
+
+    if (tdata.empty()) {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        return;
+    }
 
     // run LR classifier train classifier
     Ptr<LogisticRegression> p = LogisticRegression::create();
@@ -145,9 +150,10 @@ protected:
 
 void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 {
+    CV_TRACE_FUNCTION();
     int code = cvtest::TS::OK;
 
-    // initialize varibles from the popular Iris Dataset
+    // initialize variables from the popular Iris Dataset
     string dataFileName = ts->get_data_path() + "iris.data";
     Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
 
@@ -199,7 +205,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     comp_learnt_mats = comp_learnt_mats/255;
 
     // compare difference in prediction outputs and stored inputs
-    // check if there is any difference between computed learnt mat and retreived mat
+    // check if there is any difference between computed learnt mat and retrieved mat
 
     float errorCount = 0.0;
     errorCount += 1 - (float)countNonZero(responses1 == responses2)/responses1.rows;
@@ -218,3 +224,5 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 
 TEST(ML_LR, accuracy) { CV_LRTest test; test.safe_run(); }
 TEST(ML_LR, save_load) { CV_LRTest_SaveLoad test; test.safe_run(); }
+
+}} // namespace

@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // Remap
@@ -364,6 +362,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, Rotate,
 //////////////////////////////////////////////////////////////////////
 // PyrDown
 
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
+
 PERF_TEST_P(Sz_Depth_Cn, PyrDown,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
@@ -432,3 +432,5 @@ PERF_TEST_P(Sz_Depth_Cn, PyrUp,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

@@ -54,6 +54,7 @@ public:
         regularizationParameter=0;
         name_ = "ShapeTransformer.TPS";
         tpsComputed=false;
+        transformCost = 0;
     }
 
     ThinPlateSplineShapeTransformerImpl(double _regularizationParameter)
@@ -61,6 +62,7 @@ public:
         regularizationParameter=_regularizationParameter;
         name_ = "ShapeTransformer.TPS";
         tpsComputed=false;
+        transformCost = 0;
     }
 
     /* Destructor */
@@ -81,6 +83,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "regularization" << regularizationParameter;
     }
@@ -145,6 +148,8 @@ static Point2f _applyTransformation(const Mat &shapeRef, const Point2f point, co
 void ThinPlateSplineShapeTransformerImpl::warpImage(InputArray transformingImage, OutputArray output,
                                       int flags, int borderMode, const Scalar& borderValue) const
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(tpsComputed==true);
 
     Mat theinput = transformingImage.getMat();
@@ -165,6 +170,8 @@ void ThinPlateSplineShapeTransformerImpl::warpImage(InputArray transformingImage
 
 float ThinPlateSplineShapeTransformerImpl::applyTransformation(InputArray inPts, OutputArray outPts)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(tpsComputed);
     Mat pts1 = inPts.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0));
@@ -188,6 +195,8 @@ float ThinPlateSplineShapeTransformerImpl::applyTransformation(InputArray inPts,
 void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts1, InputArray _pts2,
                                                                std::vector<DMatch>& _matches )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
@@ -226,7 +235,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
 
     // Building the matrices for solving the L*(w|a)=(v|0) problem with L={[K|P];[P'|0]}
 
-    //Building K and P (Neede to buil L)
+    //Building K and P (Needed to build L)
     Mat matK((int)matches.size(),(int)matches.size(),CV_32F);
     Mat matP((int)matches.size(),3,CV_32F);
     for (int i=0, end=(int)matches.size(); i<end; i++)

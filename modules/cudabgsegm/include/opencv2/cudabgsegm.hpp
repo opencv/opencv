@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDABGSEGM_HPP__
-#define __OPENCV_CUDABGSEGM_HPP__
+#ifndef OPENCV_CUDABGSEGM_HPP
+#define OPENCV_CUDABGSEGM_HPP
 
 #ifndef __cplusplus
 #  error cudabgsegm.hpp header must be compiled as C++
@@ -151,4 +151,4 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDABGSEGM_HPP__ */
+#endif /* OPENCV_CUDABGSEGM_HPP */

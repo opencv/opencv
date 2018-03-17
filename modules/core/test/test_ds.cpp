@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 typedef  struct  CvTsSimpleSeq
 {
@@ -56,7 +58,7 @@ static void cvTsSimpleSeqShiftAndCopy( CvTsSimpleSeq* seq, int from_idx, int to_
                 (seq->count - from_idx)*elem_size );
     }
     seq->count += to_idx - from_idx;
-    if( elem && to_idx > from_idx )
+    if( elem )
         memcpy( seq->array + from_idx*elem_size, elem, (to_idx - from_idx)*elem_size );
 }
 
@@ -2130,3 +2132,5 @@ TEST(Core_DS_Seq, sort_invert) { Core_SeqSortInvTest test; test.safe_run(); }
 TEST(Core_DS_Set, basic_operations) { Core_SetTest test; test.safe_run(); }
 TEST(Core_DS_Graph, basic_operations) { Core_GraphTest test; test.safe_run(); }
 TEST(Core_DS_Graph, scan) { Core_GraphScanTest test; test.safe_run(); }
+
+}} // namespace

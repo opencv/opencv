@@ -2,11 +2,11 @@
 #include <iostream>
 #include <time.h>
 // OpenCV
-#include <opencv2/core/core.hpp>
+#include <opencv2//core.hpp>
 #include <opencv2/core/utility.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
 #include <opencv2/video/tracking.hpp>
 // PnP Tutorial
 #include "Mesh.h"
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
       "{keypoints k   |2000  | number of keypoints to detect        }"
       "{ratio r       |0.7   | threshold for ratio test             }"
       "{iterations it |500   | RANSAC maximum iterations count      }"
-      "{error e       |2.0   | RANSAC reprojection errror           }"
+      "{error e       |2.0   | RANSAC reprojection error            }"
       "{confidence c  |0.95  | RANSAC confidence                    }"
       "{inliers in    |30    | minimum inliers for Kalman update    }"
       "{method  pnp   |0     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS}"
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 
   Mat frame, frame_vis;
 
-  while(cap.read(frame) && waitKey(30) != 27) // capture frame until ESC is pressed
+  while(cap.read(frame) && (char)waitKey(30) != 27) // capture frame until ESC is pressed
   {
 
     frame_vis = frame.clone();    // refresh visualisation frame
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     Mat inliers_idx;
     vector<Point2f> list_points2d_inliers;
 
-    if(good_matches.size() > 0) // None matches, then RANSAC crashes
+    if(good_matches.size() >= 4) // OpenCV requires solvePnPRANSAC to minimally have 4 set of points
     {
 
       // -- Step 3: Estimate the pose using RANSAC approach

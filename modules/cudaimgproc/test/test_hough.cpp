@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HoughLines
@@ -256,4 +256,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, GeneralizedHough, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

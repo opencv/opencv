@@ -41,6 +41,50 @@
 //
 //M*/
 
+/********************************* COPYRIGHT NOTICE *******************************\
+  Original code for Bayer->BGR/RGB conversion is provided by Dirk Schaefer
+  from MD-Mathematische Dienste GmbH. Below is the copyright notice:
+
+    IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+    By downloading, copying, installing or using the software you agree
+    to this license. If you do not agree to this license, do not download,
+    install, copy or use the software.
+
+    Contributors License Agreement:
+
+      Copyright (c) 2002,
+      MD-Mathematische Dienste GmbH
+      Im Defdahl 5-10
+      44141 Dortmund
+      Germany
+      www.md-it.de
+
+    Redistribution and use in source and binary forms,
+    with or without modification, are permitted provided
+    that the following conditions are met:
+
+    Redistributions of source code must retain
+    the above copyright notice, this list of conditions and the following disclaimer.
+    Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+    The name of Contributor may not be used to endorse or promote products
+    derived from this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+    THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+    PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+    STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+    THE POSSIBILITY OF SUCH DAMAGE.
+\**********************************************************************************/
+
+
 #include "precomp.hpp"
 
 #include <limits>
@@ -1615,6 +1659,8 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 
 void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
     int scn = src.channels(), depth = src.depth();
@@ -1641,6 +1687,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         break;
 
     case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
+    case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
     case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
         {
             if (dcn <= 0)
@@ -1650,8 +1697,10 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
             Mat dst_ = _dst.getMat();
 
-            if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
-                code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
+            if( code == CV_BayerBG2BGR || code == CV_BayerBG2BGRA ||
+                code == CV_BayerGB2BGR || code == CV_BayerGB2BGRA ||
+                code == CV_BayerRG2BGR || code == CV_BayerRG2BGRA ||
+                code == CV_BayerGR2BGR || code == CV_BayerGR2BGRA )
             {
                 if( depth == CV_8U )
                     Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);

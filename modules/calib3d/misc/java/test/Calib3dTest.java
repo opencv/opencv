@@ -1,7 +1,6 @@
 package org.opencv.test.calib3d;
 
 import org.opencv.calib3d.Calib3d;
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
@@ -237,6 +236,8 @@ public class Calib3dTest extends OpenCVTestCase {
     }
 
     public void testFindFundamentalMatListOfPointListOfPoint() {
+        fail("Not yet implemented");
+/*
         int minFundamentalMatPoints = 8;
 
         MatOfPoint2f pts = new MatOfPoint2f();
@@ -253,6 +254,7 @@ public class Calib3dTest extends OpenCVTestCase {
         truth = new Mat(3, 3, CvType.CV_64F);
         truth.put(0, 0, 0, -0.577, 0.288, 0.577, 0, 0.288, -0.288, -0.288, 0);
         assertMatEqual(truth, fm, EPS);
+*/
     }
 
     public void testFindFundamentalMatListOfPointListOfPointInt() {
@@ -497,7 +499,7 @@ public class Calib3dTest extends OpenCVTestCase {
     }
 
     public void testSolvePnPListOfPoint3ListOfPointMatMatMatMat() {
-        Mat intrinsics = Mat.eye(3, 3, CvType.CV_32F);
+        Mat intrinsics = Mat.eye(3, 3, CvType.CV_64F);
         intrinsics.put(0, 0, 400);
         intrinsics.put(1, 1, 400);
         intrinsics.put(0, 2, 640 / 2);

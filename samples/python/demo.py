@@ -87,8 +87,11 @@ class App:
         for fn in glob('*.py'):
             name = splitfn(fn)[1]
             if fn[0] != '_' and name not in exclude_list:
-                demos_lb.insert(tk.END, name)
                 self.samples[name] = fn
+
+        for name in sorted(self.samples):
+            demos_lb.insert(tk.END, name)
+
         demos_lb.bind('<<ListboxSelect>>', self.on_demo_select)
 
         self.cmd_entry = cmd_entry = tk.Entry(right)
@@ -96,7 +99,7 @@ class App:
         run_btn = tk.Button(right, command=self.on_run, text='Run', width=8)
 
         self.text = text = ScrolledText(right, font=('arial', 12, 'normal'), width = 30, wrap='word')
-        self.linker = linker = LinkManager(text, self.on_link)
+        self.linker = _linker = LinkManager(text, self.on_link)
         self.text.tag_config("header1", font=('arial', 14, 'bold'))
         self.text.tag_config("header2", font=('arial', 12, 'bold'))
         text.config(state='disabled')

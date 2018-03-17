@@ -1,11 +1,11 @@
 #include <iostream>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         "{ i input    |                    | specify input image }"
         "{ c camera   |  0                 | specify camera id   }"
         "{ o output   | clahe_output.jpg   | specify output save path}"
-        "{ h help     | false              | print help message }";
+        "{ h help     |                    | print help message }";
 
     cv::CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))

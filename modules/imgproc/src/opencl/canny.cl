@@ -82,10 +82,10 @@ inline float3 sobel(int idx, __local const floatN *smem)
     // result: x, y, mag
     float3 res;
 
-    floatN dx = fma(2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
+    floatN dx = fma((floatN)2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
         smem[idx + 2] - smem[idx] + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]);
 
-    floatN dy = fma(2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
+    floatN dy = fma((floatN)2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
         smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10] + smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]);
 
 #ifdef L2GRAD
@@ -221,11 +221,11 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     int value = 1;
     if (mag0 > low_thr)
     {
-        int a = (y / (float)x) * TG22;
-        int b = (y / (float)x) * TG67;
+        float x_ = abs(x);
+        float y_ = abs(y);
 
-        a = min((int)abs(a), 1) + 1;
-        b = min((int)abs(b), 1);
+        int a = (y_ * TG22 >= x_) ? 2 : 1;
+        int b = (y_ * TG67 >= x_) ? 1 : 0;
 
         //  a = { 1, 2 }
         //  b = { 0, 1 }
@@ -260,7 +260,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 #ifdef L2GRAD
 #define dist(x, y) ((int)(x) * (x) + (int)(y) * (y))
 #else
-#define dist(x, y) (abs(x) + abs(y))
+#define dist(x, y) (abs((int)(x)) + abs((int)(y)))
 #endif
 
 __constant int prev[4][2] = {
@@ -342,11 +342,11 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
     int value = 1;
     if (mag0 > low_thr)
     {
-        int a = (y / (float)x) * TG22;
-        int b = (y / (float)x) * TG67;
+        float x_ = abs(x);
+        float y_ = abs(y);
 
-        a = min((int)abs(a), 1) + 1;
-        b = min((int)abs(b), 1);
+        int a = (y_ * TG22 >= x_) ? 2 : 1;
+        int b = (y_ * TG67 >= x_) ? 1 : 0;
 
         int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31);
         int dir = a * b + 2 * dir3;
@@ -428,6 +428,7 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
         int mod = l_counter % LOCAL_TOTAL;
         int pix_per_thr = l_counter / LOCAL_TOTAL + ((lid < mod) ? 1 : 0);
 
+        barrier(CLK_LOCAL_MEM_FENCE);
         for (int i = 0; i < pix_per_thr; ++i)
         {
             int index = atomic_dec(&l_counter) - 1;
@@ -466,7 +467,7 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
 
 #elif defined GET_EDGES
 
-// Get the edge result. egde type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
+// Get the edge result. edge type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
 // map      edge type mappings
 // dst      edge output
 

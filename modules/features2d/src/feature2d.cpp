@@ -60,6 +60,8 @@ void Feature2D::detect( InputArray image,
                         std::vector<KeyPoint>& keypoints,
                         InputArray mask )
 {
+    CV_INSTRUMENT_REGION()
+
     if( image.empty() )
     {
         keypoints.clear();
@@ -73,6 +75,8 @@ void Feature2D::detect( InputArrayOfArrays _images,
                         std::vector<std::vector<KeyPoint> >& keypoints,
                         InputArrayOfArrays _masks )
 {
+    CV_INSTRUMENT_REGION()
+
     vector<Mat> images, masks;
 
     _images.getMatVector(images);
@@ -102,6 +106,8 @@ void Feature2D::compute( InputArray image,
                          std::vector<KeyPoint>& keypoints,
                          OutputArray descriptors )
 {
+    CV_INSTRUMENT_REGION()
+
     if( image.empty() )
     {
         descriptors.release();
@@ -114,6 +120,8 @@ void Feature2D::compute( InputArrayOfArrays _images,
                          std::vector<std::vector<KeyPoint> >& keypoints,
                          OutputArrayOfArrays _descriptors )
 {
+    CV_INSTRUMENT_REGION()
+
     if( !_descriptors.needed() )
         return;
 
@@ -141,7 +149,29 @@ void Feature2D::detectAndCompute( InputArray, InputArray,
                                   OutputArray,
                                   bool )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Error(Error::StsNotImplemented, "");
+}
+
+void Feature2D::write( const String& fileName ) const
+{
+    FileStorage fs(fileName, FileStorage::WRITE);
+    write(fs);
+}
+
+void Feature2D::read( const String& fileName )
+{
+    FileStorage fs(fileName, FileStorage::READ);
+    read(fs.root());
+}
+
+void Feature2D::write( FileStorage&) const
+{
+}
+
+void Feature2D::read( const FileNode&)
+{
 }
 
 int Feature2D::descriptorSize() const
@@ -164,6 +194,11 @@ int Feature2D::defaultNorm() const
 bool Feature2D::empty() const
 {
     return true;
+}
+
+String Feature2D::getDefaultName() const
+{
+    return "Feature2D";
 }
 
 }

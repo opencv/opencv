@@ -4,9 +4,9 @@
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/cudafeatures2d.hpp"
 #include "opencv2/xfeatures2d/cuda.hpp"
 
@@ -17,7 +17,7 @@ using namespace cv::cuda;
 static void help()
 {
     cout << "\nThis program demonstrates using SURF_CUDA features detector, descriptor extractor and BruteForceMatcher_CUDA" << endl;
-    cout << "\nUsage:\n\tmatcher_simple_gpu --left <image1> --right <image2>" << endl;
+    cout << "\nUsage:\n\tsurf_keypoint_matcher --left <image1> --right <image2>" << endl;
 }
 
 int main(int argc, char* argv[])

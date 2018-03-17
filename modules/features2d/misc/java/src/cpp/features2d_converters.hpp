@@ -3,8 +3,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
-
-#include "features2d_manual.hpp"
+#include "opencv2/features2d.hpp"
 
 void Mat_to_vector_KeyPoint(cv::Mat& mat, std::vector<cv::KeyPoint>& v_kp);
 void vector_KeyPoint_to_Mat(std::vector<cv::KeyPoint>& v_kp, cv::Mat& mat);

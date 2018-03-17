@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OLD_CXCORE_H__
-#define __OPENCV_OLD_CXCORE_H__
+#ifndef OPENCV_OLD_CXCORE_H
+#define OPENCV_OLD_CXCORE_H
 
 //#if defined(__GNUC__)
 //#warning "This is a deprecated opencv header provided for compatibility. Please include a header from a corresponding opencv module"

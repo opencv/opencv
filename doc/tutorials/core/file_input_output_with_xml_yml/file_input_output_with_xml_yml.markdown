@@ -16,7 +16,7 @@ Source code
 -----------
 
 You can [download this from here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
 library.
 
@@ -112,7 +112,7 @@ you may access it. For sequences you need to go through them to query a specific
     for (; it != it_end; ++it)
         cout << (string)*it << endl;
     @endcode
-    For maps you can use the [] operator again to acces the given item (or the \>\> operator too):
+    For maps you can use the [] operator again to access the given item (or the \>\> operator too):
     @code{.cpp}
     n = fs["Mapping"];                                // Read mappings from a sequence
     cout << "Two  " << (int)(n["Two"]) << "; ";
@@ -263,8 +263,4 @@ MyData:
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=A4yqVnByMMM) .
 
-\htmlonly
-<div align="center">
-<iframe title="File Input and Output using XML and YAML files in OpenCV" width="560" height="349" src="http://www.youtube.com/embed/A4yqVnByMMM?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{A4yqVnByMMM}

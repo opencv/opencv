@@ -4,12 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace cv;
 using namespace std;
@@ -29,10 +26,17 @@ void goodFeaturesToTrack_Demo( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
   /// Load source image and convert it to gray
-  src = imread( argv[1], 1 );
+  CommandLineParser parser( argc, argv, "{@input | ../data/pic3.png | input image}" );
+  src = imread(parser.get<String>( "@input" ), IMREAD_COLOR);
+  if ( src.empty() )
+  {
+    cout << "Could not open or find the image!\n" << endl;
+    cout << "Usage: " << argv[0] << " <Input image>" << endl;
+    return -1;
+  }
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create Window
@@ -61,7 +65,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   vector<Point2f> corners;
   double qualityLevel = 0.01;
   double minDistance = 10;
-  int blockSize = 3;
+  int blockSize = 3, gradiantSize = 3;
   bool useHarrisDetector = false;
   double k = 0.04;
 
@@ -77,6 +81,7 @@ void goodFeaturesToTrack_Demo( int, void* )
                minDistance,
                Mat(),
                blockSize,
+               gradiantSize,
                useHarrisDetector,
                k );
 
@@ -91,7 +96,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, copy );
 
-  /// Set the neeed parameters to find the refined corners
+  /// Set the needed parameters to find the refined corners
   Size winSize = Size( 5, 5 );
   Size zeroZone = Size( -1, -1 );
   TermCriteria criteria = TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 40, 0.001 );

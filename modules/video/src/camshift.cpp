@@ -43,6 +43,8 @@
 
 int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
 {
+    CV_INSTRUMENT_REGION()
+
     Size size;
     int cn;
     Mat mat;
@@ -108,6 +110,8 @@ int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
 cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
                               TermCriteria criteria )
 {
+    CV_INSTRUMENT_REGION()
+
     const int TOLERANCE = 10;
     Size size;
     Mat mat;

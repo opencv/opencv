@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_TUPLE_DETAIL_HPP__
-#define __OPENCV_CUDEV_UTIL_TUPLE_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_UTIL_TUPLE_DETAIL_HPP
+#define OPENCV_CUDEV_UTIL_TUPLE_DETAIL_HPP
 
 #include <thrust/tuple.h>
 

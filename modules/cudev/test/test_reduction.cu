@@ -228,9 +228,6 @@ TEST(ReduceToColumn, Sum)
 
     Mat dst_gold;
     cv::reduce(src, dst_gold, 1, REDUCE_SUM, CV_32S);
-    dst_gold.cols = dst_gold.rows;
-    dst_gold.rows = 1;
-    dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -247,9 +244,6 @@ TEST(ReduceToColumn, Avg)
 
     Mat dst_gold;
     cv::reduce(src, dst_gold, 1, REDUCE_AVG, CV_32F);
-    dst_gold.cols = dst_gold.rows;
-    dst_gold.rows = 1;
-    dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
 }
@@ -266,9 +260,6 @@ TEST(ReduceToColumn, Min)
 
     Mat dst_gold;
     cv::reduce(src, dst_gold, 1, REDUCE_MIN);
-    dst_gold.cols = dst_gold.rows;
-    dst_gold.rows = 1;
-    dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -285,9 +276,6 @@ TEST(ReduceToColumn, Max)
 
     Mat dst_gold;
     cv::reduce(src, dst_gold, 1, REDUCE_MAX);
-    dst_gold.cols = dst_gold.rows;
-    dst_gold.rows = 1;
-    dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }

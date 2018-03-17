@@ -99,6 +99,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "flag" << flag
            << "dummies" << nDummies
@@ -124,6 +125,8 @@ protected:
 
 void NormHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, InputArray _descriptors2, OutputArray _costMatrix)
 {
+    CV_INSTRUMENT_REGION()
+
     // size of the costMatrix with dummies //
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();
@@ -224,6 +227,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "flag" << flag
            << "dummies" << nDummies
@@ -249,6 +253,8 @@ protected:
 
 void EMDHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, InputArray _descriptors2, OutputArray _costMatrix)
 {
+    CV_INSTRUMENT_REGION()
+
     // size of the costMatrix with dummies //
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();
@@ -350,6 +356,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "dummies" << nDummies
            << "default" << defaultCost;
@@ -370,6 +377,8 @@ protected:
 
 void ChiHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, InputArray _descriptors2, OutputArray _costMatrix)
 {
+    CV_INSTRUMENT_REGION()
+
     // size of the costMatrix with dummies //
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();
@@ -466,6 +475,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "dummies" << nDummies
            << "default" << defaultCost;
@@ -486,6 +496,8 @@ protected:
 
 void EMDL1HistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, InputArray _descriptors2, OutputArray _costMatrix)
 {
+    CV_INSTRUMENT_REGION()
+
     // size of the costMatrix with dummies //
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();

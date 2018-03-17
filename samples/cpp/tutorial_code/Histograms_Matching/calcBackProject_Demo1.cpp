@@ -4,9 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 
@@ -27,7 +27,13 @@ void Hist_and_Backproj(int, void* );
 int main( int, char** argv )
 {
   /// Read the image
-  src = imread( argv[1], 1 );
+  src = imread( argv[1], IMREAD_COLOR );
+
+  if( src.empty() )
+    { cout<<"Usage: ./calcBackProject_Demo1 <path_to_image>"<<endl;
+      return -1;
+    }
+
   /// Transform it to HSV
   cvtColor( src, hsv, COLOR_BGR2HSV );
 

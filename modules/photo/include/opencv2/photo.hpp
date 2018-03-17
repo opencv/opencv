@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_HPP__
-#define __OPENCV_PHOTO_HPP__
+#ifndef OPENCV_PHOTO_HPP
+#define OPENCV_PHOTO_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
@@ -89,7 +89,7 @@ enum
 
 /** @brief Restores the selected region in an image using the region neighborhood.
 
-@param src Input 8-bit 1-channel or 3-channel image.
+@param src Input 8-bit, 16-bit unsigned or 32-bit float 1-channel or 8-bit 3-channel image.
 @param inpaintMask Inpainting mask, 8-bit 1-channel image. Non-zero pixels indicate the area that
 needs to be inpainted.
 @param dst Output image with the same size and type as src .
@@ -189,7 +189,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
         float h = 3, float hColor = 3,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
-/** @brief Modification of fastNlMeansDenoising function for images sequence where consequtive images have been
+/** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>
@@ -216,7 +216,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputA
         int imgToDenoiseIndex, int temporalWindowSize,
         float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
 
-/** @brief Modification of fastNlMeansDenoising function for images sequence where consequtive images have been
+/** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>
@@ -591,7 +591,7 @@ public:
 @param samples number of pixel locations to use
 @param lambda smoothness term weight. Greater values produce smoother results, but can alter the
 response.
-@param random if true sample pixel locations are chosen at random, otherwise the form a
+@param random if true sample pixel locations are chosen at random, otherwise they form a
 rectangular grid.
  */
 CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, float lambda = 10.0f, bool random = false);
@@ -730,6 +730,9 @@ CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray co
 //! @addtogroup photo_clone
 //! @{
 
+/** @example cloning_demo.cpp
+An example using seamlessClone function
+*/
 /** @brief Image editing tasks concern either global changes (color/intensity corrections, filters,
 deformations) or local changes concerned to a selection. Here we are interested in achieving local
 changes, ones that are restricted to a region manually selected (ROI), in a seamless and effortless
@@ -748,7 +751,7 @@ complex outlines into a new background
 consuming and often leaves an undesirable halo. Seamless cloning, even averaged with the
 original image, is not effective. Mixed seamless cloning based on a loose selection proves
 effective.
--   **FEATURE_EXCHANGE** Feature exchange allows the user to easily replace certain features of
+-   **MONOCHROME_TRANSFER** Monochrome transfer allows the user to easily replace certain features of
 one object by alternative features.
  */
 CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,
@@ -833,6 +836,9 @@ CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flag
 CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
         float sigma_r = 0.15f);
 
+/** @example npr_demo.cpp
+An example using non-photorealistic line drawing functions
+*/
 /** @brief Pencil-like non-photorealistic line drawing
 
 @param src Input 8-bit 3-channel image.

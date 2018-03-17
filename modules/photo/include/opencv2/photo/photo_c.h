@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_C_H__
-#define __OPENCV_PHOTO_C_H__
+#ifndef OPENCV_PHOTO_C_H
+#define OPENCV_PHOTO_C_H
 
 #include "opencv2/core/core_c.h"
 
@@ -71,4 +71,4 @@ CVAPI(void) cvInpaint( const CvArr* src, const CvArr* inpaint_mask,
 } //extern "C"
 #endif
 
-#endif //__OPENCV_PHOTO_C_H__
+#endif //OPENCV_PHOTO_C_H

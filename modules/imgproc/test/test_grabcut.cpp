@@ -42,11 +42,7 @@
 
 #include "test_precomp.hpp"
 
-#include <string>
-#include <iostream>
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_GrabcutTest : public cvtest::BaseTest
 {
@@ -170,3 +166,5 @@ TEST(Imgproc_GrabCut, repeatability)
     EXPECT_EQ(0, countNonZero(mask_1 != mask_3));
     EXPECT_EQ(0, countNonZero(mask_2 != mask_3));
 }
+
+}} // namespace

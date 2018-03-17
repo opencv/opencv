@@ -1,9 +1,9 @@
 /*this creates a yaml or xml list of files from the command line args
  */
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <string>
 #include <iostream>
 

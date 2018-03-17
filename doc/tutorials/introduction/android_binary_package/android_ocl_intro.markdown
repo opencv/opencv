@@ -17,7 +17,7 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 This tutorial also assumes you have an Android operated device with OpenCL enabled.
 
 The related source code is located within OpenCV samples at
-[opencv/samples/android/tutorial-4-opencl](https://github.com/Itseez/opencv/tree/master/samples/android/tutorial-4-opencl/) directory.
+[opencv/samples/android/tutorial-4-opencl](https://github.com/opencv/opencv/tree/master/samples/android/tutorial-4-opencl/) directory.
 
 Preface
 -------
@@ -244,7 +244,7 @@ As you can see, inheritors for `Camera` and `Camera2` APIs should implement the 
 @endcode
 
 Let's leave the details of their implementation beyond of this tutorial, please refer the
-[source code](https://github.com/Itseez/opencv/tree/master/samples/android/tutorial-4-opencl/) to see them.
+[source code](https://github.com/opencv/opencv/tree/master/samples/android/tutorial-4-opencl/) to see them.
 
 Preview Frames modification
 ---------------------------

@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 void loadImage(string path, Mat &img)
 {
@@ -60,7 +59,7 @@ void checkEqual(Mat img0, Mat img1, double threshold, const string& name)
 static vector<float> DEFAULT_VECTOR;
 void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DEFAULT_VECTOR)
 {
-    ifstream list_file((path + "list.txt").c_str());
+    std::ifstream list_file((path + "list.txt").c_str());
     ASSERT_TRUE(list_file.is_open());
     string name;
     float val;
@@ -76,7 +75,7 @@ void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DE
 void loadResponseCSV(String path, Mat& response)
 {
     response = Mat(256, 1, CV_32FC3);
-    ifstream resp_file(path.c_str());
+    std::ifstream resp_file(path.c_str());
     for(int i = 0; i < 256; i++) {
         for(int c = 0; c < 3; c++) {
             resp_file >> response.at<Vec3f>(i)[c];
@@ -141,9 +140,10 @@ TEST(Photo_AlignMTB, regression)
     int errors = 0;
 
     Ptr<AlignMTB> align = createAlignMTB(max_bits);
+    RNG rng = theRNG();
 
     for(int i = 0; i < TESTS_COUNT; i++) {
-        Point shift(rand() % max_shift, rand() % max_shift);
+        Point shift(rng.uniform(0, max_shift), rng.uniform(0, max_shift));
         Mat res;
         align->shiftMat(img, res, shift);
         Point calc = align->calculateShift(img, res);
@@ -208,17 +208,17 @@ TEST(Photo_MergeRobertson, regression)
     vector<Mat> images;
     vector<float> times;
     loadExposureSeq(test_path + "exposures/", images, times);
-
     Ptr<MergeRobertson> merge = createMergeRobertson();
-
     Mat result, expected;
     loadImage(test_path + "merge/robertson.hdr", expected);
     merge->process(images, result, times);
-    Ptr<Tonemap> map = createTonemap();
-    map->process(result, result);
-    map->process(expected, expected);
 
-    checkEqual(expected, result, 1e-2f, "MergeRobertson");
+#ifdef __aarch64__
+    const float eps = 6.f;
+#else
+    const float eps = 5.f;
+#endif
+    checkEqual(expected, result, eps, "MergeRobertson");
 }
 
 TEST(Photo_CalibrateDebevec, regression)
@@ -252,5 +252,7 @@ TEST(Photo_CalibrateRobertson, regression)
 
     Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
     calibrate->process(images, response, times);
-    checkEqual(expected, response, 1e-3f, "CalibrateRobertson");
+    checkEqual(expected, response, 1e-1f, "CalibrateRobertson");
 }
+
+}} // namespace

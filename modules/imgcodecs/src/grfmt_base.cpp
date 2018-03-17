@@ -96,6 +96,7 @@ ImageDecoder BaseImageDecoder::newDecoder() const
 
 BaseImageEncoder::BaseImageEncoder()
 {
+    m_buf = 0;
     m_buf_supported = false;
 }
 
@@ -124,6 +125,11 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     m_buf->clear();
     m_filename = String();
     return true;
+}
+
+bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
+{
+    return false;
 }
 
 ImageEncoder BaseImageEncoder::newEncoder() const

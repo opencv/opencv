@@ -39,8 +39,8 @@
 /////////////////////////////////////////////////////////////////////////////////
 //M*/
 
-#ifndef __OPENCV_CORE_WIMAGE_HPP__
-#define __OPENCV_CORE_WIMAGE_HPP__
+#ifndef OPENCV_CORE_WIMAGE_HPP
+#define OPENCV_CORE_WIMAGE_HPP
 
 #include "opencv2/core/core_c.h"
 
@@ -289,7 +289,7 @@ protected:
 };
 
 /** Image class which owns the data, so it can be allocated and is always
-freed.  It cannot be copied but can be explicity cloned.
+freed.  It cannot be copied but can be explicitly cloned.
 */
 template<typename T>
 class WImageBuffer : public WImage<T>

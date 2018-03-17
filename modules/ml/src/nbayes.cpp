@@ -203,6 +203,7 @@ public:
             results = &_results;
             results_prob = !_results_prob.empty() ? &_results_prob : 0;
             rawOutput = _rawOutput;
+            value = 0;
         }
 
         const Mat* c;
@@ -236,7 +237,7 @@ public:
             if (results_prob)
             {
                 rptype = results_prob->type();
-                rpstep = results_prob->isContinuous() ? 1 : results_prob->step/results_prob->elemSize();
+                rpstep = results_prob->isContinuous() ? results_prob->cols : results_prob->step/results_prob->elemSize();
             }
             // allocate memory and initializing headers for calculating
             cv::AutoBuffer<double> _buffer(nvars*2);
@@ -342,6 +343,7 @@ public:
     {
         int nclasses = (int)cls_labels.total(), i;
 
+        writeFormat(fs);
         fs << "var_count" << (var_idx.empty() ? nallvars : (int)var_idx.total());
         fs << "var_all" << nallvars;
 
@@ -455,6 +457,11 @@ Ptr<NormalBayesClassifier> NormalBayesClassifier::create()
 {
     Ptr<NormalBayesClassifierImpl> p = makePtr<NormalBayesClassifierImpl>();
     return p;
+}
+
+Ptr<NormalBayesClassifier> NormalBayesClassifier::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<NormalBayesClassifier>(filepath, nodeName);
 }
 
 }

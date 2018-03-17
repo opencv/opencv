@@ -1,11 +1,8 @@
 #include <iostream>
 
-#ifdef WIN32
+#ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN 1
     #define NOMINMAX 1
-    #include <windows.h>
-#endif
-#if defined(_WIN64)
     #include <windows.h>
 #endif
 
@@ -17,10 +14,10 @@
     #include <GL/glu.h>
 #endif
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -105,8 +102,8 @@ int main(int argc, char* argv[])
     for (;;)
     {
         updateWindow("OpenGL");
-        int key = waitKey(40);
-        if ((key & 0xff) == 27)
+        char key = (char)waitKey(40);
+        if (key == 27)
             break;
     }
 

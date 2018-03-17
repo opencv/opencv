@@ -16,7 +16,7 @@ static void help()
         << " we take an input image and divide the native color palette (255) with the "  << endl
         << "input. Shows C operator[] method, iterators and at function for on-the-fly item address calculation."<< endl
         << "Usage:"                                                                       << endl
-        << "./howToScanImages imageNameToUse divideWith [G]"                              << endl
+        << "./how_to_scan_images <imageNameToUse> <divideWith> [G]"                       << endl
         << "if you add a G parameter the image is processed in gray scale"                << endl
         << "--------------------------------------------------------------------------"   << endl
         << endl;

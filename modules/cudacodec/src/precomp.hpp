@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H
+#define OPENCV_PRECOMP_H
 
 #include <cstdlib>
 #include <cstring>
@@ -56,12 +56,18 @@
 #include "opencv2/core/private.cuda.hpp"
 
 #ifdef HAVE_NVCUVID
-    #include <nvcuvid.h>
+    #if CUDA_VERSION >= 9000
+        #include <dynlink_nvcuvid.h>
+    #else
+        #include <nvcuvid.h>
+    #endif
 
-    #ifdef WIN32
+    #ifdef _WIN32
         #define NOMINMAX
         #include <windows.h>
-        #include <NVEncoderAPI.h>
+        #ifdef HAVE_NVCUVENC
+            #include <NVEncoderAPI.h>
+        #endif
     #else
         #include <pthread.h>
         #include <unistd.h>
@@ -78,4 +84,4 @@
     #include "../src/cap_ffmpeg_api.hpp"
 #endif
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif /* OPENCV_PRECOMP_H */

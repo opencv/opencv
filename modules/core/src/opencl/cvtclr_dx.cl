@@ -71,12 +71,12 @@ float c_YUV2RGBCoeffs_420[5] =
      1.5959997177f
 };
 
-static __constant float CV_8U_MAX         = 255.0f;
-static __constant float CV_8U_HALF        = 128.0f;
-static __constant float BT601_BLACK_RANGE = 16.0f;
-static __constant float CV_8U_SCALE       = 1.0f / 255.0f;
-static __constant float d1                = BT601_BLACK_RANGE / CV_8U_MAX;
-static __constant float d2                = CV_8U_HALF / CV_8U_MAX;
+static const __constant float CV_8U_MAX         = 255.0f;
+static const __constant float CV_8U_HALF        = 128.0f;
+static const __constant float BT601_BLACK_RANGE = 16.0f;
+static const __constant float CV_8U_SCALE       = 1.0f / 255.0f;
+static const __constant float d1                = BT601_BLACK_RANGE / CV_8U_MAX;
+static const __constant float d2                = CV_8U_HALF / CV_8U_MAX;
 
 #define NCHANNELS 3
 

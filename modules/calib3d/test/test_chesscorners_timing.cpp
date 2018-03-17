@@ -43,6 +43,8 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
 
+namespace opencv_test { namespace {
+
 class CV_ChessboardDetectorTimingTest : public cvtest::BaseTest
 {
 public:
@@ -113,11 +115,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         if( img2.empty() )
         {
             ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename.c_str() );
-            if( max_idx == 1 )
-            {
-                code = cvtest::TS::FAIL_MISSING_TEST_DATA;
-                goto _exit_;
-            }
+            code = cvtest::TS::FAIL_MISSING_TEST_DATA;
             continue;
         }
 
@@ -186,4 +184,5 @@ _exit_:
 
 TEST(Calib3d_ChessboardDetector, timing) { CV_ChessboardDetectorTimingTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

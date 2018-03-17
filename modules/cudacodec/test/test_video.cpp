@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
 #ifdef HAVE_NVCUVID
 
 PARAM_TEST_CASE(Video, cv::cuda::DeviceInfo, std::string)
@@ -71,7 +73,7 @@ CUDA_TEST_P(Video, Reader)
 //////////////////////////////////////////////////////
 // VideoWriter
 
-#ifdef WIN32
+#ifdef _WIN32
 
 CUDA_TEST_P(Video, Writer)
 {
@@ -116,10 +118,11 @@ CUDA_TEST_P(Video, Writer)
     }
 }
 
-#endif // WIN32
+#endif // _WIN32
 
 INSTANTIATE_TEST_CASE_P(CUDA_Codec, Video, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
 #endif // HAVE_NVCUVID
+}} // namespace

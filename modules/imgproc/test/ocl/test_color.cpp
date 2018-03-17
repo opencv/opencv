@@ -48,7 +48,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -98,7 +98,29 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
             OCL_OFF(cv::cvtColor(src_roi, dst_roi, code, channelsOut));
             OCL_ON(cv::cvtColor(usrc_roi, udst_roi, code, channelsOut));
 
-            Near(threshold);
+            int h_limit = 256;
+            switch (code)
+            {
+            case COLOR_RGB2HLS: case COLOR_BGR2HLS:
+                h_limit = 180;
+            case COLOR_RGB2HLS_FULL: case COLOR_BGR2HLS_FULL:
+            {
+                ASSERT_EQ(dst_roi.type(), udst_roi.type());
+                ASSERT_EQ(dst_roi.size(), udst_roi.size());
+                Mat gold, actual;
+                dst_roi.convertTo(gold, CV_32FC3);
+                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32FC3);
+                Mat absdiff1, absdiff2, absdiff3;
+                cv::absdiff(gold, actual, absdiff1);
+                cv::absdiff(gold, actual + h_limit, absdiff2);
+                cv::absdiff(gold, actual - h_limit, absdiff3);
+                Mat diff = cv::min(cv::min(absdiff1, absdiff2), absdiff3);
+                EXPECT_LE(cvtest::norm(diff, NORM_INF), threshold);
+                break;
+            }
+            default:
+                Near(threshold);
+            }
         }
     }
 };
@@ -144,10 +166,12 @@ OCL_TEST_P(CvtColor, YUV2BGRA) { performTest(3, 4, CVTCODE(YUV2BGR)); }
 
 // RGB <-> YCrCb
 
-OCL_TEST_P(CvtColor, RGB2YCrCb) { performTest(3, 3, CVTCODE(RGB2YCrCb)); }
-OCL_TEST_P(CvtColor, BGR2YCrCb) { performTest(3, 3, CVTCODE(BGR2YCrCb)); }
-OCL_TEST_P(CvtColor, RGBA2YCrCb) { performTest(4, 3, CVTCODE(RGB2YCrCb)); }
-OCL_TEST_P(CvtColor, BGRA2YCrCb) { performTest(4, 3, CVTCODE(BGR2YCrCb)); }
+#define EPS_FOR_FLOATING_POINT(e) (CV_32F <= depth ? e : 1)
+
+OCL_TEST_P(CvtColor, RGB2YCrCb) { performTest(3, 3, CVTCODE(RGB2YCrCb), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor, BGR2YCrCb) { performTest(3, 3, CVTCODE(BGR2YCrCb), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor, RGBA2YCrCb) { performTest(4, 3, CVTCODE(RGB2YCrCb), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor, BGRA2YCrCb) { performTest(4, 3, CVTCODE(BGR2YCrCb), EPS_FOR_FLOATING_POINT(1e-3)); }
 OCL_TEST_P(CvtColor, YCrCb2RGB) { performTest(3, 3, CVTCODE(YCrCb2RGB)); }
 OCL_TEST_P(CvtColor, YCrCb2BGR) { performTest(3, 3, CVTCODE(YCrCb2BGR)); }
 OCL_TEST_P(CvtColor, YCrCb2RGBA) { performTest(3, 4, CVTCODE(YCrCb2RGB)); }
@@ -178,7 +202,7 @@ OCL_TEST_P(CvtColor, XYZ2BGRA) { performTest(3, 4, CVTCODE(XYZ2BGR), IPP_EPS); }
 #ifdef HAVE_IPP
 #define IPP_EPS depth <= CV_32S ? 1 : 4e-5
 #else
-#define IPP_EPS 1e-3
+#define IPP_EPS EPS_FOR_FLOATING_POINT(1e-3)
 #endif
 
 typedef CvtColor CvtColor8u32f;
@@ -344,14 +368,14 @@ struct CvtColor_YUV2RGB_420 :
     }
 };
 
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV12) { performTest(1, 4, CVTCODE(YUV2RGBA_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV12) { performTest(1, 4, CVTCODE(YUV2BGRA_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV12) { performTest(1, 3, CVTCODE(YUV2RGB_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV12) { performTest(1, 3, CVTCODE(YUV2BGR_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV21) { performTest(1, 4, CVTCODE(YUV2RGBA_NV21)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV21) { performTest(1, 4, CVTCODE(YUV2BGRA_NV21)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV21) { performTest(1, 3, CVTCODE(YUV2RGB_NV21)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV21) { performTest(1, 3, CVTCODE(YUV2BGR_NV21)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV12) { performTest(1, 4, CVTCODE(YUV2RGBA_NV12), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV12) { performTest(1, 4, CVTCODE(YUV2BGRA_NV12), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV12) { performTest(1, 3, CVTCODE(YUV2RGB_NV12), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV12) { performTest(1, 3, CVTCODE(YUV2BGR_NV12), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV21) { performTest(1, 4, CVTCODE(YUV2RGBA_NV21), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV21) { performTest(1, 4, CVTCODE(YUV2BGRA_NV21), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV21) { performTest(1, 3, CVTCODE(YUV2RGB_NV21), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV21) { performTest(1, 3, CVTCODE(YUV2BGR_NV21), EPS_FOR_FLOATING_POINT(1e-3)); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_YV12) { performTest(1, 4, CVTCODE(YUV2RGBA_YV12)); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_YV12) { performTest(1, 4, CVTCODE(YUV2BGRA_YV12)); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_YV12) { performTest(1, 3, CVTCODE(YUV2RGB_YV12)); }
@@ -460,6 +484,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor_YUV2RGB_422,
                                 testing::Values(MatDepth(CV_8U)),
                                 Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

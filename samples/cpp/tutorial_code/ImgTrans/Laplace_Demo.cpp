@@ -4,52 +4,64 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
+    //![variables]
+    // Declare the variables we are going to use
+    Mat src, src_gray, dst;
+    int kernel_size = 3;
+    int scale = 1;
+    int delta = 0;
+    int ddepth = CV_16S;
+    const char* window_name = "Laplace Demo";
+    //![variables]
 
-  Mat src, src_gray, dst;
-  int kernel_size = 3;
-  int scale = 1;
-  int delta = 0;
-  int ddepth = CV_16S;
-  const char* window_name = "Laplace Demo";
+    //![load]
+    const char* imageName = argc >=2 ? argv[1] : "../data/lena.jpg";
 
-  /// Load an image
-  src = imread( argv[1] );
+    src = imread( imageName, IMREAD_COLOR ); // Load an image
 
-  if( src.empty() )
-    { return -1; }
+    // Check if image is loaded fine
+    if(src.empty()){
+        printf(" Error opening image\n");
+        printf(" Program Arguments: [image_name -- default ../data/lena.jpg] \n");
+        return -1;
+    }
+    //![load]
 
-  /// Remove noise by blurring with a Gaussian filter
-  GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
+    //![reduce_noise]
+    // Reduce noise by blurring with a Gaussian filter ( kernel size = 3 )
+    GaussianBlur( src, src, Size(3, 3), 0, 0, BORDER_DEFAULT );
+    //![reduce_noise]
 
-  /// Convert the image to grayscale
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
+    //![convert_to_gray]
+    cvtColor( src, src_gray, COLOR_BGR2GRAY ); // Convert the image to grayscale
+    //![convert_to_gray]
 
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
+    /// Apply Laplace function
+    Mat abs_dst;
+    //![laplacian]
+    Laplacian( src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT );
+    //![laplacian]
 
-  /// Apply Laplace function
-  Mat abs_dst;
+    //![convert]
+    // converting back to CV_8U
+    convertScaleAbs( dst, abs_dst );
+    //![convert]
 
-  Laplacian( src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT );
-  convertScaleAbs( dst, abs_dst );
+    //![display]
+    imshow( window_name, abs_dst );
+    waitKey(0);
+    //![display]
 
-  /// Show what you got
-  imshow( window_name, abs_dst );
-
-  waitKey(0);
-
-  return 0;
+    return 0;
 }

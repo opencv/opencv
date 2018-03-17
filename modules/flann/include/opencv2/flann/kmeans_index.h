@@ -874,6 +874,8 @@ private:
             computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
             start=end;
         }
+
+        delete[] centers;
     }
 
 
@@ -1051,7 +1053,7 @@ private:
 
 
     /**
-     * Helper function the descends in the hierarchical k-means tree by spliting those clusters that minimize
+     * Helper function the descends in the hierarchical k-means tree by splitting those clusters that minimize
      * the overall variance of the clustering.
      * Params:
      *     root = root node

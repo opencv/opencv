@@ -47,29 +47,18 @@
 namespace cv
 {
 
-static bool haveCollinearPoints( const Mat& m, int count )
-{
-    int j, k, i = count-1;
-    const Point2f* ptr = m.ptr<Point2f>();
-
-    // check that the i-th selected point does not belong
-    // to a line connecting some previously selected points
-    for( j = 0; j < i; j++ )
-    {
-        double dx1 = ptr[j].x - ptr[i].x;
-        double dy1 = ptr[j].y - ptr[i].y;
-        for( k = 0; k < j; k++ )
-        {
-            double dx2 = ptr[k].x - ptr[i].x;
-            double dy2 = ptr[k].y - ptr[i].y;
-            if( fabs(dx2*dy1 - dy2*dx1) <= FLT_EPSILON*(fabs(dx1) + fabs(dy1) + fabs(dx2) + fabs(dy2)))
-                return true;
-        }
-    }
-    return false;
-}
-
-
+/**
+ * This class estimates a homography \f$H\in \mathbb{R}^{3\times 3}\f$
+ * between \f$\mathbf{x} \in \mathbb{R}^3\f$ and
+ * \f$\mathbf{X} \in \mathbb{R}^3\f$ using DLT (direct linear transform)
+ * with algebraic distance.
+ *
+ * \f[
+ *   \lambda \mathbf{x} = H \mathbf{X}
+ * \f]
+ * where \f$\lambda \in \mathbb{R} \f$.
+ *
+ */
 class HomographyEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
@@ -110,6 +99,20 @@ public:
         return true;
     }
 
+    /**
+     * Normalization method:
+     *  - $x$ and $y$ coordinates are normalized independently
+     *  - first the coordinates are shifted so that the average coordinate is \f$(0,0)\f$
+     *  - then the coordinates are scaled so that the average L1 norm is 1, i.e,
+     *  the average L1 norm of the \f$x\f$ coordinates is 1 and the average
+     *  L1 norm of the \f$y\f$ coordinates is also 1.
+     *
+     * @param _m1 source points containing (X,Y), depth is CV_32F with 1 column 2 channels or
+     *            2 columns 1 channel
+     * @param _m2 destination points containing (x,y), depth is CV_32F with 1 column 2 channels or
+     *            2 columns 1 channel
+     * @param _model, CV_64FC1, 3x3, normalized, i.e., the last element is 1
+     */
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
@@ -177,6 +180,14 @@ public:
         return 1;
     }
 
+    /**
+     * Compute the reprojection error.
+     * m2 = H*m1
+     * @param _m1 depth CV_32F, 1-channel with 2 columns or 2-channel with 1 column
+     * @param _m2 depth CV_32F, 1-channel with 2 columns or 2-channel with 1 column
+     * @param _model CV_64FC1, 3x3
+     * @param _err, output, CV_32FC1, square of the L2 norm
+     */
     void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
@@ -194,7 +205,7 @@ public:
             float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + 1.f);
             float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
             float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
-            err[i] = (float)(dx*dx + dy*dy);
+            err[i] = dx*dx + dy*dy;
         }
     }
 };
@@ -256,10 +267,7 @@ public:
 
     Mat src, dst;
 };
-
-}
-
-
+} // end namesapce cv
 
 namespace cv{
 static bool createAndRunRHORegistrator(double confidence,
@@ -300,7 +308,7 @@ static bool createAndRunRHORegistrator(double confidence,
     rhoEnsureCapacity(p, npoints, beta);
 
     /**
-     * The critical call. All parameters are heavily documented in rhorefc.h.
+     * The critical call. All parameters are heavily documented in rho.h.
      *
      * Currently, NR (Non-Randomness criterion) and Final Refinement (with
      * internal, optimized Levenberg-Marquardt method) are enabled. However,
@@ -328,7 +336,7 @@ static bool createAndRunRHORegistrator(double confidence,
     /* Convert float homography to double precision. */
     tmpH.convertTo(_H, CV_64FC1);
 
-    /* Maps non-zero mask elems to 1, for the sake of the testcase. */
+    /* Maps non-zero mask elements to 1, for the sake of the test case. */
     for(int k=0;k<npoints;k++){
         tempMask.data[k] = !!tempMask.data[k];
     }
@@ -343,6 +351,8 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             int method, double ransacReprojThreshold, OutputArray _mask,
                             const int maxIters, const double confidence)
 {
+    CV_INSTRUMENT_REGION()
+
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 
@@ -411,7 +421,13 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             tempMask.copyTo(_mask);
     }
     else
+    {
         H.release();
+        if(_mask.needed() ) {
+            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8U);
+            tempMask.copyTo(_mask);
+        }
+    }
 
     return H;
 }
@@ -436,9 +452,31 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 namespace cv
 {
 
+/**
+ * Compute the fundamental matrix using the 7-point algorithm.
+ *
+ * \f[
+ *  (\mathrm{m2}_i,1)^T \mathrm{fmatrix} (\mathrm{m1}_i,1) = 0
+ * \f]
+ *
+ * @param _m1 Contain points in the reference view. Depth CV_32F with 2-channel
+ *            1 column or 1-channel 2 columns. It has 7 rows.
+ * @param _m2 Contain points in the other view. Depth CV_32F with 2-channel
+ *            1 column or 1-channel 2 columns. It has 7 rows.
+ * @param _fmatrix Output fundamental matrix (or matrices) of type CV_64FC1.
+ *                 The user is responsible for allocating the memory before calling
+ *                 this function.
+ * @return Number of fundamental matrices. Valid values are 1, 2 or 3.
+ *  - 1, row 0 to row 2 in _fmatrix is a valid fundamental matrix
+ *  - 2, row 3 to row 5 in _fmatrix is a valid fundamental matrix
+ *  - 3, row 6 to row 8 in _fmatrix is a valid fundamental matrix
+ *
+ * Note that the computed fundamental matrix is normalized, i.e.,
+ * the last element \f$F_{33}\f$ is 1.
+ */
 static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 {
-    double a[7*9], w[7], u[9*9], v[9*9], c[4], r[3];
+    double a[7*9], w[7], u[9*9], v[9*9], c[4], r[3] = {0};
     double* f1, *f2;
     double t0, t1, t2;
     Mat A( 7, 9, CV_64F, a );
@@ -478,7 +516,7 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     f1 = v + 7*9;
     f2 = v + 8*9;
 
-    // f1, f2 is a basis => lambda*f1 + mu*f2 is an arbitrary f. matrix.
+    // f1, f2 is a basis => lambda*f1 + mu*f2 is an arbitrary fundamental matrix,
     // as it is determined up to a scale, normalize lambda & mu (lambda + mu = 1),
     // so f ~ lambda*f1 + (1 - lambda)*f2.
     // use the additional constraint det(f) = det(lambda*f1 + (1-lambda)*f2) to find lambda.
@@ -544,7 +582,25 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     return n;
 }
 
-
+/**
+ * Compute the fundamental matrix using the 8-point algorithm.
+ *
+ * \f[
+ *  (\mathrm{m2}_i,1)^T \mathrm{fmatrix} (\mathrm{m1}_i,1) = 0
+ * \f]
+ *
+ * @param _m1 Contain points in the reference view. Depth CV_32F with 2-channel
+ *            1 column or 1-channel 2 columns. It has 8 rows.
+ * @param _m2 Contain points in the other view. Depth CV_32F with 2-channel
+ *            1 column or 1-channel 2 columns. It has 8 rows.
+ * @param _fmatrix Output fundamental matrix (or matrices) of type CV_64FC1.
+ *                 The user is responsible for allocating the memory before calling
+ *                 this function.
+ * @return 1 on success, 0 on failure.
+ *
+ * Note that the computed fundamental matrix is normalized, i.e.,
+ * the last element \f$F_{33}\f$ is 1.
+ */
 static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 {
     Point2d m1c(0,0), m2c(0,0);
@@ -705,9 +761,11 @@ public:
 }
 
 cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
-                                int method, double param1, double param2,
+                                int method, double ransacReprojThreshold, double confidence,
                                 OutputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
     int npoints = -1;
@@ -750,15 +808,15 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     }
     else
     {
-        if( param1 <= 0 )
-            param1 = 3;
-        if( param2 < DBL_EPSILON || param2 > 1 - DBL_EPSILON )
-            param2 = 0.99;
+        if( ransacReprojThreshold <= 0 )
+            ransacReprojThreshold = 3;
+        if( confidence < DBL_EPSILON || confidence > 1 - DBL_EPSILON )
+            confidence = 0.99;
 
         if( (method & ~3) == FM_RANSAC && npoints >= 15 )
-            result = createRANSACPointSetRegistrator(cb, 7, param1, param2)->run(m1, m2, F, _mask);
+            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence)->run(m1, m2, F, _mask);
         else
-            result = createLMeDSPointSetRegistrator(cb, 7, param2)->run(m1, m2, F, _mask);
+            result = createLMeDSPointSetRegistrator(cb, 7, confidence)->run(m1, m2, F, _mask);
     }
 
     if( result <= 0 )
@@ -768,16 +826,19 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 }
 
 cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
-                               OutputArray _mask, int method, double param1, double param2 )
+                               OutputArray _mask, int method,
+                               double ransacReprojThreshold , double confidence)
 {
-    return cv::findFundamentalMat(_points1, _points2, method, param1, param2, _mask);
+    return cv::findFundamentalMat(_points1, _points2, method, ransacReprojThreshold, confidence, _mask);
 }
 
 
 void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
                                     InputArray _Fmat, OutputArray _lines )
 {
-    double f[9];
+    CV_INSTRUMENT_REGION()
+
+    double f[9] = {0};
     Mat tempF(3, 3, CV_64F, f);
     Mat points = _points.getMat(), F = _Fmat.getMat();
 
@@ -850,6 +911,8 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 
 void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
@@ -949,6 +1012,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 
 void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
@@ -961,7 +1026,7 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     }
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F || depth == CV_64F));
 
-    int dtype = CV_MAKETYPE(depth <= CV_32F ? CV_32F : CV_64F, cn+1);
+    int dtype = CV_MAKETYPE(depth, cn+1);
     _dst.create(npoints, 1, dtype);
     Mat dst = _dst.getMat();
     if( !dst.isContinuous() )
@@ -1030,6 +1095,8 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 
 void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), dtype = _dst.type();
     CV_Assert( _dst.fixedType() );
 
@@ -1039,8 +1106,11 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
         convertPointsToHomogeneous(_src, _dst);
 }
 
-double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F) {
-    CV_Assert(_pt1.type() == CV_64F && _pt1.type() == CV_64F && _F.type() == CV_64F);
+double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
+{
+    CV_INSTRUMENT_REGION()
+
+    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 
     Mat pt1(_pt1.getMat());

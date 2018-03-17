@@ -104,6 +104,7 @@
 #include <vtkMath.h>
 #include <vtkExtractEdges.h>
 #include <vtkFrustumSource.h>
+#include <vtkTexture.h>
 #include <vtkTextureMapToPlane.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
@@ -282,7 +283,7 @@ namespace cv
                 scalars->SetName("Colors");
                 scalars->SetNumberOfComponents(3);
                 scalars->SetNumberOfTuples((vtkIdType)size);
-                scalars->SetArray(color_data->val, (vtkIdType)(size * 3), 0);
+                scalars->SetArray(color_data->val, (vtkIdType)(size * 3), 0, vtkUnsignedCharArray::VTK_DATA_ARRAY_DELETE);
                 return scalars;
             }
 

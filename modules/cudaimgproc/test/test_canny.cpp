@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////
 // Canny
@@ -98,4 +98,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, Canny, testing::Combine(
     testing::Values(L2gradient(false), L2gradient(true)),
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

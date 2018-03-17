@@ -97,6 +97,22 @@ template<typename T> struct OpAbsDiff
     T operator()(T a, T b) const { return a > b ? a - b : b - a; }
 };
 
+// specializations to prevent "-0" results
+template<> struct OpAbsDiff<float>
+{
+    typedef float type1;
+    typedef float type2;
+    typedef float rtype;
+    float operator()(float a, float b) const { return std::abs(a - b); }
+};
+template<> struct OpAbsDiff<double>
+{
+    typedef double type1;
+    typedef double type2;
+    typedef double rtype;
+    double operator()(double a, double b) const { return std::abs(a - b); }
+};
+
 template<typename T> struct OpAnd
 {
     typedef T type1;
@@ -528,7 +544,7 @@ div_f( const T* src1, size_t step1, const T* src2, size_t step2,
 }
 
 template<typename T> static void
-recip_i( const T*, size_t, const T* src2, size_t step2,
+recip_i( const T* src2, size_t step2,
          T* dst, size_t step, int width, int height, double scale )
 {
     step2 /= sizeof(src2[0]);
@@ -549,7 +565,7 @@ recip_i( const T*, size_t, const T* src2, size_t step2,
 }
 
 template<typename T> static void
-recip_f( const T*, size_t, const T* src2, size_t step2,
+recip_f( const T* src2, size_t step2,
          T* dst, size_t step, int width, int height, double scale )
 {
     T scale_f = (T)scale;

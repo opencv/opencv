@@ -44,25 +44,12 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-#if defined(HAVE_XINE)         || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_FFMPEG)       || \
-    defined(WIN32) /* assume that we have ffmpeg */
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////
 // MOG2
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#ifdef HAVE_VIDEO_INPUT
 
 namespace
     {
@@ -180,4 +167,5 @@ INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG2, testing::Combine(
 
 #endif
 
+}} // namespace
 #endif // HAVE_CUDA

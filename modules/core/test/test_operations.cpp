@@ -41,17 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/ts/ocl_test.hpp" // T-API like tests
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <limits>
-#include <numeric>
-
-using namespace cv;
-using namespace std;
-
+namespace opencv_test {
+namespace {
 
 class CV_OperationsTest : public cvtest::BaseTest
 {
@@ -112,7 +105,7 @@ CV_OperationsTest::~CV_OperationsTest() {}
 template<typename _Tp> void CV_OperationsTest::TestType(Size sz, _Tp value)
 {
     cv::Mat_<_Tp> m(sz);
-    CV_Assert(m.cols == sz.width && m.rows == sz.height && m.depth() == DataType<_Tp>::depth &&
+    CV_Assert(m.cols == sz.width && m.rows == sz.height && m.depth() == cv::traits::Depth<_Tp>::value &&
               m.channels() == DataType<_Tp>::channels &&
               m.elemSize() == sizeof(_Tp) && m.step == m.elemSize()*m.cols);
     for( int y = 0; y < sz.height; y++ )
@@ -141,16 +134,16 @@ bool CV_OperationsTest::TestMat()
         res = Mat(Mat(2 * rot_2x3) * res - shi_2x1) + shift;
 
         Mat tmp, res2;
-        add(one_3x1, shi_3x1, tmp);
-        add(tmp, shi_3x1, tmp);
-        add(tmp, shi_3x1, tmp);
-        gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
-        add(res2, Mat(2, 1, CV_32F, shift), res2);
+        cv::add(one_3x1, shi_3x1, tmp);
+        cv::add(tmp, shi_3x1, tmp);
+        cv::add(tmp, shi_3x1, tmp);
+        cv::gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
+        cv::add(res2, Mat(2, 1, CV_32F, shift), res2);
 
         CHECK_DIFF(res, res2);
 
         Mat mat4x4(4, 4, CV_32F);
-        randu(mat4x4, Scalar(0), Scalar(10));
+        cv::randu(mat4x4, Scalar(0), Scalar(10));
 
         Mat roi1 = mat4x4(Rect(Point(1, 1), Size(2, 2)));
         Mat roi2 = mat4x4(Range(1, 3), Range(1, 3));
@@ -473,7 +466,7 @@ bool CV_OperationsTest::TestSubMatAccess()
         Vec3f ydir(1.f, 0.f, 1.f);
         Vec3f fpt(0.1f, 0.7f, 0.2f);
         T_bs.setTo(0);
-        T_bs(Range(0,3),Range(2,3)) = 1.0*Mat(cdir); // wierd OpenCV stuff, need to do multiply
+        T_bs(Range(0,3),Range(2,3)) = 1.0*Mat(cdir); // weird OpenCV stuff, need to do multiply
         T_bs(Range(0,3),Range(1,2)) = 1.0*Mat(ydir);
         T_bs(Range(0,3),Range(0,1)) = 1.0*Mat(cdir.cross(ydir));
         T_bs(Range(0,3),Range(3,4)) = 1.0*Mat(fpt);
@@ -515,19 +508,19 @@ bool CV_OperationsTest::TestTemplateMat()
         Mat_<float> resS = rot_2x3 * one_3x1;
 
         Mat_<float> tmp, res2, resS2;
-        add(one_3x1, shi_3x1, tmp);
-        add(tmp, shi_3x1, tmp);
-        add(tmp, shi_3x1, tmp);
-        gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
-        add(res2, Mat(2, 1, CV_32F, shift), res2);
+        cv::add(one_3x1, shi_3x1, tmp);
+        cv::add(tmp, shi_3x1, tmp);
+        cv::add(tmp, shi_3x1, tmp);
+        cv::gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
+        cv::add(res2, Mat(2, 1, CV_32F, shift), res2);
 
-        gemm(rot_2x3, one_3x1, 1, shi_2x1, 0, resS2, 0);
+        cv::gemm(rot_2x3, one_3x1, 1, shi_2x1, 0, resS2, 0);
         CHECK_DIFF(res, res2);
         CHECK_DIFF(resS, resS2);
 
 
         Mat_<float> mat4x4(4, 4);
-        randu(mat4x4, Scalar(0), Scalar(10));
+        cv::randu(mat4x4, Scalar(0), Scalar(10));
 
         Mat_<float> roi1 = mat4x4(Rect(Point(1, 1), Size(2, 2)));
         Mat_<float> roi2 = mat4x4(Range(1, 3), Range(1, 3));
@@ -995,17 +988,17 @@ bool CV_OperationsTest::operations1()
         Mat A(1, 32, CV_32F), B;
         for( int i = 0; i < A.cols; i++ )
             A.at<float>(i) = (float)(i <= 12 ? i : 24 - i);
-        transpose(A, B);
+        cv::transpose(A, B);
 
         int minidx[2] = {0, 0}, maxidx[2] = {0, 0};
         double minval = 0, maxval = 0;
-        minMaxIdx(A, &minval, &maxval, minidx, maxidx);
+        cv::minMaxIdx(A, &minval, &maxval, minidx, maxidx);
 
         if( !(minidx[0] == 0 && minidx[1] == 31 && maxidx[0] == 0 && maxidx[1] == 12 &&
                   minval == -7 && maxval == 12))
             throw test_excep();
 
-        minMaxIdx(B, &minval, &maxval, minidx, maxidx);
+        cv::minMaxIdx(B, &minval, &maxval, minidx, maxidx);
 
         if( !(minidx[0] == 31 && minidx[1] == 0 && maxidx[0] == 12 && maxidx[1] == 0 &&
               minval == -7 && maxval == 12))
@@ -1013,13 +1006,13 @@ bool CV_OperationsTest::operations1()
 
         Matx33f b(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f);
         Mat c;
-        add(Mat::zeros(3, 3, CV_32F), b, c);
+        cv::add(Mat::zeros(3, 3, CV_32F), b, c);
         CV_Assert( cvtest::norm(b, c, CV_C) == 0 );
 
-        add(Mat::zeros(3, 3, CV_64F), b, c, noArray(), c.type());
+        cv::add(Mat::zeros(3, 3, CV_64F), b, c, noArray(), c.type());
         CV_Assert( cvtest::norm(b, c, CV_C) == 0 );
 
-        add(Mat::zeros(6, 1, CV_64F), 1, c, noArray(), c.type());
+        cv::add(Mat::zeros(6, 1, CV_64F), 1, c, noArray(), c.type());
         CV_Assert( cvtest::norm(Matx61f(1.f, 1.f, 1.f, 1.f, 1.f, 1.f), c, CV_C) == 0 );
 
         vector<Point2f> pt2d(3);
@@ -1032,7 +1025,7 @@ bool CV_OperationsTest::operations1()
                 0.9058f, 0.0975f, 0.9649f, 0.4854f,
                 0.1270f, 0.2785f, 0.1576f, 0.8003f,
                 0.9134f, 0.5469f, 0.9706f, 0.1419f);
-        double d = determinant(m44);
+        double d = cv::determinant(m44);
         CV_Assert( fabs(d - (-0.0262)) <= 0.001 );
 
         Cv32suf z;
@@ -1120,8 +1113,8 @@ void CV_OperationsTest::run( int /* start_from */)
     if (!TestTemplateMat())
         return;
 
- /*   if (!TestMatND())
-        return;*/
+    if (!TestMatND())
+        return;
 
     if (!TestSparseMat())
         return;
@@ -1240,3 +1233,159 @@ protected:
 };
 
 TEST(Core_SparseMat, iterations) { CV_SparseMatTest test; test.safe_run(); }
+
+TEST(MatTestRoi, adjustRoiOverflow)
+{
+    Mat m(15, 10, CV_32S);
+    Mat roi(m, cv::Range(2, 10), cv::Range(3,6));
+    int rowsInROI = roi.rows;
+    roi.adjustROI(1, 0, 0, 0);
+
+    ASSERT_EQ(roi.rows, rowsInROI + 1);
+
+    roi.adjustROI(-m.rows, -m.rows, 0, 0);
+
+    ASSERT_EQ(roi.rows, m.rows);
+}
+
+
+CV_ENUM(SortRowCol, SORT_EVERY_COLUMN, SORT_EVERY_ROW)
+CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
+
+PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
+{
+    int type;
+    Size size;
+    int flags;
+    bool use_roi;
+
+    Mat src, src_roi;
+    Mat dst, dst_roi;
+
+    virtual void SetUp()
+    {
+        int depth = GET_PARAM(0);
+        int rowFlags = GET_PARAM(1);
+        int orderFlags = GET_PARAM(2);
+        size = GET_PARAM(3);
+        use_roi = GET_PARAM(4);
+
+        type = CV_MAKE_TYPE(depth, 1);
+
+        flags = rowFlags | orderFlags;
+    }
+
+    void generateTestData()
+    {
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, size, srcBorder, type, -100, 100);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, size, dstBorder, CV_32S, 5, 16);
+    }
+
+    template<typename T>
+    void check_(const cv::Mat& values_, const cv::Mat_<int>& idx_)
+    {
+        cv::Mat_<T>& values = (cv::Mat_<T>&)values_;
+        cv::Mat_<int>& idx = (cv::Mat_<int>&)idx_;
+        size_t N = values.total();
+        std::vector<bool> processed(N, false);
+        int prevIdx = idx(0);
+        T prevValue = values(prevIdx);
+        processed[prevIdx] = true;
+        for (size_t i = 1; i < N; i++)
+        {
+            int nextIdx = idx((int)i);
+            T value = values(nextIdx);
+            ASSERT_EQ(false, processed[nextIdx]) << "Indexes must be unique. i=" << i << " idx=" << nextIdx << std::endl << idx;
+            processed[nextIdx] = true;
+            if ((flags & SORT_DESCENDING) == SORT_DESCENDING)
+                ASSERT_GE(prevValue, value) << "i=" << i << " prevIdx=" << prevIdx << " idx=" << nextIdx;
+            else
+                ASSERT_LE(prevValue, value) << "i=" << i << " prevIdx=" << prevIdx << " idx=" << nextIdx;
+            prevValue = value;
+            prevIdx = nextIdx;
+        }
+    }
+
+    void validate()
+    {
+        ASSERT_EQ(CV_32SC1, dst_roi.type());
+        ASSERT_EQ(size, dst_roi.size());
+        bool isColumn = (flags & SORT_EVERY_COLUMN) == SORT_EVERY_COLUMN;
+        size_t N = isColumn ? src_roi.cols : src_roi.rows;
+        Mat values_row((int)N, 1, type), idx_row((int)N, 1, CV_32S);
+        for (size_t i = 0; i < N; i++)
+        {
+            SCOPED_TRACE(cv::format("row/col=%d", (int)i));
+            if (isColumn)
+            {
+                src_roi.col((int)i).copyTo(values_row);
+                dst_roi.col((int)i).copyTo(idx_row);
+            }
+            else
+            {
+                src_roi.row((int)i).copyTo(values_row);
+                dst_roi.row((int)i).copyTo(idx_row);
+            }
+            switch(type)
+            {
+            case CV_8U: check_<uchar>(values_row, idx_row); break;
+            case CV_8S: check_<char>(values_row, idx_row); break;
+            case CV_16S: check_<short>(values_row, idx_row); break;
+            case CV_32S: check_<int>(values_row, idx_row); break;
+            case CV_32F: check_<float>(values_row, idx_row); break;
+            case CV_64F: check_<double>(values_row, idx_row); break;
+            default: ASSERT_FALSE(true) << "Unsupported type: " << type;
+            }
+        }
+    }
+};
+
+TEST_P(sortIdx, simple)
+{
+    for (int j = 0; j < 5; j++)
+    {
+        generateTestData();
+
+        cv::sortIdx(src_roi, dst_roi, flags);
+        validate();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core, sortIdx, Combine(
+        Values(CV_8U, CV_8S, CV_16S, CV_32S, CV_32F, CV_64F), // depth
+        Values(SORT_EVERY_COLUMN, SORT_EVERY_ROW),
+        Values(SORT_ASCENDING, SORT_DESCENDING),
+        Values(Size(3, 3), Size(16, 8)),
+        ::testing::Bool()
+));
+
+
+TEST(Core_sortIdx, regression_8941)
+{
+    cv::Mat src = (cv::Mat_<int>(3, 3) <<
+        1, 2, 3,
+        0, 9, 5,
+        8, 1, 6
+    );
+    cv::Mat expected = (cv::Mat_<int>(3, 1) <<
+        1,
+        0,
+        2
+    );
+
+    cv::Mat result;
+    cv::sortIdx(src.col(0), result, CV_SORT_EVERY_COLUMN | CV_SORT_ASCENDING);
+#if 0
+    std::cout << src.col(0) << std::endl;
+    std::cout << result << std::endl;
+#endif
+    ASSERT_EQ(expected.size(), result.size());
+    EXPECT_EQ(0, cvtest::norm(expected, result, NORM_INF)) <<
+        "result=" << std::endl << result << std::endl <<
+        "expected=" << std::endl << expected;
+}
+
+}} // namespace

@@ -465,10 +465,10 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
         T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
         T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
 
-        float num = convertToDT(mad(value_sum, template_sum, 0));
+        float num = convertToDT(mad(value_sum, template_sum, (float)0));
 
         value_sqsum -= weight * value_sum * value_sum;
-        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), (float)0));
 
         int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
         __global float * dstult = (__global float *)(dst+dst_idx);
@@ -509,7 +509,7 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
         float num = convertToDT(mad(value_sum, temp_sum, 0));
 
         value_sqsum -= weight * value_sum * value_sum;
-        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), (float)0));
 
         int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
         __global float * dstult = (__global float *)(dst+dst_idx);
@@ -549,7 +549,7 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
         float num = convertToDT(mad(value_sum, temp_sum, 0));
 
         value_sqsum -= weight * value_sum * value_sum;
-        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), (float)0));
 
         int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
         __global float * dstult = (__global float *)(dst+dst_idx);

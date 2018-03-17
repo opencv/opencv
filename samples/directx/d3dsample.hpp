@@ -168,7 +168,7 @@ static const char* keys =
 {
     "{c camera | true  | use camera or not}"
     "{f file   |       | movie file name  }"
-    "{h help   | false | print help info  }"
+    "{h help   |       | print help info  }"
 };
 
 
@@ -176,9 +176,9 @@ template <typename TApp>
 int d3d_app(int argc, char** argv, std::string& title)
 {
     cv::CommandLineParser parser(argc, argv, keys);
+    std::string file = parser.get<std::string>("file");
     bool   useCamera = parser.has("camera");
-    string file      = parser.get<string>("file");
-    bool   showHelp  = parser.get<bool>("help");
+    bool   showHelp  = parser.has("help");
 
     if (showHelp)
         help();
@@ -198,8 +198,8 @@ int d3d_app(int argc, char** argv, std::string& title)
         return -1;
     }
 
-    int width  = (int)cap.get(CAP_PROP_FRAME_WIDTH);
-    int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
+    int width  = (int)cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    int height = (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
 
     std::string wndname = title;
 

@@ -49,7 +49,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// Merge////////////////////////
@@ -156,7 +156,7 @@ OCL_PERF_TEST_P(MixChannelsFixture, MixChannels,
 
 ///////////// InsertChannel ////////////////////////
 
-typedef std::tr1::tuple<cv::Size, MatDepth> Size_MatDepth_t;
+typedef tuple<cv::Size, MatDepth> Size_MatDepth_t;
 typedef TestBaseWithParam<Size_MatDepth_t> Size_MatDepth;
 
 typedef Size_MatDepth InsertChannelFixture;
@@ -201,6 +201,6 @@ OCL_PERF_TEST_P(ExtractChannelFixture, ExtractChannel,
     SANITY_CHECK(dst);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

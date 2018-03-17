@@ -1,6 +1,6 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/videoio/videoio.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 
 #include <iostream>
 
@@ -18,17 +18,12 @@ static void help(char** argv)
 
 int main(int argc, char** argv)
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||}{@image||}");
-    if (parser.has("help"))
-    {
-        help(argv);
-        return 0;
-    }
+    help(argv);
+    cv::CommandLineParser parser(argc, argv, "{@image| ../data/left%02d.jpg |}");
     string first_file = parser.get<string>("@image");
 
     if(first_file.empty())
     {
-        help(argv);
         return 1;
     }
 

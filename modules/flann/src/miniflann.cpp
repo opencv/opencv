@@ -318,7 +318,19 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
 
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
     IndexType* _index = new IndexType(dataset, get_params(params), dist);
-    _index->buildIndex();
+
+    try
+    {
+        _index->buildIndex();
+    }
+    catch (...)
+    {
+        delete _index;
+        _index = NULL;
+
+        throw;
+    }
+
     index = _index;
 }
 
@@ -353,6 +365,8 @@ Index::Index(InputArray _data, const IndexParams& params, flann_distance_t _dist
 
 void Index::build(InputArray _data, const IndexParams& params, flann_distance_t _distType)
 {
+    CV_INSTRUMENT_REGION()
+
     release();
     algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
     if( algo == FLANN_INDEX_SAVED )
@@ -421,6 +435,8 @@ Index::~Index()
 
 void Index::release()
 {
+    CV_INSTRUMENT_REGION()
+
     if( !index )
         return;
 
@@ -466,6 +482,9 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     typedef typename Distance::ResultType DistanceType;
     int type = DataType<ElementType>::type;
     int dtype = DataType<DistanceType>::type;
+    IndexType* index_ = (IndexType*)index;
+
+    CV_Assert((size_t)knn <= index_->size());
     CV_Assert(query.type() == type && indices.type() == CV_32S && dists.type() == dtype);
     CV_Assert(query.isContinuous() && indices.isContinuous() && dists.isContinuous());
 
@@ -473,8 +492,8 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     ::cvflann::Matrix<int> _indices(indices.ptr<int>(), indices.rows, indices.cols);
     ::cvflann::Matrix<DistanceType> _dists(dists.ptr<DistanceType>(), dists.rows, dists.cols);
 
-    ((IndexType*)index)->knnSearch(_query, _indices, _dists, knn,
-                                   (const ::cvflann::SearchParams&)get_params(params));
+    index_->knnSearch(_query, _indices, _dists, knn,
+                      (const ::cvflann::SearchParams&)get_params(params));
 }
 
 template<typename Distance>
@@ -537,7 +556,7 @@ static void createIndicesDists(OutputArray _indices, OutputArray _dists,
         if( !dists.isContinuous() || dists.type() != dtype ||
            dists.rows != rows || dists.cols < minCols || dists.cols > maxCols )
         {
-            if( !indices.isContinuous() )
+            if( !_dists.isContinuous() )
                 _dists.release();
             _dists.create( rows, minCols, dtype );
             dists = _dists.getMat();
@@ -551,6 +570,8 @@ static void createIndicesDists(OutputArray _indices, OutputArray _dists,
 void Index::knnSearch(InputArray _query, OutputArray _indices,
                OutputArray _dists, int knn, const SearchParams& params)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat query = _query.getMat(), indices, dists;
     int dtype = distType == FLANN_DIST_HAMMING ? CV_32S : CV_32F;
 
@@ -593,6 +614,8 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
                         OutputArray _dists, double radius, int maxResults,
                         const SearchParams& params)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat query = _query.getMat(), indices, dists;
     int dtype = distType == FLANN_DIST_HAMMING ? CV_32S : CV_32F;
     CV_Assert( maxResults > 0 );
@@ -656,6 +679,8 @@ template<typename Distance> void saveIndex(const Index* index0, const void* inde
 
 void Index::save(const String& filename) const
 {
+    CV_INSTRUMENT_REGION()
+
     FILE* fout = fopen(filename.c_str(), "wb");
     if (fout == NULL)
         CV_Error_( Error::StsError, ("Can not open file %s for writing FLANN index\n", filename.c_str()) );

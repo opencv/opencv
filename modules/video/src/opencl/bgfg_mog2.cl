@@ -5,12 +5,11 @@
 #define cnMode 1
 
 #define frameToMean(a, b) (b) = *(a);
+#if FL==0
 #define meanToFrame(a, b) *b = convert_uchar_sat(a);
-
-inline float sum(float val)
-{
-    return val;
-}
+#else
+#define meanToFrame(a, b) *b = (float)a;
+#endif
 
 #else
 
@@ -18,21 +17,23 @@ inline float sum(float val)
 #define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
 #define cnMode 4
 
+#if FL == 0
 #define meanToFrame(a, b)\
     b[0] = convert_uchar_sat(a.x); \
     b[1] = convert_uchar_sat(a.y); \
     b[2] = convert_uchar_sat(a.z);
+#else
+#define meanToFrame(a, b)\
+    b[0] = a.x; \
+    b[1] = a.y; \
+    b[2] = a.z;
+#endif
 
 #define frameToMean(a, b)\
     b.x = a[0]; \
     b.y = a[1]; \
     b.z = a[2]; \
     b.w = 0.0f;
-
-inline float sum(const float4 val)
-{
-    return (val.x + val.y + val.z);
-}
 
 #endif
 
@@ -55,7 +56,11 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
 
     if( x < frame_col && y < frame_row)
     {
+        #if FL==0
         __global const uchar* _frame = (frame + mad24(y, frame_step, mad24(x, CN, frame_offset)));
+        #else
+        __global const float* _frame = ((__global const float*)( frame + mad24(y, frame_step, frame_offset)) + mad24(x, CN, 0));
+        #endif
         T_MEAN pix;
         frameToMean(_frame, pix);
 
@@ -195,9 +200,7 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
                 int mode_idx = mad24(mode, idx_step, pt_idx);
                 T_MEAN c_mean = _mean[mode_idx];
 
-                T_MEAN pix_mean = pix * c_mean;
-
-                float numerator = sum(pix_mean);
+                float numerator = dot(pix, c_mean);
                 float denominator = dot(c_mean, c_mean);
 
                 if (denominator == 0)
@@ -267,7 +270,13 @@ __kernel void getBackgroundImage2_kernel(__global const uchar* modesUsed,
             meanVal = meanVal / totalWeight;
         else
             meanVal = (T_MEAN)(0.f);
+
+        #if FL==0
         __global uchar* _dst = dst + mad24(y, dst_step, mad24(x, CN, dst_offset));
         meanToFrame(meanVal, _dst);
+        #else
+        __global float* _dst = ((__global float*)( dst + mad24(y, dst_step, dst_offset)) + mad24(x, CN, 0));
+        meanToFrame(meanVal, _dst);
+        #endif
     }
 }

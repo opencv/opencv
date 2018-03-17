@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_WARP_SCAN_HPP__
-#define __OPENCV_CUDEV_WARP_SCAN_HPP__
+#ifndef OPENCV_CUDEV_WARP_SCAN_HPP
+#define OPENCV_CUDEV_WARP_SCAN_HPP
 
 #include "../common.hpp"
 #include "warp.hpp"

@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test {
 
 CV_AMLTest::CV_AMLTest( const char* _modelName ) : CV_MLBaseTest( _modelName )
 {
@@ -51,6 +50,7 @@ CV_AMLTest::CV_AMLTest( const char* _modelName ) : CV_MLBaseTest( _modelName )
 
 int CV_AMLTest::run_test_case( int testCaseIdx )
 {
+    CV_TRACE_FUNCTION();
     int code = cvtest::TS::OK;
     code = prepare_test_case( testCaseIdx );
 
@@ -91,6 +91,7 @@ int CV_AMLTest::run_test_case( int testCaseIdx )
 
 int CV_AMLTest::validate_test_results( int testCaseIdx )
 {
+    CV_TRACE_FUNCTION();
     int iters;
     float mean, sigma;
     // read validation params
@@ -123,9 +124,101 @@ int CV_AMLTest::validate_test_results( int testCaseIdx )
     return cvtest::TS::OK;
 }
 
+namespace {
+
 TEST(ML_DTree, regression) { CV_AMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, regression) { CV_AMLTest test( CV_BOOST ); test.safe_run(); }
 TEST(ML_RTrees, regression) { CV_AMLTest test( CV_RTREES ); test.safe_run(); }
 TEST(DISABLED_ML_ERTrees, regression) { CV_AMLTest test( CV_ERTREES ); test.safe_run(); }
 
+TEST(ML_NBAYES, regression_5911)
+{
+    int N=12;
+    Ptr<ml::NormalBayesClassifier> nb = cv::ml::NormalBayesClassifier::create();
+
+    // data:
+    Mat_<float> X(N,4);
+    X << 1,2,3,4,  1,2,3,4,   1,2,3,4,    1,2,3,4,
+         5,5,5,5,  5,5,5,5,   5,5,5,5,    5,5,5,5,
+         4,3,2,1,  4,3,2,1,   4,3,2,1,    4,3,2,1;
+
+    // labels:
+    Mat_<int> Y(N,1);
+    Y << 0,0,0,0, 1,1,1,1, 2,2,2,2;
+    nb->train(X, ml::ROW_SAMPLE, Y);
+
+    // single prediction:
+    Mat R1,P1;
+    for (int i=0; i<N; i++)
+    {
+        Mat r,p;
+        nb->predictProb(X.row(i), r, p);
+        R1.push_back(r);
+        P1.push_back(p);
+    }
+
+    // bulk prediction (continuous memory):
+    Mat R2,P2;
+    nb->predictProb(X, R2, P2);
+
+    EXPECT_EQ(sum(R1 == R2)[0], 255 * R2.total());
+    EXPECT_EQ(sum(P1 == P2)[0], 255 * P2.total());
+
+    // bulk prediction, with non-continuous memory storage
+    Mat R3_(N, 1+1, CV_32S),
+        P3_(N, 3+1, CV_32F);
+    nb->predictProb(X, R3_.col(0), P3_.colRange(0,3));
+    Mat R3 = R3_.col(0).clone(),
+        P3 = P3_.colRange(0,3).clone();
+
+    EXPECT_EQ(sum(R1 == R3)[0], 255 * R3.total());
+    EXPECT_EQ(sum(P1 == P3)[0], 255 * P3.total());
+}
+
+TEST(ML_RTrees, getVotes)
+{
+    int n = 12;
+    int count, i;
+    int label_size = 3;
+    int predicted_class = 0;
+    int max_votes = -1;
+    int val;
+    // RTrees for classification
+    Ptr<ml::RTrees> rt = cv::ml::RTrees::create();
+
+    //data
+    Mat data(n, 4, CV_32F);
+    randu(data, 0, 10);
+
+    //labels
+    Mat labels = (Mat_<int>(n,1) << 0,0,0,0, 1,1,1,1, 2,2,2,2);
+
+    rt->train(data, ml::ROW_SAMPLE, labels);
+
+    //run function
+    Mat test(1, 4, CV_32F);
+    Mat result;
+    randu(test, 0, 10);
+    rt->getVotes(test, result, 0);
+
+    //count vote amount and find highest vote
+    count = 0;
+    const int* result_row = result.ptr<int>(1);
+    for( i = 0; i < label_size; i++ )
+    {
+        val = result_row[i];
+        //predicted_class = max_votes < val? i;
+        if( max_votes < val )
+        {
+            max_votes = val;
+            predicted_class = i;
+        }
+        count += val;
+    }
+
+    EXPECT_EQ(count, (int)rt->getRoots().size());
+    EXPECT_EQ(result.at<float>(0, predicted_class), rt->predict(test));
+}
+
+}} // namespace
 /* End of file. */

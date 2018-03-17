@@ -58,7 +58,7 @@ OpenCV Needs You !!!
 Since OpenCV is an open source initiative, all are welcome to make contributions to the library,
 documentation, and tutorials. If you find any mistake in this tutorial (from a small spelling
 mistake to an egregious error in code or concept), feel free to correct it by cloning OpenCV in
-[GitHub](https://github.com/Itseez/opencv) and submitting a pull request. OpenCV developers will
+[GitHub](https://github.com/opencv/opencv) and submitting a pull request. OpenCV developers will
 check your pull request, give you important feedback and (once it passes the approval of the
 reviewer) it will be merged into OpenCV. You will then become an open source contributor :-)
 

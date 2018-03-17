@@ -42,22 +42,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_HPP__
-#define __OPENCV_HAL_HPP__
+#ifndef OPENCV_HAL_HPP
+#define OPENCV_HAL_HPP
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/hal/interface.h"
-
-//! @cond IGNORED
-#define CALL_HAL(name, fun, ...) \
-    int res = fun(__VA_ARGS__); \
-    if (res == CV_HAL_ERROR_OK) \
-        return; \
-    else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
-        CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
-//! @endcond
-
 
 namespace cv { namespace hal {
 
@@ -74,6 +64,23 @@ CV_EXPORTS int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int 
 CV_EXPORTS int LU64f(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky64f(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS void SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, float* Vt, size_t vstep, int m, int n, int flags);
+CV_EXPORTS void SVD64f(double* At, size_t astep, double* W, double* U, size_t ustep, double* Vt, size_t vstep, int m, int n, int flags);
+CV_EXPORTS int QR32f(float* A, size_t astep, int m, int n, int k, float* b, size_t bstep, float* hFactors);
+CV_EXPORTS int QR64f(double* A, size_t astep, int m, int n, int k, double* b, size_t bstep, double* hFactors);
+
+CV_EXPORTS void gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
+                        float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
+CV_EXPORTS void gemm64f(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
+                        double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
+CV_EXPORTS void gemm32fc(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
+                        float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
+CV_EXPORTS void gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
+                        double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
 
 CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS float normL1_(const float* a, const float* b, int n);
@@ -84,7 +91,8 @@ CV_EXPORTS void exp64f(const double* src, double* dst, int n);
 CV_EXPORTS void log32f(const float* src, float* dst, int n);
 CV_EXPORTS void log64f(const double* src, double* dst, int n);
 
-CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS void fastAtan32f(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS void fastAtan64f(const double* y, const double* x, double* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude32f(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude64f(const double* x, const double* y, double* dst, int n);
 CV_EXPORTS void sqrt32f(const float* src, float* dst, int len);
@@ -171,13 +179,13 @@ CV_EXPORTS void div32s( const int* src1, size_t step1, const int* src2, size_t s
 CV_EXPORTS void div32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void div64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
 
-CV_EXPORTS void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip8u( const uchar *, size_t, const uchar * src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip8s( const schar *, size_t, const schar * src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip16u( const ushort *, size_t, const ushort * src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip16s( const short *, size_t, const short * src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip32s( const int *, size_t, const int * src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip32f( const float *, size_t, const float * src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip64f( const double *, size_t, const double * src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
 
 CV_EXPORTS void addWeighted8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _scalars );
 CV_EXPORTS void addWeighted8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scalars );
@@ -186,6 +194,29 @@ CV_EXPORTS void addWeighted16s( const short* src1, size_t step1, const short* sr
 CV_EXPORTS void addWeighted32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scalars );
+
+struct CV_EXPORTS DFT1D
+{
+    static Ptr<DFT1D> create(int len, int count, int depth, int flags, bool * useBuffer = 0);
+    virtual void apply(const uchar *src, uchar *dst) = 0;
+    virtual ~DFT1D() {}
+};
+
+struct CV_EXPORTS DFT2D
+{
+    static Ptr<DFT2D> create(int width, int height, int depth,
+                             int src_channels, int dst_channels,
+                             int flags, int nonzero_rows = 0);
+    virtual void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) = 0;
+    virtual ~DFT2D() {}
+};
+
+struct CV_EXPORTS DCT2D
+{
+    static Ptr<DCT2D> create(int width, int height, int depth, int flags);
+    virtual void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) = 0;
+    virtual ~DCT2D() {}
+};
 
 //! @} core_hal
 
@@ -204,6 +235,7 @@ CV_EXPORTS void exp(const double* src, double* dst, int n);
 CV_EXPORTS void log(const float* src, float* dst, int n);
 CV_EXPORTS void log(const double* src, double* dst, int n);
 
+CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude(const double* x, const double* y, double* dst, int n);
 CV_EXPORTS void sqrt(const float* src, float* dst, int len);
@@ -215,4 +247,4 @@ CV_EXPORTS void invSqrt(const double* src, double* dst, int len);
 
 }} //cv::hal
 
-#endif //__OPENCV_HAL_HPP__
+#endif //OPENCV_HAL_HPP

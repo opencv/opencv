@@ -4,11 +4,11 @@ file(GLOB sources "performance/*.cpp")
 file(GLOB headers "performance/*.h")
 
 if(HAVE_opencv_xfeatures2d)
-  ocv_include_directories("${opencv_xfeatures2d_SOURCE_DIR}/include")
+  ocv_include_modules_recurse(opencv_xfeatures2d)
 endif()
 
 if(HAVE_opencv_bgsegm)
-  ocv_include_directories("${opencv_bgsegm_SOURCE_DIR}/include")
+  ocv_include_modules_recurse(opencv_bgsegm)
 endif()
 
 add_executable(${the_target} ${sources} ${headers})
@@ -34,10 +34,4 @@ if(WIN32)
   install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/gpu" COMPONENT samples)
 endif()
 
-if(INSTALL_C_EXAMPLES AND NOT WIN32)
-  file(GLOB CUDA_FILES performance/*.cpp performance/*.h)
-  install(FILES ${CUDA_FILES}
-          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu/performance
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
-          COMPONENT samples)
-endif()
+ocv_install_example_src("gpu/performance" performance/*.cpp performance/*.h)

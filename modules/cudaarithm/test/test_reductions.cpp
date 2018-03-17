@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Norm
@@ -877,14 +877,11 @@ CUDA_TEST_P(Reduce, Cols)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::cuda::GpuMat dst = createMat(cv::Size(src.rows, 1), dst_type, useRoi);
+    cv::cuda::GpuMat dst;
     cv::cuda::reduce(loadMat(src, useRoi), dst, 1, reduceOp, dst_depth);
 
     cv::Mat dst_gold;
     cv::reduce(src, dst_gold, 1, reduceOp, dst_depth);
-    dst_gold.cols = dst_gold.rows;
-    dst_gold.rows = 1;
-    dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
     EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 0.02);
 }
@@ -1079,7 +1076,7 @@ CUDA_TEST_P(Integral, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Integral, testing::Combine(
     ALL_DEVICES,
-    testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(768, 1066)),
+    testing::Values(cv::Size(16, 16), cv::Size(128, 128), cv::Size(113, 113), cv::Size(768, 1066)),
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1119,4 +1116,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, IntegralSqr, testing::Combine(
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

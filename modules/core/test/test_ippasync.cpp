@@ -1,3 +1,6 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
@@ -6,9 +9,9 @@
 
 using namespace cv;
 using namespace std;
-using namespace cvtest;
+using namespace opencv_test;
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(IPPAsync, MatDepth, Channels, hppAccelType)
@@ -32,7 +35,7 @@ PARAM_TEST_CASE(IPPAsync, MatDepth, Channels, hppAccelType)
         accelType = GET_PARAM(2);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size matrix_Size = randomSize(2, 100);
         const double upValue = 100;
@@ -102,24 +105,13 @@ PARAM_TEST_CASE(IPPAsyncShared, Channels, hppAccelType)
         type=CV_MAKE_TYPE(CV_8U, GET_PARAM(0));
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size matrix_Size = randomSize(2, 100);
         hpp32u pitch, size;
         const int upValue = 100;
 
         sts = hppQueryMatrixAllocParams(accel, (hpp32u)(matrix_Size.width*cn), (hpp32u)matrix_Size.height, HPP_DATA_TYPE_8U, &pitch, &size);
-
-        if (pitch!=0 && size!=0)
-        {
-            uchar *pData = (uchar*)_aligned_malloc(size, 4096);
-
-            for (int j=0; j<matrix_Size.height; j++)
-                for(int i=0; i<matrix_Size.width*cn; i++)
-                    pData[i+j*pitch] = rand()%upValue;
-
-            matrix = Mat(matrix_Size.height, matrix_Size.width, type, pData, pitch);
-        }
 
         matrix = randomMat(matrix_Size, type, 0, upValue);
     }

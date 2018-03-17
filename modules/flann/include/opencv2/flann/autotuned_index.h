@@ -30,6 +30,8 @@
 #ifndef OPENCV_FLANN_AUTOTUNED_INDEX_H_
 #define OPENCV_FLANN_AUTOTUNED_INDEX_H_
 
+#include <sstream>
+
 #include "general.h"
 #include "nn_index.h"
 #include "ground_truth.h"
@@ -81,6 +83,7 @@ public:
         memory_weight_ = get_param(params, "memory_weight", 0.0f);
         sample_fraction_ = get_param(params,"sample_fraction", 0.1f);
         bestIndex_ = NULL;
+        speedup_ = 0;
     }
 
     AutotunedIndex(const AutotunedIndex&);

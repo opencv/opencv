@@ -14,32 +14,24 @@
 *
 */
 
-#include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
 #include <iostream>
-#include <stdlib.h>
 
 using namespace std;
 using namespace cv;
 
 int main(int argc, char* argv[])
 {
-    if(argc < 2)
-    {
-        cout << "usage: " << argv[0] << " <Input image> "  << endl;
-        exit(0);
-    }
-
     int num,type;
+    CommandLineParser parser(argc, argv, "{@input | ../data/lena.jpg | input image}");
+    Mat src = imread(parser.get<String>("@input"), IMREAD_COLOR);
 
-    Mat I = imread(argv[1]);
-
-    if(I.empty())
+    if(src.empty())
     {
-        cout <<  "Image not found" << endl;
+        cout << "Could not open or find the image!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
         exit(0);
     }
 
@@ -71,25 +63,25 @@ int main(int argc, char* argv[])
 
         cin >> type;
 
-        edgePreservingFilter(I,img,type);
+        edgePreservingFilter(src,img,type);
         imshow("Edge Preserve Smoothing",img);
 
     }
     else if(num == 2)
     {
-        detailEnhance(I,img);
+        detailEnhance(src,img);
         imshow("Detail Enhanced",img);
     }
     else if(num == 3)
     {
         Mat img1;
-        pencilSketch(I,img1, img, 10 , 0.1f, 0.03f);
+        pencilSketch(src,img1, img, 10 , 0.1f, 0.03f);
         imshow("Pencil Sketch",img1);
         imshow("Color Pencil Sketch",img);
     }
     else if(num == 4)
     {
-        stylization(I,img);
+        stylization(src,img);
         imshow("Stylization",img);
     }
     waitKey(0);

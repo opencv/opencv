@@ -124,7 +124,7 @@ bool CvCapture_Images::grabFrame()
     }
 
     cvReleaseImage(&frame);
-    frame = cvLoadImage(str, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+    frame = cvLoadImage(str, CV_LOAD_IMAGE_UNCHANGED);
     if( frame )
         currentframe++;
 
@@ -209,7 +209,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
     char *at = strchr(name, '%');
     if(at)
     {
-        int dummy;
+        unsigned int dummy;
         if(sscanf(at + 1, "%ud", &dummy) != 1)
             return 0;
         name = strdup(filename);
@@ -236,6 +236,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
 
         int size = (int)strlen(filename) + 20;
         name = (char *)malloc(size);
+        CV_Assert(name != NULL);
         strncpy(name, filename, at - filename);
         name[at - filename] = 0;
 
@@ -245,7 +246,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
         char *extension;
         for(i = 0, extension = at; isdigit(at[i]); i++, extension++)
             ;
-        char places[10];
+        char places[13] = {0};
         sprintf(places, "%dd", i);
 
         strcat(name, places);
@@ -332,18 +333,23 @@ public:
 
     virtual bool open( const char* _filename );
     virtual void close();
+    virtual bool setProperty( int, double );
     virtual bool writeFrame( const IplImage* );
 
 protected:
     char* filename;
     unsigned currentframe;
+    std::vector<int> params;
 };
 
 bool CvVideoWriter_Images::writeFrame( const IplImage* image )
 {
     char str[_MAX_PATH];
     sprintf(str, filename, currentframe);
-    int ret = cvSaveImage(str, image);
+    std::vector<int> image_params = params;
+    image_params.push_back(0); // append parameters 'stop' mark
+    image_params.push_back(0);
+    int ret = cvSaveImage(str, image, &image_params[0]);
 
     currentframe++;
 
@@ -358,6 +364,7 @@ void CvVideoWriter_Images::close()
         filename = 0;
     }
     currentframe = 0;
+    params.clear();
 }
 
 
@@ -380,7 +387,20 @@ bool CvVideoWriter_Images::open( const char* _filename )
     }
 
     currentframe = offset;
+    params.clear();
     return true;
+}
+
+
+bool CvVideoWriter_Images::setProperty( int id, double value )
+{
+    if (id >= cv::CAP_PROP_IMAGES_BASE && id < cv::CAP_PROP_IMAGES_LAST)
+    {
+        params.push_back( id - cv::CAP_PROP_IMAGES_BASE );
+        params.push_back( static_cast<int>( value ) );
+        return true;
+    }
+    return false; // not supported
 }
 
 

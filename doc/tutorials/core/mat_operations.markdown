@@ -14,7 +14,7 @@ Load an image from a file:
 If you read a jpg file, a 3 channel image is created by default. If you need a grayscale image, use:
 
 @code{.cpp}
-    Mat img = imread(filename, 0);
+    Mat img = imread(filename, IMREAD_GRAYSCALE);
 @endcode
 
 @note format of the file is determined by its content (first few bytes) Save an image to a file:
@@ -122,7 +122,7 @@ Selecting a region of interest:
     Rect r(10, 10, 100, 100);
     Mat smallImg = img(r);
 @endcode
-A convertion from Mat to C API data structures:
+A conversion from Mat to C API data structures:
 @code{.cpp}
     Mat img = imread("image.jpg");
     IplImage img1 = img;

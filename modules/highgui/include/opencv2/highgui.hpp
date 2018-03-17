@@ -40,12 +40,16 @@
 //
 //M*/
 
-#ifndef __OPENCV_HIGHGUI_HPP__
-#define __OPENCV_HIGHGUI_HPP__
+#ifndef OPENCV_HIGHGUI_HPP
+#define OPENCV_HIGHGUI_HPP
 
 #include "opencv2/core.hpp"
+#ifdef HAVE_OPENCV_IMGCODECS
 #include "opencv2/imgcodecs.hpp"
+#endif
+#ifdef HAVE_OPENCV_VIDEOIO
 #include "opencv2/videoio.hpp"
+#endif
 
 /**
 @defgroup highgui High-level GUI
@@ -182,15 +186,18 @@ enum WindowFlags {
 
        WINDOW_FULLSCREEN = 1,          //!< change the window to fullscreen.
        WINDOW_FREERATIO  = 0x00000100, //!< the image expends as much as it can (no ratio constraint).
-       WINDOW_KEEPRATIO  = 0x00000000  //!< the ratio of the image is respected.
-     };
+       WINDOW_KEEPRATIO  = 0x00000000, //!< the ratio of the image is respected.
+       WINDOW_GUI_EXPANDED=0x00000000, //!< status bar and tool bar
+       WINDOW_GUI_NORMAL = 0x00000010, //!< old fashious way
+    };
 
 //! Flags for cv::setWindowProperty / cv::getWindowProperty
 enum WindowPropertyFlags {
        WND_PROP_FULLSCREEN   = 0, //!< fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN).
        WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
-       WND_PROP_OPENGL       = 3  //!< opengl support.
+       WND_PROP_OPENGL       = 3, //!< opengl support.
+       WND_PROP_VISIBLE      = 4  //!< checks whether the window exists and is visible
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -237,9 +244,10 @@ enum QtFontStyles {
 
 //! Qt "button" type
 enum QtButtonTypes {
-       QT_PUSH_BUTTON = 0, //!< Push button.
-       QT_CHECKBOX    = 1, //!< Checkbox button.
-       QT_RADIOBOX    = 2  //!< Radiobox button.
+       QT_PUSH_BUTTON   = 0,    //!< Push button.
+       QT_CHECKBOX      = 1,    //!< Checkbox button.
+       QT_RADIOBOX      = 2,    //!< Radiobox button.
+       QT_NEW_BUTTONBAR = 1024  //!< Button should create a new buttonbar
      };
 
 /** @brief Callback function for mouse events. see cv::setMouseCallback
@@ -287,9 +295,9 @@ Qt backend supports additional flags:
      displayed image (see imshow ), and you cannot change the window size manually.
  -   **WINDOW_FREERATIO or WINDOW_KEEPRATIO:** WINDOW_FREERATIO adjusts the image
      with no respect to its ratio, whereas WINDOW_KEEPRATIO keeps the image ratio.
- -   **CV_GUI_NORMAL or CV_GUI_EXPANDED:** CV_GUI_NORMAL is the old way to draw the window
-     without statusbar and toolbar, whereas CV_GUI_EXPANDED is a new enhanced GUI.
-By default, flags == WINDOW_AUTOSIZE | WINDOW_KEEPRATIO | CV_GUI_EXPANDED
+ -   **WINDOW_GUI_NORMAL or WINDOW_GUI_EXPANDED:** WINDOW_GUI_NORMAL is the old way to draw the window
+     without statusbar and toolbar, whereas WINDOW_GUI_EXPANDED is a new enhanced GUI.
+By default, flags == WINDOW_AUTOSIZE | WINDOW_KEEPRATIO | WINDOW_GUI_EXPANDED
 
 @param winname Name of the window in the window caption that may be used as a window identifier.
 @param flags Flags of the window. The supported flags are: (cv::WindowFlags)
@@ -311,6 +319,15 @@ The function destroyAllWindows destroys all of the opened HighGUI windows.
 CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
+
+/** @brief Similar to #waitKey, but returns full key code.
+
+@note
+
+Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
+
+*/
+CV_EXPORTS_W int waitKeyEx(int delay = 0);
 
 /** @brief Waits for a pressed key.
 
@@ -344,7 +361,7 @@ Otherwise, the image is scaled to fit the window. The function may scale the ima
 -   If the image is 8-bit unsigned, it is displayed as is.
 -   If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the
     value range [0,255\*256] is mapped to [0,255].
--   If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the
+-   If the image is 32-bit or 64-bit floating-point, the pixel values are multiplied by 255. That is, the
     value range [0,1] is mapped to [0,255].
 
 If window was created with OpenGL support, cv::imshow also support ogl::Buffer , ogl::Texture2D and
@@ -384,6 +401,12 @@ CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
  */
 CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 
+/** @overload
+@param winname Window name.
+@param size The new window size.
+*/
+CV_EXPORTS_W void resizeWindow(const String& winname, const cv::Size& size);
+
 /** @brief Moves window to the specified position
 
 @param winname Name of the window.
@@ -419,11 +442,21 @@ The function getWindowProperty returns properties of a window.
  */
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
+/** @brief Provides rectangle of image in the window.
+
+The function getWindowImageRect returns the client screen coordinates, width and height of the image rendering area.
+
+@param winname Name of the window.
+
+@sa resizeWindow moveWindow
+ */
+CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
+
 /** @brief Sets mouse handler for the specified window
 
 @param winname Name of the window.
 @param onMouse Mouse callback. See OpenCV samples, such as
-<https://github.com/Itseez/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
+<https://github.com/opencv/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
 use the callback.
 @param userdata The optional parameter passed to the callback.
  */
@@ -450,6 +483,44 @@ Mouse-wheel events are currently supported only on Windows.
 @param flags The mouse callback flags parameter.
  */
 CV_EXPORTS int getMouseWheelDelta(int flags);
+
+/** @brief Selects ROI on the given image.
+Function creates a window and allows user to select a ROI using mouse.
+Controls: use `space` or `enter` to finish selection, use key `c` to cancel selection (function will return the zero cv::Rect).
+
+@param windowName name of the window where selection process will be shown.
+@param img image to select a ROI.
+@param showCrosshair if true crosshair of selection rectangle will be shown.
+@param fromCenter if true center of selection will match initial mouse position. In opposite case a corner of
+selection rectangle will correspont to the initial mouse position.
+@return selected ROI or empty rect if selection canceled.
+
+@note The function sets it's own mouse callback for specified window using cv::setMouseCallback(windowName, ...).
+After finish of work an empty callback will be set for the used window.
+ */
+CV_EXPORTS_W Rect selectROI(const String& windowName, InputArray img, bool showCrosshair = true, bool fromCenter = false);
+
+/** @overload
+ */
+CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool fromCenter = false);
+
+/** @brief Selects ROIs on the given image.
+Function creates a window and allows user to select a ROIs using mouse.
+Controls: use `space` or `enter` to finish current selection and start a new one,
+use `esc` to terminate multiple ROI selection process.
+
+@param windowName name of the window where selection process will be shown.
+@param img image to select a ROI.
+@param boundingBoxes selected ROIs.
+@param showCrosshair if true crosshair of selection rectangle will be shown.
+@param fromCenter if true center of selection will match initial mouse position. In opposite case a corner of
+selection rectangle will correspont to the initial mouse position.
+
+@note The function sets it's own mouse callback for specified window using cv::setMouseCallback(windowName, ...).
+After finish of work an empty callback will be set for the used window.
+ */
+CV_EXPORTS_W void selectROIs(const String& windowName, InputArray img,
+                             CV_OUT std::vector<Rect>& boundingBoxes, bool showCrosshair = true, bool fromCenter = false);
 
 /** @brief Creates a trackbar and attaches it to the specified window.
 
@@ -537,7 +608,7 @@ panel.
 
 @param trackbarname Name of the trackbar.
 @param winname Name of the window that is the parent of trackbar.
-@param minval New maximum position.
+@param minval New minimum position.
  */
 CV_EXPORTS_W void setTrackbarMin(const String& trackbarname, const String& winname, int minval);
 
@@ -663,6 +734,23 @@ The function addText draws *text* on the image *img* using a specific font *font
  */
 CV_EXPORTS void addText( const Mat& img, const String& text, Point org, const QtFont& font);
 
+/** @brief Draws a text on the image.
+
+@param img 8-bit 3-channel image where the text should be drawn.
+@param text Text to write on an image.
+@param org Point(x,y) where the text should start on an image.
+@param nameFont Name of the font. The name should match the name of a system font (such as
+*Times*). If the font is not found, a default one is used.
+@param pointSize Size of the font. If not specified, equal zero or negative, the point size of the
+font is set to a system-dependent default value. Generally, this is 12 points.
+@param color Color of the font in BGRA where A = 255 is fully transparent.
+@param weight Font weight. Available operation flags are : cv::QtFontWeights You can also specify a positive integer for better control.
+@param style Font style. Available operation flags are : cv::QtFontStyles
+@param spacing Spacing between characters. It can be negative or positive.
+ */
+CV_EXPORTS_W void addText(const Mat& img, const String& text, Point org, const String& nameFont, int pointSize = -1, Scalar color = Scalar::all(0),
+        int weight = QT_FONT_NORMAL, int style = QT_STYLE_NORMAL, int spacing = 0);
+
 /** @brief Displays a text on a window image as an overlay for a specified duration.
 
 The function displayOverlay displays useful information/tips on top of the window for a certain
@@ -675,7 +763,7 @@ after the specified delay the original content of the window is restored.
 function is called before the previous overlay text timed out, the timer is restarted and the text
 is updated. If this value is zero, the text never disappears.
  */
-CV_EXPORTS void displayOverlay(const String& winname, const String& text, int delayms = 0);
+CV_EXPORTS_W void displayOverlay(const String& winname, const String& text, int delayms = 0);
 
 /** @brief Displays a text on the window statusbar during the specified period of time.
 
@@ -689,7 +777,7 @@ created with the CV_GUI_EXPANDED flags).
 the previous text timed out, the timer is restarted and the text is updated. If this value is
 zero, the text never disappears.
  */
-CV_EXPORTS void displayStatusBar(const String& winname, const String& text, int delayms = 0);
+CV_EXPORTS_W void displayStatusBar(const String& winname, const String& text, int delayms = 0);
 
 /** @brief Saves parameters of the specified window.
 
@@ -717,7 +805,8 @@ CV_EXPORTS  void stopLoop();
 
 The function createButton attaches a button to the control panel. Each button is added to a
 buttonbar to the right of the last button. A new buttonbar is created if nothing was attached to the
-control panel before, or if the last element attached to the control panel was a trackbar.
+control panel before, or if the last element attached to the control panel was a trackbar or if the
+QT_NEW_BUTTONBAR flag is added to the type.
 
 See below various examples of the cv::createButton function call: :
 @code
@@ -726,6 +815,7 @@ See below various examples of the cv::createButton function call: :
     createButton("button3",callbackButton,&value);
     createButton("button5",callbackButton1,NULL,QT_RADIOBOX);
     createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON,1);
+    createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON|QT_NEW_BUTTONBAR);// create a push button in a new row
 @endcode
 
 @param  bar_name Name of the button.

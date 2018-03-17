@@ -1,11 +1,11 @@
 
 /* filter_neon_intrinsics.c - NEON optimised filter functions
  *
- * Copyright (c) 2014 Glenn Randers-Pehrson
+ * Copyright (c) 2014,2016 Glenn Randers-Pehrson
  * Written by James Yu <james.yu at linaro.org>, October 2013.
  * Based on filter_neon.S, written by Mans Rullgard, 2011.
  *
- * Last changed in libpng 1.6.16 [December 22, 2014]
+ * Last changed in libpng 1.6.22 [May 26, 2016]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -47,6 +47,8 @@ png_read_filter_row_up_neon(png_row_infop row_info, png_bytep row,
    png_bytep rp_stop = row + row_info->rowbytes;
    png_const_bytep pp = prev_row;
 
+   png_debug(1, "in png_read_filter_row_up_neon");
+
    for (; rp < rp_stop; rp += 16, pp += 16)
    {
       uint8x16_t qrp, qpp;
@@ -71,6 +73,8 @@ png_read_filter_row_sub3_neon(png_row_infop row_info, png_bytep row,
 
    uint8x8x4_t vdest;
    vdest.val[3] = vdup_n_u8(0);
+
+   png_debug(1, "in png_read_filter_row_sub3_neon");
 
    for (; rp < rp_stop;)
    {
@@ -113,6 +117,8 @@ png_read_filter_row_sub4_neon(png_row_infop row_info, png_bytep row,
    uint8x8x4_t vdest;
    vdest.val[3] = vdup_n_u8(0);
 
+   png_debug(1, "in png_read_filter_row_sub4_neon");
+
    for (; rp < rp_stop; rp += 16)
    {
       uint32x2x4_t vtmp = vld4_u32(png_ptr(uint32_t,rp));
@@ -147,6 +153,8 @@ png_read_filter_row_avg3_neon(png_row_infop row_info, png_bytep row,
    vtmp = vld1q_u8(rp);
    vrpt = png_ptr(uint8x8x2_t,&vtmp);
    vrp = *vrpt;
+
+   png_debug(1, "in png_read_filter_row_avg3_neon");
 
    for (; rp < rp_stop; pp += 12)
    {
@@ -206,6 +214,8 @@ png_read_filter_row_avg4_neon(png_row_infop row_info, png_bytep row,
 
    uint8x8x4_t vdest;
    vdest.val[3] = vdup_n_u8(0);
+
+   png_debug(1, "in png_read_filter_row_avg4_neon");
 
    for (; rp < rp_stop; rp += 16, pp += 16)
    {
@@ -280,6 +290,8 @@ png_read_filter_row_paeth3_neon(png_row_infop row_info, png_bytep row,
    vrpt = png_ptr(uint8x8x2_t,&vtmp);
    vrp = *vrpt;
 
+   png_debug(1, "in png_read_filter_row_paeth3_neon");
+
    for (; rp < rp_stop; pp += 12)
    {
       uint8x8x2_t *vppt;
@@ -338,6 +350,8 @@ png_read_filter_row_paeth4_neon(png_row_infop row_info, png_bytep row,
    uint8x8_t vlast = vdup_n_u8(0);
    uint8x8x4_t vdest;
    vdest.val[3] = vdup_n_u8(0);
+
+   png_debug(1, "in png_read_filter_row_paeth4_neon");
 
    for (; rp < rp_stop; rp += 16, pp += 16)
    {

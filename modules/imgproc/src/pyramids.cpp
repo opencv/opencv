@@ -44,6 +44,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 namespace cv
 {
 
@@ -1010,7 +1012,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         for( ; sy <= y + 1; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PU_SZ)*bufstep;
-            int _sy = borderInterpolate(sy*2, dsize.height, BORDER_REFLECT_101)/2;
+            int _sy = borderInterpolate(sy*2, ssize.height*2, BORDER_REFLECT_101)/2;
             const T* src = _src.ptr<T>(_sy);
 
             if( ssize.width == cn )
@@ -1031,6 +1033,11 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
                 t0 = src[sx - cn] + src[sx]*7;
                 t1 = src[sx]*8;
                 row[dx] = t0; row[dx + cn] = t1;
+
+                if (dsize.width > ssize.width*2)
+                {
+                    row[(_dst.cols-1) + x] = row[dx + cn];
+                }
             }
 
             for( x = cn; x < ssize.width - cn; x++ )
@@ -1055,6 +1062,17 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
             T t1 = castOp((row1[x] + row2[x])*4);
             T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
             dst1[x] = t1; dst0[x] = t0;
+        }
+    }
+
+    if (dsize.height > ssize.height*2)
+    {
+        T* dst0 = _dst.ptr<T>(ssize.height*2-2);
+        T* dst2 = _dst.ptr<T>(ssize.height*2);
+
+        for(x = 0; x < dsize.width ; x++ )
+        {
+            dst2[x] = dst0[x];
         }
     }
 }
@@ -1149,8 +1167,17 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     ocl::Kernel k;
     if (ocl::Device::getDefault().isIntel() && channels == 1)
     {
-        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
-        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+        if (type == CV_8UC1 && src.cols % 2 == 0)
+        {
+            buildOptions.clear();
+            k.create("pyrUp_cols2", ocl::imgproc::pyramid_up_oclsrc, buildOptions);
+            globalThreads[0] = dst.cols/4; globalThreads[1] = dst.rows/2;
+        }
+        else
+        {
+            k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+            globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+        }
     }
     else
         k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
@@ -1171,7 +1198,9 @@ namespace cv
 {
 static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+    CV_INSTRUMENT_REGION_IPP()
+
+#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
     Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
@@ -1206,7 +1235,7 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
                 CV_SUPPRESS_DEPRECATED_END
                 if (ok >= 0)
                 {
-                    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                    Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
                     ok = pyrUpFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
                     ippsFree(buffer);
 
@@ -1227,18 +1256,104 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 }
 #endif
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
+{
+    using namespace ivx;
+
+    Mat srcMat = _src.getMat();
+
+    if (ovx::skipSmallImages<VX_KERNEL_HALFSCALE_GAUSSIAN>(srcMat.cols, srcMat.rows))
+        return false;
+
+    CV_Assert(!srcMat.empty());
+
+    Size ssize = _src.size();
+    Size acceptableSize = Size((ssize.width + 1) / 2, (ssize.height + 1) / 2);
+
+    // OpenVX limitations
+    if((srcMat.type() != CV_8U) ||
+       (borderType != BORDER_REPLICATE) ||
+       (_dsz != acceptableSize && _dsz.area() != 0))
+        return false;
+
+    // The only border mode which is supported by both cv::pyrDown() and OpenVX
+    // and produces predictable results
+    ivx::border_t borderMode;
+    borderMode.mode = VX_BORDER_REPLICATE;
+
+    _dst.create( acceptableSize, srcMat.type() );
+    Mat dstMat = _dst.getMat();
+
+    CV_Assert( ssize.width > 0 && ssize.height > 0 &&
+            std::abs(acceptableSize.width*2 - ssize.width) <= 2 &&
+            std::abs(acceptableSize.height*2 - ssize.height) <= 2 );
+
+    try
+    {
+        Context context = ovx::getOpenVXContext();
+        if(context.vendorID() == VX_ID_KHRONOS)
+        {
+            // This implementation performs floor-like rounding
+            // (OpenCV uses floor(x+0.5)-like rounding)
+            // and ignores border mode (and loses 1px size border)
+            return false;
+        }
+
+        Image srcImg = Image::createFromHandle(context, Image::matTypeToFormat(srcMat.type()),
+                                               Image::createAddressing(srcMat), (void*)srcMat.data);
+        Image dstImg = Image::createFromHandle(context, Image::matTypeToFormat(dstMat.type()),
+                                               Image::createAddressing(dstMat), (void*)dstMat.data);
+
+        ivx::Scalar kernelSize = ivx::Scalar::create<VX_TYPE_INT32>(context, 5);
+        Graph graph = Graph::create(context);
+        ivx::Node halfNode = ivx::Node::create(graph, VX_KERNEL_HALFSCALE_GAUSSIAN, srcImg, dstImg, kernelSize);
+        halfNode.setBorder(borderMode);
+        graph.verify();
+        graph.process();
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        srcImg.swapHandle(); dstImg.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+
+}
+#endif
+
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(borderType != BORDER_CONSTANT);
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrDown(_src, _dst, _dsz, borderType))
+
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_pyrDown(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
     Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
+
+    CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrDown(src, dst))
@@ -1276,7 +1391,9 @@ namespace cv
 {
 static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+    CV_INSTRUMENT_REGION_IPP()
+
+#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
     Size dsz = _dsz.area() == 0 ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
 
@@ -1309,7 +1426,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
                 CV_SUPPRESS_DEPRECATED_END
                 if (ok >= 0)
                 {
-                    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                    Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
                     ok = pyrUpFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
                     ippsFree(buffer);
 
@@ -1332,6 +1449,8 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(borderType == BORDER_DEFAULT);
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
@@ -1380,7 +1499,9 @@ namespace cv
 {
 static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+    CV_INSTRUMENT_REGION_IPP()
+
+#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_BUILD
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
@@ -1490,6 +1611,8 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(borderType != BORDER_CONSTANT);
 
     if (_src.dims() <= 2 && _dst.isUMatVector())
@@ -1508,7 +1631,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
 
     int i=1;
 
-    CV_IPP_RUN(((IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
+    CV_IPP_RUN(((IPP_VERSION_X100 >= 810) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
         ipp_buildpyramid( _src,  _dst,  maxlevel,  borderType));
 
     for( ; i <= maxlevel; i++ )
