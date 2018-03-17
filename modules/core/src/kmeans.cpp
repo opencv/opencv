@@ -436,7 +436,7 @@ double cv::kmeans( InputArray _data, int K,
             else
             {
                 // assign labels
-                parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists, labels, data, centers), divUp(dims * N * K, CV_KMEANS_PARALLEL_GRANULARITY));
+                parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists, labels, data, centers), divUp((size_t)(dims * N * K), CV_KMEANS_PARALLEL_GRANULARITY));
             }
         }
 
