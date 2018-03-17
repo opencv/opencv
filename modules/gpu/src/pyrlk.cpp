@@ -40,9 +40,12 @@
 //
 //M*/
 
-#include <pthread.h>
-
 #include "precomp.hpp"
+
+#ifdef HAVE_TBB
+#include <tbb/compat/condition_variable>
+#include <tbb/mutex.h>
+#endif
 
 using namespace std;
 using namespace cv;
@@ -108,8 +111,8 @@ namespace
 }
 
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg,
-						const GpuMat& nextImg, const GpuMat& prevPts,
-						GpuMat& nextPts, GpuMat& status, GpuMat* err)
+                        const GpuMat& nextImg, const GpuMat& prevPts,
+                        GpuMat& nextPts, GpuMat& status, GpuMat* err)
 {
     if (prevPts.empty())
     {
@@ -192,15 +195,17 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg,
     }
 }
 
+#ifdef HAVE_TBB
 //--------------------------------------------------------------------------
 // Multi-threading support
+
 static bool index_vector_use[5] = {true, true, true, true, true}; // all free
-static pthread_mutex_t s_PyrLKOpticalFlow_Mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t s_PyrLKOpticalFlow_ConditionVariable = PTHREAD_COND_INITIALIZER;
+static tbb::mutex s_PyrLKOpticalFlow_Mutex;
+static condition_variable s_PyrLKOpticalFlow_ConditionVariable;
 
 void cv::gpu::PyrLKOpticalFlow::sparse_multi(const GpuMat& prevImg,
-		const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
-		GpuMat& status, Stream& stream, GpuMat* err)
+        const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
+        GpuMat& status, Stream& stream, GpuMat* err)
 {
     if (prevPts.empty())
     {
@@ -270,21 +275,20 @@ void cv::gpu::PyrLKOpticalFlow::sparse_multi(const GpuMat& prevImg,
 
     do
     {
-        pthread_mutex_lock(&s_PyrLKOpticalFlow_Mutex);
-    	for (unsigned int uiI = 0; uiI < 5; ++uiI)
-    	{
-    		if (index_vector_use[uiI])
-    		{
-    			index = uiI;
-    			index_vector_use[uiI] = false;
-    			break;
-    		}
-    	}
-    	if (index < 0)
-    		pthread_cond_wait(&s_PyrLKOpticalFlow_ConditionVariable,
-    							&s_PyrLKOpticalFlow_Mutex);
+        unique_lock<tbb::mutex> ul(s_PyrLKOpticalFlow_Mutex);
+        for (unsigned int uiI = 0; uiI < 5; ++uiI)
+        {
+            if (index_vector_use[uiI])
+            {
+                index = uiI;
+                index_vector_use[uiI] = false;
+                break;
+            }
+        }
+        if (index < 0)
+            s_PyrLKOpticalFlow_ConditionVariable.wait(ul);
 
-        pthread_mutex_unlock(&s_PyrLKOpticalFlow_Mutex);
+        ul.unlock();
     }while (index < 0);
 
     //--------------------------------------------------------------------------
@@ -296,22 +300,24 @@ void cv::gpu::PyrLKOpticalFlow::sparse_multi(const GpuMat& prevImg,
         if (cn == 1)
         {
             pyrlk::sparse1_multi(prevPyr_[level], nextPyr_[level],
-                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
+                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(),
+                level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
                 level, block, patch, StreamAccessor::getStream(stream), index);
         }
         else
         {
             pyrlk::sparse4_multi(prevPyr_[level], nextPyr_[level],
-                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
+                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(),
+                level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
                 level, block, patch, StreamAccessor::getStream(stream), index);
         }
     }
 
-    pthread_mutex_lock(&s_PyrLKOpticalFlow_Mutex);
+    unique_lock<tbb::mutex> ul(s_PyrLKOpticalFlow_Mutex);
     index_vector_use[index] = true;
-    pthread_cond_signal(&s_PyrLKOpticalFlow_ConditionVariable);
-    pthread_mutex_unlock(&s_PyrLKOpticalFlow_Mutex);
+    s_PyrLKOpticalFlow_ConditionVariable.notify_one();
 }
+#endif
 
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
 {

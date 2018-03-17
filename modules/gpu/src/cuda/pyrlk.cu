@@ -49,6 +49,8 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/reduce.hpp"
 
+#include "opencv2/core/core.hpp"
+
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
@@ -61,11 +63,11 @@ namespace pyrlk
     __constant__ int c_iters;
 
 #define CUDA_CONSTANTS(index) \
-	__constant__ int c_winSize_x##index; \
-	__constant__ int c_winSize_y##index; \
-	__constant__ int c_halfWin_x##index; \
-	__constant__ int c_halfWin_y##index; \
-	__constant__ int c_iters##index;
+    __constant__ int c_winSize_x##index; \
+    __constant__ int c_winSize_y##index; \
+    __constant__ int c_halfWin_x##index; \
+    __constant__ int c_halfWin_y##index; \
+    __constant__ int c_iters##index;
 
     CUDA_CONSTANTS(0)
     CUDA_CONSTANTS(1)
@@ -98,16 +100,16 @@ namespace pyrlk
     CUDA_CONSTANTS_ACCESSOR(4)
 
     texture<float, cudaTextureType2D, cudaReadModeElementType>
-    		tex_If(false, cudaFilterModeLinear, cudaAddressModeClamp);
+            tex_If(false, cudaFilterModeLinear, cudaAddressModeClamp);
     texture<float4, cudaTextureType2D, cudaReadModeElementType>
-    		tex_If4(false, cudaFilterModeLinear, cudaAddressModeClamp);
+            tex_If4(false, cudaFilterModeLinear, cudaAddressModeClamp);
     texture<uchar, cudaTextureType2D, cudaReadModeElementType>
-    		tex_Ib(false, cudaFilterModePoint, cudaAddressModeClamp);
+            tex_Ib(false, cudaFilterModePoint, cudaAddressModeClamp);
 
     texture<float, cudaTextureType2D, cudaReadModeElementType>
-    		tex_Jf(false, cudaFilterModeLinear, cudaAddressModeClamp);
+            tex_Jf(false, cudaFilterModeLinear, cudaAddressModeClamp);
     texture<float4, cudaTextureType2D, cudaReadModeElementType>
-    		tex_Jf4(false, cudaFilterModeLinear, cudaAddressModeClamp);
+            tex_Jf4(false, cudaFilterModeLinear, cudaAddressModeClamp);
 
     template <int cn> struct Tex_I;
     template <> struct Tex_I<1>
@@ -144,16 +146,16 @@ namespace pyrlk
     //--------------------------------------------------------------------------
 
 #define CUDA_DECL_TEX_MULTI(texname, type, filtermode) \
-	texture<type, cudaTextureType2D, cudaReadModeElementType> \
-    		texname##_multi0(false, filtermode, cudaAddressModeClamp); \
-	texture<type, cudaTextureType2D, cudaReadModeElementType> \
-    		texname##_multi1(false, filtermode, cudaAddressModeClamp); \
-	texture<type, cudaTextureType2D, cudaReadModeElementType> \
-			texname##_multi2(false, filtermode, cudaAddressModeClamp); \
-	texture<type, cudaTextureType2D, cudaReadModeElementType> \
-			texname##_multi3(false, filtermode, cudaAddressModeClamp); \
-	texture<type, cudaTextureType2D, cudaReadModeElementType> \
-			texname##_multi4(false, filtermode, cudaAddressModeClamp); \
+    texture<type, cudaTextureType2D, cudaReadModeElementType> \
+            texname##_multi0(false, filtermode, cudaAddressModeClamp); \
+    texture<type, cudaTextureType2D, cudaReadModeElementType> \
+            texname##_multi1(false, filtermode, cudaAddressModeClamp); \
+    texture<type, cudaTextureType2D, cudaReadModeElementType> \
+            texname##_multi2(false, filtermode, cudaAddressModeClamp); \
+    texture<type, cudaTextureType2D, cudaReadModeElementType> \
+            texname##_multi3(false, filtermode, cudaAddressModeClamp); \
+    texture<type, cudaTextureType2D, cudaReadModeElementType> \
+            texname##_multi4(false, filtermode, cudaAddressModeClamp); \
 
     CUDA_DECL_TEX_MULTI(tex_If1, float, cudaFilterModeLinear)
     CUDA_DECL_TEX_MULTI(tex_If4, float4, cudaFilterModeLinear)
@@ -168,13 +170,13 @@ namespace pyrlk
 #define CUDA_DECL_TEX_MULTI_ACCESS(accessorname, texname, cn, returntype) \
     template <> struct accessorname##_multi<cn, 0> \
     { static __device__ __forceinline__ returntype read(float x, float y) \
-    	{ return tex2D(texname##cn##_multi0, x, y); } }; \
+        { return tex2D(texname##cn##_multi0, x, y); } }; \
     template <> struct accessorname##_multi<cn, 1> \
     { static __device__ __forceinline__ returntype read(float x, float y) \
         { return tex2D(texname##cn##_multi1, x, y); } }; \
     template <> struct accessorname##_multi<cn, 2> \
     { static __device__ __forceinline__ returntype read(float x, float y) \
-    	{ return tex2D(texname##cn##_multi2, x, y); } }; \
+        { return tex2D(texname##cn##_multi2, x, y); } }; \
     template <> struct accessorname##_multi<cn, 3> \
     { static __device__ __forceinline__ returntype read(float x, float y) \
         { return tex2D(texname##cn##_multi3, x, y); } }; \
@@ -489,7 +491,7 @@ namespace pyrlk
 
         float D = A11 * A22 - A12 * A12;
 
-        if (D < numeric_limits<float>::epsilon())
+        if (abs_(D) < numeric_limits<float>::epsilon())
         {
             if (tid == 0 && level == 0)
                 status[blockIdx.x] = 0;
@@ -788,7 +790,7 @@ namespace pyrlk
 
     void loadConstants_multi(int2 winSize, int iters, int index, cudaStream_t stream = 0)
     {
-    	int2 halfWin;
+        int2 halfWin;
 #define COPY_TO_SYMBOL_CALL(index) \
         cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_x##index, &winSize.x, sizeof(int), 0, cudaMemcpyHostToDevice, stream) ); \
         cudaSafeCall( cudaMemcpyToSymbolAsync(c_winSize_y##index, &winSize.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) ); \
@@ -797,15 +799,15 @@ namespace pyrlk
         cudaSafeCall( cudaMemcpyToSymbolAsync(c_halfWin_y##index, &halfWin.y, sizeof(int), 0, cudaMemcpyHostToDevice, stream) ); \
         cudaSafeCall( cudaMemcpyToSymbolAsync(c_iters##index, &iters, sizeof(int), 0, cudaMemcpyHostToDevice, stream) );
 
-    	switch(index)
-    	{
-    		case 0:	COPY_TO_SYMBOL_CALL(0) break;
-    		case 1:	COPY_TO_SYMBOL_CALL(1) break;
-    		case 2: COPY_TO_SYMBOL_CALL(2) break;
-    		case 3:	COPY_TO_SYMBOL_CALL(3) break;
-    		case 4: COPY_TO_SYMBOL_CALL(4) break;
-    		default: /* TODO: error */ break;
-    	}
+        switch(index)
+        {
+            case 0:    COPY_TO_SYMBOL_CALL(0) break;
+            case 1:    COPY_TO_SYMBOL_CALL(1) break;
+            case 2: COPY_TO_SYMBOL_CALL(2) break;
+            case 3:    COPY_TO_SYMBOL_CALL(3) break;
+            case 4: COPY_TO_SYMBOL_CALL(4) break;
+            default: CV_Error(CV_StsBadArg, "invalid execution line index"); break;
+        }
     }
 
     void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -861,68 +863,68 @@ namespace pyrlk
 
         static const func_t funcs[5][5][5] =
         {
-        	{ // index 0
-        		{sparse_caller_multi<1, 0, 1, 1>, sparse_caller_multi<1, 0, 2, 1>, sparse_caller_multi<1, 0, 3, 1>, sparse_caller_multi<1, 0, 4, 1>, sparse_caller_multi<1, 0, 5, 1>},
-        		{sparse_caller_multi<1, 0, 1, 2>, sparse_caller_multi<1, 0, 2, 2>, sparse_caller_multi<1, 0, 3, 2>, sparse_caller_multi<1, 0, 4, 2>, sparse_caller_multi<1, 0, 5, 2>},
-        		{sparse_caller_multi<1, 0, 1, 3>, sparse_caller_multi<1, 0, 2, 3>, sparse_caller_multi<1, 0, 3, 3>, sparse_caller_multi<1, 0, 4, 3>, sparse_caller_multi<1, 0, 5, 3>},
-        		{sparse_caller_multi<1, 0, 1, 4>, sparse_caller_multi<1, 0, 2, 4>, sparse_caller_multi<1, 0, 3, 4>, sparse_caller_multi<1, 0, 4, 4>, sparse_caller_multi<1, 0, 5, 4>},
-        		{sparse_caller_multi<1, 0, 1, 5>, sparse_caller_multi<1, 0, 2, 5>, sparse_caller_multi<1, 0, 3, 5>, sparse_caller_multi<1, 0, 4, 5>, sparse_caller_multi<1, 0, 5, 5>}
-        	},
-        	{ // index 1
-        		{sparse_caller_multi<1, 1, 1, 1>, sparse_caller_multi<1, 1, 2, 1>, sparse_caller_multi<1, 1, 3, 1>, sparse_caller_multi<1, 1, 4, 1>, sparse_caller_multi<1, 1, 5, 1>},
-        		{sparse_caller_multi<1, 1, 1, 2>, sparse_caller_multi<1, 1, 2, 2>, sparse_caller_multi<1, 1, 3, 2>, sparse_caller_multi<1, 1, 4, 2>, sparse_caller_multi<1, 1, 5, 2>},
-        		{sparse_caller_multi<1, 1, 1, 3>, sparse_caller_multi<1, 1, 2, 3>, sparse_caller_multi<1, 1, 3, 3>, sparse_caller_multi<1, 1, 4, 3>, sparse_caller_multi<1, 1, 5, 3>},
-        		{sparse_caller_multi<1, 1, 1, 4>, sparse_caller_multi<1, 1, 2, 4>, sparse_caller_multi<1, 1, 3, 4>, sparse_caller_multi<1, 1, 4, 4>, sparse_caller_multi<1, 1, 5, 4>},
-        		{sparse_caller_multi<1, 1, 1, 5>, sparse_caller_multi<1, 1, 2, 5>, sparse_caller_multi<1, 1, 3, 5>, sparse_caller_multi<1, 1, 4, 5>, sparse_caller_multi<1, 1, 5, 5>}
-        	},
-        	{ // index 2
-        		{sparse_caller_multi<1, 2, 1, 1>, sparse_caller_multi<1, 2, 2, 1>, sparse_caller_multi<1, 2, 3, 1>, sparse_caller_multi<1, 2, 4, 1>, sparse_caller_multi<1, 2, 5, 1>},
-        		{sparse_caller_multi<1, 2, 1, 2>, sparse_caller_multi<1, 2, 2, 2>, sparse_caller_multi<1, 2, 3, 2>, sparse_caller_multi<1, 2, 4, 2>, sparse_caller_multi<1, 2, 5, 2>},
-        		{sparse_caller_multi<1, 2, 1, 3>, sparse_caller_multi<1, 2, 2, 3>, sparse_caller_multi<1, 2, 3, 3>, sparse_caller_multi<1, 2, 4, 3>, sparse_caller_multi<1, 2, 5, 3>},
-        		{sparse_caller_multi<1, 2, 1, 4>, sparse_caller_multi<1, 2, 2, 4>, sparse_caller_multi<1, 2, 3, 4>, sparse_caller_multi<1, 2, 4, 4>, sparse_caller_multi<1, 2, 5, 4>},
-        		{sparse_caller_multi<1, 2, 1, 5>, sparse_caller_multi<1, 2, 2, 5>, sparse_caller_multi<1, 2, 3, 5>, sparse_caller_multi<1, 2, 4, 5>, sparse_caller_multi<1, 2, 5, 5>}
-        	},
-        	{ // index 3
-        		{sparse_caller_multi<1, 3, 1, 1>, sparse_caller_multi<1, 3, 2, 1>, sparse_caller_multi<1, 3, 3, 1>, sparse_caller_multi<1, 3, 4, 1>, sparse_caller_multi<1, 3, 5, 1>},
-        		{sparse_caller_multi<1, 3, 1, 2>, sparse_caller_multi<1, 3, 2, 2>, sparse_caller_multi<1, 3, 3, 2>, sparse_caller_multi<1, 3, 4, 2>, sparse_caller_multi<1, 3, 5, 2>},
-        		{sparse_caller_multi<1, 3, 1, 3>, sparse_caller_multi<1, 3, 2, 3>, sparse_caller_multi<1, 3, 3, 3>, sparse_caller_multi<1, 3, 4, 3>, sparse_caller_multi<1, 3, 5, 3>},
-        		{sparse_caller_multi<1, 3, 1, 4>, sparse_caller_multi<1, 3, 2, 4>, sparse_caller_multi<1, 3, 3, 4>, sparse_caller_multi<1, 3, 4, 4>, sparse_caller_multi<1, 3, 5, 4>},
-        		{sparse_caller_multi<1, 3, 1, 5>, sparse_caller_multi<1, 3, 2, 5>, sparse_caller_multi<1, 3, 3, 5>, sparse_caller_multi<1, 3, 4, 5>, sparse_caller_multi<1, 3, 5, 5>}
-        	},
-        	{ // index 4
-        		{sparse_caller_multi<1, 4, 1, 1>, sparse_caller_multi<1, 4, 2, 1>, sparse_caller_multi<1, 4, 3, 1>, sparse_caller_multi<1, 4, 4, 1>, sparse_caller_multi<1, 4, 5, 1>},
-        		{sparse_caller_multi<1, 4, 1, 2>, sparse_caller_multi<1, 4, 2, 2>, sparse_caller_multi<1, 4, 3, 2>, sparse_caller_multi<1, 4, 4, 2>, sparse_caller_multi<1, 4, 5, 2>},
-        		{sparse_caller_multi<1, 4, 1, 3>, sparse_caller_multi<1, 4, 2, 3>, sparse_caller_multi<1, 4, 3, 3>, sparse_caller_multi<1, 4, 4, 3>, sparse_caller_multi<1, 4, 5, 3>},
-        		{sparse_caller_multi<1, 4, 1, 4>, sparse_caller_multi<1, 4, 2, 4>, sparse_caller_multi<1, 4, 3, 4>, sparse_caller_multi<1, 4, 4, 4>, sparse_caller_multi<1, 4, 5, 4>},
-        		{sparse_caller_multi<1, 4, 1, 5>, sparse_caller_multi<1, 4, 2, 5>, sparse_caller_multi<1, 4, 3, 5>, sparse_caller_multi<1, 4, 4, 5>, sparse_caller_multi<1, 4, 5, 5>}
-        	}
+            { // index 0
+                {sparse_caller_multi<1, 0, 1, 1>, sparse_caller_multi<1, 0, 2, 1>, sparse_caller_multi<1, 0, 3, 1>, sparse_caller_multi<1, 0, 4, 1>, sparse_caller_multi<1, 0, 5, 1>},
+                {sparse_caller_multi<1, 0, 1, 2>, sparse_caller_multi<1, 0, 2, 2>, sparse_caller_multi<1, 0, 3, 2>, sparse_caller_multi<1, 0, 4, 2>, sparse_caller_multi<1, 0, 5, 2>},
+                {sparse_caller_multi<1, 0, 1, 3>, sparse_caller_multi<1, 0, 2, 3>, sparse_caller_multi<1, 0, 3, 3>, sparse_caller_multi<1, 0, 4, 3>, sparse_caller_multi<1, 0, 5, 3>},
+                {sparse_caller_multi<1, 0, 1, 4>, sparse_caller_multi<1, 0, 2, 4>, sparse_caller_multi<1, 0, 3, 4>, sparse_caller_multi<1, 0, 4, 4>, sparse_caller_multi<1, 0, 5, 4>},
+                {sparse_caller_multi<1, 0, 1, 5>, sparse_caller_multi<1, 0, 2, 5>, sparse_caller_multi<1, 0, 3, 5>, sparse_caller_multi<1, 0, 4, 5>, sparse_caller_multi<1, 0, 5, 5>}
+            },
+            { // index 1
+                {sparse_caller_multi<1, 1, 1, 1>, sparse_caller_multi<1, 1, 2, 1>, sparse_caller_multi<1, 1, 3, 1>, sparse_caller_multi<1, 1, 4, 1>, sparse_caller_multi<1, 1, 5, 1>},
+                {sparse_caller_multi<1, 1, 1, 2>, sparse_caller_multi<1, 1, 2, 2>, sparse_caller_multi<1, 1, 3, 2>, sparse_caller_multi<1, 1, 4, 2>, sparse_caller_multi<1, 1, 5, 2>},
+                {sparse_caller_multi<1, 1, 1, 3>, sparse_caller_multi<1, 1, 2, 3>, sparse_caller_multi<1, 1, 3, 3>, sparse_caller_multi<1, 1, 4, 3>, sparse_caller_multi<1, 1, 5, 3>},
+                {sparse_caller_multi<1, 1, 1, 4>, sparse_caller_multi<1, 1, 2, 4>, sparse_caller_multi<1, 1, 3, 4>, sparse_caller_multi<1, 1, 4, 4>, sparse_caller_multi<1, 1, 5, 4>},
+                {sparse_caller_multi<1, 1, 1, 5>, sparse_caller_multi<1, 1, 2, 5>, sparse_caller_multi<1, 1, 3, 5>, sparse_caller_multi<1, 1, 4, 5>, sparse_caller_multi<1, 1, 5, 5>}
+            },
+            { // index 2
+                {sparse_caller_multi<1, 2, 1, 1>, sparse_caller_multi<1, 2, 2, 1>, sparse_caller_multi<1, 2, 3, 1>, sparse_caller_multi<1, 2, 4, 1>, sparse_caller_multi<1, 2, 5, 1>},
+                {sparse_caller_multi<1, 2, 1, 2>, sparse_caller_multi<1, 2, 2, 2>, sparse_caller_multi<1, 2, 3, 2>, sparse_caller_multi<1, 2, 4, 2>, sparse_caller_multi<1, 2, 5, 2>},
+                {sparse_caller_multi<1, 2, 1, 3>, sparse_caller_multi<1, 2, 2, 3>, sparse_caller_multi<1, 2, 3, 3>, sparse_caller_multi<1, 2, 4, 3>, sparse_caller_multi<1, 2, 5, 3>},
+                {sparse_caller_multi<1, 2, 1, 4>, sparse_caller_multi<1, 2, 2, 4>, sparse_caller_multi<1, 2, 3, 4>, sparse_caller_multi<1, 2, 4, 4>, sparse_caller_multi<1, 2, 5, 4>},
+                {sparse_caller_multi<1, 2, 1, 5>, sparse_caller_multi<1, 2, 2, 5>, sparse_caller_multi<1, 2, 3, 5>, sparse_caller_multi<1, 2, 4, 5>, sparse_caller_multi<1, 2, 5, 5>}
+            },
+            { // index 3
+                {sparse_caller_multi<1, 3, 1, 1>, sparse_caller_multi<1, 3, 2, 1>, sparse_caller_multi<1, 3, 3, 1>, sparse_caller_multi<1, 3, 4, 1>, sparse_caller_multi<1, 3, 5, 1>},
+                {sparse_caller_multi<1, 3, 1, 2>, sparse_caller_multi<1, 3, 2, 2>, sparse_caller_multi<1, 3, 3, 2>, sparse_caller_multi<1, 3, 4, 2>, sparse_caller_multi<1, 3, 5, 2>},
+                {sparse_caller_multi<1, 3, 1, 3>, sparse_caller_multi<1, 3, 2, 3>, sparse_caller_multi<1, 3, 3, 3>, sparse_caller_multi<1, 3, 4, 3>, sparse_caller_multi<1, 3, 5, 3>},
+                {sparse_caller_multi<1, 3, 1, 4>, sparse_caller_multi<1, 3, 2, 4>, sparse_caller_multi<1, 3, 3, 4>, sparse_caller_multi<1, 3, 4, 4>, sparse_caller_multi<1, 3, 5, 4>},
+                {sparse_caller_multi<1, 3, 1, 5>, sparse_caller_multi<1, 3, 2, 5>, sparse_caller_multi<1, 3, 3, 5>, sparse_caller_multi<1, 3, 4, 5>, sparse_caller_multi<1, 3, 5, 5>}
+            },
+            { // index 4
+                {sparse_caller_multi<1, 4, 1, 1>, sparse_caller_multi<1, 4, 2, 1>, sparse_caller_multi<1, 4, 3, 1>, sparse_caller_multi<1, 4, 4, 1>, sparse_caller_multi<1, 4, 5, 1>},
+                {sparse_caller_multi<1, 4, 1, 2>, sparse_caller_multi<1, 4, 2, 2>, sparse_caller_multi<1, 4, 3, 2>, sparse_caller_multi<1, 4, 4, 2>, sparse_caller_multi<1, 4, 5, 2>},
+                {sparse_caller_multi<1, 4, 1, 3>, sparse_caller_multi<1, 4, 2, 3>, sparse_caller_multi<1, 4, 3, 3>, sparse_caller_multi<1, 4, 4, 3>, sparse_caller_multi<1, 4, 5, 3>},
+                {sparse_caller_multi<1, 4, 1, 4>, sparse_caller_multi<1, 4, 2, 4>, sparse_caller_multi<1, 4, 3, 4>, sparse_caller_multi<1, 4, 4, 4>, sparse_caller_multi<1, 4, 5, 4>},
+                {sparse_caller_multi<1, 4, 1, 5>, sparse_caller_multi<1, 4, 2, 5>, sparse_caller_multi<1, 4, 3, 5>, sparse_caller_multi<1, 4, 4, 5>, sparse_caller_multi<1, 4, 5, 5>}
+            }
         };
 
         switch(index)
         {
-        	case 0:
+            case 0:
                 bindTexture(&tex_If1_multi0, I);
                 bindTexture(&tex_Jf1_multi0, J);
                 break;
-        	case 1:
+            case 1:
                 bindTexture(&tex_If1_multi1, I);
                 bindTexture(&tex_Jf1_multi1, J);
                 break;
-        	case 2:
+            case 2:
                 bindTexture(&tex_If1_multi2, I);
                 bindTexture(&tex_Jf1_multi2, J);
                 break;
-        	case 3:
+            case 3:
                 bindTexture(&tex_If1_multi3, I);
                 bindTexture(&tex_Jf1_multi3, J);
                 break;
-        	case 4:
+            case 4:
                 bindTexture(&tex_If1_multi4, I);
                 bindTexture(&tex_Jf1_multi4, J);
                 break;
-        	default:
-        		// TODO: error
-        		break;
+            default:
+                CV_Error(CV_StsBadArg, "invalid execution line index");
+                break;
         }
 
         funcs[index][patch.y - 1][patch.x - 1](I.rows, I.cols, prevPts, nextPts, status, err, ptcount,
@@ -937,68 +939,68 @@ namespace pyrlk
 
         static const func_t funcs[5][5][5] =
         {
-        	{ // index 0
-        		{sparse_caller_multi<4, 0, 1, 1>, sparse_caller_multi<4, 0, 2, 1>, sparse_caller_multi<4, 0, 3, 1>, sparse_caller_multi<4, 0, 4, 1>, sparse_caller_multi<4, 0, 5, 1>},
-        		{sparse_caller_multi<4, 0, 1, 2>, sparse_caller_multi<4, 0, 2, 2>, sparse_caller_multi<4, 0, 3, 2>, sparse_caller_multi<4, 0, 4, 2>, sparse_caller_multi<4, 0, 5, 2>},
-        		{sparse_caller_multi<4, 0, 1, 3>, sparse_caller_multi<4, 0, 2, 3>, sparse_caller_multi<4, 0, 3, 3>, sparse_caller_multi<4, 0, 4, 3>, sparse_caller_multi<4, 0, 5, 3>},
-        		{sparse_caller_multi<4, 0, 1, 4>, sparse_caller_multi<4, 0, 2, 4>, sparse_caller_multi<4, 0, 3, 4>, sparse_caller_multi<4, 0, 4, 4>, sparse_caller_multi<4, 0, 5, 4>},
-        		{sparse_caller_multi<4, 0, 1, 5>, sparse_caller_multi<4, 0, 2, 5>, sparse_caller_multi<4, 0, 3, 5>, sparse_caller_multi<4, 0, 4, 5>, sparse_caller_multi<4, 0, 5, 5>}
-        	},
-        	{ // index 1
-        		{sparse_caller_multi<4, 1, 1, 1>, sparse_caller_multi<4, 1, 2, 1>, sparse_caller_multi<4, 1, 3, 1>, sparse_caller_multi<4, 1, 4, 1>, sparse_caller_multi<4, 1, 5, 1>},
-        		{sparse_caller_multi<4, 1, 1, 2>, sparse_caller_multi<4, 1, 2, 2>, sparse_caller_multi<4, 1, 3, 2>, sparse_caller_multi<4, 1, 4, 2>, sparse_caller_multi<4, 1, 5, 2>},
-        		{sparse_caller_multi<4, 1, 1, 3>, sparse_caller_multi<4, 1, 2, 3>, sparse_caller_multi<4, 1, 3, 3>, sparse_caller_multi<4, 1, 4, 3>, sparse_caller_multi<4, 1, 5, 3>},
-        		{sparse_caller_multi<4, 1, 1, 4>, sparse_caller_multi<4, 1, 2, 4>, sparse_caller_multi<4, 1, 3, 4>, sparse_caller_multi<4, 1, 4, 4>, sparse_caller_multi<4, 1, 5, 4>},
-        		{sparse_caller_multi<4, 1, 1, 5>, sparse_caller_multi<4, 1, 2, 5>, sparse_caller_multi<4, 1, 3, 5>, sparse_caller_multi<4, 1, 4, 5>, sparse_caller_multi<4, 1, 5, 5>}
-        	},
-        	{ // index 2
-        		{sparse_caller_multi<4, 2, 1, 1>, sparse_caller_multi<4, 2, 2, 1>, sparse_caller_multi<4, 2, 3, 1>, sparse_caller_multi<4, 2, 4, 1>, sparse_caller_multi<4, 2, 5, 1>},
-        		{sparse_caller_multi<4, 2, 1, 2>, sparse_caller_multi<4, 2, 2, 2>, sparse_caller_multi<4, 2, 3, 2>, sparse_caller_multi<4, 2, 4, 2>, sparse_caller_multi<4, 2, 5, 2>},
-        		{sparse_caller_multi<4, 2, 1, 3>, sparse_caller_multi<4, 2, 2, 3>, sparse_caller_multi<4, 2, 3, 3>, sparse_caller_multi<4, 2, 4, 3>, sparse_caller_multi<4, 2, 5, 3>},
-        		{sparse_caller_multi<4, 2, 1, 4>, sparse_caller_multi<4, 2, 2, 4>, sparse_caller_multi<4, 2, 3, 4>, sparse_caller_multi<4, 2, 4, 4>, sparse_caller_multi<4, 2, 5, 4>},
-        		{sparse_caller_multi<4, 2, 1, 5>, sparse_caller_multi<4, 2, 2, 5>, sparse_caller_multi<4, 2, 3, 5>, sparse_caller_multi<4, 2, 4, 5>, sparse_caller_multi<4, 2, 5, 5>}
-        	},
-        	{ // index 3
-        		{sparse_caller_multi<4, 3, 1, 1>, sparse_caller_multi<4, 3, 2, 1>, sparse_caller_multi<4, 3, 3, 1>, sparse_caller_multi<4, 3, 4, 1>, sparse_caller_multi<4, 3, 5, 1>},
-        		{sparse_caller_multi<4, 3, 1, 2>, sparse_caller_multi<4, 3, 2, 2>, sparse_caller_multi<4, 3, 3, 2>, sparse_caller_multi<4, 3, 4, 2>, sparse_caller_multi<4, 3, 5, 2>},
-        		{sparse_caller_multi<4, 3, 1, 3>, sparse_caller_multi<4, 3, 2, 3>, sparse_caller_multi<4, 3, 3, 3>, sparse_caller_multi<4, 3, 4, 3>, sparse_caller_multi<4, 3, 5, 3>},
-        		{sparse_caller_multi<4, 3, 1, 4>, sparse_caller_multi<4, 3, 2, 4>, sparse_caller_multi<4, 3, 3, 4>, sparse_caller_multi<4, 3, 4, 4>, sparse_caller_multi<4, 3, 5, 4>},
-        		{sparse_caller_multi<4, 3, 1, 5>, sparse_caller_multi<4, 3, 2, 5>, sparse_caller_multi<4, 3, 3, 5>, sparse_caller_multi<4, 3, 4, 5>, sparse_caller_multi<4, 3, 5, 5>}
-        	},
-        	{ // index 4
-        		{sparse_caller_multi<4, 4, 1, 1>, sparse_caller_multi<4, 4, 2, 1>, sparse_caller_multi<4, 4, 3, 1>, sparse_caller_multi<4, 4, 4, 1>, sparse_caller_multi<4, 4, 5, 1>},
-        		{sparse_caller_multi<4, 4, 1, 2>, sparse_caller_multi<4, 4, 2, 2>, sparse_caller_multi<4, 4, 3, 2>, sparse_caller_multi<4, 4, 4, 2>, sparse_caller_multi<4, 4, 5, 2>},
-        		{sparse_caller_multi<4, 4, 1, 3>, sparse_caller_multi<4, 4, 2, 3>, sparse_caller_multi<4, 4, 3, 3>, sparse_caller_multi<4, 4, 4, 3>, sparse_caller_multi<4, 4, 5, 3>},
-        		{sparse_caller_multi<4, 4, 1, 4>, sparse_caller_multi<4, 4, 2, 4>, sparse_caller_multi<4, 4, 3, 4>, sparse_caller_multi<4, 4, 4, 4>, sparse_caller_multi<4, 4, 5, 4>},
-        		{sparse_caller_multi<4, 4, 1, 5>, sparse_caller_multi<4, 4, 2, 5>, sparse_caller_multi<4, 4, 3, 5>, sparse_caller_multi<4, 4, 4, 5>, sparse_caller_multi<4, 4, 5, 5>}
-        	}
+            { // index 0
+                {sparse_caller_multi<4, 0, 1, 1>, sparse_caller_multi<4, 0, 2, 1>, sparse_caller_multi<4, 0, 3, 1>, sparse_caller_multi<4, 0, 4, 1>, sparse_caller_multi<4, 0, 5, 1>},
+                {sparse_caller_multi<4, 0, 1, 2>, sparse_caller_multi<4, 0, 2, 2>, sparse_caller_multi<4, 0, 3, 2>, sparse_caller_multi<4, 0, 4, 2>, sparse_caller_multi<4, 0, 5, 2>},
+                {sparse_caller_multi<4, 0, 1, 3>, sparse_caller_multi<4, 0, 2, 3>, sparse_caller_multi<4, 0, 3, 3>, sparse_caller_multi<4, 0, 4, 3>, sparse_caller_multi<4, 0, 5, 3>},
+                {sparse_caller_multi<4, 0, 1, 4>, sparse_caller_multi<4, 0, 2, 4>, sparse_caller_multi<4, 0, 3, 4>, sparse_caller_multi<4, 0, 4, 4>, sparse_caller_multi<4, 0, 5, 4>},
+                {sparse_caller_multi<4, 0, 1, 5>, sparse_caller_multi<4, 0, 2, 5>, sparse_caller_multi<4, 0, 3, 5>, sparse_caller_multi<4, 0, 4, 5>, sparse_caller_multi<4, 0, 5, 5>}
+            },
+            { // index 1
+                {sparse_caller_multi<4, 1, 1, 1>, sparse_caller_multi<4, 1, 2, 1>, sparse_caller_multi<4, 1, 3, 1>, sparse_caller_multi<4, 1, 4, 1>, sparse_caller_multi<4, 1, 5, 1>},
+                {sparse_caller_multi<4, 1, 1, 2>, sparse_caller_multi<4, 1, 2, 2>, sparse_caller_multi<4, 1, 3, 2>, sparse_caller_multi<4, 1, 4, 2>, sparse_caller_multi<4, 1, 5, 2>},
+                {sparse_caller_multi<4, 1, 1, 3>, sparse_caller_multi<4, 1, 2, 3>, sparse_caller_multi<4, 1, 3, 3>, sparse_caller_multi<4, 1, 4, 3>, sparse_caller_multi<4, 1, 5, 3>},
+                {sparse_caller_multi<4, 1, 1, 4>, sparse_caller_multi<4, 1, 2, 4>, sparse_caller_multi<4, 1, 3, 4>, sparse_caller_multi<4, 1, 4, 4>, sparse_caller_multi<4, 1, 5, 4>},
+                {sparse_caller_multi<4, 1, 1, 5>, sparse_caller_multi<4, 1, 2, 5>, sparse_caller_multi<4, 1, 3, 5>, sparse_caller_multi<4, 1, 4, 5>, sparse_caller_multi<4, 1, 5, 5>}
+            },
+            { // index 2
+                {sparse_caller_multi<4, 2, 1, 1>, sparse_caller_multi<4, 2, 2, 1>, sparse_caller_multi<4, 2, 3, 1>, sparse_caller_multi<4, 2, 4, 1>, sparse_caller_multi<4, 2, 5, 1>},
+                {sparse_caller_multi<4, 2, 1, 2>, sparse_caller_multi<4, 2, 2, 2>, sparse_caller_multi<4, 2, 3, 2>, sparse_caller_multi<4, 2, 4, 2>, sparse_caller_multi<4, 2, 5, 2>},
+                {sparse_caller_multi<4, 2, 1, 3>, sparse_caller_multi<4, 2, 2, 3>, sparse_caller_multi<4, 2, 3, 3>, sparse_caller_multi<4, 2, 4, 3>, sparse_caller_multi<4, 2, 5, 3>},
+                {sparse_caller_multi<4, 2, 1, 4>, sparse_caller_multi<4, 2, 2, 4>, sparse_caller_multi<4, 2, 3, 4>, sparse_caller_multi<4, 2, 4, 4>, sparse_caller_multi<4, 2, 5, 4>},
+                {sparse_caller_multi<4, 2, 1, 5>, sparse_caller_multi<4, 2, 2, 5>, sparse_caller_multi<4, 2, 3, 5>, sparse_caller_multi<4, 2, 4, 5>, sparse_caller_multi<4, 2, 5, 5>}
+            },
+            { // index 3
+                {sparse_caller_multi<4, 3, 1, 1>, sparse_caller_multi<4, 3, 2, 1>, sparse_caller_multi<4, 3, 3, 1>, sparse_caller_multi<4, 3, 4, 1>, sparse_caller_multi<4, 3, 5, 1>},
+                {sparse_caller_multi<4, 3, 1, 2>, sparse_caller_multi<4, 3, 2, 2>, sparse_caller_multi<4, 3, 3, 2>, sparse_caller_multi<4, 3, 4, 2>, sparse_caller_multi<4, 3, 5, 2>},
+                {sparse_caller_multi<4, 3, 1, 3>, sparse_caller_multi<4, 3, 2, 3>, sparse_caller_multi<4, 3, 3, 3>, sparse_caller_multi<4, 3, 4, 3>, sparse_caller_multi<4, 3, 5, 3>},
+                {sparse_caller_multi<4, 3, 1, 4>, sparse_caller_multi<4, 3, 2, 4>, sparse_caller_multi<4, 3, 3, 4>, sparse_caller_multi<4, 3, 4, 4>, sparse_caller_multi<4, 3, 5, 4>},
+                {sparse_caller_multi<4, 3, 1, 5>, sparse_caller_multi<4, 3, 2, 5>, sparse_caller_multi<4, 3, 3, 5>, sparse_caller_multi<4, 3, 4, 5>, sparse_caller_multi<4, 3, 5, 5>}
+            },
+            { // index 4
+                {sparse_caller_multi<4, 4, 1, 1>, sparse_caller_multi<4, 4, 2, 1>, sparse_caller_multi<4, 4, 3, 1>, sparse_caller_multi<4, 4, 4, 1>, sparse_caller_multi<4, 4, 5, 1>},
+                {sparse_caller_multi<4, 4, 1, 2>, sparse_caller_multi<4, 4, 2, 2>, sparse_caller_multi<4, 4, 3, 2>, sparse_caller_multi<4, 4, 4, 2>, sparse_caller_multi<4, 4, 5, 2>},
+                {sparse_caller_multi<4, 4, 1, 3>, sparse_caller_multi<4, 4, 2, 3>, sparse_caller_multi<4, 4, 3, 3>, sparse_caller_multi<4, 4, 4, 3>, sparse_caller_multi<4, 4, 5, 3>},
+                {sparse_caller_multi<4, 4, 1, 4>, sparse_caller_multi<4, 4, 2, 4>, sparse_caller_multi<4, 4, 3, 4>, sparse_caller_multi<4, 4, 4, 4>, sparse_caller_multi<4, 4, 5, 4>},
+                {sparse_caller_multi<4, 4, 1, 5>, sparse_caller_multi<4, 4, 2, 5>, sparse_caller_multi<4, 4, 3, 5>, sparse_caller_multi<4, 4, 4, 5>, sparse_caller_multi<4, 4, 5, 5>}
+            }
         };
 
         switch(index)
         {
-        	case 0:
+            case 0:
                 bindTexture(&tex_If4_multi0, I);
                 bindTexture(&tex_Jf4_multi0, J);
                 break;
-        	case 1:
+            case 1:
                 bindTexture(&tex_If4_multi1, I);
                 bindTexture(&tex_Jf4_multi1, J);
                 break;
-        	case 2:
+            case 2:
                 bindTexture(&tex_If4_multi2, I);
                 bindTexture(&tex_Jf4_multi2, J);
                 break;
-        	case 3:
+            case 3:
                 bindTexture(&tex_If4_multi3, I);
                 bindTexture(&tex_Jf4_multi3, J);
                 break;
-        	case 4:
+            case 4:
                 bindTexture(&tex_If4_multi4, I);
                 bindTexture(&tex_Jf4_multi4, J);
                 break;
-        	default:
-        		// TODO: error
-        		break;
+            default:
+                CV_Error(CV_StsBadArg, "invalid execution line index");
+                break;
         }
 
         funcs[index][patch.y - 1][patch.x - 1](I.rows, I.cols, prevPts, nextPts, status, err, ptcount,
