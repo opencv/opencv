@@ -78,7 +78,9 @@ OCL_TEST(Reproducibility_GoogLeNet, Accuracy)
     net.setPreferableTarget(DNN_TARGET_OPENCL);
 
     // Initialize network for a single image in the batch but test with batch size=2.
-    net.setInput(blobFromImage(Mat(224, 224, CV_8UC3)));
+    Mat inp = Mat(224, 224, CV_8UC3);
+    randu(inp, -1, 1);
+    net.setInput(blobFromImage(inp));
     net.forward();
 
     std::vector<Mat> inpMats;
