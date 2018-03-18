@@ -65,6 +65,18 @@ TEST(Test_Darknet, read_yolo_voc)
     ASSERT_FALSE(net.empty());
 }
 
+TEST(Test_Darknet, read_filestorage_yolo_voc)
+{
+    std::ifstream ifile(_tf("yolo-voc.cfg").c_str());
+    std::stringstream buffer;
+    buffer << " " << ifile.rdbuf(); // FIXME: FileStorage drops first character.
+    FileStorage ofs(".xml", FileStorage::WRITE | FileStorage::MEMORY);
+    ofs.write("cfgFile", buffer.str());
+    FileStorage ifs(ofs.releaseAndGetString(), FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_XML);
+    Net net = readNetFromDarknet(ifs["cfgFile"]);
+    ASSERT_FALSE(net.empty());
+}
+
 class Test_Darknet_layers : public DNNTestLayer
 {
 public:

@@ -644,6 +644,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     */
     CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
 
+   /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
+    *  @param cfgFile      file node to the .cfg file with text description of the network architecture.
+    *  @param darknetModel file node to the .weights file with learned network.
+    *  @returns Network object that ready to do forward, throw an exception in failure cases.
+    *  @returns Net object.
+    */
+    CV_EXPORTS_W Net readNetFromDarknet(const FileNode &cfgFile, const FileNode &darknetModel = FileNode());
+
     /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
       * @param prototxt   path to the .prototxt file with text description of the network architecture.
       * @param caffeModel path to the .caffemodel file with learned network.
