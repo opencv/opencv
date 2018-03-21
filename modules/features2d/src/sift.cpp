@@ -90,20 +90,20 @@ public:
                           double sigma = 1.6);
 
     //! returns the descriptor size in floats (128)
-    int descriptorSize() const;
+    int descriptorSize() const CV_OVERRIDE;
 
     //! returns the descriptor type
-    int descriptorType() const;
+    int descriptorType() const CV_OVERRIDE;
 
     //! returns the default norm type
-    int defaultNorm() const;
+    int defaultNorm() const CV_OVERRIDE;
 
     //! finds the keypoints and computes descriptors for them using SIFT algorithm.
     //! Optionally it can compute descriptors for the user-provided keypoints
     void detectAndCompute(InputArray img, InputArray mask,
                     std::vector<KeyPoint>& keypoints,
                     OutputArray descriptors,
-                    bool useProvidedKeypoints = false);
+                    bool useProvidedKeypoints = false) CV_OVERRIDE;
 
     void buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const;
     void buildDoGPyramid( const std::vector<Mat>& pyr, std::vector<Mat>& dogpyr ) const;
@@ -267,7 +267,7 @@ public:
           gpyr(_gpyr),
           dogpyr(_dogpyr) { }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int begin = range.start;
         const int end = range.end;
@@ -570,7 +570,7 @@ public:
           gauss_pyr(_gauss_pyr),
           dog_pyr(_dog_pyr),
           tls_kpts_struct(_tls_kpts_struct) { }
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int begin = range.start;
         const int end = range.end;
@@ -1011,7 +1011,7 @@ public:
           nOctaveLayers(_nOctaveLayers),
           firstOctave(_firstOctave) { }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int begin = range.start;
         const int end = range.end;
