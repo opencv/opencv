@@ -208,7 +208,7 @@ public:
             float alpha1 = alpha1_, bias1 = bias1_, beta1 = beta1_;
             int k, channels = channels_, ksize = ksize_;
 
-            AutoBuffer<float> buf_((channels + ksize*2 + 4)*2);
+            AutoBuffer<float> buf_((channels + ksize + 1)*2);
             float* acc = (float*)buf_;
             float* buf = acc + channels + ksize + 1;
             for( k = 0; k <= ksize; k++ )
