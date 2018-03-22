@@ -4630,6 +4630,7 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
     }
     catch(const ::ipp::IwException& ex)
     {
+        CV_UNUSED(ex);
         return false;
     }
 
