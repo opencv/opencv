@@ -36,6 +36,7 @@ public:
 
         hasWeights = params.get<bool>("has_weight", false);
         hasBias = params.get<bool>("has_bias", false);
+        useGlobalStats = params.get<bool>("use_global_stats", true);
         if(params.get<bool>("scale_bias", false))
             hasWeights = hasBias = true;
         epsilon = params.get<float>("eps", 1E-5);
@@ -46,7 +47,7 @@ public:
                   blobs[0].type() == CV_32F && blobs[1].type() == CV_32F);
 
         float varMeanScale = 1.f;
-        if (!hasWeights && !hasBias && blobs.size() > 2) {
+        if (!hasWeights && !hasBias && blobs.size() > 2 && useGlobalStats) {
             CV_Assert(blobs.size() == 3, blobs[2].type() == CV_32F);
             varMeanScale = blobs[2].at<float>(0);
             if (varMeanScale != 0)
@@ -100,6 +101,8 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const
     {
+        if (!useGlobalStats && inputs[0][0] != 1)
+            CV_Error(Error::StsNotImplemented, "Batch normalization in training mode with batch size > 1");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
@@ -304,6 +307,9 @@ public:
         }
         return flops;
     }
+
+private:
+    bool useGlobalStats;
 };
 
 Ptr<BatchNormLayer> BatchNormLayer::create(const LayerParams& params)

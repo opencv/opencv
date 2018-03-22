@@ -109,15 +109,11 @@ public:
         for (int i = 0; i < aspectRatioParameter.size(); ++i)
         {
             float aspectRatio = aspectRatioParameter.get<float>(i);
-            bool alreadyExists = false;
+            bool alreadyExists = fabs(aspectRatio - 1.f) < 1e-6f;
 
-            for (size_t j = 0; j < _aspectRatios.size(); ++j)
+            for (size_t j = 0; j < _aspectRatios.size() && !alreadyExists; ++j)
             {
-                if (fabs(aspectRatio - _aspectRatios[j]) < 1e-6)
-                {
-                    alreadyExists = true;
-                    break;
-                }
+                alreadyExists = fabs(aspectRatio - _aspectRatios[j]) < 1e-6;
             }
             if (!alreadyExists)
             {
@@ -215,7 +211,7 @@ public:
         }
         else
         {
-            CV_Assert(!_aspectRatios.empty(), _minSize > 0);
+            CV_Assert(_minSize > 0);
             _boxWidths.resize(1 + (_maxSize > 0 ? 1 : 0) + _aspectRatios.size());
             _boxHeights.resize(_boxWidths.size());
             _boxWidths[0] = _boxHeights[0] = _minSize;
@@ -492,10 +488,12 @@ public:
         ieLayer->params["min_size"] = format("%f", _minSize);
         ieLayer->params["max_size"] = _maxSize > 0 ? format("%f", _maxSize) : "";
 
-        CV_Assert(!_aspectRatios.empty());
-        ieLayer->params["aspect_ratio"] = format("%f", _aspectRatios[0]);
-        for (int i = 1; i < _aspectRatios.size(); ++i)
-            ieLayer->params["aspect_ratio"] += format(",%f", _aspectRatios[i]);
+        if (!_aspectRatios.empty())
+        {
+            ieLayer->params["aspect_ratio"] = format("%f", _aspectRatios[0]);
+            for (int i = 1; i < _aspectRatios.size(); ++i)
+                ieLayer->params["aspect_ratio"] += format(",%f", _aspectRatios[i]);
+        }
 
         ieLayer->params["flip"] = _flip ? "1" : "0";
         ieLayer->params["clip"] = _clip ? "1" : "0";

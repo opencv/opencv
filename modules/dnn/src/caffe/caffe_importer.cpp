@@ -335,6 +335,28 @@ public:
                 }
                 continue;
             }
+            else if (type == "BatchNorm")
+            {
+                if (!layerParams.get<bool>("use_global_stats", true))
+                {
+                    CV_Assert(layer.bottom_size() == 1, layer.top_size() == 1);
+
+                    LayerParams mvnParams;
+                    mvnParams.set("eps", layerParams.get<float>("eps", 1e-5));
+                    std::string mvnName = name + "/mvn";
+
+                    int repetitions = layerCounter[mvnName]++;
+                    if (repetitions)
+                        mvnName += String("_") + toString(repetitions);
+
+                    int mvnId = dstNet.addLayer(mvnName, "MVN", mvnParams);
+                    addInput(layer.bottom(0), mvnId, 0, dstNet);
+                    addOutput(layer, mvnId, 0);
+                    net.mutable_layer(li)->set_bottom(0, layer.top(0));
+                    layerParams.blobs[0].setTo(0);  // mean
+                    layerParams.blobs[1].setTo(1);  // std
+                }
+            }
 
             int id = dstNet.addLayer(name, type, layerParams);
 
