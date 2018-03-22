@@ -90,7 +90,8 @@ below example which rotates the image by 90 degree with respect to center withou
 img = cv.imread('messi5.jpg',0)
 rows,cols = img.shape
 
-M = cv.getRotationMatrix2D((cols/2,rows/2),90,1)
+# cols-1 and rows-1 are the coordinate limits.
+M = cv.getRotationMatrix2D(((cols-1)/2.0,(rows-1)/2.0),90,1)
 dst = cv.warpAffine(img,M,(cols,rows))
 @endcode
 See the result:
