@@ -1503,33 +1503,33 @@ public:
     /** ANNEAL: Update initial temperature.
     It must be \>=0. Default value is 10.*/
     /** @see setAnnealInitialT */
-    CV_WRAP double getAnnealInitialT() const;
+    CV_WRAP virtual double getAnnealInitialT() const = 0;
     /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP void setAnnealInitialT(double val);
+    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
 
     /** ANNEAL: Update final temperature.
     It must be \>=0 and less than initialT. Default value is 0.1.*/
     /** @see setAnnealFinalT */
-    CV_WRAP double getAnnealFinalT() const;
+    CV_WRAP virtual double getAnnealFinalT() const = 0;
     /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP void setAnnealFinalT(double val);
+    CV_WRAP virtual void setAnnealFinalT(double val) = 0;
 
     /** ANNEAL: Update cooling ratio.
     It must be \>0 and less than 1. Default value is 0.95.*/
     /** @see setAnnealCoolingRatio */
-    CV_WRAP double getAnnealCoolingRatio() const;
+    CV_WRAP virtual double getAnnealCoolingRatio() const = 0;
     /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP void setAnnealCoolingRatio(double val);
+    CV_WRAP virtual void setAnnealCoolingRatio(double val) = 0;
 
     /** ANNEAL: Update iteration per step.
     It must be \>0 . Default value is 10.*/
     /** @see setAnnealItePerStep */
-    CV_WRAP int getAnnealItePerStep() const;
+    CV_WRAP virtual int getAnnealItePerStep() const = 0;
     /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP void setAnnealItePerStep(int val);
+    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
 
     /** @brief Set/initialize anneal RNG */
-    void setAnnealEnergyRNG(const RNG& rng);
+    virtual void setAnnealEnergyRNG(const RNG& rng) = 0;
 
     /** possible activation functions */
     enum ActivationFunctions {
@@ -1585,6 +1585,10 @@ public:
     CV_WRAP static Ptr<ANN_MLP> load(const String& filepath);
 
 };
+
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+typedef ANN_MLP ANN_MLP_ANNEAL;
+#endif
 
 /****************************************************************************************\
 *                           Logistic Regression                                          *
@@ -1869,43 +1873,6 @@ CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, Out
 /** @brief Creates test set */
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
-
-/** @brief Artificial Neural Networks - Multi-Layer Perceptrons.
-
-@sa @ref ml_intro_ann
-*/
-class CV_EXPORTS_W ANN_MLP_ANNEAL : public ANN_MLP
-{
-public:
-    /** @see setAnnealInitialT */
-    CV_WRAP virtual double getAnnealInitialT() const = 0;
-    /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
-
-    /** ANNEAL: Update final temperature.
-    It must be \>=0 and less than initialT. Default value is 0.1.*/
-    /** @see setAnnealFinalT */
-    CV_WRAP  virtual double getAnnealFinalT() const = 0;
-    /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP  virtual void setAnnealFinalT(double val) = 0;
-
-    /** ANNEAL: Update cooling ratio.
-    It must be \>0 and less than 1. Default value is 0.95.*/
-    /** @see setAnnealCoolingRatio */
-    CV_WRAP  virtual double getAnnealCoolingRatio() const = 0;
-    /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP  virtual void setAnnealCoolingRatio(double val) = 0;
-
-    /** ANNEAL: Update iteration per step.
-    It must be \>0 . Default value is 10.*/
-    /** @see setAnnealItePerStep */
-    CV_WRAP virtual int getAnnealItePerStep() const = 0;
-    /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
-
-    /** @brief Set/initialize anneal RNG */
-    virtual void setAnnealEnergyRNG(const RNG& rng) = 0;
-};
 
 
 /****************************************************************************************\
