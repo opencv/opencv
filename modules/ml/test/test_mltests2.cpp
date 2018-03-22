@@ -283,7 +283,7 @@ TEST_P(ML_ANN_METHOD, Test)
 
 #ifdef GENERATE_TESTDATA
     {
-    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP_ANNEAL::create();
+    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP::create();
     Mat_<int> layerSizesXX(1, 4);
     layerSizesXX(0, 0) = tdata->getNVars();
     layerSizesXX(0, 1) = 30;
@@ -303,7 +303,7 @@ TEST_P(ML_ANN_METHOD, Test)
     {
         FileStorage fs;
         fs.open(dataname + "_init_weight.yml.gz", FileStorage::READ);
-        Ptr<ml::ANN_MLP> x = ml::ANN_MLP_ANNEAL::create();
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
         x->read(fs.root());
         x->setTrainMethod(methodType);
         if (methodType == ml::ANN_MLP::ANNEAL)
