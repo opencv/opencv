@@ -2023,18 +2023,10 @@ static IPPInitSingleton& getIPPSingleton()
 }
 #endif
 
-#if OPENCV_ABI_COMPATIBILITY > 300
 unsigned long long getIppFeatures()
-#else
-int getIppFeatures()
-#endif
 {
 #ifdef HAVE_IPP
-#if OPENCV_ABI_COMPATIBILITY > 300
     return getIPPSingleton().ippFeatures;
-#else
-    return (int)getIPPSingleton().ippFeatures;
-#endif
 #else
     return 0;
 #endif

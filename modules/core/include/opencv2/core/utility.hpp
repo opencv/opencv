@@ -689,17 +689,10 @@ protected:
     virtual ~TLSDataContainer();
 
     void  gatherData(std::vector<void*> &data) const;
-#if OPENCV_ABI_COMPATIBILITY > 300
     void* getData() const;
     void  release();
 
 private:
-#else
-    void  release();
-
-public:
-    void* getData() const;
-#endif
     virtual void* createDataInstance() const = 0;
     virtual void  deleteDataInstance(void* pData) const = 0;
 
