@@ -1724,6 +1724,10 @@ TEST(Mat, from_initializer_list)
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);
+
+    auto D = Mat_<double>({2, 3}, {1, 2, 3, 4, 5, 6});
+    EXPECT_EQ(2, D.rows);
+    EXPECT_EQ(3, D.cols);
 }
 
 TEST(Mat_, from_initializer_list)
