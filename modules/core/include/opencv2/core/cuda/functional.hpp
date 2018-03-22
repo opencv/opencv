@@ -58,7 +58,6 @@
 namespace cv { namespace cuda { namespace device
 {
     // Function Objects
-#ifdef CV_CXX11
     template<typename Argument, typename Result> struct unary_function
     {
         typedef Argument argument_type;
@@ -70,10 +69,6 @@ namespace cv { namespace cuda { namespace device
         typedef Argument2 second_argument_type;
         typedef Result result_type;
     };
-#else
-    template<typename Argument, typename Result> struct unary_function : public std::unary_function<Argument, Result> {};
-    template<typename Argument1, typename Argument2, typename Result> struct binary_function : public std::binary_function<Argument1, Argument2, Result> {};
-#endif
 
     // Arithmetic Operations
     template <typename T> struct plus : binary_function<T, T, T>
