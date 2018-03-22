@@ -53,9 +53,7 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
-#ifdef CV_CXX11
 #include <type_traits>
-#endif
 
 namespace cv
 {
@@ -984,7 +982,6 @@ public:
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
 
-#ifdef CV_CXX11
     /** @overload
     */
     template<typename _Tp, typename = typename std::enable_if<std::is_arithmetic<_Tp>::value>::type>
@@ -993,7 +990,6 @@ public:
     /** @overload
     */
     template<typename _Tp> explicit Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list);
-#endif
 
 #ifdef CV_CXX_STD_ARRAY
     /** @overload
@@ -2210,10 +2206,8 @@ public:
     explicit Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
-#ifdef CV_CXX11
     Mat_(std::initializer_list<_Tp> values);
     explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
-#endif
 
 #ifdef CV_CXX_STD_ARRAY
     template <std::size_t _Nm> explicit Mat_(const std::array<_Tp, _Nm>& arr, bool copyData=false);
