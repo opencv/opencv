@@ -281,10 +281,7 @@ struct Ptr
     @note It is often easier to use makePtr instead.
      */
     template<typename Y>
-#ifdef DISABLE_OPENCV_24_COMPATIBILITY
-    explicit
-#endif
-    Ptr(Y* p);
+    explicit Ptr(Y* p);
 
     /** @overload
     @param d Deleter to use for the owned pointer.

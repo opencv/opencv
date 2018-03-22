@@ -1244,8 +1244,4 @@ CV_EXPORTS int getThreadID();
 
 } //namespace cv
 
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/core/core_c.h"
-#endif
-
 #endif //OPENCV_CORE_UTILITY_H
