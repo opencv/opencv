@@ -56,9 +56,7 @@
 #include "opencv2/core.hpp"
 #include <ostream>
 
-#ifdef CV_CXX11
 #include <functional>
-#endif
 
 namespace cv
 {
@@ -555,7 +553,6 @@ public:
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
-#ifdef CV_CXX11
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
@@ -575,7 +572,6 @@ inline void parallel_for_(const Range& range, std::function<void(const Range&)> 
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
-#endif
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline

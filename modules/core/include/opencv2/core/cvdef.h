@@ -436,6 +436,9 @@ Cv64suf;
 #    undef CV_CXX11
 #  endif
 #endif
+#ifndef CV_CXX11
+#  error "OpenCV 4.x+ requires enabled C++11 support"
+#endif
 
 
 /****************************************************************************************\
