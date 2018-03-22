@@ -565,13 +565,9 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
-}
 
-CirclesGridFinderParameters2::CirclesGridFinderParameters2()
-: CirclesGridFinderParameters()
-{
-    squareSize = 1.0f;
-    maxRectifiedDistance = squareSize/2.0f;
+  squareSize = 1.0f;
+  maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,
