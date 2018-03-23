@@ -149,7 +149,6 @@ endif()
 # ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
-OCV_OPTION(ENABLE_CXX11 "Enable C++11 compilation mode" "${OPENCV_CXX11}")
 include(cmake/OpenCVDetectCXXCompiler.cmake)
 ocv_cmake_hook(POST_DETECT_COMPILER)
 
@@ -1018,9 +1017,6 @@ string(STRIP "${OPENCV_COMPILER_STR}" OPENCV_COMPILER_STR)
 status("")
 status("  C/C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
-if(ENABLE_CXX11 OR HAVE_CXX11)
-status("    C++11:" HAVE_CXX11 THEN YES ELSE NO)
-endif()
 status("    C++ Compiler:"           ${OPENCV_COMPILER_STR})
 status("    C++ flags (Release):"    ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE})
 status("    C++ flags (Debug):"      ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG})
