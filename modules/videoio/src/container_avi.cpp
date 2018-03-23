@@ -511,7 +511,12 @@ std::vector<char> AVIReadContainer::readFrame(frame_iterator it)
 
     RiffChunk chunk;
     *(m_file_stream) >> chunk;
-    CV_Assert(chunk.m_size <= 0xFFFF);
+
+    // Assertion added to prevent complaints from static analysis tools
+    // as the chunk size is read from a file then used to allocate
+    // memory. 64MB was chosen arbitrarily as an upper bound but it may
+    // be useful to make it configurable.
+    CV_Assert(chunk.m_size <= 67108864);
 
     std::vector<char> result;
 
