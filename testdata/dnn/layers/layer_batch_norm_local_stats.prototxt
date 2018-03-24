@@ -1,0 +1,18 @@
+name: "test_BatchNorm_local_stats"
+input: "input"
+
+input_dim: 1
+input_dim: 2
+input_dim: 3
+input_dim: 4
+
+layer {
+  type: "BatchNorm"
+  name: "output"
+  bottom: "input"
+  top: "output"
+  batch_norm_param {
+    use_global_stats: false
+    moving_average_fraction: 999.982
+  }
+}
