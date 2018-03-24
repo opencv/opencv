@@ -252,6 +252,11 @@ TEST(Layer_Test_BatchNorm, Accuracy)
     testLayerUsingCaffeModels("layer_batch_norm", DNN_TARGET_CPU, true);
 }
 
+TEST(Layer_Test_BatchNorm, local_stats)
+{
+    testLayerUsingCaffeModels("layer_batch_norm_local_stats", DNN_TARGET_CPU, true, false);
+}
+
 TEST(Layer_Test_ReLU, Accuracy)
 {
     testLayerUsingCaffeModels("layer_relu");
@@ -829,6 +834,35 @@ TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
     net.setInput(blobFromImage(inp));
     Mat out = net.forward();
     normAssert(out, blobFromImage(target));
+}
+
+// Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
+TEST(Layer_PriorBox, squares)
+{
+    LayerParams lp;
+    lp.name = "testPriorBox";
+    lp.type = "PriorBox";
+    lp.set("min_size", 32);
+    lp.set("flip", true);
+    lp.set("clip", true);
+    float variance[] = {0.1f, 0.1f, 0.2f, 0.2f};
+    float aspectRatios[] = {1.0f};  // That should be ignored.
+    lp.set("variance", DictValue::arrayReal<float*>(&variance[0], 4));
+    lp.set("aspect_ratio", DictValue::arrayReal<float*>(&aspectRatios[0], 1));
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 0, id, 1);  // The second input is an input image. Shapes are used for boxes normalization.
+    Mat inp(1, 2, CV_32F);
+    randu(inp, -1, 1);
+    net.setInput(blobFromImage(inp));
+    Mat out = net.forward();
+
+    Mat target = (Mat_<float>(4, 4) << -7.75f, -15.5f, 8.25f, 16.5f,
+                                       -7.25f, -15.5f, 8.75f, 16.5f,
+                                       0.1f, 0.1f, 0.2f, 0.2f,
+                                       0.1f, 0.1f, 0.2f, 0.2f);
+    normAssert(out.reshape(1, 4), target);
 }
 
 }} // namespace
