@@ -237,8 +237,15 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wsuggest-override"
+#  endif
 #include "iw++/iw.hpp"
 #include "iw/iw_ll.h"
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic pop
+#  endif
 #endif
 
 #if IPP_VERSION_X100 >= 201700
