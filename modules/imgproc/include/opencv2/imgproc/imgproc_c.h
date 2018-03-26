@@ -982,7 +982,6 @@ CVAPI(void)  cvFitLine( const CvArr* points, int dist_type, double param,
 *       If a drawn figure is partially or completely outside of the image, it is clipped.*
 \****************************************************************************************/
 
-#define CV_RGB( r, g, b )  cvScalar( (b), (g), (r), 0 )
 #define CV_FILLED -1
 
 #define CV_AA 16

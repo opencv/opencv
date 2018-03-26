@@ -63,7 +63,7 @@ void FaceDetection::MainPage::detectBtn_Click(Platform::Object^ sender, Windows:
         std::vector<cv::Rect> facesColl;
         cv::Mat frame_gray;
 
-        cvtColor(groupFaces, frame_gray, CV_BGR2GRAY);
+        cvtColor(groupFaces, frame_gray, COLOR_BGR2GRAY);
         cv::equalizeHist(frame_gray, frame_gray);
 
         // Detect faces

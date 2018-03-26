@@ -207,7 +207,7 @@ int main( int argc, char** argv )
     }
 
     imshow("source", image);
-    namedWindow("result", CV_WINDOW_NORMAL );
+    namedWindow("result", WINDOW_NORMAL );
 
     // Create toolbars. HighGUI use.
     createTrackbar( "threshold", "result", &sliderPos, 255, processImage );

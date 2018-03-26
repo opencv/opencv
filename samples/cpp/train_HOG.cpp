@@ -312,7 +312,7 @@ int main( int argc, char** argv )
     /* Default values to train SVM */
     svm->setCoef0( 0.0 );
     svm->setDegree( 3 );
-    svm->setTermCriteria( TermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 1000, 1e-3 ) );
+    svm->setTermCriteria( TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 1e-3 ) );
     svm->setGamma( 0 );
     svm->setKernel( SVM::LINEAR );
     svm->setNu( 0.5 );

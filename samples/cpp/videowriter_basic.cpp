@@ -35,7 +35,7 @@ int main(int, char**)
 
     //--- INITIALIZE VIDEOWRITER
     VideoWriter writer;
-    int codec = CV_FOURCC('M', 'J', 'P', 'G');  // select desired codec (must be available at runtime)
+    int codec = VideoWriter::fourcc('M', 'J', 'P', 'G');  // select desired codec (must be available at runtime)
     double fps = 25.0;                          // framerate of the created video stream
     string filename = "./live.avi";             // name of the output video file
     writer.open(filename, codec, fps, src.size(), isColor);
