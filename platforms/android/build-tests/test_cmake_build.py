@@ -8,12 +8,17 @@ log.basicConfig(format='%(message)s', level=log.DEBUG)
 
 CMAKE_TEMPLATE='''\
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+# Enable C++11
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 SET(PROJECT_NAME hello-android)
 PROJECT(${PROJECT_NAME})
+
 FIND_PACKAGE(OpenCV REQUIRED %(libset)s)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 FILE(GLOB srcs "*.cpp")
+
 ADD_EXECUTABLE(${PROJECT_NAME} ${srcs})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OpenCV_LIBS} dl z)
 '''
@@ -28,9 +33,9 @@ int main(int argc, char* argv[])
 {
   (void)argc; (void)argv;
   printf("%s\\n", message);
-  Size textsize = getTextSize(message, CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
+  Size textsize = getTextSize(message, FONT_HERSHEY_COMPLEX, 3, 5, 0);
   Mat img(textsize.height + 20, textsize.width + 20, CV_32FC1, Scalar(230,230,230));
-  putText(img, message, Point(10, img.rows - 10), CV_FONT_HERSHEY_COMPLEX, 3, Scalar(0, 0, 0), 5);
+  putText(img, message, Point(10, img.rows - 10), FONT_HERSHEY_COMPLEX, 3, Scalar(0, 0, 0), 5);
   imwrite("/mnt/sdcard/HelloAndroid.png", img);
   return 0;
 }
