@@ -4,6 +4,7 @@
 #pragma warning(push)
 #pragma warning(disable:5033)  // 'register' is no longer a supported storage class
 #endif
+#include <math.h>
 #include <Python.h>
 #if defined(_MSC_VER) && (_MSC_VER >= 1800)
 #pragma warning(pop)
