@@ -28,7 +28,7 @@ endif()
 
 add_library(${JPEG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CV_GCC OR CV_CLANG)
   set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
 endif()
 
