@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 project(${IPP_IW_LIBRARY})
 
-ocv_include_directories(SYSTEM ${IPP_INCLUDE_DIRS} ${IPP_IW_PATH}/include)
+ocv_include_directories(${IPP_INCLUDE_DIRS} ${IPP_IW_PATH}/include)
 add_definitions(-DIW_BUILD)
 if(HAVE_IPP_ICV)
   add_definitions(-DICV_BASE)

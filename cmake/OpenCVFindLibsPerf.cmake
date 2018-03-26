@@ -13,10 +13,10 @@ if(WITH_IPP)
   if(HAVE_IPP)
     include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPPIW.cmake")
     if(HAVE_IPP_IW)
-      ocv_include_directories(SYSTEM ${IPP_IW_INCLUDES})
+      ocv_include_directories(${IPP_IW_INCLUDES})
       list(APPEND OPENCV_LINKER_LIBS ${IPP_IW_LIBRARIES})
     endif()
-    ocv_include_directories(SYSTEM ${IPP_INCLUDE_DIRS})
+    ocv_include_directories(${IPP_INCLUDE_DIRS})
     list(APPEND OPENCV_LINKER_LIBS ${IPP_LIBRARIES})
 
     # Details: #10229
