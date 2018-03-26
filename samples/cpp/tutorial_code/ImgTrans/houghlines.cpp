@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         pt1.y = cvRound(y0 + 1000*(a));
         pt2.x = cvRound(x0 - 1000*(-b));
         pt2.y = cvRound(y0 - 1000*(a));
-        line( cdst, pt1, pt2, Scalar(0,0,255), 3, CV_AA);
+        line( cdst, pt1, pt2, Scalar(0,0,255), 3, LINE_AA);
     }
     //![draw_lines]
 

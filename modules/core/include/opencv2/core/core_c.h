@@ -1978,11 +1978,7 @@ The function opens file storage for reading or writing data. In the latter case,
 created or an existing file is rewritten. The type of the read or written file is determined by the
 filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
 
-At the same time, it also supports adding parameters like "example.xml?base64". The three ways
-are the same:
-@snippet samples/cpp/filestorage_base64.cpp suffix_in_file_name
-@snippet samples/cpp/filestorage_base64.cpp flag_write_base64
-@snippet samples/cpp/filestorage_base64.cpp flag_write_and_flag_base64
+At the same time, it also supports adding parameters like "example.xml?base64".
 
 The function returns a pointer to the CvFileStorage structure.
 If the file cannot be opened then the function returns NULL.
@@ -2205,11 +2201,6 @@ difference is that it outputs a sequence in Base64 encoding rather than
 in plain text.
 
 This function can only be used to write a sequence with a type "binary".
-
-Consider the following two examples where their output is the same:
-@snippet samples/cpp/filestorage_base64.cpp without_base64_flag
-and
-@snippet samples/cpp/filestorage_base64.cpp with_write_base64_flag
 
 @param fs File storage
 @param src Pointer to the written array
