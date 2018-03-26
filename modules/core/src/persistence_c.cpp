@@ -301,7 +301,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         }
         else if( fs->fmt == CV_STORAGE_FORMAT_YAML )
         {
-            if( !append )
+            if( !append || ftell(fs->file)==0)
                 icvPuts( fs, "%YAML:1.0\n---\n" );
             else
                 icvPuts( fs, "...\n---\n" );
