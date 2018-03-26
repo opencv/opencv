@@ -2912,7 +2912,7 @@ HRESULT videoInput::getDevice(IBaseFilter** gottaFilter, int deviceId, WCHAR * w
         // Enumerate the monikers.
         IMoniker *pMoniker = NULL;
         ULONG cFetched;
-        while ((pEnumCat->Next(1, &pMoniker, &cFetched) == S_OK) && (!done))
+        while ((!done) && (pEnumCat->Next(1, &pMoniker, &cFetched) == S_OK))
         {
             if(deviceCounter == deviceId)
             {
@@ -2950,6 +2950,12 @@ HRESULT videoInput::getDevice(IBaseFilter** gottaFilter, int deviceId, WCHAR * w
                     pMoniker->Release();
                     pMoniker = NULL;
                 }
+            }
+            else
+            {
+                // cleaning for the case when this isn't the device we are looking for
+                pMoniker->Release();
+                pMoniker = NULL;
             }
             deviceCounter++;
         }
