@@ -698,6 +698,9 @@ endmacro()
 # setup include path for OpenCV headers for specified module
 # ocv_module_include_directories(<extra include directories/extra include modules>)
 macro(ocv_module_include_directories)
+  if(ENABLE_PRECOMPILED_HEADERS OR OPENCV_INCLUDE_DIR_APPEND_MODULE_SRC)
+    ocv_target_include_directories(${the_module} "${OPENCV_MODULE_${the_module}_LOCATION}/src")
+  endif()
   ocv_target_include_directories(${the_module}
       "${OPENCV_MODULE_${the_module}_LOCATION}/include"
       "${CMAKE_CURRENT_BINARY_DIR}" # for precompiled headers
