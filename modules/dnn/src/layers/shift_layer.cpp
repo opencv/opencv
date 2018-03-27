@@ -10,7 +10,7 @@ Implementation of shift layer, which adds up const values to blob.
 */
 
 #include "../precomp.hpp"
-#include "op_inf_engine.hpp"
+#include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
