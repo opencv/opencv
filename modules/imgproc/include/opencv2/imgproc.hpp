@@ -4339,6 +4339,10 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray user
 //! @addtogroup imgproc_draw
 //! @{
 
+
+/** OpenCV color channel order is BGR[A] */
+#define CV_RGB(r, g, b)  cv::Scalar((b), (g), (r), 0)
+
 /** @brief Draws a line segment connecting two points.
 
 The function line draws the line segment between pt1 and pt2 points in the image. The line is

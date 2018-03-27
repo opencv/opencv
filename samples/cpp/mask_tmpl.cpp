@@ -50,7 +50,7 @@ int main( int argc, const char** argv )
     Rect rect;
     minMaxLoc(res, &minVal, &maxVal, &minLoc, &maxLoc);
 
-    if(method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED)
+    if(method == TM_SQDIFF || method == TM_SQDIFF_NORMED)
         rect = Rect(minLoc, tmpl.size());
     else
         rect = Rect(maxLoc, tmpl.size());
