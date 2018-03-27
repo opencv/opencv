@@ -125,6 +125,8 @@ if(MSVC)
   endif()
 endif()
 
+add_definitions(-DDISABLE_OPENCV_24_COMPATIBILITY=1)  # Avoid C-like legacy API
+
 add_subdirectory(cpp)
 if(WIN32)
   add_subdirectory(directx)

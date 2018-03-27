@@ -177,8 +177,8 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
             circle( img, center, radius, color, 3, 8, 0 );
         }
         else
-            rectangle( img, cvPoint(cvRound(r.x*scale), cvRound(r.y*scale)),
-                       cvPoint(cvRound((r.x + r.width-1)*scale), cvRound((r.y + r.height-1)*scale)),
+            rectangle( img, Point(cvRound(r.x*scale), cvRound(r.y*scale)),
+                       Point(cvRound((r.x + r.width-1)*scale), cvRound((r.y + r.height-1)*scale)),
                        color, 3, 8, 0);
 
         const int half_height=cvRound((float)r.height/2);
@@ -206,7 +206,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         float intensityZeroOne = ((float)smile_neighbors - min_neighbors) / (max_neighbors - min_neighbors + 1);
         int rect_height = cvRound((float)img.rows * intensityZeroOne);
         Scalar col = Scalar((float)255 * intensityZeroOne, 0, 0);
-        rectangle(img, cvPoint(0, img.rows), cvPoint(img.cols/10, img.rows - rect_height), col, -1);
+        rectangle(img, Point(0, img.rows), Point(img.cols/10, img.rows - rect_height), col, -1);
     }
 
     imshow( "result", img );
