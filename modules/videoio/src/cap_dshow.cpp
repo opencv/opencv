@@ -1668,9 +1668,13 @@ bool videoInput::getVideoSettingFilter(int deviceID, long Property, long &min, l
 
     DebugPrintOut("Setting video setting %s.\n", propStr);
 
-    pAMVideoProcAmp->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);
-    DebugPrintOut("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, min, max, SteppingDelta, defaultValue, flags);
-    pAMVideoProcAmp->Get(Property, &currentValue, &flags);
+    //both GetRange() and Get() will fail if the device doesn't support this property
+    hr = pAMVideoProcAmp->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);
+    if (SUCCEEDED(hr))
+    {
+        DebugPrintOut("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, min, max, SteppingDelta, defaultValue, flags);
+        hr = pAMVideoProcAmp->Get(Property, &currentValue, &flags);
+    }
 
     if(pAMVideoProcAmp)pAMVideoProcAmp->Release();
 #if 0
@@ -1678,8 +1682,7 @@ bool videoInput::getVideoSettingFilter(int deviceID, long Property, long &min, l
     if(VD->pVideoInputFilter)VD->pVideoInputFilter = NULL;
 #endif
 
-    return true;
-
+    return SUCCEEDED(hr);
 }
 
 
@@ -1760,11 +1763,11 @@ bool videoInput::setVideoSettingFilter(int deviceID, long Property, long lValue,
     DebugPrintOut("Current value: %ld Flags %ld (%s)\n", CurrVal, CapsFlags, (CapsFlags == 1 ? "Auto" : (CapsFlags == 2 ? "Manual" : "Unknown")));
 
     if (useDefaultValue) {
-        pAMVideoProcAmp->Set(Property, Default, VideoProcAmp_Flags_Auto);
+        hr = pAMVideoProcAmp->Set(Property, Default, VideoProcAmp_Flags_Auto);
     }
     else{
         // Perhaps add a check that lValue and Flags are within the range acquired from GetRange above
-        pAMVideoProcAmp->Set(Property, lValue, Flags);
+        hr = pAMVideoProcAmp->Set(Property, lValue, Flags);
     }
 
     if(pAMVideoProcAmp)pAMVideoProcAmp->Release();
@@ -1773,7 +1776,7 @@ bool videoInput::setVideoSettingFilter(int deviceID, long Property, long lValue,
     if(VD->pVideoInputFilter)VD->pVideoInputFilter = NULL;
 #endif
 
-    return true;
+    return SUCCEEDED(hr);
 
 }
 
@@ -1841,19 +1844,19 @@ bool videoInput::setVideoSettingCamera(int deviceID, long Property, long lValue,
             pIAMCameraControl->Get(Property, &CurrVal, &CapsFlags);
             DebugPrintOut("Current value: %ld Flags %ld (%s)\n", CurrVal, CapsFlags, (CapsFlags == 1 ? "Auto" : (CapsFlags == 2 ? "Manual" : "Unknown")));
             if (useDefaultValue) {
-                pIAMCameraControl->Set(Property, Default, CameraControl_Flags_Auto);
+                hr = pIAMCameraControl->Set(Property, Default, CameraControl_Flags_Auto);
             }
             else
             {
                 // Perhaps add a check that lValue and Flags are within the range acquired from GetRange above
-                pIAMCameraControl->Set(Property, lValue, Flags);
+                hr = pIAMCameraControl->Set(Property, lValue, Flags);
             }
             pIAMCameraControl->Release();
 #if 0
             if(VDList[deviceID]->pVideoInputFilter)VDList[deviceID]->pVideoInputFilter->Release();
             if(VDList[deviceID]->pVideoInputFilter)VDList[deviceID]->pVideoInputFilter = NULL;
 #endif
-            return true;
+            return SUCCEEDED(hr);
         }
     }
     return false;
@@ -1891,9 +1894,13 @@ bool videoInput::getVideoSettingCamera(int deviceID, long Property, long &min, l
     getCameraPropertyAsString(Property,propStr);
     DebugPrintOut("Setting video setting %s.\n", propStr);
 
-    pIAMCameraControl->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);
-    DebugPrintOut("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, min, max, SteppingDelta, defaultValue, flags);
-    pIAMCameraControl->Get(Property, &currentValue, &flags);
+    //both GetRange() and Get() will fail if the device doesn't support this property
+    hr = pIAMCameraControl->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);
+    if (SUCCEEDED(hr))
+    {
+        DebugPrintOut("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, min, max, SteppingDelta, defaultValue, flags);
+        hr = pIAMCameraControl->Get(Property, &currentValue, &flags);
+    }
 
     if(pIAMCameraControl)pIAMCameraControl->Release();
 #if 0
@@ -1901,8 +1908,7 @@ bool videoInput::getVideoSettingCamera(int deviceID, long Property, long &min, l
     if(VD->pVideoInputFilter)VD->pVideoInputFilter = NULL;
 #endif
 
-    return true;
-
+    return SUCCEEDED(hr);
 }
 
 
@@ -3228,6 +3234,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_GAIN:
         if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
             return (double)current_value;
+        return -1;
 
     // camera properties
     case CV_CAP_PROP_PAN:
@@ -3239,6 +3246,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_FOCUS:
         if (g_VI.getVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
             return (double)current_value;
+        return -1;
     }
 
     if (propIdx == CV_CAP_PROP_SETTINGS )
