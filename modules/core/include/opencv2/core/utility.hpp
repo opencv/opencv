@@ -124,7 +124,7 @@ public:
     //! the default constructor
     AutoBuffer();
     //! constructor taking the real buffer size
-    AutoBuffer(size_t _size);
+    explicit AutoBuffer(size_t _size);
 
     //! the copy constructor
     AutoBuffer(const AutoBuffer<_Tp, fixed_size>& buf);
