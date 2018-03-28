@@ -305,15 +305,11 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
-    case CAP_VFW:
-#ifdef HAVE_VFW
-        TRY_OPEN(result, cvCreateFileCapture_VFW (filename))
-#endif
-
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+    case CAP_V4L:
         TRY_OPEN(result, cvCreateCameraCapture_V4L(filename))
-#endif
         if (apiPreference) break;
+#endif
 
     case CAP_MSMF:
 #ifdef HAVE_MSMF
@@ -324,6 +320,12 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         TRY_OPEN(result, cvCreateFileCapture_XINE (filename))
 #endif
         if (apiPreference) break;
+
+#ifdef HAVE_VFW
+    case CAP_VFW:
+        TRY_OPEN(result, cvCreateFileCapture_VFW (filename))
+        if (apiPreference) break;
+#endif
 
 #ifdef HAVE_GSTREAMER
     case CAP_GSTREAMER:
@@ -398,14 +400,14 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
             TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
-        #ifdef HAVE_VFW
-        case CAP_VFW:
-            TRY_OPEN(result, cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color))
-            if (apiPreference != CAP_ANY) break;
-        #endif
         #ifdef HAVE_MSMF
         case CAP_MSMF:
             TRY_OPEN(result, cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CAP_ANY) break;
+        #endif
+        #ifdef HAVE_VFW
+        case CAP_VFW:
+            TRY_OPEN(result, cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color))
             if (apiPreference != CAP_ANY) break;
         #endif
         #ifdef HAVE_AVFOUNDATION
