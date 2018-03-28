@@ -45,7 +45,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
-#include "cuda/disparity_bilateral_filter.hpp"
+#include "disparity_bilateral_filter.hpp"
 
 namespace cv { namespace cuda { namespace device
 {

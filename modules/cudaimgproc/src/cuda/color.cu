@@ -48,7 +48,7 @@
 
 #else
 
-#include "cvt_color_internal.h"
+#include "../cvt_color_internal.h"
 #include "opencv2/cudev.hpp"
 
 using namespace cv;
