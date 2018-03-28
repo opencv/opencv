@@ -10,19 +10,6 @@
 
 namespace opencv_test { namespace {
 
-static void loadNet(const std::string& weights, const std::string& proto,
-                    const std::string& framework, Net* net)
-{
-    if (framework == "caffe")
-        *net = cv::dnn::readNetFromCaffe(proto, weights);
-    else if (framework == "torch")
-        *net = cv::dnn::readNetFromTorch(weights);
-    else if (framework == "tensorflow")
-        *net = cv::dnn::readNetFromTensorflow(weights, proto);
-    else
-        CV_Error(Error::StsNotImplemented, "Unknown framework " + framework);
-}
-
 class DNNTestNetwork : public TestWithParam <tuple<DNNBackend, DNNTarget> >
 {
 public:
@@ -37,7 +24,7 @@ public:
 
     void processNet(const std::string& weights, const std::string& proto,
                     Size inpSize, const std::string& outputLayer,
-                    const std::string& framework, const std::string& halideScheduler = "",
+                    const std::string& halideScheduler = "",
                     double l1 = 1e-5, double lInf = 1e-4)
     {
         // Create a common input blob.
@@ -45,12 +32,12 @@ public:
         Mat inp(4, blobSize, CV_32FC1);
         randu(inp, 0.0f, 1.0f);
 
-        processNet(weights, proto, inp, outputLayer, framework, halideScheduler, l1, lInf);
+        processNet(weights, proto, inp, outputLayer, halideScheduler, l1, lInf);
     }
 
     void processNet(std::string weights, std::string proto,
                     Mat inp, const std::string& outputLayer,
-                    const std::string& framework, std::string halideScheduler = "",
+                    std::string halideScheduler = "",
                     double l1 = 1e-5, double lInf = 1e-4)
     {
         if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
@@ -67,9 +54,8 @@ public:
             proto = findDataFile(proto, false);
 
         // Create two networks - with default backend and target and a tested one.
-        Net netDefault, net;
-        loadNet(weights, proto, framework, &netDefault);
-        loadNet(weights, proto, framework, &net);
+        Net netDefault = readNet(weights, proto);
+        Net net = readNet(weights, proto);
 
         netDefault.setInput(inp);
         Mat outDefault = netDefault.forward(outputLayer).clone();
@@ -115,7 +101,7 @@ public:
 TEST_P(DNNTestNetwork, AlexNet)
 {
     processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt",
-               Size(227, 227), "prob", "caffe",
+               Size(227, 227), "prob",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_alexnet.yml" :
                                              "dnn/halide_scheduler_alexnet.yml");
 }
@@ -123,7 +109,7 @@ TEST_P(DNNTestNetwork, AlexNet)
 TEST_P(DNNTestNetwork, ResNet_50)
 {
     processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt",
-               Size(224, 224), "prob", "caffe",
+               Size(224, 224), "prob",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_resnet_50.yml" :
                                              "dnn/halide_scheduler_resnet_50.yml");
 }
@@ -131,7 +117,7 @@ TEST_P(DNNTestNetwork, ResNet_50)
 TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
 {
     processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
-               Size(227, 227), "prob", "caffe",
+               Size(227, 227), "prob",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_squeezenet_v1_1.yml" :
                                              "dnn/halide_scheduler_squeezenet_v1_1.yml");
 }
@@ -139,13 +125,13 @@ TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
 TEST_P(DNNTestNetwork, GoogLeNet)
 {
     processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
-               Size(224, 224), "prob", "caffe");
+               Size(224, 224), "prob");
 }
 
 TEST_P(DNNTestNetwork, Inception_5h)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
-    processNet("dnn/tensorflow_inception_graph.pb", "", Size(224, 224), "softmax2", "tensorflow",
+    processNet("dnn/tensorflow_inception_graph.pb", "", Size(224, 224), "softmax2",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_inception_5h.yml" :
                                              "dnn/halide_scheduler_inception_5h.yml");
 }
@@ -153,7 +139,7 @@ TEST_P(DNNTestNetwork, Inception_5h)
 TEST_P(DNNTestNetwork, ENet)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
-    processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution", "torch",
+    processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_enet.yml" :
                                              "dnn/halide_scheduler_enet.yml",
                2e-5, 0.15);
@@ -166,7 +152,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
 
     processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
-               inp, "detection_out", "caffe");
+               inp, "detection_out");
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_TensorFlow)
@@ -175,7 +161,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_TensorFlow)
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     processNet("dnn/ssd_mobilenet_v1_coco.pb", "dnn/ssd_mobilenet_v1_coco.pbtxt",
-               inp, "detection_out", "tensorflow");
+               inp, "detection_out");
 }
 
 TEST_P(DNNTestNetwork, SSD_VGG16)
@@ -185,21 +171,21 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
         backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
-               "dnn/ssd_vgg16.prototxt", Size(300, 300), "detection_out", "caffe");
+               "dnn/ssd_vgg16.prototxt", Size(300, 300), "detection_out");
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_coco)
 {
     if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
-               Size(368, 368), "", "caffe");
+               Size(368, 368), "");
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
 {
     if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
-               Size(368, 368), "", "caffe");
+               Size(368, 368), "");
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
@@ -208,13 +194,13 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt",
-               Size(368, 368), "", "caffe");
+               Size(368, 368), "");
 }
 
 TEST_P(DNNTestNetwork, OpenFace)
 {
     if (backend == DNN_BACKEND_HALIDE) throw SkipTestException("");
-    processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", "torch");
+    processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "");
 }
 
 TEST_P(DNNTestNetwork, opencv_face_detector)
@@ -223,7 +209,7 @@ TEST_P(DNNTestNetwork, opencv_face_detector)
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
     processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt",
-               inp, "detection_out", "caffe");
+               inp, "detection_out");
 }
 
 TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
@@ -232,7 +218,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
-               inp, "detection_out", "tensorflow");
+               inp, "detection_out");
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {

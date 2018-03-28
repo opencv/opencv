@@ -19,6 +19,10 @@ namespace cv { namespace dnn {
 class InfEngineBackendNet : public InferenceEngine::ICNNNetwork
 {
 public:
+    InfEngineBackendNet();
+
+    InfEngineBackendNet(InferenceEngine::CNNNetwork& net);
+
     virtual void Release() noexcept;
 
     virtual InferenceEngine::Precision getPrecision() noexcept;
@@ -55,7 +59,7 @@ public:
 
     virtual size_t getBatchSize() const noexcept;
 
-    void initEngine();
+    void init();
 
     void addBlobs(const std::vector<Ptr<BackendWrapper> >& wrappers);
 
@@ -70,7 +74,9 @@ private:
     InferenceEngine::BlobMap inpBlobs;
     InferenceEngine::BlobMap outBlobs;
     InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::InferenceEnginePluginPtr engine;
+    InferenceEngine::InferenceEnginePluginPtr plugin;
+
+    void initPlugin(InferenceEngine::ICNNNetwork& net);
 };
 
 class InfEngineBackendNode : public BackendNode
@@ -110,6 +116,32 @@ InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 // Fuses convolution weights and biases with channel-wise scales and shifts.
 void fuseConvWeights(const std::shared_ptr<InferenceEngine::ConvolutionLayer>& conv,
                      const Mat& w, const Mat& b = Mat());
+
+// This is a fake class to run networks from Model Optimizer. Objects of that
+// class simulate responses of layers are imported by OpenCV and supported by
+// Inference Engine. The main difference is that they do not perform forward pass.
+class InfEngineBackendLayer : public Layer
+{
+public:
+    InfEngineBackendLayer(const InferenceEngine::DataPtr& output);
+
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const;
+
+    virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output,
+                         std::vector<Mat> &internals);
+
+    virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,
+                         OutputArrayOfArrays internals);
+
+    virtual bool supportBackend(int backendId);
+
+private:
+    InferenceEngine::DataPtr output;
+};
+
 
 #endif  // HAVE_INF_ENGINE
 
