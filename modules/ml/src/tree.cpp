@@ -632,6 +632,7 @@ void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
         }
 
         node->node_risk = sum2 - (sum/sumw)*sum;
+        node->node_risk /= sumw;
         node->value = sum/sumw;
     }
 }
