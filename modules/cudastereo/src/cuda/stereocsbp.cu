@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/functional.hpp"
 
-#include "cuda/stereocsbp.hpp"
+#include "stereocsbp.hpp"
 
 namespace cv { namespace cuda { namespace device
 {
