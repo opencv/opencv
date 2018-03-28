@@ -124,7 +124,7 @@ public:
     /*!
      \return the error description and the context as a text string.
     */
-    virtual const char *what() const throw();
+    virtual const char *what() const throw() CV_OVERRIDE;
     void formatMessage();
 
     String msg; ///< the formatted error message

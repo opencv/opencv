@@ -152,8 +152,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * (i.e. @f$ x_{t}^{stream} @f$ is stored inside @p input[0][stream, ...]).
         */
 
-        int inputNameToIndex(String inputName);
-        int outputNameToIndex(const String& outputName);
+        int inputNameToIndex(String inputName) CV_OVERRIDE;
+        int outputNameToIndex(const String& outputName) CV_OVERRIDE;
     };
 
     /** @brief Classical recurrent layer

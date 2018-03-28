@@ -68,7 +68,7 @@ class CV_EXPORTS NullOutlierRejector : public IOutlierRejector
 {
 public:
     virtual void process(
-            Size frameSize, InputArray points0, InputArray points1, OutputArray mask);
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask) CV_OVERRIDE;
 };
 
 class CV_EXPORTS TranslationBasedLocalOutlierRejector : public IOutlierRejector
@@ -83,7 +83,7 @@ public:
     RansacParams ransacParams() const { return ransacParams_; }
 
     virtual void process(
-            Size frameSize, InputArray points0, InputArray points1, OutputArray mask);
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask) CV_OVERRIDE;
 
 private:
     Size cellSize_;

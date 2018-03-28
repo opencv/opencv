@@ -1706,7 +1706,7 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
     YUV420sp2RGB888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
         : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
@@ -1772,7 +1772,7 @@ struct YUV420sp2RGBA8888Invoker : ParallelLoopBody
     YUV420sp2RGBA8888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
         : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
@@ -1843,7 +1843,7 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
     YUV420p2RGB888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
         : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
@@ -1913,7 +1913,7 @@ struct YUV420p2RGBA8888Invoker : ParallelLoopBody
     YUV420p2RGBA8888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
         : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
@@ -2028,7 +2028,7 @@ struct RGB888toYUV420pInvoker: public ParallelLoopBody
           src_width(_src_width), src_height(_src_height),
           scn(_scn), swapBlue(swapBlue_), swapUV(swapUV_), interleaved(interleaved_) { }
 
-    void operator()(const Range& rowRange) const
+    void operator()(const Range& rowRange) const CV_OVERRIDE
     {
         const int w = src_width;
         const int h = src_height;
@@ -2143,7 +2143,7 @@ struct YUV422toRGB888Invoker : ParallelLoopBody
                           int _width)
         : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int rangeBegin = range.start;
         int rangeEnd = range.end;
@@ -2193,7 +2193,7 @@ struct YUV422toRGBA8888Invoker : ParallelLoopBody
                             int _width)
         : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int rangeBegin = range.start;
         int rangeEnd = range.end;

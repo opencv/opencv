@@ -3,7 +3,6 @@
 
 #include "opencv2/ts.hpp"
 
-#include "ts_gtest.h"
 #include "ts_ext.hpp"
 
 #include <functional>
@@ -397,8 +396,8 @@ public:
 protected:
     virtual void PerfTestBody() = 0;
 
-    virtual void SetUp();
-    virtual void TearDown();
+    virtual void SetUp() CV_OVERRIDE;
+    virtual void TearDown() CV_OVERRIDE;
 
     bool startTimer(); // bool is dummy for conditional loop
     void stopTimer();

@@ -452,7 +452,7 @@ struct DTColumnInvoker : ParallelLoopBody
         sqr_tab = _sqr_tab;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int i, i1 = range.start, i2 = range.end;
         int m = src->rows;
@@ -497,7 +497,7 @@ struct DTRowInvoker : ParallelLoopBody
         inv_tab = _inv_tab;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         const float inf = 1e15f;
         int i, i1 = range.start, i2 = range.end;

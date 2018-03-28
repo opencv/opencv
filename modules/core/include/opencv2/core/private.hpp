@@ -165,6 +165,8 @@ template <typename T>
 T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * count)); }
 }
 
+#if 1 // TODO: Remove in OpenCV 4.x
+
 // property implementation macros
 
 #define CV_IMPL_PROPERTY_RO(type, name, member) \
@@ -186,6 +188,8 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 
 #define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
 #define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
+
+#endif
 
 /****************************************************************************************\
 *                     Structures and macros for integration with IPP                     *
@@ -233,8 +237,15 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wsuggest-override"
+#  endif
 #include "iw++/iw.hpp"
 #include "iw/iw_ll.h"
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic pop
+#  endif
 #endif
 
 #if IPP_VERSION_X100 >= 201700

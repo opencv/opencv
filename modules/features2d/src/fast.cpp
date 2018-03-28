@@ -515,14 +515,14 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 }
 
 
-class FastFeatureDetector_Impl : public FastFeatureDetector
+class FastFeatureDetector_Impl CV_FINAL : public FastFeatureDetector
 {
 public:
     FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
     : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
     {}
 
-    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
+    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -563,14 +563,14 @@ public:
         return 0;
     }
 
-    void setThreshold(int threshold_) { threshold = threshold_; }
-    int getThreshold() const { return threshold; }
+    void setThreshold(int threshold_) CV_OVERRIDE { threshold = threshold_; }
+    int getThreshold() const CV_OVERRIDE { return threshold; }
 
-    void setNonmaxSuppression(bool f) { nonmaxSuppression = f; }
-    bool getNonmaxSuppression() const { return nonmaxSuppression; }
+    void setNonmaxSuppression(bool f) CV_OVERRIDE { nonmaxSuppression = f; }
+    bool getNonmaxSuppression() const CV_OVERRIDE { return nonmaxSuppression; }
 
-    void setType(int type_) { type = type_; }
-    int getType() const { return type; }
+    void setType(int type_) CV_OVERRIDE { type = type_; }
+    int getType() const CV_OVERRIDE { return type; }
 
     int threshold;
     bool nonmaxSuppression;

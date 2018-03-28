@@ -555,7 +555,7 @@ public:
     {
     }
 
-    virtual void operator ()(const Range& range) const
+    virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
         const int G2Y = 9617;
@@ -714,7 +714,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
         T alpha = Alpha<T>::value();
@@ -1520,7 +1520,7 @@ public:
     {
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         int dcn = dst.channels();
         int dcn2 = dcn<<1;

@@ -47,7 +47,7 @@
 namespace cv
 {
 
-class AlignMTBImpl : public AlignMTB
+class AlignMTBImpl CV_FINAL : public AlignMTB
 {
 public:
     AlignMTBImpl(int _max_bits, int _exclude_range, bool _cut) :
@@ -59,14 +59,14 @@ public:
     }
 
     void process(InputArrayOfArrays src, std::vector<Mat>& dst,
-                 InputArray, InputArray)
+                 InputArray, InputArray) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
         process(src, dst);
     }
 
-    void process(InputArrayOfArrays _src, std::vector<Mat>& dst)
+    void process(InputArrayOfArrays _src, std::vector<Mat>& dst) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -116,7 +116,7 @@ public:
         }
     }
 
-    Point calculateShift(InputArray _img0, InputArray _img1)
+    Point calculateShift(InputArray _img0, InputArray _img1) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -164,7 +164,7 @@ public:
         return shift;
     }
 
-    void shiftMat(InputArray _src, OutputArray _dst, const Point shift)
+    void shiftMat(InputArray _src, OutputArray _dst, const Point shift) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -181,16 +181,16 @@ public:
         res.copyTo(dst);
     }
 
-    int getMaxBits() const { return max_bits; }
-    void setMaxBits(int val) { max_bits = val; }
+    int getMaxBits() const CV_OVERRIDE { return max_bits; }
+    void setMaxBits(int val) CV_OVERRIDE { max_bits = val; }
 
-    int getExcludeRange() const { return exclude_range; }
-    void setExcludeRange(int val) { exclude_range = val; }
+    int getExcludeRange() const CV_OVERRIDE { return exclude_range; }
+    void setExcludeRange(int val) CV_OVERRIDE { exclude_range = val; }
 
-    bool getCut() const { return cut; }
-    void setCut(bool val) { cut = val; }
+    bool getCut() const CV_OVERRIDE { return cut; }
+    void setCut(bool val) CV_OVERRIDE { cut = val; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name
@@ -199,7 +199,7 @@ public:
            << "cut" << static_cast<int>(cut);
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert(n.isString() && String(n) == name);
@@ -209,7 +209,7 @@ public:
         cut = (cut_val != 0);
     }
 
-    void computeBitmaps(InputArray _img, OutputArray _tb, OutputArray _eb)
+    void computeBitmaps(InputArray _img, OutputArray _tb, OutputArray _eb) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 

@@ -104,7 +104,7 @@ public:
 private:
     virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
-                          std::vector<CameraParams> &cameras);
+                          std::vector<CameraParams> &cameras) CV_OVERRIDE;
 
     bool is_focals_estimated_;
 };
@@ -121,7 +121,7 @@ class CV_EXPORTS AffineBasedEstimator : public Estimator
 private:
     virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
-                          std::vector<CameraParams> &cameras);
+                          std::vector<CameraParams> &cameras) CV_OVERRIDE;
 };
 
 /** @brief Base class for all camera parameters refinement methods.
@@ -162,7 +162,7 @@ protected:
     // Runs bundle adjustment
     virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
-                          std::vector<CameraParams> &cameras);
+                          std::vector<CameraParams> &cameras) CV_OVERRIDE;
 
     /** @brief Sets initial camera parameter to refine.
 
@@ -221,14 +221,14 @@ public:
 
 private:
     bool estimate(const std::vector<ImageFeatures> &, const std::vector<MatchesInfo> &,
-                  std::vector<CameraParams> &)
+                  std::vector<CameraParams> &) CV_OVERRIDE
     {
         return true;
     }
-    void setUpInitialCameraParams(const std::vector<CameraParams> &) {}
-    void obtainRefinedCameraParams(std::vector<CameraParams> &) const {}
-    void calcError(Mat &) {}
-    void calcJacobian(Mat &) {}
+    void setUpInitialCameraParams(const std::vector<CameraParams> &) CV_OVERRIDE {}
+    void obtainRefinedCameraParams(std::vector<CameraParams> &) const CV_OVERRIDE {}
+    void calcError(Mat &) CV_OVERRIDE {}
+    void calcJacobian(Mat &) CV_OVERRIDE {}
 };
 
 
@@ -244,10 +244,10 @@ public:
     BundleAdjusterReproj() : BundleAdjusterBase(7, 2) {}
 
 private:
-    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
-    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
-    void calcError(Mat &err);
-    void calcJacobian(Mat &jac);
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const CV_OVERRIDE;
+    void calcError(Mat &err) CV_OVERRIDE;
+    void calcJacobian(Mat &jac) CV_OVERRIDE;
 
     Mat err1_, err2_;
 };
@@ -264,10 +264,10 @@ public:
     BundleAdjusterRay() : BundleAdjusterBase(4, 3) {}
 
 private:
-    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
-    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
-    void calcError(Mat &err);
-    void calcJacobian(Mat &jac);
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const CV_OVERRIDE;
+    void calcError(Mat &err) CV_OVERRIDE;
+    void calcJacobian(Mat &jac) CV_OVERRIDE;
 
     Mat err1_, err2_;
 };
@@ -288,10 +288,10 @@ public:
     BundleAdjusterAffine() : BundleAdjusterBase(6, 2) {}
 
 private:
-    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
-    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
-    void calcError(Mat &err);
-    void calcJacobian(Mat &jac);
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const CV_OVERRIDE;
+    void calcError(Mat &err) CV_OVERRIDE;
+    void calcJacobian(Mat &jac) CV_OVERRIDE;
 
     Mat err1_, err2_;
 };
@@ -312,10 +312,10 @@ public:
     BundleAdjusterAffinePartial() : BundleAdjusterBase(4, 2) {}
 
 private:
-    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
-    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
-    void calcError(Mat &err);
-    void calcJacobian(Mat &jac);
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const CV_OVERRIDE;
+    void calcError(Mat &err) CV_OVERRIDE;
+    void calcJacobian(Mat &jac) CV_OVERRIDE;
 
     Mat err1_, err2_;
 };

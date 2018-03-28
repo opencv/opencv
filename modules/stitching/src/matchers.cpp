@@ -74,7 +74,7 @@ struct MatchPairsBody : ParallelLoopBody
             : matcher(_matcher), features(_features),
               pairwise_matches(_pairwise_matches), near_pairs(_near_pairs) {}
 
-    void operator ()(const Range &r) const
+    void operator ()(const Range &r) const CV_OVERRIDE
     {
         cv::RNG rng = cv::theRNG(); // save entry rng state
         const int num_images = static_cast<int>(features.size());
@@ -122,7 +122,7 @@ struct FindFeaturesBody : ParallelLoopBody
                      std::vector<ImageFeatures> &features, const std::vector<std::vector<cv::Rect> > *rois)
             : finder_(finder), images_(images), features_(features), rois_(rois) {}
 
-    void operator ()(const Range &r) const
+    void operator ()(const Range &r) const CV_OVERRIDE
     {
         for (int i = r.start; i < r.end; ++i)
         {
@@ -152,18 +152,18 @@ typedef std::set<std::pair<int,int> > MatchesSet;
 // These two classes are aimed to find features matches only, not to
 // estimate homography
 
-class CpuMatcher : public FeaturesMatcher
+class CpuMatcher CV_FINAL : public FeaturesMatcher
 {
 public:
     CpuMatcher(float match_conf) : FeaturesMatcher(true), match_conf_(match_conf) {}
-    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info) CV_OVERRIDE;
 
 private:
     float match_conf_;
 };
 
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-class GpuMatcher : public FeaturesMatcher
+class GpuMatcher CV_FINAL : public FeaturesMatcher
 {
 public:
     GpuMatcher(float match_conf) : match_conf_(match_conf) {}
