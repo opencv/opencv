@@ -597,31 +597,31 @@ public:
     {
     }
 
-    virtual int getNumLevels() const { return numLevels_; }
-    virtual void setNumLevels(int numLevels) { numLevels_ = numLevels; }
+    virtual int getNumLevels() const CV_OVERRIDE { return numLevels_; }
+    virtual void setNumLevels(int numLevels) CV_OVERRIDE { numLevels_ = numLevels; }
 
-    virtual double getPyrScale() const { return pyrScale_; }
-    virtual void setPyrScale(double pyrScale) { pyrScale_ = pyrScale; }
+    virtual double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
+    virtual void setPyrScale(double pyrScale) CV_OVERRIDE { pyrScale_ = pyrScale; }
 
-    virtual bool getFastPyramids() const { return fastPyramids_; }
-    virtual void setFastPyramids(bool fastPyramids) { fastPyramids_ = fastPyramids; }
+    virtual bool getFastPyramids() const CV_OVERRIDE { return fastPyramids_; }
+    virtual void setFastPyramids(bool fastPyramids) CV_OVERRIDE { fastPyramids_ = fastPyramids; }
 
-    virtual int getWinSize() const { return winSize_; }
-    virtual void setWinSize(int winSize) { winSize_ = winSize; }
+    virtual int getWinSize() const CV_OVERRIDE { return winSize_; }
+    virtual void setWinSize(int winSize) CV_OVERRIDE { winSize_ = winSize; }
 
-    virtual int getNumIters() const { return numIters_; }
-    virtual void setNumIters(int numIters) { numIters_ = numIters; }
+    virtual int getNumIters() const CV_OVERRIDE { return numIters_; }
+    virtual void setNumIters(int numIters) CV_OVERRIDE { numIters_ = numIters; }
 
-    virtual int getPolyN() const { return polyN_; }
-    virtual void setPolyN(int polyN) { polyN_ = polyN; }
+    virtual int getPolyN() const CV_OVERRIDE { return polyN_; }
+    virtual void setPolyN(int polyN) CV_OVERRIDE { polyN_ = polyN; }
 
-    virtual double getPolySigma() const { return polySigma_; }
-    virtual void setPolySigma(double polySigma) { polySigma_ = polySigma; }
+    virtual double getPolySigma() const CV_OVERRIDE { return polySigma_; }
+    virtual void setPolySigma(double polySigma) CV_OVERRIDE { polySigma_ = polySigma; }
 
-    virtual int getFlags() const { return flags_; }
-    virtual void setFlags(int flags) { flags_ = flags; }
+    virtual int getFlags() const CV_OVERRIDE { return flags_; }
+    virtual void setFlags(int flags) CV_OVERRIDE { flags_ = flags; }
 
-    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow);
+    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow) CV_OVERRIDE;
 
 private:
     int numLevels_;
@@ -800,7 +800,7 @@ private:
         flowy = curFlowY;
         return true;
     }
-    virtual void collectGarbage(){
+    virtual void collectGarbage() CV_OVERRIDE {
         releaseMemory();
     }
     void releaseMemory()
@@ -1089,7 +1089,7 @@ private:
         return true;
     }
 #else // HAVE_OPENCL
-    virtual void collectGarbage(){}
+    virtual void collectGarbage() CV_OVERRIDE {}
 #endif
 };
 

@@ -283,8 +283,8 @@ namespace cv{
 
             FirstScan8Connectivity&  operator=(const FirstScan8Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const{
-
+            void operator()(const cv::Range& range) const CV_OVERRIDE
+            {
                 int r = range.start;
                 chunksSizeAndLabels_[r] = range.end;
 
@@ -385,8 +385,8 @@ namespace cv{
 
             FirstScan4Connectivity&  operator=(const FirstScan4Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const{
-
+            void operator()(const cv::Range& range) const CV_OVERRIDE
+            {
                 int r = range.start;
                 chunksSizeAndLabels_[r] = range.end;
 
@@ -462,8 +462,8 @@ namespace cv{
 
             SecondScan&  operator=(const SecondScan& ) { return *this; }
 
-            void operator()(const cv::Range& range) const{
-
+            void operator()(const cv::Range& range) const CV_OVERRIDE
+            {
                 int r = range.start;
                 const int rowBegin = r;
                 const int rowEnd = range.end;
@@ -839,8 +839,8 @@ namespace cv{
 
             FirstScan&  operator=(const FirstScan&) { return *this; }
 
-            void operator()(const cv::Range& range) const{
-
+            void operator()(const cv::Range& range) const CV_OVERRIDE
+            {
                 int r = range.start;
                 r += (r % 2);
 
@@ -1907,8 +1907,8 @@ namespace cv{
 
             SecondScan&  operator=(const SecondScan& ) { return *this; }
 
-            void operator()(const cv::Range& range) const{
-
+            void operator()(const cv::Range& range) const CV_OVERRIDE
+            {
                 int r = range.start;
                 r += (r % 2);
                 const int rowBegin = r;

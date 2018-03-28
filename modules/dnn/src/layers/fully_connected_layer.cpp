@@ -56,7 +56,7 @@ namespace cv
 namespace dnn
 {
 
-class FullyConnectedLayerImpl : public InnerProductLayer
+class FullyConnectedLayerImpl CV_FINAL : public InnerProductLayer
 {
 public:
     enum { VEC_ALIGN = 8 };
@@ -106,7 +106,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &) const
+                         std::vector<MatShape> &) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 1);
         CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
@@ -125,14 +125,14 @@ public:
         return false;
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && axis == 1;
     }
 
-    virtual bool setActivation(const Ptr<ActivationLayer>& layer)
+    virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
         activ = layer;
         return !activ.empty();
@@ -168,7 +168,7 @@ public:
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
 
-        void operator()(const Range& r) const
+        void operator()(const Range& r) const CV_OVERRIDE
         {
             int valign = FullyConnectedLayerImpl::VEC_ALIGN;
             int nsamples = srcMat->rows;
@@ -267,7 +267,7 @@ public:
     };
 
 #ifdef HAVE_OPENCL
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         innerProductOp.release();
     }
@@ -348,7 +348,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -360,7 +360,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &)
+    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -378,7 +378,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         int inW, inH, inC, inN, outC = blobs[0].size[0];
@@ -402,7 +402,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
@@ -421,7 +421,7 @@ public:
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         (void)inputs; // suppress unused variable warning
         long flops = 0;

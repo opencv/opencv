@@ -232,7 +232,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int i = range.start; i != range.end; ++i)
         {
@@ -278,7 +278,7 @@ public:
         circle(frame, Center, i + 2, ObjectColor, 2, CV_AA);
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int j = range.start; j < range.end; ++j)
         {
@@ -320,7 +320,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int i = range.start; i != range.end; ++i)
         {
@@ -342,7 +342,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int j = range.start; j < range.end; ++j)
         {

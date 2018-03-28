@@ -131,6 +131,10 @@ void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &output
 {
     outputs_ = outputs;
 }
+void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) const noexcept
+{
+    outputs_ = outputs;
+}
 
 // Returns input references that aren't connected to internal outputs.
 void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_) noexcept

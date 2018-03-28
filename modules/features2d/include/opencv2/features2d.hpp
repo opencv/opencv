@@ -208,14 +208,14 @@ public:
 
     CV_WRAP void read( const String& fileName );
 
-    virtual void write( FileStorage&) const;
+    virtual void write( FileStorage&) const CV_OVERRIDE;
 
     // see corresponding cv::Algorithm method
-    CV_WRAP virtual void read( const FileNode&);
+    CV_WRAP virtual void read( const FileNode&) CV_OVERRIDE;
 
     //! Return true if detector object is empty
-    CV_WRAP virtual bool empty() const;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual bool empty() const CV_OVERRIDE;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 
     // see corresponding cv::Algorithm method
     CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
@@ -280,7 +280,7 @@ public:
     CV_WRAP static Ptr<BRISK> create(int thresh, int octaves, const std::vector<float> &radiusList,
         const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
         const std::vector<int>& indexChange=std::vector<int>());
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
@@ -355,7 +355,7 @@ public:
 
     CV_WRAP virtual void setFastThreshold(int fastThreshold) = 0;
     CV_WRAP virtual int getFastThreshold() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @brief Maximally stable extremal region extractor
@@ -415,7 +415,7 @@ public:
 
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @overload */
@@ -471,7 +471,7 @@ public:
 
     CV_WRAP virtual void setType(int type) = 0;
     CV_WRAP virtual int getType() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @overload */
@@ -526,7 +526,7 @@ public:
 
     CV_WRAP virtual void setType(int type) = 0;
     CV_WRAP virtual int getType() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @brief Wrapping class for feature detection using the goodFeaturesToTrack function. :
@@ -555,7 +555,7 @@ public:
 
     CV_WRAP virtual void setK(double k) = 0;
     CV_WRAP virtual double getK() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @brief Class for extracting blobs from an image. :
@@ -622,7 +622,7 @@ public:
 
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
-  CV_WRAP virtual String getDefaultName() const;
+  CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 //! @} features2d_main
@@ -679,7 +679,7 @@ public:
 
     CV_WRAP virtual void setDiffusivity(int diff) = 0;
     CV_WRAP virtual int getDiffusivity() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 /** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13.
@@ -747,7 +747,7 @@ public:
 
     CV_WRAP virtual void setDiffusivity(int diff) = 0;
     CV_WRAP virtual int getDiffusivity() const = 0;
-    CV_WRAP virtual String getDefaultName() const;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 //! @} features2d_main
@@ -857,11 +857,11 @@ public:
 
     /** @brief Clears the train descriptor collections.
      */
-    CV_WRAP virtual void clear();
+    CV_WRAP virtual void clear() CV_OVERRIDE;
 
     /** @brief Returns true if there are no train descriptors in the both collections.
      */
-    CV_WRAP virtual bool empty() const;
+    CV_WRAP virtual bool empty() const CV_OVERRIDE;
 
     /** @brief Returns true if the descriptor matcher supports masking permissible matches.
      */
@@ -991,9 +991,9 @@ public:
     }
     // Reads matcher object from a file node
     // see corresponding cv::Algorithm method
-    CV_WRAP virtual void read( const FileNode& );
+    CV_WRAP virtual void read( const FileNode& ) CV_OVERRIDE;
     // Writes matcher object to a file storage
-    virtual void write( FileStorage& ) const;
+    virtual void write( FileStorage& ) const CV_OVERRIDE;
 
     /** @brief Clones the matcher.
 
@@ -1086,7 +1086,7 @@ public:
 
     virtual ~BFMatcher() {}
 
-    virtual bool isMaskSupported() const { return true; }
+    virtual bool isMaskSupported() const CV_OVERRIDE { return true; }
 
     /** @brief Brute-force matcher create method.
     @param normType One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are
@@ -1102,12 +1102,12 @@ public:
      */
     CV_WRAP static Ptr<BFMatcher> create( int normType=NORM_L2, bool crossCheck=false ) ;
 
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
+    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
 protected:
     virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-        InputArrayOfArrays masks=noArray(), bool compactResult=false );
+        InputArrayOfArrays masks=noArray(), bool compactResult=false ) CV_OVERRIDE;
     virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-        InputArrayOfArrays masks=noArray(), bool compactResult=false );
+        InputArrayOfArrays masks=noArray(), bool compactResult=false ) CV_OVERRIDE;
 
     int normType;
     bool crossCheck;
@@ -1128,29 +1128,29 @@ public:
     CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
                        const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
-    virtual void add( InputArrayOfArrays descriptors );
-    virtual void clear();
+    virtual void add( InputArrayOfArrays descriptors ) CV_OVERRIDE;
+    virtual void clear() CV_OVERRIDE;
 
     // Reads matcher object from a file node
-    virtual void read( const FileNode& );
+    virtual void read( const FileNode& ) CV_OVERRIDE;
     // Writes matcher object to a file storage
-    virtual void write( FileStorage& ) const;
+    virtual void write( FileStorage& ) const CV_OVERRIDE;
 
-    virtual void train();
-    virtual bool isMaskSupported() const;
+    virtual void train() CV_OVERRIDE;
+    virtual bool isMaskSupported() const CV_OVERRIDE;
 
     CV_WRAP static Ptr<FlannBasedMatcher> create();
 
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
+    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
 protected:
     static void convertToDMatches( const DescriptorCollection& descriptors,
                                    const Mat& indices, const Mat& distances,
                                    std::vector<std::vector<DMatch> >& matches );
 
     virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-        InputArrayOfArrays masks=noArray(), bool compactResult=false );
+        InputArrayOfArrays masks=noArray(), bool compactResult=false ) CV_OVERRIDE;
     virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-        InputArrayOfArrays masks=noArray(), bool compactResult=false );
+        InputArrayOfArrays masks=noArray(), bool compactResult=false ) CV_OVERRIDE;
 
     Ptr<flann::IndexParams> indexParams;
     Ptr<flann::SearchParams> searchParams;
@@ -1327,8 +1327,8 @@ public:
     virtual ~BOWKMeansTrainer();
 
     // Returns trained vocabulary (i.e. cluster centers).
-    CV_WRAP virtual Mat cluster() const;
-    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const;
+    CV_WRAP virtual Mat cluster() const CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const CV_OVERRIDE;
 
 protected:
 

@@ -283,12 +283,12 @@ public:
     ~OpenCLBackendWrapper() {}
 
     // Copies data from device to a host memory.
-    virtual void copyToHost()
+    virtual void copyToHost() CV_OVERRIDE
     {
         umat.copyTo(*host);
     }
 
-    virtual void setHostDirty()
+    virtual void setHostDirty() CV_OVERRIDE
     {
         hostDirty = true;
     };
@@ -395,11 +395,11 @@ struct LayerData
 //fake layer containing network input blobs
 struct DataLayer : public Layer
 {
-    void finalize(const std::vector<Mat*>&, std::vector<Mat>&) {}
-    void forward(std::vector<Mat*>&, std::vector<Mat>&, std::vector<Mat> &) {}
-    void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) {}
+    void finalize(const std::vector<Mat*>&, std::vector<Mat>&) CV_OVERRIDE {}
+    void forward(std::vector<Mat*>&, std::vector<Mat>&, std::vector<Mat> &) CV_OVERRIDE {}
+    void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) CV_OVERRIDE {}
 
-    int outputNameToIndex(const String& tgtName)
+    int outputNameToIndex(const String& tgtName) CV_OVERRIDE
     {
         int idx = (int)(std::find(outNames.begin(), outNames.end(), tgtName) - outNames.begin());
         return (idx < (int)outNames.size()) ? idx : -1;
@@ -413,7 +413,7 @@ struct DataLayer : public Layer
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == requiredOutputs);
         outputs.assign(inputs.begin(), inputs.end());

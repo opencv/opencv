@@ -356,7 +356,7 @@ public:
 
     parallelCanny& operator=(const parallelCanny&) { return *this; }
 
-    void operator()(const Range &boundaries) const
+    void operator()(const Range &boundaries) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
 
@@ -825,7 +825,7 @@ public:
 
     ~finalPass() {}
 
-    void operator()(const Range &boundaries) const
+    void operator()(const Range &boundaries) const CV_OVERRIDE
     {
         // the final pass, form the final image
         for (int i = boundaries.start; i < boundaries.end; i++)

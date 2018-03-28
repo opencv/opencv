@@ -64,8 +64,8 @@ public:
 
   explicit SimpleBlobDetectorImpl(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
 
-  virtual void read( const FileNode& fn );
-  virtual void write( FileStorage& fs ) const;
+  virtual void read( const FileNode& fn ) CV_OVERRIDE;
+  virtual void write( FileStorage& fs ) const CV_OVERRIDE;
 
 protected:
   struct CV_EXPORTS Center
@@ -75,7 +75,7 @@ protected:
       double confidence;
   };
 
-  virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() );
+  virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) CV_OVERRIDE;
   virtual void findBlobs(InputArray image, InputArray binaryImage, std::vector<Center> &centers) const;
 
   Params params;

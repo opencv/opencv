@@ -44,7 +44,7 @@
 namespace cv
 {
 
-class HausdorffDistanceExtractorImpl : public HausdorffDistanceExtractor
+class HausdorffDistanceExtractorImpl CV_FINAL : public HausdorffDistanceExtractor
 {
 public:
     /* Constructor */
@@ -61,21 +61,21 @@ public:
     }
 
     //! the main operator
-    virtual float computeDistance(InputArray contour1, InputArray contour2);
+    virtual float computeDistance(InputArray contour1, InputArray contour2) CV_OVERRIDE;
 
     //! Setters/Getters
-    virtual void setDistanceFlag(int _distanceFlag) {distanceFlag=_distanceFlag;}
-    virtual int getDistanceFlag() const {return distanceFlag;}
+    virtual void setDistanceFlag(int _distanceFlag) CV_OVERRIDE {distanceFlag=_distanceFlag;}
+    virtual int getDistanceFlag() const CV_OVERRIDE {return distanceFlag;}
 
-    virtual void setRankProportion(float _rankProportion)
+    virtual void setRankProportion(float _rankProportion) CV_OVERRIDE
     {
         CV_Assert((_rankProportion>0) && (_rankProportion<=1));
         rankProportion=_rankProportion;
     }
-    virtual float getRankProportion() const {return rankProportion;}
+    virtual float getRankProportion() const CV_OVERRIDE {return rankProportion;}
 
     //! write/read
-    virtual void write(FileStorage& fs) const
+    virtual void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
@@ -83,7 +83,7 @@ public:
            << "rank" << rankProportion;
     }
 
-    virtual void read(const FileNode& fn)
+    virtual void read(const FileNode& fn) CV_OVERRIDE
     {
         CV_Assert( (String)fn["name"] == name_ );
         distanceFlag = (int)fn["distance"];

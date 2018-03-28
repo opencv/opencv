@@ -3054,7 +3054,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
         vecOp = _vecOp;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         int _ksize = ksize;
         const DT* kx = kernel.ptr<DT>();
@@ -3112,7 +3112,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 && this->ksize <= 5 );
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         int ksize2 = this->ksize/2, ksize2n = ksize2*cn;
         const DT* kx = this->kernel.template ptr<DT>() + ksize2;
@@ -3251,7 +3251,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
                    (kernel.rows == 1 || kernel.cols == 1));
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         const ST* ky = kernel.template ptr<ST>();
         ST _delta = delta;
@@ -3314,7 +3314,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int ksize2 = this->ksize/2;
         const ST* ky = this->kernel.template ptr<ST>() + ksize2;
@@ -3420,7 +3420,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
         CV_Assert( this->ksize == 3 );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int ksize2 = this->ksize/2;
         const ST* ky = this->kernel.template ptr<ST>() + ksize2;
@@ -3889,7 +3889,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         ptrs.resize( coords.size() );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn) CV_OVERRIDE
     {
         KT _delta = delta;
         const Point* pt = &coords[0];
@@ -4628,8 +4628,9 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
 
         CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, ::ipp::IwiFilterParams(1, 0, ippAlgHintNone, ippRndFinancial), iwBorderType);
     }
-    catch(::ipp::IwException ex)
+    catch(const ::ipp::IwException& ex)
     {
+        CV_UNUSED(ex);
         return false;
     }
 

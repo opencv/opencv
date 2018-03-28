@@ -176,7 +176,7 @@ struct BatchDistInvoker : public ParallelLoopBody
         func = _func;
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         AutoBuffer<int> buf(src2->rows);
         int* bufptr = buf;

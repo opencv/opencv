@@ -51,7 +51,7 @@
 namespace cv
 {
 
-class BRISK_Impl : public BRISK
+class BRISK_Impl CV_FINAL : public BRISK
 {
 public:
     explicit BRISK_Impl(int thresh=30, int octaves=3, float patternScale=1.0f);
@@ -65,17 +65,17 @@ public:
 
     virtual ~BRISK_Impl();
 
-    int descriptorSize() const
+    int descriptorSize() const CV_OVERRIDE
     {
         return strings_;
     }
 
-    int descriptorType() const
+    int descriptorType() const CV_OVERRIDE
     {
         return CV_8U;
     }
 
-    int defaultNorm() const
+    int defaultNorm() const CV_OVERRIDE
     {
         return NORM_HAMMING;
     }
@@ -90,7 +90,7 @@ public:
     void detectAndCompute( InputArray image, InputArray mask,
                      CV_OUT std::vector<KeyPoint>& keypoints,
                      OutputArray descriptors,
-                     bool useProvidedKeypoints );
+                     bool useProvidedKeypoints ) CV_OVERRIDE;
 
 protected:
 
@@ -151,11 +151,11 @@ private:
 
 
 // a layer in the Brisk detector pyramid
-class CV_EXPORTS BriskLayer
+class BriskLayer
 {
 public:
   // constructor arguments
-  struct CV_EXPORTS CommonParams
+  struct CommonParams
   {
     static const int HALFSAMPLE = 0;
     static const int TWOTHIRDSAMPLE = 1;
@@ -223,7 +223,7 @@ private:
   int pixel_9_16_[25];
 };
 
-class CV_EXPORTS BriskScaleSpace
+class BriskScaleSpace
 {
 public:
   // construct telling the octaves number:

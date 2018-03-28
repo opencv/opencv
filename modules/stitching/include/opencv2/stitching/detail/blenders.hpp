@@ -104,9 +104,9 @@ public:
     float sharpness() const { return sharpness_; }
     void setSharpness(float val) { sharpness_ = val; }
 
-    void prepare(Rect dst_roi);
-    void feed(InputArray img, InputArray mask, Point tl);
-    void blend(InputOutputArray dst, InputOutputArray dst_mask);
+    void prepare(Rect dst_roi) CV_OVERRIDE;
+    void feed(InputArray img, InputArray mask, Point tl) CV_OVERRIDE;
+    void blend(InputOutputArray dst, InputOutputArray dst_mask) CV_OVERRIDE;
 
     //! Creates weight maps for fixed set of source images by their masks and top-left corners.
     //! Final image can be obtained by simple weighting of the source images.
@@ -131,9 +131,9 @@ public:
     int numBands() const { return actual_num_bands_; }
     void setNumBands(int val) { actual_num_bands_ = val; }
 
-    void prepare(Rect dst_roi);
-    void feed(InputArray img, InputArray mask, Point tl);
-    void blend(InputOutputArray dst, InputOutputArray dst_mask);
+    void prepare(Rect dst_roi) CV_OVERRIDE;
+    void feed(InputArray img, InputArray mask, Point tl) CV_OVERRIDE;
+    void blend(InputOutputArray dst, InputOutputArray dst_mask) CV_OVERRIDE;
 
 private:
     int actual_num_bands_, num_bands_;

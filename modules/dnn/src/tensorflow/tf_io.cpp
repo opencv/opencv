@@ -23,8 +23,8 @@ Implementation of various functions which are related to Tensorflow models readi
 #include <fstream>
 #include <vector>
 
-#include "graph.pb.h"
 #include "tf_io.hpp"
+
 #include "../caffe/caffe_io.hpp"
 #include "../caffe/glog_emulator.hpp"
 

@@ -9,7 +9,14 @@
 #define __OPENCV_DNN_OP_INF_ENGINE_HPP__
 
 #ifdef HAVE_INF_ENGINE
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include <inference_engine.hpp>
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic pop
+#endif
 #endif  // HAVE_INF_ENGINE
 
 namespace cv { namespace dnn {
@@ -23,41 +30,43 @@ public:
 
     InfEngineBackendNet(InferenceEngine::CNNNetwork& net);
 
-    virtual void Release() noexcept;
+    virtual void Release() noexcept CV_OVERRIDE;
 
-    virtual InferenceEngine::Precision getPrecision() noexcept;
+    virtual InferenceEngine::Precision getPrecision() noexcept CV_OVERRIDE;
 
-    virtual void getOutputsInfo(InferenceEngine::OutputsDataMap &out) noexcept;
+    virtual void getOutputsInfo(InferenceEngine::OutputsDataMap &out) noexcept /*CV_OVERRIDE*/;
 
-    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) noexcept;
+    virtual void getOutputsInfo(InferenceEngine::OutputsDataMap &out) const noexcept /*CV_OVERRIDE*/;
 
-    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) const noexcept;
+    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) noexcept /*CV_OVERRIDE*/;
 
-    virtual InferenceEngine::InputInfo::Ptr getInput(const std::string &inputName) noexcept;
+    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) const noexcept /*CV_OVERRIDE*/;
 
-    virtual void getName(char *pName, size_t len) noexcept;
+    virtual InferenceEngine::InputInfo::Ptr getInput(const std::string &inputName) noexcept CV_OVERRIDE;
 
-    virtual size_t layerCount() noexcept;
+    virtual void getName(char *pName, size_t len) noexcept CV_OVERRIDE;
 
-    virtual InferenceEngine::DataPtr& getData(const char *dname) noexcept;
+    virtual size_t layerCount() noexcept CV_OVERRIDE;
 
-    virtual void addLayer(const InferenceEngine::CNNLayerPtr &layer) noexcept;
+    virtual InferenceEngine::DataPtr& getData(const char *dname) noexcept CV_OVERRIDE;
+
+    virtual void addLayer(const InferenceEngine::CNNLayerPtr &layer) noexcept CV_OVERRIDE;
 
     virtual InferenceEngine::StatusCode addOutput(const std::string &layerName,
                                                   size_t outputIndex = 0,
-                                                  InferenceEngine::ResponseDesc *resp = nullptr) noexcept;
+                                                  InferenceEngine::ResponseDesc *resp = nullptr) noexcept CV_OVERRIDE;
 
     virtual InferenceEngine::StatusCode getLayerByName(const char *layerName,
                                                        InferenceEngine::CNNLayerPtr &out,
-                                                       InferenceEngine::ResponseDesc *resp) noexcept;
+                                                       InferenceEngine::ResponseDesc *resp) noexcept CV_OVERRIDE;
 
-    virtual void setTargetDevice(InferenceEngine::TargetDevice device) noexcept;
+    virtual void setTargetDevice(InferenceEngine::TargetDevice device) noexcept CV_OVERRIDE;
 
-    virtual InferenceEngine::TargetDevice getTargetDevice() noexcept;
+    virtual InferenceEngine::TargetDevice getTargetDevice() noexcept CV_OVERRIDE;
 
-    virtual InferenceEngine::StatusCode setBatchSize(const size_t size) noexcept;
+    virtual InferenceEngine::StatusCode setBatchSize(const size_t size) noexcept CV_OVERRIDE;
 
-    virtual size_t getBatchSize() const noexcept;
+    virtual size_t getBatchSize() const noexcept CV_OVERRIDE;
 
     void init();
 
@@ -99,9 +108,9 @@ public:
 
     ~InfEngineBackendWrapper();
 
-    virtual void copyToHost();
+    virtual void copyToHost() CV_OVERRIDE;
 
-    virtual void setHostDirty();
+    virtual void setHostDirty() CV_OVERRIDE;
 
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::TBlob<float>::Ptr blob;
@@ -128,15 +137,15 @@ public:
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
-                                 std::vector<MatShape> &internals) const;
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE;
 
     virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output,
-                         std::vector<Mat> &internals);
+                         std::vector<Mat> &internals) CV_OVERRIDE;
 
     virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,
-                         OutputArrayOfArrays internals);
+                         OutputArrayOfArrays internals) CV_OVERRIDE;
 
-    virtual bool supportBackend(int backendId);
+    virtual bool supportBackend(int backendId) CV_OVERRIDE;
 
 private:
     InferenceEngine::DataPtr output;

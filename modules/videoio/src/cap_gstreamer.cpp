@@ -130,7 +130,7 @@ private:
  * \brief The CvCapture_GStreamer class
  * Use GStreamer to capture video
  */
-class CvCapture_GStreamer : public CvCapture
+class CvCapture_GStreamer CV_FINAL : public CvCapture
 {
 public:
     CvCapture_GStreamer() { init(); }
@@ -139,10 +139,10 @@ public:
     virtual bool open( int type, const char* filename );
     virtual void close();
 
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
 protected:
     void init();
@@ -1262,12 +1262,12 @@ class CvVideoWriter_GStreamer : public CvVideoWriter
 {
 public:
     CvVideoWriter_GStreamer() { init(); }
-    virtual ~CvVideoWriter_GStreamer() { close(); }
+    virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE { close(); }
 
     virtual bool open( const char* filename, int fourcc,
                        double fps, CvSize frameSize, bool isColor );
     virtual void close();
-    virtual bool writeFrame( const IplImage* image );
+    virtual bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 protected:
     void init();
     const char* filenameToMimetype(const char* filename);

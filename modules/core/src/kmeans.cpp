@@ -65,7 +65,7 @@ public:
         tdist2(tdist2_), data(data_), dist(dist_), ci(ci_)
     { }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         const int begin = range.start;
@@ -171,7 +171,7 @@ public:
     {
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         const int begin = range.start;

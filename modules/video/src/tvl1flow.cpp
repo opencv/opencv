@@ -102,21 +102,33 @@ public:
     }
     OpticalFlowDual_TVL1();
 
-    void calc(InputArray I0, InputArray I1, InputOutputArray flow);
-    void collectGarbage();
+    void calc(InputArray I0, InputArray I1, InputOutputArray flow) CV_OVERRIDE;
+    void collectGarbage() CV_OVERRIDE;
 
-    CV_IMPL_PROPERTY(double, Tau, tau)
-    CV_IMPL_PROPERTY(double, Lambda, lambda)
-    CV_IMPL_PROPERTY(double, Theta, theta)
-    CV_IMPL_PROPERTY(double, Gamma, gamma)
-    CV_IMPL_PROPERTY(int, ScalesNumber, nscales)
-    CV_IMPL_PROPERTY(int, WarpingsNumber, warps)
-    CV_IMPL_PROPERTY(double, Epsilon, epsilon)
-    CV_IMPL_PROPERTY(int, InnerIterations, innerIterations)
-    CV_IMPL_PROPERTY(int, OuterIterations, outerIterations)
-    CV_IMPL_PROPERTY(bool, UseInitialFlow, useInitialFlow)
-    CV_IMPL_PROPERTY(double, ScaleStep, scaleStep)
-    CV_IMPL_PROPERTY(int, MedianFiltering, medianFiltering)
+    inline double getTau() const CV_OVERRIDE { return tau; }
+    inline void setTau(double val) CV_OVERRIDE { tau = val; }
+    inline double getLambda() const CV_OVERRIDE { return lambda; }
+    inline void setLambda(double val) CV_OVERRIDE { lambda = val; }
+    inline double getTheta() const CV_OVERRIDE { return theta; }
+    inline void setTheta(double val) CV_OVERRIDE { theta = val; }
+    inline double getGamma() const CV_OVERRIDE { return gamma; }
+    inline void setGamma(double val) CV_OVERRIDE { gamma = val; }
+    inline int getScalesNumber() const CV_OVERRIDE { return nscales; }
+    inline void setScalesNumber(int val) CV_OVERRIDE { nscales = val; }
+    inline int getWarpingsNumber() const CV_OVERRIDE { return warps; }
+    inline void setWarpingsNumber(int val) CV_OVERRIDE { warps = val; }
+    inline double getEpsilon() const CV_OVERRIDE { return epsilon; }
+    inline void setEpsilon(double val) CV_OVERRIDE { epsilon = val; }
+    inline int getInnerIterations() const CV_OVERRIDE { return innerIterations; }
+    inline void setInnerIterations(int val) CV_OVERRIDE { innerIterations = val; }
+    inline int getOuterIterations() const CV_OVERRIDE { return outerIterations; }
+    inline void setOuterIterations(int val) CV_OVERRIDE { outerIterations = val; }
+    inline bool getUseInitialFlow() const CV_OVERRIDE { return useInitialFlow; }
+    inline void setUseInitialFlow(bool val) CV_OVERRIDE { useInitialFlow = val; }
+    inline double getScaleStep() const CV_OVERRIDE { return scaleStep; }
+    inline void setScaleStep(double val) CV_OVERRIDE { scaleStep = val; }
+    inline int getMedianFiltering() const CV_OVERRIDE { return medianFiltering; }
+    inline void setMedianFiltering(int val) CV_OVERRIDE { medianFiltering = val; }
 
 protected:
     double tau;
@@ -628,7 +640,7 @@ bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputA
 
 struct BuildFlowMapBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> u1;
     Mat_<float> u2;
@@ -675,7 +687,7 @@ void buildFlowMap(const Mat_<float>& u1, const Mat_<float>& u2, Mat_<float>& map
 
 struct CenteredGradientBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> src;
     mutable Mat_<float> dx;
@@ -762,7 +774,7 @@ void centeredGradient(const Mat_<float>& src, Mat_<float>& dx, Mat_<float>& dy)
 
 struct ForwardGradientBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> src;
     mutable Mat_<float> dx;
@@ -832,7 +844,7 @@ void forwardGradient(const Mat_<float>& src, Mat_<float>& dx, Mat_<float>& dy)
 
 struct DivergenceBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> v1;
     Mat_<float> v2;
@@ -891,7 +903,7 @@ void divergence(const Mat_<float>& v1, const Mat_<float>& v2, Mat_<float>& div)
 
 struct CalcGradRhoBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> I0;
     Mat_<float> I1w;
@@ -961,7 +973,7 @@ void calcGradRho(const Mat_<float>& I0, const Mat_<float>& I1w, const Mat_<float
 
 struct EstimateVBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> I1wx;
     Mat_<float> I1wy;
@@ -1108,7 +1120,7 @@ float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>&
 
 struct EstimateDualVariablesBody : ParallelLoopBody
 {
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
     Mat_<float> u1x;
     Mat_<float> u1y;

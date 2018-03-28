@@ -59,7 +59,7 @@ namespace cv
 namespace dnn
 {
 
-class LRNLayerImpl : public LRNLayer
+class LRNLayerImpl CV_FINAL : public LRNLayer
 {
 public:
     LRNLayerImpl(const LayerParams& params)
@@ -88,7 +88,7 @@ public:
     Ptr<OCL4DNNLRN<float> > lrnOp;
 #endif
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
@@ -96,7 +96,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         lrnOp.release();
     }
@@ -139,7 +139,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -153,7 +153,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -196,7 +196,7 @@ public:
             planeSize_ = planeSize; nsamples_ = nsamples; nstripes_ = nstripes;
         }
 
-        void operator()(const Range& r) const
+        void operator()(const Range& r) const CV_OVERRIDE
         {
             int nsamples = nsamples_, nstripes = nstripes_;
             size_t planeSize = planeSize_, planeSize_n = planeSize * nsamples;
@@ -303,7 +303,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         float alphaSize = alpha;
@@ -347,7 +347,7 @@ public:
     virtual void applyHalideScheduler(Ptr<BackendNode>& node,
                                       const std::vector<Mat*> &inputs,
                                       const std::vector<Mat> &outputs,
-                                      int targetId) const
+                                      int targetId) const CV_OVERRIDE
     {
 #ifdef  HAVE_HALIDE
         if (targetId != DNN_TARGET_CPU)
@@ -376,7 +376,7 @@ public:
 #endif  // HAVE_HALIDE
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
@@ -396,7 +396,7 @@ public:
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         (void)outputs; // suppress unused variable warning
         CV_Assert(inputs.size() > 0);

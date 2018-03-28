@@ -41,6 +41,9 @@
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#  if __GNUC__ >= 5
+#    pragma GCC diagnostic ignored "-Wsuggest-override"
+#  endif
 #endif
 
 // The following lines pull in the real gtest *.cc files.

@@ -726,7 +726,7 @@ void TraceManagerThreadLocal::dumpStack(std::ostream& out, bool onlyFunctions) c
     out << ss.str();
 }
 
-class AsyncTraceStorage : public TraceStorage
+class AsyncTraceStorage CV_FINAL : public TraceStorage
 {
     mutable std::ofstream out;
 public:
@@ -744,7 +744,7 @@ public:
         out.close();
     }
 
-    bool put(const TraceMessage& msg) const
+    bool put(const TraceMessage& msg) const CV_OVERRIDE
     {
         if (msg.hasError)
             return false;
@@ -754,7 +754,7 @@ public:
     }
 };
 
-class SyncTraceStorage : public TraceStorage
+class SyncTraceStorage CV_FINAL : public TraceStorage
 {
     mutable std::ofstream out;
     mutable cv::Mutex mutex;
@@ -774,7 +774,7 @@ public:
         out.close();
     }
 
-    bool put(const TraceMessage& msg) const
+    bool put(const TraceMessage& msg) const CV_OVERRIDE
     {
         if (msg.hasError)
             return false;

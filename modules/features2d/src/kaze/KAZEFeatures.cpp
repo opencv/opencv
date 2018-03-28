@@ -196,7 +196,7 @@ public:
     {
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         std::vector<TEvolution>& evolution = *evolution_;
         for (int i = range.start; i < range.end; i++)
@@ -239,7 +239,7 @@ public:
     {
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         std::vector<TEvolution>& evolution = *evolution_;
         std::vector<std::vector<KeyPoint> >& kpts_par = *kpts_par_;
@@ -503,11 +503,11 @@ public:
     {
     }
 
-    void operator() (const Range& range) const
+    void operator() (const Range& range) const CV_OVERRIDE
     {
-                std::vector<KeyPoint> &kpts      = *kpts_;
-                Mat                   &desc      = *desc_;
-                std::vector<TEvolution>   &evolution = *evolution_;
+        std::vector<KeyPoint> &kpts      = *kpts_;
+        Mat                   &desc      = *desc_;
+        std::vector<TEvolution>   &evolution = *evolution_;
 
         for (int i = range.start; i < range.end; i++)
         {

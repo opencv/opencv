@@ -238,7 +238,7 @@ namespace
         ~ParallelLoopBodyWrapper()
         {
         }
-        void operator()(const cv::Range& sr) const
+        void operator()(const cv::Range& sr) const CV_OVERRIDE
         {
 #ifdef OPENCV_TRACE
             // TODO CV_TRACE_NS::details::setCurrentRegion(rootRegion);

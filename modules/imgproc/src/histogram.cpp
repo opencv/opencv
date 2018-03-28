@@ -1243,7 +1243,7 @@ public:
         hist.setTo(0);
     }
 
-    virtual void operator() (const Range & range) const
+    virtual void operator() (const Range & range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION_IPP()
 
@@ -3700,7 +3700,7 @@ public:
         : src_(src), globalHistogram_(histogram), histogramLock_(histogramLock)
     { }
 
-    void operator()( const cv::Range& rowRange ) const
+    void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
     {
         int localHistogram[HIST_SZ] = {0, };
 
@@ -3758,7 +3758,7 @@ public:
           lut_(lut)
     { }
 
-    void operator()( const cv::Range& rowRange ) const
+    void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
     {
         const size_t sstep = src_.step;
         const size_t dstep = dst_.step;

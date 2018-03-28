@@ -20,6 +20,7 @@ else()
                                        -Wundef -Wtautological-undefined-compare -Wignored-qualifiers -Wextra
                                        -Wunused-function -Wunused-const-variable -Wshorten-64-to-32 -Wno-invalid-offsetof
                                        -Wenum-compare-switch
+                                       -Wsuggest-override -Winconsistent-missing-override
   )
 endif()
 if(CV_ICC)

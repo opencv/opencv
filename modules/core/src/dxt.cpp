@@ -1562,7 +1562,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         IppStatus status;
         Ipp8u* pBuffer = 0;
@@ -1643,7 +1643,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         IppStatus status;
         Ipp8u* pBuffer = 0;
@@ -2607,7 +2607,7 @@ inline DftDims determineDims(int rows, int cols, bool isRowWise, bool isContinuo
     return InvalidDim;
 }
 
-class OcvDftImpl : public hal::DFT2D
+class OcvDftImpl CV_FINAL : public hal::DFT2D
 {
 protected:
     Ptr<hal::DFT1D> contextA;
@@ -2779,7 +2779,7 @@ public:
         }
     }
 
-    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step)
+    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step) CV_OVERRIDE
     {
 #if defined USE_IPP_DFT
         if (useIpp)
@@ -3039,7 +3039,7 @@ protected:
     }
 };
 
-class OcvDftBasicImpl : public hal::DFT1D
+class OcvDftBasicImpl CV_FINAL : public hal::DFT1D
 {
 public:
     OcvDftOptions opt;
@@ -3194,7 +3194,7 @@ public:
         }
     }
 
-    void apply(const uchar *src, uchar *dst)
+    void apply(const uchar *src, uchar *dst) CV_OVERRIDE
     {
         opt.dft_func(opt, src, dst);
     }
@@ -3214,7 +3214,7 @@ struct ReplacementDFT1D : public hal::DFT1D
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }
-    void apply(const uchar *src, uchar *dst)
+    void apply(const uchar *src, uchar *dst) CV_OVERRIDE
     {
         if (isInitialized)
         {
@@ -3244,7 +3244,7 @@ struct ReplacementDFT2D : public hal::DFT2D
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }
-    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step)
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step) CV_OVERRIDE
     {
         if (isInitialized)
         {
@@ -3809,7 +3809,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         if(*ok == false)
             return;
@@ -4048,7 +4048,7 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
 
 namespace cv {
 
-class OcvDctImpl : public hal::DCT2D
+class OcvDctImpl CV_FINAL : public hal::DCT2D
 {
 public:
     OcvDftOptions opt;
@@ -4100,7 +4100,7 @@ public:
             end_stage = 1;
         }
     }
-    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step)
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step) CV_OVERRIDE
     {
         CV_IPP_RUN(IPP_VERSION_X100 >= 700 && depth == CV_32F, ippi_DCT_32f(src, src_step, dst, dst_step, width, height, isInverse, isRowTransform))
 
@@ -4196,7 +4196,7 @@ struct ReplacementDCT2D : public hal::DCT2D
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }
-    void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step)
+    void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) CV_OVERRIDE
     {
         if (isInitialized)
         {

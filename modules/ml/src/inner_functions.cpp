@@ -89,7 +89,7 @@ public:
         errStrip(e)
     {
     }
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         int idxErr = range.start;
         CV_TRACE_FUNCTION_SKIP_NESTED();

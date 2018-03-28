@@ -53,18 +53,18 @@
 namespace cv
 {
 
-class JpegDecoder : public BaseImageDecoder
+class JpegDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
 
     JpegDecoder();
     virtual ~JpegDecoder();
 
-    bool  readData( Mat& img );
-    bool  readHeader();
+    bool  readData( Mat& img ) CV_OVERRIDE;
+    bool  readHeader() CV_OVERRIDE;
     void  close();
 
-    ImageDecoder newDecoder() const;
+    ImageDecoder newDecoder() const CV_OVERRIDE;
 
 protected:
 
@@ -77,14 +77,14 @@ private:
 };
 
 
-class JpegEncoder : public BaseImageEncoder
+class JpegEncoder CV_FINAL : public BaseImageEncoder
 {
 public:
     JpegEncoder();
     virtual ~JpegEncoder();
 
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
 };
 
 }
