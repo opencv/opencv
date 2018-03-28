@@ -1915,9 +1915,8 @@ Net::Net() : impl(new Net::Impl)
 
 Net Net::readFromModelOptimizer(const String& xml, const String& bin)
 {
-    Net cvNet;
 #ifndef HAVE_INF_ENGINE
-    CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
+    CV_ErrorNoReturn(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
 #else
     InferenceEngine::CNNNetReader reader;
     reader.ReadNetwork(xml);
@@ -1931,6 +1930,7 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
         inputsNames.push_back(it.first);
     }
 
+    Net cvNet;
     cvNet.setInputsNames(inputsNames);
 
     Ptr<InfEngineBackendNode> backendNode(new InfEngineBackendNode(0));
@@ -1949,8 +1949,8 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     cvNet.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
 
     cvNet.impl->skipInfEngineInit = true;
-#endif  // HAVE_INF_ENGINE
     return cvNet;
+#endif  // HAVE_INF_ENGINE
 }
 
 Net::~Net()
@@ -2894,9 +2894,8 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
             std::swap(model, config);
         return readNetFromModelOptimizer(config, model);
     }
-    CV_Error(Error::StsError, "Cannot determine an origin framework of files: " +
-                              model + (config.empty() ? "" : ", " + config));
-    return Net();
+    CV_ErrorNoReturn(Error::StsError, "Cannot determine an origin framework of files: " +
+                                      model + (config.empty() ? "" : ", " + config));
 }
 
 Net readNetFromModelOptimizer(const String &xml, const String &bin)
