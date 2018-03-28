@@ -219,8 +219,7 @@ enum LineTypes {
     LINE_AA = 16 //!< antialiased line
 };
 
-//! Only a subset of Hershey fonts
-//! <http://sources.isc.org/utils/misc/hershey-font.txt> are supported
+//! Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
 enum HersheyFonts {
     FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
     FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
