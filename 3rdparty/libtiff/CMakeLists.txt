@@ -244,7 +244,7 @@ mark_as_advanced(HAVE_IEEEFP)
 
 # Large file support
 if(UNIX OR MINGW)
-  if(ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 21) AND (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES Clang))
+  if(ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 21) AND CV_GCC)
     # Android NDK build problem: 'mmap' issue with GCC and API<21
   else()
     # This might not catch every possibility catered for by
