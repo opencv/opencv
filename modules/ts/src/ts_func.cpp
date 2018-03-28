@@ -3,10 +3,6 @@
 #include <limits.h>
 #include "opencv2/imgproc/types_c.h"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "tegra.hpp"
-#endif
-
 using namespace cv;
 
 namespace cvtest
@@ -3100,12 +3096,6 @@ void printVersionInfo(bool useStdOut)
 
     ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
     if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    const char * tegra_optimization = tegra::useTegra() && tegra::isDeviceSupported() ? "enabled" : "disabled";
-    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
-    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
-#endif
 
 #ifdef HAVE_IPP
     const char * ipp_optimization = cv::ipp::useIPP()? "enabled" : "disabled";
