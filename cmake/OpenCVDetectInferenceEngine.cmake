@@ -46,9 +46,13 @@ endif()
 set(INF_ENGINE_LIBRARIES "")
 
 set(ie_lib_list inference_engine)
-if(UNIX)
-    list(APPEND ie_lib_list mklml_intel iomp5)
-endif()
+
+link_directories(
+  ${INTEL_CVSDK_DIR}/external/mklml_lnx/lib
+  ${INTEL_CVSDK_DIR}/inference_engine/external/mklml_lnx/lib
+  ${INTEL_CVSDK_DIR}/external/cldnn/lib
+  ${INTEL_CVSDK_DIR}/inference_engine/external/cldnn/lib
+)
 
 foreach(lib ${ie_lib_list})
     find_library(${lib}
@@ -56,9 +60,6 @@ foreach(lib ${ie_lib_list})
         # For inference_engine
         HINTS ${IE_PLUGINS_PATH}
         HINTS "$ENV{IE_PLUGINS_PATH}"
-        # For mklml_intel, iomp5
-        HINTS ${INTEL_CVSDK_DIR}/external/mklml_lnx/lib
-        HINTS ${INTEL_CVSDK_DIR}/inference_engine/external/mklml_lnx/lib
     )
     if(NOT ${lib})
         ie_fail()
@@ -67,7 +68,3 @@ foreach(lib ${ie_lib_list})
 endforeach()
 
 set(HAVE_INF_ENGINE TRUE)
-
-include_directories(${INF_ENGINE_INCLUDE_DIRS})
-list(APPEND OPENCV_LINKER_LIBS ${INF_ENGINE_LIBRARIES})
-add_definitions(-DHAVE_INF_ENGINE)
