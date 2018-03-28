@@ -46,9 +46,6 @@
 /* Cocoa API */
 #cmakedefine HAVE_COCOA
 
-/* C= */
-#cmakedefine HAVE_CSTRIPES
-
 /* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
 #cmakedefine HAVE_CUBLAS
 
