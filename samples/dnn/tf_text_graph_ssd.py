@@ -196,8 +196,8 @@ for i in range(args.num_layers):
     text_format.Merge('b: false', priorBox.attr["clip"])
 
     if i == 0:
-        widths = [args.min_scale * 0.5, args.min_scale * sqrt(2.0), args.min_scale * sqrt(0.5)]
-        heights = [args.min_scale * 0.5, args.min_scale / sqrt(2.0), args.min_scale / sqrt(0.5)]
+        widths = [0.1, args.min_scale * sqrt(2.0), args.min_scale * sqrt(0.5)]
+        heights = [0.1, args.min_scale / sqrt(2.0), args.min_scale / sqrt(0.5)]
     else:
         widths = [scales[i] * sqrt(ar) for ar in args.aspect_ratios]
         heights = [scales[i] / sqrt(ar) for ar in args.aspect_ratios]
