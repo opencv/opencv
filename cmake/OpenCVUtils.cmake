@@ -2,6 +2,7 @@ include(CMakeParseArguments)
 
 # Debugging function
 function(ocv_cmake_dump_vars)
+  set(OPENCV_SUPPRESS_DEPRECATIONS 1)  # suppress deprecation warnings from variable_watch() guards
   get_cmake_property(__variableNames VARIABLES)
   cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
@@ -203,7 +204,7 @@ function(ocv_include_directories)
     ocv_is_opencv_directory(__is_opencv_dir "${dir}")
     if(__is_opencv_dir)
       list(APPEND __add_before "${dir}")
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+    elseif(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
            dir MATCHES "/usr/include$")
       # workaround for GCC 6.x bug
     else()
@@ -234,7 +235,7 @@ function(ocv_target_include_directories target)
   #ocv_debug_message("ocv_target_include_directories(${target} ${ARGN})")
   _ocv_fix_target(target)
   set(__params "")
-  if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+  if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
       ";${ARGN};" MATCHES "/usr/include;")
     return() # workaround for GCC 6.x bug
   endif()
@@ -444,7 +445,7 @@ macro(ocv_warnings_disable)
           set(${var} "${${var}} ${warning}")
         endforeach()
       endforeach()
-    elseif((CMAKE_COMPILER_IS_GNUCXX OR (UNIX AND CV_ICC)) AND _gxx_warnings AND _flag_vars)
+    elseif(((CV_GCC OR CV_CLANG) OR (UNIX AND CV_ICC)) AND _gxx_warnings AND _flag_vars)
       foreach(var ${_flag_vars})
         foreach(warning ${_gxx_warnings})
           if(NOT warning MATCHES "^-Wno-")
