@@ -1,0 +1,147 @@
+<net name="test_Convolution" version="2" batch="2">
+    <layers>
+        <layer name="input" type="Input" precision="FP32" id="0">
+            <output>
+                <port id="0">
+                    <dim>2</dim>
+                    <dim>6</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+            </output>
+        </layer>
+        <layer name="output_split" type="Split" precision="FP32" id="2">
+            <input>
+                <port id="3">
+                    <dim>2</dim>
+                    <dim>6</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+            </input>
+            <output>
+                <port id="5">
+                    <dim>2</dim>
+                    <dim>2</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+                <port id="9">
+                    <dim>2</dim>
+                    <dim>2</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+                <port id="13">
+                    <dim>2</dim>
+                    <dim>2</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+            </output>
+        </layer>
+        <layer name="output_2" type="Convolution" precision="FP32" id="6">
+            <convolution_data stride-x="3" stride-y="2" pad-x="1" pad-y="0" kernel-x="5" kernel-y="4" output="4" group="1"/>
+            <input>
+                <port id="14">
+                    <dim>2</dim>
+                    <dim>2</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+            </input>
+            <output>
+                <port id="15">
+                    <dim>2</dim>
+                    <dim>4</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+            </output>
+            <weights offset="0" size="640"/>
+            <biases offset="640" size="16"/>
+        </layer>
+        <layer name="output_1" type="Convolution" precision="FP32" id="5">
+            <convolution_data stride-x="3" stride-y="2" pad-x="1" pad-y="0" kernel-x="5" kernel-y="4" output="4" group="1"/>
+            <input>
+                <port id="10">
+                    <dim>2</dim>
+                    <dim>2</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+            </input>
+            <output>
+                <port id="11">
+                    <dim>2</dim>
+                    <dim>4</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+            </output>
+            <weights offset="656" size="640"/>
+            <biases offset="1296" size="16"/>
+        </layer>
+        <layer name="output_0" type="Convolution" precision="FP32" id="4">
+            <convolution_data stride-x="3" stride-y="2" pad-x="1" pad-y="0" kernel-x="5" kernel-y="4" output="4" group="1"/>
+            <input>
+                <port id="6">
+                    <dim>2</dim>
+                    <dim>2</dim>
+                    <dim>75</dim>
+                    <dim>113</dim>
+                </port>
+            </input>
+            <output>
+                <port id="7">
+                    <dim>2</dim>
+                    <dim>4</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+            </output>
+            <weights offset="1312" size="640"/>
+            <biases offset="1952" size="16"/>
+        </layer>
+        <layer name="output_merge" type="Concat" precision="FP32" id="3">
+            <concat_data axis="1"/>
+            <input>
+                <port id="8">
+                    <dim>2</dim>
+                    <dim>4</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+                <port id="12">
+                    <dim>2</dim>
+                    <dim>4</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+                <port id="16">
+                    <dim>2</dim>
+                    <dim>4</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+            </input>
+            <output>
+                <port id="4">
+                    <dim>2</dim>
+                    <dim>12</dim>
+                    <dim>36</dim>
+                    <dim>37</dim>
+                </port>
+            </output>
+        </layer>
+    </layers>
+    <edges>
+        <edge from-layer="0" from-port="0" to-layer="2" to-port="3"/>
+        <edge from-layer="2" from-port="5" to-layer="4" to-port="6"/>
+        <edge from-layer="4" from-port="7" to-layer="3" to-port="8"/>
+        <edge from-layer="2" from-port="9" to-layer="5" to-port="10"/>
+        <edge from-layer="5" from-port="11" to-layer="3" to-port="12"/>
+        <edge from-layer="2" from-port="13" to-layer="6" to-port="14"/>
+        <edge from-layer="6" from-port="15" to-layer="3" to-port="16"/>
+    </edges>
+</net>
