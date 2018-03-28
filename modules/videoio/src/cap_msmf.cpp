@@ -3747,6 +3747,8 @@ double CvCaptureFile_MSMF::getProperty(int property_id) const
             return captureFormat->height;
         case CV_CAP_PROP_FRAME_COUNT:
             {
+                if(captureFormat->MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
+                    return 0;
                 MFTIME duration;
                 getSourceDuration(this->videoFileSource.Get(), &duration);
                 double fps = ((double)captureFormat->MF_MT_FRAME_RATE_NUMERATOR) /
@@ -3756,6 +3758,8 @@ double CvCaptureFile_MSMF::getProperty(int property_id) const
         case CV_CAP_PROP_FOURCC:
             return captureFormat->MF_MT_SUBTYPE.Data1;
         case CV_CAP_PROP_FPS:
+            if (captureFormat->MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
+                return 0;
             return ((double)captureFormat->MF_MT_FRAME_RATE_NUMERATOR) /
                 ((double)captureFormat->MF_MT_FRAME_RATE_DENOMINATOR);
         }
