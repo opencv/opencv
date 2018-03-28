@@ -157,4 +157,36 @@ TEST(Core_Copy, repeat_regression_8972)
                      });
 }
 
+
+class ThrowErrorParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    ThrowErrorParallelLoopBody(cv::Mat& dst, int i) : dst_(dst), i_(i) {}
+    ~ThrowErrorParallelLoopBody() {}
+    void operator()(const cv::Range& r) const
+    {
+        for (int i = r.start; i < r.end; i++)
+        {
+            CV_Assert(i != i_);
+            dst_.row(i).setTo(1);
+        }
+    }
+protected:
+    Mat dst_;
+    int i_;
+};
+
+TEST(Core_Parallel, propagate_exceptions)
+{
+    Mat dst1(1000, 100, CV_8SC1, Scalar::all(0));
+    ASSERT_NO_THROW({
+        parallel_for_(cv::Range(0, dst1.rows), ThrowErrorParallelLoopBody(dst1, -1));
+    });
+
+    Mat dst2(1000, 100, CV_8SC1, Scalar::all(0));
+    ASSERT_THROW({
+        parallel_for_(cv::Range(0, dst2.rows), ThrowErrorParallelLoopBody(dst2, dst2.rows / 2));
+    }, cv::Exception);
+}
+
 }} // namespace
