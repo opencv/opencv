@@ -145,6 +145,7 @@ TEST(Imgcodecs_Image, write_umat)
     ASSERT_FALSE(image2.empty());
 
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), image1, image2);
+    EXPECT_EQ(0, remove(dst_name.c_str()));
 }
 
 }} // namespace
