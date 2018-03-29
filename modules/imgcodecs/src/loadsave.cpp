@@ -717,11 +717,14 @@ bool imwrite( const String& filename, InputArray _img,
     CV_TRACE_FUNCTION();
     std::vector<Mat> img_vec;
     //Did we get a Mat or a vector of Mats?
-    if (_img.isMat())
+    if (_img.isMat() || _img.isUMat())
         img_vec.push_back(_img.getMat());
-    else if (_img.isMatVector())
+    else if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
+    else
+        CV_ErrorNoReturn(Error::StsBadArg, "Unknown/unsupported input encountered");
 
+    CV_Assert(!img_vec.empty());
     return imwrite_(filename, img_vec, params, false);
 }
 
