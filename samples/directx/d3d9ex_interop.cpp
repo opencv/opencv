@@ -108,7 +108,7 @@ public:
         if (!m_cap.read(m_frame_bgr))
             return -1;
 
-        cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_BGR2BGRA);
+        cv::cvtColor(m_frame_bgr, m_frame_rgba, COLOR_BGR2BGRA);
 
         D3DLOCKED_RECT memDesc = { 0, NULL };
         RECT rc = { 0, 0, m_width, m_height };

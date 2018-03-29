@@ -47,7 +47,7 @@ void FaceDetection::MainPage::InitBtn_Click(Platform::Object^ sender, Windows::U
     // load Image and Init recognizer
     cv::Mat image = cv::imread("Assets/group1.jpg");
     groupFaces = cv::Mat(image.rows, image.cols, CV_8UC4);
-    cv::cvtColor(image, groupFaces, CV_BGR2BGRA);
+    cv::cvtColor(image, groupFaces, COLOR_BGR2BGRA);
     cv::winrt_initContainer(cvContainer);
     cv::imshow(window_name, groupFaces);
 
