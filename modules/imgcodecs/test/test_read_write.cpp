@@ -127,4 +127,24 @@ TEST(Imgcodecs_Image, regression_9376)
     EXPECT_EQ(32, m.rows);
 }
 
+//==================================================================================================
+
+TEST(Imgcodecs_Image, write_umat)
+{
+    const string src_name = TS::ptr()->get_data_path() + "../python/images/baboon.bmp";
+    const string dst_name = cv::tempfile(".bmp");
+
+    Mat image1 = imread(src_name);
+    ASSERT_FALSE(image1.empty());
+
+    UMat image1_umat = image1.getUMat(ACCESS_RW);
+
+    imwrite(dst_name, image1_umat);
+
+    Mat image2 = imread(dst_name);
+    ASSERT_FALSE(image2.empty());
+
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), image1, image2);
+}
+
 }} // namespace
