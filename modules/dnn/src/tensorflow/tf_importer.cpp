@@ -1539,8 +1539,44 @@ void TFImporter::populateNet(Net dstNet)
         }
         else
         {
-            printLayerAttr(layer);
-            CV_Error_(Error::StsError, ("Unknown layer type %s in op %s", type.c_str(), name.c_str()));
+            // Importer does not know how to map this TensorFlow's operation onto OpenCV's layer.
+            // However we create a layer with the same type and rely that user defined a custom layer.
+
+            // All the attributes are added to LayerParams.
+            google::protobuf::Map<std::string, tensorflow::AttrValue> attr = layer.attr();
+            for (google::protobuf::Map<std::string, tensorflow::AttrValue>::const_iterator ai = attr.begin();
+                 ai != attr.end(); ++ai)
+            {
+                if (ai->second.value_case() == tensorflow::AttrValue::kS)  // string
+                    layerParams.set(ai->first, ai->second.s());
+                if (ai->second.value_case() == tensorflow::AttrValue::kI)  // int64
+                    layerParams.set(ai->first, ai->second.i());
+                if (ai->second.value_case() == tensorflow::AttrValue::kF)  // float
+                    layerParams.set(ai->first, ai->second.f());
+                if (ai->second.value_case() == tensorflow::AttrValue::kB)  // bool
+                    layerParams.set(ai->first, ai->second.b());
+            }
+
+            // All the Const input nodes are added to layer's blobs.
+            std::vector<std::string> inputsNames;
+            for (int i = 0; i < layer.input_size(); ++i)
+            {
+                // Check if input is a Const node.
+                if (value_id.find(layer.input(i)) != value_id.end())
+                {
+                    Mat blob = getTensorContent(getConstBlob(layer, value_id, i));
+                    layerParams.blobs.push_back(blob);
+                }
+                else
+                    inputsNames.push_back(layer.input(i));
+            }
+            int id = dstNet.addLayer(name, type, layerParams);
+            layer_id[name] = id;
+
+            for (int i = 0; i < inputsNames.size(); ++i)
+            {
+                connect(layer_id, dstNet, parsePin(inputsNames[i]), id, i);
+            }
         }
     }
 }

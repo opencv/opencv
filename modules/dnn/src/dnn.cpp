@@ -2764,7 +2764,7 @@ static Mutex& getLayerFactoryMutex()
     return *instance;
 }
 
-typedef std::map<String, LayerFactory::Constuctor> LayerFactory_Impl;
+typedef std::map<String, LayerFactory::Constructor> LayerFactory_Impl;
 
 static LayerFactory_Impl& getLayerFactoryImpl_()
 {
@@ -2787,7 +2787,7 @@ static LayerFactory_Impl& getLayerFactoryImpl()
     return *instance;
 }
 
-void LayerFactory::registerLayer(const String &type, Constuctor constructor)
+void LayerFactory::registerLayer(const String &type, Constructor constructor)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());

@@ -12,6 +12,8 @@ Test for Tensorflow models loading
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 
+#include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+
 namespace opencv_test
 {
 
@@ -362,6 +364,97 @@ TEST(Test_TensorFlow, memory_read)
     runTensorFlowNet("batch_norm", DNN_TARGET_CPU, false, l1, lInf, true);
     runTensorFlowNet("fused_batch_norm", DNN_TARGET_CPU, false, l1, lInf, true);
     runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true, l1, lInf, true);
+}
+
+// Test a custom layer.
+class ResizeBilinearLayer CV_FINAL : public Layer
+{
+public:
+    ResizeBilinearLayer(const LayerParams &params) : Layer(params)
+    {
+        CV_Assert(!params.get<bool>("align_corners", false));
+        CV_Assert(blobs.size() == 1, blobs[0].type() == CV_32SC1);
+        outHeight = blobs[0].at<int>(0, 0);
+        outWidth = blobs[0].at<int>(0, 1);
+    }
+
+    static Ptr<Layer> create(LayerParams& params)
+    {
+        return Ptr<Layer>(new ResizeBilinearLayer(params));
+    }
+
+    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<std::vector<int> > &outputs,
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
+    {
+        std::vector<int> outShape(4);
+        outShape[0] = inputs[0][0];  // batch size
+        outShape[1] = inputs[0][1];  // number of channels
+        outShape[2] = outHeight;
+        outShape[3] = outWidth;
+        outputs.assign(1, outShape);
+        return false;
+    }
+
+    // This implementation is based on a reference implementation from
+    // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/lite/kernels/internal/reference/reference_ops.h
+    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    {
+        Mat& inp = *inputs[0];
+        Mat& out = outputs[0];
+        const float* inpData = (float*)inp.data;
+        float* outData = (float*)out.data;
+
+        const int batchSize = inp.size[0];
+        const int numChannels = inp.size[1];
+        const int inpHeight = inp.size[2];
+        const int inpWidth = inp.size[3];
+
+        float heightScale = static_cast<float>(inpHeight) / outHeight;
+        float widthScale = static_cast<float>(inpWidth) / outWidth;
+        for (int b = 0; b < batchSize; ++b)
+        {
+            for (int y = 0; y < outHeight; ++y)
+            {
+                float input_y = y * heightScale;
+                int y0 = static_cast<int>(std::floor(input_y));
+                int y1 = std::min(y0 + 1, inpHeight - 1);
+                for (int x = 0; x < outWidth; ++x)
+                {
+                    float input_x = x * widthScale;
+                    int x0 = static_cast<int>(std::floor(input_x));
+                    int x1 = std::min(x0 + 1, inpWidth - 1);
+                    for (int c = 0; c < numChannels; ++c)
+                    {
+                        float interpolation =
+                            inpData[offset(inp.size, c, x0, y0, b)] * (1 - (input_y - y0)) * (1 - (input_x - x0)) +
+                            inpData[offset(inp.size, c, x0, y1, b)] * (input_y - y0) * (1 - (input_x - x0)) +
+                            inpData[offset(inp.size, c, x1, y0, b)] * (1 - (input_y - y0)) * (input_x - x0) +
+                            inpData[offset(inp.size, c, x1, y1, b)] * (input_y - y0) * (input_x - x0);
+                        outData[offset(out.size, c, x, y, b)] = interpolation;
+                    }
+                }
+            }
+        }
+    }
+
+    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
+
+private:
+    static inline int offset(const MatSize& size, int c, int x, int y, int b)
+    {
+        return x + size[3] * (y + size[2] * (c + size[1] * b));
+    }
+
+    int outWidth, outHeight;
+};
+
+TEST(Test_TensorFlow, resize_bilinear)
+{
+    CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
+    runTensorFlowNet("resize_bilinear");
+    LayerFactory::unregisterLayer("ResizeBilinear");
 }
 
 }
