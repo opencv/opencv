@@ -135,7 +135,7 @@ public:
         if (!m_cap.read(m_frame_bgr))
             return -1;
 
-        cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_BGR2RGBA);
+        cv::cvtColor(m_frame_bgr, m_frame_rgba, COLOR_BGR2RGBA);
 
         UINT subResource = ::D3D10CalcSubresource(0, 0, 1);
 

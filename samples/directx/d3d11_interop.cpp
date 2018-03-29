@@ -202,7 +202,7 @@ public:
 
         if (use_nv12)
         {
-            cv::cvtColor(m_frame_bgr, m_frame_i420, CV_BGR2YUV_I420);
+            cv::cvtColor(m_frame_bgr, m_frame_i420, COLOR_BGR2YUV_I420);
 
             convert_I420_to_NV12(m_frame_i420, m_frame_nv12, m_width, m_height);
 
@@ -210,7 +210,7 @@ public:
         }
         else
         {
-            cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_BGR2RGBA);
+            cv::cvtColor(m_frame_bgr, m_frame_rgba, COLOR_BGR2RGBA);
 
             // process video frame on CPU
             UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
@@ -336,7 +336,7 @@ public:
                         }
 
                         cv::Mat frame_nv12(m_height + (m_height / 2), m_width, CV_8UC1, mappedTex.pData, mappedTex.RowPitch);
-                        cv::cvtColor(frame_nv12, m_frame_rgba, CV_YUV2RGBA_NV12);
+                        cv::cvtColor(frame_nv12, m_frame_rgba, COLOR_YUV2RGBA_NV12);
 
                         m_pD3D11Ctx->Unmap(m_pSurfaceNV12_cpu_copy, subResource);
                     }
