@@ -579,9 +579,6 @@ namespace cv{
             CV_Assert(img.cols == imgLabels.cols);
             CV_Assert(connectivity == 8 || connectivity == 4);
 
-            const int nThreads = cv::getNumberOfCPUs();
-            cv::setNumThreads(nThreads);
-
             const int h = img.rows;
             const int w = img.cols;
 
@@ -606,12 +603,13 @@ namespace cv{
             P[0] = 0;
 
             cv::Range range(0, h);
+            const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
+
             LabelT nLabels = 1;
 
             if (connectivity == 8){
-                //First scan, each thread works with chunk of img.rows/nThreads rows
-                //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-                cv::parallel_for_(range, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels), nThreads);
+                //First scan
+                cv::parallel_for_(range, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
 
                 //merge labels of different chunks
                 mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels);
@@ -621,9 +619,8 @@ namespace cv{
                 }
             }
             else{
-                //First scan, each thread works with chunk of img.rows/nThreads rows
-                //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-                cv::parallel_for_(range, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels), nThreads);
+                //First scan
+                cv::parallel_for_(range, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
 
                 //merge labels of different chunks
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels);
@@ -638,7 +635,7 @@ namespace cv{
 
             sop.init(nLabels);
             //Second scan
-            cv::parallel_for_(range, SecondScan(imgLabels, P, sop, sopArray, nLabels), nThreads);
+            cv::parallel_for_(range, SecondScan(imgLabels, P, sop, sopArray, nLabels), nParallelStripes);
             StatsOp::mergeStats(imgLabels, sopArray, sop, nLabels);
             sop.finish();
 
@@ -2530,9 +2527,6 @@ namespace cv{
             CV_Assert(img.cols == imgLabels.cols);
             CV_Assert(connectivity == 8);
 
-            const int nThreads = cv::getNumberOfCPUs();
-            cv::setNumThreads(nThreads);
-
             const int h = img.rows;
             const int w = img.cols;
 
@@ -2556,10 +2550,11 @@ namespace cv{
             P[0] = 0;
 
             cv::Range range(0, h);
+            const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
             //First scan, each thread works with chunk of img.rows/nThreads rows
             //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-            cv::parallel_for_(range, FirstScan(img, imgLabels, P, chunksSizeAndLabels), nThreads);
+            cv::parallel_for_(range, FirstScan(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
 
             //merge labels of different chunks
             mergeLabels(img, imgLabels, P, chunksSizeAndLabels);
@@ -2574,7 +2569,7 @@ namespace cv{
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range, SecondScan(img, imgLabels, P, sop, sopArray, nLabels), nThreads);
+            cv::parallel_for_(range, SecondScan(img, imgLabels, P, sop, sopArray, nLabels), nParallelStripes);
 
             StatsOp::mergeStats(imgLabels, sopArray, sop, nLabels);
             sop.finish();
@@ -3936,12 +3931,12 @@ namespace cv{
         int lDepth = L.depth();
         int iDepth = I.depth();
         const char *currentParallelFramework = cv::currentParallelFramework();
-        const int numberOfCPUs = cv::getNumberOfCPUs();
+        const int nThreads = cv::getNumThreads();
 
         CV_Assert(iDepth == CV_8U || iDepth == CV_8S);
 
-        //Run parallel labeling only if the rows of the image are at least twice the number returned by getNumberOfCPUs
-        const bool is_parallel = currentParallelFramework != NULL && numberOfCPUs > 1 && L.rows / numberOfCPUs >= 2;
+        //Run parallel labeling only if the rows of the image are at least twice the number of available threads
+        const bool is_parallel = currentParallelFramework != NULL && nThreads > 1 && L.rows / nThreads >= 2;
 
         if (ccltype == CCL_WU || connectivity == 4){
             // Wu algorithm is used
