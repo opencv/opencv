@@ -2039,4 +2039,49 @@ TEST(Core_minMaxIdx, regression_9207_2)
     EXPECT_EQ(14, maxIdx[1]);
 }
 
+TEST(Core_Set, regression_11044)
+{
+    Mat testFloat(Size(3, 3), CV_32FC1);
+    Mat testDouble(Size(3, 3), CV_64FC1);
+
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0,0));
+    testFloat.setTo(std::numeric_limits<float>::infinity());
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0, 0));
+    testFloat.setTo(std::numeric_limits<double>::infinity());
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<float>::infinity());
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<double>::infinity());
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+
+    Mat testMask(Size(3, 3), CV_8UC1, Scalar(1));
+
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0, 0));
+    testFloat.setTo(std::numeric_limits<float>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0, 0));
+    testFloat.setTo(std::numeric_limits<double>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+
+
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<float>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<double>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+}
+
 }} // namespace
