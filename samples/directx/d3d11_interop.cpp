@@ -202,7 +202,7 @@ public:
 
         if (use_nv12)
         {
-            cv::cvtColor(m_frame_bgr, m_frame_i420, COLOR_BGR2YUV_I420);
+            cv::cvtColor(m_frame_bgr, m_frame_i420, cv::COLOR_BGR2YUV_I420);
 
             convert_I420_to_NV12(m_frame_i420, m_frame_nv12, m_width, m_height);
 
@@ -210,7 +210,7 @@ public:
         }
         else
         {
-            cv::cvtColor(m_frame_bgr, m_frame_rgba, COLOR_BGR2RGBA);
+            cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2RGBA);
 
             // process video frame on CPU
             UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
