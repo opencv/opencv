@@ -419,8 +419,6 @@ public:
           stepY = _stepY;
         }
 
-        int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
-
         float* outputPtr = outputs[0].ptr<float>();
         float _boxWidth, _boxHeight;
         for (size_t h = 0; h < _layerHeight; ++h)
@@ -444,6 +442,8 @@ public:
         // clip the prior's coordidate such that it is within [0, 1]
         if (_clip)
         {
+            int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
+            outputPtr = outputs[0].ptr<float>();
             for (size_t d = 0; d < _outChannelSize; ++d)
             {
                 outputPtr[d] = std::min<float>(std::max<float>(outputPtr[d], 0.), 1.);

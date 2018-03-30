@@ -842,7 +842,7 @@ TEST(Layer_PriorBox, squares)
     LayerParams lp;
     lp.name = "testPriorBox";
     lp.type = "PriorBox";
-    lp.set("min_size", 32);
+    lp.set("min_size", 2);
     lp.set("flip", true);
     lp.set("clip", true);
     float variance[] = {0.1f, 0.1f, 0.2f, 0.2f};
@@ -858,8 +858,8 @@ TEST(Layer_PriorBox, squares)
     net.setInput(blobFromImage(inp));
     Mat out = net.forward();
 
-    Mat target = (Mat_<float>(4, 4) << -7.75f, -15.5f, 8.25f, 16.5f,
-                                       -7.25f, -15.5f, 8.75f, 16.5f,
+    Mat target = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
+                                       0.25, 0.0, 1.0, 1.0,
                                        0.1f, 0.1f, 0.2f, 0.2f,
                                        0.1f, 0.1f, 0.2f, 0.2f);
     normAssert(out.reshape(1, 4), target);

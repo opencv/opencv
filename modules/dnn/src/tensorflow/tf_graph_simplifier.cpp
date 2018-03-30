@@ -219,7 +219,7 @@ public:
         Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
         CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
 
-        fusedNode->mutable_input()->ReleaseLast();
+        fusedNode->mutable_input()->RemoveLast();
         fusedNode->clear_attr();
         tensorflow::AttrValue epsilon;
         epsilon.set_f(epsMat.at<float>(0));
@@ -254,7 +254,7 @@ public:
         Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
         CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
 
-        fusedNode->mutable_input()->ReleaseLast();
+        fusedNode->mutable_input()->RemoveLast();
         fusedNode->clear_attr();
         tensorflow::AttrValue epsilon;
         epsilon.set_f(epsMat.at<float>(0));
