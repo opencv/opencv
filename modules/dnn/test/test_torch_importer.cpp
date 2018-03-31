@@ -103,7 +103,7 @@ typedef testing::TestWithParam<DNNTarget> Test_Torch_layers;
 
 TEST_P(Test_Torch_layers, run_convolution)
 {
-    runTorchNet("net_conv", GetParam());
+    runTorchNet("net_conv", GetParam(), "", false, true);
 }
 
 TEST_P(Test_Torch_layers, run_pool_max)
