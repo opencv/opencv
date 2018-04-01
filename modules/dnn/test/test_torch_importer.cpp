@@ -320,4 +320,9 @@ TEST(Torch_Importer, DISABLED_run_paralel)
     runTorchNet("net_parallel", DNN_TARGET_OPENCL, "l5_torchMerge");
 }
 
+TEST(Torch_Importer, net_residual)
+{
+    runTorchNet("net_residual", DNN_TARGET_CPU, "", false, true);
+}
+
 }
