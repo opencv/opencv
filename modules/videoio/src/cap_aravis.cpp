@@ -261,13 +261,14 @@ bool CvCaptureCAM_Aravis::open( int index )
         arv_camera_get_height_bounds(camera, &heightMin, &heightMax);
         arv_camera_set_region(camera, 0, 0, widthMax, heightMax);
 
-        if( (fpsAvailable = arv_camera_is_frame_rate_available(camera)) )
-            arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax);
-        if( (gainAvailable = arv_camera_is_gain_available(camera)) )
-            arv_camera_get_gain_bounds (camera, &gainMin, &gainMax);
-        if( (exposureAvailable = arv_camera_is_exposure_time_available(camera)) )
-            arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax);
-
+        if( arv_camera_is_gv_device(camera) ) {
+            if( (fpsAvailable = arv_camera_is_frame_rate_available(camera)) )
+                arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax);
+            if( (gainAvailable = arv_camera_is_gain_available(camera)) )
+                arv_camera_get_gain_bounds (camera, &gainMin, &gainMax);
+            if( (exposureAvailable = arv_camera_is_exposure_time_available(camera)) )
+                arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax);
+        }
         // get initial values
         pixelFormat = arv_camera_get_pixel_format(camera);
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
