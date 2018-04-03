@@ -32,6 +32,8 @@
 # pragma comment(lib, "glu32.lib")
 #endif
 
+using namespace cv;
+
 /*
 // Press key   to
 //       1     processing on CPU
@@ -64,7 +66,7 @@ public:
 
     ~GLWinApp() {}
 
-    virtual void cleanup()
+    virtual void cleanup() CV_OVERRIDE
     {
         m_shutdown = true;
 #if defined(__linux__)
@@ -75,7 +77,7 @@ public:
     }
 
 #if defined(_WIN32)
-    virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+    virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) CV_OVERRIDE
     {
         switch (message)
         {
@@ -121,7 +123,7 @@ public:
 #endif
 
 #if defined(__linux__)
-    int handle_event(XEvent& e)
+    int handle_event(XEvent& e) CV_OVERRIDE
     {
         switch(e.type)
         {
@@ -167,7 +169,7 @@ public:
     }
 #endif
 
-    int init()
+    int init() CV_OVERRIDE
     {
 #if defined(_WIN32)
         m_hDC = GetDC(m_hWnd);
@@ -258,12 +260,12 @@ public:
 #endif
     }
 
-    void idle()
+    void idle() CV_OVERRIDE
     {
         render();
     }
 
-    int render()
+    int render() CV_OVERRIDE
     {
         try
         {
