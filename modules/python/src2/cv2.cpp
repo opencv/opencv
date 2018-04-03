@@ -1556,9 +1556,6 @@ static int OnError(int status, const char *func_name, const char *err_msg, const
     return 0; // The return value isn't used
 }
 
-// Keep track of the previous handler parameter, so we can decref it when no longer used
-static PyObject* last_on_error_param = NULL;
-
 static PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
 {
     const char *keywords[] = { "on_error", "param", NULL };
@@ -1576,6 +1573,8 @@ static PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
         param = Py_None;
     }
 
+    // Keep track of the previous handler parameter, so we can decref it when no longer used
+    static PyObject* last_on_error_param = NULL;
     if (last_on_error_param) {
         Py_DECREF(last_on_error_param);
         last_on_error_param = NULL;
