@@ -1540,10 +1540,10 @@ static int OnError(int status, const char *func_name, const char *err_msg, const
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
-    PyObject *o = (PyObject*)userdata;
-    PyObject *args = Py_BuildValue("isssiO", status, func_name, err_msg, file_name, line, PyTuple_GetItem(o, 1));
+    PyObject *on_error = (PyObject*)userdata;
+    PyObject *args = Py_BuildValue("isssi", status, func_name, err_msg, file_name, line);
 
-    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
+    PyObject *r = PyObject_Call(on_error, args, NULL);
     if (r == NULL) {
         PyErr_Print();
     } else {
@@ -1558,33 +1558,30 @@ static int OnError(int status, const char *func_name, const char *err_msg, const
 
 static PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
 {
-    const char *keywords[] = { "on_error", "param", NULL };
+    const char *keywords[] = { "on_error", NULL };
     PyObject *on_error;
-    PyObject *param = NULL;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|O", (char**)keywords, &on_error, &param))
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O", (char**)keywords, &on_error))
         return NULL;
 
     if ((on_error != Py_None) && !PyCallable_Check(on_error))  {
         PyErr_SetString(PyExc_TypeError, "on_error must be callable");
         return NULL;
     }
-    if (param == NULL) {
-        param = Py_None;
-    }
 
     // Keep track of the previous handler parameter, so we can decref it when no longer used
-    static PyObject* last_on_error_param = NULL;
-    if (last_on_error_param) {
-        Py_DECREF(last_on_error_param);
-        last_on_error_param = NULL;
+    static PyObject* last_on_error = NULL;
+    if (last_on_error) {
+        Py_DECREF(last_on_error);
+        last_on_error = NULL;
     }
 
     if (on_error == Py_None) {
         ERRWRAP2(redirectError(NULL));
     } else {
-        last_on_error_param = Py_BuildValue("OO", on_error, param);
-        ERRWRAP2(redirectError(OnError, last_on_error_param));
+        last_on_error = on_error;
+        Py_INCREF(last_on_error);
+        ERRWRAP2(redirectError(OnError, last_on_error));
     }
     Py_RETURN_NONE;
 }
