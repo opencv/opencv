@@ -1536,6 +1536,57 @@ PyObject* pyopencv_from(const Moments& m)
 
 #include "pyopencv_custom_headers.h"
 
+static int OnError(int status, const char *func_name, const char *err_msg, const char *file_name, int line, void *userdata)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject *on_error = (PyObject*)userdata;
+    PyObject *args = Py_BuildValue("isssi", status, func_name, err_msg, file_name, line);
+
+    PyObject *r = PyObject_Call(on_error, args, NULL);
+    if (r == NULL) {
+        PyErr_Print();
+    } else {
+        Py_DECREF(r);
+    }
+
+    Py_DECREF(args);
+    PyGILState_Release(gstate);
+
+    return 0; // The return value isn't used
+}
+
+static PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
+{
+    const char *keywords[] = { "on_error", NULL };
+    PyObject *on_error;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O", (char**)keywords, &on_error))
+        return NULL;
+
+    if ((on_error != Py_None) && !PyCallable_Check(on_error))  {
+        PyErr_SetString(PyExc_TypeError, "on_error must be callable");
+        return NULL;
+    }
+
+    // Keep track of the previous handler parameter, so we can decref it when no longer used
+    static PyObject* last_on_error = NULL;
+    if (last_on_error) {
+        Py_DECREF(last_on_error);
+        last_on_error = NULL;
+    }
+
+    if (on_error == Py_None) {
+        ERRWRAP2(redirectError(NULL));
+    } else {
+        last_on_error = on_error;
+        Py_INCREF(last_on_error);
+        ERRWRAP2(redirectError(OnError, last_on_error));
+    }
+    Py_RETURN_NONE;
+}
+
 static void OnMouse(int event, int x, int y, int flags, void* param)
 {
     PyGILState_STATE gstate;
@@ -1683,6 +1734,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_funcs.h"
 
 static PyMethodDef special_methods[] = {
+  {"redirectError", (PyCFunction)pycvRedirectError, METH_VARARGS | METH_KEYWORDS, "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"createButton", (PyCFunction)pycvCreateButton, METH_VARARGS | METH_KEYWORDS, "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
