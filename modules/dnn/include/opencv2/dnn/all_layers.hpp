@@ -581,6 +581,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<ProposalLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS CropAndResizeLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
