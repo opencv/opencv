@@ -1511,6 +1511,19 @@ TEST(Mat, regression_5991)
     EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
 }
 
+TEST(Mat, regression_9720)
+{
+    Mat mat(1, 1, CV_32FC1);
+    mat.at<float>(0) = 1.f;
+    const float a = 0.1f;
+    Mat me1 = (Mat)(mat.mul((a / mat)));
+    Mat me2 = (Mat)(mat.mul((Mat)(a / mat)));
+    Mat me3 = (Mat)(mat.mul((a * mat)));
+    Mat me4 = (Mat)(mat.mul((Mat)(a * mat)));
+    EXPECT_EQ(me1.at<float>(0), me2.at<float>(0));
+    EXPECT_EQ(me3.at<float>(0), me4.at<float>(0));
+}
+
 #ifdef OPENCV_TEST_BIGDATA
 TEST(Mat, regression_6696_BigData_8Gb)
 {
