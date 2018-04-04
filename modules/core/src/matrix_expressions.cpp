@@ -420,7 +420,7 @@ void MatOp::multiply(const MatExpr& e1, const MatExpr& e2, MatExpr& res, double 
             {
                 op = '/';
                 m2 = e2.a;
-                scale /= e2.alpha;
+                scale *= e2.alpha;
             }
             else
                 e2.op->assign(e2, m2);
