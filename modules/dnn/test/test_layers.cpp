@@ -602,54 +602,36 @@ TEST(Layer_Test_ROIPooling, Accuracy)
     normAssert(out, ref);
 }
 
-TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
+typedef testing::TestWithParam<DNNTarget> Test_Caffe_layers;
+TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 {
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+    net.setPreferableTarget(GetParam());
 
     Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
     Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
     Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
-    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
 
     net.setInput(scores, "rpn_cls_prob_reshape");
     net.setInput(deltas, "rpn_bbox_pred");
     net.setInput(imInfo, "im_info");
 
-    Mat out = net.forward();
+    std::vector<Mat> outs;
+    net.forward(outs, "output");
 
-    const int numDets = ref.size[0];
-    EXPECT_LE(numDets, out.size[0]);
-    normAssert(out.rowRange(0, numDets), ref);
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat ref = blobFromNPY(_tf(i == 0 ? "net_faster_rcnn_proposal.out_rois.npy" :
+                                           "net_faster_rcnn_proposal.out_scores.npy"));
+        const int numDets = ref.size[0];
+        EXPECT_LE(numDets, outs[i].size[0]);
+        normAssert(outs[i].rowRange(0, numDets), ref);
 
-    if (numDets < out.size[0])
-        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
+        if (numDets < outs[i].size[0])
+            EXPECT_EQ(countNonZero(outs[i].rowRange(numDets, outs[i].size[0])), 0);
+    }
 }
-
-OCL_TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
-{
-    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
-
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    net.setPreferableTarget(DNN_TARGET_OPENCL);
-
-    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
-    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
-    Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
-    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
-
-    net.setInput(scores, "rpn_cls_prob_reshape");
-    net.setInput(deltas, "rpn_bbox_pred");
-    net.setInput(imInfo, "im_info");
-
-    Mat out = net.forward();
-
-    const int numDets = ref.size[0];
-    EXPECT_LE(numDets, out.size[0]);
-    normAssert(out.rowRange(0, numDets), ref);
-
-    if (numDets < out.size[0])
-        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
-}
+INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_layers, availableDnnTargets());
 
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
 TEST_P(Scale_untrainable, Accuracy)
