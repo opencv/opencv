@@ -1,5 +1,28 @@
 name: "TestFasterRCNNProposal"
 
+# input: "rpn_cls_prob_reshape"
+# input_shape {
+#   dim: 1
+#   dim: 18
+#   dim: 39
+#   dim: 51
+# }
+#
+# input: "rpn_bbox_pred"
+# input_shape {
+#   dim: 1
+#   dim: 36
+#   dim: 39
+#   dim: 51
+# }
+#
+#
+# input: "im_info"
+# input_shape {
+#   dim: 1
+#   dim: 3
+# }
+
 layer {
   type: 'Input'
   name: 'rpn_cls_prob_reshape'
@@ -15,14 +38,32 @@ layer {
   name: 'im_info'
   top: 'im_info'
 }
+
+# layer {
+#   name: 'output'
+#   type: 'Python'
+#   bottom: 'rpn_cls_prob_reshape'
+#   bottom: 'rpn_bbox_pred'
+#   bottom: 'im_info'
+#   top: 'rois'
+#   top: 'scores'
+#   python_param {
+#     module: 'rpn.proposal_layer'
+#     layer: 'ProposalLayer'
+#     param_str: "'feat_stride': 9"
+#   }
+# }
+
 layer {
   name: 'output'
   type: 'Proposal'
   bottom: 'rpn_cls_prob_reshape'
   bottom: 'rpn_bbox_pred'
   bottom: 'im_info'
-  top: 'output'
+  top: 'rois'
+  top: 'scores'
   proposal_param {
+    feat_stride: 9
     ratio: 0.5
     ratio: 1.0
     ratio: 2.0
