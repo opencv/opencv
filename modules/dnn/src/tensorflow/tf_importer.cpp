@@ -37,7 +37,13 @@ using ::google::protobuf::Reflection;
 namespace
 {
 
-static int toNCHW[] = {0, 2, 3, 1};
+static int toNCHW(int idx)
+{
+    CV_Assert(-4 <= idx && idx < 4);
+    if (idx == 0) return 0;
+    else if (idx > 0) return idx % 3 + 1;
+    else return (4 + idx) % 3 + 1;
+}
 
 // This values are used to indicate layer output's data layout where it's possible.
 enum DataLayout
@@ -556,11 +562,23 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
 // this layer's output has this data layout too. Returns DATA_LAYOUT_UNKNOWN otherwise.
 static int predictOutputDataLayout(const tensorflow::NodeDef& layer, const std::map<String, int>& data_layouts)
 {
+    if (hasLayerAttr(layer, "data_format"))
+    {
+        std::string format = getLayerAttr(layer, "data_format").s();
+        if (format == "NHWC" || format == "channels_last")
+            return DATA_LAYOUT_NHWC;
+        else if (format == "NCHW" || format == "channels_first")
+            return DATA_LAYOUT_NCHW;
+        else
+            CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
+    }
+
+    // Determine layout by layer's inputs
     int layout = DATA_LAYOUT_UNKNOWN;
     std::map<String, int>::const_iterator it;
     for (int i = 0, n = layer.input_size(); i < n; ++i)
     {
-        it = data_layouts.find(layer.input(i));
+        it = data_layouts.find(layer.input(i).substr(0, layer.input(i).rfind(':')));
         if (it != data_layouts.end())
         {
             if (it->second == DATA_LAYOUT_UNKNOWN)
@@ -708,17 +726,7 @@ void TFImporter::populateNet(Net dstNet)
             // one input only
             connect(layer_id, dstNet, parsePin(input), id, 0);
 
-            if (hasLayerAttr(layer, "data_format"))
-            {
-                std::string format = getLayerAttr(layer, "data_format").s();
-                if (format == "NHWC" || format == "channels_last")
-                    data_layouts[name] = DATA_LAYOUT_NHWC;
-                else if (format == "NCHW" || format == "channels_first")
-                    data_layouts[name] = DATA_LAYOUT_NCHW;
-                else
-                    CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
-            }
-            else
+            if (data_layouts[name] == DATA_LAYOUT_UNKNOWN)
                 data_layouts[name] = DATA_LAYOUT_NHWC;
         }
         else if (type == "BiasAdd" || type == "Add")
@@ -956,7 +964,7 @@ void TFImporter::populateNet(Net dstNet)
         {
             int axisId = (type == "Concat" ? 0 : layer.input_size() - 1);
             int axis = getConstBlob(layer, value_id, axisId).int_val().Get(0);
-            layerParams.set("axis", 0 <= axis && axis < 4 ? toNCHW[axis] : axis);
+            layerParams.set("axis", 0 <= axis && axis < 4 ? toNCHW(axis) : axis);
 
             int id = dstNet.addLayer(name, "Concat", layerParams);
             layer_id[name] = id;
@@ -1017,7 +1025,7 @@ void TFImporter::populateNet(Net dstNet)
             // num_split
             // 1st blob is dims tensor
             int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
-            layerParams.set("axis", toNCHW[axis]);
+            layerParams.set("axis", toNCHW(axis));
 
             int id = dstNet.addLayer(name, "Slice", layerParams);
             layer_id[name] = id;
@@ -1410,9 +1418,26 @@ void TFImporter::populateNet(Net dstNet)
         {
             // op: "L2Normalize"
             // input: "input"
-            CV_Assert(layer.input_size() == 1);
-            layerParams.set("across_spatial", false);
-            layerParams.set("channel_shared", false);
+            // input: "reduction_indices" (axis)
+            CV_Assert(layer.input_size() == 2);
+            Mat reductionIndices = getTensorContent(getConstBlob(layer, value_id, 1));
+            CV_Assert(reductionIndices.type() == CV_32SC1);
+
+            const int numAxes = reductionIndices.total();
+            if (data_layouts[name] == DATA_LAYOUT_NHWC)
+                for (int i = 0; i < numAxes; ++i)
+                    reductionIndices.at<int>(i) = toNCHW(reductionIndices.at<int>(i));
+
+            cv::sort(reductionIndices, reductionIndices, SORT_ASCENDING);
+            for (int i = 1; i < numAxes; ++i)
+            {
+                CV_Assert(reductionIndices.at<int>(i) == reductionIndices.at<int>(i - 1) + 1);
+                // Axes have the same sign.
+                CV_Assert(reductionIndices.at<int>(i) * reductionIndices.at<int>(i - 1) >= 0);
+            }
+            layerParams.set("start_axis", reductionIndices.at<int>(0));
+            layerParams.set("end_axis", reductionIndices.at<int>(numAxes - 1));
+
             int id = dstNet.addLayer(name, "Normalize", layerParams);
             layer_id[name] = id;
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);

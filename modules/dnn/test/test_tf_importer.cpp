@@ -193,6 +193,13 @@ TEST_P(Test_TensorFlow_layers, reshape)
     runTensorFlowNet("unfused_flatten_unknown_batch", targetId);
 }
 
+TEST_P(Test_TensorFlow_layers, l2_normalize)
+{
+    int targetId = GetParam();
+    runTensorFlowNet("l2_normalize", targetId);
+    runTensorFlowNet("l2_normalize_3d", targetId);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, availableDnnTargets());
 
 typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_nets;
