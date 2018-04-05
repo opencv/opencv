@@ -560,8 +560,8 @@ namespace
         explicit StackAllocator(cudaStream_t stream);
         ~StackAllocator();
 
-        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
-        void free(GpuMat* mat);
+        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize) CV_OVERRIDE;
+        void free(GpuMat* mat) CV_OVERRIDE;
 
     private:
         StackAllocator(const StackAllocator&);
