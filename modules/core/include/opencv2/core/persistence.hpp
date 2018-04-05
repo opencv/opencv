@@ -438,6 +438,8 @@ public:
      * @param name Name of the written object
      * @param val Value of the written object
      */
+    CV_WRAP void write(const String& name, int val);
+    /// @overload
     CV_WRAP void write(const String& name, double val);
     /// @overload
     CV_WRAP void write(const String& name, const String& val);
