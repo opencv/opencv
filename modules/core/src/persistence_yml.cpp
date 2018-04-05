@@ -51,7 +51,7 @@ static char* icvYMLSkipSpaces( CvFileStorage* fs, char* ptr, int min_indent, int
                     CV_PARSE_ERROR( "Too long string or a last string w/o newline" );
             }
 
-            fs->lineno++;
+            fs->lineno++;  // FIXIT doesn't really work with long lines. It must be counted via '\n' or '\r' symbols, not the number of icvGets() calls.
         }
         else
             CV_PARSE_ERROR( *ptr == '\t' ? "Tabs are prohibited in YAML!" : "Invalid character" );
@@ -331,6 +331,7 @@ force_int:
             CV_PARSE_ERROR( "Invalid numeric value (inconsistent explicit type specification?)" );
 
         ptr = endptr;
+        CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
     }
     else if( c == '\'' || c == '\"' ) // an explicit string
     {

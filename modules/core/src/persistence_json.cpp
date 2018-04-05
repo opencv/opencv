@@ -125,8 +125,10 @@ static char* icvJSONParseKey( CvFileStorage* fs, char* ptr, CvFileNode* map, CvF
     char * beg = ptr + 1;
     char * end = beg;
 
-    do ++ptr;
-    while( cv_isprint(*ptr) && *ptr != '"' );
+    do {
+        ++ptr;
+        CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
+    } while( cv_isprint(*ptr) && *ptr != '"' );
 
     if( *ptr != '"' )
         CV_PARSE_ERROR( "Key must end with \'\"\'" );
@@ -367,17 +369,25 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
     {    /**************** number ****************/
         char * beg = ptr;
         if ( *ptr == '+' || *ptr == '-' )
+        {
             ptr++;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
+        }
         while( cv_isdigit(*ptr) )
+        {
             ptr++;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
+        }
         if (*ptr == '.' || *ptr == 'e')
         {
             node->data.f = icv_strtod( fs, beg, &ptr );
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
             node->tag = CV_NODE_REAL;
         }
         else
         {
             node->data.i = static_cast<int>(strtol( beg, &ptr, 0 ));
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
             node->tag = CV_NODE_INT;
         }
 
@@ -388,8 +398,12 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
     {    /**************** other data ****************/
         const char * beg = ptr;
         size_t len = 0u;
-        for ( ; cv_isalpha(*ptr) && len <= 6u; ptr++ )
+        for ( ; cv_isalpha(*ptr) && len <= 6u; )
+        {
             len++;
+            ptr++;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
+        }
 
         if ( len >= 4u && memcmp( beg, "null", 4u ) == 0 )
         {
