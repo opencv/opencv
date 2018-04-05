@@ -78,52 +78,52 @@ namespace
     const unsigned char defaultShadowValue = 127; // value to use in the segmentation mask for shadows, set 0 not to do shadow detection
     const float defaultShadowThreshold = 0.5f; // Tau - shadow threshold, see the paper for explanation
 
-    class MOG2Impl : public cuda::BackgroundSubtractorMOG2
+    class MOG2Impl CV_FINAL : public cuda::BackgroundSubtractorMOG2
     {
     public:
         MOG2Impl(int history, double varThreshold, bool detectShadows);
 
-        void apply(InputArray image, OutputArray fgmask, double learningRate=-1);
-        void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream);
+        void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE;
+        void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) CV_OVERRIDE;
 
-        void getBackgroundImage(OutputArray backgroundImage) const;
-        void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const;
+        void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
+        void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const CV_OVERRIDE;
 
-        int getHistory() const { return history_; }
-        void setHistory(int history) { history_ = history; }
+        int getHistory() const CV_OVERRIDE { return history_; }
+        void setHistory(int history) CV_OVERRIDE { history_ = history; }
 
-        int getNMixtures() const { return nmixtures_; }
-        void setNMixtures(int nmixtures) { nmixtures_ = nmixtures; }
+        int getNMixtures() const CV_OVERRIDE { return nmixtures_; }
+        void setNMixtures(int nmixtures) CV_OVERRIDE { nmixtures_ = nmixtures; }
 
-        double getBackgroundRatio() const { return backgroundRatio_; }
-        void setBackgroundRatio(double ratio) { backgroundRatio_ = (float) ratio; }
+        double getBackgroundRatio() const CV_OVERRIDE { return backgroundRatio_; }
+        void setBackgroundRatio(double ratio) CV_OVERRIDE { backgroundRatio_ = (float) ratio; }
 
-        double getVarThreshold() const { return varThreshold_; }
-        void setVarThreshold(double varThreshold) { varThreshold_ = (float) varThreshold; }
+        double getVarThreshold() const CV_OVERRIDE { return varThreshold_; }
+        void setVarThreshold(double varThreshold) CV_OVERRIDE { varThreshold_ = (float) varThreshold; }
 
-        double getVarThresholdGen() const { return varThresholdGen_; }
-        void setVarThresholdGen(double varThresholdGen) { varThresholdGen_ = (float) varThresholdGen; }
+        double getVarThresholdGen() const CV_OVERRIDE { return varThresholdGen_; }
+        void setVarThresholdGen(double varThresholdGen) CV_OVERRIDE { varThresholdGen_ = (float) varThresholdGen; }
 
-        double getVarInit() const { return varInit_; }
-        void setVarInit(double varInit) { varInit_ = (float) varInit; }
+        double getVarInit() const CV_OVERRIDE { return varInit_; }
+        void setVarInit(double varInit) CV_OVERRIDE { varInit_ = (float) varInit; }
 
-        double getVarMin() const { return varMin_; }
-        void setVarMin(double varMin) { varMin_ = (float) varMin; }
+        double getVarMin() const CV_OVERRIDE { return varMin_; }
+        void setVarMin(double varMin) CV_OVERRIDE { varMin_ = (float) varMin; }
 
-        double getVarMax() const { return varMax_; }
-        void setVarMax(double varMax) { varMax_ = (float) varMax; }
+        double getVarMax() const CV_OVERRIDE { return varMax_; }
+        void setVarMax(double varMax) CV_OVERRIDE { varMax_ = (float) varMax; }
 
-        double getComplexityReductionThreshold() const { return ct_; }
-        void setComplexityReductionThreshold(double ct) { ct_ = (float) ct; }
+        double getComplexityReductionThreshold() const CV_OVERRIDE { return ct_; }
+        void setComplexityReductionThreshold(double ct) CV_OVERRIDE { ct_ = (float) ct; }
 
-        bool getDetectShadows() const { return detectShadows_; }
-        void setDetectShadows(bool detectShadows) { detectShadows_ = detectShadows; }
+        bool getDetectShadows() const CV_OVERRIDE { return detectShadows_; }
+        void setDetectShadows(bool detectShadows) CV_OVERRIDE { detectShadows_ = detectShadows; }
 
-        int getShadowValue() const { return shadowValue_; }
-        void setShadowValue(int value) { shadowValue_ = (uchar) value; }
+        int getShadowValue() const CV_OVERRIDE { return shadowValue_; }
+        void setShadowValue(int value) CV_OVERRIDE { shadowValue_ = (uchar) value; }
 
-        double getShadowThreshold() const { return shadowThreshold_; }
-        void setShadowThreshold(double threshold) { shadowThreshold_ = (float) threshold; }
+        double getShadowThreshold() const CV_OVERRIDE { return shadowThreshold_; }
+        void setShadowThreshold(double threshold) CV_OVERRIDE { shadowThreshold_ = (float) threshold; }
 
     private:
         void initialize(Size frameSize, int frameType);

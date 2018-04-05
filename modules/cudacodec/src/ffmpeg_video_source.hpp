@@ -56,9 +56,9 @@ public:
     FFmpegVideoSource(const String& fname);
     ~FFmpegVideoSource();
 
-    bool getNextPacket(unsigned char** data, int* size, bool* endOfFile);
+    bool getNextPacket(unsigned char** data, int* size, bool* endOfFile) CV_OVERRIDE;
 
-    FormatInfo format() const;
+    FormatInfo format() const CV_OVERRIDE;
 
 private:
     FormatInfo format_;

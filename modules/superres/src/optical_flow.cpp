@@ -441,8 +441,8 @@ namespace
     public:
         explicit GpuOpticalFlow(int work_type);
 
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
     protected:
         virtual void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) = 0;
@@ -510,8 +510,8 @@ namespace
     {
     public:
         Brox_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline double getAlpha() const CV_OVERRIDE { return alpha_; }
         inline void setAlpha(double val) CV_OVERRIDE { alpha_ = val; }
@@ -527,7 +527,7 @@ namespace
         inline void setSolverIterations(int val) CV_OVERRIDE { solverIterations_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double alpha_;
@@ -597,8 +597,8 @@ namespace
     {
     public:
         PyrLK_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline int getWindowSize() const CV_OVERRIDE { return winSize_; }
         inline void setWindowSize(int val) CV_OVERRIDE { winSize_ = val; }
@@ -608,7 +608,7 @@ namespace
         inline void setIterations(int val) CV_OVERRIDE { iterations_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         int winSize_;
@@ -669,8 +669,8 @@ namespace
     {
     public:
         Farneback_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
         inline void setPyrScale(double val) CV_OVERRIDE { pyrScale_ = val; }
@@ -688,7 +688,7 @@ namespace
         inline void setFlags(int val) CV_OVERRIDE { flags_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double pyrScale_;
@@ -761,8 +761,8 @@ namespace
     {
     public:
         DualTVL1_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline double getTau() const CV_OVERRIDE { return tau_; }
         inline void setTau(double val) CV_OVERRIDE { tau_ = val; }
@@ -782,7 +782,7 @@ namespace
         inline void setUseInitialFlow(bool val) CV_OVERRIDE { useInitialFlow_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double tau_;

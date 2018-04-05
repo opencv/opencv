@@ -66,7 +66,7 @@ namespace
         LookUpTableImpl(InputArray lut);
         ~LookUpTableImpl();
 
-        void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+        void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) CV_OVERRIDE;
 
     private:
         GpuMat d_lut;
