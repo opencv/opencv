@@ -375,8 +375,7 @@ Ext_Fourcc_PSNR synthetic_params[] = {
 #endif
     makeParam("wmv", "WMV3", 30.f, CAP_MSMF),
     makeParam("wmv", "WVC1", 30.f, CAP_MSMF),
-    makeParam("avi", "H264", 30.f, CAP_MSMF),
-    makeParam("avi", "MJPG", 30.f, CAP_MSMF),
+    makeParam("mov", "H264", 30.f, CAP_MSMF),
 #endif
 
 #ifdef HAVE_VFW
