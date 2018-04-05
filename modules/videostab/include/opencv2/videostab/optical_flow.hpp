@@ -133,7 +133,7 @@ public:
 
     virtual void run(
             InputArray frame0, InputArray frame1, InputOutputArray flowX, InputOutputArray flowY,
-            OutputArray errors);
+            OutputArray errors) CV_OVERRIDE;
 
 private:
     Ptr<cuda::DensePyrLKOpticalFlow> optFlowEstimator_;
