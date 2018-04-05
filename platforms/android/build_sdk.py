@@ -160,7 +160,6 @@ class Builder:
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
             WITH_OPENCL="OFF",
-            WITH_CUDA="OFF",
             WITH_IPP=("ON" if abi.haveIPP() else "OFF"),
             WITH_TBB="ON",
             BUILD_EXAMPLES="OFF",
@@ -195,7 +194,6 @@ class Builder:
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
             WITH_OPENCL="OFF",
-            WITH_CUDA="OFF",
             WITH_IPP="OFF",
             BUILD_ANDROID_SERVICE = 'ON'
         )
