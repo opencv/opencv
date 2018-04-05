@@ -124,7 +124,7 @@ class CV_EXPORTS MoreAccurateMotionWobbleSuppressorGpu : public MoreAccurateMoti
 {
 public:
     void suppress(int idx, const cuda::GpuMat &frame, cuda::GpuMat &result);
-    virtual void suppress(int idx, const Mat &frame, Mat &result);
+    virtual void suppress(int idx, const Mat &frame, Mat &result) CV_OVERRIDE;
 
 private:
     cuda::GpuMat frameDevice_, resultDevice_;

@@ -64,7 +64,7 @@ namespace
     class DefaultThrustAllocator: public cv::cuda::device::ThrustAllocator
     {
     public:
-        __device__ __host__ uchar* allocate(size_t numBytes)
+        __device__ __host__ uchar* allocate(size_t numBytes) CV_OVERRIDE
         {
 #ifndef __CUDA_ARCH__
             uchar* ptr;
@@ -74,7 +74,7 @@ namespace
             return NULL;
 #endif
         }
-        __device__ __host__ void deallocate(uchar* ptr, size_t numBytes)
+        __device__ __host__ void deallocate(uchar* ptr, size_t numBytes) CV_OVERRIDE
         {
             (void)numBytes;
 #ifndef __CUDA_ARCH__
@@ -105,8 +105,8 @@ namespace
     class DefaultAllocator : public GpuMat::Allocator
     {
     public:
-        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
-        void free(GpuMat* mat);
+        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize) CV_OVERRIDE;
+        void free(GpuMat* mat) CV_OVERRIDE;
     };
 
     bool DefaultAllocator::allocate(GpuMat* mat, int rows, int cols, size_t elemSize)

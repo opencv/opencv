@@ -60,7 +60,7 @@ public:
 
     UMatData* allocate(int dims, const int* sizes, int type,
                        void* data0, size_t* step,
-                       int /*flags*/, UMatUsageFlags /*usageFlags*/) const
+                       int /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
         for (int i = dims-1; i >= 0; i--)
@@ -100,12 +100,12 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const
+    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         return (u != NULL);
     }
 
-    void deallocate(UMatData* u) const
+    void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if (!u)
             return;
