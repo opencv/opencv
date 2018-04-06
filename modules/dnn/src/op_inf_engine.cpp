@@ -311,11 +311,19 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
     CV_Assert(!isInitialized());
 #ifdef _WIN32
     plugin = InferenceEngine::InferenceEnginePluginPtr("MKLDNNPlugin.dll");
+    InferenceEngine::IExtensionPtr extension =
+        InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("cpu_extension.dll");
 #else
     plugin = InferenceEngine::InferenceEnginePluginPtr("libMKLDNNPlugin.so");
+    InferenceEngine::IExtensionPtr extension =
+        InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("libcpu_extension.so");
 #endif  // _WIN32
     InferenceEngine::ResponseDesc resp;
-    InferenceEngine::StatusCode status = plugin->LoadNetwork(net, &resp);
+    InferenceEngine::StatusCode status = plugin->AddExtension(extension, &resp);
+    if (status != InferenceEngine::StatusCode::OK)
+        CV_Error(Error::StsAssert, resp.msg);
+
+    status = plugin->LoadNetwork(net, &resp);
     if (status != InferenceEngine::StatusCode::OK)
         CV_Error(Error::StsAssert, resp.msg);
 }
