@@ -506,20 +506,11 @@ class Media_Foundation
 {
 public:
     ~Media_Foundation(void) { CV_Assert(SUCCEEDED(MFShutdown())); }
+    friend cv::TLSData<Media_Foundation>;
     static Media_Foundation& getInstance()
     {
-#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
-        //CXX11
-        static thread_local Media_Foundation instance;
-#else //__cplusplus >= 201103L || _MSC_VER >= 1800
-        //CXX98
-#ifdef _WIN32
-        static __declspec(thread) Media_Foundation instance;
-#else
-        static __thread Media_Foundation instance;
-#endif
-#endif
-        return instance;
+        static cv::TLSData<Media_Foundation> tls;
+        return tls.getRef();
     }
 private:
     Media_Foundation(void) { CV_Assert(SUCCEEDED(MFStartup(MF_VERSION))); }
