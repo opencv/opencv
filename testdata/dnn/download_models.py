@@ -295,6 +295,17 @@ models = [
         member='frozen_east_text_detection.pb',
         sha='fffabf5ac36f37bddf68e34e84b45f5c4247ed06',
         filename='frozen_east_text_detection.pb'),
+    Model(
+        name='Faster-RCNN, InveptionV2 (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz',
+        sha='c710f25e5c6a3ce85fe793d5bf266d581ab1c230',
+        filename='faster_rcnn_inception_v2_coco_2018_01_28.tar.gz'),
+    Model(
+        name='Faster-RCNN, InveptionV2 (TensorFlow)',
+        archive='faster_rcnn_inception_v2_coco_2018_01_28.tar.gz',
+        member='faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb',
+        sha='f2e4bf386b9bb3e25ddfcbbd382c20f417e444f3',
+        filename='faster_rcnn_inception_v2_coco_2018_01_28.pb'),
 ]
 
 # Note: models will be downloaded to current working directory
