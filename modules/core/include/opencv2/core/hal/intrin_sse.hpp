@@ -1570,6 +1570,39 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
     v_transpose4x4(u0, u1, u2, u3, a, b, c, d);
 }
 
+inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c)
+{
+    __m128 t0 = _mm_loadu_ps(ptr + 0);
+    __m128 t1 = _mm_loadu_ps(ptr + 4);
+    __m128 t2 = _mm_loadu_ps(ptr + 8);
+
+    __m128 at12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 1, 0, 2));
+    a.val = _mm_shuffle_ps(t0, at12, _MM_SHUFFLE(2, 0, 3, 0));
+
+    __m128 bt01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 0, 0, 1));
+    __m128 bt12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 2, 0, 3));
+    b.val = _mm_shuffle_ps(bt01, bt12, _MM_SHUFFLE(2, 0, 2, 0));
+
+    __m128 ct01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 1, 0, 2));
+    c.val = _mm_shuffle_ps(ct01, t2, _MM_SHUFFLE(3, 0, 2, 0));
+}
+
+inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d)
+{
+    __m128 t0 = _mm_loadu_ps(ptr +  0);
+    __m128 t1 = _mm_loadu_ps(ptr +  4);
+    __m128 t2 = _mm_loadu_ps(ptr +  8);
+    __m128 t3 = _mm_loadu_ps(ptr + 12);
+    __m128 t02lo = _mm_unpacklo_ps(t0, t2);
+    __m128 t13lo = _mm_unpacklo_ps(t1, t3);
+    __m128 t02hi = _mm_unpackhi_ps(t0, t2);
+    __m128 t13hi = _mm_unpackhi_ps(t1, t3);
+    a.val = _mm_unpacklo_ps(t02lo, t13lo);
+    b.val = _mm_unpackhi_ps(t02lo, t13lo);
+    c.val = _mm_unpacklo_ps(t02hi, t13hi);
+    d.val = _mm_unpackhi_ps(t02hi, t13hi);
+}
+
 inline void v_load_deinterleave(const uint64 *ptr, v_uint64x2& a, v_uint64x2& b, v_uint64x2& c)
 {
     __m128i t0 = _mm_loadu_si128((const __m128i*)ptr);
@@ -1796,6 +1829,41 @@ inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32
     _mm_storeu_ps((ptr + 4), u1);
 }
 
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
+{
+    __m128 u0 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 0, 0, 0));
+    __m128 u1 = _mm_shuffle_ps(c.val, a.val, _MM_SHUFFLE(1, 1, 0, 0));
+    __m128 v0 = _mm_shuffle_ps(u0, u1, _MM_SHUFFLE(2, 0, 2, 0));
+    __m128 u2 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128 u3 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(2, 2, 2, 2));
+    __m128 v1 = _mm_shuffle_ps(u2, u3, _MM_SHUFFLE(2, 0, 2, 0));
+    __m128 u4 = _mm_shuffle_ps(c.val, a.val, _MM_SHUFFLE(3, 3, 2, 2));
+    __m128 u5 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(3, 3, 3, 3));
+    __m128 v2 = _mm_shuffle_ps(u4, u5, _MM_SHUFFLE(2, 0, 2, 0));
+
+    _mm_storeu_ps(ptr + 0, v0);
+    _mm_storeu_ps(ptr + 4, v1);
+    _mm_storeu_ps(ptr + 8, v2);
+}
+
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b,
+                               const v_float32x4& c, const v_float32x4& d)
+{
+    __m128 u0 = _mm_unpacklo_ps(a.val, c.val);
+    __m128 u1 = _mm_unpacklo_ps(b.val, d.val);
+    __m128 u2 = _mm_unpackhi_ps(a.val, c.val);
+    __m128 u3 = _mm_unpackhi_ps(b.val, d.val);
+    __m128 v0 = _mm_unpacklo_ps(u0, u1);
+    __m128 v2 = _mm_unpacklo_ps(u2, u3);
+    __m128 v1 = _mm_unpackhi_ps(u0, u1);
+    __m128 v3 = _mm_unpackhi_ps(u2, u3);
+
+    _mm_storeu_ps(ptr +  0, v0);
+    _mm_storeu_ps(ptr +  4, v1);
+    _mm_storeu_ps(ptr +  8, v2);
+    _mm_storeu_ps(ptr + 12, v3);
+}
+
 inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c)
 {
     __m128i t0 = _mm_unpacklo_epi64(a.val, b.val);
@@ -1858,7 +1926,7 @@ inline void v_store_interleave( _Tp* ptr, const _Tpvec& a0, const _Tpvec& b0, \
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int8x16, schar, s8, v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int16x8, short, s16, v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int32x4, int, s32, v_uint32x4, unsigned, u32)
-OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_float32x4, float, f32, v_uint32x4, unsigned, u32)
+//OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_float32x4, float, f32, v_uint32x4, unsigned, u32)
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
