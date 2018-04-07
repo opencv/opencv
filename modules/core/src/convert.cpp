@@ -1398,7 +1398,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 
 #define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype) \
 static void cvtScaleHalf##suffix( const stype* src, size_t sstep, \
-dtype* dst, size_t dstep, Size size) \
+dtype* dst, size_t dstep, Size size, void*) \
 { \
     cvtScaleHalf_<stype,dtype>(src, sstep, dst, dstep, size); \
 }
