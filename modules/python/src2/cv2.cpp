@@ -1621,7 +1621,13 @@ static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
     if (param == NULL) {
         param = Py_None;
     }
-    ERRWRAP2(setMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
+    static PyObject* last_param = NULL;
+    if (last_param) {
+        Py_DECREF(last_param);
+        last_param = NULL;
+    }
+    last_param = Py_BuildValue("OO", on_mouse, param);
+    ERRWRAP2(setMouseCallback(name, OnMouse, last_param));
     Py_RETURN_NONE;
 }
 #endif
@@ -1657,7 +1663,13 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
         PyErr_SetString(PyExc_TypeError, "on_change must be callable");
         return NULL;
     }
-    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
+    static PyObject* last_param = NULL;
+    if (last_param) {
+        Py_DECREF(last_param);
+        last_param = NULL;
+    }
+    last_param = Py_BuildValue("OO", on_change, Py_None);
+    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, last_param));
     Py_RETURN_NONE;
 }
 
@@ -1705,7 +1717,13 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
         userdata = Py_None;
     }
 
-    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state != 0));
+    static PyObject* last_param = NULL;
+    if (last_param) {
+        Py_DECREF(last_param);
+        last_param = NULL;
+    }
+    last_param = Py_BuildValue("OO", on_change, userdata);
+    ERRWRAP2(createButton(button_name, OnButtonChange, last_param, button_type, initial_button_state != 0));
     Py_RETURN_NONE;
 }
 #endif
