@@ -61,37 +61,10 @@
 #  include "opencv2/core/eigen.hpp"
 #endif
 
-#ifdef HAVE_TBB
-#  include "tbb/tbb.h"
-#  include "tbb/task.h"
-#  undef min
-#  undef max
-#endif
-
 //! @cond IGNORED
 
 namespace cv
 {
-#ifdef HAVE_TBB
-
-    typedef tbb::blocked_range<int> BlockedRange;
-
-    template<typename Body> static inline
-    void parallel_for( const BlockedRange& range, const Body& body )
-    {
-        tbb::parallel_for(range, body);
-    }
-
-    typedef tbb::split Split;
-
-    template<typename Body> static inline
-    void parallel_reduce( const BlockedRange& range, Body& body )
-    {
-        tbb::parallel_reduce(range, body);
-    }
-
-    typedef tbb::concurrent_vector<Rect> ConcurrentRectVector;
-#else
     class BlockedRange
     {
     public:
@@ -119,7 +92,6 @@ namespace cv
     {
         body(range);
     }
-#endif
 
     // Returns a static string if there is a parallel framework,
     // NULL otherwise.

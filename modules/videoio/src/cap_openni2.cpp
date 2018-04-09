@@ -78,11 +78,7 @@ public:
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
 
-#ifdef HAVE_TBB
-    static const int DEFAULT_MAX_BUFFER_SIZE = 8;
-#else
     static const int DEFAULT_MAX_BUFFER_SIZE = 2;
-#endif
     static const int DEFAULT_IS_CIRCLE_BUFFER = 0;
     static const int DEFAULT_MAX_TIME_DURATION = 20;
 

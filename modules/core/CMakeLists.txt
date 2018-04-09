@@ -13,6 +13,10 @@ if(WINRT AND CMAKE_SYSTEM_NAME MATCHES WindowsStore AND CMAKE_SYSTEM_VERSION MAT
   list(APPEND extra_libs ole32.lib)
 endif()
 
+if(HAVE_TBB)
+  list(APPEND extra_libs tbb)
+endif()
+
 if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()

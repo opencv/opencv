@@ -34,42 +34,6 @@ using cv::ParallelLoopBody;
 
 #include "cvconfig.h"
 
-#ifdef HAVE_TBB
-#  include "tbb/tbb.h"
-#  include "tbb/task.h"
-#  undef min
-#  undef max
-#endif
-
-#ifdef HAVE_TBB
-    typedef tbb::blocked_range<int> BlockedRange;
-
-    template<typename Body> static inline
-    void parallel_for( const BlockedRange& range, const Body& body )
-    {
-        tbb::parallel_for(range, body);
-    }
-#else
-    class BlockedRange
-    {
-    public:
-        BlockedRange() : _begin(0), _end(0), _grainsize(0) {}
-        BlockedRange(int b, int e, int g=1) : _begin(b), _end(e), _grainsize(g) {}
-        int begin() const { return _begin; }
-        int end() const { return _end; }
-        int grainsize() const { return _grainsize; }
-
-    protected:
-        int _begin, _end, _grainsize;
-    };
-
-    template<typename Body> static inline
-    void parallel_for( const BlockedRange& range, const Body& body )
-    {
-        body(range);
-    }
-#endif
-
 using namespace std;
 
 static inline double
