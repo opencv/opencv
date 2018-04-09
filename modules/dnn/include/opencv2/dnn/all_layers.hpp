@@ -555,7 +555,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * An every sample in the batch is normalized separately. Optionally,
      * output is scaled by the trained parameters.
      */
-    class NormalizeBBoxLayer : public Layer
+    class CV_EXPORTS NormalizeBBoxLayer : public Layer
     {
     public:
         float pnorm, epsilon;
