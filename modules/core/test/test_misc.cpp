@@ -189,4 +189,14 @@ TEST(Core_Parallel, propagate_exceptions)
     }, cv::Exception);
 }
 
+TEST(Core_Version, consistency)
+{
+    // this test verifies that OpenCV version loaded in runtime
+    //   is the same this test has been built with
+    EXPECT_EQ(CV_VERSION_MAJOR, cv::getVersionMajor());
+    EXPECT_EQ(CV_VERSION_MINOR, cv::getVersionMinor());
+    EXPECT_EQ(CV_VERSION_REVISION, cv::getVersionRevision());
+    EXPECT_EQ(String(CV_VERSION), cv::getVersionString());
+}
+
 }} // namespace
