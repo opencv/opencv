@@ -161,6 +161,8 @@ Added v4l2 support for getting capture property CV_CAP_PROP_POS_MSEC.
 Returns the millisecond timestamp of the last frame grabbed or 0 if no frames have been grabbed
 Used to successfully synchronize 2 Logitech C310 USB webcams to within 16 ms of one another
 
+12th patch: March 9, 2018, Taylor Lanclos <tlanclos@live.com>
+ added support for CV_CAP_PROP_BUFFERSIZE
 
 make & enjoy!
 
@@ -277,6 +279,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 
    __u32 palette;
    int width, height;
+   int bufferSize;
    __u32 fps;
    bool convert_rgb;
    bool frame_allocated;
@@ -685,7 +688,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
 
    capture->req = v4l2_requestbuffers();
 
-   unsigned int buffer_number = DEFAULT_V4L_BUFFERS;
+   unsigned int buffer_number = capture->bufferSize;
 
    try_again:
 
@@ -818,6 +821,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     FirstCapture = 1;
     width = DEFAULT_V4L_WIDTH;
     height = DEFAULT_V4L_HEIGHT;
+    bufferSize = DEFAULT_V4L_BUFFERS;
     fps = DEFAULT_V4L_FPS;
     convert_rgb = true;
     deviceName = _deviceName;
@@ -1639,6 +1643,8 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
           return CV_MAKETYPE(IPL2CV_DEPTH(capture->frame.depth), capture->frame.nChannels);
       case CV_CAP_PROP_CONVERT_RGB:
           return capture->convert_rgb;
+      case CV_CAP_PROP_BUFFERSIZE:
+          return capture->bufferSize;
       }
 
       if(property_id == CV_CAP_PROP_FPS) {
@@ -1820,6 +1826,18 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
             }
         }
         break;
+    case CV_CAP_PROP_BUFFERSIZE:
+        if ((int)value > MAX_V4L_BUFFERS || (int)value < 1) {
+            fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", (int)value, MAX_V4L_BUFFERS);
+            retval = false;
+        } else {
+            capture->bufferSize = (int)value;
+            if (capture->bufferIndex > capture->bufferSize) {
+                capture->bufferIndex = 0;
+            }
+            retval = v4l2_reset(capture);
+        }
+        break;
     default:
         retval = icvSetControl(capture, property_id, value);
         break;
@@ -1841,10 +1859,14 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
                perror ("Unable to stop the stream");
        }
 
-       for (unsigned int n_buffers_ = 0; n_buffers_ < capture->req.count; ++n_buffers_)
+       for (unsigned int n_buffers_ = 0; n_buffers_ < MAX_V4L_BUFFERS; ++n_buffers_)
        {
-           if (-1 == munmap (capture->buffers[n_buffers_].start, capture->buffers[n_buffers_].length)) {
-               perror ("munmap");
+           if (capture->buffers[n_buffers_].start) {
+               if (-1 == munmap (capture->buffers[n_buffers_].start, capture->buffers[n_buffers_].length)) {
+                   perror ("munmap");
+               } else {
+                   capture->buffers[n_buffers_].start = 0;
+               }
            }
        }
 
