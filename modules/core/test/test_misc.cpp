@@ -133,6 +133,52 @@ TEST(Core_OutputArrayAssign, _Matxf_UMatd)
 }
 
 
+
+int fixedType_handler(OutputArray dst)
+{
+    int type = CV_32FC2; // return points only {x, y}
+    if (dst.fixedType())
+    {
+        type = dst.type();
+        CV_Assert(type == CV_32FC2 || type == CV_32FC3); // allow points + confidence level: {x, y, confidence}
+    }
+    const int N = 100;
+    dst.create(Size(1, N), type);
+    Mat m = dst.getMat();
+    if (m.type() == CV_32FC2)
+    {
+        for (int i = 0; i < N; i++)
+            m.at<Vec2f>(i) = Vec2f((float)i, (float)(i*2));
+    }
+    else if (m.type() == CV_32FC3)
+    {
+        for (int i = 0; i < N; i++)
+            m.at<Vec3f>(i) = Vec3f((float)i, (float)(i*2), 1.0f / (i + 1));
+    }
+    else
+    {
+        CV_Assert(0 && "Internal error");
+    }
+    return CV_MAT_CN(type);
+}
+
+TEST(Core_OutputArray, FixedType)
+{
+    Mat_<Vec2f> pointsOnly;
+    int num_pointsOnly = fixedType_handler(pointsOnly);
+    EXPECT_EQ(2, num_pointsOnly);
+
+    Mat_<Vec3f> pointsWithConfidence;
+    int num_pointsWithConfidence = fixedType_handler(pointsWithConfidence);
+    EXPECT_EQ(3, num_pointsWithConfidence);
+
+    Mat defaultResult;
+    int num_defaultResult = fixedType_handler(defaultResult);
+    EXPECT_EQ(2, num_defaultResult);
+}
+
+
+
 TEST(Core_String, find_last_of__with__empty_string)
 {
     cv::String s;
