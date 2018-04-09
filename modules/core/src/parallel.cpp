@@ -379,8 +379,8 @@ namespace
 
         void operator ()() const  // run parallel job
         {
-            cv::Range stripeRange = this->stripeRange();
-            tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), *this);
+            cv::Range range = this->stripeRange();
+            tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), *this);
         }
     };
 #elif defined HAVE_CSTRIPES || defined HAVE_OPENMP
