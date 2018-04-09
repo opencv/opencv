@@ -2,20 +2,23 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Face Detection Camera Example</title>
+<title>Face Detection Camera And Video Example</title>
 <link href="js_example_style.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
-<h2>Face Detection Camera Example</h2>
+<h2>Face Detection Camera And Video Example</h2>
 <p>
-    Click <b>Start/Stop</b> button to start or stop the camera capture.<br>
+    Click <b>Start/Stop</b> button to start or stop the capture.<br>
     The <b>videoInput</b> is a &lt;video&gt; element used as face detector input.
     The <b>canvasOutput</b> is a &lt;canvas&gt; element used as face detector output.<br>
     The code of &lt;textarea&gt; will be executed when video is started.
     You can modify the code to investigate more.
 </p>
 <div>
-<div class="control"><button id="startAndStop" disabled>Start</button></div>
+<div class="control">
+    <button id="cameraStartAndStop" disabled>Start Camera</button>
+    <button id="videoStartAndStop" disabled>Start Video</button>
+</div>
 <textarea class="code" rows="29" cols="80" id="codeEditor" spellcheck="false">
 </textarea>
 </div>
@@ -61,7 +64,7 @@ classifier.load('haarcascade_frontalface_default.xml');
 const FPS = 30;
 function processVideo() {
     try {
-        if (!streaming) {
+        if (!cameraStreaming && !videoStreaming) {
             // clean and stop.
             src.delete();
             dst.delete();
@@ -101,41 +104,80 @@ let utils = new Utils('errorMessage');
 
 utils.loadCode('codeSnippet', 'codeEditor');
 
-let streaming = false;
+let cameraStreaming = false;
+let videoStreaming = false;
 let videoInput = document.getElementById('videoInput');
-let startAndStop = document.getElementById('startAndStop');
+let cameraStartAndStop = document.getElementById('cameraStartAndStop');
+let videoStartAndStop = document.getElementById('videoStartAndStop');
 let canvasOutput = document.getElementById('canvasOutput');
 let canvasContext = canvasOutput.getContext('2d');
 
-startAndStop.addEventListener('click', () => {
-    if (!streaming) {
-        utils.clearError();
-        utils.startCamera('qvga', onVideoStarted, 'videoInput');
-    } else {
-        utils.stopCamera();
+cameraStartAndStop.addEventListener('click', () => {
+    if (!cameraStreaming) {
         onVideoStopped();
+        utils.clearError();
+        onCameraStopped();
+        utils.startCamera('qvga', onCameraStarted, 'videoInput');
+    } else {
+        onVideoStopped();
+        utils.stopCamera();
+        onCameraStopped();
     }
 });
 
-function onVideoStarted() {
-    streaming = true;
-    startAndStop.innerText = 'Stop';
+function onCameraStarted() {
+    cameraStreaming = true;
+    cameraStartAndStop.innerText = 'Stop Camera';
     videoInput.width = videoInput.videoWidth;
     videoInput.height = videoInput.videoHeight;
     utils.executeCode('codeEditor');
 }
 
-function onVideoStopped() {
-    streaming = false;
+function onCameraStopped() {
+    cameraStreaming = false;
     canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
-    startAndStop.innerText = 'Start';
+    cameraStartAndStop.innerText = 'Start Camera';
+}
+
+videoStartAndStop.addEventListener('click', () => {
+    if (!videoStreaming) {
+        utils.stopCamera();
+        onCameraStopped();
+        utils.clearError();
+        videoInput.play().then(() => {
+            onVideoStarted();
+        });
+    } else {
+        utils.stopCamera();
+        onCameraStopped();
+        videoInput.pause();
+        videoInput.currentTime = 0;
+        onVideoStopped();
+    }
+});
+
+function onVideoStarted() {
+    videoStreaming = true;
+    videoStartAndStop.innerText = 'Stop Video';
+    videoInput.height = videoInput.width * (videoInput.videoHeight / videoInput.videoWidth);
+    utils.executeCode('codeEditor');
+}
+
+function onVideoStopped() {
+    videoStreaming = false;
+    canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
+    videoStartAndStop.innerText = 'Start Video';
 }
 
 utils.loadOpenCv(() => {
     let faceCascadeFile = 'haarcascade_frontalface_default.xml';
     utils.createFileFromUrl(faceCascadeFile, faceCascadeFile, () => {
-        startAndStop.removeAttribute('disabled');
+        cameraStartAndStop.removeAttribute('disabled');
     });
+    videoInput.addEventListener('canplay', () => {
+        videoStartAndStop.removeAttribute('disabled');
+    });
+    videoInput.src = 'Megamind.mp4';
 });
 </script>
 </body>
