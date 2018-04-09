@@ -48,9 +48,9 @@
    http://www.codeproject.com/info/cpol10.aspx
 */
 //require Windows 8 for some of the formats defined otherwise could baseline on lower version
-#if WINVER < _WIN32_WINNT_WIN7
+#if WINVER < _WIN32_WINNT_WIN8
 #undef WINVER
-#define WINVER _WIN32_WINNT_WIN7
+#define WINVER _WIN32_WINNT_WIN8
 #endif
 #if defined _MSC_VER && _MSC_VER >= 1600
     #define HAVE_CONCURRENCY
@@ -505,20 +505,10 @@ private:
 class Media_Foundation
 {
 public:
-    ~Media_Foundation(void) { CV_Assert(SUCCEEDED(MFShutdown())); }
+    ~Media_Foundation(void) { /*CV_Assert(SUCCEEDED(MFShutdown()));*/ }
     static Media_Foundation& getInstance()
     {
-#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
-        //CXX11
-        static thread_local Media_Foundation instance;
-#else //__cplusplus >= 201103L || _MSC_VER >= 1800
-        //CXX98
-#ifdef _WIN32
-        static __declspec(thread) Media_Foundation instance;
-#else
-        static __thread Media_Foundation instance;
-#endif
-#endif
+        static Media_Foundation instance;
         return instance;
     }
 private:
@@ -3651,19 +3641,20 @@ public:
     virtual int getCaptureDomain() { return CV_CAP_MSMF; }
 protected:
     Media_Foundation& MF;
-    ImageGrabberThread* grabberThread;
-    _ComPtr<IMFMediaSource> videoFileSource;
-    const MediaType *captureFormat;
+    _ComPtr<IMFSourceReader> videoFileSource;
+    DWORD dwStreamIndex;
+    MediaType captureFormat;
+    _ComPtr<IMFSample> videoSample;
     IplImage* frame;
     bool isOpened;
 
-    HRESULT getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration) const;
+    HRESULT getSourceDuration(MFTIME *pDuration) const;
 };
 
 CvCaptureFile_MSMF::CvCaptureFile_MSMF():
     MF(Media_Foundation::getInstance()),
-    grabberThread(NULL),
     videoFileSource(NULL),
+    videoSample(NULL),
     frame(NULL),
     isOpened(false)
 {
@@ -3671,8 +3662,6 @@ CvCaptureFile_MSMF::CvCaptureFile_MSMF():
 
 CvCaptureFile_MSMF::~CvCaptureFile_MSMF()
 {
-    if (frame)
-        cvReleaseImage(&frame);
     close();
 }
 
@@ -3683,29 +3672,64 @@ bool CvCaptureFile_MSMF::open(const char* filename)
     if (!filename)
         return false;
 
-    _ComPtr<IMFSourceResolver> pSourceResolver = NULL;
-    if (SUCCEEDED(MFCreateSourceResolver(pSourceResolver.GetAddressOf())))
+    // Set source reader parameters
+    _ComPtr<IMFAttributes> srAttr;
+    if (SUCCEEDED(MFCreateAttributes(&srAttr, 10)) &&
+        SUCCEEDED(srAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true)) &&
+        SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, false)) &&
+        SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, false)) &&
+        SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
+        )
     {
-        _ComPtr<IUnknown> pUnkSource = NULL;
-        MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
+        //ToDo: Enable D3D MF_SOURCE_READER_D3D_MANAGER attribute
         cv::AutoBuffer<wchar_t> unicodeFileName(strlen(filename) + 1);
         MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, (int)strlen(filename) + 1);
-        HRESULT hr = pSourceResolver->CreateObjectFromURL(unicodeFileName,
-                                                            MF_RESOLUTION_MEDIASOURCE,
-                                                            NULL, // Optional property store.
-                                                            &ObjectType,
-                                                            pUnkSource.GetAddressOf()
-                                                            );
-        if (SUCCEEDED(hr) &&
-            // Get the IMFMediaSource from the IUnknown pointer.
-            SUCCEEDED(pUnkSource->QueryInterface(IID_PPV_ARGS(&videoFileSource))) &&
-            // Create thread for stream processing
-            SUCCEEDED(ImageGrabberThread::CreateInstance(&grabberThread, videoFileSource.Get(), (unsigned int)-2, true)))
+        if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName, srAttr.Get(), &videoFileSource)))
         {
-            captureFormat = grabberThread->getImageGrabber()->getCaptureFormat();
-            isOpened = true;
-            grabberThread->start();
-            return true;
+            HRESULT hr = S_OK;
+            DWORD dwMediaTypeIndex = 0;
+            dwStreamIndex = 0;
+            while (SUCCEEDED(hr))
+            {
+                _ComPtr<IMFMediaType> pType;
+                hr = videoFileSource->GetNativeMediaType(dwStreamIndex, dwMediaTypeIndex, &pType);
+                if (hr == MF_E_NO_MORE_TYPES)
+                {
+                    hr = S_OK;
+                    ++dwStreamIndex;
+                    dwMediaTypeIndex = 0;
+                }
+                else if (SUCCEEDED(hr))
+                {
+                    MediaType MT = FormatReader::Read(pType.Get());
+                    if (MT.MF_MT_MAJOR_TYPE == MFMediaType_Video)
+                    {
+                        captureFormat = MT;
+                        break;
+                    }
+                    ++dwMediaTypeIndex;
+                }
+            }
+
+            _ComPtr<IMFMediaType>  mediaTypeOut;
+            if (// Retrieved stream media type
+                SUCCEEDED(hr) &&
+                // Set the output media type.
+                SUCCEEDED(MFCreateMediaType(&mediaTypeOut)) &&
+                SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video)) &&
+                SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24)) &&
+                SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive)) &&
+                SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_DEFAULT_STRIDE, 3 * captureFormat.width)) && //Assume BGR24 input
+                SUCCEEDED(MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, captureFormat.width, captureFormat.height)) &&
+                SUCCEEDED(MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1)) &&
+                SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)MF_SOURCE_READER_ALL_STREAMS, false)) &&
+                SUCCEEDED(videoFileSource->SetStreamSelection(dwStreamIndex, true)) &&
+                SUCCEEDED(videoFileSource->SetCurrentMediaType(dwStreamIndex, NULL, mediaTypeOut.Get()))
+                )
+            {
+                isOpened = true;
+                return true;
+            }
         }
     }
 
@@ -3717,12 +3741,12 @@ void CvCaptureFile_MSMF::close()
     if (isOpened)
     {
         isOpened = false;
-        SetEvent(grabberThread->getImageGrabber()->ig_hFinish);
-        grabberThread->stop();
-        delete grabberThread;
-
-        videoFileSource->Shutdown();
-        videoFileSource.Reset();
+        if (videoSample)
+            videoSample.Reset();
+        if (videoFileSource)
+            videoFileSource.Reset();
+        if (frame)
+            cvReleaseImage(&frame);
     }
 }
 
@@ -3742,26 +3766,26 @@ double CvCaptureFile_MSMF::getProperty(int property_id) const
         switch( property_id )
         {
         case CV_CAP_PROP_FRAME_WIDTH:
-            return captureFormat->width;
+            return captureFormat.width;
         case CV_CAP_PROP_FRAME_HEIGHT:
-            return captureFormat->height;
+            return captureFormat.height;
         case CV_CAP_PROP_FRAME_COUNT:
             {
-                if(captureFormat->MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
+                if(captureFormat.MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
                     return 0;
                 MFTIME duration;
-                getSourceDuration(this->videoFileSource.Get(), &duration);
-                double fps = ((double)captureFormat->MF_MT_FRAME_RATE_NUMERATOR) /
-                ((double)captureFormat->MF_MT_FRAME_RATE_DENOMINATOR);
+                getSourceDuration(&duration);
+                double fps = ((double)captureFormat.MF_MT_FRAME_RATE_NUMERATOR) /
+                ((double)captureFormat.MF_MT_FRAME_RATE_DENOMINATOR);
                 return (double)floor(((double)duration/1e7)*fps+0.5);
             }
         case CV_CAP_PROP_FOURCC:
-            return captureFormat->MF_MT_SUBTYPE.Data1;
+            return captureFormat.MF_MT_SUBTYPE.Data1;
         case CV_CAP_PROP_FPS:
-            if (captureFormat->MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
+            if (captureFormat.MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
                 return 0;
-            return ((double)captureFormat->MF_MT_FRAME_RATE_NUMERATOR) /
-                ((double)captureFormat->MF_MT_FRAME_RATE_DENOMINATOR);
+            return ((double)captureFormat.MF_MT_FRAME_RATE_NUMERATOR) /
+                ((double)captureFormat.MF_MT_FRAME_RATE_DENOMINATOR);
         }
 
     return -1;
@@ -3769,22 +3793,70 @@ double CvCaptureFile_MSMF::getProperty(int property_id) const
 
 bool CvCaptureFile_MSMF::grabFrame()
 {
-    DWORD waitResult = (DWORD)-1;
     if (isOpened)
     {
-        SetEvent(grabberThread->getImageGrabber()->ig_hFrameGrabbed);
-        HANDLE tmp[] = {grabberThread->getImageGrabber()->ig_hFrameReady, grabberThread->getImageGrabber()->ig_hFinish, 0};
-        waitResult = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
+        DWORD streamIndex, flags;
+        LONGLONG llTimeStamp;
+        if (videoSample)
+            videoSample.Reset();
+        if (SUCCEEDED(videoFileSource->ReadSample(
+                                                     dwStreamIndex, // Stream index.
+                                                     0,             // Flags.
+                                                     &streamIndex,  // Receives the actual stream index.
+                                                     &flags,        // Receives status flags.
+                                                     &llTimeStamp,  // Receives the time stamp.
+                                                     &videoSample   // Receives the sample or NULL.
+                                                 )))
+        {
+            if (streamIndex != dwStreamIndex)
+            {
+                DebugPrintOut(L"\tWrong stream readed. Abort capturing\n");
+                close();
+            }
+            else if (flags & MF_SOURCE_READERF_ERROR)
+            {
+                DebugPrintOut(L"\tStream reading error. Abort capturing\n");
+                close();
+            }
+            else if (flags & MF_SOURCE_READERF_ALLEFFECTSREMOVED)
+            {
+                DebugPrintOut(L"\tStream decoding error. Abort capturing\n");
+                close();
+            }
+            else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
+            {
+                DebugPrintOut(L"\tEnd of stream detected\n");
+            }
+            else
+            {
+                if (flags & MF_SOURCE_READERF_NEWSTREAM)
+                {
+                    DebugPrintOut(L"\tNew stream detected\n");
+                }
+                if (flags & MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED)
+                {
+                    DebugPrintOut(L"\tStream native media type changed\n");
+                }
+                if (flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
+                {
+                    DebugPrintOut(L"\tStream current media type changed\n");
+                }
+                if (flags & MF_SOURCE_READERF_STREAMTICK)
+                {
+                    DebugPrintOut(L"\tStream tick detected\n");
+                }
+                return true;
+            }
+        }
     }
-
-    return isOpened && grabberThread->getImageGrabber()->getRawImage()->isNew() && (waitResult == WAIT_OBJECT_0);
+    return false;
 }
 
 IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
 {
-    unsigned int width = captureFormat->width;
-    unsigned int height = captureFormat->height;
-    unsigned int bytes = 3;
+    unsigned int width = captureFormat.width;
+    unsigned int height = captureFormat.height;
+    unsigned int bytes = 3; //Suppose output format is BGR24
     if( !frame || (int)width != frame->width || (int)height != frame->height )
     {
         if (frame)
@@ -3792,31 +3864,41 @@ IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
         frame = cvCreateImage( cvSize(width,height), 8, bytes );
     }
 
-    RawImage *RIOut = grabberThread->getImageGrabber()->getRawImage();
     unsigned int size = bytes * width * height;
-
-    bool verticalFlip = captureFormat->MF_MT_DEFAULT_STRIDE < 0;
-
-    if(RIOut && size == RIOut->getSize())
+    DWORD bcnt;
+    if (videoSample && SUCCEEDED(videoSample->GetBufferCount(&bcnt)) && bcnt > 0)
     {
-         videoInput::processPixels(RIOut->getpPixels(), (unsigned char*)frame->imageData, width,
-             height, bytes, false, verticalFlip);
+        _ComPtr<IMFMediaBuffer> buf = NULL;
+        if (SUCCEEDED(videoSample->GetBufferByIndex(0, &buf)))
+        {
+            DWORD maxsize, cursize;
+            BYTE* ptr = NULL;
+            if (SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
+            {
+                if ((unsigned int)cursize == size)
+                {
+                    memcpy(frame->imageData, ptr, size);
+                    buf->Unlock();
+                    return frame;
+                }
+                buf->Unlock();
+            }
+        }
     }
 
-    return frame;
+    return NULL;
 }
 
-HRESULT CvCaptureFile_MSMF::getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration) const
+HRESULT CvCaptureFile_MSMF::getSourceDuration(MFTIME *pDuration) const
 {
     *pDuration = 0;
 
-    IMFPresentationDescriptor *pPD = NULL;
-
-    HRESULT hr = pSource->CreatePresentationDescriptor(&pPD);
-    if (SUCCEEDED(hr))
+    PROPVARIANT var;
+    HRESULT hr = videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &var);
+    if (SUCCEEDED(hr) && var.vt == VT_I8)
     {
-        hr = pPD->GetUINT64(MF_PD_DURATION, (UINT64*)pDuration);
-        pPD->Release();
+        *pDuration = var.hVal.QuadPart;
+        PropVariantClear(&var);
     }
     return hr;
 }
