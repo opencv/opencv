@@ -50,6 +50,7 @@ set(ie_lib_list inference_engine)
 link_directories(
   ${INTEL_CVSDK_DIR}/external/mklml_lnx/lib
   ${INTEL_CVSDK_DIR}/inference_engine/external/mklml_lnx/lib
+  ${INTEL_CVSDK_DIR}/inference_engine/external/mkltiny_lnx/lib
   ${INTEL_CVSDK_DIR}/external/cldnn/lib
   ${INTEL_CVSDK_DIR}/inference_engine/external/cldnn/lib
 )

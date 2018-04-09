@@ -9,6 +9,11 @@
 #include "op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#ifdef HAVE_INF_ENGINE
+#include <ie_extension.h>
+#include <ie_plugin_dispatcher.hpp>
+#endif  // HAVE_INF_ENGINE
+
 namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
@@ -309,13 +314,26 @@ void InfEngineBackendNet::init()
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
-#ifdef _WIN32
-    plugin = InferenceEngine::InferenceEnginePluginPtr("MKLDNNPlugin.dll");
-#else
-    plugin = InferenceEngine::InferenceEnginePluginPtr("libMKLDNNPlugin.so");
-#endif  // _WIN32
+
+    InferenceEngine::StatusCode status;
     InferenceEngine::ResponseDesc resp;
-    InferenceEngine::StatusCode status = plugin->LoadNetwork(net, &resp);
+    const InferenceEngine::Version* v = InferenceEngine::GetInferenceEngineVersion();
+
+    plugin = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(InferenceEngine::TargetDevice::eCPU);
+    if (std::atoi(v->buildNumber) > 5855)
+    {
+#ifdef _WIN32
+        InferenceEngine::IExtensionPtr extension =
+            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("cpu_extension.dll");
+#else
+        InferenceEngine::IExtensionPtr extension =
+            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("libcpu_extension.so");
+#endif  // _WIN32
+        status = plugin->AddExtension(extension, &resp);
+        if (status != InferenceEngine::StatusCode::OK)
+            CV_Error(Error::StsAssert, resp.msg);
+    }
+    status = plugin->LoadNetwork(net, &resp);
     if (status != InferenceEngine::StatusCode::OK)
         CV_Error(Error::StsAssert, resp.msg);
 }
