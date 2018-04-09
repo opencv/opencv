@@ -1027,7 +1027,7 @@ function(ocv_install_target)
     set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
   endif()
 
-  if(MSVS)
+  if(MSVC)
     if(NOT INSTALL_IGNORE_PDB AND
         (INSTALL_PDB OR
           (INSTALL_CREATE_DISTRIB AND NOT BUILD_SHARED_LIBS)
@@ -1056,16 +1056,13 @@ function(ocv_install_target)
       if(DEFINED __dst)
         # If CMake version is >=3.1.0 or <2.8.12.
         if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
-          get_target_property(fname ${__target} LOCATION_DEBUG)
-          if(fname MATCHES "\\.lib$")
-            string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug OPTIONAL)
+          get_target_property(compile_pdb_name ${__target} COMPILE_PDB_NAME)
+          get_target_property(compile_pdb_name_debug ${__target} COMPILE_PDB_NAME_DEBUG)
+          if(compile_pdb_name)
+            install(FILES "$<TARGET_FILE_DIR:${__target}>/${compile_pdb_name}.pdb" DESTINATION "${__dst}" CONFIGURATIONS Release OPTIONAL)
           endif()
-
-          get_target_property(fname ${__target} LOCATION_RELEASE)
-          if(fname MATCHES "\\.lib$")
-            string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release OPTIONAL)
+          if(compile_pdb_name_debug)
+            install(FILES "$<TARGET_FILE_DIR:${__target}>/${compile_pdb_name_debug}.pdb" DESTINATION "${__dst}" CONFIGURATIONS Debug OPTIONAL)
           endif()
         else()
           # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
