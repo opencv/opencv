@@ -134,159 +134,116 @@ struct HSV2RGB_f
 
     HSV2RGB_f(int _dstcn, int _blueIdx, float _hrange)
     : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {
-        #if CV_SSE2
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #if CV_SIMD128
+        hasSIMD = hasSIMD128();
         #endif
     }
 
-    #if CV_SSE2
-    void process(__m128& v_h0, __m128& v_h1, __m128& v_s0,
-                 __m128& v_s1, __m128& v_v0, __m128& v_v1) const
+    #if CV_SIMD128
+    inline void process(v_float32x4& v_h, v_float32x4& v_s,
+                        v_float32x4& v_v, v_float32x4& v_scale) const
     {
-        v_h0 = _mm_mul_ps(v_h0, _mm_set1_ps(hscale));
-        v_h1 = _mm_mul_ps(v_h1, _mm_set1_ps(hscale));
+        v_h = v_h * v_scale;
+        v_float32x4 v_pre_sector = v_cvt_f32(v_trunc(v_h));
+        v_h = v_h - v_pre_sector;
+        v_float32x4 v_tab0 = v_v;
+        v_float32x4 v_one = v_setall_f32(1.0f);
+        v_float32x4 v_tab1 = v_v * (v_one - v_s);
+        v_float32x4 v_tab2 = v_v * (v_one - (v_s * v_h));
+        v_float32x4 v_tab3 = v_v * (v_one - (v_s * (v_one - v_h)));
 
-        __m128 v_pre_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h0));
-        __m128 v_pre_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h1));
+        v_float32x4 v_one_sixth = v_setall_f32(1.0f / 6.0f);
+        v_float32x4 v_sector = v_pre_sector * v_one_sixth;
+        v_sector = v_cvt_f32(v_trunc(v_sector));
+        v_float32x4 v_six = v_setall_f32(6.0f);
+        v_sector = v_pre_sector - (v_sector * v_six);
 
-        v_h0 = _mm_sub_ps(v_h0, v_pre_sector0);
-        v_h1 = _mm_sub_ps(v_h1, v_pre_sector1);
+        v_float32x4 v_two = v_setall_f32(2.0f);
+        v_h = v_tab1 & (v_sector < v_two);
+        v_h = v_h | (v_tab3 & (v_sector == v_two));
+        v_float32x4 v_three = v_setall_f32(3.0f);
+        v_h = v_h | (v_tab0 & (v_sector == v_three));
+        v_float32x4 v_four = v_setall_f32(4.0f);
+        v_h = v_h | (v_tab0 & (v_sector == v_four));
+        v_h = v_h | (v_tab2 & (v_sector > v_four));
 
-        __m128 v_tab00 = v_v0;
-        __m128 v_tab01 = v_v1;
-        __m128 v_tab10 = _mm_mul_ps(v_v0, _mm_sub_ps(_mm_set1_ps(1.0f), v_s0));
-        __m128 v_tab11 = _mm_mul_ps(v_v1, _mm_sub_ps(_mm_set1_ps(1.0f), v_s1));
-        __m128 v_tab20 = _mm_mul_ps(v_v0, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s0, v_h0)));
-        __m128 v_tab21 = _mm_mul_ps(v_v1, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s1, v_h1)));
-        __m128 v_tab30 = _mm_mul_ps(v_v0, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s0, _mm_sub_ps(_mm_set1_ps(1.0f), v_h0))));
-        __m128 v_tab31 = _mm_mul_ps(v_v1, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s1, _mm_sub_ps(_mm_set1_ps(1.0f), v_h1))));
+        v_s = v_tab3 & (v_sector < v_one);
+        v_s = v_s | (v_tab0 & (v_sector == v_one));
+        v_s = v_s | (v_tab0 & (v_sector == v_two));
+        v_s = v_s | (v_tab2 & (v_sector == v_three));
+        v_s = v_s | (v_tab1 & (v_sector > v_three));
 
-        __m128 v_sector0 = _mm_div_ps(v_pre_sector0, _mm_set1_ps(6.0f));
-        __m128 v_sector1 = _mm_div_ps(v_pre_sector1, _mm_set1_ps(6.0f));
-        v_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector0));
-        v_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector1));
-        v_sector0 = _mm_mul_ps(v_sector0, _mm_set1_ps(6.0f));
-        v_sector1 = _mm_mul_ps(v_sector1, _mm_set1_ps(6.0f));
-        v_sector0 = _mm_sub_ps(v_pre_sector0, v_sector0);
-        v_sector1 = _mm_sub_ps(v_pre_sector1, v_sector1);
-
-        v_h0 = _mm_and_ps(v_tab10, _mm_cmplt_ps(v_sector0, _mm_set1_ps(2.0f)));
-        v_h1 = _mm_and_ps(v_tab11, _mm_cmplt_ps(v_sector1, _mm_set1_ps(2.0f)));
-        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
-        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
-        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
-        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
-        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
-        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
-        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab20, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
-        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab21, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
-        v_s0 = _mm_and_ps(v_tab30, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
-        v_s1 = _mm_and_ps(v_tab31, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
-        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
-        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
-        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
-        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
-        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
-        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
-        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab10, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(3.0f))));
-        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab11, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(3.0f))));
-        v_v0 = _mm_and_ps(v_tab00, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
-        v_v1 = _mm_and_ps(v_tab01, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
-        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
-        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
-        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
-        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
-        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
-        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
-        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
-        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
-        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab00, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
-        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab01, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_v = v_tab0 & (v_sector < v_one);
+        v_v = v_v | (v_tab2 & (v_sector == v_one));
+        v_v = v_v | (v_tab1 & (v_sector == v_two));
+        v_v = v_v | (v_tab1 & (v_sector == v_three));
+        v_v = v_v | (v_tab3 & (v_sector == v_four));
+        v_v = v_v | (v_tab0 & (v_sector > v_four));
     }
     #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
         int i = 0, bidx = blueIdx, dcn = dstcn;
-        float _hscale = hscale;
         float alpha = ColorChannel<float>::max();
         n *= 3;
 
-        #if CV_SSE2
-        if (haveSIMD)
+        #if CV_SIMD128
+        if (hasSIMD)
         {
-            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            v_float32x4 v_scale = v_setall_f32(hscale);
+            if (dcn == 3)
             {
-                __m128 v_h0 = _mm_loadu_ps(src + i +  0);
-                __m128 v_h1 = _mm_loadu_ps(src + i +  4);
-                __m128 v_s0 = _mm_loadu_ps(src + i +  8);
-                __m128 v_s1 = _mm_loadu_ps(src + i + 12);
-                __m128 v_v0 = _mm_loadu_ps(src + i + 16);
-                __m128 v_v1 = _mm_loadu_ps(src + i + 20);
-
-                _mm_deinterleave_ps(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1);
-
-                process(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1);
-
-                if (dcn == 3)
+                if (bidx)
                 {
-                    if (bidx)
+                    for (; i <= n - 12; i += 12, dst += dcn * 4)
                     {
-                        _mm_interleave_ps(v_v0, v_v1, v_s0, v_s1, v_h0, v_h1);
-
-                        _mm_storeu_ps(dst +  0, v_v0);
-                        _mm_storeu_ps(dst +  4, v_v1);
-                        _mm_storeu_ps(dst +  8, v_s0);
-                        _mm_storeu_ps(dst + 12, v_s1);
-                        _mm_storeu_ps(dst + 16, v_h0);
-                        _mm_storeu_ps(dst + 20, v_h1);
+                        v_float32x4 v_h;
+                        v_float32x4 v_s;
+                        v_float32x4 v_v;
+                        v_load_deinterleave(src + i, v_h, v_s, v_v);
+                        process(v_h, v_s, v_v, v_scale);
+                        v_store_interleave(dst, v_v, v_s, v_h);
                     }
-                    else
+                } else {
+                    for (; i <= n - 12; i += 12, dst += dcn * 4)
                     {
-                        _mm_interleave_ps(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1);
-
-                        _mm_storeu_ps(dst +  0, v_h0);
-                        _mm_storeu_ps(dst +  4, v_h1);
-                        _mm_storeu_ps(dst +  8, v_s0);
-                        _mm_storeu_ps(dst + 12, v_s1);
-                        _mm_storeu_ps(dst + 16, v_v0);
-                        _mm_storeu_ps(dst + 20, v_v1);
+                        v_float32x4 v_h;
+                        v_float32x4 v_s;
+                        v_float32x4 v_v;
+                        v_load_deinterleave(src + i, v_h, v_s, v_v);
+                        process(v_h, v_s, v_v, v_scale);
+                        v_store_interleave(dst, v_h, v_s, v_v);
                     }
                 }
-                else
+            } else { // dcn == 4
+                v_float32x4 v_a = v_setall_f32(alpha);
+                if (bidx)
                 {
-                    __m128 v_a0 = _mm_set1_ps(alpha);
-                    __m128 v_a1 = _mm_set1_ps(alpha);
-                    if (bidx)
+                    for (; i <= n - 12; i += 12, dst += dcn * 4)
                     {
-                        _mm_interleave_ps(v_v0, v_v1, v_s0, v_s1, v_h0, v_h1, v_a0, v_a1);
-
-                        _mm_storeu_ps(dst +  0, v_v0);
-                        _mm_storeu_ps(dst +  4, v_v1);
-                        _mm_storeu_ps(dst +  8, v_s0);
-                        _mm_storeu_ps(dst + 12, v_s1);
-                        _mm_storeu_ps(dst + 16, v_h0);
-                        _mm_storeu_ps(dst + 20, v_h1);
-                        _mm_storeu_ps(dst + 24, v_a0);
-                        _mm_storeu_ps(dst + 28, v_a1);
+                        v_float32x4 v_h;
+                        v_float32x4 v_s;
+                        v_float32x4 v_v;
+                        v_load_deinterleave(src + i, v_h, v_s, v_v);
+                        process(v_h, v_s, v_v, v_scale);
+                        v_store_interleave(dst, v_v, v_s, v_h, v_a);
                     }
-                    else
+                } else {
+                    for (; i <= n - 12; i += 12, dst += dcn * 4)
                     {
-                        _mm_interleave_ps(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1, v_a0, v_a1);
-
-                        _mm_storeu_ps(dst +  0, v_h0);
-                        _mm_storeu_ps(dst +  4, v_h1);
-                        _mm_storeu_ps(dst +  8, v_s0);
-                        _mm_storeu_ps(dst + 12, v_s1);
-                        _mm_storeu_ps(dst + 16, v_v0);
-                        _mm_storeu_ps(dst + 20, v_v1);
-                        _mm_storeu_ps(dst + 24, v_a0);
-                        _mm_storeu_ps(dst + 28, v_a1);
+                        v_float32x4 v_h;
+                        v_float32x4 v_s;
+                        v_float32x4 v_v;
+                        v_load_deinterleave(src + i, v_h, v_s, v_v);
+                        process(v_h, v_s, v_v, v_scale);
+                        v_store_interleave(dst, v_h, v_s, v_v, v_a);
                     }
                 }
             }
         }
         #endif
+
         for( ; i < n; i += 3, dst += dcn )
         {
             float h = src[i], s = src[i+1], v = src[i+2];
@@ -300,7 +257,7 @@ struct HSV2RGB_f
                     {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
                 float tab[4];
                 int sector;
-                h *= _hscale;
+                h *= hscale;
                 if( h < 0 )
                     do h += 6; while( h < 0 );
                 else if( h >= 6 )
@@ -333,8 +290,8 @@ struct HSV2RGB_f
 
     int dstcn, blueIdx;
     float hscale;
-    #if CV_SSE2
-    bool haveSIMD;
+    #if CV_SIMD128
+    bool hasSIMD;
     #endif
 };
 
