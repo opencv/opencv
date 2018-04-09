@@ -70,6 +70,75 @@ SPLIT4_KERNEL_TEMPLATE(VSplit4, ushort,  uint16x8x4_t, vld4q_u16, vst1q_u16);
 SPLIT4_KERNEL_TEMPLATE(VSplit4, int   ,   int32x4x4_t, vld4q_s32, vst1q_s32);
 SPLIT4_KERNEL_TEMPLATE(VSplit4, int64 ,   int64x1x4_t, vld4_s64 , vst1_s64 );
 
+#elif CV_VSX
+template<typename T> struct VSplit2;
+template<typename T> struct VSplit3;
+template<typename T> struct VSplit4;
+
+#define SPLIT2_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>                                                        \
+    {                                                                             \
+        void operator()(const data_type* src, data_type* dst0,                    \
+                        data_type* dst1) const                                    \
+        {                                                                         \
+            reg_type r0, r1;                                                      \
+            load_func(src, r0, r1);                                               \
+            store_func(dst0, r0);                                                 \
+            store_func(dst1, r1);                                                 \
+        }                                                                         \
+    }
+
+#define SPLIT3_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>                                                        \
+    {                                                                             \
+        void operator()(const data_type* src, data_type* dst0, data_type* dst1,   \
+                        data_type* dst2) const                                    \
+        {                                                                         \
+            reg_type r0, r1, r2;                                                  \
+            load_func(src, r0, r1, r2);                                           \
+            store_func(dst0, r0);                                                 \
+            store_func(dst1, r1);                                                 \
+            store_func(dst2, r2);                                                 \
+        }                                                                         \
+    }
+
+#define SPLIT4_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>                                                        \
+    {                                                                             \
+        void operator()(const data_type* src, data_type* dst0, data_type* dst1,   \
+                        data_type* dst2, data_type* dst3) const                   \
+        {                                                                         \
+            reg_type r0, r1, r2, r3;                                              \
+            load_func(src, r0, r1, r2, r3);                                       \
+            store_func(dst0, r0);                                                 \
+            store_func(dst1, r1);                                                 \
+            store_func(dst2, r2);                                                 \
+            store_func(dst3, r3);                                                 \
+        }                                                                         \
+    }
+
+
+#define _SPLIT_CPP_VSX_VEC_LD v_load_deinterleave
+#define _SPLIT_CPP_VSX_VEC_ST v_store
+
+SPLIT2_KERNEL_TEMPLATE(VSplit2, uchar,  v_uint8x16, _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, ushort, v_uint16x8, _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, int,    v_int32x4,  _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, int64,  v_int64x2,  _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+
+SPLIT3_KERNEL_TEMPLATE(VSplit3, uchar , v_uint8x16, _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, ushort, v_uint16x8, _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, int,    v_int32x4,  _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, int64,  v_int64x2,  _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+
+SPLIT4_KERNEL_TEMPLATE(VSplit4, uchar,  v_uint8x16, _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, ushort, v_uint16x8, _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, int,    v_int32x4,  _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, int64,  v_int64x2,  _SPLIT_CPP_VSX_VEC_LD, _SPLIT_CPP_VSX_VEC_ST);
+
 #elif CV_SSE2
 
 template <typename T>
@@ -260,6 +329,16 @@ split_( const T* src, T** dst, int len, int cn )
             for( ; i < len - inc_i; i += inc_i, j += inc_j)
                 vsplit(src + j, dst0 + i, dst1 + i);
         }
+#elif CV_VSX
+        if(cn == 2)
+        {
+            int inc_i = 16/sizeof(T);
+            int inc_j = 2 * inc_i;
+
+            VSplit2<T> vsplit;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vsplit(src + j, dst0 + i, dst1 + i);
+        }
 #elif CV_SSE2
         if (cn == 2)
         {
@@ -289,6 +368,16 @@ split_( const T* src, T** dst, int len, int cn )
         if(cn == 3)
         {
             int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 3 * inc_i;
+
+            VSplit3<T> vsplit;
+            for( ; i <= len - inc_i; i += inc_i, j += inc_j)
+                vsplit(src + j, dst0 + i, dst1 + i, dst2 + i);
+        }
+#elif CV_VSX
+        if(cn == 3)
+        {
+            int inc_i = 16/sizeof(T);
             int inc_j = 3 * inc_i;
 
             VSplit3<T> vsplit;
@@ -326,6 +415,16 @@ split_( const T* src, T** dst, int len, int cn )
         if(cn == 4)
         {
             int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 4 * inc_i;
+
+            VSplit4<T> vsplit;
+            for( ; i <= len - inc_i; i += inc_i, j += inc_j)
+                vsplit(src + j, dst0 + i, dst1 + i, dst2 + i, dst3 + i);
+        }
+#elif CV_VSX
+        if(cn == 4)
+        {
+            int inc_i = 16/sizeof(T);
             int inc_j = 4 * inc_i;
 
             VSplit4<T> vsplit;

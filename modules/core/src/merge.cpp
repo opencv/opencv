@@ -68,6 +68,67 @@ MERGE4_KERNEL_TEMPLATE(VMerge4, ushort,  uint16x8x4_t, vld1q_u16, vst4q_u16);
 MERGE4_KERNEL_TEMPLATE(VMerge4, int   ,   int32x4x4_t, vld1q_s32, vst4q_s32);
 MERGE4_KERNEL_TEMPLATE(VMerge4, int64 ,   int64x1x4_t, vld1_s64 , vst4_s64 );
 
+#elif CV_VSX
+template<typename T> struct VMerge2;
+template<typename T> struct VMerge3;
+template<typename T> struct VMerge4;
+
+#define MERGE2_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+      template<>                                                                             \
+      struct name<data_type>{                                                                \
+          void operator()(const data_type* src0, const data_type* src1,                      \
+                  data_type* dst){                                                           \
+            reg_type r1 = load_func(src0);                                                   \
+            reg_type r2 = load_func(src1);                                                   \
+            store_func(dst, r1, r2);                                                         \
+         }                                                                                   \
+}
+
+#define MERGE3_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                               \
+    struct name<data_type>{                                                                  \
+        void operator()(const data_type* src0, const data_type* src1,                        \
+                        const data_type* src2, data_type* dst){                              \
+            reg_type r1 = load_func(src0);                                                   \
+            reg_type r2 = load_func(src1);                                                   \
+            reg_type r3 = load_func(src2);                                                   \
+            store_func(dst, r1, r2, r3);                                                     \
+        }                                                                                    \
+    }
+
+#define MERGE4_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                               \
+    struct name<data_type>{                                                                  \
+        void operator()(const data_type* src0, const data_type* src1,                        \
+                        const data_type* src2, const data_type* src3,                        \
+                        data_type* dst){                                                     \
+            reg_type r1 = load_func(src0);                                                   \
+            reg_type r2 = load_func(src1);                                                   \
+            reg_type r3 = load_func(src2);                                                   \
+            reg_type r4 = load_func(src3);                                                   \
+            store_func(dst, r1, r2, r3, r4);                                                 \
+        }                                                                                    \
+    }
+
+
+#define _MERGE_CPP_VSX_VEC_LD v_load
+#define _MERGE_CPP_VSX_VEC_ST v_store_interleave
+
+MERGE2_KERNEL_TEMPLATE(VMerge2, uchar,  v_uint8x16, _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE2_KERNEL_TEMPLATE(VMerge2, ushort, v_uint16x8, _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE2_KERNEL_TEMPLATE(VMerge2, int,    v_int32x4,  _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE2_KERNEL_TEMPLATE(VMerge2, int64,  v_int64x2,  _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+
+MERGE3_KERNEL_TEMPLATE(VMerge3, uchar , v_uint8x16, _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE3_KERNEL_TEMPLATE(VMerge3, ushort, v_uint16x8, _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE3_KERNEL_TEMPLATE(VMerge3, int,    v_int32x4,  _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE3_KERNEL_TEMPLATE(VMerge3, int64,  v_int64x2,  _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+
+MERGE4_KERNEL_TEMPLATE(VMerge4, uchar,  v_uint8x16, _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE4_KERNEL_TEMPLATE(VMerge4, ushort, v_uint16x8, _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE4_KERNEL_TEMPLATE(VMerge4, int,    v_int32x4,  _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+MERGE4_KERNEL_TEMPLATE(VMerge4, int64,  v_int64x2,  _MERGE_CPP_VSX_VEC_LD, _MERGE_CPP_VSX_VEC_ST);
+
 #elif CV_SSE2
 
 template <typename T>
@@ -252,6 +313,16 @@ merge_( const T** src, T* dst, int len, int cn )
             for( ; i < len - inc_i; i += inc_i, j += inc_j)
                 vmerge(src0 + i, src1 + i, dst + j);
         }
+#elif CV_VSX
+        if(cn == 2)
+        {
+            int inc_i = 16/sizeof(T);
+            int inc_j = 2 * inc_i;
+
+            VMerge2<T> vmerge;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vmerge(src0 + i, src1 + i, dst + j);
+        }
 #elif CV_SSE2
         if(cn == 2)
         {
@@ -278,6 +349,16 @@ merge_( const T** src, T* dst, int len, int cn )
         if(cn == 3)
         {
             int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 3 * inc_i;
+
+            VMerge3<T> vmerge;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vmerge(src0 + i, src1 + i, src2 + i, dst + j);
+        }
+#elif CV_VSX
+        if(cn == 3)
+        {
+            int inc_i = 16/sizeof(T);
             int inc_j = 3 * inc_i;
 
             VMerge3<T> vmerge;
@@ -311,6 +392,16 @@ merge_( const T** src, T* dst, int len, int cn )
         if(cn == 4)
         {
             int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 4 * inc_i;
+
+            VMerge4<T> vmerge;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vmerge(src0 + i, src1 + i, src2 + i, src3 + i, dst + j);
+        }
+#elif CV_VSX
+        if(cn == 4)
+        {
+            int inc_i = 16/sizeof(T);
             int inc_j = 4 * inc_i;
 
             VMerge4<T> vmerge;
