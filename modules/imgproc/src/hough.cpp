@@ -1329,7 +1329,7 @@ public:
         CV_Assert(nzSz > 0);
     }
 
-    ~HoughCircleEstimateRadiusInvoker() {_lock.unlock();}
+    ~HoughCircleEstimateRadiusInvoker() {}
 
 protected:
     inline int filterCircles(const Point2f& curCenter, float* ddata) const;
