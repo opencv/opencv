@@ -1130,17 +1130,31 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
         cvtColor(_image, _image, COLOR_GRAY2BGR);
     }
 
-    Mat _lines;
-    _lines = lines.getMat();
-    int N = _lines.checkVector(4);
+    Mat _lines = lines.getMat();
+    const int N = _lines.checkVector(4);
+
+    CV_Assert(_lines.depth() == CV_32F || _lines.depth() == CV_32S);
 
     // Draw segments
-    for(int i = 0; i < N; ++i)
+    if (_lines.depth() == CV_32F)
     {
-        const Vec4f& v = _lines.at<Vec4f>(i);
-        Point2f b(v[0], v[1]);
-        Point2f e(v[2], v[3]);
-        line(_image, b, e, Scalar(0, 0, 255), 1);
+        for (int i = 0; i < N; ++i)
+        {
+            const Vec4f& v = _lines.at<Vec4f>(i);
+            const Point2f b(v[0], v[1]);
+            const Point2f e(v[2], v[3]);
+            line(_image, b, e, Scalar(0, 0, 255), 1);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            const Vec4i& v = _lines.at<Vec4i>(i);
+            const Point2i b(v[0], v[1]);
+            const Point2i e(v[2], v[3]);
+            line(_image, b, e, Scalar(0, 0, 255), 1);
+        }
     }
 }
 
@@ -1156,24 +1170,30 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     Mat_<uchar> I1 = Mat_<uchar>::zeros(sz);
     Mat_<uchar> I2 = Mat_<uchar>::zeros(sz);
 
-    Mat _lines1;
-    Mat _lines2;
-    _lines1 = lines1.getMat();
-    _lines2 = lines2.getMat();
-    int N1 = _lines1.checkVector(4);
-    int N2 = _lines2.checkVector(4);
+    Mat _lines1 = lines1.getMat();
+    Mat _lines2 = lines2.getMat();
+    const int N1 = _lines1.checkVector(4);
+    const int N2 = _lines2.checkVector(4);
+
+    CV_Assert(_lines1.depth() == CV_32F || _lines1.depth() == CV_32S);
+    CV_Assert(_lines2.depth() == CV_32F || _lines2.depth() == CV_32S);
+
+    if (_lines1.depth() == CV_32S)
+        _lines1.convertTo(_lines1, CV_32F);
+    if (_lines2.depth() == CV_32S)
+        _lines2.convertTo(_lines2, CV_32F);
 
     // Draw segments
     for(int i = 0; i < N1; ++i)
     {
-        Point2f b(_lines1.at<Vec4f>(i)[0], _lines1.at<Vec4f>(i)[1]);
-        Point2f e(_lines1.at<Vec4f>(i)[2], _lines1.at<Vec4f>(i)[3]);
+        const Point2f b(_lines1.at<Vec4f>(i)[0], _lines1.at<Vec4f>(i)[1]);
+        const Point2f e(_lines1.at<Vec4f>(i)[2], _lines1.at<Vec4f>(i)[3]);
         line(I1, b, e, Scalar::all(255), 1);
     }
     for(int i = 0; i < N2; ++i)
     {
-        Point2f b(_lines2.at<Vec4f>(i)[0], _lines2.at<Vec4f>(i)[1]);
-        Point2f e(_lines2.at<Vec4f>(i)[2], _lines2.at<Vec4f>(i)[3]);
+        const Point2f b(_lines2.at<Vec4f>(i)[0], _lines2.at<Vec4f>(i)[1]);
+        const Point2f e(_lines2.at<Vec4f>(i)[2], _lines2.at<Vec4f>(i)[3]);
         line(I2, b, e, Scalar::all(255), 1);
     }
 
