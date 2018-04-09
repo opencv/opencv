@@ -110,7 +110,8 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_FileMode,
 struct notForGDAL {
     bool operator()(const string &name) const {
         const string &ext = name.substr(name.size() - 3, 3);
-        return ext == "hdr" || ext == "dcm" || ext == "jp2";
+        return ext == "hdr" || ext == "dcm" || ext == "jp2" ||
+                name.find("rle8.bmp") != std::string::npos;
     }
 };
 
