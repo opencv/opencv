@@ -748,9 +748,13 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     // defaults for now, maybe base them on params in the future
     int compression = COMPRESSION_LZW;
     int predictor = PREDICTOR_HORIZONTAL;
+    int resUnit = -1, dpiX = -1, dpiY = -1;
 
     readParam(params, TIFFTAG_COMPRESSION, compression);
     readParam(params, TIFFTAG_PREDICTOR, predictor);
+    readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
+    readParam(params, IMWRITE_TIFF_XDPI, dpiX);
+    readParam(params, IMWRITE_TIFF_YDPI, dpiY);
 
     //Iterate through each image in the vector and write them out as Tiff directories
     for (size_t page = 0; page < img_vec.size(); page++)
@@ -816,6 +820,16 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             TIFFClose(pTiffHandle);
             return false;
         }
+
+        if (((resUnit >= RESUNIT_NONE && resUnit <= RESUNIT_CENTIMETER) && !TIFFSetField(pTiffHandle, TIFFTAG_RESOLUTIONUNIT, resUnit))
+            || (dpiX >= 0 && !TIFFSetField(pTiffHandle, TIFFTAG_XRESOLUTION, (float)dpiX))
+            || (dpiY >= 0 && !TIFFSetField(pTiffHandle, TIFFTAG_YRESOLUTION, (float)dpiY))
+            )
+        {
+            TIFFClose(pTiffHandle);
+            return false;
+        }
+
 
         // row buffer, because TIFFWriteScanline modifies the original data!
         size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
