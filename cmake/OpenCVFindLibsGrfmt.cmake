@@ -131,9 +131,26 @@ if(WITH_WEBP)
   if(BUILD_WEBP)
     ocv_clear_vars(WEBP_FOUND WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
   else()
+    if(HUNTER_ENABLED)
+      hunter_add_package(WebP)
+      find_package(WebP CONFIG REQUIRED)
+      set(WEBP_FOUND TRUE)
+      set(HAVE_WEBP 1)
+      set(WEBP_LIBRARY WebP::webp)
+      set(WEBP_LIBRARIES ${WEBP_LIBRARY})
+
+      get_target_property(
+          WEBP_INCLUDE_DIR
+          WebP::webp
+          INTERFACE_INCLUDE_DIRECTORIES
+      )
+    else()
+
     include(cmake/OpenCVFindWebP.cmake)
     if(WEBP_FOUND)
       set(HAVE_WEBP 1)
+    endif()
+
     endif()
   endif()
 endif()

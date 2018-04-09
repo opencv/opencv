@@ -336,6 +336,10 @@ if("@JASPER_FOUND@")
   find_dependency(jasper CONFIG)
 endif()
 
+if("@WEBP_FOUND@")
+  find_dependency(WebP CONFIG)
+endif()
+
 # AWP: Qt5 dependencies -- start
 if("@Qt5Core_FOUND@")
   find_dependency(Qt5Core)
