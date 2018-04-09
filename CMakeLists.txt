@@ -221,7 +221,7 @@ OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF
 OCV_OPTION(WITH_CAROTENE       "Use NVidia carotene acceleration library for ARM platform"                   ON  IF (ARM OR AARCH64) AND NOT IOS AND NOT (CMAKE_VERSION VERSION_LESS "2.8.11"))
 OCV_OPTION(WITH_CPUFEATURES    "Use cpufeatures Android library"             ON   IF ANDROID)
 OCV_OPTION(WITH_VTK            "Include VTK library support (and build opencv_viz module eiher)"             ON  IF (NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
-OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"                                         ON  IF (NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"                                         OFF IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" ON IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               ON IF (NOT IOS AND NOT APPLE) )
