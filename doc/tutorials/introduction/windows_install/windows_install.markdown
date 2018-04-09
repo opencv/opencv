@@ -89,7 +89,7 @@ CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 @endcode
     with no Perf tests, no tests, no doc, no CUDA and no example
 @code{.bash}
-CMAKE_OPTIONS='-DBUILD_PERF_TESTS:BOOL=OFF -DBUILD_TESTS:BOOL=OFF -DBUILD_DOCS:BOOL=OFF  -DWITH_CUDA:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF'
+CMAKE_OPTIONS='-DBUILD_PERF_TESTS:BOOL=OFF -DBUILD_TESTS:BOOL=OFF -DBUILD_DOCS:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF'
 @endcode
 -#  In git command line enter following command :
 @code{.bash}
