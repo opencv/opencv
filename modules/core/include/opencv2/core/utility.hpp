@@ -247,6 +247,23 @@ architecture.
  */
 CV_EXPORTS_W const String& getBuildInformation();
 
+/** @brief Returns library version string
+
+For example "3.4.1-dev".
+
+@sa getMajorVersion, getMinorVersion, getRevisionVersion
+*/
+CV_EXPORTS_W String getVersionString();
+
+/** @brief Returns major library version */
+CV_EXPORTS_W int getVersionMajor();
+
+/** @brief Returns minor library version */
+CV_EXPORTS_W int getVersionMinor();
+
+/** @brief Returns revision field of the library version */
+CV_EXPORTS_W int getVersionRevision();
+
 /** @brief Returns the number of ticks.
 
 The function returns the number of ticks after the certain event (for example, when the machine was

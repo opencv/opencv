@@ -745,6 +745,14 @@ const String& getBuildInformation()
     return build_info;
 }
 
+String getVersionString() { return String(CV_VERSION); }
+
+int getVersionMajor() { return CV_VERSION_MAJOR; }
+
+int getVersionMinor() { return CV_VERSION_MINOR; }
+
+int getVersionRevision() { return CV_VERSION_REVISION; }
+
 String format( const char* fmt, ... )
 {
     AutoBuffer<char, 1024> buf;

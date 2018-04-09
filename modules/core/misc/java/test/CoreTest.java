@@ -2048,4 +2048,11 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(5f, val2);
     }
 
+    public void testVersion() {
+        assertEquals(Core.VERSION_MAJOR, Core.getVersionMajor());
+        assertEquals(Core.VERSION_MINOR, Core.getVersionMinor());
+        assertEquals(Core.VERSION_REVISION, Core.getVersionRevision());
+        assertEquals(Core.VERSION, Core.getVersionString());
+    }
+
 }
