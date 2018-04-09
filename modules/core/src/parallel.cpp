@@ -131,7 +131,9 @@
 
 
 #ifndef CV__EXCEPTION_PTR
-#  ifdef CV_CXX11
+#  if defined(__ANDROID__) && defined(ATOMIC_INT_LOCK_FREE) && ATOMIC_INT_LOCK_FREE < 2
+#    define CV__EXCEPTION_PTR 0  // Not supported, details: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58938
+#  elif defined(CV_CXX11)
 #    define CV__EXCEPTION_PTR 1
 #  elif defined(CV_ICC)
 #    define CV__EXCEPTION_PTR 1
@@ -145,7 +147,7 @@
 #endif
 #ifndef CV__EXCEPTION_PTR
 #  define CV__EXCEPTION_PTR 0
-#else
+#elif CV__EXCEPTION_PTR
 #  include <exception>  // std::exception_ptr
 #endif
 
