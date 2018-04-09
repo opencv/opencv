@@ -332,6 +332,10 @@ if("@JPEG_FOUND@")
   find_dependency(JPEG CONFIG)
 endif()
 
+if("@JASPER_FOUND@")
+  find_dependency(jasper CONFIG)
+endif()
+
 # AWP: Qt5 dependencies -- start
 if("@Qt5Core_FOUND@")
   find_dependency(Qt5Core)
