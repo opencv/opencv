@@ -32,7 +32,18 @@ if(WITH_JPEG)
     ocv_clear_vars(JPEG_FOUND)
   else()
     hunter_add_package(Jpeg)
+    if(HUNTER_ENABLED)
+      find_package(JPEG CONFIG REQUIRED)
+      set(JPEG_LIBRARY JPEG::jpeg)
+      set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+      get_target_property(
+          JPEG_INCLUDE_DIR
+          JPEG::jpeg
+          INTERFACE_INCLUDE_DIRECTORIES
+      )
+    else()
     include(FindJPEG)
+    endif()
   endif()
 
   if(NOT JPEG_FOUND)
