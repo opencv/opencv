@@ -2088,7 +2088,7 @@ template <class T, bool NULLABLE = FALSE>
 class ComPtrList : public List<T*>
 {
 public:
-
+    typedef typename List<T*>::Node Node;
     typedef T* Ptr;
 
     void Clear()
