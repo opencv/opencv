@@ -700,7 +700,7 @@ struct XYZ2RGB_f<float>
     : dstcn(_dstcn), blueIdx(_blueIdx)
     {
         for(int i = 0; i < 9; i++)
-            coeffs[i] = _coeffs ? _coeffs[i] : XYZ2sRGB_D65[i];
+            coeffs[i] = _coeffs ? _coeffs[i] : (float)XYZ2sRGB_D65[i];
         if(blueIdx == 0)
         {
             std::swap(coeffs[0], coeffs[6]);
