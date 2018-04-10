@@ -224,7 +224,7 @@ TEST_F(Imgproc_LSD_NONE, whiteNoise)
     for (int i = 0; i < EPOCHS; ++i)
     {
         GenerateWhiteNoise(test_image);
-        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
         detector->detect(test_image, lines);
 
         if(50u >= lines.size()) ++passedtests;
