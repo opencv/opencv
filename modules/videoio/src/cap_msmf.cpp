@@ -543,7 +543,7 @@ public:
     // Getting frame rate, which is getting from videodevice with deviceID
     unsigned int getFrameRate(int deviceID) const;
     // Getting name of videodevice with deviceID
-    wchar_t *getNameVideoDevice(int deviceID);
+    const wchar_t *getNameVideoDevice(int deviceID);
     // Getting interface MediaSource for Media Foundation from videodevice with deviceID
     IMFMediaSource *getMediaSource(int deviceID);
     // Getting format with id, which is supported by videodevice with deviceID
@@ -1371,8 +1371,10 @@ void ImageGrabberCallback::resumeGrabbing()
 
 HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo)
 {
+    HRESULT hr = S_OK;
+    { // "done:" scope
     _ComPtr<IMFPresentationDescriptor> pPD = NULL;
-    HRESULT hr = !pSource ? E_POINTER : S_OK; CHECK_HR(hr);
+    hr = !pSource ? E_POINTER : S_OK; CHECK_HR(hr);
     CHECK_HR(hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf()));
 
     DWORD cStreams = 0;
@@ -1455,6 +1457,7 @@ HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSink
     else
         hr = E_INVALIDARG;
 
+    } // "done:" scope
 done:
     return hr;
 }
@@ -2613,11 +2616,14 @@ HRESULT videoDevice::enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource
 
 HRESULT videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
 {
+    HRESULT hr = S_OK;
+    { // "done:" scope
+
     _ComPtr<IMFPresentationDescriptor> pPD = NULL;
     _ComPtr<IMFStreamDescriptor> pSD = NULL;
     _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
     _ComPtr<IMFMediaType> pType = NULL;
-    HRESULT hr = !pSource ? E_POINTER : S_OK;
+    hr = !pSource ? E_POINTER : S_OK;
     if (FAILED(hr))
     {
         goto done;
@@ -2655,6 +2661,7 @@ HRESULT videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
         vd_CurrentFormats.push_back(MT);
     }
 
+    } // "done:" scope
 done:
     return hr;
 }
@@ -3234,7 +3241,7 @@ unsigned int videoInput::getFrameRate(int deviceID) const
     return 0;
 }
 
-wchar_t *videoInput::getNameVideoDevice(int deviceID)
+const wchar_t *videoInput::getNameVideoDevice(int deviceID)
 {
     if (deviceID < 0)
     {
