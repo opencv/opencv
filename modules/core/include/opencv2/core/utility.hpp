@@ -56,9 +56,9 @@
 #include "opencv2/core.hpp"
 #include <ostream>
 
-#ifdef CV_CXX11
 #include <functional>
-#endif
+
+#include <mutex>  // std::mutex, std::lock_guard
 
 namespace cv
 {
@@ -531,7 +531,6 @@ public:
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
-#ifdef CV_CXX11
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
@@ -551,7 +550,6 @@ inline void parallel_for_(const Range& range, std::function<void(const Range&)> 
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
-#endif
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline
@@ -652,34 +650,8 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
-class CV_EXPORTS Mutex
-{
-public:
-    Mutex();
-    ~Mutex();
-    Mutex(const Mutex& m);
-    Mutex& operator = (const Mutex& m);
-
-    void lock();
-    bool trylock();
-    void unlock();
-
-    struct Impl;
-protected:
-    Impl* impl;
-};
-
-class CV_EXPORTS AutoLock
-{
-public:
-    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
-    ~AutoLock() { mutex->unlock(); }
-protected:
-    Mutex* mutex;
-private:
-    AutoLock(const AutoLock&);
-    AutoLock& operator = (const AutoLock&);
-};
+typedef std::recursive_mutex Mutex;
+typedef std::lock_guard<cv::Mutex> AutoLock;
 
 // TLS interface
 class CV_EXPORTS TLSDataContainer
@@ -689,17 +661,10 @@ protected:
     virtual ~TLSDataContainer();
 
     void  gatherData(std::vector<void*> &data) const;
-#if OPENCV_ABI_COMPATIBILITY > 300
     void* getData() const;
     void  release();
 
 private:
-#else
-    void  release();
-
-public:
-    void* getData() const;
-#endif
     virtual void* createDataInstance() const = 0;
     virtual void  deleteDataInstance(void* pData) const = 0;
 
@@ -1250,9 +1215,5 @@ CV_EXPORTS int getThreadID();
 } // namespace
 
 } //namespace cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/core/core_c.h"
-#endif
 
 #endif //OPENCV_CORE_UTILITY_H
