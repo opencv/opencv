@@ -60,11 +60,6 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::calcSharrDeriv(src, dst))
-        return;
-#endif
-
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
     deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
@@ -1378,12 +1373,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        typedef tegra::LKTrackerInvoker<cv::detail::LKTrackerInvoker> LKTrackerInvoker;
-#else
         typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
-#endif
-
         parallel_for_(Range(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
                                                           nextPyr[level * lvlStep2], prevPts, nextPts,
                                                           status, err,
