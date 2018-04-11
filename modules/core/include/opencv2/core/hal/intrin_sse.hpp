@@ -286,6 +286,27 @@ struct v_float16x4
 };
 #endif
 
+namespace hal_sse_internal
+{
+    template <typename to_sse_type, typename from_sse_type>
+    to_sse_type v_sse_reinterpret_as(const from_sse_type& val);
+
+#define OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(to_sse_type, from_sse_type, sse_cast_intrin) \
+    template<> inline \
+    to_sse_type v_sse_reinterpret_as(const from_sse_type& a) \
+    { return sse_cast_intrin(a); }
+
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128i, OPENCV_HAL_NOP);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128, _mm_castps_si128);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128d, _mm_castpd_si128);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128i, _mm_castsi128_ps);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128, OPENCV_HAL_NOP);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128d, _mm_castpd_ps);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128i, _mm_castsi128_pd);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128, _mm_castps_pd);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128d, OPENCV_HAL_NOP);
+}
+
 #define OPENCV_HAL_IMPL_SSE_INITVEC(_Tpvec, _Tp, suffix, zsuffix, ssuffix, _Tps, cast) \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(_mm_setzero_##zsuffix()); } \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(_mm_set1_##ssuffix((_Tps)v)); } \
