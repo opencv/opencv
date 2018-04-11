@@ -80,7 +80,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     enum Target
     {
         DNN_TARGET_CPU,
-        DNN_TARGET_OPENCL
+        DNN_TARGET_OPENCL,
+        DNN_TARGET_OPENCL_FP16
     };
 
     /** @brief This class provides all data needed to initialize layer.

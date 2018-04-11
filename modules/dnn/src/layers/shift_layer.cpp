@@ -90,27 +90,6 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
-    {
-        switch (node->backendId)
-        {
-            case DNN_BACKEND_INFERENCE_ENGINE:
-            {
-#ifdef HAVE_INF_ENGINE
-                auto base = node.dynamicCast<InfEngineBackendNode>();
-                auto conv = std::dynamic_pointer_cast<InferenceEngine::ConvolutionLayer>(base->layer);
-                if (conv)
-                {
-                    fuseConvWeights(conv, Mat(), blobs[0]);
-                    return base;
-                }
-#endif  // HAVE_INF_ENGINE
-                break;
-            }
-        }
-        return Ptr<BackendNode>();
-    }
-
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
