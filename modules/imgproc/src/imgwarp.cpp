@@ -52,6 +52,7 @@
 #include "hal_replacement.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
 using namespace cv;
@@ -172,7 +173,7 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     }
 
     float sum = 0;
-    double y0=-(x+3)*CV_PI*0.25, s0 = sin(y0), c0=cos(y0);
+    double y0=-(x+3)*CV_PI*0.25, s0 = std::sin(y0), c0= std::cos(y0);
     for(int i = 0; i < 8; i++ )
     {
         double y = -(x+3-i)*CV_PI*0.25;
@@ -3079,8 +3080,8 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
     CV_INSTRUMENT_REGION()
 
     angle *= CV_PI/180;
-    double alpha = cos(angle)*scale;
-    double beta = sin(angle)*scale;
+    double alpha = std::cos(angle)*scale;
+    double beta = std::sin(angle)*scale;
 
     Mat M(2, 3, CV_64F);
     double* m = M.ptr<double>();
@@ -3199,30 +3200,30 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
 
     if( matM.type() == CV_32F )
     {
-        const float* M = matM.ptr<float>();
-        float* iM = _iM.ptr<float>();
+        const softfloat* M = matM.ptr<softfloat>();
+        softfloat* iM = _iM.ptr<softfloat>();
         int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
 
-        double D = M[0]*M[step+1] - M[1]*M[step];
-        D = D != 0 ? 1./D : 0;
-        double A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
-        double b1 = -A11*M[2] - A12*M[step+2];
-        double b2 = -A21*M[2] - A22*M[step+2];
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
 
-        iM[0] = (float)A11; iM[1] = (float)A12; iM[2] = (float)b1;
-        iM[istep] = (float)A21; iM[istep+1] = (float)A22; iM[istep+2] = (float)b2;
+        iM[0] = A11; iM[1] = A12; iM[2] = b1;
+        iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
     }
     else if( matM.type() == CV_64F )
     {
-        const double* M = matM.ptr<double>();
-        double* iM = _iM.ptr<double>();
+        const softdouble* M = matM.ptr<softdouble>();
+        softdouble* iM = _iM.ptr<softdouble>();
         int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
 
-        double D = M[0]*M[step+1] - M[1]*M[step];
-        D = D != 0 ? 1./D : 0;
-        double A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
-        double b1 = -A11*M[2] - A12*M[step+2];
-        double b2 = -A21*M[2] - A22*M[step+2];
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
 
         iM[0] = A11; iM[1] = A12; iM[2] = b1;
         iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
@@ -3497,8 +3498,8 @@ void cv::logPolar( InputArray _src, OutputArray _dst,
 
         for (phi = 0; phi < dsize.height; phi++)
         {
-            double cp = cos(phi * 2 * CV_PI / dsize.height);
-            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            double cp = std::cos(phi * 2 * CV_PI / dsize.height);
+            double sp = std::sin(phi * 2 * CV_PI / dsize.height);
             float* mx = (float*)(mapx.data + phi*mapx.step);
             float* my = (float*)(mapy.data + phi*mapy.step);
 
@@ -3699,8 +3700,8 @@ void cv::linearPolar( InputArray _src, OutputArray _dst,
 
         for (phi = 0; phi < dsize.height; phi++)
         {
-            double cp = cos(phi * 2 * CV_PI / dsize.height);
-            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            double cp = std::cos(phi * 2 * CV_PI / dsize.height);
+            double sp = std::sin(phi * 2 * CV_PI / dsize.height);
             float* mx = (float*)(mapx.data + phi*mapx.step);
             float* my = (float*)(mapy.data + phi*mapy.step);
 
