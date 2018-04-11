@@ -866,6 +866,44 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
 
     normAssert(outDefault, out);
 }
+
+// 1. Create a .prototxt file with the following network:
+// layer {
+//   type: "Input" name: "data" top: "data"
+//   input_param { shape { dim: 1 dim: 2 dim: 3 } }
+// }
+// layer {
+//   type: "Input" name: "second_input" top: "second_input"
+//   input_param { shape { dim: 1 dim: 2 dim: 3 } }
+// }
+// layer {
+//  type: "Eltwise" name: "output" top: "output"
+//  bottom: "data" bottom: "second_input"
+//  eltwise_param { operation: SUM }
+// }
+//
+// 2. Create a .caffemodel file using Caffe:
+//
+// import caffe
+// net = caffe.Net('/path/to/prototxt', caffe.TEST)
+// net.save('/path/to/caffemodel')
+//
+// 3. Convert using ModelOptimizer.
+TEST(Test_DLDT, two_inputs)
+{
+    Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
+    int inpSize[] = {1, 2, 3};
+    Mat firstInp(3, &inpSize[0], CV_32F);
+    Mat secondInp(3, &inpSize[0], CV_32F);
+    randu(firstInp, -1, 1);
+    randu(secondInp, -1, 1);
+
+    net.setInput(firstInp, "data");
+    net.setInput(secondInp, "second_input");
+    Mat out = net.forward();
+
+    normAssert(out, firstInp + secondInp);
+}
 #endif  // HAVE_INF_ENGINE
 
 }} // namespace
