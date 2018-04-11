@@ -1133,15 +1133,21 @@ namespace hal_sse_internal
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec &a)
 {
-    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
-    return _Tpvec(_mm_srli_si128(a.val, CV_SHIFT));
+    using namespace hal_sse_internal;
+    enum { imm2 = (imm * sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(v_sse_reinterpret_as<typename _Tpvec::vector_type>(
+        _mm_srli_si128(
+            v_sse_reinterpret_as<__m128i>(a.val), imm2)));
 }
 
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_left(const _Tpvec &a)
 {
-    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
-    return _Tpvec(_mm_slli_si128(a.val, CV_SHIFT));
+    using namespace hal_sse_internal;
+    enum { imm2 = (imm * sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(v_sse_reinterpret_as<typename _Tpvec::vector_type>(
+        _mm_slli_si128(
+            v_sse_reinterpret_as<__m128i>(a.val), imm2)));
 }
 
 template<int imm, typename _Tpvec>
