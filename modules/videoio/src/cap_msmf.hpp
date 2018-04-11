@@ -1,9 +1,3 @@
-#ifdef WINRT
-#define ICustomStreamSink StreamSink
-#ifndef __cplusplus_winrt
-#include "wrl.h"
-#endif
-#else
 EXTERN_C const IID IID_ICustomStreamSink;
 
 class DECLSPEC_UUID("4F8A1939-2FD3-46DB-AE70-DB7E0DD79B73") DECLSPEC_NOVTABLE ICustomStreamSink : public IUnknown
@@ -16,7 +10,6 @@ public:
     virtual HRESULT Restart() = 0;
     virtual HRESULT Stop() = 0;
 };
-#endif
 
 #define MF_PROP_SAMPLEGRABBERCALLBACK L"samplegrabbercallback"
 #define MF_PROP_VIDTYPE L"vidtype"
@@ -182,219 +175,6 @@ MAKE_ENUM(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypePairs[] = {
 };
 MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypePairs, StreamSinkMarkerTypePairs + sizeof(StreamSinkMarkerTypePairs) / sizeof(StreamSinkMarkerTypePairs[0]));
 
-#ifdef WINRT
-
-#ifdef __cplusplus_winrt
-#define _ContextCallback Concurrency::details::_ContextCallback
-#define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = S_OK;\
-    var._CallInContext([__VA_ARGS__]() {
-#define END_CALL_IN_CONTEXT(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
-});
-#define END_CALL_IN_CONTEXT_BASE });
-#else
-#define _ContextCallback Concurrency_winrt::details::_ContextCallback
-#define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = var._CallInContext([__VA_ARGS__]() -> HRESULT {
-#define END_CALL_IN_CONTEXT(hr) return hr;\
-});
-#define END_CALL_IN_CONTEXT_BASE return S_OK;\
-});
-#endif
-#define GET_CURRENT_CONTEXT _ContextCallback::_CaptureCurrent()
-#define SAVE_CURRENT_CONTEXT(var) _ContextCallback var = GET_CURRENT_CONTEXT
-
-#define COMMA ,
-
-#ifdef __cplusplus_winrt
-#define _Object Platform::Object^
-#define _ObjectObj Platform::Object^
-#define _String Platform::String^
-#define _StringObj Platform::String^
-#define _StringReference ref new Platform::String
-#define _StringReferenceObj Platform::String^
-#define _DeviceInformationCollection Windows::Devices::Enumeration::DeviceInformationCollection
-#define _MediaCapture Windows::Media::Capture::MediaCapture
-#define _MediaCaptureVideoPreview Windows::Media::Capture::MediaCapture
-#define _MediaCaptureInitializationSettings Windows::Media::Capture::MediaCaptureInitializationSettings
-#define _VideoDeviceController Windows::Media::Devices::VideoDeviceController
-#define _MediaDeviceController Windows::Media::Devices::VideoDeviceController
-#define _MediaEncodingProperties Windows::Media::MediaProperties::IMediaEncodingProperties
-#define _VideoEncodingProperties Windows::Media::MediaProperties::VideoEncodingProperties
-#define _MediaStreamType Windows::Media::Capture::MediaStreamType
-#define _AsyncInfo Windows::Foundation::IAsyncInfo
-#define _AsyncAction Windows::Foundation::IAsyncAction
-#define _AsyncOperation Windows::Foundation::IAsyncOperation
-#define _DeviceClass Windows::Devices::Enumeration::DeviceClass
-#define _IDeviceInformation Windows::Devices::Enumeration::DeviceInformation
-#define _DeviceInformation Windows::Devices::Enumeration::DeviceInformation
-#define _DeviceInformationStatics Windows::Devices::Enumeration::DeviceInformation
-#define _MediaEncodingProfile Windows::Media::MediaProperties::MediaEncodingProfile
-#define _StreamingCaptureMode Windows::Media::Capture::StreamingCaptureMode
-#define _PropertySet Windows::Foundation::Collections::PropertySet
-#define _Map Windows::Foundation::Collections::PropertySet
-#define _PropertyValueStatics Windows::Foundation::PropertyValue
-#define _VectorView Windows::Foundation::Collections::IVectorView
-#define _StartPreviewToCustomSinkIdAsync StartPreviewToCustomSinkAsync
-#define _InitializeWithSettingsAsync InitializeAsync
-#define _FindAllAsyncDeviceClass FindAllAsync
-#define _MediaExtension Windows::Media::IMediaExtension
-#define BEGIN_CREATE_ASYNC(type, ...) (Concurrency::create_async([__VA_ARGS__]() {
-#define END_CREATE_ASYNC(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
-}))
-#define DEFINE_TASK Concurrency::task
-#define CREATE_TASK Concurrency::create_task
-#define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency::task<rettype>()) ? Concurrency::create_task(func) : _task.then([func](rettype) -> rettype { return func(); });
-#define DEFINE_RET_VAL(x)
-#define DEFINE_RET_TYPE(x)
-#define DEFINE_RET_FORMAL(x) x
-#define RET_VAL(x) return x;
-#define RET_VAL_BASE
-#define MAKE_STRING(str) str
-#define GET_STL_STRING(str) std::wstring(str->Data())
-#define GET_STL_STRING_RAW(str) std::wstring(str->Data())
-#define MAKE_WRL_OBJ(x) x^
-#define MAKE_WRL_REF(x) x^
-#define MAKE_OBJ_REF(x) x^
-#define MAKE_WRL_AGILE_REF(x) Platform::Agile<x^>
-#define MAKE_PROPERTY_BACKING(Type, PropName) property Type PropName;
-#define MAKE_PROPERTY(Type, PropName, PropValue)
-#define MAKE_PROPERTY_STRING(Type, PropName, PropValue)
-#define MAKE_READONLY_PROPERTY(Type, PropName, PropValue) property Type PropName\
-{\
-    Type get() { return PropValue; }\
-}
-#define THROW_INVALID_ARG throw ref new Platform::InvalidArgumentException();
-#define RELEASE_AGILE_WRL(x) x = nullptr;
-#define RELEASE_WRL(x) x = nullptr;
-#define GET_WRL_OBJ_FROM_REF(objtype, obj, orig, hr) objtype^ obj = orig;\
-hr = S_OK;
-#define GET_WRL_OBJ_FROM_OBJ(objtype, obj, orig, hr) objtype^ obj = safe_cast<objtype^>(orig);\
-hr = S_OK;
-#define WRL_ENUM_GET(obj, prefix, prop) obj::##prop
-#define WRL_PROP_GET(obj, prop, arg, hr) arg = obj->##prop;\
-hr = S_OK;
-#define WRL_PROP_PUT(obj, prop, arg, hr) obj->##prop = arg;\
-hr = S_OK;
-#define WRL_METHOD_BASE(obj, method, ret, hr) ret = obj->##method();\
-hr = S_OK;
-#define WRL_METHOD(obj, method, ret, hr, ...) ret = obj->##method(__VA_ARGS__);\
-hr = S_OK;
-#define WRL_METHOD_NORET_BASE(obj, method, hr) obj->##method();\
-    hr = S_OK;
-#define WRL_METHOD_NORET(obj, method, hr, ...) obj->##method(__VA_ARGS__);\
-    hr = S_OK;
-#define REF_WRL_OBJ(obj) &obj
-#define DEREF_WRL_OBJ(obj) obj
-#define DEREF_AGILE_WRL_OBJ(obj) obj.Get()
-#define DEREF_AS_NATIVE_WRL_OBJ(type, obj) reinterpret_cast<type*>(obj)
-#define PREPARE_TRANSFER_WRL_OBJ(obj) obj
-#define ACTIVATE_LOCAL_OBJ_BASE(objtype) ref new objtype()
-#define ACTIVATE_LOCAL_OBJ(objtype, ...) ref new objtype(__VA_ARGS__)
-#define ACTIVATE_EVENT_HANDLER(objtype, ...) ref new objtype(__VA_ARGS__)
-#define ACTIVATE_OBJ(rtclass, objtype, obj, hr) MAKE_WRL_OBJ(objtype) obj = ref new objtype();\
-hr = S_OK;
-#define ACTIVATE_STATIC_OBJ(rtclass, objtype, obj, hr) objtype obj;\
-hr = S_OK;
-#else
-#define _Object IInspectable*
-#define _ObjectObj Microsoft::WRL::ComPtr<IInspectable>
-#define _String HSTRING
-#define _StringObj Microsoft::WRL::Wrappers::HString
-#define _StringReference Microsoft::WRL::Wrappers::HStringReference
-#define _StringReferenceObj Microsoft::WRL::Wrappers::HStringReference
-#define _DeviceInformationCollection ABI::Windows::Devices::Enumeration::DeviceInformationCollection
-#define _MediaCapture ABI::Windows::Media::Capture::IMediaCapture
-#define _MediaCaptureVideoPreview ABI::Windows::Media::Capture::IMediaCaptureVideoPreview
-#define _MediaCaptureInitializationSettings ABI::Windows::Media::Capture::IMediaCaptureInitializationSettings
-#define _VideoDeviceController ABI::Windows::Media::Devices::IVideoDeviceController
-#define _MediaDeviceController ABI::Windows::Media::Devices::IMediaDeviceController
-#define _MediaEncodingProperties ABI::Windows::Media::MediaProperties::IMediaEncodingProperties
-#define _VideoEncodingProperties ABI::Windows::Media::MediaProperties::IVideoEncodingProperties
-#define _MediaStreamType ABI::Windows::Media::Capture::MediaStreamType
-#define _AsyncInfo ABI::Windows::Foundation::IAsyncInfo
-#define _AsyncAction ABI::Windows::Foundation::IAsyncAction
-#define _AsyncOperation ABI::Windows::Foundation::IAsyncOperation
-#define _DeviceClass ABI::Windows::Devices::Enumeration::DeviceClass
-#define _IDeviceInformation ABI::Windows::Devices::Enumeration::IDeviceInformation
-#define _DeviceInformation ABI::Windows::Devices::Enumeration::DeviceInformation
-#define _DeviceInformationStatics ABI::Windows::Devices::Enumeration::IDeviceInformationStatics
-#define _MediaEncodingProfile ABI::Windows::Media::MediaProperties::IMediaEncodingProfile
-#define _StreamingCaptureMode ABI::Windows::Media::Capture::StreamingCaptureMode
-#define _PropertySet ABI::Windows::Foundation::Collections::IPropertySet
-#define _Map ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable *>
-#define _PropertyValueStatics ABI::Windows::Foundation::IPropertyValueStatics
-#define _VectorView ABI::Windows::Foundation::Collections::IVectorView
-#define _StartPreviewToCustomSinkIdAsync StartPreviewToCustomSinkIdAsync
-#define _InitializeWithSettingsAsync InitializeWithSettingsAsync
-#define _FindAllAsyncDeviceClass FindAllAsyncDeviceClass
-#define _MediaExtension ABI::Windows::Media::IMediaExtension
-#define BEGIN_CREATE_ASYNC(type, ...) Concurrency_winrt::create_async<type>([__VA_ARGS__]() -> HRESULT {
-#define END_CREATE_ASYNC(hr) return hr;\
-})
-#define DEFINE_TASK Concurrency_winrt::task
-#define CREATE_TASK Concurrency_winrt::create_task
-#define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency_winrt::task<rettype>()) ? Concurrency_winrt::create_task<rettype>(func) : _task.then([func](rettype, rettype* retVal) -> HRESULT { return func(retVal); });
-#define DEFINE_RET_VAL(x) x* retVal
-#define DEFINE_RET_TYPE(x) <x>
-#define DEFINE_RET_FORMAL(x) HRESULT
-#define RET_VAL(x) *retVal = x;\
-return S_OK;
-#define RET_VAL_BASE return S_OK;
-#define MAKE_STRING(str) Microsoft::WRL::Wrappers::HStringReference(L##str)
-#define GET_STL_STRING(str) std::wstring(str.GetRawBuffer(NULL))
-#define GET_STL_STRING_RAW(str) WindowsGetStringRawBuffer(str, NULL)
-#define MAKE_WRL_OBJ(x) Microsoft::WRL::ComPtr<x>
-#define MAKE_WRL_REF(x) x*
-#define MAKE_OBJ_REF(x) x
-#define MAKE_WRL_AGILE_REF(x) x*
-#define MAKE_PROPERTY_BACKING(Type, PropName) Type PropName;
-#define MAKE_PROPERTY(Type, PropName, PropValue) STDMETHODIMP get_##PropName(Type* pVal) { if (pVal) { *pVal = PropValue; } else { return E_INVALIDARG; } return S_OK; }\
-    STDMETHODIMP put_##PropName(Type Val) { PropValue = Val; return S_OK; }
-#define MAKE_PROPERTY_STRING(Type, PropName, PropValue) STDMETHODIMP get_##PropName(Type* pVal) { if (pVal) { return ::WindowsDuplicateString(PropValue.Get(), pVal); } else { return E_INVALIDARG; } }\
-    STDMETHODIMP put_##PropName(Type Val) { return PropValue.Set(Val); }
-#define MAKE_READONLY_PROPERTY(Type, PropName, PropValue) STDMETHODIMP get_##PropName(Type* pVal) { if (pVal) { *pVal = PropValue; } else { return E_INVALIDARG; } return S_OK; }
-#define THROW_INVALID_ARG RoOriginateError(E_INVALIDARG, nullptr);
-#define RELEASE_AGILE_WRL(x) if (x) { (x)->Release(); x = nullptr; }
-#define RELEASE_WRL(x) if (x) { (x)->Release(); x = nullptr; }
-#define GET_WRL_OBJ_FROM_REF(objtype, obj, orig, hr) Microsoft::WRL::ComPtr<objtype> obj;\
-hr = orig->QueryInterface(__uuidof(objtype), &obj);
-#define GET_WRL_OBJ_FROM_OBJ(objtype, obj, orig, hr) Microsoft::WRL::ComPtr<objtype> obj;\
-hr = orig.As(&obj);
-#define WRL_ENUM_GET(obj, prefix, prop) obj::prefix##_##prop
-#define WRL_PROP_GET(obj, prop, arg, hr) hr = obj->get_##prop(&arg);
-#define WRL_PROP_PUT(obj, prop, arg, hr) hr = obj->put_##prop(arg);
-#define WRL_METHOD_BASE(obj, method, ret, hr) hr = obj->##method(&ret);
-#define WRL_METHOD(obj, method, ret, hr, ...) hr = obj->##method(__VA_ARGS__, &ret);
-#define WRL_METHOD_NORET_BASE(obj, method, hr) hr = obj->##method();
-#define REF_WRL_OBJ(obj) obj.GetAddressOf()
-#define DEREF_WRL_OBJ(obj) obj.Get()
-#define DEREF_AGILE_WRL_OBJ(obj) obj
-#define DEREF_AS_NATIVE_WRL_OBJ(type, obj) obj.Get()
-#define PREPARE_TRANSFER_WRL_OBJ(obj) obj.Detach()
-#define ACTIVATE_LOCAL_OBJ_BASE(objtype) Microsoft::WRL::Make<objtype>()
-#define ACTIVATE_LOCAL_OBJ(objtype, ...) Microsoft::WRL::Make<objtype>(__VA_ARGS__)
-#define ACTIVATE_EVENT_HANDLER(objtype, ...) Microsoft::WRL::Callback<objtype>(__VA_ARGS__).Get()
-#define ACTIVATE_OBJ(rtclass, objtype, obj, hr) MAKE_WRL_OBJ(objtype) obj;\
-{\
-    Microsoft::WRL::ComPtr<IActivationFactory> objFactory;\
-    hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(rtclass).Get(), objFactory.ReleaseAndGetAddressOf());\
-    if (SUCCEEDED(hr)) {\
-        Microsoft::WRL::ComPtr<IInspectable> pInsp;\
-        hr = objFactory->ActivateInstance(pInsp.GetAddressOf());\
-        if (SUCCEEDED(hr)) hr = pInsp.As(&obj);\
-    }\
-}
-#define ACTIVATE_STATIC_OBJ(rtclass, objtype, obj, hr) objtype obj;\
-{\
-    Microsoft::WRL::ComPtr<IActivationFactory> objFactory;\
-    hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(rtclass).Get(), objFactory.ReleaseAndGetAddressOf());\
-    if (SUCCEEDED(hr)) {\
-        if (SUCCEEDED(hr)) hr = objFactory.As(&obj);\
-    }\
-}
-#endif
-
-#define _ComPtr Microsoft::WRL::ComPtr
-#else
 
 #define _COM_SMARTPTR_DECLARE(T,var) T ## Ptr var
 
@@ -509,7 +289,6 @@ private:
 };
 
 #define _ComPtr ComPtr
-#endif
 
 template <class TBase=IMFAttributes>
 class CBaseAttributes : public TBase
@@ -860,19 +639,10 @@ protected:
 };
 
 class StreamSink :
-#ifdef WINRT
-    public Microsoft::WRL::RuntimeClass<
-    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>,
-    IMFStreamSink,
-    IMFMediaEventGenerator,
-    IMFMediaTypeHandler,
-    CBaseAttributes<> >
-#else
     public IMFStreamSink,
     public IMFMediaTypeHandler,
     public CBaseAttributes<>,
     public ICustomStreamSink
-#endif
 {
 public:
     // IUnknown methods
@@ -890,9 +660,6 @@ public:
         if (riid == IID_IMarshal) {
             return MarshalQI(riid, ppv);
         } else {
-#ifdef WINRT
-            hr = RuntimeClassT::QueryInterface(riid, ppv);
-#else
             if (riid == IID_IUnknown || riid == IID_IMFStreamSink) {
                 *ppv = static_cast<IMFStreamSink*>(this);
                 AddRef();
@@ -910,15 +677,11 @@ public:
                 AddRef();
             } else
                 hr = E_NOINTERFACE;
-#endif
         }
 
         return hr;
     }
 
-#ifdef WINRT
-    STDMETHOD(RuntimeClassInitialize)() { return S_OK; }
-#else
     ULONG STDMETHODCALLTYPE AddRef()
     {
         return InterlockedIncrement(&m_cRef);
@@ -932,7 +695,6 @@ public:
         }
         return cRef;
     }
-#endif
     HRESULT MarshalQI(REFIID riid, LPVOID* ppv)
     {
         HRESULT hr = S_OK;
@@ -967,11 +729,7 @@ public:
         m_StartTime(0), m_fGetStartTimeFromSample(false), m_fWaitingForFirstSample(false),
         m_state(State_TypeNotSet), m_pParent(nullptr),
         m_imageWidthInPixels(0), m_imageHeightInPixels(0) {
-#ifdef WINRT
-        m_token.value = 0;
-#else
         m_bConnected = false;
-#endif
         InitializeCriticalSectionEx(&m_critSec, 3000, 0);
         ZeroMemory(&m_guiCurrentSubtype, sizeof(m_guiCurrentSubtype));
         CBaseAttributes::Initialize(0U);
@@ -1646,17 +1404,11 @@ public:
         return hr;
     }
 private:
-#ifdef WINRT
-    EventRegistrationToken m_token;
-#else
     bool m_bConnected;
-#endif
 
     bool m_IsShutdown;                // Flag to indicate if Shutdown() method was called.
     CRITICAL_SECTION m_critSec;
-#ifndef WINRT
     long m_cRef;
-#endif
     IMFAttributes*        m_pParent;
     _ComPtr<IMFMediaType>        m_spCurrentType;
     _ComPtr<IMFMediaEventQueue>  m_spEventQueue;              // Event queue
@@ -2174,37 +1926,11 @@ protected:
     }
 };
 
-/* Be sure to declare webcam device capability in manifest
-  For better media capture support, add the following snippet with correct module name to the project manifest
-    (videoio needs DLL activation class factoryentry points):
-  <Extensions>
-    <Extension Category="windows.activatableClass.inProcessServer">
-      <InProcessServer>
-        <Path>modulename</Path>
-        <ActivatableClass ActivatableClassId="cv.MediaSink" ThreadingModel="both" />
-      </InProcessServer>
-    </Extension>
-  </Extensions>*/
-
 extern const __declspec(selectany) WCHAR RuntimeClass_CV_MediaSink[] = L"cv.MediaSink";
 
 class MediaSink :
-#ifdef WINRT
-    public Microsoft::WRL::RuntimeClass<
-    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix >,
-    Microsoft::WRL::Implements<ABI::Windows::Media::IMediaExtension>,
-    IMFMediaSink,
-    IMFClockStateSink,
-    Microsoft::WRL::FtmBase,
-    CBaseAttributes<>>
-#else
     public IMFMediaSink, public IMFClockStateSink, public CBaseAttributes<>
-#endif
 {
-#ifdef WINRT
-    InspectableClass(RuntimeClass_CV_MediaSink, BaseTrust)
-public:
-#else
 public:
     ULONG STDMETHODCALLTYPE AddRef()
     {
@@ -2246,7 +1972,6 @@ public:
 
         return hr;
     }
-#endif
     MediaSink() : m_IsShutdown(false), m_llStartTime(0) {
         CBaseAttributes<>::Initialize(0U);
         InitializeCriticalSectionEx(&m_critSec, 3000, 0);
@@ -2269,308 +1994,6 @@ public:
             return S_OK;
         }
     }
-#ifdef WINRT
-    STDMETHODIMP SetProperties(ABI::Windows::Foundation::Collections::IPropertySet *pConfiguration)
-    {
-        HRESULT hr = S_OK;
-        if (pConfiguration) {
-            Microsoft::WRL::ComPtr<IInspectable> spInsp;
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable *>> spSetting;
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropVal;
-            Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
-            UINT32 uiType = ABI::Windows::Media::Capture::MediaStreamType_VideoPreview;
-
-            hr = pConfiguration->QueryInterface(IID_PPV_ARGS(&spSetting));
-            if (FAILED(hr)) {
-                hr = E_FAIL;
-            }
-
-            if (SUCCEEDED(hr)) {
-                hr = spSetting->Lookup(Microsoft::WRL::Wrappers::HStringReference(MF_PROP_SAMPLEGRABBERCALLBACK).Get(), spInsp.ReleaseAndGetAddressOf());
-                if (FAILED(hr)) {
-                    hr = E_INVALIDARG;
-                }
-                if (SUCCEEDED(hr)) {
-                    hr = SetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, spInsp.Get());
-                }
-            }
-            if (SUCCEEDED(hr)) {
-                hr = spSetting->Lookup(Microsoft::WRL::Wrappers::HStringReference(MF_PROP_VIDTYPE).Get(), spInsp.ReleaseAndGetAddressOf());
-                if (FAILED(hr)) {
-                    hr = E_INVALIDARG;
-                }
-                if (SUCCEEDED(hr)) {
-                    if (SUCCEEDED(hr = spInsp.As(&spPropVal))) {
-                        hr = spPropVal->GetUInt32(&uiType);
-                    }
-                }
-            }
-            if (SUCCEEDED(hr)) {
-                hr = spSetting->Lookup(Microsoft::WRL::Wrappers::HStringReference(MF_PROP_VIDENCPROPS).Get(), spInsp.ReleaseAndGetAddressOf());
-                if (FAILED(hr)) {
-                    hr = E_INVALIDARG;
-                }
-                if (SUCCEEDED(hr)) {
-                    hr = spInsp.As(&pMedEncProps);
-                }
-            }
-            if (SUCCEEDED(hr)) {
-                hr = SetMediaStreamProperties((ABI::Windows::Media::Capture::MediaStreamType)uiType, pMedEncProps.Get());
-            }
-        }
-
-        return hr;
-    }
-    static DWORD GetStreamId(ABI::Windows::Media::Capture::MediaStreamType mediaStreamType)
-    {
-        return 3 - mediaStreamType;
-    }
-    static HRESULT AddAttribute(_In_ GUID guidKey, _In_ ABI::Windows::Foundation::IPropertyValue *pValue, _In_ IMFAttributes* pAttr)
-    {
-        HRESULT hr = S_OK;
-        PROPVARIANT var;
-        ABI::Windows::Foundation::PropertyType type;
-        hr = pValue->get_Type(&type);
-        ZeroMemory(&var, sizeof(var));
-
-        if (SUCCEEDED(hr))
-        {
-            switch (type)
-            {
-            case ABI::Windows::Foundation::PropertyType_UInt8Array:
-            {
-                                                                      UINT32 cbBlob;
-                                                                      BYTE *pbBlog = nullptr;
-                                                                      hr = pValue->GetUInt8Array(&cbBlob, &pbBlog);
-                                                                      if (SUCCEEDED(hr))
-                                                                      {
-                                                                          if (pbBlog == nullptr)
-                                                                          {
-                                                                              hr = E_INVALIDARG;
-                                                                          }
-                                                                          else
-                                                                          {
-                                                                              hr = pAttr->SetBlob(guidKey, pbBlog, cbBlob);
-                                                                          }
-                                                                      }
-                                                                      CoTaskMemFree(pbBlog);
-            }
-                break;
-
-            case ABI::Windows::Foundation::PropertyType_Double:
-            {
-                                                                  DOUBLE value;
-                                                                  hr = pValue->GetDouble(&value);
-                                                                  if (SUCCEEDED(hr))
-                                                                  {
-                                                                      hr = pAttr->SetDouble(guidKey, value);
-                                                                  }
-            }
-                break;
-
-            case ABI::Windows::Foundation::PropertyType_Guid:
-            {
-                                                                GUID value;
-                                                                hr = pValue->GetGuid(&value);
-                                                                if (SUCCEEDED(hr))
-                                                                {
-                                                                    hr = pAttr->SetGUID(guidKey, value);
-                                                                }
-            }
-                break;
-
-            case ABI::Windows::Foundation::PropertyType_String:
-            {
-                        Microsoft::WRL::Wrappers::HString value;
-                        hr = pValue->GetString(value.GetAddressOf());
-                                                                  if (SUCCEEDED(hr))
-                                                                  {
-                                                                      UINT32 len = 0;
-                            LPCWSTR szValue = WindowsGetStringRawBuffer(value.Get(), &len);
-                                                                      hr = pAttr->SetString(guidKey, szValue);
-                                                                  }
-            }
-                break;
-
-            case ABI::Windows::Foundation::PropertyType_UInt32:
-            {
-                                                                  UINT32 value;
-                                                                  hr = pValue->GetUInt32(&value);
-                                                                  if (SUCCEEDED(hr))
-                                                                  {
-                                                                      pAttr->SetUINT32(guidKey, value);
-                                                                  }
-            }
-                break;
-
-            case ABI::Windows::Foundation::PropertyType_UInt64:
-            {
-                                                                  UINT64 value;
-                                                                  hr = pValue->GetUInt64(&value);
-                                                                  if (SUCCEEDED(hr))
-                                                                  {
-                                                                      hr = pAttr->SetUINT64(guidKey, value);
-                                                                  }
-            }
-                break;
-
-            case ABI::Windows::Foundation::PropertyType_Inspectable:
-            {
-                                                                       Microsoft::WRL::ComPtr<IInspectable> value;
-                                                                       hr = TYPE_E_TYPEMISMATCH;
-                                                                       if (SUCCEEDED(hr))
-                                                                       {
-                                                                           pAttr->SetUnknown(guidKey, value.Get());
-                                                                       }
-            }
-                break;
-
-                // ignore unknown values
-            }
-        }
-
-        return hr;
-    }
-    static HRESULT ConvertPropertiesToMediaType(_In_ ABI::Windows::Media::MediaProperties::IMediaEncodingProperties *pMEP, _Outptr_ IMFMediaType **ppMT)
-    {
-        HRESULT hr = S_OK;
-        _ComPtr<IMFMediaType> spMT;
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IMap<GUID, IInspectable*>> spMap;
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IIterable<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*>*>> spIterable;
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IIterator<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*>*>> spIterator;
-
-        if (pMEP == nullptr || ppMT == nullptr)
-        {
-            return E_INVALIDARG;
-        }
-        *ppMT = nullptr;
-
-                hr = pMEP->get_Properties(spMap.GetAddressOf());
-
-        if (SUCCEEDED(hr))
-        {
-            hr = spMap.As(&spIterable);
-        }
-        if (SUCCEEDED(hr))
-        {
-            hr = spIterable->First(&spIterator);
-        }
-        if (SUCCEEDED(hr))
-        {
-            MFCreateMediaType(spMT.ReleaseAndGetAddressOf());
-        }
-
-        boolean hasCurrent = false;
-        if (SUCCEEDED(hr))
-        {
-            hr = spIterator->get_HasCurrent(&hasCurrent);
-        }
-
-        while (hasCurrent)
-        {
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*> > spKeyValuePair;
-            Microsoft::WRL::ComPtr<IInspectable> spValue;
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropValue;
-            GUID guidKey;
-
-            hr = spIterator->get_Current(&spKeyValuePair);
-            if (FAILED(hr))
-            {
-                break;
-            }
-            hr = spKeyValuePair->get_Key(&guidKey);
-            if (FAILED(hr))
-            {
-                break;
-            }
-            hr = spKeyValuePair->get_Value(&spValue);
-            if (FAILED(hr))
-            {
-                break;
-            }
-            hr = spValue.As(&spPropValue);
-            if (FAILED(hr))
-            {
-                break;
-            }
-            hr = AddAttribute(guidKey, spPropValue.Get(), spMT.Get());
-            if (FAILED(hr))
-            {
-                break;
-            }
-
-            hr = spIterator->MoveNext(&hasCurrent);
-            if (FAILED(hr))
-            {
-                break;
-            }
-        }
-
-
-        if (SUCCEEDED(hr))
-        {
-            Microsoft::WRL::ComPtr<IInspectable> spValue;
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropValue;
-            GUID guiMajorType;
-
-            hr = spMap->Lookup(MF_MT_MAJOR_TYPE, spValue.GetAddressOf());
-
-            if (SUCCEEDED(hr))
-            {
-                hr = spValue.As(&spPropValue);
-            }
-            if (SUCCEEDED(hr))
-            {
-                hr = spPropValue->GetGuid(&guiMajorType);
-            }
-            if (SUCCEEDED(hr))
-            {
-                if (guiMajorType != MFMediaType_Video && guiMajorType != MFMediaType_Audio)
-                {
-                    hr = E_UNEXPECTED;
-                }
-            }
-        }
-
-        if (SUCCEEDED(hr))
-        {
-            *ppMT = spMT.Detach();
-        }
-
-        return hr;
-    }
-            //this should be passed through SetProperties!
-            HRESULT SetMediaStreamProperties(ABI::Windows::Media::Capture::MediaStreamType MediaStreamType,
-        _In_opt_ ABI::Windows::Media::MediaProperties::IMediaEncodingProperties *mediaEncodingProperties)
-    {
-        HRESULT hr = S_OK;
-        _ComPtr<IMFMediaType> spMediaType;
-
-        if (MediaStreamType != ABI::Windows::Media::Capture::MediaStreamType_VideoPreview &&
-            MediaStreamType != ABI::Windows::Media::Capture::MediaStreamType_VideoRecord &&
-            MediaStreamType != ABI::Windows::Media::Capture::MediaStreamType_Audio)
-        {
-            return E_INVALIDARG;
-        }
-
-        RemoveStreamSink(GetStreamId(MediaStreamType));
-
-        if (mediaEncodingProperties != nullptr)
-        {
-            _ComPtr<IMFStreamSink> spStreamSink;
-            hr = ConvertPropertiesToMediaType(mediaEncodingProperties, &spMediaType);
-            if (SUCCEEDED(hr))
-            {
-                hr = AddStreamSink(GetStreamId(MediaStreamType), nullptr, spStreamSink.GetAddressOf());
-            }
-            if (SUCCEEDED(hr)) {
-                hr = SetUnknown(MF_MEDIASINK_PREFERREDTYPE, spMediaType.Detach());
-            }
-        }
-
-        return hr;
-    }
-#endif
     //IMFMediaSink
     HRESULT STDMETHODCALLTYPE GetCharacteristics(
         /* [out] */ __RPC__out DWORD *pdwCharacteristics) {
@@ -2609,14 +2032,6 @@ public:
 
         if (SUCCEEDED(hr))
         {
-#ifdef WINRT
-            pStream = Microsoft::WRL::Make<StreamSink>();
-            if (pStream == nullptr) {
-                hr = E_OUTOFMEMORY;
-            }
-            if (SUCCEEDED(hr))
-                hr = pStream.As<IMFStreamSink>(&spMFStream);
-#else
             StreamSink* pSink = new StreamSink();
             if (pSink) {
                 hr = pSink->QueryInterface(IID_IMFStreamSink, (void**)spMFStream.GetAddressOf());
@@ -2625,7 +2040,6 @@ public:
                 }
                 if (FAILED(hr)) delete pSink;
             }
-#endif
         }
 
         // Initialize the stream.
@@ -2721,12 +2135,7 @@ public:
         {
             hr = m_streams.Remove(pos, nullptr);
                     _ComPtr<ICustomStreamSink> spCustomSink;
-#ifdef WINRT
-                    spCustomSink = static_cast<StreamSink*>(spStream.Get());
-                    hr = S_OK;
-#else
                     hr = spStream.As(&spCustomSink);
-#endif
                     if (SUCCEEDED(hr))
                         hr = spCustomSink->Shutdown();
         }
@@ -2945,12 +2354,8 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef WINRT
-                    spCustomSink = static_cast<StreamSink*>(pStream);
-#else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
                     if (FAILED(hr)) return hr;
-#endif
                     hr = spCustomSink->Shutdown();
                     return hr;
         }
@@ -2968,12 +2373,8 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef WINRT
-                    spCustomSink = static_cast<StreamSink*>(pStream);
-#else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
                     if (FAILED(hr)) return hr;
-#endif
                     hr = spCustomSink->Start(_llStartTime);
                     return hr;
         }
@@ -2988,12 +2389,8 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef WINRT
-                    spCustomSink = static_cast<StreamSink*>(pStream);
-#else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
                     if (FAILED(hr)) return hr;
-#endif
                     hr = spCustomSink->Stop();
                     return hr;
         }
@@ -3098,16 +2495,10 @@ public:
         return hr;
     }
 private:
-#ifndef WINRT
     long m_cRef;
-#endif
     CRITICAL_SECTION            m_critSec;
     bool                        m_IsShutdown;
     ComPtrList<IMFStreamSink>    m_streams;
     _ComPtr<IMFPresentationClock>    m_spClock;
     LONGLONG                        m_llStartTime;
 };
-
-#ifdef WINRT
-ActivatableClass(MediaSink);
-#endif
