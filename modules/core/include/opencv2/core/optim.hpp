@@ -274,6 +274,29 @@ public:
                                   TermCriteria termcrit = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5000, 0.000001));
 };
 
+/** @brief This class is used to perform the non-linear non-constrained minimization of a function,
+defined on an `n`-dimensional Euclidean space, using the **Limited-memory Broyden-Fletcher-Goldfarb-Shanno method**.
+The basic idea about the method can be obtained from
+<http://en.wikipedia.org/wiki/Limited-memory_BFGS>
+
+The L-BFGS method is a quasi-Newton method. L-BFGS approximates the regular BFGS algorithm using a reduced amount of memory.
+
+Like the original BFGS, L-BFGS uses an estimation to the inverse Hessian matrix, but where BFGS stores a dense NxN approximation, L-BFGS stores only a few vectors that represent the approximation implicitly. Thus the L-BFGS method is better suited for optimization problems with a large number of variables.
+*/
+class CV_EXPORTS LBFGSSolver : public MinProblemSolver
+{
+public:
+    /** @brief This function returns the reference to the ready-to-use LBFGSSolver object.
+
+    @param f Pointer to the function that will be minimized, similarly to the one you submit via
+    MinProblemSolver::setFunction.
+    @param termcrit Terminal criteria to the algorithm, similarly to the one you submit via
+    MinProblemSolver::setTermCriteria.
+    */
+    static Ptr<LBFGSSolver> create(const Ptr<MinProblemSolver::Function>& f = Ptr<LBFGSSolver::Function>(),
+                                   TermCriteria termcrit = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5000, 0.000001));
+};
+
 //! return codes for cv::solveLP() function
 enum SolveLPResult
 {
