@@ -1944,7 +1944,8 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
         ld.layerInstance = Ptr<Layer>(new InfEngineBackendLayer(it.second));
         ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE] = backendNode;
 
-        cvNet.connect(0, 0, lid, 0);
+        for (int i = 0; i < inputsNames.size(); ++i)
+            cvNet.connect(0, i, lid, i);
     }
     cvNet.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
 
