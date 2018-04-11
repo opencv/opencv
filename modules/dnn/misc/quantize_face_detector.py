@@ -318,6 +318,7 @@ for node in graph_def.node:
         node.input.pop()
         node.input.pop()
         node.input.append(layer_256_1_relu1.name)
+        node.input.append('conv4_3_norm/l2_normalize/Sum/reduction_indices')
         break
 
 softmaxShape = NodeDef()
