@@ -462,6 +462,18 @@ inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 reduced = tf.reduce_mean(inp, axis=[1, 2], keepdims=True)
 save(inp, reduced, 'reduce_mean')
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+pool = tf.layers.average_pooling2d(inp, pool_size=1, strides=1, padding='SAME')
+l2norm = tf.nn.l2_normalize(pool, axis=-1)
+l2norm = tf.nn.l2_normalize(l2norm, axis=[2, 3, 1])
+save(inp, l2norm, 'l2_normalize')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4], 'input')
+l2norm = tf.nn.l2_normalize(inp, axis=1)
+l2norm = tf.nn.l2_normalize(l2norm, axis=-1)
+l2norm = tf.nn.l2_normalize(l2norm, axis=[0, 1])
+save(inp, l2norm, 'l2_normalize_3d')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
