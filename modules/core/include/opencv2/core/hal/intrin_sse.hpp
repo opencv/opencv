@@ -1125,7 +1125,7 @@ namespace hal_sse_internal
     template <int imm>
     inline __m128i v_sse_palignr_u8(const __m128i& a, const __m128i& b)
     {
-        static_assert((imm >= 0) && (imm <= 16), "invalid value for (imm) calling intrinsic (v_sse_palignr_u8)");
+        CV_StaticAssert((imm >= 0) && (imm <= 16), "Invalid imm for v_sse_palignr_u8.");
         return v_sse_palignr_u8_class<imm>()(a, b);
     }
 }
