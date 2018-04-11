@@ -61,6 +61,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 struct v_uint8x16
 {
     typedef uchar lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 16 };
 
     v_uint8x16() : val(_mm_setzero_si128()) {}
@@ -84,6 +85,7 @@ struct v_uint8x16
 struct v_int8x16
 {
     typedef schar lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 16 };
 
     v_int8x16() : val(_mm_setzero_si128()) {}
@@ -107,6 +109,7 @@ struct v_int8x16
 struct v_uint16x8
 {
     typedef ushort lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 8 };
 
     v_uint16x8() : val(_mm_setzero_si128()) {}
@@ -127,6 +130,7 @@ struct v_uint16x8
 struct v_int16x8
 {
     typedef short lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 8 };
 
     v_int16x8() : val(_mm_setzero_si128()) {}
@@ -146,6 +150,7 @@ struct v_int16x8
 struct v_uint32x4
 {
     typedef unsigned lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 4 };
 
     v_uint32x4() : val(_mm_setzero_si128()) {}
@@ -164,6 +169,7 @@ struct v_uint32x4
 struct v_int32x4
 {
     typedef int lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 4 };
 
     v_int32x4() : val(_mm_setzero_si128()) {}
@@ -182,6 +188,7 @@ struct v_int32x4
 struct v_float32x4
 {
     typedef float lane_type;
+    typedef __m128 vector_type;
     enum { nlanes = 4 };
 
     v_float32x4() : val(_mm_setzero_ps()) {}
@@ -200,6 +207,7 @@ struct v_float32x4
 struct v_uint64x2
 {
     typedef uint64 lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 2 };
 
     v_uint64x2() : val(_mm_setzero_si128()) {}
@@ -220,6 +228,7 @@ struct v_uint64x2
 struct v_int64x2
 {
     typedef int64 lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 2 };
 
     v_int64x2() : val(_mm_setzero_si128()) {}
@@ -240,6 +249,7 @@ struct v_int64x2
 struct v_float64x2
 {
     typedef double lane_type;
+    typedef __m128d vector_type;
     enum { nlanes = 2 };
 
     v_float64x2() : val(_mm_setzero_pd()) {}
@@ -259,6 +269,7 @@ struct v_float64x2
 struct v_float16x4
 {
     typedef short lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 4 };
 
     v_float16x4() : val(_mm_setzero_si128()) {}
