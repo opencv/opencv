@@ -11,15 +11,15 @@ layer {
 
   convolution_param
   {
-  	group: 3
+    group: 3
     num_output: 15
 
-  	pad_h: 0
-  	pad_w: 1
-  	kernel_h: 4
-  	kernel_w: 5
-  	stride_h: 2
-  	stride_w: 3
+    pad_h: 0
+    pad_w: 1
+    kernel_size: 4
+    kernel_size: 5
+    stride_h: 2
+    stride_w: 3
 
     weight_filler{
       type: 'uniform'
