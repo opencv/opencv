@@ -253,6 +253,27 @@ public:
                                       TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 };
 
+/** @brief This class is used to perform the non-linear non-constrained minimization of a function,
+defined on an `n`-dimensional Euclidean space, using the **Broyden-Fletcher-Goldfarb-Shanno method**.
+The basic idea about the method can be obtained from
+<http://en.wikipedia.org/wiki/Broyden–Fletcher–Goldfarb–Shanno_algorithm>
+
+The BFGS method is a quasi-Newton method. BFGS methods are not guaranteed to converge to the global optimal point unless the function has a quadratic Taylor expansion near an optimum. However, BFGS has proven to have very good practical performance.
+*/
+class CV_EXPORTS BFGSSolver : public MinProblemSolver
+{
+public:
+    /** @brief This function returns the reference to the ready-to-use BFGSSolver object.
+
+    @param f Pointer to the function that will be minimized, similarly to the one you submit via
+    MinProblemSolver::setFunction.
+    @param termcrit Terminal criteria to the algorithm, similarly to the one you submit via
+    MinProblemSolver::setTermCriteria.
+    */
+    static Ptr<BFGSSolver> create(const Ptr<MinProblemSolver::Function>& f = Ptr<BFGSSolver::Function>(),
+                                  TermCriteria termcrit = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5000, 0.000001));
+};
+
 //! return codes for cv::solveLP() function
 enum SolveLPResult
 {
