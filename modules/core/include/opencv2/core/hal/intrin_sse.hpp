@@ -61,6 +61,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 struct v_uint8x16
 {
     typedef uchar lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 16 };
 
     v_uint8x16() : val(_mm_setzero_si128()) {}
@@ -84,6 +85,7 @@ struct v_uint8x16
 struct v_int8x16
 {
     typedef schar lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 16 };
 
     v_int8x16() : val(_mm_setzero_si128()) {}
@@ -107,6 +109,7 @@ struct v_int8x16
 struct v_uint16x8
 {
     typedef ushort lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 8 };
 
     v_uint16x8() : val(_mm_setzero_si128()) {}
@@ -127,6 +130,7 @@ struct v_uint16x8
 struct v_int16x8
 {
     typedef short lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 8 };
 
     v_int16x8() : val(_mm_setzero_si128()) {}
@@ -146,6 +150,7 @@ struct v_int16x8
 struct v_uint32x4
 {
     typedef unsigned lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 4 };
 
     v_uint32x4() : val(_mm_setzero_si128()) {}
@@ -164,6 +169,7 @@ struct v_uint32x4
 struct v_int32x4
 {
     typedef int lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 4 };
 
     v_int32x4() : val(_mm_setzero_si128()) {}
@@ -182,6 +188,7 @@ struct v_int32x4
 struct v_float32x4
 {
     typedef float lane_type;
+    typedef __m128 vector_type;
     enum { nlanes = 4 };
 
     v_float32x4() : val(_mm_setzero_ps()) {}
@@ -200,6 +207,7 @@ struct v_float32x4
 struct v_uint64x2
 {
     typedef uint64 lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 2 };
 
     v_uint64x2() : val(_mm_setzero_si128()) {}
@@ -220,6 +228,7 @@ struct v_uint64x2
 struct v_int64x2
 {
     typedef int64 lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 2 };
 
     v_int64x2() : val(_mm_setzero_si128()) {}
@@ -240,6 +249,7 @@ struct v_int64x2
 struct v_float64x2
 {
     typedef double lane_type;
+    typedef __m128d vector_type;
     enum { nlanes = 2 };
 
     v_float64x2() : val(_mm_setzero_pd()) {}
@@ -259,6 +269,7 @@ struct v_float64x2
 struct v_float16x4
 {
     typedef short lane_type;
+    typedef __m128i vector_type;
     enum { nlanes = 4 };
 
     v_float16x4() : val(_mm_setzero_si128()) {}
@@ -274,6 +285,27 @@ struct v_float16x4
     __m128i val;
 };
 #endif
+
+namespace hal_sse_internal
+{
+    template <typename to_sse_type, typename from_sse_type>
+    to_sse_type v_sse_reinterpret_as(const from_sse_type& val);
+
+#define OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(to_sse_type, from_sse_type, sse_cast_intrin) \
+    template<> inline \
+    to_sse_type v_sse_reinterpret_as(const from_sse_type& a) \
+    { return sse_cast_intrin(a); }
+
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128i, OPENCV_HAL_NOP);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128, _mm_castps_si128);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128d, _mm_castpd_si128);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128i, _mm_castsi128_ps);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128, OPENCV_HAL_NOP);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128d, _mm_castpd_ps);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128i, _mm_castsi128_pd);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128, _mm_castps_pd);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128d, OPENCV_HAL_NOP);
+}
 
 #define OPENCV_HAL_IMPL_SSE_INITVEC(_Tpvec, _Tp, suffix, zsuffix, ssuffix, _Tps, cast) \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(_mm_setzero_##zsuffix()); } \
@@ -1021,31 +1053,123 @@ OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint16x8, v_int16x8, epi16, _mm_srai_epi16)
 OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint32x4, v_int32x4, epi32, _mm_srai_epi32)
 OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint64x2, v_int64x2, epi64, v_srai_epi64)
 
+namespace hal_sse_internal
+{
+    // note, "half = 2" is reserved for future implementation.
+    enum class v_sse_palignr_u8_mode
+    {
+        invalid = 0,
+        first = 1,
+        second = 3,
+        other = 4
+    };
+
+    constexpr v_sse_palignr_u8_mode v_sse_get_palignr_u8_mode(int imm)
+    {
+        return (imm < 0) ? v_sse_palignr_u8_mode::invalid
+            : (imm == 0) ? v_sse_palignr_u8_mode::first
+            : (imm < 16) ? v_sse_palignr_u8_mode::other
+            : (imm == 16) ? v_sse_palignr_u8_mode::second
+            : v_sse_palignr_u8_mode::invalid;
+    }
+
+    template <int imm, v_sse_palignr_u8_mode mode = v_sse_get_palignr_u8_mode(imm)>
+    class v_sse_palignr_u8_class;
+
+    template <int imm>
+    class v_sse_palignr_u8_class<imm, v_sse_palignr_u8_mode::invalid>
+    {
+    public:
+        __m128i operator()(const __m128i&, const __m128i&) const = delete;
+    };
+
+    template <int imm>
+    class v_sse_palignr_u8_class<imm, v_sse_palignr_u8_mode::first>
+    {
+    public:
+        inline __m128i operator()(const __m128i& a, const __m128i&) const
+        {
+            return a;
+        }
+    };
+
+    template <int imm>
+    class v_sse_palignr_u8_class<imm, v_sse_palignr_u8_mode::second>
+    {
+    public:
+        inline __m128i operator()(const __m128i&, const __m128i& b) const
+        {
+            return b;
+        }
+    };
+
+    template <int imm>
+    class v_sse_palignr_u8_class<imm, v_sse_palignr_u8_mode::other>
+    {
+#if CV_SSSE3
+    public:
+        inline __m128i operator()(const __m128i& a, const __m128i& b) const
+        {
+            return _mm_alignr_epi8(b, a, imm);
+        }
+#else
+    public:
+        inline __m128i operator()(const __m128i& a, const __m128i& b) const
+        {
+            enum { imm2 = (sizeof(__m128i) - imm) };
+            return _mm_or_si128(_mm_srli_si128(a, imm), _mm_slli_si128(b, imm2));
+        }
+#endif
+    };
+
+    template <int imm>
+    inline __m128i v_sse_palignr_u8(const __m128i& a, const __m128i& b)
+    {
+        CV_StaticAssert((imm >= 0) && (imm <= 16), "Invalid imm for v_sse_palignr_u8.");
+        return v_sse_palignr_u8_class<imm>()(a, b);
+    }
+}
+
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec &a)
 {
-    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
-    return _Tpvec(_mm_srli_si128(a.val, CV_SHIFT));
+    using namespace hal_sse_internal;
+    enum { imm2 = (imm * sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(v_sse_reinterpret_as<typename _Tpvec::vector_type>(
+        _mm_srli_si128(
+            v_sse_reinterpret_as<__m128i>(a.val), imm2)));
 }
+
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_left(const _Tpvec &a)
 {
-    enum { CV_SHIFT = imm*(sizeof(typename _Tpvec::lane_type)) };
-    return _Tpvec(_mm_slli_si128(a.val, CV_SHIFT));
+    using namespace hal_sse_internal;
+    enum { imm2 = (imm * sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(v_sse_reinterpret_as<typename _Tpvec::vector_type>(
+        _mm_slli_si128(
+            v_sse_reinterpret_as<__m128i>(a.val), imm2)));
 }
+
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec &a, const _Tpvec &b)
 {
-    enum { CV_SHIFT1 = imm*(sizeof(typename _Tpvec::lane_type)) };
-    enum { CV_SHIFT2 = 16 - imm*(sizeof(typename _Tpvec::lane_type)) };
-    return _Tpvec(_mm_or_si128(_mm_srli_si128(a.val, CV_SHIFT1), _mm_slli_si128(b.val, CV_SHIFT2)));
+    using namespace hal_sse_internal;
+    enum { imm2 = (imm * sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(v_sse_reinterpret_as<typename _Tpvec::vector_type>(
+        v_sse_palignr_u8<imm2>(
+            v_sse_reinterpret_as<__m128i>(a.val),
+            v_sse_reinterpret_as<__m128i>(b.val))));
 }
+
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_left(const _Tpvec &a, const _Tpvec &b)
 {
-    enum { CV_SHIFT1 = imm*(sizeof(typename _Tpvec::lane_type)) };
-    enum { CV_SHIFT2 = 16 - imm*(sizeof(typename _Tpvec::lane_type)) };
-    return _Tpvec(_mm_or_si128(_mm_slli_si128(a.val, CV_SHIFT1), _mm_srli_si128(b.val, CV_SHIFT2)));
+    using namespace hal_sse_internal;
+    enum { imm2 = ((_Tpvec::nlanes - imm) * sizeof(typename _Tpvec::lane_type)) };
+    return _Tpvec(v_sse_reinterpret_as<typename _Tpvec::vector_type>(
+        v_sse_palignr_u8<imm2>(
+            v_sse_reinterpret_as<__m128i>(b.val),
+            v_sse_reinterpret_as<__m128i>(a.val))));
 }
 
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INT_OP(_Tpvec, _Tp) \
@@ -1362,12 +1486,7 @@ OPENCV_HAL_IMPL_SSE_UNPACKS(v_float64x2, pd, _mm_castpd_si128, _mm_castsi128_pd)
 template<int s, typename _Tpvec>
 inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 {
-    const int w = sizeof(typename _Tpvec::lane_type);
-    const int n = _Tpvec::nlanes;
-    __m128i ra, rb;
-    ra = _mm_srli_si128(a.val, s*w);
-    rb = _mm_slli_si128(b.val, (n-s)*w);
-    return _Tpvec(_mm_or_si128(ra, rb));
+    return v_rotate_right<s>(a, b);
 }
 
 inline v_int32x4 v_round(const v_float32x4& a)
