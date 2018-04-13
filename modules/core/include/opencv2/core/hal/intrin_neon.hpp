@@ -506,6 +506,12 @@ inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
     return v_int32x4(vaddq_s32(cd.val[0], cd.val[1]));
 }
 
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{
+    v_int32x4 s = v_dotprod(a, b);
+    return v_int32x4(vaddq_s32(s.val , c.val));
+}
+
 #define OPENCV_HAL_IMPL_NEON_LOGIC_OP(_Tpvec, suffix) \
     OPENCV_HAL_IMPL_NEON_BIN_OP(&, _Tpvec, vandq_##suffix) \
     OPENCV_HAL_IMPL_NEON_BIN_OP(|, _Tpvec, vorrq_##suffix) \
@@ -728,6 +734,11 @@ inline v_float32x4 v_sqr_magnitude(const v_float32x4& a, const v_float32x4& b)
 inline v_float32x4 v_muladd(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
 {
     return v_float32x4(vmlaq_f32(c.val, a.val, b.val));
+}
+
+inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{
+    return v_int32x4(vmlaq_s32(c.val, a.val, b.val));
 }
 
 #if CV_SIMD128_64F
@@ -1095,6 +1106,18 @@ OPENCV_HAL_IMPL_NEON_EXTRACT(float32x4, f32)
 OPENCV_HAL_IMPL_NEON_EXTRACT(float64x2, f64)
 #endif
 
+#if CV_SIMD128_64F
+inline v_int32x4 v_round(const v_float32x4& a)
+{
+    float32x4_t a_ = a.val;
+    int32x4_t result;
+    __asm__ ("fcvtns %0.4s, %1.4s"
+             : "=w"(result)
+             : "w"(a_)
+             : /* No clobbers */);
+    return v_int32x4(result);
+}
+#else
 inline v_int32x4 v_round(const v_float32x4& a)
 {
     static const int32x4_t v_sign = vdupq_n_s32(1 << 31),
@@ -1103,7 +1126,7 @@ inline v_int32x4 v_round(const v_float32x4& a)
     int32x4_t v_addition = vorrq_s32(v_05, vandq_s32(v_sign, vreinterpretq_s32_f32(a.val)));
     return v_int32x4(vcvtq_s32_f32(vaddq_f32(a.val, vreinterpretq_f32_s32(v_addition))));
 }
-
+#endif
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
     int32x4_t a1 = vcvtq_s32_f32(a.val);

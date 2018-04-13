@@ -202,8 +202,8 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
 
 PERF_TEST_P( TestRemap, remap,
              Combine(
-                 Values( TYPICAL_MAT_TYPES ),
-                 Values( szVGA, sz720p, sz1080p ),
+                 Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1 ),
+                 Values( szVGA, sz1080p ),
                  InterType::all(),
                  BorderMode::all(),
                  RemapMode::all()
@@ -231,7 +231,7 @@ PERF_TEST_P( TestRemap, remap,
         remap(source, destination, map_x, map_y, interpolationType, borderMode);
     }
 
-    SANITY_CHECK(destination, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
