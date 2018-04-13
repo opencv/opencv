@@ -1053,7 +1053,7 @@ OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint16x8, v_int16x8, epi16, _mm_srai_epi16)
 OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint32x4, v_int32x4, epi32, _mm_srai_epi32)
 OPENCV_HAL_IMPL_SSE_SHIFT_OP(v_uint64x2, v_int64x2, epi64, v_srai_epi64)
 
-namespace hal_sse_internal 
+namespace hal_sse_internal
 {
     template <int imm,
         bool is_invalid = ((imm < 0) || (imm > 16)),
