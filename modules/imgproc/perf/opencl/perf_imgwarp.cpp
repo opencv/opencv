@@ -229,7 +229,7 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
 
     OCL_TEST_CYCLE() cv::remap(src, dst, xmap, ymap, interpolation, borderMode);
 
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
 } } // namespace opencv_test::ocl
