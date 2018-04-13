@@ -217,6 +217,16 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
+PERF_TEST_P_(DNNTestNetwork, YOLOv3)
+{
+    if (backend != DNN_BACKEND_DEFAULT)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png", false));
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3);
+    processNet("dnn/yolov3.cfg", "dnn/yolov3.weights", "", inp / 255);
+}
+
 const tuple<DNNBackend, DNNTarget> testCases[] = {
 #ifdef HAVE_HALIDE
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),

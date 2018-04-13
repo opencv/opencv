@@ -55,7 +55,11 @@ net.setPreferableTarget(args.target)
 
 confThreshold = args.thr
 
-def postprocess(frame, out):
+def getOutputsNames(net):
+    layersNames = net.getLayerNames()
+    return [layersNames[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+
+def postprocess(frame, outs):
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
 
@@ -63,7 +67,7 @@ def postprocess(frame, out):
         # Draw a bounding box.
         cv.rectangle(frame, (left, top), (right, bottom), (0, 255, 0))
 
-        label = '%.2f' % confidence
+        label = '%.2f' % conf
 
         # Print a label of class.
         if classes:
@@ -83,6 +87,8 @@ def postprocess(frame, out):
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
+        assert(len(outs) == 1)
+        out = outs[0]
         for detection in out[0, 0]:
             confidence = detection[2]
             if confidence > confThreshold:
@@ -96,6 +102,8 @@ def postprocess(frame, out):
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
+        assert(len(outs) == 1)
+        out = outs[0]
         for detection in out[0, 0]:
             confidence = detection[2]
             if confidence > confThreshold:
@@ -109,18 +117,33 @@ def postprocess(frame, out):
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
-        for detection in out:
-            confidences = detection[5:]
-            classId = np.argmax(confidences)
-            confidence = confidences[classId]
-            if confidence > confThreshold:
-                center_x = int(detection[0] * frameWidth)
-                center_y = int(detection[1] * frameHeight)
-                width = int(detection[2] * frameWidth)
-                height = int(detection[3] * frameHeight)
-                left = center_x - width / 2
-                top = center_y - height / 2
-                drawPred(classId, confidence, left, top, left + width, top + height)
+        classIds = []
+        confidences = []
+        boxes = []
+        for out in outs:
+            for detection in out:
+                scores = detection[5:]
+                classId = np.argmax(scores)
+                confidence = scores[classId]
+                if confidence > confThreshold:
+                    center_x = int(detection[0] * frameWidth)
+                    center_y = int(detection[1] * frameHeight)
+                    width = int(detection[2] * frameWidth)
+                    height = int(detection[3] * frameHeight)
+                    left = center_x - width / 2
+                    top = center_y - height / 2
+                    classIds.append(classId)
+                    confidences.append(float(confidence))
+                    boxes.append([left, top, width, height])
+        indices = cv.dnn.NMSBoxes(boxes, confidences, confThreshold, 0.4)
+        for i in indices:
+            i = i[0]
+            box = boxes[i]
+            left = box[0]
+            top = box[1]
+            width = box[2]
+            height = box[3]
+            drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
 
 # Process inputs
 winName = 'Deep learning object detection in OpenCV'
@@ -152,9 +175,9 @@ while cv.waitKey(1) < 0:
     if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
         frame = cv.resize(frame, (inpWidth, inpHeight))
         net.setInput(np.array([inpHeight, inpWidth, 1.6], dtype=np.float32), 'im_info');
-    out = net.forward()
+    outs = net.forward(getOutputsNames(net))
 
-    postprocess(frame, out)
+    postprocess(frame, outs)
 
     # Put efficiency information.
     t, _ = net.getPerfProfile()

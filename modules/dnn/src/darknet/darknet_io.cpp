@@ -89,6 +89,8 @@ namespace cv {
                 return init_val;
             }
 
+            static const std::string kFirstLayerName = "data";
+
             class setLayersParams {
 
                 NetParameter *net;
@@ -97,8 +99,8 @@ namespace cv {
                 std::vector<std::string> fused_layer_names;
 
             public:
-                setLayersParams(NetParameter *_net, std::string _first_layer = "data") :
-                    net(_net), layer_id(0), last_layer(_first_layer)
+                setLayersParams(NetParameter *_net) :
+                    net(_net), layer_id(0), last_layer(kFirstLayerName)
                 {}
 
                 void setLayerBlobs(int i, std::vector<cv::Mat> blobs)
@@ -275,7 +277,7 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
-                void setPermute()
+                void setPermute(bool isDarknetLayer = true)
                 {
                     cv::dnn::LayerParams permute_params;
                     permute_params.name = "Permute-name";
@@ -294,8 +296,11 @@ namespace cv {
                     last_layer = layer_name;
                     net->layers.push_back(lp);
 
-                    layer_id++;
-                    fused_layer_names.push_back(last_layer);
+                    if (isDarknetLayer)
+                    {
+                        layer_id++;
+                        fused_layer_names.push_back(last_layer);
+                    }
                 }
 
                 void setRegion(float thresh, int coords, int classes, int anchors, int classfix, int softmax, int softmax_tree, float *biasData)
@@ -320,6 +325,85 @@ namespace cv {
                     lp.layer_name = layer_name;
                     lp.layer_type = region_param.type;
                     lp.layerParams = region_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setYolo(int classes, const std::vector<int>& mask, const std::vector<float>& anchors)
+                {
+                    cv::dnn::LayerParams region_param;
+                    region_param.name = "Region-name";
+                    region_param.type = "Region";
+
+                    const int numAnchors = mask.size();
+
+                    region_param.set<int>("classes", classes);
+                    region_param.set<int>("anchors", numAnchors);
+                    region_param.set<bool>("logistic", true);
+
+                    std::vector<float> usedAnchors(numAnchors * 2);
+                    for (int i = 0; i < numAnchors; ++i)
+                    {
+                        usedAnchors[i * 2] = anchors[mask[i] * 2];
+                        usedAnchors[i * 2 + 1] = anchors[mask[i] * 2 + 1];
+                    }
+
+                    cv::Mat biasData_mat = cv::Mat(1, numAnchors * 2, CV_32F, &usedAnchors[0]).clone();
+                    region_param.blobs.push_back(biasData_mat);
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("yolo_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = region_param.type;
+                    lp.layerParams = region_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    lp.bottom_indexes.push_back(kFirstLayerName);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setShortcut(int from)
+                {
+                    cv::dnn::LayerParams shortcut_param;
+                    shortcut_param.name = "Shortcut-name";
+                    shortcut_param.type = "Eltwise";
+
+                    shortcut_param.set<std::string>("op", "sum");
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("shortcut_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = shortcut_param.type;
+                    lp.layerParams = shortcut_param;
+                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setUpsample(int scaleFactor)
+                {
+                    cv::dnn::LayerParams param;
+                    param.name = "Upsample-name";
+                    param.type = "ResizeNearestNeighbor";
+
+                    param.set<int>("zoom_factor", scaleFactor);
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("upsample_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = param.type;
+                    lp.layerParams = param;
                     lp.bottom_indexes.push_back(last_layer);
                     last_layer = layer_name;
                     net->layers.push_back(lp);
@@ -464,7 +548,7 @@ namespace cv {
 
                         current_channels = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
-                            layers_vec[k] += layers_counter;
+                            layers_vec[k] = layers_vec[k] > 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
                             current_channels += net->out_channels_vec[layers_vec[k]];
                         }
 
@@ -496,8 +580,42 @@ namespace cv {
 
                         CV_Assert(classes > 0 && num_of_anchors > 0 && (num_of_anchors * 2) == anchors_vec.size());
 
-                        setParams.setPermute();
+                        setParams.setPermute(false);
                         setParams.setRegion(thresh, coords, classes, num_of_anchors, classfix, softmax, softmax_tree, anchors_vec.data());
+                    }
+                    else if (layer_type == "shortcut")
+                    {
+                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
+                        CV_Assert(!bottom_layer.empty());
+                        int from = std::atoi(bottom_layer.c_str());
+
+                        from += layers_counter;
+                        current_channels = net->out_channels_vec[from];
+
+                        setParams.setShortcut(from);
+                    }
+                    else if (layer_type == "upsample")
+                    {
+                        int scaleFactor = getParam<int>(layer_params, "stride", 1);
+                        setParams.setUpsample(scaleFactor);
+                    }
+                    else if (layer_type == "yolo")
+                    {
+                        int classes = getParam<int>(layer_params, "classes", -1);
+                        int num_of_anchors = getParam<int>(layer_params, "num", -1);
+
+                        std::string anchors_values = getParam<std::string>(layer_params, "anchors", std::string());
+                        CV_Assert(!anchors_values.empty());
+                        std::vector<float> anchors_vec = getNumbers<float>(anchors_values);
+
+                        std::string mask_values = getParam<std::string>(layer_params, "mask", std::string());
+                        CV_Assert(!mask_values.empty());
+                        std::vector<int> mask_vec = getNumbers<int>(mask_values);
+
+                        CV_Assert(classes > 0 && num_of_anchors > 0 && (num_of_anchors * 2) == anchors_vec.size());
+
+                        setParams.setPermute(false);
+                        setParams.setYolo(classes, mask_vec, anchors_vec);
                     }
                     else {
                         CV_Error(cv::Error::StsParseError, "Unknown layer type: " + layer_type);
@@ -597,6 +715,10 @@ namespace cv {
 
                         if(activation == "leaky")
                             ++cv_layers_counter;
+                    }
+                    if (layer_type == "region" || layer_type == "yolo")
+                    {
+                        ++cv_layers_counter;  // For permute.
                     }
                     current_channels = net->out_channels_vec[darknet_layers_counter];
                 }
