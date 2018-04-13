@@ -49,13 +49,13 @@
 /* C= */
 #cmakedefine HAVE_CSTRIPES
 
-/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
+/* NVIDIA CUDA Basic Linear Algebra Subprograms (BLAS) API*/
 #cmakedefine HAVE_CUBLAS
 
-/* NVidia Cuda Runtime API*/
+/* NVIDIA CUDA Runtime API*/
 #cmakedefine HAVE_CUDA
 
-/* NVidia Cuda Fast Fourier Transform (FFT) API*/
+/* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
 /* IEEE1394 capturing support */
@@ -127,10 +127,10 @@
 /* Microsoft Media Foundation Capture library */
 #cmakedefine HAVE_MSMF
 
-/* NVidia Video Decoding API*/
+/* NVIDIA Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
 
-/* NVidia Video Encoding API*/
+/* NVIDIA Video Encoding API*/
 #cmakedefine HAVE_NVCUVENC
 
 /* OpenCL Support */
