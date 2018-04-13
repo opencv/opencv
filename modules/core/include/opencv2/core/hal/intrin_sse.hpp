@@ -710,6 +710,11 @@ inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
     return v_int32x4(_mm_madd_epi16(a.val, b.val));
 }
 
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{
+    return v_int32x4(_mm_add_epi32(_mm_madd_epi16(a.val, b.val), c.val));
+}
+
 #define OPENCV_HAL_IMPL_SSE_LOGIC_OP(_Tpvec, suffix, not_const) \
     OPENCV_HAL_IMPL_SSE_BIN_OP(&, _Tpvec, _mm_and_##suffix) \
     OPENCV_HAL_IMPL_SSE_BIN_OP(|, _Tpvec, _mm_or_##suffix) \
@@ -953,6 +958,10 @@ inline v_uint32x4 v_absdiff(const v_int32x4& a, const v_int32x4& b)
     __m128i d = _mm_sub_epi32(a.val, b.val);
     __m128i m = _mm_cmpgt_epi32(b.val, a.val);
     return v_uint32x4(_mm_sub_epi32(_mm_xor_si128(d, m), m));
+}
+inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{
+    return a * b + c;
 }
 
 #define OPENCV_HAL_IMPL_SSE_MISC_FLT_OP(_Tpvec, _Tp, _Tpreg, suffix, absmask_vec) \
@@ -1632,7 +1641,7 @@ inline void v_load_deinterleave(const double *ptr, v_float64x2& a, v_float64x2& 
     c = v_reinterpret_as_f64(t2);
 }
 
-// 2-channel, float only
+// 2-channel
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b)
 {
     const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1);
@@ -1644,7 +1653,29 @@ inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b
     b.val = _mm_shuffle_ps(u0, u1, mask_hi); // b0 b1 ab b3
 }
 
-inline void v_store_interleave( short* ptr, const v_int16x8& a, const v_int16x8& b )
+inline void v_load_deinterleave(const short* ptr, v_int16x8& a, v_int16x8& b)
+{
+    __m128i v0 = _mm_loadu_si128((__m128i*)(ptr));     // a0 b0 a1 b1 a2 b2 a3 b3
+    __m128i v1 = _mm_loadu_si128((__m128i*)(ptr + 8)); // a4 b4 a5 b5 a6 b6 a7 b7
+
+    __m128i v2 = _mm_unpacklo_epi16(v0, v1); // a0 a4 b0 b4 a1 a5 b1 b5
+    __m128i v3 = _mm_unpackhi_epi16(v0, v1); // a2 a6 b2 b6 a3 a7 b3 b7
+    __m128i v4 = _mm_unpacklo_epi16(v2, v3); // a0 a2 a4 a6 b0 b2 b4 b6
+    __m128i v5 = _mm_unpackhi_epi16(v2, v3); // a1 a3 a5 a7 b1 b3 b5 b7
+
+    a.val = _mm_unpacklo_epi16(v4, v5); // a0 a1 a2 a3 a4 a5 a6 a7
+    b.val = _mm_unpackhi_epi16(v4, v5); // b0 b1 ab b3 b4 b5 b6 b7
+}
+
+inline void v_load_deinterleave(const ushort*ptr, v_uint16x8& a, v_uint16x8& b)
+{
+    v_int16x8 sa, sb;
+    v_load_deinterleave((const short*)ptr, sa, sb);
+    a = v_reinterpret_as_u16(sa);
+    b = v_reinterpret_as_u16(sb);
+}
+
+inline void v_store_interleave(short* ptr, const v_int16x8& a, const v_int16x8& b)
 {
     __m128i t0, t1;
     t0 = _mm_unpacklo_epi16(a.val, b.val);

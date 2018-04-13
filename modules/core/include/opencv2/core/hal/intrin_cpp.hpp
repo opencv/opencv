@@ -795,7 +795,7 @@ inline v_reg<_Tp, n> v_sqr_magnitude(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>
 /** @brief Multiply and add
 
 Returns \f$ a*b + c \f$
-For floating point types only. */
+For floating point types and signed 32bit int only. */
 template<typename _Tp, int n>
 inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
                               const v_reg<_Tp, n>& c)
@@ -826,6 +826,29 @@ template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n
     for( int i = 0; i < (n/2); i++ )
         c.s[i] = (w_type)a.s[i*2]*b.s[i*2] + (w_type)a.s[i*2+1]*b.s[i*2+1];
     return c;
+}
+
+/** @brief Dot product of elements
+
+Same as cv::v_dotprod, but add a third element to the sum of adjacent pairs.
+Scheme:
+@code
+  {A1 A2 ...} // 16-bit
+x {B1 B2 ...} // 16-bit
+-------------
+  {A1B1+A2B2+C1 ...} // 32-bit
+
+@endcode
+Implemented only for 16-bit signed source type (v_int16x8).
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
+    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b, const v_reg<typename V_TypeTraits<_Tp>::w_type, n / 2>& c)
+{
+    typedef typename V_TypeTraits<_Tp>::w_type w_type;
+    v_reg<w_type, n/2> s;
+    for( int i = 0; i < (n/2); i++ )
+        s.s[i] = (w_type)a.s[i*2]*b.s[i*2] + (w_type)a.s[i*2+1]*b.s[i*2+1] + c.s[i];
+    return s;
 }
 
 /** @brief Multiply and expand

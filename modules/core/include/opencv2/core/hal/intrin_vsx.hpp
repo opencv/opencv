@@ -760,6 +760,9 @@ inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)   \
 OPENCV_HAL_IMPL_VSX_MULADD(v_float32x4)
 OPENCV_HAL_IMPL_VSX_MULADD(v_float64x2)
 
+inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{ return a * b + c; }
+
 // TODO: exp, log, sin, cos
 
 /** Absolute values **/
@@ -842,6 +845,9 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 { return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)); }
+
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_int32x4(vec_msum(a.val, b.val, c.val)); }
 
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                             const v_float32x4& m1, const v_float32x4& m2,
