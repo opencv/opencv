@@ -521,15 +521,25 @@ template<typename R> struct TheTest
     TheTest & test_dot_prod()
     {
         typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
+        typedef typename Rx2::lane_type w_type;
+
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
 
-        Data<Rx2> res = v_dotprod(a, b);
+        Data<Rx2> dataC;
+        dataC += std::numeric_limits<w_type>::is_signed ?
+                    std::numeric_limits<w_type>::min() :
+                    std::numeric_limits<w_type>::max() - R::nlanes * (dataB[0] + 1);
+        Rx2 c = dataC;
+
+        Data<Rx2> resD = v_dotprod(a, b),
+                  resE = v_dotprod(a, b, c);
 
         const int n = R::nlanes / 2;
         for (int i = 0; i < n; ++i)
         {
-            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1], res[i]);
+            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1], resD[i]);
+            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1] + dataC[i], resE[i]);
         }
         return *this;
     }
