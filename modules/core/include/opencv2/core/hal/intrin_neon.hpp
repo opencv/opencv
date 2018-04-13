@@ -759,7 +759,7 @@ template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
 { return _Tpvec(vshrq_n_##suffix(a.val, n)); } \
 template<int n> inline _Tpvec v_rshr(const _Tpvec& a) \
-{ return _Tpvec(vrshrq_n_##suffix(a.val, n)); } 
+{ return _Tpvec(vrshrq_n_##suffix(a.val, n)); }
 
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint8x16, u8, schar, s8)
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int8x16, s8, schar, s8)
