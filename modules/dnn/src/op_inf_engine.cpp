@@ -18,6 +18,11 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+static int infEngineVersion()
+{
+    return std::atoi(InferenceEngine::GetInferenceEngineVersion()->buildNumber);
+}
+
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
 
@@ -58,9 +63,23 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
-    return InferenceEngine::DataPtr(
-      new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32)
-    );
+    if (infEngineVersion() > 5855)
+    {
+        InferenceEngine::Layout l = InferenceEngine::Layout::ANY;
+        if (m.dims == 4)
+            l = InferenceEngine::Layout::NCHW;
+        else if (m.dims == 2)
+            l = InferenceEngine::Layout::NC;
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, l)
+        );
+    }
+    else
+    {
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32)
+        );
+    }
 }
 
 InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
@@ -336,10 +355,9 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 
     InferenceEngine::StatusCode status;
     InferenceEngine::ResponseDesc resp;
-    const InferenceEngine::Version* v = InferenceEngine::GetInferenceEngineVersion();
 
     plugin = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
-    if (std::atoi(v->buildNumber) > 5855)
+    if (infEngineVersion() > 5855 && targetDevice == InferenceEngine::TargetDevice::eCPU)
     {
 #ifdef _WIN32
         InferenceEngine::IExtensionPtr extension =

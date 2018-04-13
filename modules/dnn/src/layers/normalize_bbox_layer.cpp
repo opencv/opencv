@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 
 namespace cv { namespace dnn {
 
@@ -58,6 +59,13 @@ public:
         CV_Assert(!params.has("across_spatial") || !params.has("end_axis"));
         endAxis = params.get<int>("end_axis", acrossSpatial ? -1 : startAxis);
         CV_Assert(pnorm > 0);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+               pnorm == 2 && !blobs.empty();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -226,6 +234,28 @@ public:
             inpData += numPlanes * planeSize;
             outData += numPlanes * planeSize;
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Normalize";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        CV_Assert(!blobs.empty());
+
+        ieLayer->params["eps"] = format("%f", epsilon);
+        ieLayer->params["across_spatial"] = acrossSpatial ? "1" : "0";
+        ieLayer->params["channel_shared"] = blobs[0].total() == 1 ? "1" : "0";
+
+        const int numChannels = blobs[0].total();
+        ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 
 private:
