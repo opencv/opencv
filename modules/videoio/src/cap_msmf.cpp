@@ -52,9 +52,6 @@
 #undef WINVER
 #define WINVER _WIN32_WINNT_WIN8
 #endif
-#if defined _MSC_VER && _MSC_VER >= 1600
-    #define HAVE_CONCURRENCY
-#endif
 #include <windows.h>
 #include <guiddef.h>
 #include <mfidl.h>
@@ -97,15 +94,6 @@ struct IMFAttributes;
 namespace
 {
 
-template <class T> void SafeRelease(T **ppT)
-{
-    if (*ppT)
-    {
-        (*ppT)->Release();
-        *ppT = NULL;
-    }
-}
-
 #ifdef _DEBUG
 void DPOprintOut(const wchar_t *format, ...)
 {
@@ -138,164 +126,152 @@ void DPOprintOut(const wchar_t *format, ...)
 #define DebugPrintOut(...) void()
 #endif
 
-#include "cap_msmf.hpp"
+template <class T>
+class ComPtr
+{
+public:
+    ComPtr() throw()
+    {
+    }
+    ComPtr(T* lp) throw()
+    {
+        p = lp;
+    }
+    ComPtr(_In_ const ComPtr<T>& lp) throw()
+    {
+        p = lp.p;
+    }
+    virtual ~ComPtr()
+    {
+    }
+
+    T** operator&() throw()
+    {
+        assert(p == NULL);
+        return p.operator&();
+    }
+    T* operator->() const throw()
+    {
+        assert(p != NULL);
+        return p.operator->();
+    }
+    bool operator!() const throw()
+    {
+        return p.operator==(NULL);
+    }
+    bool operator==(_In_opt_ T* pT) const throw()
+    {
+        return p.operator==(pT);
+    }
+    bool operator!=(_In_opt_ T* pT) const throw()
+    {
+        return p.operator!=(pT);
+    }
+    operator bool()
+    {
+        return p.operator!=(NULL);
+    }
+
+    T* const* GetAddressOf() const throw()
+    {
+        return &p;
+    }
+
+    T** GetAddressOf() throw()
+    {
+        return &p;
+    }
+
+    T** ReleaseAndGetAddressOf() throw()
+    {
+        p.Release();
+        return &p;
+    }
+
+    T* Get() const throw()
+    {
+        return p;
+    }
+
+    // Attach to an existing interface (does not AddRef)
+    void Attach(_In_opt_ T* p2) throw()
+    {
+        p.Attach(p2);
+    }
+    // Detach the interface (does not Release)
+    T* Detach() throw()
+    {
+        return p.Detach();
+    }
+    _Check_return_ HRESULT CopyTo(_Deref_out_opt_ T** ppT) throw()
+    {
+        assert(ppT != NULL);
+        if (ppT == NULL)
+            return E_POINTER;
+        *ppT = p;
+        if (p != NULL)
+            p->AddRef();
+        return S_OK;
+    }
+
+    void Reset()
+    {
+        p.Release();
+    }
+
+    // query for U interface
+    template<typename U>
+    HRESULT As(_Inout_ U** lp) const throw()
+    {
+        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp));
+    }
+    // query for U interface
+    template<typename U>
+    HRESULT As(_Out_ ComPtr<U>* lp) const throw()
+    {
+        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp->ReleaseAndGetAddressOf()));
+    }
+private:
+    _COM_SMARTPTR_TYPEDEF(T, __uuidof(T));
+    TPtr p;
+};
+
+#define _ComPtr ComPtr
 
 // Structure for collecting info about types of video, which are supported by current video device
 struct MediaType
 {
     unsigned int MF_MT_FRAME_SIZE;
-    unsigned int height;
-    unsigned int width;
+    UINT32 height;
+    UINT32 width;
     unsigned int MF_MT_YUV_MATRIX;
     unsigned int MF_MT_VIDEO_LIGHTING;
     int MF_MT_DEFAULT_STRIDE; // stride is negative if image is bottom-up
     unsigned int MF_MT_VIDEO_CHROMA_SITING;
     GUID MF_MT_AM_FORMAT_TYPE;
-    wchar_t *pMF_MT_AM_FORMAT_TYPEName;
+    LPCWSTR pMF_MT_AM_FORMAT_TYPEName;
     unsigned int MF_MT_FIXED_SIZE_SAMPLES;
     unsigned int MF_MT_VIDEO_NOMINAL_RANGE;
-    unsigned int MF_MT_FRAME_RATE_NUMERATOR;
-    unsigned int MF_MT_FRAME_RATE_DENOMINATOR;
-    unsigned int MF_MT_PIXEL_ASPECT_RATIO;
-    unsigned int MF_MT_PIXEL_ASPECT_RATIO_low;
+    UINT32 MF_MT_FRAME_RATE_NUMERATOR;
+    UINT32 MF_MT_FRAME_RATE_DENOMINATOR;
+    UINT32 MF_MT_PIXEL_ASPECT_RATIO;
+    UINT32 MF_MT_PIXEL_ASPECT_RATIO_low;
     unsigned int MF_MT_ALL_SAMPLES_INDEPENDENT;
-    unsigned int MF_MT_FRAME_RATE_RANGE_MIN;
-    unsigned int MF_MT_FRAME_RATE_RANGE_MIN_low;
+    UINT32 MF_MT_FRAME_RATE_RANGE_MIN;
+    UINT32 MF_MT_FRAME_RATE_RANGE_MIN_low;
     unsigned int MF_MT_SAMPLE_SIZE;
     unsigned int MF_MT_VIDEO_PRIMARIES;
     unsigned int MF_MT_INTERLACE_MODE;
-    unsigned int MF_MT_FRAME_RATE_RANGE_MAX;
-    unsigned int MF_MT_FRAME_RATE_RANGE_MAX_low;
+    UINT32 MF_MT_FRAME_RATE_RANGE_MAX;
+    UINT32 MF_MT_FRAME_RATE_RANGE_MAX_low;
     GUID MF_MT_MAJOR_TYPE;
     GUID MF_MT_SUBTYPE;
-    wchar_t *pMF_MT_MAJOR_TYPEName;
-    wchar_t *pMF_MT_SUBTYPEName;
+    LPCWSTR pMF_MT_MAJOR_TYPEName;
+    LPCWSTR pMF_MT_SUBTYPEName;
     MediaType();
+    MediaType(IMFMediaType *pType);
     ~MediaType();
     void Clear();
-};
-
-/// Class for parsing info from IMFMediaType into the local MediaType
-class FormatReader
-{
-public:
-    static MediaType Read(IMFMediaType *pType);
-    ~FormatReader(void);
-private:
-    FormatReader(void);
-};
-
-DWORD WINAPI MainThreadFunction( LPVOID lpParam );
-typedef void(*emergensyStopEventCallback)(int, void *);
-
-class RawImage
-{
-public:
-    ~RawImage(void);
-    // Function of creation of the instance of the class
-    static long CreateInstance(RawImage **ppRImage,unsigned int size);
-    void setCopy(const BYTE * pSampleBuffer);
-    void fastCopy(const BYTE * pSampleBuffer);
-    unsigned char * getpPixels();
-    bool isNew();
-    unsigned int getSize();
-private:
-    bool ri_new;
-    unsigned int ri_size;
-    unsigned char *ri_pixels;
-    RawImage(unsigned int size);
-};
-
-class ImageGrabberCallback : public IMFSampleGrabberSinkCallback
-{
-public:
-    void pauseGrabbing();
-    void resumeGrabbing();
-    RawImage *getRawImage();
-    // IMFClockStateSink methods
-    STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset);
-    STDMETHODIMP OnClockStop(MFTIME hnsSystemTime);
-    STDMETHODIMP OnClockPause(MFTIME hnsSystemTime);
-    STDMETHODIMP OnClockRestart(MFTIME hnsSystemTime);
-    STDMETHODIMP OnClockSetRate(MFTIME hnsSystemTime, float flRate);
-    // IMFSampleGrabberSinkCallback methods
-    STDMETHODIMP OnSetPresentationClock(IMFPresentationClock* pClock);
-    STDMETHODIMP OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
-        LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
-        DWORD dwSampleSize);
-    STDMETHODIMP OnShutdown();
-
-    const HANDLE ig_hFrameReady;
-    const HANDLE ig_hFrameGrabbed;
-    const HANDLE ig_hFinish;
-protected:
-    ImageGrabberCallback(bool synchronous);
-    bool ig_RIE;
-    bool ig_Close;
-    bool ig_Synchronous;
-    long m_cRef;
-
-    RawImage *ig_RIFirst;
-    RawImage *ig_RISecond;
-    RawImage *ig_RIOut;
-private:
-    ImageGrabberCallback& operator=(const ImageGrabberCallback&);   // Declared to fix compilation warning.
- };
-
-// Class for grabbing image from video stream
-class ImageGrabber : public ImageGrabberCallback
-{
-public:
-    ~ImageGrabber(void);
-    HRESULT initImageGrabber(IMFMediaSource *pSource);
-    HRESULT startGrabbing(void);
-    void stopGrabbing();
-    // IUnknown methods
-    STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
-    STDMETHODIMP_(ULONG) AddRef();
-    STDMETHODIMP_(ULONG) Release();
-    // Function of creation of the instance of the class
-    static HRESULT CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronous = false);
-    const MediaType* getCaptureFormat() { return &captureFormat; }
-
-private:
-    unsigned int ig_DeviceID;
-
-    IMFMediaSource *ig_pSource;
-    MediaType captureFormat;
-    IMFMediaSession *ig_pSession;
-    IMFTopology *ig_pTopology;
-    ImageGrabber(unsigned int deviceID, bool synchronous);
-    HRESULT CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo);
-    HRESULT AddSourceNode(IMFTopology *pTopology, IMFMediaSource *pSource,
-        IMFPresentationDescriptor *pPD, IMFStreamDescriptor *pSD, IMFTopologyNode **ppNode);
-    HRESULT AddOutputNode(IMFTopology *pTopology, IMFActivate *pActivate, DWORD dwId, IMFTopologyNode **ppNode);
-
-    ImageGrabber& operator=(const ImageGrabber&);   // Declared to fix comiplation error.
-};
-
-/// Class for controlling of thread of the grabbing raw data from video device
-class ImageGrabberThread
-{
-    friend DWORD WINAPI MainThreadFunction( LPVOID lpParam );
-public:
-    ~ImageGrabberThread(void);
-    static HRESULT CreateInstance(ImageGrabberThread **ppIGT, IMFMediaSource *pSource, unsigned int deviceID, bool synchronious = false);
-    void start();
-    void stop();
-    void setEmergencyStopEvent(void *userData, void(*func)(int, void *));
-    ImageGrabber *getImageGrabber();
-protected:
-    virtual void run();
-private:
-    ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID, bool synchronious);
-    HANDLE igt_Handle;
-    DWORD   igt_ThreadIdArray;
-    ImageGrabber *igt_pImageGrabber;
-    emergensyStopEventCallback igt_func;
-    void *igt_userData;
-    bool igt_stop;
-    unsigned int igt_DeviceID;
 };
 
 // Structure for collecting info about one parametr of current video device
@@ -307,97 +283,112 @@ struct Parametr
     long Step;
     long Default;
     long Flag;
-    Parametr();
+    Parametr()
+    {
+        CurrentValue = 0;
+        Min = 0;
+        Max = 0;
+        Step = 0;
+        Default = 0;
+        Flag = 0;
+    }
 };
 
 // Structure for collecting info about 17 parametrs of current video device
 struct CamParametrs
 {
-        Parametr Brightness;
-        Parametr Contrast;
-        Parametr Hue;
-        Parametr Saturation;
-        Parametr Sharpness;
-        Parametr Gamma;
-        Parametr ColorEnable;
-        Parametr WhiteBalance;
-        Parametr BacklightCompensation;
-        Parametr Gain;
-        Parametr Pan;
-        Parametr Tilt;
-        Parametr Roll;
-        Parametr Zoom;
-        Parametr Exposure;
-        Parametr Iris;
-        Parametr Focus;
+    Parametr Brightness;
+    Parametr Contrast;
+    Parametr Hue;
+    Parametr Saturation;
+    Parametr Sharpness;
+    Parametr Gamma;
+    Parametr ColorEnable;
+    Parametr WhiteBalance;
+    Parametr BacklightCompensation;
+    Parametr Gain;
+    Parametr Pan;
+    Parametr Tilt;
+    Parametr Roll;
+    Parametr Zoom;
+    Parametr Exposure;
+    Parametr Iris;
+    Parametr Focus;
 };
 
-typedef std::wstring String;
-typedef std::vector<int> vectorNum;
-typedef std::map<String, vectorNum> SUBTYPEMap;
-typedef std::map<UINT64, SUBTYPEMap> FrameRateMap;
-typedef void(*emergensyStopEventCallback)(int, void *);
-
-/// Class for controlling of video device
-class videoDevice
+CamParametrs videoDevice__getParametrs(IMFMediaSource* vd_pSource)
 {
-public:
-    videoDevice(void);
-    ~videoDevice(void);
-    void closeDevice();
-    CamParametrs getParametrs();
-    void setParametrs(CamParametrs parametrs);
-    void setEmergencyStopEvent(void *userData, void(*func)(int, void *));
-    long readInfoOfDevice(IMFActivate *pActivate, unsigned int Num);
-    int getCountFormats();
-    unsigned int getWidth();
-    unsigned int getHeight();
-    unsigned int getFrameRate() const;
-    MediaType getFormat(unsigned int id);
-    bool setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate = 0);
-    bool setupDevice(unsigned int id);
-    bool isDeviceSetup();
-    bool isDeviceMediaSource();
-    bool isDeviceRawDataSource();
-    bool isFrameNew();
-    IMFMediaSource *getMediaSource();
-    RawImage *getRawImageOut();
-private:
-    enum typeLock
+    CamParametrs out;
+    if (vd_pSource)
     {
-        MediaSourceLock,
-        RawDataLock,
-        OpenLock
-    } vd_LockOut;
-    wchar_t *vd_pFriendlyName;
-    ImageGrabberThread *vd_pImGrTh;
-    unsigned int vd_Width;
-    unsigned int vd_Height;
-    unsigned int vd_FrameRate;
-    unsigned int vd_CurrentNumber;
-    bool vd_IsSetuped;
-    std::map<UINT64, FrameRateMap> vd_CaptureFormats;
-    std::vector<MediaType> vd_CurrentFormats;
-    IMFMediaSource *vd_pSource;
-    emergensyStopEventCallback vd_func;
-    void *vd_userData;
-    HRESULT enumerateCaptureFormats(IMFMediaSource *pSource);
-    long setDeviceFormat(IMFMediaSource *pSource, unsigned long dwFormatIndex);
-    void buildLibraryofTypes();
-    int findType(unsigned int size, unsigned int frameRate = 0);
-    long checkDevice(IMFActivate **pDevice);
-    long initDevice();
-};
+        Parametr *pParametr = (Parametr *)(&out);
+        IAMVideoProcAmp *pProcAmp = NULL;
+        HRESULT hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcAmp));
+        if (SUCCEEDED(hr))
+        {
+            for (unsigned int i = 0; i < 10; i++)
+            {
+                Parametr temp;
+                hr = pProcAmp->GetRange(VideoProcAmp_Brightness + i, &temp.Min, &temp.Max, &temp.Step, &temp.Default, &temp.Flag);
+                if (SUCCEEDED(hr))
+                {
+                    temp.CurrentValue = temp.Default;
+                    pParametr[i] = temp;
+                }
+            }
+            pProcAmp->Release();
+        }
+        IAMCameraControl *pProcControl = NULL;
+        hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcControl));
+        if (SUCCEEDED(hr))
+        {
+            for (unsigned int i = 0; i < 7; i++)
+            {
+                Parametr temp;
+                hr = pProcControl->GetRange(CameraControl_Pan + i, &temp.Min, &temp.Max, &temp.Step, &temp.Default, &temp.Flag);
+                if (SUCCEEDED(hr))
+                {
+                    temp.CurrentValue = temp.Default;
+                    pParametr[10 + i] = temp;
+                }
+            }
+            pProcControl->Release();
+        }
+    }
+    return out;
+}
 
-/// Class for managing of list of video devices
-class videoDevices
+void videoDevice__setParametrs(IMFMediaSource* vd_pSource, CamParametrs parametrs)
 {
-public:
-    ~videoDevices(void);
-    static cv::Ptr<videoDevice> getDevice(unsigned int i, bool fallback = false);
-private:
-    videoDevices(void);
-};
+    if (vd_pSource)
+    {
+        CamParametrs vd_PrevParametrs = videoDevice__getParametrs(vd_pSource);
+        Parametr *pParametr = (Parametr *)(&parametrs);
+        Parametr *pPrevParametr = (Parametr *)(&vd_PrevParametrs);
+        IAMVideoProcAmp *pProcAmp = NULL;
+        HRESULT hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcAmp));
+        if (SUCCEEDED(hr))
+        {
+            for (unsigned int i = 0; i < 10; i++)
+            {
+                if (pPrevParametr[i].CurrentValue != pParametr[i].CurrentValue || pPrevParametr[i].Flag != pParametr[i].Flag)
+                    hr = pProcAmp->Set(VideoProcAmp_Brightness + i, pParametr[i].CurrentValue, pParametr[i].Flag);
+            }
+            pProcAmp->Release();
+        }
+        IAMCameraControl *pProcControl = NULL;
+        hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcControl));
+        if (SUCCEEDED(hr))
+        {
+            for (unsigned int i = 0; i < 7; i++)
+            {
+                if (pPrevParametr[10 + i].CurrentValue != pParametr[10 + i].CurrentValue || pPrevParametr[10 + i].Flag != pParametr[10 + i].Flag)
+                    hr = pProcControl->Set(CameraControl_Pan + i, pParametr[10 + i].CurrentValue, pParametr[10 + i].Flag);
+            }
+            pProcControl->Release();
+        }
+    }
+}
 
 // Class for creating of Media Foundation context
 class Media_Foundation
@@ -413,1546 +404,352 @@ private:
     Media_Foundation(void) { CV_Assert(SUCCEEDED(MFStartup(MF_VERSION))); }
 };
 
-LPCWSTR GetGUIDNameConstNew(const GUID& guid);
-HRESULT GetGUIDNameNew(const GUID& guid, WCHAR **ppwsz);
-HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index);
-HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaType &out);
-
-unsigned int *GetParametr(GUID guid, MediaType &out)
-{
-    if(guid == MF_MT_YUV_MATRIX)
-        return &(out.MF_MT_YUV_MATRIX);
-    if(guid == MF_MT_VIDEO_LIGHTING)
-        return &(out.MF_MT_VIDEO_LIGHTING);
-    if(guid == MF_MT_DEFAULT_STRIDE)
-        return (unsigned int*)&(out.MF_MT_DEFAULT_STRIDE);
-    if(guid == MF_MT_VIDEO_CHROMA_SITING)
-        return &(out.MF_MT_VIDEO_CHROMA_SITING);
-    if(guid == MF_MT_VIDEO_NOMINAL_RANGE)
-        return &(out.MF_MT_VIDEO_NOMINAL_RANGE);
-    if(guid == MF_MT_ALL_SAMPLES_INDEPENDENT)
-        return &(out.MF_MT_ALL_SAMPLES_INDEPENDENT);
-    if(guid == MF_MT_FIXED_SIZE_SAMPLES)
-        return &(out.MF_MT_FIXED_SIZE_SAMPLES);
-    if(guid == MF_MT_SAMPLE_SIZE)
-        return &(out.MF_MT_SAMPLE_SIZE);
-    if(guid == MF_MT_VIDEO_PRIMARIES)
-        return &(out.MF_MT_VIDEO_PRIMARIES);
-    if(guid == MF_MT_INTERLACE_MODE)
-        return &(out.MF_MT_INTERLACE_MODE);
-    return NULL;
-}
-
-HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType &out)
-{
-    WCHAR *pGuidName = NULL;
-    WCHAR *pGuidValName = NULL;
-    GUID guid = { 0 };
-    PROPVARIANT var;
-    PropVariantInit(&var);
-    HRESULT hr = pAttr->GetItemByIndex(index, &guid, &var);
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = GetGUIDNameNew(guid, &pGuidName);
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = SpecialCaseAttributeValueNew(guid, var, out);
-    unsigned int *p;
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    if (hr == S_FALSE)
-    {
-        switch (var.vt)
-        {
-        case VT_UI4:
-            p = GetParametr(guid, out);
-            if(p)
-            {
-                *p = var.ulVal;
-            }
-            break;
-        case VT_UI8:
-            break;
-        case VT_R8:
-            break;
-        case VT_CLSID:
-            if(guid == MF_MT_AM_FORMAT_TYPE)
-            {
-                hr = GetGUIDNameNew(*var.puuid, &pGuidValName);
-                if (SUCCEEDED(hr))
-                {
-                    out.MF_MT_AM_FORMAT_TYPE = *var.puuid;
-                    out.pMF_MT_AM_FORMAT_TYPEName = pGuidValName;
-                    pGuidValName = NULL;
-                }
-            }
-            if(guid == MF_MT_MAJOR_TYPE)
-            {
-                hr = GetGUIDNameNew(*var.puuid, &pGuidValName);
-                if (SUCCEEDED(hr))
-                {
-                    out.MF_MT_MAJOR_TYPE = *var.puuid;
-                    out.pMF_MT_MAJOR_TYPEName = pGuidValName;
-                    pGuidValName = NULL;
-                }
-            }
-            if(guid == MF_MT_SUBTYPE)
-            {
-                hr = GetGUIDNameNew(*var.puuid, &pGuidValName);
-                if (SUCCEEDED(hr))
-                {
-                    out.MF_MT_SUBTYPE = *var.puuid;
-                    out.pMF_MT_SUBTYPEName = pGuidValName;
-                    pGuidValName = NULL;
-                }
-            }
-            break;
-        case VT_LPWSTR:
-            break;
-        case VT_VECTOR | VT_UI1:
-            break;
-        case VT_UNKNOWN:
-            break;
-        default:
-            break;
-        }
-    }
-done:
-    CoTaskMemFree(pGuidName);
-    CoTaskMemFree(pGuidValName);
-    PropVariantClear(&var);
-    return hr;
-}
-
-HRESULT GetGUIDNameNew(const GUID& guid, WCHAR **ppwsz)
-{
-    HRESULT hr = S_OK;
-    WCHAR *pName = NULL;
-    LPCWSTR pcwsz = GetGUIDNameConstNew(guid);
-    if (pcwsz)
-    {
-        size_t cchLength = 0;
-        hr = StringCchLengthW(pcwsz, STRSAFE_MAX_CCH, &cchLength);
-        if (FAILED(hr))
-        {
-            goto done;
-        }
-        pName = (WCHAR*)CoTaskMemAlloc((cchLength + 1) * sizeof(WCHAR));
-        if (pName == NULL)
-        {
-            hr = E_OUTOFMEMORY;
-            goto done;
-        }
-        hr = StringCchCopyW(pName, cchLength + 1, pcwsz);
-        if (FAILED(hr))
-        {
-            goto done;
-        }
-    }
-    else
-    {
-        hr = StringFromCLSID(guid, &pName);
-    }
-done:
-    if (FAILED(hr))
-    {
-        *ppwsz = NULL;
-        CoTaskMemFree(pName);
-    }
-    else
-    {
-        *ppwsz = pName;
-    }
-    return hr;
-}
-
-void LogUINT32AsUINT64New(const PROPVARIANT& var, UINT32 &uHigh, UINT32 &uLow)
-{
-    Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &uHigh, &uLow);
-}
-
-float OffsetToFloatNew(const MFOffset& offset)
-{
-    return offset.value + (static_cast<float>(offset.fract) / 65536.0f);
-}
-
-HRESULT LogVideoAreaNew(const PROPVARIANT& var)
-{
-    if (var.caub.cElems < sizeof(MFVideoArea))
-    {
-        return S_OK;
-    }
-    return S_OK;
-}
-
-HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaType &out)
-{
-    if (guid == MF_MT_DEFAULT_STRIDE)
-    {
-        out.MF_MT_DEFAULT_STRIDE = var.intVal;
-    } else
-    if (guid == MF_MT_FRAME_SIZE)
-    {
-        UINT32 uHigh = 0, uLow = 0;
-        LogUINT32AsUINT64New(var, uHigh, uLow);
-        out.width = uHigh;
-        out.height = uLow;
-        out.MF_MT_FRAME_SIZE = out.width * out.height;
-    }
-    else
-    if (guid == MF_MT_FRAME_RATE)
-    {
-        UINT32 uHigh = 0, uLow = 0;
-        LogUINT32AsUINT64New(var, uHigh, uLow);
-        out.MF_MT_FRAME_RATE_NUMERATOR = uHigh;
-        out.MF_MT_FRAME_RATE_DENOMINATOR = uLow;
-    }
-    else
-    if (guid == MF_MT_FRAME_RATE_RANGE_MAX)
-    {
-        UINT32 uHigh = 0, uLow = 0;
-        LogUINT32AsUINT64New(var, uHigh, uLow);
-        out.MF_MT_FRAME_RATE_RANGE_MAX = uHigh;
-        out.MF_MT_FRAME_RATE_RANGE_MAX_low = uLow;
-    }
-    else
-    if (guid == MF_MT_FRAME_RATE_RANGE_MIN)
-    {
-        UINT32 uHigh = 0, uLow = 0;
-        LogUINT32AsUINT64New(var, uHigh, uLow);
-        out.MF_MT_FRAME_RATE_RANGE_MIN = uHigh;
-        out.MF_MT_FRAME_RATE_RANGE_MIN_low = uLow;
-    }
-    else
-    if (guid == MF_MT_PIXEL_ASPECT_RATIO)
-    {
-        UINT32 uHigh = 0, uLow = 0;
-        LogUINT32AsUINT64New(var, uHigh, uLow);
-        out.MF_MT_PIXEL_ASPECT_RATIO = uHigh;
-        out.MF_MT_PIXEL_ASPECT_RATIO_low = uLow;
-    }
-    else
-    {
-        return S_FALSE;
-    }
-    return S_OK;
-}
-
-#ifndef IF_EQUAL_RETURN
-#define IF_EQUAL_RETURN(param, val) if(val == param) return L#val
+#ifndef IF_GUID_EQUAL_RETURN
+#define IF_GUID_EQUAL_RETURN(val) if(val == guid) return L#val
 #endif
-
 LPCWSTR GetGUIDNameConstNew(const GUID& guid)
 {
-    IF_EQUAL_RETURN(guid, MF_MT_MAJOR_TYPE);
-    IF_EQUAL_RETURN(guid, MF_MT_MAJOR_TYPE);
-    IF_EQUAL_RETURN(guid, MF_MT_SUBTYPE);
-    IF_EQUAL_RETURN(guid, MF_MT_ALL_SAMPLES_INDEPENDENT);
-    IF_EQUAL_RETURN(guid, MF_MT_FIXED_SIZE_SAMPLES);
-    IF_EQUAL_RETURN(guid, MF_MT_COMPRESSED);
-    IF_EQUAL_RETURN(guid, MF_MT_SAMPLE_SIZE);
-    IF_EQUAL_RETURN(guid, MF_MT_WRAPPED_TYPE);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_NUM_CHANNELS);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_SAMPLES_PER_SECOND);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_BLOCK_ALIGNMENT);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_BITS_PER_SAMPLE);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_VALID_BITS_PER_SAMPLE);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_SAMPLES_PER_BLOCK);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_CHANNEL_MASK);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_FOLDDOWN_MATRIX);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_WMADRC_PEAKREF);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_WMADRC_PEAKTARGET);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_WMADRC_AVGREF);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_WMADRC_AVGTARGET);
-    IF_EQUAL_RETURN(guid, MF_MT_AUDIO_PREFER_WAVEFORMATEX);
-    IF_EQUAL_RETURN(guid, MF_MT_AAC_PAYLOAD_TYPE);
-    IF_EQUAL_RETURN(guid, MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION);
-    IF_EQUAL_RETURN(guid, MF_MT_FRAME_SIZE);
-    IF_EQUAL_RETURN(guid, MF_MT_FRAME_RATE);
-    IF_EQUAL_RETURN(guid, MF_MT_FRAME_RATE_RANGE_MAX);
-    IF_EQUAL_RETURN(guid, MF_MT_FRAME_RATE_RANGE_MIN);
-    IF_EQUAL_RETURN(guid, MF_MT_PIXEL_ASPECT_RATIO);
-    IF_EQUAL_RETURN(guid, MF_MT_DRM_FLAGS);
-    IF_EQUAL_RETURN(guid, MF_MT_PAD_CONTROL_FLAGS);
-    IF_EQUAL_RETURN(guid, MF_MT_SOURCE_CONTENT_HINT);
-    IF_EQUAL_RETURN(guid, MF_MT_VIDEO_CHROMA_SITING);
-    IF_EQUAL_RETURN(guid, MF_MT_INTERLACE_MODE);
-    IF_EQUAL_RETURN(guid, MF_MT_TRANSFER_FUNCTION);
-    IF_EQUAL_RETURN(guid, MF_MT_VIDEO_PRIMARIES);
-    IF_EQUAL_RETURN(guid, MF_MT_CUSTOM_VIDEO_PRIMARIES);
-    IF_EQUAL_RETURN(guid, MF_MT_YUV_MATRIX);
-    IF_EQUAL_RETURN(guid, MF_MT_VIDEO_LIGHTING);
-    IF_EQUAL_RETURN(guid, MF_MT_VIDEO_NOMINAL_RANGE);
-    IF_EQUAL_RETURN(guid, MF_MT_GEOMETRIC_APERTURE);
-    IF_EQUAL_RETURN(guid, MF_MT_MINIMUM_DISPLAY_APERTURE);
-    IF_EQUAL_RETURN(guid, MF_MT_PAN_SCAN_APERTURE);
-    IF_EQUAL_RETURN(guid, MF_MT_PAN_SCAN_ENABLED);
-    IF_EQUAL_RETURN(guid, MF_MT_AVG_BITRATE);
-    IF_EQUAL_RETURN(guid, MF_MT_AVG_BIT_ERROR_RATE);
-    IF_EQUAL_RETURN(guid, MF_MT_MAX_KEYFRAME_SPACING);
-    IF_EQUAL_RETURN(guid, MF_MT_DEFAULT_STRIDE);
-    IF_EQUAL_RETURN(guid, MF_MT_PALETTE);
-    IF_EQUAL_RETURN(guid, MF_MT_USER_DATA);
-    IF_EQUAL_RETURN(guid, MF_MT_AM_FORMAT_TYPE);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG_START_TIME_CODE);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG2_PROFILE);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG2_LEVEL);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG2_FLAGS);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG_SEQUENCE_HEADER);
-    IF_EQUAL_RETURN(guid, MF_MT_DV_AAUX_SRC_PACK_0);
-    IF_EQUAL_RETURN(guid, MF_MT_DV_AAUX_CTRL_PACK_0);
-    IF_EQUAL_RETURN(guid, MF_MT_DV_AAUX_SRC_PACK_1);
-    IF_EQUAL_RETURN(guid, MF_MT_DV_AAUX_CTRL_PACK_1);
-    IF_EQUAL_RETURN(guid, MF_MT_DV_VAUX_SRC_PACK);
-    IF_EQUAL_RETURN(guid, MF_MT_DV_VAUX_CTRL_PACK);
-    IF_EQUAL_RETURN(guid, MF_MT_ARBITRARY_HEADER);
-    IF_EQUAL_RETURN(guid, MF_MT_ARBITRARY_FORMAT);
-    IF_EQUAL_RETURN(guid, MF_MT_IMAGE_LOSS_TOLERANT);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG4_SAMPLE_DESCRIPTION);
-    IF_EQUAL_RETURN(guid, MF_MT_MPEG4_CURRENT_SAMPLE_ENTRY);
-    IF_EQUAL_RETURN(guid, MF_MT_ORIGINAL_4CC);
-    IF_EQUAL_RETURN(guid, MF_MT_ORIGINAL_WAVE_FORMAT_TAG);
+    IF_GUID_EQUAL_RETURN(MF_MT_MAJOR_TYPE);
+    IF_GUID_EQUAL_RETURN(MF_MT_SUBTYPE);
+    IF_GUID_EQUAL_RETURN(MF_MT_ALL_SAMPLES_INDEPENDENT);
+    IF_GUID_EQUAL_RETURN(MF_MT_FIXED_SIZE_SAMPLES);
+    IF_GUID_EQUAL_RETURN(MF_MT_COMPRESSED);
+    IF_GUID_EQUAL_RETURN(MF_MT_SAMPLE_SIZE);
+    IF_GUID_EQUAL_RETURN(MF_MT_WRAPPED_TYPE);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_NUM_CHANNELS);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_SAMPLES_PER_SECOND);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_BLOCK_ALIGNMENT);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_BITS_PER_SAMPLE);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_VALID_BITS_PER_SAMPLE);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_SAMPLES_PER_BLOCK);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_CHANNEL_MASK);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_FOLDDOWN_MATRIX);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_PEAKREF);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_PEAKTARGET);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_AVGREF);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_AVGTARGET);
+    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_PREFER_WAVEFORMATEX);
+    IF_GUID_EQUAL_RETURN(MF_MT_AAC_PAYLOAD_TYPE);
+    IF_GUID_EQUAL_RETURN(MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION);
+    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_SIZE);
+    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_RATE);
+    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_RATE_RANGE_MAX);
+    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_RATE_RANGE_MIN);
+    IF_GUID_EQUAL_RETURN(MF_MT_PIXEL_ASPECT_RATIO);
+    IF_GUID_EQUAL_RETURN(MF_MT_DRM_FLAGS);
+    IF_GUID_EQUAL_RETURN(MF_MT_PAD_CONTROL_FLAGS);
+    IF_GUID_EQUAL_RETURN(MF_MT_SOURCE_CONTENT_HINT);
+    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_CHROMA_SITING);
+    IF_GUID_EQUAL_RETURN(MF_MT_INTERLACE_MODE);
+    IF_GUID_EQUAL_RETURN(MF_MT_TRANSFER_FUNCTION);
+    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_PRIMARIES);
+    IF_GUID_EQUAL_RETURN(MF_MT_CUSTOM_VIDEO_PRIMARIES);
+    IF_GUID_EQUAL_RETURN(MF_MT_YUV_MATRIX);
+    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_LIGHTING);
+    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_NOMINAL_RANGE);
+    IF_GUID_EQUAL_RETURN(MF_MT_GEOMETRIC_APERTURE);
+    IF_GUID_EQUAL_RETURN(MF_MT_MINIMUM_DISPLAY_APERTURE);
+    IF_GUID_EQUAL_RETURN(MF_MT_PAN_SCAN_APERTURE);
+    IF_GUID_EQUAL_RETURN(MF_MT_PAN_SCAN_ENABLED);
+    IF_GUID_EQUAL_RETURN(MF_MT_AVG_BITRATE);
+    IF_GUID_EQUAL_RETURN(MF_MT_AVG_BIT_ERROR_RATE);
+    IF_GUID_EQUAL_RETURN(MF_MT_MAX_KEYFRAME_SPACING);
+    IF_GUID_EQUAL_RETURN(MF_MT_DEFAULT_STRIDE);
+    IF_GUID_EQUAL_RETURN(MF_MT_PALETTE);
+    IF_GUID_EQUAL_RETURN(MF_MT_USER_DATA);
+    IF_GUID_EQUAL_RETURN(MF_MT_AM_FORMAT_TYPE);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG_START_TIME_CODE);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG2_PROFILE);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG2_LEVEL);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG2_FLAGS);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG_SEQUENCE_HEADER);
+    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_SRC_PACK_0);
+    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_CTRL_PACK_0);
+    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_SRC_PACK_1);
+    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_CTRL_PACK_1);
+    IF_GUID_EQUAL_RETURN(MF_MT_DV_VAUX_SRC_PACK);
+    IF_GUID_EQUAL_RETURN(MF_MT_DV_VAUX_CTRL_PACK);
+    IF_GUID_EQUAL_RETURN(MF_MT_ARBITRARY_HEADER);
+    IF_GUID_EQUAL_RETURN(MF_MT_ARBITRARY_FORMAT);
+    IF_GUID_EQUAL_RETURN(MF_MT_IMAGE_LOSS_TOLERANT);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG4_SAMPLE_DESCRIPTION);
+    IF_GUID_EQUAL_RETURN(MF_MT_MPEG4_CURRENT_SAMPLE_ENTRY);
+    IF_GUID_EQUAL_RETURN(MF_MT_ORIGINAL_4CC);
+    IF_GUID_EQUAL_RETURN(MF_MT_ORIGINAL_WAVE_FORMAT_TAG);
     // Media types
-    IF_EQUAL_RETURN(guid, MFMediaType_Audio);
-    IF_EQUAL_RETURN(guid, MFMediaType_Video);
-    IF_EQUAL_RETURN(guid, MFMediaType_Protected);
-    IF_EQUAL_RETURN(guid, MFMediaType_SAMI);
-    IF_EQUAL_RETURN(guid, MFMediaType_Script);
-    IF_EQUAL_RETURN(guid, MFMediaType_Image);
-    IF_EQUAL_RETURN(guid, MFMediaType_HTML);
-    IF_EQUAL_RETURN(guid, MFMediaType_Binary);
-    IF_EQUAL_RETURN(guid, MFMediaType_FileTransfer);
-    IF_EQUAL_RETURN(guid, MFVideoFormat_AI44); //     FCC('AI44')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_ARGB32); //   D3DFMT_A8R8G8B8
-    IF_EQUAL_RETURN(guid, MFVideoFormat_AYUV); //     FCC('AYUV')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_DV25); //     FCC('dv25')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_DV50); //     FCC('dv50')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_DVH1); //     FCC('dvh1')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_DVSD); //     FCC('dvsd')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_DVSL); //     FCC('dvsl')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_H264); //     FCC('H264')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_I420); //     FCC('I420')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_IYUV); //     FCC('IYUV')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_M4S2); //     FCC('M4S2')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MJPG);
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MP43); //     FCC('MP43')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MP4S); //     FCC('MP4S')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MP4V); //     FCC('MP4V')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MPG1); //     FCC('MPG1')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MSS1); //     FCC('MSS1')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_MSS2); //     FCC('MSS2')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_NV11); //     FCC('NV11')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_NV12); //     FCC('NV12')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_P010); //     FCC('P010')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_P016); //     FCC('P016')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_P210); //     FCC('P210')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_P216); //     FCC('P216')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_RGB24); //    D3DFMT_R8G8B8
-    IF_EQUAL_RETURN(guid, MFVideoFormat_RGB32); //    D3DFMT_X8R8G8B8
-    IF_EQUAL_RETURN(guid, MFVideoFormat_RGB555); //   D3DFMT_X1R5G5B5
-    IF_EQUAL_RETURN(guid, MFVideoFormat_RGB565); //   D3DFMT_R5G6B5
-    IF_EQUAL_RETURN(guid, MFVideoFormat_RGB8);
-    IF_EQUAL_RETURN(guid, MFVideoFormat_UYVY); //     FCC('UYVY')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_v210); //     FCC('v210')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_v410); //     FCC('v410')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_WMV1); //     FCC('WMV1')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_WMV2); //     FCC('WMV2')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_WMV3); //     FCC('WMV3')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_WVC1); //     FCC('WVC1')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_Y210); //     FCC('Y210')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_Y216); //     FCC('Y216')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_Y410); //     FCC('Y410')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_Y416); //     FCC('Y416')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_Y41P);
-    IF_EQUAL_RETURN(guid, MFVideoFormat_Y41T);
-    IF_EQUAL_RETURN(guid, MFVideoFormat_YUY2); //     FCC('YUY2')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_YV12); //     FCC('YV12')
-    IF_EQUAL_RETURN(guid, MFVideoFormat_YVYU);
-    IF_EQUAL_RETURN(guid, MFAudioFormat_PCM); //              WAVE_FORMAT_PCM
-    IF_EQUAL_RETURN(guid, MFAudioFormat_Float); //            WAVE_FORMAT_IEEE_FLOAT
-    IF_EQUAL_RETURN(guid, MFAudioFormat_DTS); //              WAVE_FORMAT_DTS
-    IF_EQUAL_RETURN(guid, MFAudioFormat_Dolby_AC3_SPDIF); //  WAVE_FORMAT_DOLBY_AC3_SPDIF
-    IF_EQUAL_RETURN(guid, MFAudioFormat_DRM); //              WAVE_FORMAT_DRM
-    IF_EQUAL_RETURN(guid, MFAudioFormat_WMAudioV8); //        WAVE_FORMAT_WMAUDIO2
-    IF_EQUAL_RETURN(guid, MFAudioFormat_WMAudioV9); //        WAVE_FORMAT_WMAUDIO3
-    IF_EQUAL_RETURN(guid, MFAudioFormat_WMAudio_Lossless); // WAVE_FORMAT_WMAUDIO_LOSSLESS
-    IF_EQUAL_RETURN(guid, MFAudioFormat_WMASPDIF); //         WAVE_FORMAT_WMASPDIF
-    IF_EQUAL_RETURN(guid, MFAudioFormat_MSP1); //             WAVE_FORMAT_WMAVOICE9
-    IF_EQUAL_RETURN(guid, MFAudioFormat_MP3); //              WAVE_FORMAT_MPEGLAYER3
-    IF_EQUAL_RETURN(guid, MFAudioFormat_MPEG); //             WAVE_FORMAT_MPEG
-    IF_EQUAL_RETURN(guid, MFAudioFormat_AAC); //              WAVE_FORMAT_MPEG_HEAAC
-    IF_EQUAL_RETURN(guid, MFAudioFormat_ADTS); //             WAVE_FORMAT_MPEG_ADTS_AAC
+    IF_GUID_EQUAL_RETURN(MFMediaType_Audio);
+    IF_GUID_EQUAL_RETURN(MFMediaType_Video);
+    IF_GUID_EQUAL_RETURN(MFMediaType_Protected);
+#ifdef MFMediaType_Perception
+    IF_GUID_EQUAL_RETURN(MFMediaType_Perception);
+#endif
+    IF_GUID_EQUAL_RETURN(MFMediaType_Stream);
+    IF_GUID_EQUAL_RETURN(MFMediaType_SAMI);
+    IF_GUID_EQUAL_RETURN(MFMediaType_Script);
+    IF_GUID_EQUAL_RETURN(MFMediaType_Image);
+    IF_GUID_EQUAL_RETURN(MFMediaType_HTML);
+    IF_GUID_EQUAL_RETURN(MFMediaType_Binary);
+    IF_GUID_EQUAL_RETURN(MFMediaType_FileTransfer);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_AI44); //     FCC('AI44')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_ARGB32); //   D3DFMT_A8R8G8B8
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_AYUV); //     FCC('AYUV')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DV25); //     FCC('dv25')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DV50); //     FCC('dv50')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVH1); //     FCC('dvh1')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVC);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVHD);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVSD); //     FCC('dvsd')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVSL); //     FCC('dvsl')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_H264); //     FCC('H264')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_I420); //     FCC('I420')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_IYUV); //     FCC('IYUV')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_M4S2); //     FCC('M4S2')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MJPG);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MP43); //     FCC('MP43')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MP4S); //     FCC('MP4S')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MP4V); //     FCC('MP4V')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MPG1); //     FCC('MPG1')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MSS1); //     FCC('MSS1')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MSS2); //     FCC('MSS2')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_NV11); //     FCC('NV11')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_NV12); //     FCC('NV12')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_P010); //     FCC('P010')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_P016); //     FCC('P016')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_P210); //     FCC('P210')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_P216); //     FCC('P216')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB24); //    D3DFMT_R8G8B8
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB32); //    D3DFMT_X8R8G8B8
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB555); //   D3DFMT_X1R5G5B5
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB565); //   D3DFMT_R5G6B5
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB8);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_UYVY); //     FCC('UYVY')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_v210); //     FCC('v210')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_v410); //     FCC('v410')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_WMV1); //     FCC('WMV1')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_WMV2); //     FCC('WMV2')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_WMV3); //     FCC('WMV3')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_WVC1); //     FCC('WVC1')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y210); //     FCC('Y210')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y216); //     FCC('Y216')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y410); //     FCC('Y410')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y416); //     FCC('Y416')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y41P);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y41T);
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_YUY2); //     FCC('YUY2')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_YV12); //     FCC('YV12')
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_YVYU);
+#ifdef MFVideoFormat_H263
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_H263);
+#endif
+#ifdef MFVideoFormat_H265
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_H265);
+#endif
+#ifdef MFVideoFormat_H264_ES
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_H264_ES);
+#endif
+#ifdef MFVideoFormat_HEVC
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_HEVC);
+#endif
+#ifdef MFVideoFormat_HEVC_ES
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_HEVC_ES);
+#endif
+#ifdef MFVideoFormat_MPEG2
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_MPEG2);
+#endif
+#ifdef MFVideoFormat_VP80
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_VP80);
+#endif
+#ifdef MFVideoFormat_VP90
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_VP90);
+#endif
+#ifdef MFVideoFormat_420O
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_420O);
+#endif
+#ifdef MFVideoFormat_Y42T
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y42T);
+#endif
+#ifdef MFVideoFormat_YVU9
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_YVU9);
+#endif
+#ifdef MFVideoFormat_v216
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_v216);
+#endif
+#ifdef MFVideoFormat_L8
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_L8);
+#endif
+#ifdef MFVideoFormat_L16
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_L16);
+#endif
+#ifdef MFVideoFormat_D16
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_D16);
+#endif
+#ifdef D3DFMT_X8R8G8B8
+    IF_GUID_EQUAL_RETURN(D3DFMT_X8R8G8B8);
+#endif
+#ifdef D3DFMT_A8R8G8B8
+    IF_GUID_EQUAL_RETURN(D3DFMT_A8R8G8B8);
+#endif
+#ifdef D3DFMT_R8G8B8
+    IF_GUID_EQUAL_RETURN(D3DFMT_R8G8B8);
+#endif
+#ifdef D3DFMT_X1R5G5B5
+    IF_GUID_EQUAL_RETURN(D3DFMT_X1R5G5B5);
+#endif
+#ifdef D3DFMT_A4R4G4B4
+    IF_GUID_EQUAL_RETURN(D3DFMT_A4R4G4B4);
+#endif
+#ifdef D3DFMT_R5G6B5
+    IF_GUID_EQUAL_RETURN(D3DFMT_R5G6B5);
+#endif
+#ifdef D3DFMT_P8
+    IF_GUID_EQUAL_RETURN(D3DFMT_P8);
+#endif
+#ifdef D3DFMT_A2R10G10B10
+    IF_GUID_EQUAL_RETURN(D3DFMT_A2R10G10B10);
+#endif
+#ifdef D3DFMT_A2B10G10R10
+    IF_GUID_EQUAL_RETURN(D3DFMT_A2B10G10R10);
+#endif
+#ifdef D3DFMT_L8
+    IF_GUID_EQUAL_RETURN(D3DFMT_L8);
+#endif
+#ifdef D3DFMT_L16
+    IF_GUID_EQUAL_RETURN(D3DFMT_L16);
+#endif
+#ifdef D3DFMT_D16
+    IF_GUID_EQUAL_RETURN(D3DFMT_D16);
+#endif
+#ifdef MFVideoFormat_A2R10G10B10
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_A2R10G10B10);
+#endif
+#ifdef MFVideoFormat_A16B16G16R16F
+    IF_GUID_EQUAL_RETURN(MFVideoFormat_A16B16G16R16F);
+#endif
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_PCM); //              WAVE_FORMAT_PCM
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_Float); //            WAVE_FORMAT_IEEE_FLOAT
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_DTS); //              WAVE_FORMAT_DTS
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_Dolby_AC3_SPDIF); //  WAVE_FORMAT_DOLBY_AC3_SPDIF
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_DRM); //              WAVE_FORMAT_DRM
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMAudioV8); //        WAVE_FORMAT_WMAUDIO2
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMAudioV9); //        WAVE_FORMAT_WMAUDIO3
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMAudio_Lossless); // WAVE_FORMAT_WMAUDIO_LOSSLESS
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMASPDIF); //         WAVE_FORMAT_WMASPDIF
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_MSP1); //             WAVE_FORMAT_WMAVOICE9
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_MP3); //              WAVE_FORMAT_MPEGLAYER3
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_MPEG); //             WAVE_FORMAT_MPEG
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_AAC); //              WAVE_FORMAT_MPEG_HEAAC
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_ADTS); //             WAVE_FORMAT_MPEG_ADTS_AAC
+#ifdef MFAudioFormat_ALAC
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_ALAC);
+#endif
+#ifdef MFAudioFormat_AMR_NB
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_AMR_NB);
+#endif
+#ifdef MFAudioFormat_AMR_WB
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_AMR_WB);
+#endif
+#ifdef MFAudioFormat_AMR_WP
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_AMR_WP);
+#endif
+#ifdef MFAudioFormat_Dolby_AC3
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_Dolby_AC3);
+#endif
+#ifdef MFAudioFormat_Dolby_DDPlus
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_Dolby_DDPlus);
+#endif
+#ifdef MFAudioFormat_FLAC
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_FLAC);
+#endif
+#ifdef MFAudioFormat_Opus
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_Opus);
+#endif
+#ifdef MEDIASUBTYPE_RAW_AAC1
+    IF_GUID_EQUAL_RETURN(MEDIASUBTYPE_RAW_AAC1);
+#endif
+#ifdef MFAudioFormat_Float_SpatialObjects
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_Float_SpatialObjects);
+#endif
+#ifdef MFAudioFormat_QCELP
+    IF_GUID_EQUAL_RETURN(MFAudioFormat_QCELP);
+#endif
+
     return NULL;
 }
 
-FormatReader::FormatReader(void)
-{
-}
-
-MediaType FormatReader::Read(IMFMediaType *pType)
-{
-    UINT32 count = 0;
-    MediaType out;
-    HRESULT hr = pType->LockStore();
-    if (FAILED(hr))
-    {
-        return out;
-    }
-    hr = pType->GetCount(&count);
-    if (FAILED(hr))
-    {
-        return out;
-    }
-    for (UINT32 i = 0; i < count; i++)
-    {
-        hr = LogAttributeValueByIndexNew(pType, i, out);
-        if (FAILED(hr))
-        {
-            break;
-        }
-    }
-    hr = pType->UnlockStore();
-    if (FAILED(hr))
-    {
-        return out;
-    }
-    return out;
-}
-
-FormatReader::~FormatReader(void)
-{
-}
-
-#define CHECK_HR(x) if (FAILED(x)) { goto done; }
-
-ImageGrabberCallback::ImageGrabberCallback(bool synchronous):
-    m_cRef(1),
-    ig_RIE(true),
-    ig_Close(false),
-    ig_Synchronous(synchronous),
-    ig_hFrameReady(synchronous ? CreateEvent(NULL, FALSE, FALSE, NULL): 0),
-    ig_hFrameGrabbed(synchronous ? CreateEvent(NULL, FALSE, FALSE, NULL): 0),
-    ig_hFinish(CreateEvent(NULL, TRUE, FALSE, NULL))
-{}
-
-ImageGrabber::ImageGrabber(unsigned int deviceID, bool synchronous):
-    ImageGrabberCallback(synchronous),
-    ig_DeviceID(deviceID),
-    ig_pSource(NULL),
-    ig_pSession(NULL),
-    ig_pTopology(NULL)
-{}
-
-ImageGrabber::~ImageGrabber(void)
-{
-    if (ig_pSession)
-    {
-        ig_pSession->Shutdown();
-    }
-
-    CloseHandle(ig_hFinish);
-
-    if (ig_Synchronous)
-    {
-        CloseHandle(ig_hFrameReady);
-        CloseHandle(ig_hFrameGrabbed);
-    }
-
-    SafeRelease(&ig_pSession);
-    SafeRelease(&ig_pTopology);
-
-    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroying instance of the ImageGrabber class\n", ig_DeviceID);
-}
-
-HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource)
-{
-     // Clean up.
-    if (ig_pSession)
-    {
-        ig_pSession->Shutdown();
-    }
-    SafeRelease(&ig_pSession);
-    SafeRelease(&ig_pTopology);
-
-    HRESULT hr;
-    ig_pSource = pSource;
-    // Configure the media type that the Sample Grabber will receive.
-    // Setting the major and subtype is usually enough for the topology loader
-    // to resolve the topology.
-    _ComPtr<IMFMediaType> pType = NULL;
-    _ComPtr<IMFActivate> pSinkActivate = NULL;
-    CHECK_HR(hr = MFCreateMediaType(pType.GetAddressOf()));
-    CHECK_HR(hr = pType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video));
-    CHECK_HR(hr = pType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24));
-    // Create the sample grabber sink.
-    CHECK_HR(hr = MFCreateSampleGrabberSinkActivate(pType.Get(), this, pSinkActivate.GetAddressOf()));
-    // To run as fast as possible, set this attribute (requires Windows 7):
-    CHECK_HR(hr = pSinkActivate->SetUINT32(MF_SAMPLEGRABBERSINK_IGNORE_CLOCK, TRUE));
-    // Create the Media Session.
-    CHECK_HR(hr = MFCreateMediaSession(NULL, &ig_pSession));
-    // Create the topology.
-    CHECK_HR(hr = CreateTopology(pSource, pSinkActivate.Get(), &ig_pTopology));
-
-    CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, captureFormat.MF_MT_FRAME_SIZE * 3)); // Expect that output image will be RGB24 thus occupy 3 byte per point
-    CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, captureFormat.MF_MT_FRAME_SIZE * 3));
-    ig_RIOut = ig_RISecond;
-done:
-    // Clean up.
-    if (FAILED(hr))
-    {
-        if (ig_pSession)
-        {
-            ig_pSession->Shutdown();
-        }
-        SafeRelease(&ig_pSession);
-        SafeRelease(&ig_pTopology);
-    }
-    return hr;
-}
-
-void ImageGrabber::stopGrabbing()
-{
-    if(ig_pSession)
-        ig_pSession->Stop();
-    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Stopping of of grabbing of images\n", ig_DeviceID);
-}
-
-HRESULT ImageGrabber::startGrabbing(void)
+bool LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType &out)
 {
     PROPVARIANT var;
     PropVariantInit(&var);
-    HRESULT hr = ig_pSession->SetTopology(0, ig_pTopology);
-    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Start Grabbing of the images\n", ig_DeviceID);
-    hr = ig_pSession->Start(&GUID_NULL, &var);
-    for(;;)
+    GUID guid = { 0 };
+    if (SUCCEEDED(pAttr->GetItemByIndex(index, &guid, &var)))
     {
-        _ComPtr<IMFMediaEvent> pEvent = NULL;
-        HRESULT hrStatus = S_OK;
-        MediaEventType met;
-        if(!ig_pSession) break;
-        hr = ig_pSession->GetEvent(0, &pEvent);
-        if(!SUCCEEDED(hr))
+        if (guid == MF_MT_DEFAULT_STRIDE && var.vt == VT_INT)
+            out.MF_MT_DEFAULT_STRIDE = var.intVal;
+        else if (guid == MF_MT_FRAME_RATE && var.vt == VT_UI8)
+            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_FRAME_RATE_NUMERATOR, &out.MF_MT_FRAME_RATE_DENOMINATOR);
+        else if (guid == MF_MT_FRAME_RATE_RANGE_MAX && var.vt == VT_UI8)
+            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_FRAME_RATE_RANGE_MAX, &out.MF_MT_FRAME_RATE_RANGE_MAX_low);
+        else if (guid == MF_MT_FRAME_RATE_RANGE_MIN && var.vt == VT_UI8)
+            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_FRAME_RATE_RANGE_MIN, &out.MF_MT_FRAME_RATE_RANGE_MIN_low);
+        else if (guid == MF_MT_PIXEL_ASPECT_RATIO && var.vt == VT_UI8)
+            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_PIXEL_ASPECT_RATIO, &out.MF_MT_PIXEL_ASPECT_RATIO_low);
+        else if (guid == MF_MT_YUV_MATRIX && var.vt == VT_UI4)
+            out.MF_MT_YUV_MATRIX = var.ulVal;
+        else if (guid == MF_MT_VIDEO_LIGHTING && var.vt == VT_UI4)
+            out.MF_MT_VIDEO_LIGHTING = var.ulVal;
+        else if (guid == MF_MT_DEFAULT_STRIDE && var.vt == VT_UI4)
+            out.MF_MT_DEFAULT_STRIDE = (int)var.ulVal;
+        else if (guid == MF_MT_VIDEO_CHROMA_SITING && var.vt == VT_UI4)
+            out.MF_MT_VIDEO_CHROMA_SITING = var.ulVal;
+        else if (guid == MF_MT_VIDEO_NOMINAL_RANGE && var.vt == VT_UI4)
+            out.MF_MT_VIDEO_NOMINAL_RANGE = var.ulVal;
+        else if (guid == MF_MT_ALL_SAMPLES_INDEPENDENT && var.vt == VT_UI4)
+            out.MF_MT_ALL_SAMPLES_INDEPENDENT = var.ulVal;
+        else if (guid == MF_MT_FIXED_SIZE_SAMPLES && var.vt == VT_UI4)
+            out.MF_MT_FIXED_SIZE_SAMPLES = var.ulVal;
+        else if (guid == MF_MT_SAMPLE_SIZE && var.vt == VT_UI4)
+            out.MF_MT_SAMPLE_SIZE = var.ulVal;
+        else if (guid == MF_MT_VIDEO_PRIMARIES && var.vt == VT_UI4)
+            out.MF_MT_VIDEO_PRIMARIES = var.ulVal;
+        else if (guid == MF_MT_INTERLACE_MODE && var.vt == VT_UI4)
+            out.MF_MT_INTERLACE_MODE = var.ulVal;
+        else if (guid == MF_MT_AM_FORMAT_TYPE && var.vt == VT_CLSID)
+            out.MF_MT_AM_FORMAT_TYPE = *var.puuid;
+        else if (guid == MF_MT_MAJOR_TYPE && var.vt == VT_CLSID)
+            out.pMF_MT_MAJOR_TYPEName = GetGUIDNameConstNew(out.MF_MT_MAJOR_TYPE = *var.puuid);
+        else if (guid == MF_MT_SUBTYPE && var.vt == VT_CLSID)
+            out.pMF_MT_SUBTYPEName = GetGUIDNameConstNew(out.MF_MT_SUBTYPE = *var.puuid);
+        else if (guid == MF_MT_FRAME_SIZE && var.vt == VT_UI8)
         {
-            hr = S_OK;
-            goto done;
+            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.width, &out.height);
+            out.MF_MT_FRAME_SIZE = out.width * out.height;
         }
-        hr = pEvent->GetStatus(&hrStatus);
-        if(!SUCCEEDED(hr))
-        {
-            hr = S_OK;
-            goto done;
-        }
-        hr = pEvent->GetType(&met);
-        if(!SUCCEEDED(hr))
-        {
-            hr = S_OK;
-            goto done;
-        }
-        if (!SUCCEEDED(hrStatus))
-        {
-            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Event Status Error: %u\n", ig_DeviceID, hrStatus);
-            goto done;
-        }
-        if (met == MESessionEnded)
-        {
-            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionEnded\n", ig_DeviceID);
-            ig_pSession->Stop();
-            break;
-        }
-        if (met == MESessionStopped)
-        {
-            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionStopped \n", ig_DeviceID);
-            break;
-        }
-#if (WINVER >= 0x0602) // Available since Win 8
-        if (met == MEVideoCaptureDeviceRemoved)
-        {
-            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MEVideoCaptureDeviceRemoved \n", ig_DeviceID);
-            break;
-        }
-#endif
-        if ((met == MEError) || (met == MENonFatalError))
-        {
-            pEvent->GetStatus(&hrStatus);
-            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MEError | MENonFatalError: %u\n", ig_DeviceID, hrStatus);
-            break;
-        }
-    }
-    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
-
-done:
-    SetEvent(ig_hFinish);
-
-    return hr;
-}
-
-void ImageGrabberCallback::pauseGrabbing()
-{
-}
-
-void ImageGrabberCallback::resumeGrabbing()
-{
-}
-
-HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo)
-{
-    HRESULT hr = S_OK;
-    { // "done:" scope
-    _ComPtr<IMFPresentationDescriptor> pPD = NULL;
-    hr = !pSource ? E_POINTER : S_OK; CHECK_HR(hr);
-    CHECK_HR(hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf()));
-
-    DWORD cStreams = 0;
-    CHECK_HR(hr = pPD->GetStreamDescriptorCount(&cStreams));
-    DWORD vStream = cStreams;
-    BOOL vStreamSelected = FALSE;
-    for (DWORD i = 0; i < cStreams; i++)
-    {
-        BOOL fSelected = FALSE;
-        _ComPtr<IMFStreamDescriptor> pSD = NULL;
-        CHECK_HR(hr = pPD->GetStreamDescriptorByIndex(i, &fSelected, pSD.GetAddressOf()));
-
-        _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
-        CHECK_HR(hr = pSD->GetMediaTypeHandler(pHandler.GetAddressOf()));
-
-        GUID majorType;
-        CHECK_HR(hr = pHandler->GetMajorType(&majorType));
-
-        if (majorType == MFMediaType_Video && !vStreamSelected)
-        {
-            if (fSelected)
-            {
-                vStream = i;
-                vStreamSelected = TRUE;
-            }
-            else
-                vStream = i < vStream ? i : vStream;
-        }
-        else
-        {
-            CHECK_HR(hr = pPD->DeselectStream(i));
-        }
-    }
-
-    if (vStream < cStreams)
-    {
-        if (!vStreamSelected)
-            CHECK_HR(hr = pPD->SelectStream(vStream));
-        BOOL fSelected;
-        _ComPtr<IMFStreamDescriptor> pSD = NULL;
-        CHECK_HR(hr = pPD->GetStreamDescriptorByIndex(vStream, &fSelected, pSD.GetAddressOf()));
-
-        _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
-        CHECK_HR(hr = pSD->GetMediaTypeHandler(pHandler.GetAddressOf()));
-
-        DWORD cTypes = 0;
-        CHECK_HR(hr = pHandler->GetMediaTypeCount(&cTypes));
-        DWORD j = 0;
-        for (; j < cTypes; j++) // Iterate throug available video subtypes to find supported and fill MediaType structure
-        {
-            _ComPtr<IMFMediaType> pType = NULL;
-            CHECK_HR(hr = pHandler->GetMediaTypeByIndex(j, pType.GetAddressOf()));
-            MediaType MT = FormatReader::Read(pType.Get());
-            if (MT.MF_MT_MAJOR_TYPE == MFMediaType_Video /*&& MT.MF_MT_SUBTYPE == MFVideoFormat_RGB24*/)
-            {
-                captureFormat = MT;
-                break;
-            }
-        }
-
-        if (j < cTypes) // If there is supported video subtype create topology
-        {
-            IMFTopology* pTopology = NULL;
-            _ComPtr<IMFTopologyNode> pNode1 = NULL;
-            _ComPtr<IMFTopologyNode> pNode2 = NULL;
-
-            _ComPtr<IMFTopologyNode> pNode1c1 = NULL;
-            _ComPtr<IMFTopologyNode> pNode1c2 = NULL;
-
-            CHECK_HR(hr = MFCreateTopology(&pTopology));
-            CHECK_HR(hr = AddSourceNode(pTopology, pSource, pPD.Get(), pSD.Get(), pNode1.GetAddressOf()));
-            CHECK_HR(hr = AddOutputNode(pTopology, pSinkActivate, 0, pNode2.GetAddressOf()));
-            CHECK_HR(hr = pNode1->ConnectOutput(0, pNode2.Get(), 0));
-            *ppTopo = pTopology;
-            (*ppTopo)->AddRef();
-        }
-        else
-            hr = E_INVALIDARG;
-    }
-    else
-        hr = E_INVALIDARG;
-
-    } // "done:" scope
-done:
-    return hr;
-}
-
-HRESULT ImageGrabber::AddSourceNode(
-    IMFTopology *pTopology,           // Topology.
-    IMFMediaSource *pSource,          // Media source.
-    IMFPresentationDescriptor *pPD,   // Presentation descriptor.
-    IMFStreamDescriptor *pSD,         // Stream descriptor.
-    IMFTopologyNode **ppNode)         // Receives the node pointer.
-{
-    _ComPtr<IMFTopologyNode> pNode = NULL;
-    HRESULT hr = S_OK;
-    CHECK_HR(hr = MFCreateTopologyNode(MF_TOPOLOGY_SOURCESTREAM_NODE, pNode.GetAddressOf()));
-    CHECK_HR(hr = pNode->SetUnknown(MF_TOPONODE_SOURCE, pSource));
-    CHECK_HR(hr = pNode->SetUnknown(MF_TOPONODE_PRESENTATION_DESCRIPTOR, pPD));
-    CHECK_HR(hr = pNode->SetUnknown(MF_TOPONODE_STREAM_DESCRIPTOR, pSD));
-    CHECK_HR(hr = pTopology->AddNode(pNode.Get()));
-    // Return the pointer to the caller.
-    *ppNode = pNode.Get();
-    (*ppNode)->AddRef();
-
-done:
-    return hr;
-}
-
-HRESULT ImageGrabber::AddOutputNode(
-    IMFTopology *pTopology,     // Topology.
-    IMFActivate *pActivate,     // Media sink activation object.
-    DWORD dwId,                 // Identifier of the stream sink.
-    IMFTopologyNode **ppNode)   // Receives the node pointer.
-{
-    _ComPtr<IMFTopologyNode> pNode = NULL;
-    HRESULT hr = S_OK;
-    CHECK_HR(hr = MFCreateTopologyNode(MF_TOPOLOGY_OUTPUT_NODE, pNode.GetAddressOf()));
-    CHECK_HR(hr = pNode->SetObject(pActivate));
-    CHECK_HR(hr = pNode->SetUINT32(MF_TOPONODE_STREAMID, dwId));
-    CHECK_HR(hr = pNode->SetUINT32(MF_TOPONODE_NOSHUTDOWN_ON_REMOVE, FALSE));
-    CHECK_HR(hr = pTopology->AddNode(pNode.Get()));
-    // Return the pointer to the caller.
-    *ppNode = pNode.Get();
-    (*ppNode)->AddRef();
-
-done:
-    return hr;
-}
-
-HRESULT ImageGrabber::CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronious)
-{
-    *ppIG = new (std::nothrow) ImageGrabber(deviceID, synchronious);
-    if (ppIG == NULL)
-    {
-        return E_OUTOFMEMORY;
-    }
-    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Creating instance of ImageGrabber\n", deviceID);
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabber::QueryInterface(REFIID riid, void** ppv)
-{
-    HRESULT hr = E_NOINTERFACE;
-    *ppv = NULL;
-    if(riid == IID_IUnknown || riid == IID_IMFSampleGrabberSinkCallback)
-    {
-        *ppv = static_cast<IMFSampleGrabberSinkCallback *>(this);
-        hr = S_OK;
-    }
-    if(riid == IID_IMFClockStateSink)
-    {
-        *ppv = static_cast<IMFClockStateSink *>(this);
-        hr = S_OK;
-    }
-    if(SUCCEEDED(hr))
-    {
-        reinterpret_cast<IUnknown *>(*ppv)->AddRef();
-    }
-    return hr;
-}
-
-STDMETHODIMP_(ULONG) ImageGrabber::AddRef()
-{
-    return InterlockedIncrement(&m_cRef);
-}
-
-STDMETHODIMP_(ULONG) ImageGrabber::Release()
-{
-    ULONG cRef = InterlockedDecrement(&m_cRef);
-    if (cRef == 0)
-    {
-        delete this;
-    }
-    return cRef;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset)
-{
-    (void)hnsSystemTime;
-    (void)llClockStartOffset;
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnClockStop(MFTIME hnsSystemTime)
-{
-    (void)hnsSystemTime;
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnClockPause(MFTIME hnsSystemTime)
-{
-    (void)hnsSystemTime;
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnClockRestart(MFTIME hnsSystemTime)
-{
-    (void)hnsSystemTime;
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnClockSetRate(MFTIME hnsSystemTime, float flRate)
-{
-    (void)flRate;
-    (void)hnsSystemTime;
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnSetPresentationClock(IMFPresentationClock* pClock)
-{
-    (void)pClock;
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
-    LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
-    DWORD dwSampleSize)
-{
-    (void)guidMajorMediaType;
-    (void)llSampleTime;
-    (void)dwSampleFlags;
-    (void)llSampleDuration;
-    (void)dwSampleSize;
-
-    HANDLE tmp[] = {ig_hFinish, ig_hFrameGrabbed, NULL};
-
-    DWORD status = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
-    if (status == WAIT_OBJECT_0)
-    {
-        DebugPrintOut(L"OnProcessFrame called after ig_hFinish event\n");
-        return S_OK;
-    }
-
-    if(ig_RIE)
-    {
-        ig_RIFirst->fastCopy(pSampleBuffer);
-        ig_RIOut = ig_RIFirst;
-    }
-    else
-    {
-        ig_RISecond->fastCopy(pSampleBuffer);
-        ig_RIOut = ig_RISecond;
-    }
-
-    if (ig_Synchronous)
-    {
-        SetEvent(ig_hFrameReady);
-    }
-    else
-    {
-        ig_RIE = !ig_RIE;
-    }
-
-    return S_OK;
-}
-
-STDMETHODIMP ImageGrabberCallback::OnShutdown()
-{
-    SetEvent(ig_hFinish);
-    return S_OK;
-}
-
-RawImage *ImageGrabberCallback::getRawImage()
-{
-    return ig_RIOut;
-}
-
-DWORD WINAPI MainThreadFunction( LPVOID lpParam )
-{
-    ImageGrabberThread *pIGT = (ImageGrabberThread *)lpParam;
-    pIGT->run();
-    return 0;
-}
-
-HRESULT ImageGrabberThread::CreateInstance(ImageGrabberThread **ppIGT, IMFMediaSource *pSource, unsigned int deviceID, bool synchronious)
-{
-    *ppIGT = new (std::nothrow) ImageGrabberThread(pSource, deviceID, synchronious);
-    if (ppIGT == NULL)
-    {
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Memory cannot be allocated\n", deviceID);
-        return E_OUTOFMEMORY;
-    }
-    else
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Creating of the instance of ImageGrabberThread\n", deviceID);
-    return S_OK;
-}
-
-ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID, bool synchronious) :
-    igt_func(NULL),
-    igt_Handle(NULL),
-    igt_stop(false)
-{
-    HRESULT hr = ImageGrabber::CreateInstance(&igt_pImageGrabber, deviceID, synchronious);
-    igt_DeviceID = deviceID;
-    if(SUCCEEDED(hr))
-    {
-        hr = igt_pImageGrabber->initImageGrabber(pSource);
-        if(!SUCCEEDED(hr))
-        {
-            DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with initialization of the instance of the ImageGrabber class\n", deviceID);
-        }
-        else
-        {
-            DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Initialization of instance of the ImageGrabber class\n", deviceID);
-        }
-    }
-    else
-    {
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with creation of the instance of the ImageGrabber class\n", deviceID);
-    }
-}
-
-void ImageGrabberThread::setEmergencyStopEvent(void *userData, void(*func)(int, void *))
-{
-    if(func)
-    {
-        igt_func = func;
-        igt_userData = userData;
-    }
-}
-
-ImageGrabberThread::~ImageGrabberThread(void)
-{
-    DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroying ImageGrabberThread\n", igt_DeviceID);
-    if (igt_Handle)
-        WaitForSingleObject(igt_Handle, INFINITE);
-    delete igt_pImageGrabber;
-}
-
-void ImageGrabberThread::stop()
-{
-    igt_stop = true;
-    if(igt_pImageGrabber)
-    {
-        igt_pImageGrabber->stopGrabbing();
-    }
-}
-
-void ImageGrabberThread::start()
-{
-    igt_Handle = CreateThread(
-            NULL,                  // default security attributes
-            0,                     // use default stack size
-            MainThreadFunction,    // thread function name
-            this,                  // argument to thread function
-            0,                     // use default creation flags
-            &igt_ThreadIdArray);   // returns the thread identifier
-}
-
-void ImageGrabberThread::run()
-{
-    if(igt_pImageGrabber)
-    {
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Thread for grabbing images is started\n", igt_DeviceID);
-        HRESULT hr = igt_pImageGrabber->startGrabbing();
-        if(!SUCCEEDED(hr))
-        {
-            DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with starting the process of grabbing\n", igt_DeviceID);
-        }
-    }
-    else
-    {
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i The thread is finished without execution of grabbing\n", igt_DeviceID);
-    }
-    if(!igt_stop)
-    {
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Emergency Stop thread\n", igt_DeviceID);
-        if(igt_func)
-        {
-            igt_func(igt_DeviceID, igt_userData);
-        }
-    }
-    else
-        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Finish thread\n", igt_DeviceID);
-}
-
-ImageGrabber *ImageGrabberThread::getImageGrabber()
-{
-    return igt_pImageGrabber;
-}
-
-RawImage::RawImage(unsigned int size): ri_new(false), ri_pixels(NULL)
-{
-    ri_size = size;
-    ri_pixels = new unsigned char[size];
-    memset((void *)ri_pixels,0,ri_size);
-}
-
-bool RawImage::isNew()
-{
-    return ri_new;
-}
-
-unsigned int RawImage::getSize()
-{
-    return ri_size;
-}
-
-RawImage::~RawImage(void)
-{
-    delete []ri_pixels;
-    ri_pixels = NULL;
-}
-
-long RawImage::CreateInstance(RawImage **ppRImage,unsigned int size)
-{
-    *ppRImage = new (std::nothrow) RawImage(size);
-    if (ppRImage == NULL)
-    {
-        return E_OUTOFMEMORY;
-    }
-    return S_OK;
-}
-
-void RawImage::setCopy(const BYTE * pSampleBuffer)
-{
-    memcpy(ri_pixels, pSampleBuffer, ri_size);
-    ri_new = true;
-}
-
-void RawImage::fastCopy(const BYTE * pSampleBuffer)
-{
-    memcpy(ri_pixels, pSampleBuffer, ri_size);
-    ri_new = true;
-}
-
-unsigned char * RawImage::getpPixels()
-{
-    ri_new = false;
-    return ri_pixels;
-}
-
-videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
-    vd_Width(0), vd_Height(0), vd_FrameRate(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
-{
-}
-
-void videoDevice::setParametrs(CamParametrs parametrs)
-{
-    if(vd_IsSetuped)
-    {
-        if(vd_pSource)
-        {
-            CamParametrs vd_PrevParametrs = getParametrs();
-            Parametr *pParametr = (Parametr *)(&parametrs);
-            Parametr *pPrevParametr = (Parametr *)(&vd_PrevParametrs);
-            IAMVideoProcAmp *pProcAmp = NULL;
-            HRESULT hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcAmp));
-            if (SUCCEEDED(hr))
-            {
-                for(unsigned int i = 0; i < 10; i++)
-                {
-                    if(pPrevParametr[i].CurrentValue != pParametr[i].CurrentValue || pPrevParametr[i].Flag != pParametr[i].Flag)
-                        hr = pProcAmp->Set(VideoProcAmp_Brightness + i, pParametr[i].CurrentValue, pParametr[i].Flag);
-                }
-                pProcAmp->Release();
-            }
-            IAMCameraControl *pProcControl = NULL;
-            hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcControl));
-            if (SUCCEEDED(hr))
-            {
-                for(unsigned int i = 0; i < 7; i++)
-                {
-                    if(pPrevParametr[10 + i].CurrentValue != pParametr[10 + i].CurrentValue || pPrevParametr[10 + i].Flag != pParametr[10 + i].Flag)
-                    hr = pProcControl->Set(CameraControl_Pan+i, pParametr[10 + i].CurrentValue, pParametr[10 + i].Flag);
-                }
-                pProcControl->Release();
-            }
-            vd_PrevParametrs = parametrs;
-        }
-    }
-}
-
-CamParametrs videoDevice::getParametrs()
-{
-    CamParametrs out;
-    if(vd_IsSetuped)
-    {
-        if(vd_pSource)
-        {
-            Parametr *pParametr = (Parametr *)(&out);
-            IAMVideoProcAmp *pProcAmp = NULL;
-            HRESULT hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcAmp));
-            if (SUCCEEDED(hr))
-            {
-                for(unsigned int i = 0; i < 10; i++)
-                {
-                    Parametr temp;
-                    hr = pProcAmp->GetRange(VideoProcAmp_Brightness+i, &temp.Min, &temp.Max, &temp.Step, &temp.Default, &temp.Flag);
-                    if (SUCCEEDED(hr))
-                    {
-                        temp.CurrentValue = temp.Default;
-                        pParametr[i] = temp;
-                    }
-                }
-                pProcAmp->Release();
-            }
-            IAMCameraControl *pProcControl = NULL;
-            hr = vd_pSource->QueryInterface(IID_PPV_ARGS(&pProcControl));
-            if (SUCCEEDED(hr))
-            {
-                for(unsigned int i = 0; i < 7; i++)
-                {
-                    Parametr temp;
-                    hr = pProcControl->GetRange(CameraControl_Pan+i, &temp.Min, &temp.Max, &temp.Step, &temp.Default, &temp.Flag);
-                    if (SUCCEEDED(hr))
-                    {
-                        temp.CurrentValue = temp.Default;
-                        pParametr[10 + i] = temp;
-                    }
-                }
-                pProcControl->Release();
-            }
-        }
-    }
-    return out;
-}
-
-long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
-{
-    vd_CurrentNumber = Num;
-    HRESULT hr = E_FAIL;
-    vd_CurrentFormats.clear();
-    if (pActivate)
-    {
-        SafeRelease(&vd_pSource);
-        hr = pActivate->ActivateObject(
-            __uuidof(IMFMediaSource),
-            (void**)&vd_pSource
-        );
-        if (SUCCEEDED(hr) && vd_pSource)
-        {
-            enumerateCaptureFormats(vd_pSource);
-            buildLibraryofTypes();
-        }//end if (SUCCEEDED(hr) && pSource)
-        else
-            DebugPrintOut(L"VIDEODEVICE %i: IMFMediaSource interface cannot be created \n", vd_CurrentNumber);
-    }
-    return hr;
-}
-
-MediaType videoDevice::getFormat(unsigned int id)
-{
-    if(id < vd_CurrentFormats.size())
-    {
-        return vd_CurrentFormats[id];
-    }
-    else return MediaType();
-}
-int videoDevice::getCountFormats()
-{
-    return (int)vd_CurrentFormats.size();
-}
-void videoDevice::setEmergencyStopEvent(void *userData, void(*func)(int, void *))
-{
-    vd_func = func;
-    vd_userData = userData;
-}
-void videoDevice::closeDevice()
-{
-    if(vd_IsSetuped)
-    {
-        vd_IsSetuped = false;
-
-        vd_pSource->Shutdown();
-        SafeRelease(&vd_pSource);
-        if(vd_LockOut == RawDataLock)
-        {
-            vd_pImGrTh->stop();
-            Sleep(500);
-            delete vd_pImGrTh;
-        }
-        vd_pImGrTh = NULL;
-        vd_LockOut = OpenLock;
-        DebugPrintOut(L"VIDEODEVICE %i: Device is stopped \n", vd_CurrentNumber);
-    }
-}
-unsigned int videoDevice::getWidth()
-{
-    if(vd_IsSetuped)
-        return vd_Width;
-    else
-        return 0;
-}
-unsigned int videoDevice::getHeight()
-{
-    if(vd_IsSetuped)
-        return vd_Height;
-    else
-        return 0;
-}
-
-unsigned int videoDevice::getFrameRate() const
-{
-    if(vd_IsSetuped)
-        return vd_FrameRate;
-    else
-        return 0;
-}
-
-IMFMediaSource *videoDevice::getMediaSource()
-{
-    IMFMediaSource *out = NULL;
-    if(vd_LockOut == OpenLock)
-    {
-        vd_LockOut = MediaSourceLock;
-        out = vd_pSource;
-    }
-    return out;
-}
-int videoDevice::findType(unsigned int size, unsigned int frameRate)
-{
-    // For required frame size look for the suitable video format.
-    // If not found, get the format for the largest available frame size.
-    FrameRateMap FRM;
-    std::map<UINT64, FrameRateMap>::const_iterator fmt;
-    fmt = vd_CaptureFormats.find(size);
-    if( fmt != vd_CaptureFormats.end() )
-        FRM = fmt->second;
-    else if( !vd_CaptureFormats.empty() )
-        FRM = vd_CaptureFormats.rbegin()->second;
-
-    if( FRM.empty() )
-        return -1;
-
-    UINT64 frameRateMax = 0;  SUBTYPEMap STMMax;
-    if(frameRate == 0)
-    {
-        std::map<UINT64, SUBTYPEMap>::iterator f = FRM.begin();
-        for(; f != FRM.end(); f++)
-        {
-            // Looking for highest possible frame rate.
-             if((*f).first >= frameRateMax)
-             {
-                 frameRateMax = (*f).first;
-                 STMMax = (*f).second;
-             }
-        }
-    }
-    else
-    {
-        std::map<UINT64, SUBTYPEMap>::iterator f = FRM.begin();
-        for(; f != FRM.end(); f++)
-        {
-            // Looking for frame rate higher that recently found but not higher then demanded.
-            if( (*f).first >= frameRateMax && (*f).first <= frameRate )
-            {
-                frameRateMax = (*f).first;
-                STMMax = (*f).second;
-            }
-        }
-    }
-    // Get first (default) item from the list if no suitable frame rate found.
-    if( STMMax.empty() )
-        STMMax = FRM.begin()->second;
-
-    // Check if there are any format types on the list.
-    if( STMMax.empty() )
-        return -1;
-
-    vectorNum VN = STMMax.begin()->second;
-    if( VN.empty() )
-        return -1;
-
-    return VN[0];
-}
-
-void videoDevice::buildLibraryofTypes()
-{
-    unsigned int size;
-    unsigned int framerate;
-    std::vector<MediaType>::iterator i = vd_CurrentFormats.begin();
-    int count = 0;
-    for(; i != vd_CurrentFormats.end(); i++)
-    {
-        // Count only supported video formats.
-        if( (*i).MF_MT_SUBTYPE == MFVideoFormat_RGB24 || (*i).MF_MT_SUBTYPE == MFVideoFormat_NV12 )
-        {
-            size = (*i).MF_MT_FRAME_SIZE;
-            framerate = (*i).MF_MT_FRAME_RATE_NUMERATOR / (*i).MF_MT_FRAME_RATE_DENOMINATOR;
-            FrameRateMap FRM = vd_CaptureFormats[size];
-            SUBTYPEMap STM = FRM[framerate];
-            String subType((*i).pMF_MT_SUBTYPEName);
-            vectorNum VN = STM[subType];
-            VN.push_back(count);
-            STM[subType] = VN;
-            FRM[framerate] = STM;
-            vd_CaptureFormats[size] = FRM;
-        }
-        count++;
-    }
-}
-
-long videoDevice::setDeviceFormat(IMFMediaSource *pSource, unsigned long  dwFormatIndex)
-{
-    _ComPtr<IMFPresentationDescriptor> pPD = NULL;
-    _ComPtr<IMFStreamDescriptor> pSD = NULL;
-    _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
-    _ComPtr<IMFMediaType> pType = NULL;
-    HRESULT hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    BOOL fSelected;
-    hr = pPD->GetStreamDescriptorByIndex(0, &fSelected, pSD.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = pSD->GetMediaTypeHandler(pHandler.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = pHandler->GetMediaTypeByIndex((DWORD)dwFormatIndex, pType.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = pHandler->SetCurrentMediaType(pType.Get());
-
-done:
-    return hr;
-}
-
-bool videoDevice::isDeviceSetup()
-{
-    return vd_IsSetuped;
-}
-
-RawImage * videoDevice::getRawImageOut()
-{
-    if(!vd_IsSetuped) return NULL;
-    if(vd_pImGrTh)
-            return vd_pImGrTh->getImageGrabber()->getRawImage();
-    else
-    {
-        DebugPrintOut(L"VIDEODEVICE %i: The instance of ImageGrabberThread class does not exist  \n", vd_CurrentNumber);
-    }
-    return NULL;
-}
-
-bool videoDevice::isFrameNew()
-{
-    if(!vd_IsSetuped) return false;
-    if(vd_LockOut == RawDataLock || vd_LockOut == OpenLock)
-    {
-        if(vd_LockOut == OpenLock)
-        {
-            vd_LockOut = RawDataLock;
-
-            //must already be closed
-            HRESULT hr = ImageGrabberThread::CreateInstance(&vd_pImGrTh, vd_pSource, vd_CurrentNumber);
-            if(FAILED(hr))
-            {
-                DebugPrintOut(L"VIDEODEVICE %i: The instance of ImageGrabberThread class cannot be created.\n", vd_CurrentNumber);
-                return false;
-            }
-            vd_pImGrTh->setEmergencyStopEvent(vd_userData, vd_func);
-            vd_pImGrTh->start();
-            return true;
-        }
-        if(vd_pImGrTh)
-            return vd_pImGrTh->getImageGrabber()->getRawImage()->isNew();
+        PropVariantClear(&var);
+        return true;
     }
     return false;
-}
-
-bool videoDevice::isDeviceMediaSource()
-{
-    if(vd_LockOut == MediaSourceLock) return true;
-    return false;
-}
-
-bool videoDevice::isDeviceRawDataSource()
-{
-    if(vd_LockOut == RawDataLock) return true;
-    return false;
-}
-
-bool videoDevice::setupDevice(unsigned int id)
-{
-    if(!vd_IsSetuped)
-    {
-        HRESULT hr;
-        vd_Width = vd_CurrentFormats[id].width;
-        vd_Height = vd_CurrentFormats[id].height;
-        vd_FrameRate = vd_CurrentFormats[id].MF_MT_FRAME_RATE_NUMERATOR /
-                        vd_CurrentFormats[id].MF_MT_FRAME_RATE_DENOMINATOR;
-        hr = setDeviceFormat(vd_pSource, (DWORD) id);
-        vd_IsSetuped = (SUCCEEDED(hr));
-        if(vd_IsSetuped)
-            DebugPrintOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
-        return vd_IsSetuped;
-    }
-    else
-    {
-        DebugPrintOut(L"VIDEODEVICE %i: Device is setuped already \n", vd_CurrentNumber);
-        return false;
-    }
-}
-
-bool videoDevice::setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate)
-{
-    int id = findType(w * h, idealFramerate);
-    if( id < 0 )
-        return false;
-
-    return setupDevice(id);
-}
-
-videoDevice::~videoDevice(void)
-{
-    closeDevice();
-    SafeRelease(&vd_pSource);
-    if(vd_pFriendlyName)
-        CoTaskMemFree(vd_pFriendlyName);
-}
-
-HRESULT videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
-{
-    HRESULT hr = S_OK;
-    { // "done:" scope
-
-    _ComPtr<IMFPresentationDescriptor> pPD = NULL;
-    _ComPtr<IMFStreamDescriptor> pSD = NULL;
-    _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
-    _ComPtr<IMFMediaType> pType = NULL;
-    hr = !pSource ? E_POINTER : S_OK;
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    BOOL fSelected;
-    hr = pPD->GetStreamDescriptorByIndex(0, &fSelected, pSD.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    hr = pSD->GetMediaTypeHandler(pHandler.GetAddressOf());
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    DWORD cTypes = 0;
-    hr = pHandler->GetMediaTypeCount(&cTypes);
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-    for (DWORD i = 0; i < cTypes; i++)
-    {
-        hr = pHandler->GetMediaTypeByIndex(i, pType.GetAddressOf());
-        if (FAILED(hr))
-        {
-            goto done;
-        }
-        MediaType MT = FormatReader::Read(pType.Get());
-        vd_CurrentFormats.push_back(MT);
-    }
-
-    } // "done:" scope
-done:
-    return hr;
-}
-
-videoDevices::videoDevices(void)
-{
-    DebugPrintOut(L"\n***** VIDEOINPUT LIBRARY - 2013 (Author: Evgeny Pereguda) *****\n\n");
-}
-
-videoDevices::~videoDevices(void)
-{
-    DebugPrintOut(L"\n***** CLOSE VIDEOINPUT LIBRARY - 2013 *****\n\n");
-}
-
-cv::Ptr<videoDevice> videoDevices::getDevice(unsigned int i, bool fallback)
-{
-    static videoDevices instance;
-
-    cv::Ptr<videoDevice> res;
-
-    _ComPtr<IMFAttributes> pAttributes = NULL;
-    if (SUCCEEDED(MFCreateAttributes(pAttributes.GetAddressOf(), 1)) &&
-        SUCCEEDED(pAttributes->SetGUID(
-            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
-        )))
-    {
-        IMFActivate **ppDevices = NULL;
-        UINT32 count;
-        if (SUCCEEDED(MFEnumDeviceSources(pAttributes.Get(), &ppDevices, &count)))
-        {
-            if (count > 0)
-            {
-                if (fallback)
-                    i = std::min(std::max(0U, i), count - 1);
-
-                for (UINT32 ind = 0; ind < count; ind++)
-                {
-                    if (ind == i)
-                    {
-                        res = cv::Ptr<videoDevice>(new videoDevice);
-                        res->readInfoOfDevice(ppDevices[ind], ind);
-                        res->setupDevice(0, 0, 0);
-                        if (!res->isDeviceSetup() || !res->isFrameNew())
-                            res.release();
-                    }
-                    SafeRelease(&ppDevices[ind]);
-                }
-            }
-        }
-        else
-            DebugPrintOut(L"VIDEODEVICES: The instances of the videoDevice class cannot be created\n");
-        CoTaskMemFree(ppDevices);
-    }
-
-    if (res.empty())
-        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", i);
-    return res;
-}
-
-Parametr::Parametr()
-{
-    CurrentValue = 0;
-    Min = 0;
-    Max = 0;
-    Step = 0;
-    Default = 0;
-    Flag = 0;
 }
 
 MediaType::MediaType()
 {
-    pMF_MT_AM_FORMAT_TYPEName = NULL;
     pMF_MT_MAJOR_TYPEName = NULL;
     pMF_MT_SUBTYPEName = NULL;
     Clear();
+}
+
+MediaType::MediaType(IMFMediaType *pType)
+{
+    UINT32 count = 0;
+    if (SUCCEEDED(pType->GetCount(&count)) &&
+        SUCCEEDED(pType->LockStore()))
+    {
+        for (UINT32 i = 0; i < count; i++)
+            if (!LogAttributeValueByIndexNew(pType, i, *this))
+                break;
+        pType->UnlockStore();
+    }
 }
 
 MediaType::~MediaType()
@@ -2067,7 +864,7 @@ bool CvCaptureCAM_MSMF::configureOutput(unsigned int width, unsigned int height,
         }
         else if (SUCCEEDED(hr))
         {
-            MediaType MT = FormatReader::Read(pType.Get());
+            MediaType MT(pType.Get());
             if (MT.MF_MT_MAJOR_TYPE == MFMediaType_Video)
             {
                 if (dwStreamFallback < 0 ||
@@ -2160,7 +957,8 @@ bool CvCaptureCAM_MSMF::open(int _index)
                             configureOutput(0, 0, 0);
                         }
                     }
-                    SafeRelease(&ppDevices[ind]);
+                    if (ppDevices[ind])
+                        ppDevices[ind]->Release();
                 }
             }
         }
@@ -2407,7 +1205,7 @@ bool CvCaptureFile_MSMF::open(const char* filename)
                 }
                 else if (SUCCEEDED(hr))
                 {
-                    MediaType MT = FormatReader::Read(pType.Get());
+                    MediaType MT(pType.Get());
                     if (MT.MF_MT_MAJOR_TYPE == MFMediaType_Video)
                     {
                         captureFormat = MT;
