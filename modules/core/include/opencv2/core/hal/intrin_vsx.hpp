@@ -562,9 +562,10 @@ OPENCV_IMPL_VSX_ROTATE_LR(v_uint16x8, vec_ushort8)
 OPENCV_IMPL_VSX_ROTATE_LR(v_int16x8,  vec_short8)
 OPENCV_IMPL_VSX_ROTATE_LR(v_uint32x4, vec_uint4)
 OPENCV_IMPL_VSX_ROTATE_LR(v_int32x4,  vec_int4)
+OPENCV_IMPL_VSX_ROTATE_LR(v_float32x4, vec_float4)
 OPENCV_IMPL_VSX_ROTATE_LR(v_uint64x2, vec_udword2)
 OPENCV_IMPL_VSX_ROTATE_LR(v_int64x2,  vec_dword2)
-
+OPENCV_IMPL_VSX_ROTATE_LR(v_float64x2, vec_double2)
 
 template<int imm, typename _Tpvec>
 inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)
