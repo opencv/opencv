@@ -4275,7 +4275,8 @@ public:
         entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
         Context& ctx = Context::getDefault();
         cl_int retval = CL_SUCCESS;
-        CV_OCL_CHECK_(entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE|createFlags_, entry.capacity_, 0, &retval), retval);
+        entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE|createFlags_, entry.capacity_, 0, &retval);
+        CV_OCL_CHECK_RESULT(retval, cv::format("clCreateBuffer(capacity=%lld) => %p", (long long int)entry.capacity_, (void*)entry.clBuffer_).c_str());
         CV_Assert(entry.clBuffer_ != NULL);
         if(retval == CL_SUCCESS)
         {
@@ -4669,15 +4670,19 @@ public:
                 {
                     handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
                                             u->size, u->origdata, &retval);
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_USE_HOST_PTR|createFlags, sz=%lld, origdata=%p) => %p",
+                            (long long int)u->size, u->origdata, (void*)handle).c_str());
                 }
                 if((!handle || retval < 0) && !(accessFlags & ACCESS_FAST))
                 {
                     handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
                                                u->size, u->origdata, &retval);
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags, sz=%lld, origdata=%p) => %p",
+                            (long long int)u->size, u->origdata, (void*)handle).c_str());
                     tempUMatFlags |= UMatData::TEMP_COPIED_UMAT;
                 }
             }
-            CV_OCL_DBG_CHECK_RESULT(retval, "clCreateBuffer()");
+            CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer() => %p", (void*)handle).c_str());
             if(!handle || retval != CL_SUCCESS)
                 return false;
             u->handle = handle;
@@ -4805,13 +4810,14 @@ public:
                             void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                 (CL_MAP_READ | CL_MAP_WRITE),
                                 0, u->size, 0, 0, 0, &retval);
-                            CV_OCL_CHECK_RESULT(retval, "clEnqueueMapBuffer()");
+                            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, data).c_str());
                             CV_Assert(u->origdata == data);
                             if (u->originalUMatData)
                             {
                                 CV_Assert(u->originalUMatData->data == data);
                             }
-                            CV_OCL_CHECK(clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0));
+                            retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
+                            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, data, (long long int)u->size).c_str());
                             CV_OCL_DBG_CHECK(clFinish(q));
                         }
                     }
@@ -4838,7 +4844,8 @@ public:
             else
 #endif
             {
-                CV_OCL_DBG_CHECK(clReleaseMemObject((cl_mem)u->handle));
+                cl_int retval = clReleaseMemObject((cl_mem)u->handle);
+                CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clReleaseMemObject(ptr=%p)", (void*)u->handle).c_str());
             }
             u->handle = 0;
             u->markDeviceCopyObsolete(true);
@@ -4955,7 +4962,7 @@ public:
                     u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                                          (CL_MAP_READ | CL_MAP_WRITE),
                                                          0, u->size, 0, 0, 0, &retval);
-                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(sz=%lld)", (int64)u->size).c_str());
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, u->data).c_str());
                 }
                 if (u->data && retval == CL_SUCCESS)
                 {
@@ -4982,8 +4989,10 @@ public:
 #ifdef HAVE_OPENCL_SVM
             CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == 0);
 #endif
-            CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                    0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0));
+            cl_int retval = clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
+            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueReadBuffer(q, handle=%p, CL_TRUE, 0, sz=%lld, data=%p, 0, 0, 0)",
+                    (void*)u->handle, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
             u->markHostCopyObsolete(false);
         }
     }
@@ -5032,7 +5041,8 @@ public:
             if (u->refcount == 0)
             {
                 CV_Assert(u->mapcount-- == 1);
-                CV_OCL_CHECK(retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0));
+                retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, u->data, (long long int)u->size).c_str());
                 if (Device::getDefault().isAMD())
                 {
                     // required for multithreaded applications (see stitching test)
@@ -5050,8 +5060,10 @@ public:
 #ifdef HAVE_OPENCL_SVM
             CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == 0);
 #endif
-            CV_OCL_CHECK(retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0));
+            retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
+            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueWriteBuffer(q, handle=%p, CL_TRUE, 0, sz=%lld, data=%p, 0, 0, 0)",
+                    (void*)u->handle, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
             u->markDeviceCopyObsolete(false);
             u->markHostCopyObsolete(true);
         }
@@ -5354,8 +5366,10 @@ public:
             if( iscontinuous )
             {
                 AlignedDataPtr<true, false> alignedPtr((uchar*)srcptr, total, CV_OPENCL_DATA_PTR_ALIGNMENT);
-                CV_OCL_CHECK(clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                    dstrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0));
+                cl_int retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    dstrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueWriteBuffer(q, handle=%p, CL_TRUE, offset=%lld, sz=%lld, data=%p, 0, 0, 0)",
+                        (void*)u->handle, (long long int)dstrawofs, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
             }
             else if (CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS)
             {
@@ -5527,8 +5541,10 @@ public:
         {
             if( iscontinuous )
             {
-                CV_OCL_CHECK(retval = clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
-                                               srcrawofs, dstrawofs, total, 0, 0, 0));
+                retval = clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                               srcrawofs, dstrawofs, total, 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueCopyBuffer(q, src=%p, dst=%p, src_offset=%lld, dst_offset=%lld, sz=%lld, 0, 0, 0)",
+                        (void*)src->handle, (void*)dst->handle, (long long int)srcrawofs, (long long int)dstrawofs, (long long int)total).c_str());
             }
             else if (CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS)
             {
@@ -6373,7 +6389,9 @@ struct Image2D::Impl
         if (!alias && !src.isContinuous())
         {
             devData = clCreateBuffer(context, CL_MEM_READ_ONLY, src.cols * src.rows * src.elemSize(), NULL, &err);
-            CV_OCL_CHECK_RESULT(err, "clCreateBuffer()");
+            CV_OCL_CHECK_RESULT(err, cv::format("clCreateBuffer(CL_MEM_READ_ONLY, sz=%lld) => %p",
+                    (long long int)(src.cols * src.rows * src.elemSize()), (void*)devData
+                ).c_str());
 
             const size_t roi[3] = {static_cast<size_t>(src.cols) * src.elemSize(), static_cast<size_t>(src.rows), 1};
             CV_OCL_CHECK(clEnqueueCopyBufferRect(queue, (cl_mem)src.handle(ACCESS_READ), devData, origin, origin,
