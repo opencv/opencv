@@ -547,7 +547,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     size_t src_step = _src.step(), src_offset = _src.offset();
     const size_t tileSizeYmax = wgs / tileSizeX;
 
-    // workaround for Nvidia: 3 channel vector type takes 4*elem_size in local memory
+    // workaround for NVIDIA: 3 channel vector type takes 4*elem_size in local memory
     int loc_mem_cn = dev.vendorID() == ocl::Device::VENDOR_NVIDIA && cn == 3 ? 4 : cn;
 
     if (((src_offset % src_step) % esz == 0) &&
