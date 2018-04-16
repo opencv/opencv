@@ -2725,7 +2725,7 @@ In addiction, to calculate the original coordinate from a polar mapped coordinat
 @sa cv::remap
 */
 CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
-    Point2f center, double maxRadius,int flags);
+                            Point2f center, double maxRadius, int flags);
 
 
 //! @} imgproc_transform
