@@ -482,6 +482,7 @@ node {
   name: "conv4_3_norm/l2_normalize"
   op: "L2Normalize"
   input: "Relu_4:0"
+  input: "conv4_3_norm/l2_normalize/Sum/reduction_indices"
 }
 node {
   name: "conv4_3_norm/mul_1"

@@ -36,19 +36,25 @@ public:
     typedef fixedpoint64 WT;
     CV_ALWAYS_INLINE fixedpoint64() { val = 0; }
     CV_ALWAYS_INLINE fixedpoint64(const int8_t& _val) { val = ((int64_t)_val) << fixedShift; }
+    CV_ALWAYS_INLINE fixedpoint64(const uint8_t& _val) { val = ((int64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint64(const int16_t& _val) { val = ((int64_t)_val) << fixedShift; }
+    CV_ALWAYS_INLINE fixedpoint64(const uint16_t& _val) { val = ((int64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint64(const int32_t& _val) { val = ((int64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint64(const cv::softdouble& _val) { val = cvRound64(_val * cv::softdouble((int64_t)(1LL << fixedShift))); }
     CV_ALWAYS_INLINE fixedpoint64& operator = (const int8_t& _val) { val = ((int64_t)_val) << fixedShift; return *this; }
+    CV_ALWAYS_INLINE fixedpoint64& operator = (const uint8_t& _val) { val = ((int64_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE fixedpoint64& operator = (const int16_t& _val) { val = ((int64_t)_val) << fixedShift; return *this; }
+    CV_ALWAYS_INLINE fixedpoint64& operator = (const uint16_t& _val) { val = ((int64_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE fixedpoint64& operator = (const int32_t& _val) { val = ((int64_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE fixedpoint64& operator = (const cv::softdouble& _val) { val = cvRound64(_val * cv::softdouble((int64_t)(1LL << fixedShift))); return *this; }
     CV_ALWAYS_INLINE fixedpoint64& operator = (const fixedpoint64& _val) { val = _val.val; return *this; }
-    template <typename ET>
-    CV_ALWAYS_INLINE fixedpoint64 operator * (const ET& val2) const { return val * val2; } // Wrong rounding is possible for floating point types
+    CV_ALWAYS_INLINE fixedpoint64 operator * (const int8_t& val2) const { return operator *(fixedpoint64(val2)); }
+    CV_ALWAYS_INLINE fixedpoint64 operator * (const uint8_t& val2) const { return operator *(fixedpoint64(val2)); }
+    CV_ALWAYS_INLINE fixedpoint64 operator * (const int16_t& val2) const { return operator *(fixedpoint64(val2)); }
+    CV_ALWAYS_INLINE fixedpoint64 operator * (const uint16_t& val2) const { return operator *(fixedpoint64(val2)); }
+    CV_ALWAYS_INLINE fixedpoint64 operator * (const int32_t& val2) const { return operator *(fixedpoint64(val2)); }
     CV_ALWAYS_INLINE fixedpoint64 operator * (const fixedpoint64& val2) const
     {
-        //Assume -0x00000000C0000000 <= val2 <=0x0000000100000000 INT64_MIN <= val <= INT64_MAX, so shifted multiplication result is inside [INT64_MIN, INT64_MAX] range
         uint64_t uval = (uint64_t)((val ^ (val >> 63)) - (val >> 63));
         uint64_t umul = (uint64_t)((val2.val ^ (val2.val >> 63)) - (val2.val >> 63));
         int64_t ressign = (val >> 63) ^ (val2.val >> 63);
@@ -61,6 +67,9 @@ public:
         uint64_t val0_h = (sh2   & 0xFFFFFFFF) + (sh1_0 >> 32) + (sh1_1 >> 32) + (val0_l >> 32);
         val0_l &= 0xFFFFFFFF;
 
+        if ( (sh2 >> 32) || (val0_h >> ressign ? 32 : 31) )
+            return (ressign ? ~(int64_t)0x7FFFFFFFFFFFFFFF : (int64_t)0x7FFFFFFFFFFFFFFF);
+
         if (ressign)
         {
             val0_l = (~val0_l + 1) & 0xFFFFFFFF;
@@ -68,16 +77,19 @@ public:
         }
         return (int64_t)(val0_h << 32 | val0_l);
     }
-    CV_ALWAYS_INLINE fixedpoint64 operator + (const fixedpoint64& val2) const { return fixedpoint64(val + val2.val); }
-    CV_ALWAYS_INLINE fixedpoint64 operator - (const fixedpoint64& val2) const { return fixedpoint64(val - val2.val); }
-    //    CV_ALWAYS_INLINE fixedpoint64 operator + (const fixedpoint64& val2) const
-    //    {
-    //        int64_t nfrac = (int64_t)frac + val2.frac;
-    //        int64_t nval = (int64_t)val + val2.val + nfrac >> 32;
-    //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
-    //    }
+    CV_ALWAYS_INLINE fixedpoint64 operator + (const fixedpoint64& val2) const
+    {
+        int64_t res = val + val2.val;
+        return ((val ^ res) & (val2.val ^ res)) >> 63 ? ~(res & ~0x7FFFFFFFFFFFFFFF) : res;
+    }
+    CV_ALWAYS_INLINE fixedpoint64 operator - (const fixedpoint64& val2) const
+    {
+        int64_t res = val - val2.val;
+        return ((val ^ val2.val) & (val ^ res)) >> 63 ? ~(res & ~0x7FFFFFFFFFFFFFFF) : res;
+    }
     CV_ALWAYS_INLINE fixedpoint64 operator >> (int n) const { return fixedpoint64(val >> n); }
     CV_ALWAYS_INLINE fixedpoint64 operator << (int n) const { return fixedpoint64(val << n); }
+    CV_ALWAYS_INLINE bool operator == (const fixedpoint64& val2) const { return val == val2.val; }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int64_t)fixedround((uint64_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1LL << fixedShift); }
@@ -108,31 +120,36 @@ public:
     CV_ALWAYS_INLINE ufixedpoint64& operator = (const uint32_t& _val) { val = ((uint64_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE ufixedpoint64& operator = (const cv::softdouble& _val) { val = _val.getSign() ? 0 : (uint64_t)cvRound64(_val * cv::softdouble((int64_t)(1LL << fixedShift))); return *this; }
     CV_ALWAYS_INLINE ufixedpoint64& operator = (const ufixedpoint64& _val) { val = _val.val; return *this; }
-    template <typename ET>
-    CV_ALWAYS_INLINE ufixedpoint64 operator * (const ET& val2) const { return val * val2; } // Wrong rounding is possible for floating point types
+    CV_ALWAYS_INLINE ufixedpoint64 operator * (const uint8_t& val2) const { return operator *(ufixedpoint64(val2)); }
+    CV_ALWAYS_INLINE ufixedpoint64 operator * (const uint16_t& val2) const { return operator *(ufixedpoint64(val2)); }
+    CV_ALWAYS_INLINE ufixedpoint64 operator * (const uint32_t& val2) const { return operator *(ufixedpoint64(val2)); }
     CV_ALWAYS_INLINE ufixedpoint64 operator * (const ufixedpoint64& val2) const
     {
-        //Assume val2 <=0x0000000100000000, so shifted multiplication result is less than val and therefore than UINT64_MAX
         uint64_t sh0 = fixedround((val & 0xFFFFFFFF) * (val2.val & 0xFFFFFFFF));
         uint64_t sh1_0 = (val >> 32)        * (val2.val & 0xFFFFFFFF);
         uint64_t sh1_1 = (val & 0xFFFFFFFF) * (val2.val >> 32);
-        uint64_t sh2 = (val >> 32)        * (val2.val >> 32);
+        uint64_t sh2   = (val >> 32)        * (val2.val >> 32);
         uint64_t val0_l = (sh1_0 & 0xFFFFFFFF) + (sh1_1 & 0xFFFFFFFF) + (sh0 >> 32);
         uint64_t val0_h = (sh2 & 0xFFFFFFFF) + (sh1_0 >> 32) + (sh1_1 >> 32) + (val0_l >> 32);
         val0_l &= 0xFFFFFFFF;
 
+        if ((sh2 >> 32) || (val0_h >> 32))
+            return ((uint64_t)0xFFFFFFFFFFFFFFFF);
+
         return val0_h << 32 | val0_l;
     }
-    CV_ALWAYS_INLINE ufixedpoint64 operator + (const ufixedpoint64& val2) const { return ufixedpoint64(val + val2.val); }
-    CV_ALWAYS_INLINE ufixedpoint64 operator - (const ufixedpoint64& val2) const { return ufixedpoint64(val - val2.val); }
-    //    CV_ALWAYS_INLINE fixedpoint64 operator + (const fixedpoint64& val2) const
-    //    {
-    //        int64_t nfrac = (int64_t)frac + val2.frac;
-    //        int64_t nval = (int64_t)val + val2.val + nfrac >> 32;
-    //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
-    //    }
+    CV_ALWAYS_INLINE ufixedpoint64 operator + (const ufixedpoint64& val2) const
+    {
+        uint64_t res = val + val2.val;
+        return (val > res) ? (uint64_t)0xFFFFFFFFFFFFFFFF : res;
+    }
+    CV_ALWAYS_INLINE ufixedpoint64 operator - (const ufixedpoint64& val2) const
+    {
+        return val > val2.val ? (val - val2.val) : 0;
+    }
     CV_ALWAYS_INLINE ufixedpoint64 operator >> (int n) const { return ufixedpoint64(val >> n); }
     CV_ALWAYS_INLINE ufixedpoint64 operator << (int n) const { return ufixedpoint64(val << n); }
+    CV_ALWAYS_INLINE bool operator == (const ufixedpoint64& val2) const { return val == val2.val; }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1LL << fixedShift); }
@@ -163,21 +180,26 @@ public:
     CV_ALWAYS_INLINE fixedpoint32& operator = (const int16_t& _val) { val = ((int32_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE fixedpoint32& operator = (const cv::softdouble& _val) { val = (int32_t)cvRound(_val * cv::softdouble((1 << fixedShift))); return *this; }
     CV_ALWAYS_INLINE fixedpoint32& operator = (const fixedpoint32& _val) { val = _val.val; return *this; }
-    template <typename ET>
-    CV_ALWAYS_INLINE fixedpoint32 operator * (const ET& val2) const { return val * val2; } // Wrong rounding is possible for floating point types
+    CV_ALWAYS_INLINE fixedpoint32 operator * (const int8_t& val2) const { return cv::saturate_cast<int32_t>((int64_t)val * val2); }
+    CV_ALWAYS_INLINE fixedpoint32 operator * (const uint8_t& val2) const { return cv::saturate_cast<int32_t>((int64_t)val * val2); }
+    CV_ALWAYS_INLINE fixedpoint32 operator * (const int16_t& val2) const { return cv::saturate_cast<int32_t>((int64_t)val * val2); }
     CV_ALWAYS_INLINE fixedpoint64 operator * (const fixedpoint32& val2) const { return (int64_t)val * (int64_t)(val2.val); }
-    CV_ALWAYS_INLINE fixedpoint32 operator + (const fixedpoint32& val2) const { return fixedpoint32(val + val2.val); }
-    CV_ALWAYS_INLINE fixedpoint32 operator - (const fixedpoint32& val2) const { return fixedpoint32(val - val2.val); }
-    //    CV_ALWAYS_INLINE fixedpoint32 operator + (const fixedpoint32& val2) const
-    //    {
-    //        int32_t nfrac = (int32_t)frac + val2.frac;
-    //        int32_t nval = (int32_t)val + val2.val + nfrac >> 32;
-    //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
-    //    }
+    CV_ALWAYS_INLINE fixedpoint32 operator + (const fixedpoint32& val2) const
+    {
+        int32_t res = val + val2.val;
+        return ((val ^ res) & (val2.val ^ res)) >> 31 ? ~(res & ~0x7FFFFFFF) : res;
+    }
+    CV_ALWAYS_INLINE fixedpoint32 operator - (const fixedpoint32& val2) const
+    {
+        int32_t res = val - val2.val;
+        return ((val ^ val2.val) & (val ^ res)) >> 31 ? ~(res & ~0x7FFFFFFF) : res;
+    }
     CV_ALWAYS_INLINE fixedpoint32 operator >> (int n) const { return fixedpoint32(val >> n); }
     CV_ALWAYS_INLINE fixedpoint32 operator << (int n) const { return fixedpoint32(val << n); }
+    CV_ALWAYS_INLINE bool operator == (const fixedpoint32& val2) const { return val == val2.val; }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int32_t)fixedround((uint32_t)val) >> fixedShift); }
+    CV_ALWAYS_INLINE operator fixedpoint64() const { return (int64_t)val << (fixedpoint64::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
@@ -204,21 +226,24 @@ public:
     CV_ALWAYS_INLINE ufixedpoint32& operator = (const uint16_t& _val) { val = ((uint32_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE ufixedpoint32& operator = (const cv::softdouble& _val) { val = _val.getSign() ? 0 : (uint32_t)cvRound(_val * cv::softdouble((1 << fixedShift))); return *this; }
     CV_ALWAYS_INLINE ufixedpoint32& operator = (const ufixedpoint32& _val) { val = _val.val; return *this; }
-    template <typename ET>
-    CV_ALWAYS_INLINE ufixedpoint32 operator * (const ET& val2) const { return val * val2; } // Wrong rounding is possible for floating point types
+    CV_ALWAYS_INLINE ufixedpoint32 operator * (const uint8_t& val2) const { return cv::saturate_cast<uint32_t>((uint64_t)val * val2); }
+    CV_ALWAYS_INLINE ufixedpoint32 operator * (const uint16_t& val2) const { return cv::saturate_cast<uint32_t>((uint64_t)val * val2); }
     CV_ALWAYS_INLINE ufixedpoint64 operator * (const ufixedpoint32& val2) const { return (uint64_t)val * (uint64_t)(val2.val); }
-    CV_ALWAYS_INLINE ufixedpoint32 operator + (const ufixedpoint32& val2) const { return ufixedpoint32(val + val2.val); }
-    CV_ALWAYS_INLINE ufixedpoint32 operator - (const ufixedpoint32& val2) const { return ufixedpoint32(val - val2.val); }
-    //    CV_ALWAYS_INLINE fixedpoint32 operator + (const fixedpoint32& val2) const
-    //    {
-    //        int32_t nfrac = (int32_t)frac + val2.frac;
-    //        int32_t nval = (int32_t)val + val2.val + nfrac >> 32;
-    //        return nval > MAXINT32 ? beConv(MAXINT32, MAXINT32) : beConv((int32_t)(nval), 0);
-    //    }
+    CV_ALWAYS_INLINE ufixedpoint32 operator + (const ufixedpoint32& val2) const
+    {
+        uint32_t res = val + val2.val;
+        return (val > res) ? 0xFFFFFFFF : res;
+    }
+    CV_ALWAYS_INLINE ufixedpoint32 operator - (const ufixedpoint32& val2) const
+    {
+        return val > val2.val ? (val - val2.val) : 0;
+    }
     CV_ALWAYS_INLINE ufixedpoint32 operator >> (int n) const { return ufixedpoint32(val >> n); }
     CV_ALWAYS_INLINE ufixedpoint32 operator << (int n) const { return ufixedpoint32(val << n); }
+    CV_ALWAYS_INLINE bool operator == (const ufixedpoint32& val2) const { return val == val2.val; }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
+    CV_ALWAYS_INLINE operator ufixedpoint64() const { return (uint64_t)val << (ufixedpoint64::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
@@ -239,20 +264,28 @@ public:
     typedef fixedpoint32 WT;
     CV_ALWAYS_INLINE fixedpoint16() { val = 0; }
     CV_ALWAYS_INLINE fixedpoint16(const int8_t& _val) { val = ((int16_t)_val) << fixedShift; }
-    CV_ALWAYS_INLINE fixedpoint16(const uint8_t& _val) { val = ((int16_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint16(const cv::softdouble& _val) { val = (int16_t)cvRound(_val * cv::softdouble((1 << fixedShift))); }
     CV_ALWAYS_INLINE fixedpoint16& operator = (const int8_t& _val) { val = ((int16_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE fixedpoint16& operator = (const cv::softdouble& _val) { val = (int16_t)cvRound(_val * cv::softdouble((1 << fixedShift))); return *this; }
     CV_ALWAYS_INLINE fixedpoint16& operator = (const fixedpoint16& _val) { val = _val.val; return *this; }
-    template <typename ET>
-    CV_ALWAYS_INLINE fixedpoint16 operator * (const ET& val2) const { return (int16_t)(val * val2); } // Wrong rounding is possible for floating point types
+    CV_ALWAYS_INLINE fixedpoint16 operator * (const int8_t& val2) const { return cv::saturate_cast<int16_t>((int32_t)val * val2); }
     CV_ALWAYS_INLINE fixedpoint32 operator * (const fixedpoint16& val2) const { return (int32_t)val * (int32_t)(val2.val); }
-    CV_ALWAYS_INLINE fixedpoint16 operator + (const fixedpoint16& val2) const { return fixedpoint16((int16_t)(val + val2.val)); }
-    CV_ALWAYS_INLINE fixedpoint16 operator - (const fixedpoint16& val2) const { return fixedpoint16((int16_t)(val - val2.val)); }
+    CV_ALWAYS_INLINE fixedpoint16 operator + (const fixedpoint16& val2) const
+    {
+        int16_t res = val + val2.val;
+        return ((val ^ res) & (val2.val ^ res)) >> 15 ? (int16_t)(~(res & ~0x7FFF)) : res;
+    }
+    CV_ALWAYS_INLINE fixedpoint16 operator - (const fixedpoint16& val2) const
+    {
+        int16_t res = val - val2.val;
+        return ((val ^ val2.val) & (val ^ res)) >> 15 ? (int16_t)(~(res & ~(int16_t)0x7FFF)) : res;
+    }
     CV_ALWAYS_INLINE fixedpoint16 operator >> (int n) const { return fixedpoint16((int16_t)(val >> n)); }
     CV_ALWAYS_INLINE fixedpoint16 operator << (int n) const { return fixedpoint16((int16_t)(val << n)); }
+    CV_ALWAYS_INLINE bool operator == (const fixedpoint16& val2) const { return val == val2.val; }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int16_t)fixedround((uint16_t)val) >> fixedShift); }
+    CV_ALWAYS_INLINE operator fixedpoint32() const { return (int32_t)val << (fixedpoint32::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
@@ -276,15 +309,23 @@ public:
     CV_ALWAYS_INLINE ufixedpoint16& operator = (const uint8_t& _val) { val = ((uint16_t)_val) << fixedShift; return *this; }
     CV_ALWAYS_INLINE ufixedpoint16& operator = (const cv::softdouble& _val) { val = _val.getSign() ? 0 : (uint16_t)cvRound(_val * cv::softdouble((int32_t)(1 << fixedShift))); return *this; }
     CV_ALWAYS_INLINE ufixedpoint16& operator = (const ufixedpoint16& _val) { val = _val.val; return *this; }
-    template <typename ET>
-    CV_ALWAYS_INLINE ufixedpoint16 operator * (const ET& val2) const { return (uint16_t)(val * val2); } // Wrong rounding is possible for floating point types
+    CV_ALWAYS_INLINE ufixedpoint16 operator * (const uint8_t& val2) const { return cv::saturate_cast<uint16_t>((uint32_t)val * val2); }
     CV_ALWAYS_INLINE ufixedpoint32 operator * (const ufixedpoint16& val2) const { return ((uint32_t)val * (uint32_t)(val2.val)); }
-    CV_ALWAYS_INLINE ufixedpoint16 operator + (const ufixedpoint16& val2) const { return ufixedpoint16((uint16_t)(val + val2.val)); }
-    CV_ALWAYS_INLINE ufixedpoint16 operator - (const ufixedpoint16& val2) const { return ufixedpoint16((uint16_t)(val - val2.val)); }
+    CV_ALWAYS_INLINE ufixedpoint16 operator + (const ufixedpoint16& val2) const
+    {
+        uint16_t res = val + val2.val;
+        return (val > res) ? (uint16_t)0xFFFF : res;
+    }
+    CV_ALWAYS_INLINE ufixedpoint16 operator - (const ufixedpoint16& val2) const
+    {
+        return val > val2.val ? (uint16_t)(val - val2.val) : (uint16_t)0;
+    }
     CV_ALWAYS_INLINE ufixedpoint16 operator >> (int n) const { return ufixedpoint16((uint16_t)(val >> n)); }
     CV_ALWAYS_INLINE ufixedpoint16 operator << (int n) const { return ufixedpoint16((uint16_t)(val << n)); }
+    CV_ALWAYS_INLINE bool operator == (const ufixedpoint16& val2) const { return val == val2.val; }
     template <typename ET>
     CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
+    CV_ALWAYS_INLINE operator ufixedpoint32() const { return (uint32_t)val << (ufixedpoint32::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }

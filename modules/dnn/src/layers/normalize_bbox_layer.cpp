@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 
 namespace cv { namespace dnn {
 
@@ -54,7 +55,17 @@ public:
         pnorm = params.get<float>("p", 2);
         epsilon = params.get<float>("eps", 1e-10f);
         acrossSpatial = params.get<bool>("across_spatial", true);
+        startAxis = params.get<int>("start_axis", 1);
+        CV_Assert(!params.has("across_spatial") || !params.has("end_axis"));
+        endAxis = params.get<int>("end_axis", acrossSpatial ? -1 : startAxis);
         CV_Assert(pnorm > 0);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+               pnorm == 2 && !blobs.empty();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -85,20 +96,26 @@ public:
 
         const UMat& inp0 = inputs[0];
         UMat& buffer = internals[0];
-        size_t num = inp0.size[0];
-        size_t channels = inp0.size[1];
-        size_t channelSize = inp0.total() / (num * channels);
+        startAxis = clamp(startAxis, inp0.dims);
+        endAxis = clamp(endAxis, inp0.dims);
+
+        size_t num = total(shape(inp0.size), 0, startAxis);
+        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t planeSize = inp0.total() / (num * numPlanes);
+        MatShape s = shape(1, inputs[0].total());
+        UMat inp = inputs[0].reshape(1, s.size(), &s[0]).reshape(1, num);
+        UMat out = outputs[0].reshape(1, s.size(), &s[0]).reshape(1, num);
         for (size_t i = 0; i < num; ++i)
         {
-            MatShape s = shape(channels, channelSize);
-            UMat src = inputs[i].reshape(1, s.size(), &s[0]);
-            UMat dst = outputs[i].reshape(1, s.size(), &s[0]);
+            s = shape(numPlanes, planeSize);
+            UMat src = inp.row(i).reshape(1, s.size(), &s[0]);
+            UMat dst = out.row(i).reshape(1, s.size(), &s[0]);
 
             UMat abs_mat;
             absdiff(src, cv::Scalar::all(0), abs_mat);
             pow(abs_mat, pnorm, buffer);
 
-            if (acrossSpatial)
+            if (planeSize == 1)
             {
                 // add eps to avoid overflow
                 float absSum = sum(buffer)[0] + epsilon;
@@ -114,7 +131,7 @@ public:
                 // compute inverted norm to call multiply instead divide
                 cv::pow(norm, -1.0f / pnorm, norm);
 
-                repeat(norm, channels, 1, buffer);
+                repeat(norm, numPlanes, 1, buffer);
                 multiply(src, buffer, dst);
             }
 
@@ -130,7 +147,7 @@ public:
                 else
                 {
                     // _scale: _channels x 1
-                    CV_Assert(scale.total() == channels);
+                    CV_Assert(scale.total() == numPlanes);
                     repeat(scale, 1, dst.cols, buffer);
                     multiply(dst, buffer, dst);
                 }
@@ -162,17 +179,22 @@ public:
 
         const Mat& inp0 = *inputs[0];
         Mat& buffer = internals[0];
-        size_t num = inp0.size[0];
-        size_t channels = inp0.size[1];
-        size_t channelSize = inp0.total() / (num * channels);
+        startAxis = clamp(startAxis, inp0.dims);
+        endAxis = clamp(endAxis, inp0.dims);
+
+        const float* inpData = inp0.ptr<float>();
+        float* outData = outputs[0].ptr<float>();
+
+        size_t num = total(shape(inp0.size), 0, startAxis);
+        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t planeSize = inp0.total() / (num * numPlanes);
         for (size_t n = 0; n < num; ++n)
         {
-            Mat src = Mat(channels, channelSize, CV_32F, (void*)inp0.ptr<float>(n));
-            Mat dst = Mat(channels, channelSize, CV_32F, (void*)outputs[0].ptr<float>(n));
-
+            Mat src = Mat(numPlanes, planeSize, CV_32F, (void*)inpData);
+            Mat dst = Mat(numPlanes, planeSize, CV_32F, (void*)outData);
             cv::pow(abs(src), pnorm, buffer);
 
-            if (acrossSpatial)
+            if (planeSize == 1)
             {
                 // add eps to avoid overflow
                 float absSum = sum(buffer)[0] + epsilon;
@@ -188,7 +210,7 @@ public:
                 // compute inverted norm to call multiply instead divide
                 cv::pow(norm, -1.0f / pnorm, norm);
 
-                repeat(norm, channels, 1, buffer);
+                repeat(norm, numPlanes, 1, buffer);
                 multiply(src, buffer, dst);
             }
 
@@ -204,13 +226,40 @@ public:
                 else
                 {
                     // _scale: _channels x 1
-                    CV_Assert(scale.total() == channels);
+                    CV_Assert(scale.total() == numPlanes);
                     repeat(scale, 1, dst.cols, buffer);
                     multiply(dst, buffer, dst);
                 }
             }
+            inpData += numPlanes * planeSize;
+            outData += numPlanes * planeSize;
         }
     }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Normalize";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        CV_Assert(!blobs.empty());
+
+        ieLayer->params["eps"] = format("%f", epsilon);
+        ieLayer->params["across_spatial"] = acrossSpatial ? "1" : "0";
+        ieLayer->params["channel_shared"] = blobs[0].total() == 1 ? "1" : "0";
+
+        const int numChannels = blobs[0].total();
+        ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
+private:
+    int startAxis, endAxis;
 };
 
 

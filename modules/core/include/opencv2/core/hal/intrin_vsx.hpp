@@ -1,46 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                          License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
-// Copyright (C) 2015, Itseez Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 
 #ifndef OPENCV_HAL_VSX_HPP
 #define OPENCV_HAL_VSX_HPP
@@ -276,34 +236,38 @@ OPENCV_HAL_IMPL_VSX_INITVEC(v_int64x2, int64, s64, vec_dword2)
 OPENCV_HAL_IMPL_VSX_INITVEC(v_float32x4, float, f32, vec_float4)
 OPENCV_HAL_IMPL_VSX_INITVEC(v_float64x2, double, f64, vec_double2)
 
-#define OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(_Tpvec, _Tp, ld_func, st_func) \
+#define OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, ld, ld_a, st, st_a)    \
 inline _Tpvec v_load(const _Tp* ptr)                                        \
-{ return _Tpvec(ld_func(0, ptr)); }                                         \
-inline _Tpvec v_load_aligned(const _Tp* ptr)                                \
-{ return _Tpvec(ld_func(0, ptr)); }                                         \
+{ return _Tpvec(ld(0, ptr)); }                                              \
+inline _Tpvec v_load_aligned(VSX_UNUSED(const _Tp* ptr))                    \
+{ return _Tpvec(ld_a(0, ptr)); }                                            \
 inline _Tpvec v_load_low(const _Tp* ptr)                                    \
 { return _Tpvec(vec_ld_l8(ptr)); }                                          \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1)               \
 { return _Tpvec(vec_mergesqh(vec_ld_l8(ptr0), vec_ld_l8(ptr1))); }          \
 inline void v_store(_Tp* ptr, const _Tpvec& a)                              \
-{ st_func(a.val, 0, ptr); }                                                 \
-inline void v_store_aligned(_Tp* ptr, const _Tpvec& a)                      \
-{ st_func(a.val, 0, ptr); }                                                 \
+{ st(a.val, 0, ptr); }                                                      \
+inline void v_store_aligned(VSX_UNUSED(_Tp* ptr), const _Tpvec& a)          \
+{ st_a(a.val, 0, ptr); }                                                    \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a)                          \
 { vec_st_l8(a.val, ptr); }                                                  \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a)                         \
 { vec_st_h8(a.val, ptr); }
 
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_uint8x16, uchar, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_int8x16, schar, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_uint16x8, ushort, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_int16x8, short, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_uint32x4, uint, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_int32x4, int, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_float32x4, float, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_float64x2, double, vsx_ld, vsx_st)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_uint64x2, uint64, vsx_ld2, vsx_st2)
-OPENCV_HAL_IMPL_VSX_LOADSTORE_INT_OP(v_int64x2, int64, vsx_ld2, vsx_st2)
+#define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_uint8x16,  uchar)
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_int8x16,   schar)
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_uint16x8,  ushort)
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_int16x8,   short)
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_uint32x4,  uint)
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_int32x4,   int)
+OPENCV_HAL_IMPL_VSX_LOADSTORE(v_float32x4, float)
+
+OPENCV_HAL_IMPL_VSX_LOADSTORE_C(v_float64x2, double, vsx_ld,  vsx_ld,  vsx_st,  vsx_st)
+OPENCV_HAL_IMPL_VSX_LOADSTORE_C(v_uint64x2,  uint64, vsx_ld2, vsx_ld2, vsx_st2, vsx_st2)
+OPENCV_HAL_IMPL_VSX_LOADSTORE_C(v_int64x2,    int64, vsx_ld2, vsx_ld2, vsx_st2, vsx_st2)
 
 //////////////// Value reordering ///////////////
 
@@ -343,7 +307,7 @@ inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1)   \
     b1.val = fl(a.val);                                           \
 }                                                                 \
 inline _Tpwvec v_load_expand(const _Tp* ptr)                      \
-{ return _Tpwvec(fh(vsx_ld(0, ptr))); }
+{ return _Tpwvec(fh(vec_ld_l8(ptr))); }
 
 OPENCV_HAL_IMPL_VSX_EXPAND(v_uint8x16, v_uint16x8, uchar, vec_unpacklu, vec_unpackhu)
 OPENCV_HAL_IMPL_VSX_EXPAND(v_int8x16, v_int16x8, schar, vec_unpackl, vec_unpackh)
@@ -353,10 +317,10 @@ OPENCV_HAL_IMPL_VSX_EXPAND(v_uint32x4, v_uint64x2, uint, vec_unpacklu, vec_unpac
 OPENCV_HAL_IMPL_VSX_EXPAND(v_int32x4, v_int64x2, int, vec_unpackl, vec_unpackh)
 
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
-{ return v_uint32x4(vec_ld_buw(ptr)); }
+{ return v_uint32x4(vec_uint4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
 
 inline v_int32x4 v_load_expand_q(const schar* ptr)
-{ return v_int32x4(vec_ld_bsw(ptr)); }
+{ return v_int32x4(vec_int4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
 
 /* pack */
 #define OPENCV_HAL_IMPL_VSX_PACK(_Tpvec, _Tp, _Tpwvec, _Tpvn, _Tpdel, sfnc, pkfnc, addfnc, pack)    \
@@ -428,36 +392,6 @@ inline void v_recombine(const _Tpvec& a, const _Tpvec& b, _Tpvec& c, _Tpvec& d)
     c.val = vec_mergesqh(a.val, b.val);
     d.val = vec_mergesql(a.val, b.val);
 }
-
-/* Extract */
-template<int s, typename _Tpvec>
-inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
-{
-    const int w = sizeof(typename _Tpvec::lane_type);
-    const int n = _Tpvec::nlanes;
-    const unsigned int sf = ((w * n) - (s * w));
-    if (s == 0)
-        return _Tpvec(a.val);
-    else if (sf > 15)
-        return _Tpvec();
-    // bitwise it just to make xlc happy
-    return _Tpvec(vec_sld(b.val, a.val, sf & 15));
-}
-
-#define OPENCV_HAL_IMPL_VSX_EXTRACT_2(_Tpvec)             \
-template<int s>                                           \
-inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b) \
-{                                                         \
-    switch(s) {                                           \
-    case 0: return _Tpvec(a.val);                         \
-    case 2: return _Tpvec(b.val);                         \
-    case 1: return _Tpvec(vec_sldw(b.val, a.val, 2));     \
-    default: return _Tpvec();                             \
-    }                                                     \
-}
-OPENCV_HAL_IMPL_VSX_EXTRACT_2(v_uint64x2)
-OPENCV_HAL_IMPL_VSX_EXTRACT_2(v_int64x2)
-
 
 ////////// Arithmetic, bitwise and comparison operations /////////
 
@@ -669,6 +603,11 @@ OPENCV_IMPL_VSX_ROTATE_64(v_uint64x2, right, a, b)
 OPENCV_IMPL_VSX_ROTATE_64(v_int64x2,  left, b, a)
 OPENCV_IMPL_VSX_ROTATE_64(v_uint64x2, left, b, a)
 
+/* Extract */
+template<int s, typename _Tpvec>
+inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
+{ return v_rotate_right<s>(a, b); }
+
 ////////// Reduce and mask /////////
 
 /** Reduce **/
@@ -821,6 +760,9 @@ inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)   \
 OPENCV_HAL_IMPL_VSX_MULADD(v_float32x4)
 OPENCV_HAL_IMPL_VSX_MULADD(v_float64x2)
 
+inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{ return a * b + c; }
+
 // TODO: exp, log, sin, cos
 
 /** Absolute values **/
@@ -903,6 +845,9 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 { return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)); }
+
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_int32x4(vec_msum(a.val, b.val, c.val)); }
 
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                             const v_float32x4& m1, const v_float32x4& m2,

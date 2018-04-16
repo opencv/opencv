@@ -249,10 +249,34 @@ const char* Exception::what() const throw() { return msg.c_str(); }
 
 void Exception::formatMessage()
 {
-    if( func.size() > 0 )
-        msg = format("OpenCV(%s) %s:%d: error: (%d) %s: %s in function %s\n", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), err.c_str(), func.c_str());
+    size_t pos = err.find('\n');
+    bool multiline = pos != cv::String::npos;
+    if (multiline)
+    {
+        std::stringstream ss;
+        size_t prev_pos = 0;
+        while (pos != cv::String::npos)
+        {
+           ss << "> " << err.substr(prev_pos, pos - prev_pos) << std::endl;
+           prev_pos = pos + 1;
+           pos = err.find('\n', prev_pos);
+        }
+        ss << "> " << err.substr(prev_pos);
+        if (err[err.size() - 1] != '\n')
+            ss << std::endl;
+        err = ss.str();
+    }
+    if (func.size() > 0)
+    {
+        if (multiline)
+            msg = format("OpenCV(%s) %s:%d: error: (%d:%s) in function '%s'\n%s", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), func.c_str(), err.c_str());
+        else
+            msg = format("OpenCV(%s) %s:%d: error: (%d:%s) %s in function '%s'\n", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), err.c_str(), func.c_str());
+    }
     else
-        msg = format("OpenCV(%s) %s:%d: error: (%d) %s: %s\n", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), err.c_str());
+    {
+        msg = format("OpenCV(%s) %s:%d: error: (%d:%s) %s%s", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), err.c_str(), multiline ? "" : "\n");
+    }
 }
 
 static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { NULL };

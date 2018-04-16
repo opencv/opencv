@@ -80,14 +80,16 @@ public:
     {
         CV_Assert(inpId < node.input_size());
         std::string name = node.input(inpId);
+        // If operation produces several tensors, they are specified by index
+        // after ':' character. In example, "input:0".
+        name = name.substr(0, name.rfind(':'));
         const int numNodes = net.node_size();
         for (int i = 0; i < numNodes; ++i)
         {
             if (net.node(i).name() == name)
                 return net.node(i);
         }
-        CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
-        return net.node(0);  // just return something
+        CV_ErrorNoReturn(Error::StsParseError, "Input node with name " + name + " not found");
     }
 
     // Match TensorFlow subgraph starting from <nodeId> with a set of nodes to be fused.
@@ -400,6 +402,23 @@ private:
     int numOutDims;
 };
 
+class L2NormalizeSubgraph : public Subgraph
+{
+public:
+    L2NormalizeSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int square = addNodeToMatch("Square", input);
+        int reductionIndices = addNodeToMatch("Const");
+        int sum = addNodeToMatch("Sum", square, reductionIndices);
+        int y = addNodeToMatch("Const");
+        int maximum = addNodeToMatch("Maximum", sum, y);
+        int rsqrt = addNodeToMatch("Rsqrt", maximum);
+        addNodeToMatch("Mul", input, rsqrt);
+        setFusedNode("L2Normalize", input, reductionIndices);
+    }
+};
+
 void simplifySubgraphs(tensorflow::GraphDef& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -410,6 +429,7 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new SoftMaxKerasSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ReLU6KerasSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ReshapeKerasSubgraph(3)));
+    subgraphs.push_back(Ptr<Subgraph>(new L2NormalizeSubgraph()));
 
     int numNodes = net.node_size();
     std::vector<int> matchedNodesIds;
