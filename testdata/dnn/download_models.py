@@ -279,6 +279,11 @@ models = [
         url='http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/mpi/pose_iter_160000.caffemodel',
         sha='a344f4da6b52892e44a0ca8a4c68ee605fc611cf',
         filename='openpose_pose_mpi.caffemodel'),
+    Model(
+        name='YOLOv3',  # https://pjreddie.com/darknet/yolo/
+        url='https://pjreddie.com/media/files/yolov3.weights',
+        sha='520878f12e97cf820529daea502acca380f1cb8e',
+        filename='yolov3.weights'),
 ]
 
 # Note: models will be downloaded to current working directory
