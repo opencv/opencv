@@ -40,6 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
+using namespace std;
 #include "cap_intelperc.hpp"
 #include "cap_dshow.hpp"
 
@@ -200,12 +202,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         TRY_OPEN(capture, cvCreateCameraCapture_V4L(index))
 #endif
 
-#ifdef HAVE_GSTREAMER
-        TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L2, reinterpret_cast<char *>(index)))
-
-        TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L, reinterpret_cast<char *>(index)))
-#endif
-
         if (pref) break; // CAP_VFW or CAP_V4L or CAP_V4L2
 
     case CAP_FIREWIRE:
@@ -219,11 +215,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
 #ifdef HAVE_CMU1394
         TRY_OPEN(capture, cvCreateCameraCapture_CMU(index))
-#endif
-
-#if defined(HAVE_GSTREAMER) && 0
-        // Re-enable again when gstreamer 1394 support will land in the backend code
-        TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_1394, 0))
 #endif
 
         if (pref) break; // CAP_FIREWIRE
@@ -327,12 +318,6 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
 #ifdef HAVE_VFW
     case CAP_VFW:
         TRY_OPEN(result, cvCreateFileCapture_VFW (filename))
-        if (apiPreference) break;
-#endif
-
-#ifdef HAVE_GSTREAMER
-    case CAP_GSTREAMER:
-        TRY_OPEN(result, cvCreateCapture_GStreamer (CV_CAP_GSTREAMER_FILE, filename))
         if (apiPreference) break;
 #endif
 
@@ -463,6 +448,9 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 {
     int  domains[] =
     {
+#ifdef HAVE_GSTREAMER
+        CAP_GSTREAMER,
+#endif
 #ifdef HAVE_DSHOW
         CAP_DSHOW,
 #endif
@@ -490,7 +478,8 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
     // try every possibly installed camera API
     for (int i = 0; domains[i] >= 0; i++)
     {
-#if defined(HAVE_DSHOW)        || \
+#if defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_DSHOW)        || \
     defined(HAVE_INTELPERC)    || \
     defined(WINRT_VIDEO)       || \
     defined(HAVE_GPHOTO2)      || \
@@ -499,6 +488,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 
         switch (domains[i])
         {
+#ifdef HAVE_GSTREAMER
+            case CAP_GSTREAMER:
+                capture = createGStreamerCapture(index);
+                break;
+#endif
 #ifdef HAVE_DSHOW
             case CAP_DSHOW:
                 capture = makePtr<VideoCapture_DShow>(index);
@@ -536,6 +530,14 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
 {
     bool useAny = (apiPreference == CAP_ANY);
     Ptr<IVideoCapture> capture;
+#ifdef HAVE_GSTREAMER
+    if (useAny || apiPreference == CAP_GSTREAMER)
+    {
+        capture = createGStreamerCapture(filename);
+        if (capture && capture->isOpened())
+            return capture;
+    }
+#endif
 #ifdef HAVE_XINE
     if (useAny || apiPreference == CAP_XINE)
     {
