@@ -458,7 +458,7 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
             if (out.at<float>(j, 2) > 0.8)
               detections.push_back(out.row(j).colRange(1, 7));
         }
-        normAssert(detections, refs[i], ("model name: " + models[i]).c_str(), 2e-4, 6e-4);
+        normAssert(detections, refs[i], ("model name: " + models[i]).c_str(), 1e-3, 1e-3);
     }
 }
 
