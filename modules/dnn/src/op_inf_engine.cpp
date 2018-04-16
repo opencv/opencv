@@ -18,6 +18,11 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+static int infEngineVersion()
+{
+    return std::atoi(InferenceEngine::GetInferenceEngineVersion()->buildNumber);
+}
+
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
 
@@ -58,23 +63,37 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
-    return InferenceEngine::DataPtr(
-      new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32,
-                                InferenceEngine::Layout::ANY)
-    );
+    if (infEngineVersion() > 5855)
+    {
+        InferenceEngine::Layout l = InferenceEngine::Layout::ANY;
+        if (m.dims == 4)
+            l = InferenceEngine::Layout::NCHW;
+        else if (m.dims == 2)
+            l = InferenceEngine::Layout::NC;
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, l)
+        );
+    }
+    else
+    {
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32)
+        );
+    }
 }
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape)
+InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
+                                                       InferenceEngine::Layout layout)
 {
     return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                    shape, (float*)m.data);
+                                                    layout, shape, (float*)m.data);
 }
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m)
+InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
-    return wrapToInfEngineBlob(m, reversedShape);
+    return wrapToInfEngineBlob(m, reversedShape, layout);
 }
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr)
@@ -109,10 +128,14 @@ void InfEngineBackendWrapper::setHostDirty()
 
 InfEngineBackendNet::InfEngineBackendNet()
 {
+    targetDevice = InferenceEngine::TargetDevice::eCPU;
+    precision = InferenceEngine::Precision::FP32;
 }
 
 InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net)
 {
+    targetDevice = InferenceEngine::TargetDevice::eCPU;
+    precision = InferenceEngine::Precision::FP32;
     inputs = net.getInputsInfo();
     outputs = net.getOutputsInfo();
     layers.resize(net.layerCount());  // A hack to execute InfEngineBackendNet::layerCount correctly.
@@ -126,9 +149,14 @@ void InfEngineBackendNet::Release() noexcept
     outputs.clear();
 }
 
+void InfEngineBackendNet::setPrecision(InferenceEngine::Precision p) noexcept
+{
+    precision = p;
+}
+
 InferenceEngine::Precision InfEngineBackendNet::getPrecision() noexcept
 {
-    return InferenceEngine::Precision::FP32;
+    return precision;
 }
 
 // Assume that outputs of network is unconnected blobs.
@@ -161,9 +189,8 @@ InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string 
     return it->second;
 }
 
-void InfEngineBackendNet::getName(char *pName, size_t len) noexcept
+void InfEngineBackendNet::getName(char*, size_t) noexcept
 {
-    CV_Error(Error::StsNotImplemented, "");
 }
 
 size_t InfEngineBackendNet::layerCount() noexcept
@@ -213,13 +240,15 @@ InfEngineBackendNet::getLayerByName(const char *layerName, InferenceEngine::CNNL
 
 void InfEngineBackendNet::setTargetDevice(InferenceEngine::TargetDevice device) noexcept
 {
-    if (device != InferenceEngine::TargetDevice::eCPU)
+    if (device != InferenceEngine::TargetDevice::eCPU &&
+        device != InferenceEngine::TargetDevice::eGPU)
         CV_Error(Error::StsNotImplemented, "");
+    targetDevice = device;
 }
 
 InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() noexcept
 {
-    return InferenceEngine::TargetDevice::eCPU;
+    return targetDevice;
 }
 
 InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t size) noexcept
@@ -234,7 +263,7 @@ size_t InfEngineBackendNet::getBatchSize() const noexcept
     return 0;
 }
 
-void InfEngineBackendNet::init()
+void InfEngineBackendNet::init(int targetId)
 {
     if (inputs.empty())
     {
@@ -307,6 +336,15 @@ void InfEngineBackendNet::init()
         outBlobs[it.first] = allBlobs[it.first];
     }
 
+    switch (targetId)
+    {
+    case DNN_TARGET_CPU: setTargetDevice(InferenceEngine::TargetDevice::eCPU); break;
+    case DNN_TARGET_OPENCL_FP16: setPrecision(InferenceEngine::Precision::FP16);  // Fallback to the next.
+    case DNN_TARGET_OPENCL: setTargetDevice(InferenceEngine::TargetDevice::eGPU); break;
+    default:
+        CV_Error(Error::StsError, format("Unknown target identifier: %d", targetId));
+    }
+
     if (!isInitialized())
         initPlugin(*this);
 }
@@ -317,10 +355,9 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 
     InferenceEngine::StatusCode status;
     InferenceEngine::ResponseDesc resp;
-    const InferenceEngine::Version* v = InferenceEngine::GetInferenceEngineVersion();
 
-    plugin = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(InferenceEngine::TargetDevice::eCPU);
-    if (std::atoi(v->buildNumber) > 5855)
+    plugin = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
+    if (infEngineVersion() > 5855 && targetDevice == InferenceEngine::TargetDevice::eCPU)
     {
 #ifdef _WIN32
         InferenceEngine::IExtensionPtr extension =
@@ -360,63 +397,13 @@ void InfEngineBackendNet::forward()
         CV_Error(Error::StsAssert, resp.msg);
 }
 
-static inline Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
 {
     // NOTE: Inference Engine sizes are reversed.
     std::vector<size_t> dims = blob->dims();
     std::vector<int> size(dims.begin(), dims.end());
     std::reverse(size.begin(), size.end());
     return Mat(size, CV_32F, (void*)blob->buffer());
-}
-
-void fuseConvWeights(const std::shared_ptr<InferenceEngine::ConvolutionLayer>& conv,
-                     const Mat& w, const Mat& b)
-{
-    CV_Assert(!w.empty() || !b.empty());
-    if (!w.empty())
-    {
-        // Get convolution's weights. Clone the data because Inference Engine can host it
-        // and conv->_weights->allocate() below will deallocate it.
-        Mat originWeights = infEngineBlobToMat(conv->_weights).clone();
-
-        // Create new weights blob.
-        conv->_weights = InferenceEngine::make_shared_blob<float>(
-                            InferenceEngine::Precision::FP32, conv->_weights->dims());
-        conv->_weights->allocate();
-
-        // Convolution weights have OIHW data layout.
-        // (conv(I) + b1 ) * w + b2
-        // w*conv(I) + b1 * w + b2
-        Mat fusedWeights = infEngineBlobToMat(conv->_weights);
-
-        const int numChannels = fusedWeights.size[0];
-        // Mat weights = blobs[0].reshape(1, 1);
-        // Mat bias = hasBias ? blobs[1].reshape(1, 1) : Mat();
-        CV_Assert(numChannels == w.total());
-        CV_Assert(b.empty() || numChannels == b.total());
-        for (int i = 0; i < numChannels; ++i)
-        {
-            cv::multiply(slice(originWeights, i), w.at<float>(i), slice(fusedWeights, i));
-        }
-    }
-    if (conv->_biases)
-    {
-        // The same for biases.
-        Mat originBiases = infEngineBlobToMat(conv->_biases).clone();
-
-        conv->_biases = InferenceEngine::make_shared_blob<float>(
-                            InferenceEngine::Precision::FP32, conv->_biases->dims());
-        conv->_biases->allocate();
-        Mat fusedBiases = infEngineBlobToMat(conv->_biases);
-        originBiases.copyTo(fusedBiases);
-
-        if (!w.empty())
-            cv::multiply(w.reshape(1, fusedBiases.dims, &fusedBiases.size[0]), fusedBiases, fusedBiases);
-        if (!b.empty())
-            cv::add(fusedBiases, b.reshape(1, fusedBiases.dims, &fusedBiases.size[0]), fusedBiases);
-    }
-    else
-        conv->_biases = wrapToInfEngineBlob(b);
 }
 
 InfEngineBackendLayer::InfEngineBackendLayer(const InferenceEngine::DataPtr& output_)
@@ -452,6 +439,16 @@ void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArra
                                     OutputArrayOfArrays internals)
 {
     CV_Error(Error::StsInternal, "Choose Inference Engine as a preferable backend.");
+}
+
+InferenceEngine::TBlob<int16_t>::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
+{
+    auto halfs = InferenceEngine::make_shared_blob<int16_t>(InferenceEngine::Precision::FP16, blob->layout(), blob->dims());
+    halfs->allocate();
+    Mat floatsData(1, blob->size(), CV_32F, blob->buffer());
+    Mat halfsData(1, blob->size(), CV_16SC1, halfs->buffer());
+    convertFp16(floatsData, halfsData);
+    return halfs;
 }
 
 #endif  // HAVE_INF_ENGINE

@@ -559,7 +559,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         float pnorm, epsilon;
-        bool acrossSpatial;
+        CV_DEPRECATED bool acrossSpatial;
 
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
     };

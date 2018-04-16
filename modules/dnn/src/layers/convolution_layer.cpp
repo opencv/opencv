@@ -173,21 +173,21 @@ public:
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
+    bool newWeightAndBias;
+    bool fusedBias;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
     std::vector<UMat> umat_blobs;
-    bool fusedBias;
-    bool newWeightAndBias;
     bool newActiv;
     ocl4dnnFusedActiv_t activType;
     float power;
 #endif
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
-#ifdef HAVE_OPENCL
-        fusedBias = false;
         newWeightAndBias = false;
+        fusedBias = false;
+#ifdef HAVE_OPENCL
         newActiv = false;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
         power = 0.f;
@@ -350,10 +350,8 @@ public:
                 biasvec[i] += b.at<float>(i);
         }
 
-#ifdef HAVE_OPENCL
         newWeightAndBias = !w.empty() || !b.empty();
         fusedBias = hasBias() || !b.empty();
-#endif
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
 
@@ -433,9 +431,31 @@ public:
         ieLayer->_dilation_y = dilation.height;
         ieLayer->_group = group;
 
-        ieLayer->_weights = wrapToInfEngineBlob(blobs[0]);
-        if (hasBias())
-            ieLayer->_biases = wrapToInfEngineBlob(blobs[1]);
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW);
+        if (newWeightAndBias)
+        {
+            if (weightsMat.isContinuous())
+            {
+                Mat fusedWeights = weightsMat.reshape(1, blobs[0].dims, blobs[0].size);
+                ieLayer->_weights = wrapToInfEngineBlob(fusedWeights, InferenceEngine::Layout::OIHW);
+            }
+            else
+            {
+                ieLayer->_weights = InferenceEngine::make_shared_blob<float>(
+                                    InferenceEngine::Precision::FP32, InferenceEngine::Layout::OIHW,
+                                    ieLayer->_weights->dims());
+                ieLayer->_weights->allocate();
+
+                Mat newWeights = infEngineBlobToMat(ieLayer->_weights).reshape(1, outCn);
+                Mat fusedWeights = weightsMat.colRange(0, newWeights.cols);
+                fusedWeights.copyTo(newWeights);
+            }
+        }
+        if (hasBias() || fusedBias)
+        {
+            Mat biasesMat({outCn}, CV_32F, &biasvec[0]);
+            ieLayer->_biases = wrapToInfEngineBlob(biasesMat, {outCn}, InferenceEngine::Layout::C);
+        }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();

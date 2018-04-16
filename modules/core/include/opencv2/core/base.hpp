@@ -754,5 +754,6 @@ CV_EXPORTS_W void setUseIPP_NE(bool flag);
 
 #include "opencv2/core/neon_utils.hpp"
 #include "opencv2/core/vsx_utils.hpp"
+#include "opencv2/core/check.hpp"
 
 #endif //OPENCV_CORE_BASE_HPP
