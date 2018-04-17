@@ -1781,7 +1781,7 @@ TEST(Imgproc_Remap, DISABLED_memleak)
     }
 }
 
-
+//** @deprecated */
 TEST(Imgproc_linearPolar, identity)
 {
     const int N = 33;
@@ -1821,7 +1821,7 @@ TEST(Imgproc_linearPolar, identity)
 #endif
 }
 
-
+//** @deprecated */
 TEST(Imgproc_logPolar, identity)
 {
     const int N = 33;
@@ -1862,6 +1862,52 @@ TEST(Imgproc_logPolar, identity)
 #endif
 }
 
+TEST(Imgproc_warpPolar, identity)
+{
+    const int N = 33;
+    Mat in(N, N, CV_8UC3, Scalar(255, 0, 0));
+    in(cv::Rect(N / 3, N / 3, N / 3, N / 3)).setTo(Scalar::all(255));
+    cv::blur(in, in, Size(5, 5));
+    cv::blur(in, in, Size(5, 5));
+
+    Mat src = in.clone();
+    Mat dst;
+
+    Rect roi = Rect(0, 0, in.cols - ((N + 19) / 20), in.rows);
+    Point2f center = Point2f((N - 1) * 0.5f, (N - 1) * 0.5f);
+    double radius = N * 0.5;
+    int flags = CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR;
+    // test linearPolar
+    for (int ki = 1; ki <= 5; ki++)
+    {
+        warpPolar(src, dst, src.size(), center, radius, flags + WARP_POLAR_LINEAR + CV_WARP_INVERSE_MAP);
+        warpPolar(dst, src, src.size(), center, radius, flags + WARP_POLAR_LINEAR);
+
+        double psnr = cv::PSNR(in(roi), src(roi));
+        EXPECT_LE(25, psnr) << "iteration=" << ki;
+    }
+    // test logPolar
+    src = in.clone();
+    for (int ki = 1; ki <= 5; ki++)
+    {
+        warpPolar(src, dst, src.size(),center, radius, flags + WARP_POLAR_LOG + CV_WARP_INVERSE_MAP );
+        warpPolar(dst, src, src.size(),center, radius, flags + WARP_POLAR_LOG);
+
+        double psnr = cv::PSNR(in(roi), src(roi));
+        EXPECT_LE(25, psnr) << "iteration=" << ki;
+    }
+
+#if 0
+    Mat all(N*2+2,N*2+2, src.type(), Scalar(0,0,255));
+    in.copyTo(all(Rect(0,0,N,N)));
+    src.copyTo(all(Rect(0,N+1,N,N)));
+    src.copyTo(all(Rect(N+1,0,N,N)));
+    dst.copyTo(all(Rect(N+1,N+1,N,N)));
+    imwrite("linearPolar.png", all);
+    imshow("input", in); imshow("result", dst); imshow("restore", src); imshow("all", all);
+    cv::waitKey();
+#endif
+}
 
 }} // namespace
 /* End of file. */
