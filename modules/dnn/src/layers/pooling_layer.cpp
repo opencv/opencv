@@ -853,7 +853,7 @@ public:
             dims[0] = inputs[1][0];  // Number of proposals;
             dims[1] = psRoiOutChannels;
         }
-        outputs.assign(type == MAX ? 2 : 1, shape(dims));
+        outputs.assign(type == MAX ? 2 : 1, shape(dims, 4));
         return false;
     }
 
