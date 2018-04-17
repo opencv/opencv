@@ -462,11 +462,7 @@ namespace cvtest
             return false;
         }
 
-#ifdef CV_CXX11
         struct KeyPointLess
-#else
-        struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
-#endif
         {
             bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
             {

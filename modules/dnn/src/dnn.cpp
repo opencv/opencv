@@ -328,7 +328,7 @@ struct LayerPin
 
     bool operator<(const LayerPin &r) const
     {
-        return lid < r.lid || lid == r.lid && oid < r.oid;
+        return lid < r.lid || (lid == r.lid && oid < r.oid);
     }
 
     bool operator ==(const LayerPin &r) const

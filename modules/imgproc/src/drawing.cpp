@@ -1737,7 +1737,7 @@ PolyLine( Mat& img, const Point2l* v, int count, bool is_closed,
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-void drawMarker(Mat& img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
+void drawMarker(InputOutputArray img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
 {
     switch(markerType)
     {
@@ -1873,13 +1873,12 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
 }
 
 
-void rectangle( Mat& img, Rect rec,
+void rectangle( InputOutputArray img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     if( rec.area() > 0 )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
