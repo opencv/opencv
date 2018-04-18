@@ -1,0 +1,26 @@
+# export PYTHONPATH=/path/to/darknet/python/:$PYTHONPATH
+# export LD_LIBRARY_PATH=/path/to/darknet/:$LD_LIBRARY_PATH
+import darknet as dn
+import numpy as np
+
+np.random.seed(324)
+
+def genTestData(name, inpShape, outShape):
+    net = dn.load_net(name + '.cfg', '', 0)
+
+    inp = np.random.standard_normal(inpShape).astype(np.float32)
+
+    inpData = dn.c_array(dn.c_float, inp.flatten())
+    pred = dn.predict(net, inpData)
+
+    total = np.prod(outShape)
+    out = np.zeros([total], np.float32)
+    for i in range(total):
+        out[i] = pred[i]
+    out = out.reshape(outShape)
+
+    np.save(name + '_in.npy', inp)
+    np.save(name + '_out.npy', out)
+
+genTestData('shortcut', [1, 2, 3, 4], [1, 2, 3, 4])
+genTestData('upsample', [2, 3, 4, 5], [2, 3, 8, 10])
