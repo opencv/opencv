@@ -796,43 +796,75 @@ OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_float64x2, v_max, _mm_max_pd)
 
 inline v_int8x16 v_min(const v_int8x16& a, const v_int8x16& b)
 {
+#if CV_SSE4_1
+    return v_int8x16(_mm_min_epi8(a.val, b.val));
+#else
     __m128i delta = _mm_set1_epi8((char)-128);
     return v_int8x16(_mm_xor_si128(delta, _mm_min_epu8(_mm_xor_si128(a.val, delta),
                                                        _mm_xor_si128(b.val, delta))));
+#endif
 }
 inline v_int8x16 v_max(const v_int8x16& a, const v_int8x16& b)
 {
+#if CV_SSE4_1
+    return v_int8x16(_mm_max_epi8(a.val, b.val));
+#else
     __m128i delta = _mm_set1_epi8((char)-128);
     return v_int8x16(_mm_xor_si128(delta, _mm_max_epu8(_mm_xor_si128(a.val, delta),
                                                        _mm_xor_si128(b.val, delta))));
+#endif
 }
 inline v_uint16x8 v_min(const v_uint16x8& a, const v_uint16x8& b)
 {
+#if CV_SSE4_1
+    return v_uint16x8(_mm_min_epu16(a.val, b.val));
+#else
     return v_uint16x8(_mm_subs_epu16(a.val, _mm_subs_epu16(a.val, b.val)));
+#endif
 }
 inline v_uint16x8 v_max(const v_uint16x8& a, const v_uint16x8& b)
 {
+#if CV_SSE4_1
+    return v_uint16x8(_mm_max_epu16(a.val, b.val));
+#else
     return v_uint16x8(_mm_adds_epu16(_mm_subs_epu16(a.val, b.val), b.val));
+#endif
 }
 inline v_uint32x4 v_min(const v_uint32x4& a, const v_uint32x4& b)
 {
+#if CV_SSE4_1
+    return v_uint32x4(_mm_min_epu32(a.val, b.val));
+#else
     __m128i delta = _mm_set1_epi32((int)0x80000000);
     __m128i mask = _mm_cmpgt_epi32(_mm_xor_si128(a.val, delta), _mm_xor_si128(b.val, delta));
     return v_uint32x4(v_select_si128(mask, b.val, a.val));
+#endif
 }
 inline v_uint32x4 v_max(const v_uint32x4& a, const v_uint32x4& b)
 {
+#if CV_SSE4_1
+    return v_uint32x4(_mm_max_epu32(a.val, b.val));
+#else
     __m128i delta = _mm_set1_epi32((int)0x80000000);
     __m128i mask = _mm_cmpgt_epi32(_mm_xor_si128(a.val, delta), _mm_xor_si128(b.val, delta));
     return v_uint32x4(v_select_si128(mask, a.val, b.val));
+#endif
 }
 inline v_int32x4 v_min(const v_int32x4& a, const v_int32x4& b)
 {
+#if CV_SSE4_1
+    return v_int32x4(_mm_min_epi32(a.val, b.val));
+#else
     return v_int32x4(v_select_si128(_mm_cmpgt_epi32(a.val, b.val), b.val, a.val));
+#endif
 }
 inline v_int32x4 v_max(const v_int32x4& a, const v_int32x4& b)
 {
+#if CV_SSE4_1
+    return v_int32x4(_mm_max_epi32(a.val, b.val));
+#else
     return v_int32x4(v_select_si128(_mm_cmpgt_epi32(a.val, b.val), a.val, b.val));
+#endif
 }
 
 #define OPENCV_HAL_IMPL_SSE_INT_CMP_OP(_Tpuvec, _Tpsvec, suffix, sbit) \
