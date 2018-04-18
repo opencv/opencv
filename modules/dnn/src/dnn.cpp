@@ -1527,12 +1527,11 @@ struct Net::Impl
                                 convLayer = downLayerData->layerInstance.dynamicCast<ConvolutionLayer>();
 
                             //  first input layer is convolution layer
-                            if( !convLayer.empty() )
+                            if( !convLayer.empty() && eltwiseData->consumers.size() == 1 )
                             {
                                 // fuse eltwise + activation layer
                                 LayerData *firstConvLayerData = downLayerData;
                                 {
-                                    CV_Assert(eltwiseData->consumers.size() == 1);
                                     nextData = &layers[eltwiseData->consumers[0].lid];
                                     lpNext = LayerPin(eltwiseData->consumers[0].lid, 0);
                                     Ptr<ActivationLayer> nextActivLayer;
