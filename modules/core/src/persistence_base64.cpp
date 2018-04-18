@@ -83,11 +83,15 @@ size_t base64_encode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
     /* padding */
     switch (rst)
     {
-    case 1U: *dst_cur++ = base64_padding;
-    case 2U: *dst_cur++ = base64_padding;
-    default: *dst_cur   = 0;
+    case 1U:
+        *dst_cur++ = base64_padding;
+        *dst_cur++ = base64_padding;
+        break;
+    case 2U:
+        *dst_cur++ = base64_padding;
         break;
     }
+    *dst_cur = 0;
 
     return static_cast<size_t>(dst_cur - dst_beg);
 }
@@ -636,7 +640,7 @@ private:
                     pack.func = to_binary<double>;
                     break;
                 case 'r':
-                default: { CV_Assert(!"type not support"); break; }
+                default: { CV_Assert(false && "type not support"); break; }
                 };
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
@@ -795,7 +799,7 @@ private:
                     pack.func = binary_to<double>;
                     break;
                 case 'r':
-                default:  { CV_Assert(!"type not support"); break; }
+                default:  { CV_Assert(false && "type not support"); break; }
                 }; // need a better way for outputting error.
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
@@ -813,7 +817,7 @@ private:
                 case 'f': { pack.cv_type = CV_32F; break; }
                 case 'd': { pack.cv_type = CV_64F; break; }
                 case 'r':
-                default:  { CV_Assert(!"type is not support"); break; }
+                default:  { CV_Assert(false && "type is not support"); break; }
                 } // need a better way for outputting error.
 
                 binary_to_funcs.push_back(pack);

@@ -250,11 +250,7 @@ public:
     //! conversion to another data type
     template<typename _Tp2> operator Point3_<_Tp2>() const;
     //! conversion to cv::Vec<>
-#if OPENCV_ABI_COMPATIBILITY > 300
-    template<typename _Tp2> operator Vec<_Tp2, 3>() const;
-#else
     operator Vec<_Tp, 3>() const;
-#endif
 
     //! dot product
     _Tp dot(const Point3_& pt) const;
@@ -1405,19 +1401,11 @@ Point3_<_Tp>::operator Point3_<_Tp2>() const
     return Point3_<_Tp2>(saturate_cast<_Tp2>(x), saturate_cast<_Tp2>(y), saturate_cast<_Tp2>(z));
 }
 
-#if OPENCV_ABI_COMPATIBILITY > 300
-template<typename _Tp> template<typename _Tp2> inline
-Point3_<_Tp>::operator Vec<_Tp2, 3>() const
-{
-    return Vec<_Tp2, 3>(x, y, z);
-}
-#else
 template<typename _Tp> inline
 Point3_<_Tp>::operator Vec<_Tp, 3>() const
 {
     return Vec<_Tp, 3>(x, y, z);
 }
-#endif
 
 template<typename _Tp> inline
 Point3_<_Tp>& Point3_<_Tp>::operator = (const Point3_& pt)

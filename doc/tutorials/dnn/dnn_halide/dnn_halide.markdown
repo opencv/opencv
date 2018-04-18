@@ -68,8 +68,6 @@ MSBuild.exe /m:4 /t:Build /p:Configuration=Release .\\ALL_BUILD.vcxproj
 ## Build OpenCV with Halide backend
 When you build OpenCV add the following configuration flags:
 
-- `ENABLE_CXX11` - enable C++11 standard
-
 - `WITH_HALIDE` - enable Halide linkage
 
 - `HALIDE_ROOT_DIR` - path to Halide build directory

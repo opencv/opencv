@@ -643,9 +643,6 @@ void setUseOptimized( bool flag )
 #ifdef HAVE_OPENCL
     ocl::setUseOpenCL(flag);
 #endif
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    ::tegra::setUseTegra(flag);
-#endif
 }
 
 bool useOptimized(void)
@@ -1128,93 +1125,6 @@ cvErrorFromIppStatus( int status )
 
 namespace cv {
 bool __termination = false;
-}
-
-namespace cv
-{
-
-#if defined _WIN32 || defined WINCE
-
-struct Mutex::Impl
-{
-    Impl()
-    {
-#if (_WIN32_WINNT >= 0x0600)
-        ::InitializeCriticalSectionEx(&cs, 1000, 0);
-#else
-        ::InitializeCriticalSection(&cs);
-#endif
-        refcount = 1;
-    }
-    ~Impl() { DeleteCriticalSection(&cs); }
-
-    void lock() { EnterCriticalSection(&cs); }
-    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
-    void unlock() { LeaveCriticalSection(&cs); }
-
-    CRITICAL_SECTION cs;
-    int refcount;
-};
-
-#else
-
-struct Mutex::Impl
-{
-    Impl()
-    {
-        pthread_mutexattr_t attr;
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-        pthread_mutex_init(&mt, &attr);
-        pthread_mutexattr_destroy(&attr);
-
-        refcount = 1;
-    }
-    ~Impl() { pthread_mutex_destroy(&mt); }
-
-    void lock() { pthread_mutex_lock(&mt); }
-    bool trylock() { return pthread_mutex_trylock(&mt) == 0; }
-    void unlock() { pthread_mutex_unlock(&mt); }
-
-    pthread_mutex_t mt;
-    int refcount;
-};
-
-#endif
-
-Mutex::Mutex()
-{
-    impl = new Mutex::Impl;
-}
-
-Mutex::~Mutex()
-{
-    if( CV_XADD(&impl->refcount, -1) == 1 )
-        delete impl;
-    impl = 0;
-}
-
-Mutex::Mutex(const Mutex& m)
-{
-    impl = m.impl;
-    CV_XADD(&impl->refcount, 1);
-}
-
-Mutex& Mutex::operator = (const Mutex& m)
-{
-    if (this != &m)
-    {
-        CV_XADD(&m.impl->refcount, 1);
-        if( CV_XADD(&impl->refcount, -1) == 1 )
-            delete impl;
-        impl = m.impl;
-    }
-    return *this;
-}
-
-void Mutex::lock() { impl->lock(); }
-void Mutex::unlock() { impl->unlock(); }
-bool Mutex::trylock() { return impl->trylock(); }
 
 
 //////////////////////////////// thread-local storage ////////////////////////////////
@@ -2047,18 +1957,10 @@ static IPPInitSingleton& getIPPSingleton()
 }
 #endif
 
-#if OPENCV_ABI_COMPATIBILITY > 300
 unsigned long long getIppFeatures()
-#else
-int getIppFeatures()
-#endif
 {
 #ifdef HAVE_IPP
-#if OPENCV_ABI_COMPATIBILITY > 300
     return getIPPSingleton().ippFeatures;
-#else
-    return (int)getIPPSingleton().ippFeatures;
-#endif
 #else
     return 0;
 #endif
@@ -2171,35 +2073,5 @@ void setUseIPP_NE(bool flag)
 } // namespace ipp
 
 } // namespace cv
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-
-namespace tegra {
-
-bool useTegra()
-{
-    cv::CoreTLSData* data = cv::getCoreTlsData().get();
-
-    if (data->useTegra < 0)
-    {
-        const char* pTegraEnv = getenv("OPENCV_TEGRA");
-        if (pTegraEnv && (cv::String(pTegraEnv) == "disabled"))
-            data->useTegra = false;
-        else
-            data->useTegra = true;
-    }
-
-    return (data->useTegra > 0);
-}
-
-void setUseTegra(bool flag)
-{
-    cv::CoreTLSData* data = cv::getCoreTlsData().get();
-    data->useTegra = flag;
-}
-
-} // namespace tegra
-
-#endif
 
 /* End of file. */

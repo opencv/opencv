@@ -1614,7 +1614,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         caps = gst_caps_fixate(caps);
 #endif
 #else
-        CV_Assert(!"Gstreamer 0.10.29 or newer is required for grayscale input");
+        CV_Assert(false && "Gstreamer 0.10.29 or newer is required for grayscale input");
 #endif
     }
 

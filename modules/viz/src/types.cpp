@@ -63,7 +63,7 @@ cv::viz::Mesh cv::viz::Mesh::load(const String& file, int type)
     switch (type) {
       case LOAD_AUTO:
       {
-        CV_Assert(!"cv::viz::Mesh::LOAD_AUTO: Not implemented yet");
+        CV_Assert(false && "cv::viz::Mesh::LOAD_AUTO: Not implemented yet");
         break;
       }
       case LOAD_PLY:
@@ -83,7 +83,7 @@ cv::viz::Mesh cv::viz::Mesh::load(const String& file, int type)
         break;
       }
       default:
-        CV_Assert(!"cv::viz::Mesh::load: Unknown file type");
+        CV_Assert(false && "cv::viz::Mesh::load: Unknown file type");
         break;
     }
 
