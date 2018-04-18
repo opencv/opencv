@@ -70,7 +70,7 @@ static void testDarknetModel(const std::string& cfg, const std::string& weights,
                              const std::vector<cv::String>& outNames,
                              const std::vector<int>& refClassIds,
                              const std::vector<float>& refConfidences,
-                             const std::vector<Rect2f>& refBoxes,
+                             const std::vector<Rect2d>& refBoxes,
                              int targetId, float confThreshold = 0.24)
 {
     Mat sample = imread(_tf("dog416.png"));
@@ -85,7 +85,7 @@ static void testDarknetModel(const std::string& cfg, const std::string& weights,
 
     std::vector<int> classIds;
     std::vector<float> confidences;
-    std::vector<Rect2f> boxes;
+    std::vector<Rect2d> boxes;
     for (int i = 0; i < outs.size(); ++i)
     {
         Mat& out = outs[i];
@@ -95,31 +95,20 @@ static void testDarknetModel(const std::string& cfg, const std::string& weights,
             double confidence;
             Point maxLoc;
             minMaxLoc(scores, 0, &confidence, 0, &maxLoc);
-            if (confidence > confThreshold)
-            {
-                float* detection = out.ptr<float>(j);
-                float centerX = detection[0];
-                float centerY = detection[1];
-                float width = detection[2];
-                float height = detection[3];
-                boxes.push_back(Rect2f(centerX - 0.5 * width, centerY - 0.5 * height,
-                                       width, height));
-                confidences.push_back(confidence);
-                classIds.push_back(maxLoc.x);
-            }
+
+            float* detection = out.ptr<float>(j);
+            double centerX = detection[0];
+            double centerY = detection[1];
+            double width = detection[2];
+            double height = detection[3];
+            boxes.push_back(Rect2d(centerX - 0.5 * width, centerY - 0.5 * height,
+                                   width, height));
+            confidences.push_back(confidence);
+            classIds.push_back(maxLoc.x);
         }
     }
-
-    ASSERT_EQ(classIds.size(), refClassIds.size());
-    ASSERT_EQ(confidences.size(), refConfidences.size());
-    ASSERT_EQ(boxes.size(), refBoxes.size());
-    for (int i = 0; i < boxes.size(); ++i)
-    {
-        ASSERT_EQ(classIds[i], refClassIds[i]);
-        ASSERT_LE(std::abs(confidences[i] - refConfidences[i]), 1e-4);
-        float iou = (boxes[i] & refBoxes[i]).area() / (boxes[i] | refBoxes[i]).area();
-        ASSERT_LE(std::abs(iou - 1.0f), 1e-4);
-    }
+    normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
+                         confidences, boxes, "", confThreshold, 8e-5, 3e-5);
 }
 
 typedef testing::TestWithParam<DNNTarget> Test_Darknet_nets;
@@ -131,10 +120,10 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
     std::vector<int> classIds(3);
     std::vector<float> confidences(3);
-    std::vector<Rect2f> boxes(3);
-    classIds[0] = 6;  confidences[0] = 0.750469f; boxes[0] = Rect2f(0.577374, 0.127391, 0.325575, 0.173418);  // a car
-    classIds[1] = 1;  confidences[1] = 0.780879f; boxes[1] = Rect2f(0.270762, 0.264102, 0.461713, 0.48131); // a bycicle
-    classIds[2] = 11; confidences[2] = 0.901615f; boxes[2] = Rect2f(0.1386, 0.338509, 0.282737, 0.60028);  // a dog
+    std::vector<Rect2d> boxes(3);
+    classIds[0] = 6;  confidences[0] = 0.750469f; boxes[0] = Rect2d(0.577374, 0.127391, 0.325575, 0.173418);  // a car
+    classIds[1] = 1;  confidences[1] = 0.780879f; boxes[1] = Rect2d(0.270762, 0.264102, 0.461713, 0.48131); // a bycicle
+    classIds[2] = 11; confidences[2] = 0.901615f; boxes[2] = Rect2d(0.1386, 0.338509, 0.282737, 0.60028);  // a dog
     testDarknetModel("yolo-voc.cfg", "yolo-voc.weights", outNames,
                      classIds, confidences, boxes, targetId);
 }
@@ -145,9 +134,9 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     std::vector<cv::String> outNames(1, "detection_out");
     std::vector<int> classIds(2);
     std::vector<float> confidences(2);
-    std::vector<Rect2f> boxes(2);
-    classIds[0] = 6;  confidences[0] = 0.761967f; boxes[0] = Rect2f(0.579042, 0.159161, 0.31544, 0.160779);  // a car
-    classIds[1] = 11; confidences[1] = 0.780595f; boxes[1] = Rect2f(0.129696, 0.386467, 0.315579, 0.534527);  // a dog
+    std::vector<Rect2d> boxes(2);
+    classIds[0] = 6;  confidences[0] = 0.761967f; boxes[0] = Rect2d(0.579042, 0.159161, 0.31544, 0.160779);  // a car
+    classIds[1] = 11; confidences[1] = 0.780595f; boxes[1] = Rect2d(0.129696, 0.386467, 0.315579, 0.534527);  // a dog
     testDarknetModel("tiny-yolo-voc.cfg", "tiny-yolo-voc.weights", outNames,
                      classIds, confidences, boxes, targetId);
 }
@@ -162,10 +151,10 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
     std::vector<int> classIds(3);
     std::vector<float> confidences(3);
-    std::vector<Rect2f> boxes(3);
-    classIds[0] = 7;  confidences[0] = 0.952983f; boxes[0] = Rect2f(0.614622, 0.150257, 0.286747, 0.138994);  // a truck
-    classIds[1] = 1; confidences[1] = 0.987908f; boxes[1] = Rect2f(0.150913, 0.221933, 0.591342, 0.524327);  // a bycicle
-    classIds[2] = 16; confidences[2] = 0.998836f; boxes[2] = Rect2f(0.160024, 0.389964, 0.257861, 0.553752);  // a dog (COCO)
+    std::vector<Rect2d> boxes(3);
+    classIds[0] = 7;  confidences[0] = 0.952983f; boxes[0] = Rect2d(0.614622, 0.150257, 0.286747, 0.138994);  // a truck
+    classIds[1] = 1; confidences[1] = 0.987908f; boxes[1] = Rect2d(0.150913, 0.221933, 0.591342, 0.524327);  // a bycicle
+    classIds[2] = 16; confidences[2] = 0.998836f; boxes[2] = Rect2d(0.160024, 0.389964, 0.257861, 0.553752);  // a dog (COCO)
     testDarknetModel("yolov3.cfg", "yolov3.weights", outNames,
                      classIds, confidences, boxes, targetId);
 }
