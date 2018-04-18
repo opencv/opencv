@@ -83,11 +83,15 @@ size_t base64_encode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
     /* padding */
     switch (rst)
     {
-    case 1U: *dst_cur++ = base64_padding;
-    case 2U: *dst_cur++ = base64_padding;
-    default: *dst_cur   = 0;
+    case 1U:
+        *dst_cur++ = base64_padding;
+        *dst_cur++ = base64_padding;
+        break;
+    case 2U:
+        *dst_cur++ = base64_padding;
         break;
     }
+    *dst_cur = 0;
 
     return static_cast<size_t>(dst_cur - dst_beg);
 }
