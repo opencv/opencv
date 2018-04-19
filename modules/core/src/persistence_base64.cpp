@@ -640,7 +640,6 @@ private:
                 case 'r':
                 default:
                     CV_Error(cv::Error::StsError, "type is not supported");
-                    break;
                 };
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
@@ -801,7 +800,6 @@ private:
                 case 'r':
                 default:
                     CV_Error(cv::Error::StsError, "type is not supported");
-                    break;
                 }; // need a better way for outputting error.
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
@@ -821,7 +819,6 @@ private:
                 case 'r':
                 default:
                     CV_Error(cv::Error::StsError, "type is not supported");
-                    break;
                 } // need a better way for outputting error.
 
                 binary_to_funcs.push_back(pack);
