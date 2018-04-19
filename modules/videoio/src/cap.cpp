@@ -60,6 +60,13 @@
 #pragma warning(disable: 4748)
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
+#endif
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
+
 using namespace cv;
 
 namespace cv

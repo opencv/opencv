@@ -15,6 +15,8 @@ if(NOT WIN32)
   endif()
 endif()
 
+ocv_warnings_disable(CMAKE_C_FLAGS -Wimplicit-fallthrough)
+
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(ITT_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
