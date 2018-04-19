@@ -311,7 +311,7 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
                     case 't' : { string_buffer.append( 1u, '\t' ); break; }
                     case 'b' : { string_buffer.append( 1u, '\b' ); break; }
                     case 'f' : { string_buffer.append( 1u, '\f' ); break; }
-                    case 'u' : { CV_PARSE_ERROR( "'\\uXXXX' currently not supported" ); }
+                    case 'u' : { CV_PARSE_ERROR( "'\\uXXXX' currently not supported" ); break; }
                     default  : { CV_PARSE_ERROR( "Invalid escape character" ); }
                         break;
                     }
