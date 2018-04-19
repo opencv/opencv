@@ -71,7 +71,7 @@ public:
         Mat out = net.forward(outputLayer).clone();
 
         if (outputLayer == "detection_out")
-            checkDetections(outDefault, out, "First run", l1, lInf);
+            normAssertDetections(outDefault, out, "First run", 0.2);
         else
             normAssert(outDefault, out, "First run", l1, lInf);
 
