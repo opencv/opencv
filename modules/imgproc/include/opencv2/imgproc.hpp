@@ -386,7 +386,9 @@ enum GrabCutModes {
     automatically initialized with GC_BGD .*/
     GC_INIT_WITH_MASK  = 1,
     /** The value means that the algorithm should just resume. */
-    GC_EVAL            = 2
+    GC_EVAL            = 2,
+    /** The value means that the algorithm should just run the grabCut algorithm (a single iteration) with the fixed model */
+    GC_EVAL_FREEZE_MODEL = 3
 };
 
 //! distanceTransform algorithm flags
