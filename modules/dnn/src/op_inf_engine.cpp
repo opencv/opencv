@@ -139,7 +139,6 @@ InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net)
     inputs = net.getInputsInfo();
     outputs = net.getOutputsInfo();
     layers.resize(net.layerCount());  // A hack to execute InfEngineBackendNet::layerCount correctly.
-    initPlugin(net);
 }
 
 void InfEngineBackendNet::Release() noexcept
