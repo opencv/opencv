@@ -311,15 +311,11 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
-    case CAP_MSMF:
 #ifdef HAVE_MSMF
+    case CAP_MSMF:
         TRY_OPEN(result, cvCreateFileCapture_MSMF (filename))
-#endif
-
-#ifdef HAVE_XINE
-        TRY_OPEN(result, cvCreateFileCapture_XINE (filename))
-#endif
         if (apiPreference) break;
+#endif
 
 #ifdef HAVE_VFW
     case CAP_VFW:
@@ -533,6 +529,14 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
 {
     bool useAny = (apiPreference == CAP_ANY);
     Ptr<IVideoCapture> capture;
+#ifdef HAVE_XINE
+    if (useAny || apiPreference == CAP_XINE)
+    {
+        capture = createXINECapture(filename.c_str());
+        if (capture && capture->isOpened())
+            return capture;
+    }
+#endif
 #ifdef HAVE_GPHOTO2
     if (useAny || apiPreference == CAP_GPHOTO2)
     {
