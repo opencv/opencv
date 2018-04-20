@@ -119,7 +119,10 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
     add_extra_compiler_option(-Wno-comment)
-    add_extra_compiler_option(-Wno-implicit-fallthrough)
+    if(NOT OPENCV_SKIP_IMPLICIT_FALLTHROUGH
+        AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES "implicit-fallthrough")
+      add_extra_compiler_option(-Wimplicit-fallthrough=3)
+    endif()
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7.2.0)
       add_extra_compiler_option(-Wno-strict-overflow) # Issue is fixed in GCC 7.2.1
     endif()

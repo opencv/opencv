@@ -82,6 +82,7 @@ set_target_properties(${ZLIB_LIBRARY} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wshift-negative-value
     -Wundef  # _LFS64_LARGEFILE is not defined
     /wd4267  # MSVS 2015 (x64) + zlib 1.2.11
+    -Wimplicit-fallthrough
 )
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES
